@@ -614,6 +614,10 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925143003000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): a1c7ea64ac1df9890fc2a171d12608e173bb14f33594a1db4f1ce91516276b17
 
+#### Round 2
+
+- Round 2: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md, the `status` row of the field table, `Meaning` cell — "`"PASS"` when every gate in scope passed; `"FAIL"` otherwise.", which closes the value set at two
+
 ### TDD-0046
 
 - TDD-ID: TDD-0046
@@ -667,6 +671,10 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Round 1: reviewer verdict (attempt 1): REVISE
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925143004000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 2ddada080279045bbb775a31994ac0c941938c3d5b3a1a8678832d26e9563754
+
+#### Round 2
+
+- Round 2: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, the repair-kind table under `## Findings verify did not cause` — its three body rows, `spec gap` to `qfai-sdd`, `acceptance-test defect` to `qfai-atdd` and `implementation defect` to `qfai-implement`, which close the repair kinds and their owners at three
 
 ### TDD-0047
 

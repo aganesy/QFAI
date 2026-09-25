@@ -888,9 +888,11 @@ is reported `unrun`, never as a pass. This row has **two `❌` depth cells** and
 
 Ledger row `TDD-0045`. One passing case reads `verify-output-contract.md` and requires four things:
 the field table's first column is exactly `status`, `scope`, `specId`, `recordedAt`, `summary`,
-`gates`; the quoted values in the `status` row are exactly `PASS` and `FAIL`; the `scope` table's
-first column is exactly `prototyping`, `atdd`, `full`; and the file names neither `outcome` nor
-`testObservation`. Adding a field row, a status value or a scope row reddens it. This row has **no
+`gates`; the double-quoted values in the `status` row, whatever characters they hold, are exactly
+`PASS` and `FAIL`; the `scope` table's first column is exactly `prototyping`, `atdd`, `full`; and
+the file names neither `outcome` nor `testObservation`. Adding a field row or a scope row reddens
+it, and so does adding a status value written the way the row writes its values, in double quotes:
+`"WARN"`, `"needs_repair"`, `"blocked"` and `"PASS2"` alike. This row has **no
 `❌` or `⚠️` cell**; its six `n/a` cells are explained under "The eight rows added for the verify
 stage", and its `Status` is `✅`.
 
@@ -898,10 +900,11 @@ stage", and its `Status` is `✅`.
 
 Ledger row `TDD-0046`. One passing case reads `## Findings verify did not cause`. It requires the
 sentence that verify edits no artifact another owner holds and the sentence that routes a finding
-through `needs_repair`, `debts` and `resolvingOwner`, and it requires the table to map exactly
-`spec gap`, `acceptance-test defect` and `implementation defect` to `qfai-sdd`, `qfai-atdd` and
-`qfai-implement`, so a fourth kind or a changed owner reddens it. This row has **two `❌` depth
-cells** and no `❌` in `Status`.
+through `needs_repair`, `debts` and `resolvingOwner`. It compares the table's body rows, in order,
+with three literal pairs: `spec gap` to `qfai-sdd`, `acceptance-test defect` to `qfai-atdd` and
+`implementation defect` to `qfai-implement`, each cell exactly one backticked token. A fourth row,
+whichever of its cells are backticked, reddens it, as do a second owner in one cell, a duplicated
+kind and a changed owner. This row has **two `❌` depth cells** and no `❌` in `Status`.
 
 - **Edge cases** — the repair kinds are closed at three, and a finding verify did not cause may fit
   none of them — a defect in a contract, or in the verify skill itself — or fit two. Neither the
@@ -1344,8 +1347,10 @@ documented rationale for each, so each is named here.
 - **TC-0014-0039 × Oracle strength** — deleting either sentence reddens the case. The second pattern
   ends at "never as a pass", so ", unless every other gate passed" appended after it leaves the case
   green.
-- **TC-0014-0041 × Oracle strength** — the table comparison is exact and meets the row's own demand:
-  a fourth kind or a changed owner reddens it. The prohibition is a pattern that ends at "another
+- **TC-0014-0041 × Oracle strength** — the table is compared row by row with the three literal pairs,
+  each cell exactly one backticked token, which meets the row's own demand: a fourth row whatever its
+  backticks, a second owner in one cell, a duplicated kind or a changed owner reddens it. The
+  prohibition is a pattern that ends at "another
   owner holds", so ", except a test it can fix in place" appended after it leaves the case green.
 - **TC-0014-0042 × Equivalence partitions** — two partitions of the request are pinned: in mode
   `active`, a request with no work order and no name, and a worker holding a work order. Two more
@@ -1422,8 +1427,8 @@ documented rationale for each, so each is named here.
 - **TC-0014-0039 × Status** — both sentences are stated and pinned. It is capped at `⚠️` because
   `EX-0014-0032`'s consequence for `verify.json` is stated nowhere, and because a gate that did not
   run for want of an environment is not tied to the `blocked` outcome.
-- **TC-0014-0041 × Status** — the routing table is pinned exactly, which is the strongest oracle
-  among these rows. It is capped at `⚠️` because a finding of no listed kind has no route, and a
+- **TC-0014-0041 × Status** — the routing table is pinned exactly, row by row and cell by cell, which
+  is the strongest oracle among these rows. It is capped at `⚠️` because a finding of no listed kind has no route, and a
   repairable finding beside a missing environment has no stated outcome.
 - **TC-0014-0042 × Status** — the handover and the one-line citation are stated and pinned. It is
   capped at `⚠️` because two partitions of the request are left to a baseline the case does not
