@@ -96,13 +96,16 @@ export interface DecisionQuestionInput {
   recommendation?: string;
 }
 
-// A fact is asked as a value: it offers no options and carries no recommendation.
-export interface FactQuestionInput {
-  kind: "fact";
-  text: string;
-  options: QuestionOption[];
-  effect: QuestionEffect;
-}
+// A fact carries no recommendation. It is a choice where its candidates can be listed, and a
+// value request with one effect where they cannot.
+export type FactQuestionInput =
+  | {
+      kind: "fact";
+      text: string;
+      options: QuestionOption[];
+      selection: { min: number; max: number };
+    }
+  | { kind: "fact"; text: string; options: []; effect: QuestionEffect };
 
 function isEffect(value: unknown): value is QuestionEffect {
   return value === "proceed" || value === "replan" || value === "stop";
@@ -123,12 +126,23 @@ function parseOption(value: unknown): QuestionOption | undefined {
   return { optionId, label, description, effect };
 }
 
-// SIMPLIFIED: a fact question is read as a value request; a fact offering candidates is not read.
-// Lift when: a routing or stage result asks for a fact whose candidates can be listed.
+// A fact whose candidates can be listed is a choice among them, each option carrying its
+// effect; otherwise it is a value request, and `effect` applies to any value.
 function parseFactQuestion(value: Record<string, unknown>): FactQuestionInput | undefined {
   const { text, effect } = value;
+  if (value.recommendation !== undefined) return undefined;
+  if (value.options !== undefined) {
+    if (effect !== undefined) return undefined;
+    const choice = parseDecisionQuestion({ ...value, kind: "decision" });
+    if (!choice) return undefined;
+    return {
+      kind: "fact",
+      text: choice.text,
+      options: choice.options,
+      selection: choice.selection,
+    };
+  }
   if (typeof text !== "string" || !text.trim() || !isEffect(effect)) return undefined;
-  if (value.options !== undefined || value.recommendation !== undefined) return undefined;
   return { kind: "fact", text, options: [], effect };
 }
 
