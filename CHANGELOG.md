@@ -84,6 +84,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow` reads the ledger to decide whether acceptance runs and
+  where a test fix goes** (#2467). The command never told the decision core
+  whether acceptance obligations were unmet, or the level of each test case a
+  ledger row names. A bugfix or bounded-change run therefore skipped its
+  acceptance stage, and a test fix on an `Integration` row naming an `L3` case
+  went to `qfai-implement` instead of `qfai-atdd`.
+
+  - Each ledger row now carries the levels `06_Test-Cases.md` declares for the
+    cases its `TC-Refs` cell names.
+  - Acceptance is due when the ledger holds an unfinished `E2E`, `API` or
+    `L3` `Integration` row. In a bugfix run this counts only after a
+    `missing-test` diagnosis. Once issued, the stage stays due for the rest of
+    the run, so the stages already accepted keep their place in the plan.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

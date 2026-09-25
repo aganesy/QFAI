@@ -13,6 +13,7 @@ import type {
   WorkflowSnapshot,
 } from "../../core/workflow/decide.js";
 import {
+  acceptanceObligationsUnmetOf,
   baselineOf,
   completionFacts,
   identityOf,
@@ -430,7 +431,8 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
+// accepted, so the row set can be compared and the acceptance stage selected; and at `accept`,
+// where each changed path really is.
 async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { state } = snapshot.run;
   const reads =
@@ -439,12 +441,14 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     input.operation === "resume";
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
+  const acceptanceObligationsUnmet = reads && acceptanceObligationsUnmetOf(snapshot, ledger);
   const accepting = input.operation === "accept" && state === "running";
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
   const receiptValidity =
     input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
   return {
     ...(ledger ? { ledger } : {}),
+    ...(acceptanceObligationsUnmet ? { acceptanceObligationsUnmet } : {}),
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
   };
