@@ -49,6 +49,11 @@ was the same before and after the thirty invocations. The comparison left out
 `.git`, `node_modules`, `tmp/`, the build output and the report directory
 itself.
 
+The thirty invocations were repeated on a build of the working tree that
+follows `13959aaed`, which changes the step 9 link writer. Every report had the
+same content as the tracked one, apart from a trailing blank line, every exit
+code matched, and the working-tree hash was again unchanged.
+
 Exit 3 on steps 5 and 8 denotes historical items in `## For a person`, not a
 write:
 
