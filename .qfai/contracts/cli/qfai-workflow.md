@@ -293,6 +293,12 @@ A run binds its spec in one of two ways:
 Every stage but `route`, `discussion`, `maintenance` and `verify` takes the bound
 spec as its `target`. A plan with no other stage binds no spec.
 
+The `feature` route is for a change that needs a new capability. Its proposal
+lists at least one `newCapabilities` entry, and `accept` refuses one that lists
+none as `invalid-input`. A change to an existing spec that needs no new
+capability routes `bounded-change`, whose plan binds the one spec
+`affectedSpecIds` names.
+
 ### Work order
 
 | Field                                                | Content                                                                                                                                                                                                                           |

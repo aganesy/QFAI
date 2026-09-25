@@ -84,6 +84,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A workflow run with no new capability binds the spec it changes when its
+  plan is accepted** (#2339). A `bugfix` or `bounded-change` run never had its
+  spec bound, so `qfai workflow next` answered "The plan is not ready." Accepting
+  the plan now records the one spec the route proposal's `affectedSpecIds` names.
+  That binding has no slot and adds no `targetBindings` entry to `summary.json`.
+  A proposal whose plan needs a spec and whose `affectedSpecIds` names none, or
+  more than one, is refused with the new reason `spec-binding`.
+
+- **The `qfai-run` skill routes a change that adds no capability to
+  `bounded-change`** (#2394). A feature request that changes an existing spec
+  and needs no new capability was left without a route that could run: the
+  `feature` plan starts by creating a capability, and `accept` refuses a
+  `feature` proposal with none. The skill's payload reference now sends such a
+  change to `bounded-change`, naming the one spec it changes, and the workflow
+  contract states the same rule.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
