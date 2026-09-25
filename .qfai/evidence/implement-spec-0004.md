@@ -90,3 +90,136 @@ Rows closed under DR-0298, one entry per row.
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts`
 - Evidence file: recorded here for the reason the TDD-0067 entry gives.
+
+### TDD-0068
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0075 create-row: two CAPs cited and one bound raise no QFAI-TRIAGE-011 or QFAI-TRIAGE-005`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0075 create-row: two CAPs cited and one bound raise no QFAI-TRIAGE-011 or QFAI-TRIAGE-005' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); nothing read the column yet, and the case holds that a passing reference raises nothing once it is read
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0069
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0075 column-position: the column after Depends-On raises no QFAI-TRIAGE-011 or QFAI-TRIAGE-005`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0075 column-position: the column after Depends-On raises no QFAI-TRIAGE-011 or QFAI-TRIAGE-005' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); nothing read the column yet, and the case holds that a passing reference raises nothing once it is read
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0070
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 resolves-malformed: a value outside the two-segment grammar names the Resolves check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 resolves-malformed: a value outside the two-segment grammar names the Resolves check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: run-2026092404571299/create-0001: expected [] to deeply equal [ { severity: 'error', …(2) } ]`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0071
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 resolves-outside: a run directory linked outside the workflow directory names the Resolves check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 resolves-outside: a run directory linked outside the workflow directory names the Resolves check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised); the outside record is a complete passing record, so only a refusal before it is read yields Resolves
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0072
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 resolves-missing: a well-formed value with no record file names the Resolves check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 resolves-missing: a well-formed value with no record file names the Resolves check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0073
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 resolves-unparsable: a record that is not JSON names the Resolves check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 resolves-unparsable: a record that is not JSON names the Resolves check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0074
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 kind: a request_scope record names the Kind check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 kind: a request_scope record names the Kind check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0075
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 operation: a record whose operation is null names the Operation check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 operation: a record whose operation is null names the Operation check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0076
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 binding-create: a slot bound to a CAP the Rationale does not cite names the Binding check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 binding-create: a slot bound to a CAP the Rationale does not cite names the Binding check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0077
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 answerer: an answeredBy differing only in case names the Answerer check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 answerer: an answeredBy differing only in case names the Answerer check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0078
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0077: a year-old record whose capability text differs from today's raises no QFAI-TRIAGE-011`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0077: a year-old record whose capability text differs from today'\''s raises no QFAI-TRIAGE-011' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); after the change the case still passes because no check compares the record with the catalog or its date
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
+### TDD-0082
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+- Selector: `TC-0004-0076 operation-non-create: a DELETE row carrying a reference names the Operation check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/triageAuthorizationRef.test.ts --testNamePattern='TC-0004-0076 operation-non-create: a DELETE row carrying a reference names the Operation check' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ { severity: 'error', …(2) } ]` (no QFAI-TRIAGE-011 was raised)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/core/validators/triageAuthorizationRef.ts` (new: the five checks), `packages/qfai/src/core/validators/specPack.ts` (`validateTriageAuthorizationRefs` over every Triage table), `packages/qfai/src/cli/commands/validate.ts` (expected state for QFAI-TRIAGE-011), `packages/qfai/src/core/emittedRuleCodes.ts` (regenerated), `packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts`
+
