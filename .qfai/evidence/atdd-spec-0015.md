@@ -40,6 +40,15 @@ Preflight: confidence high
 | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 
+### /qfai-atdd — run started 2026-09-25T12:04:27.243Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+No session opened: the six rows, their test cases and their business rules are settled, and their tests and the text or code that satisfies them already exist.
+
 ## Work performed (what changed, where)
 
 - `packages/qfai/tests/integration/agentDelegationSpec0015.test.ts`: the existing test now checks the rest of the `legacy-profile-preservation` boundary after the forced refresh:
@@ -138,7 +147,13 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 
 | TDD-ID   | Branch         | Entry                    |
 | -------- | -------------- | ------------------------ |
+| TDD-0038 | falsifiability | [#tdd-0038](#tdd-0038) |
 | TDD-0039 | falsifiability | [#tdd-0039](#tdd-0039) |
+| TDD-0054 | falsifiability | [#tdd-0054](#tdd-0054) |
+| TDD-0055 | falsifiability | [#tdd-0055](#tdd-0055) |
+| TDD-0056 | falsifiability | [#tdd-0056](#tdd-0056) |
+| TDD-0057 | falsifiability | [#tdd-0057](#tdd-0057) |
+| TDD-0058 | falsifiability | [#tdd-0058](#tdd-0058) |
 
 ### TDD-0039
 
@@ -279,6 +294,108 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Checkpoint verification revision: working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113
 - Checkpoint verification seal: ae61f155025285cb460f409f6e78583e9b7e5f23b8144bb374ac6a5e92b2fccd
 
+### TDD-0038
+
+- TDD-ID: TDD-0038
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0015GovernanceAndHandoff.test.ts
+- Selector: QFAI:SPEC-0015:TC-0015-0034
+- TC-ref: TC-0015-0034
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0038`.
+- Branch: falsifiability — the validator's present-but-incomplete branch and this test both predate the row, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/src/core/validators/autopilotPolicy.ts:597, `validateAutopilotPolicy`, the present-but-incomplete branch — `if (missingBuckets.length > 0) {`, which pushes `R-AUTOPILOT-POLICY-MISSING` at `error` when the section heading is present and one or more of the three bucket headers is not.
+- Mutation: `if (missingBuckets.length > 0) {` to `if (missingBuckets.length > 3) {`
+- Why it fails: the fixture is the heading with no bucket, so all three buckets are missing and the length is 3. The branch no longer fires, and nothing later pushes `R-AUTOPILOT-POLICY-MISSING`: the widened and hard-required checks are empty when their buckets are absent. `f` is `undefined`, so `expect(f?.severity).toBe("error")` (test line 107) fails with `expected undefined to be 'error'`.
+- Type check: the mutated condition compares a number with a number literal, as the original does, so tsc stays clean and no binding becomes unused.
+- Other rows: TDD-0054 to TDD-0058 still pass. None of them imports `autopilotPolicy.ts`; they read shipped Markdown and YAML.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/spec0015GovernanceAndHandoff.test.ts -t "QFAI:SPEC-0015:TC-0015-0034"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+### TDD-0054
+
+- TDD-ID: TDD-0054
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/autopilotBindingExceptionSpec0015.test.ts
+- Selector: TC-0015-0037: a run's valid binding supplies primarySpecId, and with no binding it stays hard-required
+- TC-ref: TC-0015-0037
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0054`.
+- Branch: falsifiability — the passage and the test were both committed when the row closed, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md:201, `## Default Autopilot Policy inside a run`, the binding paragraph — ``A `primarySpecId` that a run's valid binding supplies counts as supplied: the``, which lets a valid binding stand in for the hard-required input.
+- Mutation: `supplies counts as supplied:` to `supplies does not count as supplied:`
+- Why it fails: the passage no longer contains the phrase the first content assertion (test lines 20-22) matches, ``a `primarySpecId` that a run's valid binding supplies counts as supplied``. The section still exists, so the presence assertion on line 19 passes and the failure lands on the owned sentence.
+- Type check: not applicable: the predicate is shipped prose/YAML, not source
+- Other rows: TDD-0056 reads the same section but asserts only the four bucket sentences on lines 194-199, so it still passes. TDD-0038, TDD-0055, TDD-0057 and TDD-0058 read other files and still pass.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts -t "TC-0015-0037: a run's valid binding supplies primarySpecId, and with no binding it stays hard-required"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+### TDD-0055
+
+- TDD-ID: TDD-0055
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/routingManifestEntrySkillsSpec0015.test.ts
+- Selector: TC-0015-0038: qfai-run routes the orchestrator only, qfai-maintain an author and an independent reviewer on default
+- TC-ref: TC-0015-0038
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0055`.
+- Branch: falsifiability — the `qfai-run` and `qfai-maintain` routing entries and the test were both committed when the row closed, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml:419, the `qfai-run` entry's `route` phase — `mandatory_agents: [orchestrator]`, which routes the orchestrator and no author or reviewer.
+- Mutation: `mandatory_agents: [orchestrator]` to `mandatory_agents: [orchestrator, doc-steward]`
+- Why it fails: the set of agents across `qfai-run`'s phases becomes `["orchestrator", "doc-steward"]`, so `expect([...new Set(runPhases.flatMap(phaseAgents))]).toEqual(["orchestrator"])` (test line 64) fails.
+- Type check: not applicable: the predicate is shipped prose/YAML, not source
+- Other rows: TDD-0038, TDD-0054, TDD-0056, TDD-0057 and TDD-0058 do not read `agent-routing.yml` and still pass.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/routingManifestEntrySkillsSpec0015.test.ts -t "TC-0015-0038: qfai-run routes the orchestrator only, qfai-maintain an author and an independent reviewer on default"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+### TDD-0056
+
+- TDD-ID: TDD-0056
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts
+- Selector: TC-0015-0039: ask-user by a human_decision, hard-required by request_scope or the binding, auto-decide by none, --auto by nothing
+- TC-ref: TC-0015-0039
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0056`.
+- Branch: falsifiability — the passage and the test were both committed when the row closed, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md:194, `## Default Autopilot Policy inside a run`, the `ask-user` bullet — ``- An `ask-user` item is satisfied only by a `human_decision` that answers it.``, which makes a `human_decision` the one authorization that answers an `ask-user` item.
+- Mutation: `satisfied only by a` to `satisfied by a`
+- Why it fails: without `only` the bullet no longer states the exclusive authorization, and the first content assertion (test lines 20-22), ``an `ask-user` item is satisfied only by a `human_decision` that answers it``, fails. The section still exists, so the presence assertion on line 19 passes.
+- Type check: not applicable: the predicate is shipped prose/YAML, not source
+- Other rows: TDD-0054 reads the same section but asserts only the binding paragraph on lines 201-203, so it still passes. TDD-0038, TDD-0055, TDD-0057 and TDD-0058 read other files and still pass.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts -t "TC-0015-0039: ask-user by a human_decision, hard-required by request_scope or the binding, auto-decide by none, --auto by nothing"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+### TDD-0057
+
+- TDD-ID: TDD-0057
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/actorHistoryRunSpec0015.test.ts
+- Selector: TC-0015-0040: the history travels with every work order, and an author or recommender is never its own independent reviewer
+- TC-ref: TC-0015-0040
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0057`.
+- Branch: falsifiability — the passage and the test were both committed when the row closed, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md:270, `### Actor history in a run`, the independence bullet — `never counts as that artifact's independent reviewer, whichever stage it`, which keeps a recorded author or recommender from reviewing its own artifact.
+- Mutation: `never counts as` to `may count as`
+- Why it fails: the second content assertion (test lines 23-25), `recorded there as the author or recommender of an artifact never counts as that artifact's independent reviewer`, no longer matches. The section still exists, so the presence assertion on line 19 passes.
+- Type check: not applicable: the predicate is shipped prose/YAML, not source
+- Other rows: TDD-0058 reads the same file, but its passage starts at `### Grilling in a run` on line 276, after line 270, so it still passes. TDD-0038, TDD-0054, TDD-0055 and TDD-0056 read other files and still pass.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts -t "TC-0015-0040: the history travels with every work order, and an author or recommender is never its own independent reviewer"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+### TDD-0058
+
+- TDD-ID: TDD-0058
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/grillingInRunSpec0015.test.ts
+- Selector: TC-0015-0041: settled is taken as settled, only the remaining frontier is worked, and the session split stands
+- TC-ref: TC-0015-0041
+- Reopened: `exception` -> `todo` at f89e2bbd5 for the reviews DR-0298 waived. The waived closure's record stays in `.qfai/evidence/implement-spec-0015.md#tdd-0058`.
+- Branch: falsifiability — the passage and the test were both committed when the row closed, so the classification run passes against HEAD.
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md:280, `### Grilling in a run`, the frontier bullet — `- It works only the remaining frontier.`, which limits a grilling session in a run to the frontier the work order leaves open.
+- Mutation: `- It works only the remaining frontier.` to `- It works the whole frontier again.`
+- Why it fails: the second content assertion (test line 20), `works only the remaining frontier`, no longer matches. The section still exists, so the presence assertion on line 18 passes.
+- Type check: not applicable: the predicate is shipped prose/YAML, not source
+- Other rows: TDD-0057 reads the same file, but its passage ends where `### Grilling in a run` begins on line 276, before line 280, so it still passes. TDD-0038, TDD-0054, TDD-0055 and TDD-0056 read other files and still pass.
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/grillingInRunSpec0015.test.ts -t "TC-0015-0041: settled is taken as settled, only the remaining frontier is worked, and the session split stands"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / ⚠️ 24 / ❌ 5.
@@ -293,6 +410,8 @@ See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / �
 | 4 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-atdd implementation: extend the TDD-0039 test and take its first run | round 1 required fixes | agentDelegationSpec0015.test.ts; #tdd-0039 first run | PASS |
 | 5 | delivery-planner | delivery-planner#1 | /qfai-atdd red: TDD-0039 slice and selector scope, round 2 | the extended test at working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113 | PASS: one boundary, no split, no seam, Satisfied-by accepted | PASS |
 | 6 | - | n/a | grilling(-@2026-09-25T09:01:01.993Z/none): none | - | - | PASS |
+| 7 | acceptance-test-engineer | acceptance-test-engineer#2 | /qfai-atdd: hand over TDD-0038 and TDD-0054 to TDD-0058 on the falsifiability branch | the six test files and their predicates | #tdd-0038, #tdd-0054 to #tdd-0058 | PASS |
+| 8 | - | n/a | grilling(-@2026-09-25T12:04:27.243Z/none): none | - | - | PASS |
 
 ## Cross-spec obligations
 
