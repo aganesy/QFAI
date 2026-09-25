@@ -82,6 +82,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **Six spec-0018 end-to-end rows are reviewed and closed** (#2299).
+  `TDD-0458`, `TDD-0459`, `TDD-0460`, `TDD-0462`, `TDD-0463` and `TDD-0464` had
+  closed at `exception` under `DR-0298`, with their per-row reviews waived. Each
+  test passed on its first run, so each row now carries a falsifiability proof: a
+  production mutation that fails the row's own assertion. Each also carries a
+  `qa-gatekeeper` RED and GREEN and a completion and an implementation review,
+  and closes at `done` with its evidence in `atdd-spec-0018.md`. The six rows
+  leave waiver `WVR-20260925-18`. `TDD-0455` stays under the waiver.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
