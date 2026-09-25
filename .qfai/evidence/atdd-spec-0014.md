@@ -416,6 +416,10 @@ packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+3c507dc339ba6c83c25e05f359450b198f16c399ad56667170b0661fa3846bec, reproduced the orchestrated-mode.md:29 mutation ("this run's" to "a"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's toMatch at stageResultReceipts.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 6dd6c7b4…f647 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): deba7c4dbb7a4c7f78fc2aa85b40b3232554caafd4c7b54c1215cfb8e8b3b27e
+
 ### TDD-0043
 
 - TDD-ID: TDD-0043
@@ -465,6 +469,26 @@ packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+82eaac8506872657a86db89a70501c55cc3c7405900436af6806ce3e65f8caf2, reproduced the orchestrated-mode.md:32 mutation ("is never named" to "may be named"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's toMatch at foreignReport.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash e9652270…c7ad recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143001000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): c9881cde479625588ecabb62371b9df7b80c5ce28ae30e8c07c711857bfc24c9
+- Spec review: PASS
+- Spec reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Spec audited evidence hash: 318369182198b3a062374b08366f308ad7f0db956fee01ea3e59b94d3a5d474c
+- Spec review pack: .qfai/review/review-20260925143001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c9881cde479625588ecabb62371b9df7b80c5ce28ae30e8c07c711857bfc24c9
+- Code quality review: PASS
+- Code quality reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Code quality audited evidence hash: 318369182198b3a062374b08366f308ad7f0db956fee01ea3e59b94d3a5d474c
+- Code quality review pack: .qfai/review/review-20260925143001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c9881cde479625588ecabb62371b9df7b80c5ce28ae30e8c07c711857bfc24c9
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/foreignReport.test.ts > qfai-verify in a workflow run > TC-0014-0038 (TDD-0043): A report from elsewhere is never offered as this run's; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification seal: b8222c472285511a65634b3be5bfa6b88bbedb5e02af79bded6b806ee2de6e09
 
 ### TDD-0044
 
@@ -516,6 +540,26 @@ packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+bade17e6d7045038bec3ea35fecafe3164d3cd1bf79659b49c8d48604ef03013, reproduced the orchestrated-mode.md:38 mutation (dropping "`unrun`, never"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's second toMatch at unrunGate.test.ts:22:18 with the first still matching (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash fd33efac…fa2a recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143002000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 6fefeb2afe8d8763bb5f6b740ec66f7871831550c20a8e7640bf9945ccd09484
+- Spec review: PASS
+- Spec reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Spec audited evidence hash: 792b7100615520f1af412d6550a3d7536fdd4979e11ff434da3dfda8e90f1ce8
+- Spec review pack: .qfai/review/review-20260925143002000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 6fefeb2afe8d8763bb5f6b740ec66f7871831550c20a8e7640bf9945ccd09484
+- Code quality review: PASS
+- Code quality reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Code quality audited evidence hash: 792b7100615520f1af412d6550a3d7536fdd4979e11ff434da3dfda8e90f1ce8
+- Code quality review pack: .qfai/review/review-20260925143002000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 6fefeb2afe8d8763bb5f6b740ec66f7871831550c20a8e7640bf9945ccd09484
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/unrunGate.test.ts > qfai-verify in a workflow run > TC-0014-0039 (TDD-0044): A gate that did not run is reported unrun; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification seal: 4c15638776da3445e002e98e75e3392c674061291f3bedef4c5862f8ef305104
+
 ### TDD-0045
 
 - TDD-ID: TDD-0045
@@ -565,6 +609,10 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+459954f5c2b4cc737f2ff5d29b281e9905c00bcd00486d2fea70df040e900f62, reproduced the verify-output-contract.md:11 mutation (adding the WARN value to the status row), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on expected [ 'PASS', 'WARN', 'FAIL' ] to deeply equal [ 'PASS', 'FAIL' ] at verifyJsonUnchanged.test.ts:40:84 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 9f4c080d…124f recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by status cell is the oracle proof, run with the GREEN command
+
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143003000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): a1c7ea64ac1df9890fc2a171d12608e173bb14f33594a1db4f1ce91516276b17
 
 ### TDD-0046
 
@@ -616,6 +664,10 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+438496aca219c24cbd15cc4cd21380868b4935e82c0a438a5b0ce92061702cbf, reproduced the orchestrated-mode.md:53 mutation (the acceptance-test defect owner changed to qfai-implement), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the owner-map toEqual at repairRouting.test.ts:35:76 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash be82ec30…2c79 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by table row is the oracle proof, run with the GREEN command
 
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143004000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 2ddada080279045bbb775a31994ac0c941938c3d5b3a1a8678832d26e9563754
+
 ### TDD-0047
 
 - TDD-ID: TDD-0047
@@ -665,6 +717,26 @@ packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+f2b194d194ab52f00ed8e6474b034655f55daa6b6f28dd1043464803c94b3b51, reproduced the orchestrated-mode.md:13 mutation ("with nothing edited" to "with its edits applied"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's first toMatch at stageSkillHandover.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 12814a49…b811 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143005000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 797a359487d2661c063a12c25052b8e55815e360a7aad5c8ed20d9404d8900cd
+- Spec review: PASS
+- Spec reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Spec audited evidence hash: ce555353216ec56a4b07fee4b48f8c512b7f973b934b672d14f1b06a7894d38a
+- Spec review pack: .qfai/review/review-20260925143005000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 797a359487d2661c063a12c25052b8e55815e360a7aad5c8ed20d9404d8900cd
+- Code quality review: PASS
+- Code quality reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Code quality audited evidence hash: ce555353216ec56a4b07fee4b48f8c512b7f973b934b672d14f1b06a7894d38a
+- Code quality review pack: .qfai/review/review-20260925143005000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 797a359487d2661c063a12c25052b8e55815e360a7aad5c8ed20d9404d8900cd
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/stageSkillHandover.test.ts > qfai-verify in a workflow run > TC-0014-0042 (TDD-0047): The verify stage follows the stage-skill handover; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification seal: 7d2db2f68a8fe4e763159f184310c4412d863b350490286fd1cbbce2cbdcfcb3
 
 ### TDD-0048
 
@@ -716,6 +788,26 @@ packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+1c5ff5f27430c3ba78ae1c4a0ec3fb2dc42cb0ef34fdb718de3f17c24795576e, reproduced the orchestrated-mode.md:23 mutation (verify-full to verify-spec), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on expected [ 'verify-spec' ] to deeply equal [ 'verify-full' ] at operationsTable.test.ts:18:17 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash f59a21f6…4f2c recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by table cell is the oracle proof, run with the GREEN command
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143006000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 2f3397ca85ce248cb94e27e50be912d7c7ffc128b873846e124f3dbb0e4a04eb
+- Spec review: PASS
+- Spec reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Spec audited evidence hash: ec3f556b414b2e8629c56fde22379490e794d05017daf7bfb781868c4518c440
+- Spec review pack: .qfai/review/review-20260925143006000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 2f3397ca85ce248cb94e27e50be912d7c7ffc128b873846e124f3dbb0e4a04eb
+- Code quality review: PASS
+- Code quality reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Code quality audited evidence hash: ec3f556b414b2e8629c56fde22379490e794d05017daf7bfb781868c4518c440
+- Code quality review pack: .qfai/review/review-20260925143006000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 2f3397ca85ce248cb94e27e50be912d7c7ffc128b873846e124f3dbb0e4a04eb
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/operationsTable.test.ts > qfai-verify in a workflow run > TC-0014-0043 (TDD-0048): The Operations table lists exactly verify-full; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification seal: b5501adee4962b6e203bc6b7625a9d9d08dd9f161003a75daf802e85c7603dd0
+
 ### TDD-0050
 
 - TDD-ID: TDD-0050
@@ -765,6 +857,26 @@ packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+02849ee485dcbbebde47c9c2cfe3d288bb0e5a3e86ac5fcc3a309505bfbff6e1, reproduced the orchestrated-mode.md:60 mutation (`blocked` to `needs_repair`), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's first toMatch at missingEnvironment.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 8cd27bd4…6095 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143007000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): ec1d3a4c67b0a5e3c169c6bc828a1867ab5f25414ac19536e3d006f248837349
+- Spec review: PASS
+- Spec reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Spec audited evidence hash: d221aacff6d14f2e227cf5a97296dec9eb8e8f9806a599b51ee60d2ddfac5edf
+- Spec review pack: .qfai/review/review-20260925143007000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: ec1d3a4c67b0a5e3c169c6bc828a1867ab5f25414ac19536e3d006f248837349
+- Code quality review: PASS
+- Code quality reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Code quality audited evidence hash: d221aacff6d14f2e227cf5a97296dec9eb8e8f9806a599b51ee60d2ddfac5edf
+- Code quality review pack: .qfai/review/review-20260925143007000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: ec1d3a4c67b0a5e3c169c6bc828a1867ab5f25414ac19536e3d006f248837349
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — ✓ |integration| tests/integration/verify/orchestrated/missingEnvironment.test.ts > qfai-verify in a workflow run > TC-0014-0044 (TDD-0050): A missing environment blocks the stage; Test Files 1 passed (1); Tests 1 passed (1). The row is off a checkpoint boundary, so its narrow suite is the checkpoint
+- Checkpoint verification revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- Checkpoint verification seal: 22300a461012c5bdc40899b1733ff9fcea270eb86df3983c2426599212a6ec0a
 
 ## Coverage Depth Matrix
 
