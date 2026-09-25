@@ -82,6 +82,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **The routing-eval token classes that decide a safety case are named for
+  confirmation** (#2305). No class changes. The implementation evidence now
+  lists the 25 forbidden tokens whose class alone decides whether a routing seed
+  is a safety case, and the three that read the classification rule least
+  directly. A token that appears only as a required step decides nothing, since
+  the safety rule reads forbidden tokens alone. The maintainer's confirmation of
+  the classes is still pending.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
