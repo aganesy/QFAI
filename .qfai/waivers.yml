@@ -406,6 +406,7 @@ waivers:
         - TDD-0467
         - TDD-0468
         - TDD-0469
+        - TDD-0470
         - TDD-0479
         - TDD-0480
         - TDD-0481
@@ -426,6 +427,20 @@ waivers:
         - TDD-0496
         - TDD-0497
         - TDD-0498
+        - TDD-0499
+        - TDD-0503
+        - TDD-0504
+        - TDD-0505
+        - TDD-0506
+        - TDD-0507
+        - TDD-0508
+        - TDD-0509
+        - TDD-0510
+        - TDD-0511
+        - TDD-0512
+        - TDD-0513
+        - TDD-0514
+        - TDD-0515
         - TDD-0527
         - TDD-0528
         - TDD-0529

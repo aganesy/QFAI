@@ -272,6 +272,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0468 | TC-0018-0240 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0469 | TC-0018-0240 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0470 | TC-0018-0241 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0479 | TC-0018-0246 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0480 | TC-0018-0247 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0481 | TC-0018-0248 | Closed `exception` under DR-0298; per-row review waived |
@@ -292,6 +293,20 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0496 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0497 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0498 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0499 | TC-0018-0251 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0503 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0504 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0505 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0506 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0507 | TC-0018-0256 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0508 | TC-0018-0257 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0509 | TC-0018-0258 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0510 | TC-0018-0259 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0511 | TC-0018-0259 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0512 | TC-0018-0259 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0513 | TC-0018-0260 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0514 | TC-0018-0260 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0515 | TC-0018-0261 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -4426,6 +4441,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0240 (TDD-0469): other-path`
 - Production files: none
 
+### TDD-0470
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDiscussionUnderARunAsksOnlyWhatIsOpen.test.ts`
+- Selector: `TC-0018-0241 (TDD-0470): settled names the routing result and the answered question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDiscussionUnderARunAsksOnlyWhatIsOpen.test.ts --testNamePattern='TC-0018-0241 \(TDD-0470\): settled names the routing result and the answered question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal { …(2) }`, `tests/unit/workflow/aDiscussionUnderARunAsksOnlyWhatIsOpen.test.ts:106`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDiscussionUnderARunAsksOnlyWhatIsOpen.test.ts > TC-0018-0241 (TDD-0470): settled names the routing result and the answered question`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice (settled between agents): `settled` reaches `next` through one snapshot field, `settled`, and one runtime-only payload. The routing-accept event (`plan-accepted` or `unsettled-material-input`) carries `settled` with the accepted routing result's ID, and each `authorization-recorded` event carries `settled` with the answered question added as `{ questionId, text, chosen }`, `chosen` the chosen option labels or the NFC-trimmed value. The run's settled facts are the last event that carries them, and `next` copies the snapshot's `settled` into the work order. The payload rides on events the contract already lists rather than on a new event type: CLI-WF `## State machine` enumerates the journal's events, and the edge-table rows (TDD-0164, TDD-0165, TDD-0175, TDD-0176) and the effect rows (TDD-0120 to TDD-0123) pin each operation's event list, so a new event type would have contradicted the contract and moved those closed rows. The free-text value stays out of the tracked authorization record, which still keeps only its keyed digest.
+
 ### TDD-0479
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4626,6 +4652,148 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0498\): route' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `route` work order carries none.
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0498): route`
+- Production files: none
+
+### TDD-0499
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0251 \(TDD-0499\): scope digest leaves recordAreas out' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { recordAreasDiffer: true, …(2) } to deeply equal { recordAreasDiffer: true, …(2) }` (`digests[0]` received `undefined`), `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:249`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice (settled between agents): CLI-WF `### Work order` says `scope.digest` covers `scope` only and CLI-WFFILE names no further inputs, so the digest is the SHA-256, the helper the ledger row-set digest already uses, of the JSON of the other four scope fields in a fixed order: `writeAreas`, `protectedTargets`, `allowedEffects`, `nonGoals`. The scope's `SIMPLIFIED` marker now names only what is still missing: the plan carries no protected targets and nothing supplies non-goals, so the digest reads each as empty until the checked plan keeps them.
+
+### TDD-0503
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
+- Selector: `TC-0018-0255 (TDD-0503): decisions-cr`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0503\): decisions-cr' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/decisions/` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0503): decisions-cr`
+- Production files: none
+
+### TDD-0504
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
+- Selector: `TC-0018-0255 (TDD-0504): evidence-decisions`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0504\): evidence-decisions' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decisions/` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0504): evidence-decisions`
+- Production files: none
+
+### TDD-0505
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
+- Selector: `TC-0018-0255 (TDD-0505): change-request`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0505\): change-request' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/change-request-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0505): change-request`
+- Production files: none
+
+### TDD-0506
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts`
+- Selector: `TC-0018-0255 (TDD-0506): decision-record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts --testNamePattern='TC-0018-0255 \(TDD-0506\): decision-record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0019: `.qfai/evidence/decision-` is one of the core's protected prefixes, so the proposal naming it is refused `protected-surface` and the run stays `routing` with no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theProposalNamesEachTrackedStageRecord.test.ts > TC-0018-0255 (TDD-0506): decision-record`
+- Production files: none
+
+### TDD-0507
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0256 (TDD-0507): blocked debts outside the scope name scope-dependency and every finding`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0256 \(TDD-0507\): blocked debts outside the scope name scope-dependency and every finding' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [ { state: 'blocked', …(3) }, …(1) ] to deeply equal [ { state: 'blocked', …(3) }, …(1) ]` (`halt` received `undefined`), `tests/unit/workflow/upstreamDriftInsideARun.test.ts:115`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0256 (TDD-0507): blocked debts outside the scope name scope-dependency and every finding`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice: the blocker's subjects name each listed finding as `<findingCode>@<path>`, the form the repair budget already uses for a cause. The `blockOnResult` `SIMPLIFIED` marker now covers an `unrun` result only, since a `blocked` result's blocker and owner are derived from its debts; the contract names no blocker for `unrun`.
+
+### TDD-0508
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0257 (TDD-0508): drift inside the checked scope goes to qfai-sdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0257 \(TDD-0508\): drift inside the checked scope goes to qfai-sdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0101: a `needs_repair` result's finding goes to the plan stage its `resolvingOwner` serves, here the `qfai-sdd` stage.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0257 (TDD-0508): drift inside the checked scope goes to qfai-sdd`
+- Production files: none
+
+### TDD-0509
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0258 (TDD-0509): a CR under .qfai/decisions refused write-scope`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0258 \(TDD-0509\): a CR under \.qfai/decisions refused write-scope' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074: a changed file in neither `scope.writeAreas` nor `recordAreas` is refused `write-scope`, and no record area names `.qfai/decisions/`.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0258 (TDD-0509): a CR under .qfai/decisions refused write-scope`
+- Production files: none
+
+### TDD-0510
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0259 (TDD-0510): in-scope-skill-owner`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0259 \(TDD-0510\): in-scope-skill-owner' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'blocked', …(3) } to deeply equal { state: 'running', …(3) }`, `tests/unit/workflow/upstreamDriftInsideARun.test.ts:176`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0259 (TDD-0510): in-scope-skill-owner`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0511
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0259 (TDD-0511): owning-spec-unknown`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0259 \(TDD-0511\): owning-spec-unknown' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'blocked', …(3) } to deeply equal { state: 'running', …(3) }`, `tests/unit/workflow/upstreamDriftInsideARun.test.ts:176`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0259 (TDD-0511): owning-spec-unknown`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0512
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0259 (TDD-0512): owning-spec-false`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0259 \(TDD-0512\): owning-spec-false' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'blocked', …(3) } to deeply equal { state: 'running', …(3) }`, `tests/unit/workflow/upstreamDriftInsideARun.test.ts:176`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0259 (TDD-0512): owning-spec-false`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0513
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0260 (TDD-0513): still-blocked`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0260 \(TDD-0513\): still-blocked' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { …(4) } to deeply equal { …(4) }` (`blocker` received `undefined`), `tests/unit/workflow/upstreamDriftInsideARun.test.ts:207`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0260 (TDD-0513): still-blocked`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0514
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0260 (TDD-0514): cleared`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0260 \(TDD-0514\): cleared' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0177: `resume` of a blocked run reissues the stage's work order as a new attempt, and an accepted result moves the run to `ready`.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0260 (TDD-0514): cleared`
+- Production files: none
+
+### TDD-0515
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/upstreamDriftInsideARun.test.ts`
+- Selector: `TC-0018-0261 (TDD-0515): delegation-unavailable comes before listed debts`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0261 \(TDD-0515\): delegation-unavailable comes before listed debts' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0206: the delegation decision runs before anything the result lists, so an unavailable delegation after the first names `delegation-unavailable`.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0261 (TDD-0515): delegation-unavailable comes before listed debts`
 - Production files: none
 
 ### TDD-0527

@@ -51,6 +51,15 @@ export interface WorkflowEvent {
   halt?: WorkflowHalt;
   retry?: { attempt: number; nextDelaySeconds: number };
   measurement?: WorkflowMeasurement;
+  // Runtime only: what the run has settled so far, which the tracked summary never copies.
+  settled?: WorkflowSettled;
+}
+
+// The checked proposal's routing result, and every answered question with the option labels
+// chosen or the value given.
+interface WorkflowSettled {
+  routingResultId: string;
+  answers: { questionId: string; text: string; chosen: string[] | string }[];
 }
 
 type FailClosedCause =
@@ -135,13 +144,14 @@ interface WorkflowWorkOrder {
   operation?: string;
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
-  scope?: { writeAreas: string[]; allowedEffects?: string[] };
+  scope?: { digest?: string; writeAreas: string[]; allowedEffects?: string[] };
   recordAreas?: string[];
   inputs?: { path: string; digest: string }[];
   ledger?: { specId: string; rowIds: string[]; rowSetDigest: string };
   priorStageReceiptRefs?: { ref: string; validity: "valid" | "stale" | "unknown" }[];
   requiredReviewerRoles?: string[];
   actorHistory?: WorkflowActor[];
+  settled?: WorkflowSettled;
 }
 
 interface WorkflowActor {
@@ -231,6 +241,7 @@ type InputRefusalReason =
   | "test-fix-meaning"
   | "option"
   | "reviewer-not-independent"
+  | "blocked-repairable"
   | "authorization-kind";
 
 interface InputRefusal {
@@ -323,6 +334,7 @@ interface WorkflowSnapshot {
   // The run's key for free-text answers, read from its private request file.
   digestKey?: string;
   routingReceiptRef?: string;
+  settled?: WorkflowSettled;
 }
 
 interface WorkflowPolicy {
@@ -588,6 +600,17 @@ function requiredReviewerRoles(
   return facts.reviewerRoles?.[skill];
 }
 
+// The digest covers the scope's own four fields and nothing else, so a work order's record
+// areas never change it.
+// SIMPLIFIED: the scope carries no protected targets or non-goals, and the digest reads each as
+// empty.
+// Lift when: the checked plan keeps the proposal's protected targets and a source of non-goals.
+function scopeOf(writeAreas: string[], effects: string[]): NonNullable<WorkflowWorkOrder["scope"]> {
+  const fields = { writeAreas, protectedTargets: [], allowedEffects: effects, nonGoals: [] };
+  const digest = createHash("sha256").update(JSON.stringify(fields)).digest("hex");
+  return { digest, writeAreas, allowedEffects: effects };
+}
+
 // An external effect is allowed only where a project policy names it. A request that asks
 // for one authorizes nothing.
 function allowedEffects(stage: PlanStages[number], snapshot: WorkflowSnapshot): string[] {
@@ -641,6 +664,7 @@ function resultRefusals(
     ...reviewerRefusals(result, actorHistory),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
+    ...blockedRefusals(result, workOrder, facts),
   ];
   const areas = [...(workOrder.scope?.writeAreas ?? []), ...(workOrder.recordAreas ?? [])];
   const target = workOrder.target;
@@ -677,6 +701,46 @@ function resultRefusals(
     }
   });
   return refusals;
+}
+
+// A blocked result may list only findings the run cannot repair itself: one outside the
+// checked write scope, or one inside it that only the operator can clear, owned by a spec that
+// exists and, inside the scope, by the bound spec.
+function blockedRefusals(
+  result: NonNullable<WorkflowInput["result"]>,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  if (result.outcome !== "blocked") return [];
+  const scope = workOrder.scope?.writeAreas ?? [];
+  const boundSpec = workOrder.target?.kind === "spec" ? workOrder.target.specId : undefined;
+  return (result.debts ?? []).flatMap((debt, index): InputRefusal[] => {
+    const inside = scope.some((area) => areaCovers(area, debt.path));
+    const skillOwned = Boolean(debt.resolvingOwner?.trim()) && debt.resolvingOwner !== "operator";
+    const repairable =
+      (inside && (skillOwned || debt.owningSpec !== boundSpec)) ||
+      !Object.hasOwn(facts.specs ?? {}, debt.owningSpec);
+    return repairable ? [{ reason: "blocked-repairable", subject: `debts[${index}]` }] : [];
+  });
+}
+
+// A blocked result names its blocker from the findings it lists: `scope-dependency` when any
+// lies outside the checked write scope, `stage-blocked` otherwise. Their shared resolving owner
+// clears it, or the operator when they differ or none is listed.
+function blockedHalt(
+  result: NonNullable<WorkflowInput["result"]>,
+  workOrder: WorkflowWorkOrder,
+): WorkflowHalt {
+  const scope = workOrder.scope?.writeAreas ?? [];
+  const debts = result.debts ?? [];
+  const outside = debts.some((debt) => !scope.some((area) => areaCovers(area, debt.path)));
+  const owners = [...new Set(debts.map((debt) => debt.resolvingOwner))];
+  const shared = owners.length === 1 ? owners[0] : undefined;
+  return {
+    blocker: outside ? "scope-dependency" : "stage-blocked",
+    owner: shared ?? "operator",
+    subjects: debts.map((debt) => `${debt.findingCode}@${debt.path}`),
+  };
 }
 
 function measurementRefusals(result: NonNullable<WorkflowInput["result"]>): InputRefusal[] {
@@ -1061,9 +1125,9 @@ function outcomeIsAcceptable(
   }
 }
 
-// SIMPLIFIED: an unrun or blocked result with no delegation blocks the run without naming a
-// blocker or who can clear it.
-// Lift when: a blocked result's blocker and owner are derived from its debts.
+// SIMPLIFIED: an unrun result with no delegation blocks the run without naming a blocker or who
+// can clear it.
+// Lift when: the contract names the blocker an unrun result gives.
 function blockOnResult(
   run: WorkflowSnapshot["run"],
   result: NonNullable<WorkflowInput["result"]>,
@@ -1712,8 +1776,13 @@ function chosenOptions(question: WorkflowQuestion, optionIds: readonly string[])
   return valid ? chosen : undefined;
 }
 
-function answerEvents(authorization: WorkflowAuthorization): WorkflowEvent[] {
-  const events: WorkflowEvent[] = [{ type: "authorization-recorded", authorization }];
+function answerEvents(
+  authorization: WorkflowAuthorization,
+  settled: WorkflowSettled | undefined,
+): WorkflowEvent[] {
+  const events: WorkflowEvent[] = [
+    { type: "authorization-recorded", authorization, ...(settled ? { settled } : {}) },
+  ];
   if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
   if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
@@ -1850,6 +1919,25 @@ function answerOf(
   return { answer: { optionIds: chosen.map((option) => option.optionId).sort() }, effect };
 }
 
+// The run's settled facts with this answer added: the labels chosen, or the value given.
+function settledWith(
+  snapshot: WorkflowSnapshot,
+  question: WorkflowQuestion,
+  input: WorkflowInput,
+): WorkflowSettled | undefined {
+  const settled = snapshot.settled;
+  if (!settled) return undefined;
+  const optionIds = input.answer?.optionIds ?? [];
+  const chosen =
+    question.kind === "fact"
+      ? (input.answer?.value ?? "").normalize("NFC").trim()
+      : question.options
+          .filter((option) => optionIds.includes(option.optionId))
+          .map((option) => option.label);
+  const answer = { questionId: question.questionId, text: question.text, chosen };
+  return { ...settled, answers: [...settled.answers, answer] };
+}
+
 const STATE_AFTER_EFFECT: Record<QuestionEffect, string> = {
   proceed: "ready",
   replan: "routing",
@@ -1925,7 +2013,7 @@ function decideAnswer(
         }
       : {}),
   };
-  const events = answerEvents(authorization);
+  const events = answerEvents(authorization, settledWith(snapshot, question, input));
   const next = {
     ...run,
     state: STATE_AFTER_EFFECT[effect],
@@ -2069,18 +2157,15 @@ export function decide(
       stageKind: stage.stageKind,
       ...(skill ? { executor: { skill } } : {}),
       ...(stage.operation ? { operation: stage.operation } : {}),
-      // SIMPLIFIED: the scope carries the plan's write areas and the allowed effects only.
-      // Lift when: a work order's scope digest, protected targets or non-goals are read.
       ...(plan.writeScope
-        ? {
-            scope: { writeAreas: plan.writeScope, allowedEffects: allowedEffects(stage, snapshot) },
-          }
+        ? { scope: scopeOf(plan.writeScope, allowedEffects(stage, snapshot)) }
         : {}),
     };
     const reviewerRoles = requiredReviewerRoles(skill, plan, facts);
     if (reviewerRoles) nextWorkOrder.requiredReviewerRoles = reviewerRoles;
     const actorHistory = snapshot.actorHistory ?? [];
     if (actorHistory.length > 0) nextWorkOrder.actorHistory = actorHistory;
+    if (snapshot.settled) nextWorkOrder.settled = snapshot.settled;
     const receiptRefs = snapshot.receiptRefs ?? [];
     if (receiptRefs.length > 0) {
       nextWorkOrder.priorStageReceiptRefs = receiptRefs.map((ref) => ({
@@ -2223,9 +2308,10 @@ export function decide(
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
     const delegated = decideDelegation(snapshot, workOrder, result);
     if (delegated) return delegated;
-    if (result.outcome === "unrun" || result.outcome === "blocked") {
-      return blockOnResult(run, result);
+    if (result.outcome === "blocked") {
+      return blockOnResult(run, result, undefined, blockedHalt(result, workOrder));
     }
+    if (result.outcome === "unrun") return blockOnResult(run, result);
     if (result.outcome === "awaiting_input") return openStageQuestions(run, result);
     const approvedCapability = snapshot.approval?.target?.capability;
     if (
@@ -2352,6 +2438,7 @@ export function decide(
   }
 
   const plan = checkedPlan(proposal, facts);
+  const settled = { routingResultId: result.resultId, answers: snapshot.settled?.answers ?? [] };
   const questionInputs = (proposal.unresolvedQuestions ?? []).map(parseQuestionInput);
   const decisionInputs = questionInputs.flatMap((question) => question ?? []);
   if (decisionInputs.length !== questionInputs.length) {
@@ -2373,7 +2460,7 @@ export function decide(
     }
     return {
       verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + 1 }, plan },
-      events: [{ type: "plan-accepted", plan }],
+      events: [{ type: "plan-accepted", plan, settled }],
     };
   }
 
@@ -2401,7 +2488,7 @@ export function decide(
     },
     events: [
       ...questions.map((question) => ({ type: "question-opened", question })),
-      { type: "unsettled-material-input", proposal },
+      { type: "unsettled-material-input", proposal, settled },
     ],
   };
 }

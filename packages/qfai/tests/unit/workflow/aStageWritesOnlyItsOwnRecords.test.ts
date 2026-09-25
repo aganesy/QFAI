@@ -3,6 +3,7 @@
 // QFAI:SPEC-0018:TC-0018-0248
 // QFAI:SPEC-0018:TC-0018-0249
 // QFAI:SPEC-0018:TC-0018-0250
+// QFAI:SPEC-0018:TC-0018-0251
 
 import { expect, it } from "vitest";
 
@@ -191,3 +192,68 @@ for (const [title, stage, recordAreas] of derivations) {
     expect(issueMiddle(...stage).workOrder.recordAreas).toEqual(recordAreas);
   });
 }
+
+// The checked plan a routing result becomes, for the same bounded-change stages.
+function checkedPlanDocument() {
+  const plan = boundedPlan(...implement);
+  const routed = decide(
+    {
+      run: { id: "run-records", state: "routing", sequence: 2 },
+      outstandingWorkOrder: {
+        workOrderId: "routing-1",
+        stageInstanceId: "routing-stage-1",
+        attempt: 1,
+        stageKind: "routing",
+      },
+    },
+    {
+      operation: "accept",
+      result: {
+        resultId: "routing-result-1",
+        workOrderId: "routing-1",
+        stageInstanceId: "routing-stage-1",
+        attempt: 1,
+        expectedSequence: 2,
+        outcome: "accepted",
+        proposal: {
+          requestKind: "change",
+          candidateRoute: "bounded-change",
+          goal: "Notify the owner when an export fails.",
+          expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
+          observedRefs: [],
+          affectedSpecIds: ["spec-0001"],
+          newCapabilities: [],
+          proposedWriteScope: plan.writeScope,
+          protectedTargets: [],
+          requiredStages: ["sdd_delta", "implement", "verify"],
+        },
+      },
+    },
+    {
+      plans: { "bounded-change": { route: "bounded-change", stages: plan.stages } },
+      specs: { "spec-0001": { lifecycle: "active" } },
+    },
+  );
+  return routed.verdict.plan;
+}
+
+it("TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out", () => {
+  const implementOrder = issueMiddle(...implement).workOrder;
+  const acceptanceOrder = issueMiddle(
+    "acceptance",
+    "qfai-atdd",
+    "author-acceptance-tests",
+  ).workOrder;
+  const plan = checkedPlanDocument();
+
+  expect({
+    recordAreasDiffer:
+      JSON.stringify(implementOrder.recordAreas) !== JSON.stringify(acceptanceOrder.recordAreas),
+    digests: [implementOrder.scope?.digest, acceptanceOrder.scope?.digest],
+    planHoldsRecordAreas: plan === undefined || "recordAreas" in plan,
+  }).toEqual({
+    recordAreasDiffer: true,
+    digests: [expect.stringMatching(/^[a-f0-9]{64}$/), implementOrder.scope?.digest],
+    planHoldsRecordAreas: false,
+  });
+});
