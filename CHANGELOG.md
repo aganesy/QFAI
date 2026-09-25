@@ -37,6 +37,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   as errors for the first time: the `playwright-cli` browser wrapper, readers of
   `.qfai/output/validate.json`, and hand-written per-skill handoff files.
 
+- **The dogfooding backlog guard names the findings behind a count it
+  refuses.** When a file held at zero reports errors, or a pinned file reports
+  more than its pin, the guard now prints each error finding in that file as
+  `code: message` under the refusal. GitHub caps the annotations a run shows,
+  so the findings that changed the count were often not visible anywhere.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at
