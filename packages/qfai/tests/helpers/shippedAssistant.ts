@@ -65,6 +65,29 @@ export function frontMatterOf(text: string): Record<string, unknown> {
   return Object.fromEntries(Object.entries(parsed));
 }
 
+/**
+ * The Operations table of an `orchestrated-mode.md`, read the way the workflow file contract defines
+ * it: the first table under a heading exactly `## Operations`, its first column's header, and the
+ * backticked ID each cell of that column holds.
+ */
+export function operationsOf(text: string): { header: string; ids: string[] } {
+  const section = /^## Operations\s*$/m.test(text) ? sectionOf(text, "## Operations\n") : "";
+  const rows = section
+    .split("\n")
+    .filter((line) => line.startsWith("|"))
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
+  const [head, , ...body] = rows;
+  return {
+    header: head?.[0] ?? "",
+    ids: body.map((cells) => /^`([^`]+)`$/.exec(cells[0] ?? "")?.[1] ?? `<${cells[0] ?? ""}>`),
+  };
+}
+
 /** The first table row of `text` whose cells hold `token`, or `""`. */
 export function rowOf(text: string, token: string): string {
   return text.split("\n").find((line) => line.startsWith("|") && line.includes(token)) ?? "";
