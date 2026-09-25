@@ -511,10 +511,34 @@ case reads no other test-owned file.
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3). Taken after the mutation was reverted with `git checkout`, on a tree equal to HEAD outside the evidence and the ledger
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 980a2d71c34a7a3d9353466403b983a8cc7f193e
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read, after the attempt-1 rework
+- Refactor verify revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e43767b20+mutation address matches working-tree+82e3960a…; the row's selector fails as an assertion at :92:27 via :99:5; RED test hash recomputes; mutation stays inside REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES; GREEN 1 passed and whole-file refactor verify 3/3 at 980a2d71c
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the run rewrote the spec-0013 ledger note /qfai-implement may not write; restored, and /qfai-sdd wrote the correction in c763c9aec
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260924150000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 86efc51db12b5ceb5d9d50b045a51c731a6409c069c7ad702fc3b54ac178c6e8
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260924150010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 4104d67a8a456c9aa2f6e0bbd46391e2f5a42a93e051cc9c68fc425e1914a232
+- Spec review: PASS
+- Spec reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Spec audited evidence hash: 898a2a3b675d3ce24b7f6428cd3fe96c7f43bce33220486510bd809d0490734a
+- Spec review pack: .qfai/review/review-20260924150010000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4104d67a8a456c9aa2f6e0bbd46391e2f5a42a93e051cc9c68fc425e1914a232
+- Code quality review: PASS
+- Code quality reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Code quality audited evidence hash: 898a2a3b675d3ce24b7f6428cd3fe96c7f43bce33220486510bd809d0490734a
+- Code quality review pack: .qfai/review/review-20260924150010000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4104d67a8a456c9aa2f6e0bbd46391e2f5a42a93e051cc9c68fc425e1914a232
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 3 passed (3). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Checkpoint verification seal: 8625e6ba9d886eb1983d8b3f4b7093439de4543ca9950e16b30aebb7e38638f7
 
 ### TDD-0045
 
@@ -583,10 +607,34 @@ packages/qfai/tests/integration/spec0013SideArtifactPreflight.test.ts
 - Round 1: GREEN result: each entry ran on its own and passed: Test Files 1 passed (1); Tests 1 passed | 2 skipped (3), twice. Taken after the mutation was reverted with `git checkout`, on a tree equal to HEAD outside the evidence and the ledger
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 980a2d71c34a7a3d9353466403b983a8cc7f193e
+- Refactor verify result: Test Files 1 passed (1); Tests 3 passed (3). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read, after the attempt-1 rework
+- Refactor verify revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e43767b20+mutation address matches working-tree+e1ea19be…; both selector entries fail as assertions on one tree (:92:27 via :107:5 and :122:5); RED test hash recomputes; mutation stays inside resolveStoryWorkshopGaps; GREEN 1 passed per entry and whole-file refactor verify 3/3 at 980a2d71c
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the run rewrote the spec-0013 ledger note /qfai-implement may not write; restored, and /qfai-sdd wrote the correction in c763c9aec
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260924150001000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4214bb1784a17c86a232e9d22256e963d9e61465d3ee7fa8a8fff8b09f07017e
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260924150011000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 922bc2ecf753afc5c60cf47536405721894ba2ceb0c5ffd96433346cc1d70403
+- Spec review: PASS
+- Spec reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Spec audited evidence hash: 278fe154904b8482aca5a94dc303637afaf2c68e544473236bcca9d6f6aab4b4
+- Spec review pack: .qfai/review/review-20260924150011000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 922bc2ecf753afc5c60cf47536405721894ba2ceb0c5ffd96433346cc1d70403
+- Code quality review: PASS
+- Code quality reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Code quality audited evidence hash: 278fe154904b8482aca5a94dc303637afaf2c68e544473236bcca9d6f6aab4b4
+- Code quality review pack: .qfai/review/review-20260924150011000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 922bc2ecf753afc5c60cf47536405721894ba2ceb0c5ffd96433346cc1d70403
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/spec0013SideArtifactPreflight.test.ts && pnpm -C packages/qfai exec vitest run
+- Checkpoint verification result: PASS — the row's Test file: Test Files 1 passed (1); Tests 3 passed (3). The full suite, as the last row of the run: Test Files 763 passed | 8 failed | 3 skipped (774); every failure was a timeout (a 100 ms VM budget in ownWorkflowTopology.test.ts, 120 s and 600 s test budgets elsewhere) while other suites ran on the same machine. The eight files re-run on their own: 848 of 849 tests passed, and the one failure was the same 100 ms VM budget; ownWorkflowTopology.test.ts alone with one worker: 81 of 81 passed. None of the eight files reads the spec-0013 preflight code
+- Checkpoint verification revision: c763c9aec63b1339c40c8a9dfe29a30a9879035b
+- Checkpoint verification seal: 0a7ab152434912dd95ffb57724dfa6be2b43dd1ec28c941d47f9c9bea7797d4b
 
 ## Coverage Depth Matrix
 
@@ -699,6 +747,8 @@ program, no composite action and no verification step.
 
 ## Gaps / Open risks
 
+- Handoff to `/qfai-sdd`, done: attempt 1 of the completion review found that commit 980a2d71c rewrote the ledger `## Notes` line for `CR-20260913-0012`, which `/qfai-implement` may not write. e14e998f0 restores it, and `/qfai-sdd` wrote the corrected line in c763c9aec, together with the `CR-20260912-0003` link and the `US-0013-0008` title the review also raised. The two rows returned through `review-fix` on the no-new-behaviour path.
+
 Eight of the pack's twelve `done` rows are not backfilled. Four name an
 obligation the product states the opposite of, and one an obligation a sibling
 in the same pack contradicts. The other three have a case that runs and no
@@ -785,3 +835,12 @@ PASS for the four rows recorded here, each for the part of its obligation named
 under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
 the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
 rather than claimed.
+
+## Record defects
+
+Open entries from the reviews of the `/qfai-implement` run started
+2026-09-24T00:29:55.901Z. Each is repaired in place before spec-0013 completion
+is declared.
+
+- `record:unchecked`, `TDD-0044` and `TDD-0045`, Round 1: the attempt-1 reviewer verdict line names the trigger and the rework but not the path; the rows took the no-new-behaviour path and opened no round, which only `## Gaps / Open risks` states.
+- `record:unchecked`, `TDD-0044` and `TDD-0045`, Round 1: the RED gate was taken after the mutations were reverted and the ledger had moved; qa-gatekeeper rebuilt each mutated tree from its recorded address and edit.
