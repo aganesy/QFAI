@@ -114,6 +114,7 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
     expect(page.screenshot).not.toHaveBeenCalled();
   });
 
+  // QFAI:SPEC-0012:TC-0012-0487
   it("REJECTS a null response (no navigation occurred)", async () => {
     const dir = await newTempDir();
     const page = makeStubPage(null);
