@@ -173,7 +173,10 @@ export interface WorkflowDecision {
           message: string;
           reasons?: InputRefusal[];
         }
-      | { code: "stale-sequence" | "no-open-question" | "answer-conflict"; message: string }
+      | {
+          code: "stale-sequence" | "no-open-question" | "answer-conflict" | "run-terminal";
+          message: string;
+        }
       | {
           code: "proposal-refused";
           message: string;
@@ -280,6 +283,8 @@ interface WorkflowSnapshot {
     string,
     { answer: WorkflowAuthorization["answer"]; verdict: WorkflowDecision["verdict"] }
   >;
+  // The verdict a `stop` returned, which a repeated `stop` returns again.
+  stopVerdict?: WorkflowDecision["verdict"];
   // The run's key for free-text answers, read from its private request file.
   digestKey?: string;
 }
@@ -318,6 +323,7 @@ interface WorkflowInput {
   operation: string;
   request?: { text: string };
   harness?: WorkflowHarness;
+  stop?: boolean;
   questionId?: string;
   answer?: { optionIds?: string[]; value?: string };
   answeredBy?: string;
@@ -1057,11 +1063,7 @@ function acceptPreamble(
 ): WorkflowDecision | undefined {
   const { run, outstandingWorkOrder: workOrder } = snapshot;
   const recorded = snapshot.recordedResults?.[result.resultId];
-  if (recorded) {
-    return recorded.payloadDigest === input.payloadDigest
-      ? { verdict: recorded.verdict, events: [] }
-      : refusedWith(run, [{ reason: "result-id-reused", subject: "resultId" }]);
-  }
+  if (recorded) return refusedWith(run, [{ reason: "result-id-reused", subject: "resultId" }]);
   if (!RESULT_ID.test(result.resultId)) {
     return refusedWith(run, [{ reason: "schema", subject: "resultId" }]);
   }
@@ -1466,8 +1468,6 @@ function decideAnswer(
   input: WorkflowInput,
   facts: WorkflowFacts,
 ): WorkflowDecision {
-  const replayed = replayedAnswer(snapshot, input);
-  if (replayed) return replayed;
   const { run, scopeDigest } = snapshot;
   const question = snapshot.openQuestions?.find(
     (openQuestion) => openQuestion.questionId === input.questionId,
@@ -1541,6 +1541,32 @@ function decideAnswer(
   return { verdict: { ok: true, run: next }, events };
 }
 
+const TERMINAL_STATES = ["completed", "cancelled", "failed"];
+
+// A replay returns the verdict it was given, whatever state the run is in now.
+function replayOf(snapshot: WorkflowSnapshot, input: WorkflowInput): WorkflowDecision | undefined {
+  const result = input.result;
+  const recorded = result ? snapshot.recordedResults?.[result.resultId] : undefined;
+  if (input.operation === "accept") {
+    const same = recorded !== undefined && recorded.payloadDigest === input.payloadDigest;
+    return same ? { verdict: recorded.verdict, events: [] } : undefined;
+  }
+  if (input.operation !== "decision") return undefined;
+  if (input.stop === true) {
+    return snapshot.stopVerdict ? { verdict: snapshot.stopVerdict, events: [] } : undefined;
+  }
+  return replayedAnswer(snapshot, input);
+}
+
+// A stop needs no open question and no sequence: it cancels any run that has not ended.
+function decideStop(run: WorkflowSnapshot["run"], input: WorkflowInput): WorkflowDecision {
+  if (!input.answeredBy?.trim()) return refusedInput(run, "The stop is not ready.");
+  return {
+    verdict: { ok: true, run: { ...run, state: "cancelled", sequence: run.sequence + 1 } },
+    events: [{ type: "authorized-stop" }],
+  };
+}
+
 // Before `start` there is no run, so `start` alone takes no snapshot.
 export function decide(
   snapshot: null,
@@ -1558,7 +1584,14 @@ export function decide(
   facts: WorkflowFacts,
 ): WorkflowDecision {
   if (!snapshot) return decideStart(input, facts);
+  const replayed = replayOf(snapshot, input);
+  if (replayed) return replayed;
   const run = snapshot.run;
+  if (TERMINAL_STATES.includes(run.state)) {
+    const message = "The run has ended. Start a new run to continue.";
+    return { verdict: { ok: false, run, error: { code: "run-terminal", message } }, events: [] };
+  }
+  if (input.operation === "decision" && input.stop === true) return decideStop(run, input);
   const workOrder = snapshot.outstandingWorkOrder;
   const result = input.result;
   const proposal = result?.proposal;

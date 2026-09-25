@@ -156,6 +156,20 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0146 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0147 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0148 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0149 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0150 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0151 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0152 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0153 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0154 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0155 | TC-0018-0135 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0156 | TC-0018-0136 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0157 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0158 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0159 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0160 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0161 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0162 | TC-0018-0140 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -3124,6 +3138,146 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected { refusal: undefined, …(2) } to deeply equal { Object (refusal, exitCode, ...) }` at `tests/unit/workflow/persistence.test.ts:24`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0122 (TDD-0148): eacces`
 - Production files: `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0149
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0149): created`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0149\): created' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0149): created`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0150
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0150): routing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0150\): routing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0150): routing`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0151
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0151): ready`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0151\): ready' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0151): ready`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0152
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0152): running`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0152\): running' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0152): running`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0153
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0153): awaiting-input`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0153\): awaiting-input' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0153): awaiting-input`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0154
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0154): blocked`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0154\): blocked' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0154): blocked`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0155
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0135 (TDD-0155): interrupted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0135 \(TDD-0155\): interrupted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-stop', …(2) }, …(1) } to deeply equal { run: { id: 'run-stop', …(2) }, …(1) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0135 (TDD-0155): interrupted`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0156
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0136 (TDD-0156): A second stop on a run a stop cancelled`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0136 \(TDD-0156\): A second stop on a run a stop cancelled' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { same: false, events: [] } to deeply equal { same: true, events: [] }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:63`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0136 (TDD-0156): A second stop on a run a stop cancelled`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0157
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0137 (TDD-0157): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0137 \(TDD-0157\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:107`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0137 (TDD-0157): accept`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0158
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0137 (TDD-0158): next`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0137 \(TDD-0158\): next' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:107`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0137 (TDD-0158): next`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0159
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0137 (TDD-0159): decision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0137 \(TDD-0159\): decision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:107`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0137 (TDD-0159): decision`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0160
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0137 (TDD-0160): resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0137 \(TDD-0160\): resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:107`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0137 (TDD-0160): resume`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0161
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStopCancelsAtOnce.test.ts`
+- Selector: `TC-0018-0137 (TDD-0161): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStopCancelsAtOnce.test.ts --testNamePattern='TC-0018-0137 \(TDD-0161\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/aStopCancelsAtOnce.test.ts:107`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStopCancelsAtOnce.test.ts > TC-0018-0137 (TDD-0161): finish`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0162
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anUnrecordedStopIsReconciled.test.ts`
+- Selector: `TC-0018-0140 (TDD-0162): Decide resume on a run in running whose outstanding work order has no accepted result`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anUnrecordedStopIsReconciled.test.ts --testNamePattern='TC-0018-0140 \(TDD-0162\): Decide resume on a run in running whose outstanding work order has no accepted result' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0031, which added the `resume` transition firing `observed-session-interruption` and `reconciled-resume` and returning the outstanding work order
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anUnrecordedStopIsReconciled.test.ts > TC-0018-0140 (TDD-0162): Decide resume on a run in running whose outstanding work order has no accepted result`
+- Production files: none
 
 ### TDD-0212
 
