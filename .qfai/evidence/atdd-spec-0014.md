@@ -375,6 +375,34 @@ first mutation passes it and fails the literal check below it instead.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts -t "TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, `## The stage result`, first bullet — "The stage writes this run's `.qfai/report/verify.json` and names it in `artifactRefs`."
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts -t "TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## The stage result - The stage write…' to match /writes this run's `\.qfai\/rep…/report\`` at `tests/integration/verify/orchestrated/stageResultReceipts.test.ts:21:18`; the received section reads "The stage writes a `.qfai/report/verify.json`", with "this run's" gone
+
+The edit, at line 29:
+
+```diff
+-- The stage writes this run's `.qfai/report/verify.json` and names it in
++- The stage writes a `.qfai/report/verify.json` and names it in
+```
+
+- Round 1: Falsifiability revision: working-tree+3c507dc339ba6c83c25e05f359450b198f16c399ad56667170b0661fa3846bec
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 6dd6c7b42ac7c24ed476fcac83591221910a406fa7b83f5c6740a950c09df647
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts -t "TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
 ### TDD-0043
 
 - TDD-ID: TDD-0043
@@ -390,6 +418,34 @@ first mutation passes it and fails the literal check below it instead.
 - Other rows: `TDD-0042`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. `TDD-0042` and `TDD-0044` read the same section, but other bullets
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts -t "TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, `## The stage result`, second bullet — "A `verify.json` written by another run, for another spec or kept in a shared location is never named as this stage's report."
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts -t "TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## The stage result - The stage write…' to match /a `verify\.json` written by another …/i`` at `tests/integration/verify/orchestrated/foreignReport.test.ts:21:18`; the received section says a foreign report "may be named as this stage's report"
+
+The edit, at line 32:
+
+```diff
+-  location is never named as this stage's report.
++  location may be named as this stage's report.
+```
+
+- Round 1: Falsifiability revision: working-tree+82eaac8506872657a86db89a70501c55cc3c7405900436af6806ce3e65f8caf2
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: e9652270c7b89347452f5192b6730606ff85ebe8f199393f6fa3c05f627ec7ad
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts -t "TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
 ### TDD-0044
 
@@ -407,6 +463,34 @@ first mutation passes it and fails the literal check below it instead.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts -t "TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, `## The stage result`, last bullet — "A required gate that did not run is reported `unrun`, never as a pass."
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts -t "TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## The stage result - The stage write…' to match /a required gate that did not run is …/i`` at `tests/integration/verify/orchestrated/unrunGate.test.ts:22:18`, the second `toMatch`; the first, on `outcome` and `testObservation` at line 21, still matched
+
+The edit, at line 38:
+
+```diff
+-- A required gate that did not run is reported `unrun`, never as a pass.
++- A required gate that did not run is reported as a pass.
+```
+
+- Round 1: Falsifiability revision: working-tree+bade17e6d7045038bec3ea35fecafe3164d3cd1bf79659b49c8d48604ef03013
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: fd33efac6d70075c876f90c538662d5db6d138683b768ee7f1c9e8e6b0b1fa2a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts -t "TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
 ### TDD-0045
 
 - TDD-ID: TDD-0045
@@ -422,6 +506,34 @@ first mutation passes it and fails the literal check below it instead.
 - Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. None of them reads this file
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md, the `status` row of the field table, `Meaning` cell — "`"PASS"` when every gate in scope passed; `"FAIL"` otherwise.", which closes the value set at two
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [ 'PASS', 'WARN', 'FAIL' ] to deeply equal [ 'PASS', 'FAIL' ]` at `tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts:40:84`
+
+The edit, at line 11:
+
+```diff
+-| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate.                                                                                                                                   |
++| `status`     | string           | yes      | `"PASS"` when every gate in scope passed; `"WARN"` when only warnings were found; `"FAIL"` otherwise. Only `"PASS"` satisfies a downstream gate.                                                                                                                                   |
+```
+
+- Round 1: Falsifiability revision: working-tree+459954f5c2b4cc737f2ff5d29b281e9905c00bcd00486d2fea70df040e900f62
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 9f4c080d1bb28db8d149c4f6062d6fbcb83af44dc46b74d08fbcf68f124d124f
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md`, which restores the file as it is at that revision
 
 ### TDD-0046
 
@@ -439,6 +551,34 @@ first mutation passes it and fails the literal check below it instead.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, the repair-kind table under `## Findings verify did not cause` — the `acceptance-test defect` row, whose `resolvingOwner` is `qfai-atdd`
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected { 'spec gap': 'qfai-sdd', …(2) } to deeply equal { 'spec gap': 'qfai-sdd', …(2) }` at `tests/integration/verify/orchestrated/repairRouting.test.ts:35:76`; the diff shows `"acceptance-test defect": "qfai-implement"` received where `"qfai-atdd"` is expected
+
+The edit, at line 53:
+
+```diff
+-| `acceptance-test defect` | `qfai-atdd`      |
++| `acceptance-test defect` | `qfai-implement` |
+```
+
+- Round 1: Falsifiability revision: working-tree+438496aca219c24cbd15cc4cd21380868b4935e82c0a438a5b0ce92061702cbf
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: be82ec30e27e07f93c9d50e72e33be444c40523a0d96b62e2cf2e19d3d502c79
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
 ### TDD-0047
 
 - TDD-ID: TDD-0047
@@ -454,6 +594,34 @@ first mutation passes it and fails the literal check below it instead.
 - Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0048` and `TDD-0050` still pass. None of them reads this section
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts -t "TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, `## Entry check`, first bullet — "In mode `active`, a request with no work order and no name is passed to `qfai-run` with nothing edited."
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts -t "TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## Entry check The full check is `.qf…' to match /in mode `active`, a request with no …/i`` at `tests/integration/verify/orchestrated/stageSkillHandover.test.ts:21:18`
+
+The edit, at line 13:
+
+```diff
+-  `qfai-run` with nothing edited.
++  `qfai-run` with its edits applied.
+```
+
+- Round 1: Falsifiability revision: working-tree+f2b194d194ab52f00ed8e6474b034655f55daa6b6f28dd1043464803c94b3b51
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 12814a4952492fe3a202ffe009009d0e048ce37ea620892221044c19910eb811
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts -t "TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
 ### TDD-0048
 
@@ -471,6 +639,34 @@ first mutation passes it and fails the literal check below it instead.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts -t "TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, the table under `## Operations`, whose only body row names `verify-full`
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts -t "TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [ 'verify-spec' ] to deeply equal [ 'verify-full' ]` at `tests/integration/verify/orchestrated/operationsTable.test.ts:18:17`
+
+The edit, at line 23:
+
+```diff
+-| `verify-full` | Run every required gate over the run's change and report each result |
++| `verify-spec` | Run every required gate over the run's change and report each result |
+```
+
+- Round 1: Falsifiability revision: working-tree+1c5ff5f27430c3ba78ae1c4a0ec3fb2dc42cb0ef34fdb718de3f17c24795576e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: f59a21f6bf1852d68d0e6b29f96a286d0cadc8e0d84455d85211071ddf604f2c
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts -t "TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
 ### TDD-0050
 
 - TDD-ID: TDD-0050
@@ -486,6 +682,34 @@ first mutation passes it and fails the literal check below it instead.
 - Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047` and `TDD-0048` still pass. `TDD-0046` also names `needs_repair`, but reads only `## Findings verify did not cause`
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts -t "TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md, `## A missing environment`, first bullet — "A gate whose environment is missing returns the stage `blocked`, with the blocker `stage-blocked` and `operator` as the one who clears it."
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts -t "TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## A missing environment - A gate who…' to match /returns the stage `blocked`, with th…/i`` at `tests/integration/verify/orchestrated/missingEnvironment.test.ts:21:18`
+
+The edit, at line 60:
+
+```diff
+-- A gate whose environment is missing returns the stage `blocked`, with the
++- A gate whose environment is missing returns the stage `needs_repair`, with the
+```
+
+- Round 1: Falsifiability revision: working-tree+02849ee485dcbbebde47c9c2cfe3d288bb0e5a3e86ac5fcc3a309505bfbff6e1
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 8cd27bd4780ecd868ca9d3897a36897f2a44d7560bfa5b65c29b89bdabc46095
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
+```
+
+- Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts -t "TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
 ## Coverage Depth Matrix
 
