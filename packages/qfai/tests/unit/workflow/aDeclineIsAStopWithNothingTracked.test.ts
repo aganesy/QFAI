@@ -60,7 +60,7 @@ it("TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding 
           operation: authorization.operation,
           effect: authorization.effect,
           optionIds: authorization.answer.optionIds,
-          slotId: authorization.target.slotId,
+          slotId: authorization.target?.slotId,
         }
       : null,
     bindingEvents: decision.events.filter((event) => event.type === "binding-recorded").length,

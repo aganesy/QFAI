@@ -107,6 +107,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0097 | TC-0018-0078 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0098 | TC-0018-0079 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0099 | TC-0018-0080 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0100 | TC-0018-0081 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0101 | TC-0018-0082 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0102 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0103 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
@@ -117,6 +118,18 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0108 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0109 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0110 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0111 | TC-0018-0085 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0120 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0121 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0122 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0123 | TC-0018-0089 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0124 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0125 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0126 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0127 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0128 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0129 | TC-0018-0091 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0130 | TC-0018-0092 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2591,6 +2604,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ … TC-0018-0080 (TDD-0099)`, 1 passed
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 
+### TDD-0100
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aChangedExpectationGoesToSdd.test.ts`
+- Selector: `TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from citedBefore`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aChangedExpectationGoesToSdd.test.ts --testNamePattern='TC-0018-0081 \(TDD-0100\): A test_fix result whose citedAfter differs from citedBefore' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, run: { …(3) }, …(3) } to deeply equal { ok: false, run: { …(3) }, …(3) }` at `tests/unit/workflow/aChangedExpectationGoesToSdd.test.ts:84`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aChangedExpectationGoesToSdd.test.ts > TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from citedBefore`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
 ### TDD-0101
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -2693,6 +2716,128 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
 - GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0110)`, 1 passed
 - Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0111
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/restoringACheckIsNotAQuestion.test.ts`
+- Selector: `TC-0018-0085 (TDD-0111): A bugfix routing result whose only risk signal is authorization-restored`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/restoringACheckIsNotAQuestion.test.ts --testNamePattern='TC-0018-0085 \(TDD-0111\): A bugfix routing result whose only risk signal is authorization-restored' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [ …(4) ] to deeply equal [ Array(4) ]` at `tests/unit/workflow/restoringACheckIsNotAQuestion.test.ts:119`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/restoringACheckIsNotAQuestion.test.ts > TC-0018-0085 (TDD-0111): A bugfix routing result whose only risk signal is authorization-restored`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: an accepted plan keeps the routing result's `riskSignals`. A work order's `requiredReviewerRoles` come from a new `reviewerRoles` fact, the always-required reviewers of each skill's profile; in a run carrying `authorization-restored`, a `qfai-implement` or `qfai-atdd` work order takes `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer` instead. A skill the fact does not carry gets no roles, marked `SIMPLIFIED` in `decide.ts` until the command adapter supplies every plan skill's roles.
+
+### TDD-0120
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0088 (TDD-0120): proceed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0088 \(TDD-0120\): proceed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'ready', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:81`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0088 (TDD-0120): proceed`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: `decision` now answers a `decision` question as well as a `create` one. The chosen options are checked against the offered set and `selection` first, and a failure is refused `invalid-input` with reason `option`. The answer takes the strongest chosen effect; `replan` adds `answer-changes-scope` and moves the run to `routing`, and `stop` adds `authorized-stop` and moves it to `cancelled`. A `human_decision` for a non-`create` question records `operation: null` and no target.
+
+### TDD-0121
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0088 (TDD-0121): replan`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0088 \(TDD-0121\): replan' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'routing', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:81`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0088 (TDD-0121): replan`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0122
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0088 (TDD-0122): stop`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0088 \(TDD-0122\): stop' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'cancelled', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:81`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0088 (TDD-0122): stop`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0123
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0089 (TDD-0123): A multi-select answer choosing a proceed option and a stop option`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0089 \(TDD-0123\): A multi-select answer choosing a proceed option and a stop option' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'cancelled', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:92`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0089 (TDD-0123): A multi-select answer choosing a proceed option and a stop option`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0124
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0090 (TDD-0124): count-min`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0090 \(TDD-0124\): count-min' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { recorded: undefined, …(1) } to deeply equal { …(2) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:123`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0090 (TDD-0124): count-min`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0125
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0090 (TDD-0125): count-max`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0090 \(TDD-0125\): count-max' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { recorded: undefined, …(1) } to deeply equal { …(2) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:123`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0090 (TDD-0125): count-max`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0126
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0090 (TDD-0126): below-min`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0090 \(TDD-0126\): below-min' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'awaiting_input', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:121`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0090 (TDD-0126): below-min`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0127
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0090 (TDD-0127): above-max`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0090 \(TDD-0127\): above-max' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'awaiting_input', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:121`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0090 (TDD-0127): above-max`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0128
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts`
+- Selector: `TC-0018-0090 (TDD-0128): option-outside`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/eachOptionCarriesItsEffect.test.ts --testNamePattern='TC-0018-0090 \(TDD-0128\): option-outside' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'awaiting_input', …(4) } to deeply equal { state: 'awaiting_input', …(4) }` at `tests/unit/workflow/eachOptionCarriesItsEffect.test.ts:121`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/eachOptionCarriesItsEffect.test.ts > TC-0018-0090 (TDD-0128): option-outside`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0129
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aProceedAnswerContinuesUnprompted.test.ts`
+- Selector: `TC-0018-0091 (TDD-0129): A proceed answer to a material question, then next`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aProceedAnswerContinuesUnprompted.test.ts --testNamePattern='TC-0018-0091 \(TDD-0129\): A proceed answer to a material question, then next' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0120: a `proceed` answer moves the run to `ready`, and `next` from `ready` issues the plan's first unaccepted stage.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aProceedAnswerContinuesUnprompted.test.ts > TC-0018-0091 (TDD-0129): A proceed answer to a material question, then next`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0130
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts`
+- Selector: `TC-0018-0092 (TDD-0130): A run in awaiting_input that nobody answers`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts --testNamePattern='TC-0018-0092 \(TDD-0130\): A run in awaiting_input that nobody answers' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, run: { …(3) }, …(1) } to deeply equal { ok: true, run: { …(3) }, …(2) }` at `tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts:31`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts > TC-0018-0092 (TDD-0130): A run in awaiting_input that nobody answers`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0212
 

@@ -104,6 +104,7 @@ interface WorkflowWorkOrder {
   inputs?: { path: string; digest: string }[];
   ledger?: { specId: string; rowIds: string[]; rowSetDigest: string };
   priorStageReceiptRefs?: { ref: string; validity: "valid" | "stale" | "unknown" }[];
+  requiredReviewerRoles?: string[];
   actorHistory?: WorkflowActor[];
 }
 
@@ -125,8 +126,8 @@ interface WorkflowAuthorization {
   answer: { optionIds: string[] };
   effect: QuestionEffect;
   answeredBy: string;
-  operation: "CREATE";
-  target: {
+  operation: "CREATE" | null;
+  target?: {
     kind: "new_capability";
     slotId: string;
     capability: Omit<WorkflowCapability, "slotId">;
@@ -173,6 +174,8 @@ type InputRefusalReason =
   | "unbound-capability"
   | "regression-fix-receipt"
   | "test-fix-receipt"
+  | "test-fix-meaning"
+  | "option"
   | "reviewer-not-independent";
 
 interface InputRefusal {
@@ -210,6 +213,7 @@ interface WorkflowPlan {
   writeScope: string[];
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
+  riskSignals?: string[];
 }
 
 interface WorkflowSnapshot {
@@ -217,7 +221,7 @@ interface WorkflowSnapshot {
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
-  plan?: { route: string; stages: PlanStages; writeScope?: string[] };
+  plan?: { route: string; stages: PlanStages; writeScope?: string[]; riskSignals?: string[] };
   specBinding?: { specId: string };
   diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] } | null;
   capabilities?: WorkflowCapability[];
@@ -225,7 +229,7 @@ interface WorkflowSnapshot {
     authorizationId?: string;
     scopeDigest?: string;
     kind: string;
-    operation: string;
+    operation: string | null;
     effect: string;
     target?: {
       kind: string;
@@ -347,6 +351,8 @@ interface WorkflowFacts {
     rows: { rowId: string; status: string; digest: string; layer?: string; tcLevels?: string[] }[];
   };
   completion?: WorkflowCompletionFacts;
+  // The always-required reviewers of the review profile each skill is routed to.
+  reviewerRoles?: Record<string, string[]>;
 }
 
 // What `finish` observes: validate run in process, the offered verify report, the tool and
@@ -458,7 +464,31 @@ function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): Workflow
     writeScope: proposal.proposedWriteScope,
     expectedBehaviorRefs: proposal.expectedBehaviorRefs,
     observedRefs: proposal.observedRefs,
+    ...(proposal.riskSignals?.length ? { riskSignals: proposal.riskSignals } : {}),
   };
+}
+
+const IMPLEMENTATION_HEAVY_ROLES = [
+  "completion-reviewer",
+  "qa-gatekeeper",
+  "implementation-reviewer",
+];
+
+// A run that restores an authorization check reviews its implementation work harder, and
+// asks nobody first.
+// SIMPLIFIED: a skill whose review profile the facts do not carry gets no reviewer roles.
+// Lift when: the command adapter supplies the reviewer roles of every skill a plan names.
+function requiredReviewerRoles(
+  skill: string | undefined,
+  plan: NonNullable<WorkflowSnapshot["plan"]>,
+  facts: WorkflowFacts,
+): string[] | undefined {
+  if (!skill) return undefined;
+  const restored = (plan.riskSignals ?? []).includes("authorization-restored");
+  if (restored && (skill === "qfai-implement" || skill === "qfai-atdd")) {
+    return IMPLEMENTATION_HEAVY_ROLES;
+  }
+  return facts.reviewerRoles?.[skill];
 }
 
 function notRunRefusalOf(
@@ -524,6 +554,10 @@ function resultRefusals(
   const testFix = result.testFix;
   if (workOrder.stageKind === "test_fix" && (!testFix?.reviewRef || !testFix.rerunRef)) {
     refusals.push({ reason: "test-fix-receipt", subject: "testFix" });
+  }
+  // A changed expectation is a change of meaning, which the fix leaves to SDD.
+  if (workOrder.stageKind === "test_fix" && testFix?.citedAfter !== testFix?.citedBefore) {
+    refusals.push({ reason: "test-fix-meaning", subject: "testFix" });
   }
   (result.debts ?? []).forEach((debt, index) => {
     if (!debt.resolvingOwner?.trim()) {
@@ -1203,6 +1237,99 @@ function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workflo
   };
 }
 
+// Strongest first: the answer takes the strongest effect among the options chosen.
+const EFFECT_STRENGTH: QuestionEffect[] = ["stop", "replan", "proceed"];
+
+function chosenOptions(question: WorkflowQuestion, optionIds: readonly string[]) {
+  const chosen = question.options.filter((option) => optionIds.includes(option.optionId));
+  const { min, max } = question.selection;
+  const valid =
+    new Set(optionIds).size === optionIds.length &&
+    chosen.length === optionIds.length &&
+    optionIds.length >= min &&
+    optionIds.length <= max;
+  return valid ? chosen : undefined;
+}
+
+function answerEvents(authorization: WorkflowAuthorization): WorkflowEvent[] {
+  const events: WorkflowEvent[] = [{ type: "authorization-recorded", authorization }];
+  if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
+  if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
+  return events;
+}
+
+const STATE_AFTER_EFFECT: Record<QuestionEffect, string> = {
+  proceed: "ready",
+  replan: "routing",
+  stop: "cancelled",
+};
+
+function decideAnswer(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  facts: WorkflowFacts,
+): WorkflowDecision {
+  const { run, scopeDigest } = snapshot;
+  const question = snapshot.openQuestions?.find(
+    (openQuestion) => openQuestion.questionId === input.questionId,
+  );
+  const notReady = refusedInput(run, "The answer is not ready.");
+  if (!question || question.kind === "fact") return notReady;
+  const chosen = chosenOptions(question, input.answer?.optionIds ?? []);
+  if (!chosen) return refusedWith(run, [{ reason: "option", subject: "answer" }]);
+  const slotId = question.capability?.slotId;
+  if (
+    input.expectedSequence !== run.sequence ||
+    !input.answeredBy?.trim() ||
+    scopeDigest === undefined ||
+    !/^[a-f0-9]{64}$/.test(scopeDigest) ||
+    !facts.now ||
+    !Number.isFinite(Date.parse(facts.now)) ||
+    new Date(facts.now).toISOString() !== facts.now ||
+    (question.kind === "create" && !slotId)
+  ) {
+    return notReady;
+  }
+  const effect = EFFECT_STRENGTH.find((candidate) =>
+    chosen.some((option) => option.effect === candidate),
+  );
+  if (!effect) return notReady;
+  const authorization: WorkflowAuthorization = {
+    authorizationId: `authorization-${run.sequence + 1}`,
+    runId: run.id,
+    kind: "human_decision",
+    capture: "agent_captured",
+    scopeDigest,
+    recordedAt: facts.now,
+    questionId: question.questionId,
+    question: { text: question.text, options: question.options, selection: question.selection },
+    answer: { optionIds: chosen.map((option) => option.optionId).sort() },
+    effect,
+    answeredBy: input.answeredBy,
+    operation: question.capability && slotId ? "CREATE" : null,
+    ...(question.capability && slotId
+      ? {
+          target: {
+            kind: "new_capability",
+            slotId,
+            capability: {
+              goal: question.capability.goal,
+              covers: question.capability.covers,
+              excludes: question.capability.excludes,
+            },
+          },
+        }
+      : {}),
+  };
+  const events = answerEvents(authorization);
+  const next = {
+    ...run,
+    state: STATE_AFTER_EFFECT[effect],
+    sequence: run.sequence + events.length,
+  };
+  return { verdict: { ok: true, run: next }, events };
+}
+
 export function decide(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
@@ -1222,65 +1349,7 @@ export function decide(
   if (input.operation === "finish") return decideFinish(snapshot, facts);
 
   if (input.operation === "decision" && run.state === "awaiting_input") {
-    const question = snapshot.openQuestions?.find(
-      (openQuestion) => openQuestion.questionId === input.questionId,
-    );
-    const chosen = question?.options.find(
-      (option) => option.optionId === input.answer?.optionIds[0],
-    );
-    const scopeDigest = snapshot.scopeDigest;
-    if (
-      input.expectedSequence !== run.sequence ||
-      question?.kind !== "create" ||
-      input.answer?.optionIds.length !== 1 ||
-      !chosen ||
-      !input.answeredBy?.trim() ||
-      scopeDigest === undefined ||
-      !/^[a-f0-9]{64}$/.test(scopeDigest) ||
-      !facts.now ||
-      !Number.isFinite(Date.parse(facts.now)) ||
-      new Date(facts.now).toISOString() !== facts.now ||
-      !question.capability?.slotId
-    ) {
-      return {
-        verdict: {
-          ok: false,
-          run,
-          error: { code: "invalid-input", message: "The create answer is not ready." },
-        },
-        events: [],
-      };
-    }
-
-    const { goal, covers, excludes, slotId } = question.capability;
-    const authorization: WorkflowAuthorization = {
-      authorizationId: `authorization-${run.sequence + 1}`,
-      runId: run.id,
-      kind: "human_decision",
-      capture: "agent_captured",
-      scopeDigest,
-      recordedAt: facts.now,
-      questionId: question.questionId,
-      question: { text: question.text, options: question.options, selection: question.selection },
-      answer: { optionIds: [chosen.optionId] },
-      effect: chosen.effect,
-      answeredBy: input.answeredBy,
-      operation: "CREATE",
-      target: { kind: "new_capability", slotId, capability: { goal, covers, excludes } },
-    };
-    const events: WorkflowEvent[] = [{ type: "authorization-recorded", authorization }];
-    if (chosen.effect === "stop") events.push({ type: "authorized-stop" });
-    return {
-      verdict: {
-        ok: true,
-        run: {
-          ...run,
-          state: chosen.effect === "stop" ? "cancelled" : "ready",
-          sequence: run.sequence + events.length,
-        },
-      },
-      events,
-    };
+    return decideAnswer(snapshot, input, facts);
   }
 
   if (input.operation === "next" && run.state === "ready") {
@@ -1344,6 +1413,8 @@ export function decide(
       // Lift when: a work order's scope digest, protected targets, effects or non-goals are read.
       ...(plan.writeScope ? { scope: { writeAreas: plan.writeScope } } : {}),
     };
+    const reviewerRoles = requiredReviewerRoles(skill, plan, facts);
+    if (reviewerRoles) nextWorkOrder.requiredReviewerRoles = reviewerRoles;
     const actorHistory = snapshot.actorHistory ?? [];
     if (actorHistory.length > 0) nextWorkOrder.actorHistory = actorHistory;
     const receiptRefs = snapshot.receiptRefs ?? [];
@@ -1412,6 +1483,12 @@ export function decide(
 
   if (input.operation === "next" && run.state === "running" && workOrder) {
     return { verdict: { ok: true, run, workOrder }, events: [] };
+  }
+
+  // An unanswered question is never answered by asking for work: nothing is issued or recorded.
+  if (input.operation === "next" && run.state === "awaiting_input") {
+    const questions = snapshot.openQuestions ?? [];
+    return { verdict: { ok: true, run, workOrder: null, questions }, events: [] };
   }
 
   // SIMPLIFIED: resume reissues the outstanding work order without revalidating the run.

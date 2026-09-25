@@ -148,6 +148,7 @@ waivers:
         - TDD-0097
         - TDD-0098
         - TDD-0099
+        - TDD-0100
         - TDD-0101
         - TDD-0102
         - TDD-0103
@@ -158,6 +159,18 @@ waivers:
         - TDD-0108
         - TDD-0109
         - TDD-0110
+        - TDD-0111
+        - TDD-0120
+        - TDD-0121
+        - TDD-0122
+        - TDD-0123
+        - TDD-0124
+        - TDD-0125
+        - TDD-0126
+        - TDD-0127
+        - TDD-0128
+        - TDD-0129
+        - TDD-0130
         - TDD-0212
         - TDD-0213
         - TDD-0214
