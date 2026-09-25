@@ -1,0 +1,1 @@
+../../../packages/qfai/assets/init/.qfai/assistant/catalog/stage-cost.md

@@ -18,6 +18,7 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "catalog/product.md",
   "catalog/review-gate.rules.yml",
   "catalog/spec_required_files.json",
+  "catalog/stage-cost.md",
   "catalog/structure.md",
   "catalog/tech.md",
   "catalog/test-layers-ci-lanes.md",
