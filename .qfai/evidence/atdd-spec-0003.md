@@ -1164,9 +1164,14 @@ The RED showed bullets 1, 2 and 4 failing against the wrong text, and the
 Oracle proof showed bullets 1 to 3 failing without the item, so every case in
 the selector has been seen to fail.
 
+The Refactor verify fields taken after Round 1, superseded by the ones after Round 2:
+
+```text
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
 - Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783). No production or test file changed in this phase. The suite is the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
 - Refactor verify revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
+```
+
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate on the observed RED against the pre-fix surface at cb835cbff; build-phase GREEN + oracle proof)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the observed RED (bullets 1, 2, 4 at :42:24, :47:24, :55:22) and its assertion-stripped run, reviewed revision cb835cbff1313257292d405fa4b39d0f703b59a5; build-phase GREEN + oracle proof (item deleted, bullets 1-3 at :41:24, :47:24, :51:24), reviewed revision b639815a9f23e6de8f2e59baf28c62f3935814f0. Gate taken after GREEN and refactor, on the kept RED commit
 
@@ -1234,9 +1239,22 @@ packages/qfai/tests/helpers/tempTree.ts
 packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts
 ```
 
+- Round 2: Revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
+- Round 2: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window"
+- Round 2: GREEN result: PASS — Test Files 1 passed (1); Tests 4 passed (4), exit 0. Taken after `packages/qfai/src/cli/commands/init.ts` was restored to its committed fixed text, whose blob is 94c2c242053742f9a45c10e6d8b823390b8749e1
+- Round 2: Oracle proof: mutation — the three lines of the legacy-layout item deleted from `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts`, whose blob is 94c2c242053742f9a45c10e6d8b823390b8749e1 before and after. Command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window", which selects TC-0003-0059 (TDD-0094): generated Copilot instructions state the closed legacy window. Result: FAIL — Test Files 1 failed (1); Tests 3 failed | 1 passed (4), exit 1: `AssertionError: expected '' to contain '.qfai/assistant/steering/'` at `tests/integration/initCopilotLegacyWindow.test.ts:41:24`, `expected '' to contain 'qfai init reports it on stderr as a…'` at `:47:24`, `expected '' to contain 'qfai init --upgrade-assistant-tree'` at `:51:24`. Reverted with git checkout, after which the blob is again 94c2c242053742f9a45c10e6d8b823390b8749e1; the same command then passes: Test Files 1 passed (1); Tests 4 passed (4)
+
+Round 2's RED showed bullets 1, 2 and 4 failing against the pre-fix text, and its
+Oracle proof showed bullets 1 to 3 failing without the item, so every case in
+the selector has again been seen to fail.
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
+- Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783), exit 0. No production or test file changed in this phase. The suite is the one recorded after Round 1: the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
+- Refactor verify revision: 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
+
 ## Coverage Depth Matrix
 
-See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
+See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / ⚠️ 130 / ❌ 176, with 372 not applicable, across 921 scored cells.
 
 ## Work Orders Summary
 
@@ -1320,6 +1338,9 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
 | 77 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-implement review-fix: TDD-0094 Round 2 RED, taken on the tree with the legacy-layout item in `buildCopilotInstructions` put back to its pre-fix text, and its assertion-stripped run | #tdd-0094; review-20260925140000000 <!-- qfai:not-a-citation --> | #tdd-0094 Round 2 RED fields; packages/qfai/src/cli/commands/init.ts left at its pre-fix text, uncommitted, for the RED gate | PASS |
 | 78 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement review-fix: TDD-0094 Round 2 RED phase gate at routing phase red, on the live tree before the fix was restored | #tdd-0094 Round 2 | reviewed revision working-tree+10211e58331aa55965284d65840388a810a5cdac73312e4634f5d957ea196a94 | PASS |
+| 79 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Round 2 GREEN on the restored fix, and its Oracle proof | #tdd-0094 Round 2 | packages/qfai/src/cli/commands/init.ts restored to blob 94c2c242053742f9a45c10e6d8b823390b8749e1; #tdd-0094 Round 2 Revision, GREEN and Oracle proof fields | PASS |
+| 80 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Refactor verify after Round 2 | #tdd-0094 | Refactor verify fields, the Round 1 copies fenced as superseded; the REV of the TDD-0094 ledger row | PASS |
+| 81 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: correct the matrix totals and the TDD-0094 status lines of this file | coverage-depth-spec-0003.md; #tdd-0094 | Coverage Depth Matrix, Gaps / Open risks and Final status | PASS |
 
 ## Cross-spec obligations
 
@@ -1356,8 +1377,9 @@ Recorded per row under `## Ledger rows advanced`.
 - The comments inside the `TDD-0037` count case still speak of four and three installs.
   Only the titles were in scope.
 
-- `TDD-0094` stands at `refactor`. Its `qa-gatekeeper` gates, both reviews and
-  its checkpoint have not run.
+- `TDD-0094` stands at `review-fix`, in Round 2. `qa-gatekeeper#2` passed the
+  Round 2 RED. Its GREEN, Oracle proof and Refactor verify are recorded; the
+  build-phase gate on them, both reviews and the checkpoint are owed.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
@@ -1369,5 +1391,6 @@ falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
 `implementation-reviewer` passed each one. `TDD-0061`, `TDD-0093` and `TDD-0037`
 closed on the full suite.
 
-`TDD-0094` stands at `refactor`: its RED, GREEN, Oracle proof and Refactor verify
-are recorded, and its gates, reviews and checkpoint are owed.
+`TDD-0094` stands at `review-fix`, in Round 2: `qa-gatekeeper#2` passed its
+Round 2 RED, and its GREEN, Oracle proof and Refactor verify are recorded. The
+build-phase gate on the GREEN, both reviews and the checkpoint are owed.
