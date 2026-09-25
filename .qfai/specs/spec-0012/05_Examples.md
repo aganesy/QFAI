@@ -90,13 +90,6 @@
 - When `qfai prototyping iterate --cycle 9` runs.
 - Then it returns exit 64. `prototyping.json#stopReason` is `"converged"`. `acceptedIterationIndex === 8`.
 
-## EX-0012-0111: Pivot triggered by 3-low-IA + latest lap-\*
-
-- BR-Ref: BR-0012-0021
-- Given iter-05/06/07 each with `informationArchitecture: "acceptable"` and iter-07 with `layoutAntiPatternsDetected: ["lap-008-no-back-affordance"]`.
-- When `computePivotDirective(history)` runs.
-- Then it returns `"pivot"`. With latest `layoutAntiPatternsDetected: []`, returns `"refine"`.
-
 ## EX-0012-0112: Cycle ≥1 hash mismatch forces re-run
 
 - BR-Ref: BR-0012-0026
@@ -147,13 +140,6 @@
 - Given `iter-NN/review.json` with `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` and `informationArchitecture: "strong"`.
 - When validate runs.
 - Then `QFAI-PROT-021` is raised because the lap detection caps `informationArchitecture` at `acceptable`. With `informationArchitecture: "acceptable"` the finding is not raised.
-
-## EX-0012-0119: ordinalIndex monotonic mapping
-
-- BR-Ref: BR-0012-0022
-- Given the ordinal scale `weak < acceptable < strong < exceptional`.
-- When `ordinalIndex` is applied.
-- Then `ordinalIndex(weak) === 0`, `ordinalIndex(acceptable) === 1`, `ordinalIndex(strong) === 2`, `ordinalIndex(exceptional) === 3`. Other inputs are rejected by the type guard.
 
 ## EX-0012-0120: Generator and evaluator are distinct sub-agents
 
@@ -576,7 +562,7 @@
 - BR-Ref: BR-0012-0057
 - Given a frozen license catalog with sources `[unsplash, pexels]` AND an add-only patch adding `wikimedia-commons` (CC BY-SA tier),
 - When `qfai prototyping iterate --license-patch ./patch.yaml` runs,
-- Then the new frozen catalog is written with `[unsplash, pexels, wikimedia-commons]` AND `prototyping.json#licensePatchAudit[]` appends `{appliedAt: "2026-05-24T...", patchSha256: "abc...", addedSources: ["wikimedia-commons"]}`. A second invocation attempting to DELETE `pexels` is rejected with the hint to use the cycle-0-restart path. Async patch I/O failure surfaces `qfai prototyping iterate: license-patch read failed: ENOENT ./patch.yaml`.
+- Then the new frozen catalog is written with `[unsplash, pexels, wikimedia-commons]` AND `prototyping.json#licensePatchAudit[]` appends `{appliedAt: "2026-05-24T...", patchSha256: "abc...", addedSources: ["wikimedia-commons"], addedLicenseTiers: {"wikimedia-commons": ["CC BY-SA"]}}`. A patch that adds only a source, with no tier, appends a row without `addedLicenseTiers`. A second invocation attempting to DELETE `pexels` is rejected with the hint to use the cycle-0-restart path. Async patch I/O failure surfaces `qfai prototyping iterate: license-patch read failed: ENOENT ./patch.yaml`.
 
 ## EX-0012-0179: `iter-NN/iterate-context.json` Subagent Hint (SHOULD)
 

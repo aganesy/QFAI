@@ -22,6 +22,30 @@
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T06:04:36Z |
 | CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T07:34:27Z |
 | CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-25T10:20:50Z |
+| CR-20260925-0001 | `.qfai/specs/spec-0012/tdd/test-list.md`                                                                                                                                                 | re-derive | user (Claude Code structured question)                         | 2026-09-25T22:32:07Z |
+| CR-20260925-0002 | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`; `06_Test-Cases.md`; `tdd/test-list.md`                                                                                                | re-derive | user (Codex interactive decision)                              | -                    |
+| CR-20260925-0003 | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`; `04_Business-Rules.md`; `05_Examples.md`; `06_Test-Cases.md`; `tdd/test-list.md`                                                      | re-derive | user (Codex interactive decision)                              | 2026-09-25T22:32:07Z |
+| CR-20260925-0004 | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`; `04_Business-Rules.md`; `05_Examples.md`; `06_Test-Cases.md`; `tdd/test-list.md`                                                      | re-derive | user (Codex interactive decision)                              | 2026-09-25T22:32:07Z |
+| CR-20260925-0005 | `.qfai/specs/spec-0012/tdd/test-list.md`                                                                                                                                                 | re-derive | user (Codex interactive decision)                              | 2026-09-25T22:32:07Z |
+
+## 2026-09-26 — Selector, proof and obligation repairs
+
+Four approved Change Requests are applied, and a fifth in part. Each one's `Resolution` lists the
+rows it touched.
+
+| Operation | Sub-op | Subject                                                                                                                                            | Result                                                                                                                           |
+| --------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| UPDATE    | MODIFY | `CR-20260925-0001`: 24 rows whose selector named the case only in a comment                                                                        | Each names an executable test title. Six rows are split one boundary per row; `TDD-0591` is the positive Reviewer dispatch case. |
+| UPDATE    | MODIFY | `CR-20260925-0002`: `TDD-0453`, `0456`, `0457`, `0459`, `0465`, `0486`                                                                             | Reset. Four matrix rows are split one boundary per row. The carrier-only rows of the same request are not in this pass.          |
+| UPDATE    | REMOVE | `CR-20260925-0003`: `AC-0012-0026`, `AC-0012-0027`, `BR-0012-0021`, `BR-0012-0022`, `EX-0012-0111`, `EX-0012-0119`, `TC-0012-0332`, `TC-0012-0333` | The pivot rule is retired, with the `ordinalIndex` mapping only it used. `TDD-0342` is retired and reserved.                     |
+| UPDATE    | MODIFY | `CR-20260925-0004`: `AC-0012-0069`, `BR-0012-0057`, `EX-0012-0178`, `TC-0012-0468`                                                                 | The audit row has three required fields and an optional tier map. `TDD-0507` is split into four boundary rows.                   |
+| UPDATE    | MODIFY | `CR-20260925-0005`: `TDD-0489`, `0498`, `0499`, `0500`                                                                                             | Reset. `TDD-0498` and `TDD-0500` are split, each gaining an `Integration` row for its command-line boundary.                     |
+
+Every reset row is at `todo` with its request in `DR-ID` and its prior `Evidence` kept after
+`prior:`. Every new row starts at `todo`. The new rows are `TDD-0590` to `TDD-0620`.
+
+`TC-0012-0341` keeps `AC-0012-0023` and now cites no example. The only other example stating the
+`pivotDirective` value set, `EX-0012-0117`, is superseded.
 
 ## 2026-09-04
 

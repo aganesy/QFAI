@@ -59,6 +59,21 @@ const KNOWN_TEST_FILE_DRIFT: readonly string[] = [
   "spec-0012 TDD-0506 TC-0012-0466",
   "spec-0012 TDD-0507 TC-0012-0468",
   "spec-0012 TDD-0508 TC-0012-0469",
+  // Split out of a listed row by an approved Change Request. Each names its
+  // parent's file, so it leaves this list with the repair of that row.
+  "spec-0012 TDD-0606 TC-0012-0436",
+  "spec-0012 TDD-0607 TC-0012-0436",
+  "spec-0012 TDD-0608 TC-0012-0436",
+  "spec-0012 TDD-0609 TC-0012-0459",
+  "spec-0012 TDD-0610 TC-0012-0460",
+  "spec-0012 TDD-0611 TC-0012-0460",
+  "spec-0012 TDD-0612 TC-0012-0457",
+  "spec-0012 TDD-0613 TC-0012-0457",
+  "spec-0012 TDD-0616 TC-0012-0452",
+  "spec-0012 TDD-0617 TC-0012-0452",
+  "spec-0012 TDD-0618 TC-0012-0468",
+  "spec-0012 TDD-0619 TC-0012-0468",
+  "spec-0012 TDD-0620 TC-0012-0468",
 ];
 
 const ANNOTATION = /QFAI:SPEC-\d{4}:(TC-\d{4}-\d{4})/g;

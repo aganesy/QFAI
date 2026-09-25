@@ -89,18 +89,6 @@
 - When validated,
 - Then every entry in `layoutAntiPatternsDetected[]` is an identifier declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is what `loadKnownLapIds` reads. A token no entry declares raises `QFAI-PROT-002`. The registry is the list: writing it out here is a second copy that goes stale the next time an entry is added or retired.
 
-## AC-0012-0026: pivotDirective Rule — pivot
-
-- Given the latest 3 iters each have `informationArchitecture ∈ {weak, acceptable}` and the latest iter has `layoutAntiPatternsDetected.length > 0`,
-- When `computePivotDirective(history)` runs,
-- Then it returns `"pivot"`.
-
-## AC-0012-0027: pivotDirective Rule — continue
-
-- Given the latest iter has `≥ 2` of the 4 UX axes strictly improved by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter,
-- When `computePivotDirective(history)` runs,
-- Then it returns `"continue"`. Otherwise (and not `pivot`) it returns `"refine"`.
-
 ## AC-0012-0028: Deterministic Stop on Convergence
 
 - Status: superseded by AC-0012-0042 (AND-aggregator across all spec × screen pairs of 4-axes-exceptional + lap empty + dmv empty; no quantitative AC-pass thresholds). See `09_delta.md` CHG-002 OP-PURGE-073.
@@ -450,7 +438,7 @@
 - REQ-Refs: REQ-0012-0071
 - Given `qfai prototyping iterate --license-patch <file>` invoked with an add-only diff,
 - When the patch is applied,
-- Then the new frozen catalog MUST be written AND an audit row MUST be appended to `prototyping.json#licensePatchAudit[]` carrying `{appliedAt, patchSha256, addedSources[]}`.
+- Then the new frozen catalog MUST be written AND an audit row MUST be appended to `prototyping.json#licensePatchAudit[]` carrying `{appliedAt, patchSha256, addedSources[]}`, plus `addedLicenseTiers` when the patch adds license tiers. The row carries no other field.
 - And deletions or modifications MUST be rejected with the hint to use the cycle-0-restart path.
 - And async patch I/O errors MUST be surfaced with explicit operator-facing diagnostic.
 

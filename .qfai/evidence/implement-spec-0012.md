@@ -357,6 +357,12 @@ is declared.
 
 - `record:unchecked`, `TDD-0577`, Round 1: the row-level `qa-gatekeeper: PASS` line does not name the attempt, round and trees its one attempt covered — the RED gate on the rebuilt mutated tree and the build-phase GREEN at 79af8ad63. That is written only in the `qa-gatekeeper attempts` line. The gate ran after the ledger had already moved to `green` and `refactor`.
 
+Open entries from the cross-spec re-review of the completed spec-0012 rows. Each
+is repaired in place before spec-0012 completion is declared.
+
+- `record:unchecked`, `TDD-0575`, entry header in `atdd-spec-0012.md`: `Predicate to break`, `Mutation` and `Why it fails` still describe Round 1's proof, line 459 of `prototypingIterate.ts` changed from `9` to `0`. Round 2 replaced that proof. Its tree changes `main.ts:398` from `?? 9` to `?? 10` together with line 473, and Test 6b fails at line 245 on `expected '' to contain '(cycle 9)'`. The lines sit inside the audited entry, so the repair needs a record re-attestation.
+- `record:unchecked`, `TDD-0372`, the row's only cycle: the row passed on its first run and records no falsifiability trio (`Satisfied-by`, falsifiability command, falsifiability result). Its `Evidence` cell cites the RED of `TDD-0371`, which ran a different test. If no run of this row's own test against a mutated `MAX_ITERATION_INDEX` can be found, nothing honest can be written, and the entry is reclassified as blocking.
+
 ---
 
 # CR-20260925-0019 preflight and TDD-0364 test fix (2026-09-24 UTC)

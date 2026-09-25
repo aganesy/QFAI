@@ -9,7 +9,7 @@
 - Approved by: `user (Codex interactive decision)`
 - Approved at: `2026-09-24T21:36:00Z`
 - Approved option: `approved defect repair`
-- Applied at: `-`
+- Applied at: `2026-09-25T22:32:07Z`
 - Superseded by: `-`
 
 ## Context
@@ -122,4 +122,25 @@ missing exact-output, negative-input, boundary and CLI-layer proof, followed by
 
 ## Resolution
 
-Pending explicit approval and owner rerun.
+Applied. The owner rerun and the ledger sweep (actions 1 and 2) are done. Action 3, the tests and
+proof of each reset or new row, is the downstream work this releases. No test case text changes.
+
+- **Reset.** `spec-0012/TDD-0489`, `TDD-0498`, `TDD-0499` and `TDD-0500` are at `todo` with this
+  record in `DR-ID`, each with its prior `Evidence` kept after `prior:`. No row is retired.
+- **`TDD-0498`** keeps the helper boundary, `summary-counts-and-first-offenders`, on the test that
+  names the top three categories with their offenders. `TDD-0614` is a new `Integration` row for
+  the stdout line, `cli-stdout-line`. No test exists for it, so its `Test file` and `Selector` are
+  `-` until `/qfai-atdd` writes them.
+- **`TDD-0500`** keeps the parser boundary, `parser-pads-to-four-digits`. Three new rows take the
+  rest:
+
+  | Row        | Boundary                   | Layer         |
+  | ---------- | -------------------------- | ------------- |
+  | `TDD-0615` | `cli-resolves-spec-prefix` | `Integration` |
+  | `TDD-0616` | `rejects-above-9999`       | `unit`        |
+  | `TDD-0617` | `rejects-zero`             | `unit`        |
+
+- **`TDD-0499` is not split.** All seven inputs fail with the same literal diagnostic, so they are
+  one boundary seen from seven angles. The row's test still needs the six inputs the case lists.
+- **`TDD-0489` is not split.** Its case states one boundary: the rejection text ends with the hint.
+  Its selector stays until the test that fails on trailing text exists.
