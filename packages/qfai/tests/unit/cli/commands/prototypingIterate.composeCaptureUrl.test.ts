@@ -79,11 +79,13 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result.reason).not.toMatch(/options\.targetUrl/);
   });
 
+  // QFAI:SPEC-0012:TC-0012-0486
   it("falls back to targetUrl when screen URL is undefined", () => {
     const result = composeCaptureUrl(undefined, "http://localhost:5173");
     expect(result).toEqual({ ok: true, url: "http://localhost:5173" });
   });
 
+  // QFAI:SPEC-0012:TC-0012-0486
   it("falls back to null when both screen URL and targetUrl are undefined", () => {
     const result = composeCaptureUrl(undefined, undefined);
     expect(result).toEqual({ ok: true, url: null });
