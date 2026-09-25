@@ -285,7 +285,7 @@ Round: 1 | 2 | 2b
 Review series: <reviewed artifact> + <reviewer role> + <replacement ordinal>   # the budget is counted per series, not per instance
 Result: PASS | REVISE
 Reviewed revision: <git rev> | working-tree+<content hash>
-Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
+Audited evidence hash: <content hash of the evidence read>   # one line per EX round reviewed, as audited-evidence-hash.md defines
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:

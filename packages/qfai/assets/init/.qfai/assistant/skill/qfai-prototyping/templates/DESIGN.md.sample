@@ -46,9 +46,9 @@ accessibility:
 
 <!-- QFAI-SAMPLE-DESIGN-MD: this is the qfai sample brand, NOT your product's brand.
      Replace the front-matter and the body below with this product's own brand SSOT
-     (`/qfai-sdd` Phase 0 authors it), then DELETE this comment. While this comment
-     is present `qfai validate` reports QFAI-DCON-034 and /qfai-sdd Phase 0 refuses to
-     freeze the file's sha256 as the project's brand contract. -->
+     (the design lock step of `/qfai-sdd` authors it), then DELETE this comment.
+     While this comment is present `qfai validate` reports QFAI-DCON-034 and
+     /qfai-sdd refuses to freeze the file's sha256 as the project's brand contract. -->
 
 # Brand Philosophy
 

@@ -38,9 +38,9 @@ implementation.
 
 **Whether a capability should exist** and **where it comes from** are different
 questions, and only the first is a Change Request. The second is what rungs 2 to
-5 answer, and a design stage is where it is decided: contracts-first authors the
-contract before any source exists, so a contract that mandates a shape has
-already settled the source. By the time a source file is written, reopening it
+5 answer, and a design stage is where it is decided: a contract is written
+before any source exists, so a contract that mandates a shape has already
+settled the source. By the time a source file is written, reopening it
 costs a Change Request.
 
 So a decision that selects where a capability or a body of reference data comes

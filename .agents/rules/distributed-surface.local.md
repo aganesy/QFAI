@@ -107,7 +107,7 @@ already covers at a different grain.
 
 ## Where internal IDs are fine
 
-- `.qfai/specs/`, `.qfai/discussion/`, `.qfai/contracts/`
+- `.qfai/spec/`, `.qfai/discussion/`, `.qfai/evidence/`
 - `CHANGELOG.md`
 - `packages/qfai/docs/`
 - Commit messages, and pull request and issue bodies

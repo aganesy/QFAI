@@ -618,7 +618,7 @@ export async function runPrototypingIterate(
     error(
       "qfai prototyping iterate: DESIGN.md.lock.yaml exists but " +
         "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run /qfai-sdd Phase 0 to regenerate the lock.",
+        "Re-run the design lock step of /qfai-sdd to regenerate the lock.",
     );
     return 2;
   }
@@ -637,7 +637,7 @@ export async function runPrototypingIterate(
     error(
       "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
         `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
-        "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze.",
+        "DESIGN.md was edited after the SDD freeze; re-run the design lock step of /qfai-sdd to refreeze.",
     );
     return 2;
   }

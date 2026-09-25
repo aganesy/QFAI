@@ -939,7 +939,7 @@ export async function runPrototypingCertify(
     error(
       "qfai prototyping certify: DESIGN.md.lock.yaml exists but " +
         "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run /qfai-sdd Phase 0 to regenerate the lock before sealing.",
+        "Re-run the design lock step of /qfai-sdd to regenerate the lock before sealing.",
     );
     return 2;
   }

@@ -339,7 +339,7 @@ are opened as questions, and the session ends `no-question` on that write.
 
 The count bounds the rounds between agents. It does not end the session while a
 critical decision is unanswered. The rules are in
-`.qfai/assistant/constitution/review-convergence.md`.
+`.qfai/assistant/rule/review-convergence.md`.
 
 ## Under a no-question mode
 

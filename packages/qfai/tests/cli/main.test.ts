@@ -474,7 +474,8 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
-    expect(entry).toContain("adopter-owned assistant/catalog/**");
+    expect(entry).toContain("rule/*.local.md overlays");
+    expect(entry).not.toContain("assistant/catalog");
   });
 });
 
