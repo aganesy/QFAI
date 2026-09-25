@@ -74,20 +74,20 @@ from a fresh clone.
 
 `summary.json`:
 
-| Field              | Content                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `runId`            | The run ID                                                                                                   |
-| `qfaiVersion`      | The package version that wrote the run. The only version the file carries                                    |
-| `route`            | The checked route                                                                                            |
-| `completionTarget` | `qfai_done` or `working_tree`                                                                                |
-| `state`            | The state when this tracked summary was last written; the runtime journal holds the current state            |
-| `targetBindings`   | `{ slotId, flowId, storyIds }` per bound `new_story` slot. IDs only, no story text                           |
-| `stages`           | `{ stageInstanceId, stageKind, outcome, testObservation, receiptDigests, reviewerRoles }` per stage instance |
-| `authorizationIds` | The authorizations under `authorizations/`                                                                   |
-| `debts`            | `{ findingCode, path, cause, owningFlow, detectingCommand, resolvingOwner, blockingExtent }` each            |
-| `requestDigest`    | HMAC-SHA-256 of the request text under the run's digest key, lowercase hex                                   |
-| `createdAt`        | When the run was created                                                                                     |
-| `updatedAt`        | When the file was last written                                                                               |
+| Field              | Content                                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runId`            | The run ID                                                                                                                                                |
+| `qfaiVersion`      | The package version that wrote the run. The only version the file carries                                                                                 |
+| `route`            | The checked route                                                                                                                                         |
+| `completionTarget` | `qfai_done` or `working_tree`                                                                                                                             |
+| `state`            | The state when this tracked summary was last written; the runtime journal holds the current state                                                         |
+| `targetBindings`   | `{ slotId, flowId, storyIds }` per bound `new_story` slot. IDs only, no story text                                                                        |
+| `stages`           | `{ stageInstanceId, stageKind, outcome, testObservation, receiptDigests, reviewerRoles }` per stage instance                                              |
+| `authorizationIds` | The authorizations under `authorizations/`                                                                                                                |
+| `debts`            | `{ findingCode, path, cause, owningFlow, detectingCommand, resolvingOwner, blockingExtent }` each; `owningFlow` may be `null` in a run that binds no flow |
+| `requestDigest`    | HMAC-SHA-256 of the request text under the run's digest key, lowercase hex                                                                                |
+| `createdAt`        | When the run was created                                                                                                                                  |
+| `updatedAt`        | When the file was last written                                                                                                                            |
 
 - **First write.** Tracked evidence is first written at the run's first
   `proceed` authorization or its first accepted stage result, as
