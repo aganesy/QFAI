@@ -146,3 +146,23 @@ flow, acceptance criterion or example still missing a test in its layer. E2E
 tests cover flows, integration and API tests cover criteria, and other tests
 cover examples. Record a permitted exception in `decisions.md` when a test is
 intentionally absent.
+
+## Former migration memos
+
+QFAI 2.0.0 has no `.qfai/assistant/process/` directory, and `qfai init` writes
+no migration memo. Step 3 moves the memos a 1.x release wrote to
+`.qfai/assistant/process/migrations/` into
+`.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`.
+Nothing reads them after that. Keep them as a record, or delete them once the
+migration is committed.
+
+The upgrade notes for each release are in the QFAI changelog, under that
+release's heading. The memos announced deprecation windows, and every one of
+them closed at 1.10.0. A project upgrading from an earlier release meets these
+forms as errors for the first time:
+
+| Old form                                                             | Current form                                                                               |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `playwright-cli` as the browser wrapper or `prototyping.browserTool` | `playwright`                                                                               |
+| A reader of `.qfai/output/validate.json`                             | `.qfai/report/validate-<profile>.json`, or `.qfai/report/validate.json` for the latest run |
+| A hand-written, per-skill handoff file                               | The canonical `handoff.yaml`. `npx qfai handoff upgrade <legacy-file>` converts one        |
