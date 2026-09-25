@@ -1092,17 +1092,24 @@ describe("changed obligations and their bindings", () => {
     ).toBe(true);
   });
 
-  it.each(["#", "##"])(
-    "compares acceptance-criterion %s headings without a catalog table",
-    async (level) => {
+  const headingForms: [level: string, title: string][] = [
+    ["#", ": Title"],
+    ["#", ""],
+    ["##", ": Title"],
+    ["##", ""],
+  ];
+
+  it.each(headingForms)(
+    "compares acceptance-criterion headings shaped '%s AC-NNNN%s' without a catalog table",
+    async (level, title) => {
       const before = [
         "# Acceptance Criteria",
         "",
-        `${level} AC-0099-0001: First outcome`,
+        `${level} AC-0099-0001${title}`,
         "",
         "The initial boundary applies.",
         "",
-        `${level} AC-0099-0002: Second outcome`,
+        `${level} AC-0099-0002${title}`,
         "",
         "The stable boundary applies.",
       ].join("\n");
@@ -1123,26 +1130,86 @@ describe("changed obligations and their bindings", () => {
     },
   );
 
-  it.each(["#", "##"])("compares business-rule %s headings without a rule table", async (level) => {
-    const before = [
-      "# Business Rules",
-      "",
-      `${level} BR-0099-0001: First behavior`,
-      "",
-      "The initial rule applies.",
-      "",
-      `${level} BR-0099-0002: Second behavior`,
-      "",
-      "The stable rule applies.",
-    ].join("\n");
-    const after = before.replace("The initial rule applies.", "The stronger rule applies.");
-    await writeFile(path.join(root, brPath), after, "utf-8");
-    await ledger([active("BR-0099-0001", "src/first.ts"), active("BR-0099-0002", "src/second.ts")]);
-    mockHistory([`1\t1\t${brPath}`], { baseRules: before });
+  it.each(headingForms)(
+    "compares business-rule headings shaped '%s BR-NNNN%s' without a rule table",
+    async (level, title) => {
+      const before = [
+        "# Business Rules",
+        "",
+        `${level} BR-0099-0001${title}`,
+        "",
+        "The initial rule applies.",
+        "",
+        `${level} BR-0099-0002${title}`,
+        "",
+        "The stable rule applies.",
+      ].join("\n");
+      const after = before.replace("The initial rule applies.", "The stronger rule applies.");
+      await writeFile(path.join(root, brPath), after, "utf-8");
+      await ledger([
+        active("BR-0099-0001", "src/first.ts"),
+        active("BR-0099-0002", "src/second.ts"),
+      ]);
+      mockHistory([`1\t1\t${brPath}`], { baseRules: before });
+
+      const issues = await validateTraceabilityIntegrity(root, stubConfig);
+      const drift = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
+      expect(drift.map((entry) => entry.refs)).toEqual([["BR-0099-0001"]]);
+    },
+  );
+
+  async function compareCriteria(before: string, after: string): Promise<string[][]> {
+    await writeFile(path.join(root, acPath), after, "utf-8");
+    await ledger([active("AC-0099-0001", "src/first.ts"), active("AC-0099-0002", "src/second.ts")]);
+    mockHistory([`1\t1\t${acPath}`], { baseCriteria: before });
 
     const issues = await validateTraceabilityIntegrity(root, stubConfig);
-    const drift = issues.filter((entry) => entry.code === "QFAI-TRACE-001");
-    expect(drift.map((entry) => entry.refs)).toEqual([["BR-0099-0001"]]);
+    expect(issues.filter((entry) => entry.code === "QFAI-TRACE-003")).toEqual([]);
+    return issues.filter((entry) => entry.code === "QFAI-TRACE-001").map((entry) => entry.refs);
+  }
+
+  it("compares criteria written as the template's Gherkin scenarios", async () => {
+    const before = [
+      "# 03 Acceptance Criteria",
+      "",
+      "## AC Gherkin (required)",
+      "",
+      "```gherkin",
+      "# AC-0099-0001",
+      "Scenario: First outcome",
+      "  Then the initial result appears",
+      "```",
+      "",
+      "```gherkin",
+      "# AC-0099-0002",
+      "Scenario: Second outcome",
+      "  Then the stable result appears",
+      "```",
+    ].join("\n");
+    const after = before.replace("the initial result", "the stronger result");
+
+    expect(await compareCriteria(before, after)).toEqual([["AC-0099-0001"]]);
+  });
+
+  it("reads a Gherkin comment inside its own criterion's section as that criterion", async () => {
+    const before = [
+      "# 03 Acceptance Criteria",
+      "",
+      "## AC-0099-0001: First outcome",
+      "",
+      "```gherkin",
+      "# AC-0099-0001",
+      "Scenario: First outcome",
+      "  Then the initial result appears",
+      "```",
+      "",
+      "## AC-0099-0002: Second outcome",
+      "",
+      "The stable boundary applies.",
+    ].join("\n");
+    const after = before.replace("the initial result", "the stronger result");
+
+    expect(await compareCriteria(before, after)).toEqual([["AC-0099-0001"]]);
   });
 
   async function proofFixture(

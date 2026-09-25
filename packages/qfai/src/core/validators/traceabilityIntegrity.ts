@@ -147,9 +147,18 @@ function obligationContent(text: string, kind: "BR" | "AC"): Map<string, string>
     }
   }
   const normalized = text.replace(/\r\n/g, "\n");
+  // A marker is the ID alone or followed by `: title` — `## BR-0001: Title`,
+  // `## AC-0001`, and the `# AC-0001` comment that opens a template Gherkin
+  // scenario. That comment inside its own `## AC-0001` section labels the
+  // criterion the section already holds, so it does not start a second one.
   const markers = [
-    ...normalized.matchAll(/^([#]{1,6})\s+((?:BR|AC)-\d{4}(?:-\d{4})?):[^\n]*$/gm),
-  ].filter((marker) => marker[2]?.startsWith(`${kind}-`));
+    ...normalized.matchAll(/^(#{1,6})[ \t]+((?:BR|AC)-\d{4}(?:-\d{4})?)(?::[^\n]*)?[ \t]*$/gm),
+  ]
+    .filter((marker) => marker[2]?.startsWith(`${kind}-`))
+    .filter((marker, index, all) => {
+      const enclosing = all[index - 1];
+      return !(marker[1] === "#" && enclosing?.[1] !== "#" && enclosing?.[2] === marker[2]);
+    });
   for (const [index, marker] of markers.entries()) {
     const id = marker[2];
     if (!id) continue;
