@@ -22,6 +22,41 @@
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T06:04:36Z |
 | CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T07:34:27Z |
 | CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-25T10:20:50Z |
+| CR-20260925-0002 | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md`; `06_Test-Cases.md`; `tdd/test-list.md`                                                                                                | re-derive | user (Codex interactive decision)                              | -                    |
+
+## 2026-09-26 — Completed rows that no test proves
+
+The user approved `CR-20260925-0002`. This pass applies it to thirteen of the
+fourteen rows whose `done` rested only on an annotation carrier: each selector
+selects no test, and the only file naming the case is
+`tests/integration/qfai-traceability.md`, which declares no test.
+
+| Operation | Sub-op | Subject                                                                    | Result                                                                                                                                              |
+| --------- | ------ | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UPDATE    | MODIFY | `TDD-0295`, `0341`, `0346`, `0348`, `0354`, `0356`, `0357`, `0358`, `0362` | Reset to `todo` with the Change Request in `DR-ID`. Each case stays active and needs a test that runs.                                              |
+| UPDATE    | REMOVE | `TDD-0349`, `0359`; `TC-0012-0340`, `TC-0012-0350`                         | Retired and reserved. Both cases declare `Level: L1` under a superseded criterion, so they and their carrier lines are removed.                     |
+| UPDATE    | REMOVE | `TDD-0351`; `TC-0012-0342`; `AC-0012-0030`                                 | Retired and reserved. The case and its criterion were both superseded, and the case was the criterion's only one, so both go with the carrier line. |
+| UPDATE    | REMOVE | `TDD-0353`                                                                 | Retired and reserved. Its case `TC-0012-0344` declares no `Level`, so it owes no row and stays.                                                     |
+
+Each retired row's `Evidence` is kept verbatim under `## TDD-ID reservations`.
+No test is deleted, because none of the retired selectors selected one.
+
+`TDD-0340` stays `done`. Its case `TC-0012-0330` is the only case for
+`EX-0012-0117`, the only example for `BR-0012-0019`, so retiring it removes the
+example and the rule as well. Those files are outside the request, and
+`CR-20260926-0002` is raised for that chain.
+
+The owner rerun still owes the resets of the six rows that are not carrier-only
+(`TDD-0453`, `0456`, `0457`, `0459`, `0465`, `0486`), and the matrix splits and
+new boundary rows. `Applied at` is set once those and the `TDD-0340` retirement
+are done. The tests the reset rows need then follow from
+`/qfai-implement spec-0012` and `/qfai-atdd spec-0012`.
+
+`TDD-0346` and `TDD-0356` may not survive that run as written: the shipped
+`SKILL.md` is over 500 lines where `TC-0012-0337` allows 130, and
+`qfai prototyping iterate` runs cycle 0 with no lock where `TC-0012-0347`
+expects exit 2. If the run confirms either, it raises a separate intent Change
+Request.
 
 ## 2026-09-04
 
