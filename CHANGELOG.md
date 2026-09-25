@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0014's traceability ledger binds the verify-stage obligations**
+  (#2309). BR-0014-0026..0033 and AC-0014-0023..0029 had no ledger row, so a
+  branch that changed them could not be checked against the
+  `qfai-verify` files that realize them. Each is now bound to its test file
+  and to `SKILL.md` or `references/orchestrated-mode.md`. The
+  `verify.json` rule is a planned binding on
+  `references/verify-output-contract.md`, which states it unedited. The
+  dogfood pin for this ledger is struck.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
