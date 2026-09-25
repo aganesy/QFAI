@@ -220,12 +220,49 @@ function terminatorOf(line: string | undefined): string {
   return (line ?? "").endsWith("\r") ? "\r" : "";
 }
 
+const REVIEW_DIRECTIVE_PREFIX = "Read `REVIEW.md` before reviewing a pull request";
+const ENTRY_DIRECTIVE_PREFIX = "Send a first free-text change request to the `qfai-run` skill";
+
+function templateLine(template: string | null, prefix: string): string | undefined {
+  return template?.split(/\r?\n/).find((line) => line.startsWith(prefix));
+}
+
 /** Prepend the template's review directive only when no operative copy exists. */
 export function addReviewPointer(existing: string, template: string | null): string {
-  const pointer = template
-    ?.split(/\r?\n/)
-    .find((line) => line.startsWith("Read `REVIEW.md` before reviewing a pull request"));
-  if (pointer === undefined) return existing;
+  const pointer = templateLine(template, REVIEW_DIRECTIVE_PREFIX);
+  return pointer === undefined ? existing : prependDirective(existing, pointer, true);
+}
+
+/**
+ * Prepend the template's directives that have no operative copy.
+ *
+ * The entry directive is always owed and ends on top. The review directive is
+ * owed only where the project keeps a `REVIEW.md` for it to point at.
+ */
+export function addEntryPointDirectives(
+  existing: string,
+  template: string | null,
+  hasReviewPolicy: boolean,
+): string {
+  const reviewed = hasReviewPolicy ? addReviewPointer(existing, template) : existing;
+  return addEntryDirective(reviewed, template);
+}
+
+/** Prepend the template's entry directive only when no operative copy exists. */
+export function addEntryDirective(existing: string, template: string | null): string {
+  const entry = templateLine(template, ENTRY_DIRECTIVE_PREFIX);
+  return entry === undefined ? existing : prependDirective(existing, entry, false);
+}
+
+/**
+ * `existing` with `pointer` on its first line, unless an operative copy is
+ * already there. The review directive is followed by a blank line; the entry
+ * directive by the line break alone, so the project's bytes follow it directly.
+ */
+function prependDirective(existing: string, pointer: string, blankLine: boolean): string {
+  // A code span the directive itself contains is part of its visible text; any
+  // other span is opaque, so a copy quoted inside one is not operative.
+  const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
 
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
@@ -843,7 +880,7 @@ export function addReviewPointer(existing: string, template: string | null): str
           let span = codeSpan.exec(tail)?.[0];
           if (span !== undefined && crossesTable(offset + index, offset + index + span.length))
             span = undefined;
-          if (span === "`REVIEW.md`") {
+          if (span !== undefined && pointerSpans.has(span)) {
             visible += span;
             index += span.length;
             continue;
@@ -891,7 +928,8 @@ export function addReviewPointer(existing: string, template: string | null): str
 
   const end = /\r\n|\n/.exec(existing)?.[0] ?? "\n";
   const bom = existing.startsWith("\uFEFF") ? 1 : 0;
-  return `${existing.slice(0, bom)}${pointer}${end}${end}${existing.slice(bom)}`;
+  const separator = blankLine ? `${end}${end}` : end;
+  return `${existing.slice(0, bom)}${pointer}${separator}${existing.slice(bom)}`;
 }
 
 /**

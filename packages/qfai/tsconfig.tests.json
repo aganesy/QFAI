@@ -527,6 +527,15 @@
     "tests/integration/workflow/storyTreeFixture.ts",
     "tests/integration/workflow/theObligationCheckReadsTheTree.test.ts",
     "tests/unit/workflow/noStageUncoversAnExample.test.ts",
-    "tests/unit/workflow/storyAuthoringKeepsItsRecords.test.ts"
+    "tests/unit/workflow/storyAuthoringKeepsItsRecords.test.ts",
+    "tests/integration/init/entryDirective.test.ts",
+    "tests/integration/init/entryInstallSet.test.ts",
+    "tests/integration/init/entryTemplateLint.test.ts",
+    "tests/integration/init/managedGitignoreBlock.test.ts",
+    "tests/integration/init/modeLine.test.ts",
+    "tests/integration/init/noOpenaiYaml.test.ts",
+    "tests/integration/init/upgradeStates.ts",
+    "tests/integration/init/windowsParity.test.ts",
+    "tests/integration/workflow/theModeIsValidated.test.ts"
   ]
 }
