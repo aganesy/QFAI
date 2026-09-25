@@ -123,3 +123,28 @@ titles would take it for the safe-skip case.
 ## Final status
 
 PASS for the row recorded here.
+
+## /qfai-implement run started 2026-09-25T10:08:44.375Z
+
+Rows `TDD-0008` and `TDD-0016`, reopened `exception` -> `todo` from the
+accepted-risk record `DR-0298` so that each runs its cycle with the reviews that
+record waived. Their row-level evidence is in
+`.qfai/evidence/atdd-spec-0002.md#tdd-0008` and `#tdd-0016`.
+
+`TDD-0009` and `TDD-0012` stay at `exception` under `DR-0298`. The plan phase
+found that each answers an `L3` test case from outside `tests/integration/**`,
+so neither can pass a review until its test moves and its `Layer` is corrected.
+
+### Plan phase
+
+| Role                          | Instance                 | Verdict | Summary                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------- | ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delivery-planner` (blocking) | `delivery-planner#1`     | PASS    | No Change Request blocks a row. Each row has no `BR-Ref`, so each is its own review unit. Dispatch is serial: the rows' tests read the same shipped files, so one row's mutation is reverted and `git diff` is clean before the next starts. Only files under `packages/qfai/assets/init/**` are mutated                                                                             |
+| `test-design-analyst`         | `test-design-analyst#1`  | REVISE  | Not blocking. `TDD-0008` and `TDD-0016` can discharge their obligations; `TDD-0016` does not assert the story's first clause. `TDD-0009`'s test is in `tests/e2e` with no annotation for its `L3` case, and `TDD-0012`'s is in `tests/assets` under a `validators` Layer cell. Both need a test move before review, so both are left at `exception` by this run |
+
+### Work Orders Summary
+
+| Step | Role (sub-agent)    | Agent instance        | Task title                                                             | Input (refs)                                              | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------- | --------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- | ------------- | ---------------------------- |
+| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: order and dispatch for the four reopened rows    | test-list.md, 06_Test-Cases.md, 02_User-stories.md, CR-\* | #plan-phase   | PASS                         |
+| 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0002 rows | test-list.md, 06_Test-Cases.md, 02_User-stories.md        | #plan-phase   | REVISE                       |
