@@ -734,6 +734,22 @@ function evidenceRowGrammar(specId: string, layer: string, tddId: string): Evide
  */
 const EVIDENCE_CELL_MAX_CHARS = 240;
 
+/** A compatibility marker at the end of the cell, the one place it may stand. */
+const EVIDENCE_COMPAT_MARKER_TRAILING = new RegExp(`${EVIDENCE_COMPAT_MARKER_SOURCE}$`);
+
+/**
+ * The length the cap reads: the cell without a trailing compatibility marker.
+ *
+ * The marker is a fixed suffix the pre-split marker pass appends to a cell it
+ * did not write. Counted, it would push a cell inside the cap past it, and the
+ * row would draw a different finding after a pass whose only edit was the
+ * marker. The cap limits the payload a cell carries, and the marker is not
+ * payload.
+ */
+function evidenceCappedLength(evidence: string): number {
+  return evidence.replace(EVIDENCE_COMPAT_MARKER_TRAILING, "").length;
+}
+
 /**
  * Rule ids for `QFAI-TDDLIST-011` / `QFAI-TDDLIST-012`.
  *
@@ -7149,11 +7165,12 @@ async function validateSpecTddList(
         }),
       );
     }
-    if (evidence.length > EVIDENCE_CELL_MAX_CHARS) {
+    const cappedLength = evidenceCappedLength(evidence);
+    if (cappedLength > EVIDENCE_CELL_MAX_CHARS) {
       issues.push(
         issue(
           "QFAI-TDDLIST-012",
-          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names.`,
+          `Evidence for spec-${specNumber} ${rowLabel} is ${cappedLength} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names.`,
           evidenceOversizeSeverity,
           relPath,
           EVIDENCE_CELL_OVERSIZE_RULE_ID,

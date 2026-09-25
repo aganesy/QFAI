@@ -253,7 +253,7 @@ assert a cycle has run:
 | `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
 | `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
 | `QFAI-TDDLIST-011`             | the cell does not match the grammar above                                               | error    |
-| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters                                                  | error    |
+| `QFAI-TDDLIST-012`             | the cell is longer than 240 characters, not counting a trailing pre-split marker        | error    |
 | `QFAI-TDDLIST-013`             | `RED:n-a` on an ATDD-owned row                                                          | error    |
 | `QFAI-TDDLIST-007`             | a `done` row's cell carries no anchor at all                                            | error    |
 | `QFAI-TDDLIST-008`             | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |

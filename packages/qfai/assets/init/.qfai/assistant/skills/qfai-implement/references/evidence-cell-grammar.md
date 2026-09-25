@@ -71,5 +71,9 @@ owns. Anywhere else it is `QFAI-TDDLIST-011`: item 10 reads the
 marker to tell a legacy row from a current one, so a row that may carry it for
 no reason is a row that may claim to be legacy.
 
+The marker does not count toward the cap. The 240 characters are measured
+without a `Pre-split-evidence: implement` at the end of the cell, so the marker
+pass cannot push a cell over the cap and change the finding the row draws.
+
 Everything else the cell used to carry belongs in the evidence file the anchor
 names. This is a move, not a deletion.

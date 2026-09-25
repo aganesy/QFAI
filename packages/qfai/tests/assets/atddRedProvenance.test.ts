@@ -1181,7 +1181,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("keeps a pre-split row gateable where its evidence actually is", async () => {
     const record = flat(await read(tree, RECORD));
     expect(record).toContain(
-      "an `E2E` / `API` / `Integration` row advanced past `todo` before its layer's split",
+      "an `E2E` / `API` row advanced past `todo` before its layer's split",
     );
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
@@ -1563,13 +1563,31 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(migration).toContain("**`B(L)` cannot be resolved");
   });
 
-  it("covers the legacy `Integration` rows the later split left behind", async () => {
-    // Integration joined the ATDD file one release after E2E / API, so rows
-    // already past `todo` at that upgrade hold a lawful implement anchor.
+  it("leaves `Integration` rows out of the pass", async () => {
+    // Integration reached the ATDD file in the same release as E2E / API, so
+    // no upgrade leaves an Integration row with a lawful implement anchor.
     const migration = flat(await read(tree, MIGRATION));
-    expect(migration).toContain("`Integration` joined the ATDD file one release **after**");
-    expect(migration).toContain("They take the same history test as `E2E` / `API`");
-    expect(migration).not.toContain("An `Integration` row gets no marker");
+    expect(migration).toContain(
+      "`Integration` reached the ATDD file in the same release as `E2E` and `API`",
+    );
+    expect(migration).not.toContain("`Integration` joined the ATDD file one release **after**");
+  });
+
+  it("tells the operator to commit the markers once", async () => {
+    // Uncommitted or reverted, the markers come back in every checkout the pass
+    // runs in, as edits to ledgers the run was not about.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Commit the markers on their own, once.**");
+    expect(migration).toContain("a fresh clone's re-run finds no unmarked legacy row");
+  });
+
+  it("keeps the marker out of the length cap", async () => {
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("The marker does not count toward the `Evidence` cell's");
+    const grammar = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-cell-grammar.md"),
+    );
+    expect(grammar).toContain("The marker does not count toward the cap");
   });
 
   it("defines the rework path a review-fix row takes through this stage", async () => {
@@ -2146,7 +2164,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
     const migration = flat(await read(tree, MIGRATION));
-    expect(migration).toContain("for **every** `E2E` / `API` / `Integration` row past `todo`");
+    expect(migration).toContain("for **every** `E2E` / `API` row past `todo`");
     expect(migration).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
@@ -3237,19 +3255,18 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(notObservable).not.toContain("`Unit` / `Component` / `Integration` row it is **not**");
   });
 
-  it("migrates a pre-existing Integration row's evidence with the same marker pass", async () => {
-    // Integration was implement-owned until this version, so an existing row past
-    // `todo` holds a lawful implement anchor. Marking only E2E/API left that row
-    // rejected at item 10 with no forward transition able to re-take its RED.
+  it("keeps the marker pass on the layers the validator reads the marker on", async () => {
+    // The validator reports the marker on an Integration row. A pass that
+    // wrote it there rewrote other specs' ledgers in every fresh checkout with
+    // a marker nothing accepts.
     const migration = flat(await read(tree, MIGRATION));
-    expect(migration).toContain("`Integration` joined the ATDD file one release **after**");
-    expect(migration).toContain(
-      "an ordinary Integration row stored its evidence in `implement-<spec-id>.md`",
+    expect(migration).toContain("## `Integration` is out of scope");
+    expect(migration).toContain("An `Integration` row gets no marker.");
+    expect(migration).not.toContain("They take the same history test as `E2E` / `API`");
+    const grammar = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-cell-grammar.md"),
     );
-    // The marker pass itself is the migration, so it has to cover the layer that
-    // moved: an unmarked legacy Integration row is judged by the current rule and
-    // has no forward transition that could re-take its RED on the ATDD side.
-    expect(migration).toContain("They take the same history test as `E2E` / `API`");
+    expect(grammar).toContain("after an `implement-` anchor on an `E2E` / `API` row");
   });
 
   it("routes the Integration gatekeeper at the file its provenance is in", async () => {

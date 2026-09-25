@@ -84,6 +84,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The pre-split evidence marker pass leaves `Integration` rows alone, and
+  the marker no longer counts toward the `Evidence` cap** (#2421). The pass in
+  `/qfai-implement` Stage 0 wrote `Pre-split-evidence: implement` on
+  `Integration` rows, where `qfai validate` reports the marker. Its run record
+  lives in the untracked `.qfai/state.json`, so every fresh checkout ran it
+  again and rewrote other specs' ledgers.
+
+  - The pass now reads `E2E` / `API` rows only. `Integration` reached the ATDD
+    evidence file in the same release as those two, so no upgrade leaves an
+    `Integration` row with a lawful implement anchor.
+  - The pass tells the operator to commit the markers it writes on their own,
+    once. A committed marker reaches every checkout, and a re-run then writes
+    nothing.
+  - `QFAI-TDDLIST-012` measures the cell without a trailing marker. A cell
+    inside the 240-character cap before the pass stays inside it after.
+  - This repository's own ledgers for spec-0003, spec-0006 and spec-0017 drop
+    the 82 `Integration` markers the pass had written.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
