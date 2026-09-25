@@ -28,7 +28,7 @@ describe("qfai-sdd in a workflow run", () => {
     );
     expect(text, "the ## Inside a workflow run section exists").not.toBe("");
     expect(text).toMatch(
-      /Stage 1 checks the `human_decision` the work order cites instead of asking/i,
+      /- \*\*`CREATE`\.\*\* Stage 1 checks the `human_decision` the work order cites instead of asking/i,
     );
     expect(text).toMatch(
       /the check passes only when the record exists, matches the row's operation and capability, and is not stale/i,

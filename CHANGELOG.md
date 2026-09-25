@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Five spec-0013 ledger rows closed without per-row review now carry it**
+  (#2293). `TDD-0131` to `TDD-0134` and `TDD-0116`, the rows for Stage 1
+  approvals inside a workflow run, each went through a falsifiability proof,
+  the RED and GREEN gates and both reviews before closing at `done`. The review
+  of `TDD-0131` found that its test did not tie the no-ask check to `CREATE`,
+  and the test now requires the `CREATE` bullet. The five rows leave the waiver
+  that covered them, which still names the eleven rows left to review.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
