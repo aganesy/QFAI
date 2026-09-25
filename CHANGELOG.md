@@ -4,6 +4,48 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A change can be asked for in your own words.** The new `qfai-run` skill
+  takes a request stated in free text, proposes a route, and runs each stage of
+  it through the skill that owns the stage. The operator types no stage name.
+  The run stops only for a decision the agent cannot take: whether to create a
+  new story, whether to approve a change to the story tree, or a fact only the
+  operator holds.
+
+  - `npx qfai workflow` is the run control the skill calls. It has seven
+    operations — `start`, `next`, `accept`, `decision`, `status`, `resume` and
+    `finish` — and each prints one JSON document. It starts no agent and runs
+    no repository command.
+  - A run follows one of five built-in plans — `direct`, `bugfix`,
+    `bounded-change`, `feature` and `discovery` — and binds at most one
+    business flow. The plans ship in the package and are not installed into
+    the project.
+  - A result that writes outside the checked scope, rewrites a row of
+    `decisions.md` or `open-questions.md`, drops the test of an annotated
+    example, or claims an approval the operator did not give is refused.
+  - A story-tree change is made only by the stage attempt that holds the
+    operator's answer. It appends the `Change request:` row at WIP, citing
+    that answer as `<runId>/<authorizationId>`.
+  - Only `finish` reports a run complete. It runs `validate` itself, reads
+    only this run's `verify.json`, and needs an independent `qa-gatekeeper`
+    pass. A run whose operator said not to commit completes as a verified
+    working tree, never as done.
+  - `continue` resumes the worktree's one open run where it stopped, and
+    `stop` cancels it.
+  - `workflow.mode` in `qfai.config.yaml` is `active` (the default), `shadow`,
+    which proposes the route and writes nothing, or `off`. Any other value is
+    a configuration error.
+  - Runtime state lives under the git-ignored `.qfai/run/`. A run's summary
+    and the answers it recorded are tracked under
+    `.qfai/evidence/workflow/<runId>/`, with the request text kept only as a
+    keyed digest.
+  - `qfai-maintain` fixes a typo or other non-normative text inside a run, and
+    stops before an edit that would change behaviour.
+  - A run starts only on a host whose capability report covers what a run
+    needs. No host is declared supported in this release: that needs a
+    recorded routing eval.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
@@ -55,6 +97,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported as a version marker, like any other file name.
 
 ### Changed
+
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states
+  when a host is declared supported, and declares none in this release.
 
 - **`qfai init` says how many shipped skills it left unchanged.** A plain run
   keeps a shipped skill whose project copy differs from this release. It now
