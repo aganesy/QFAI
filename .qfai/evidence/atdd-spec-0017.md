@@ -22,11 +22,7 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
 - `.qfai/specs/spec-0017/07_Decisions.md` — `DR-0017-*`, read for the rejected alternatives this
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
-- `.qfai/specs/spec-0017/tdd/test-list.md` — 101 rows: 81 `Integration`,
-  11 `Unit`; **81 `refactor`, 0 `blocked`, 11 `todo`**, with 6 `done` and 3 `review-fix`. Nine rows are `E2E`, one per story,
-  seeded at `todo`. Eleven `todo` rows are `Integration` and are therefore this stage's to route.
-  The run started 2026-09-23T10:23:39.000Z hands ten of them over — see § "Ledger rows advanced".
-  `TDD-0012` is the eleventh, and that run's work order did not name it
+- `.qfai/specs/spec-0017/tdd/test-list.md` — the P7 archived snapshot has 106 rows: 84 `Integration`, 11 `Unit`, and eleven `E2E`, with **81 `refactor`, 6 `blocked` and 19 `todo`**. The 2026-09-23 ATDD run recorded below started from a 101-row snapshot and routed ten `Integration` rows. The five rows appended by the later spec-to-story `/qfai-sdd` run (TDD-0102 to TDD-0104, TDD-0106 and TDD-0107) were outside that ATDD run. The P7 archive keeps the later blocked decisions and appended rows; the feature-run ledger is preserved byte-for-byte in the migration retired archive.
 - `.qfai/assistant/catalog/test-layers.md` — the layer derivation and the directory each `Level`
   routes to
 - `packages/qfai/assets/init/root/.github/workflows/**` — the shipped surface, measured before any

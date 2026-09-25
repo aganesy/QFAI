@@ -19,9 +19,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-discussion/SKILL.md";
-const MATRIX = "assistant/skills/qfai-discussion/references/discussion-completion-matrix.md";
-const REVIEW_REQUEST = "assistant/skills/qfai-discussion/templates/review/review_request.md";
+const SKILL = "assistant/skill/qfai-discussion/SKILL.md";
+const MATRIX = "assistant/skill/qfai-discussion/references/discussion-completion-matrix.md";
+const REVIEW_REQUEST = "assistant/skill/qfai-discussion/templates/review/review_request.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -60,7 +60,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // The body is read, not the name: a host that loads skill bodies lazily
     // hands the agent the reference and not the procedure, and an agent with
     // the reference alone improvises an interview that reads like the method.
-    expectPhrase(skill, "Read `.qfai/assistant/skills/qfai-grilling/SKILL.md`");
+    expectPhrase(skill, "Read `.qfai/assistant/skill/qfai-grilling/SKILL.md`");
     expectPhrase(skill, "**Read the file, do not work from the name.**");
     expectPhrase(skill, "stop and report that `npx qfai init` installs it");
     expectPhrase(skill, ".agents/rules/grilling.md");
@@ -330,11 +330,11 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
   });
 
   it("agrees with the protocol whose output it redirects", async () => {
-    // The constitution outranks the skill and sits at P1 in its own read order,
+    // The shared rule outranks the skill and sits at P1 in its own read order,
     // so a storage contract sending the summary straight into the pack is the
     // instruction an agent follows — and it rebuilds the partial pack this
     // change exists to prevent.
-    const protocol = await read("assistant/constitution/research-first-protocol.md");
+    const protocol = await read("assistant/rule/research-first-protocol.md");
     expectPhrase(protocol, "goes to the invoking stage's own evidence when it is");
     expectPhrase(protocol, "carried into the artifact that consumes it");
     expectPhrase(protocol, "a run cancelled before that authorization leaves it behind");

@@ -33,7 +33,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ASSISTANT_DIR = "assistant";
-const SKILLS_DIR = `${ASSISTANT_DIR}/skills`;
+const SKILLS_DIR = `${ASSISTANT_DIR}/skill`;
 
 const OPT_OUT_FIELD = "disable-model-invocation";
 const CANONICAL_OPT_OUT = `${OPT_OUT_FIELD}: true`;

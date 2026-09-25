@@ -7,9 +7,8 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
-const DRIFT = "assistant/constitution/drift-protocol.md";
-const ANCHOR = "shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must";
+const DELEGATION = "assistant/rule/shared-skill-delegation-baseline.md";
+const DRIFT = "assistant/rule/drift-protocol.md";
 const REVIEWER_CARDS = [
   "architecture-reviewer",
   "completion-reviewer",
@@ -48,10 +47,12 @@ describe("a reviewer's demand for more work is bounded by the artifact", () => {
       expect(content).toContain("is recorded as `advisory` and cannot force `REVISE`");
     });
 
-    it(`${tree}: the drift protocol and every reviewer card point at the rule`, async () => {
-      expect(await read(tree, DRIFT)).toContain(ANCHOR);
+    it(`${tree}: the drift protocol routes new scope and every reviewer card reads the rule`, async () => {
+      expect(await read(tree, DRIFT)).toContain("New scope adds product behavior");
       for (const card of REVIEWER_CARDS) {
-        expect(await read(tree, `assistant/agents/${card}.md`), card).toContain(ANCHOR);
+        expect(await read(tree, `assistant/agent/${card}.md`), card).toContain(
+          "shared-skill-delegation-baseline.md",
+        );
       }
     });
   }

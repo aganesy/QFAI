@@ -7,7 +7,10 @@ import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
-import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
+import {
+  runPrototypingCertify,
+  runPrototypingShowUiContract,
+} from "./commands/prototypingCertify.js";
 import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
@@ -161,7 +164,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.profile ? { profile: options.profile } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.platform ? { platform: options.platform } : {}),
-          ...(options.validateSpecIds.length > 0 ? { specIds: options.validateSpecIds } : {}),
+          ...(options.validateFlowIds.length > 0 ? { flowIds: options.validateFlowIds } : {}),
         });
       }
       return;
@@ -178,7 +181,7 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
           ...(options.reportRunValidate ? { runValidate: true } : {}),
           ...(options.profile ? { profile: options.profile } : {}),
-          ...(options.reportSpecIds.length > 0 ? { specIds: options.reportSpecIds } : {}),
+          ...(options.reportFlowIds.length > 0 ? { flowIds: options.reportFlowIds } : {}),
         });
       }
       return;
@@ -277,16 +280,12 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
     case "atdd":
       {
         // サブコマンド欠落 / 不正は parseArgs が拒否済み (invalidReason)。
-        if (!options.atddSpecId) {
-          error("qfai atdd scaffold: --spec <id> is required.");
-          info(usage());
-          process.exitCode = options.invalidExitCode;
-          return;
-        }
         const resolvedRoot = await resolveRoot(options);
         process.exitCode = await runAtddScaffold({
           root: resolvedRoot,
-          specId: options.atddSpecId,
+          ...(options.atddStoryId !== undefined ? { storyId: options.atddStoryId } : {}),
+          ...(options.atddFlowId !== undefined ? { flowId: options.atddFlowId } : {}),
+          ...(options.atddSpecId !== undefined ? { specId: options.atddSpecId } : {}),
         });
       }
       return;
@@ -358,9 +357,9 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           });
           return;
         }
-        if (options.prototypingAction === "show-spec") {
+        if (options.prototypingAction === "show-ui-contract") {
           const resolvedRoot = await resolveRoot(options);
-          process.exitCode = await runPrototypingShowSpec({ root: resolvedRoot });
+          process.exitCode = await runPrototypingShowUiContract({ root: resolvedRoot });
           return;
         }
         if (options.prototypingAction === "preflight") {
@@ -402,8 +401,8 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.prototypingLicensePatch
             ? { licensePatch: options.prototypingLicensePatch }
             : {}),
-          ...(options.prototypingPrimarySpecId
-            ? { primarySpecId: options.prototypingPrimarySpecId }
+          ...(options.prototypingPrimaryUiContract
+            ? { primaryUiContract: options.prototypingPrimaryUiContract }
             : {}),
           ...(options.prototypingCheckConvergence ? { checkConvergence: true } : {}),
           ...(options.prototypingCapture ? { capture: true } : {}),
@@ -441,16 +440,17 @@ Commands:
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
-  audit log [filters]          List the decision log under .qfai/evidence/decisions/ (--scope/--operator/--clause + --format table|json)
+  audit log [filters]          List the decision log under .qfai/evidence/decision/ (--scope/--operator/--clause + --format table|json)
   handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml (CLI-HANDOFF)
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
-  atdd scaffold --spec <id>    Generate per-TC test skeletons from a spec's Test-Cases (idempotent + N-cycle escalation)
+  atdd scaffold --story <US-ID> Generate one test skeleton per AC in a story
+  atdd scaffold --flow <BF-ID>  Generate an E2E test skeleton for a flow
   prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
   prototyping iterate          Commit one cycle of the single-thread evolution loop
   prototyping certify [--check]         Generate / verify completion-certificate.json
                                         [--scope <saas-package|full>] issue a scope-limited certificate
                                         [--upgrade-scope full] promote a scope-limited certificate to full DONE
-  prototyping show-spec                 Print the resolved primary prototyping spec
+  prototyping show-ui-contract          Print the frozen UI contract scope
   prototyping rescope --remove <id> --reason <delta-id>
                                         Drop a retired surface from frozenSurfaceUnion
                                         (the loop stays on its current cycle; a surface still being resolved is refused)
@@ -458,15 +458,15 @@ Commands:
 Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
   --dir <path>    init: output directory (init only; --dir wins when both are given)
-  --force         init: overwrite .qfai/assistant/{skills,agents}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
-                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts/steering and assistant/manifest/** are never overwritten)
+  --force         init: overwrite .qfai/assistant/{skill,agent}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
+                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; story specs, contracts, steering, and adopter-owned assistant/catalog/** are never overwritten)
                   It deletes as well as overwrites: the wrappers a past qfai placed in
                   .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
                   that are no longer shipped (including the real directories from before they
                   became symlinks). Ownership is decided by a file's content and not by its name,
                   so your own command / prompt / skill files survive; a symlink has no content of
                   its own, so one you published under a retired QFAI skill name is deleted (its
-                  target .qfai/assistant/skills/<id>/ stays, so you can re-link it).
+                  target .qfai/assistant/skill/<id>/ stays, so you can re-link it).
   --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
   --force         prototyping iterate --cycle 0: required to re-seed an existing iter-00. Moves iter-00
                   to iter-00.backup-<ISO>, then clears the stale iter-NN (without it the run is
@@ -496,7 +496,8 @@ Options:
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL
-  --path <path>                 guardrails: target file/directory (repeatable)
+  --path <path>                 guardrails: target Markdown file/directory (repeatable)
+                                 Default: configured specsDir/01_policy and contractsDir
   --max <number>                guardrails extract: maximum number of entries
   --keyword <text>              guardrails list/extract: keyword filter
   --format <text|json>          guardrails list/extract/check: output format (default text)
@@ -506,7 +507,7 @@ Options:
   --capture                     prototyping iterate: opt-in PNG/HTML capture (default OFF; Playwright is imported dynamically)
   --auto-serve                  prototyping iterate: opt-in in-process local HTTP server (default OFF; default port 4321; node:http; SIGINT teardown <= 2s; EADDRINUSE is a refusal)
   --license-patch <file>        prototyping iterate: apply an add-only license allowlist patch on any cycle (not cycle 0 only; appended to the audit ledger and replayed on later cycles. sourceHosts are not replayed)
-  --primary-spec-id <value>     prototyping iterate: pick the primary spec explicitly when several UI-bearing specs exist
+  --primary-ui-contract <CON-UI-NNNN>  prototyping iterate: pick the primary UI contract when several apply
   --emit-skeletons              prototyping iterate --cycle 0: emit a placeholder HTML per frozenSurfaceUnion screen (default OFF; opt-in)
   --skeleton-mode <placeholder|full|stub>  prototyping iterate --cycle 0 --emit-skeletons: output mode (default placeholder)
   --mode <convergence|exploration>  prototyping iterate: loop posture (default convergence; exploration relaxes soft-rubric gates only, to warning at medium)
@@ -518,10 +519,11 @@ Options:
   --clean                       doctor: move review packs past their TTL into _archive/, and delete validate run logs (outDir/run-*) past their TTL (the newest N are always kept; combinable with --dry-run)
   --autoremediate               doctor: run install + clean + config-fill together
   --assume <text>               sdd preflight: record a carried-over open question / assumption in the summary (repeatable)
-  --spec <id>                   atdd scaffold: target spec (e.g. spec-0006)
-  --spec <id>                   validate/report: restrict to the given spec (repeatable; e.g. --spec 0003 --spec spec-0004)
-                                 Excludes spec-owned findings and specs-coverage report output for every other spec
-                                 report: also switches the default input/output to validate.spec-<ids>.json / report.spec-<ids>.md
+  --story <US-ID>               atdd scaffold: target story (e.g. US-0001-0001)
+  --flow <BF-ID>                atdd scaffold: target flow (e.g. BF-0001)
+  --spec <id>                   Legacy option; atdd scaffold, validate, and report reject it
+  --flow <BF-NNNN>              validate/report: restrict to the given business flow (repeatable)
+                                 report: reads validate.flow-<ids>.json and writes report.flow-<ids>.md by default
   -h, --help      Show this help
   -V, --version   Show the version (prints the installed qfai's version to stdout)
 

@@ -1,13 +1,13 @@
 /**
- * Constitution front matter convention.
+ * Shared-rule front matter convention.
  *
- * `constitution/agent-selection.md` shipped an un-ported copy of the internal
+ * `rule/agent-selection.md` shipped an un-ported copy of the internal
  * authoring format: a hyphenated `update-frequency` key, a `version` marker and
  * a `dependencies` list whose targets (`02_project/**`) exist in no tree a
  * consumer receives. Nothing reads any of it, so no gate could ever report the
  * drift — only readers paid, by being sent to unresolvable paths.
  *
- * These tests pin the shipped convention instead: a constitution file either
+ * These tests pin the shipped convention instead: a shared rule either
  * carries no front matter, or carries exactly `id` / `category` /
  * `update_frequency`, with `id` equal to its own basename.
  */
@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const CONSTITUTION = "assistant/constitution";
+const CONSTITUTION = "assistant/rule";
 const ALLOWED_KEYS = ["id", "category", "update_frequency"];
 
 const FRONT_MATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;

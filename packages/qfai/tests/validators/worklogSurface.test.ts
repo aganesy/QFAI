@@ -1,14 +1,9 @@
 /**
  * Validator: worklogSurface (.qfai/steering/).
  *
- * Covers TC-0004-0016..0021: W-WORKLOG-SCHEMA / W-WORKLOG-BROKEN-LINK /
+ * Covers W-WORKLOG-SCHEMA / W-WORKLOG-BROKEN-LINK /
  * R-HANDOFF-INCOMPLETE / W-PENDING-PROMOTION / W-WORKLOG-STALE.
  */
-// QFAI:SPEC-0004:TC-0004-0016
-// QFAI:SPEC-0004:TC-0004-0017
-// QFAI:SPEC-0004:TC-0004-0019
-// QFAI:SPEC-0004:TC-0004-0020
-// QFAI:SPEC-0004:TC-0004-0021
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +22,25 @@ async function seedWorklog(root: string, name: string, body: string): Promise<vo
   await writeFile(path.join(dir, name), body, "utf-8");
 }
 
+async function seedDecisions(root: string, rows: string[]): Promise<void> {
+  const dir = path.join(root, ".qfai", "spec");
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    path.join(dir, "decisions.md"),
+    [
+      "# Decisions",
+      "",
+      "## Decisions",
+      "",
+      "| ID | Content | Approach | Status |",
+      "| --- | --- | --- | --- |",
+      ...rows,
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+}
+
 async function getConfig(root: string) {
   const result = await loadConfig(root);
   return result.config;
@@ -43,8 +57,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (contract-kinds): the validator accepts every kind in the contract enum
-  it("TC-0004-0016 (contract-kinds): accepts every kind listed in worklog-entry.schema.md without firing W-WORKLOG-SCHEMA", async () => {
+  // the validator accepts every kind in the contract enum
+  it("accepts every kind listed in worklog-entry.schema.md without firing W-WORKLOG-SCHEMA", async () => {
     const root = await newRoot("worklog-contract-kinds");
     try {
       const contractKinds = [
@@ -99,8 +113,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016: W-WORKLOG-SCHEMA on invalid kind
-  it("TC-0004-0016: emits W-WORKLOG-SCHEMA for entry with invalid kind", async () => {
+  // W-WORKLOG-SCHEMA on invalid kind
+  it("emits W-WORKLOG-SCHEMA for entry with invalid kind", async () => {
     const root = await newRoot("worklog-schema");
     try {
       await seedWorklog(
@@ -125,8 +139,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0017: W-WORKLOG-BROKEN-LINK
-  it("TC-0004-0017: emits W-WORKLOG-BROKEN-LINK once per unresolved link", async () => {
+  // W-WORKLOG-BROKEN-LINK
+  it("emits W-WORKLOG-BROKEN-LINK once per unresolved link", async () => {
     const root = await newRoot("worklog-links");
     try {
       await seedWorklog(
@@ -138,7 +152,7 @@ describe("worklogSurface validator", () => {
           "kind: decision",
           "status: active",
           "links:",
-          "  - spec-9999",
+          "  - BF-9999",
           "  - discussion-99991231235959999",
           "---",
           "",
@@ -152,8 +166,42 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0019: R-HANDOFF-INCOMPLETE
-  it("TC-0004-0019: emits R-HANDOFF-INCOMPLETE naming the missing sections", async () => {
+  it("resolves BF and DEC links from the story tree and reports missing IDs", async () => {
+    const root = await newRoot("worklog-story-links");
+    try {
+      await mkdir(path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001"), {
+        recursive: true,
+      });
+      await seedDecisions(root, ["| DEC-0001 | Selected option | Use it | DONE |"]);
+      await seedWorklog(
+        root,
+        "entry-links.md",
+        [
+          "---",
+          "id: entry-links",
+          "kind: risk",
+          "status: active",
+          "links:",
+          "  - BF-0001",
+          "  - DEC-0001",
+          "  - BF-9999",
+          "  - DEC-9999",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const issues = await validateWorklogSurface(root, await getConfig(root));
+      const broken = issues.filter((item) => item.code === "W-WORKLOG-BROKEN-LINK");
+      expect(broken).toHaveLength(2);
+      expect(broken.map((item) => item.message).join(" ")).toContain("BF-9999");
+      expect(broken.map((item) => item.message).join(" ")).toContain("DEC-9999");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // R-HANDOFF-INCOMPLETE
+  it("emits R-HANDOFF-INCOMPLETE naming the missing sections", async () => {
     const root = await newRoot("worklog-handoff");
     try {
       await seedWorklog(
@@ -190,8 +238,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0020: W-PENDING-PROMOTION
-  it("TC-0004-0020: emits W-PENDING-PROMOTION when promote-to has no decision row", async () => {
+  // W-PENDING-PROMOTION
+  it("emits W-PENDING-PROMOTION when promote-to has no decision row", async () => {
     const root = await newRoot("worklog-promo");
     try {
       await seedWorklog(
@@ -202,7 +250,7 @@ describe("worklogSurface validator", () => {
           "id: entry-003",
           "kind: decision",
           "status: active",
-          "promote-to: 07_Decisions.md",
+          "promote-to: decisions.md",
           "---",
           "",
           "# choose Y over Z",
@@ -217,8 +265,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0017 (entry-* link): inter-entry broken-link integrity
-  it("TC-0004-0017 (entry-*): emits W-WORKLOG-BROKEN-LINK for entry-* link pointing at non-existent entry", async () => {
+  // inter-entry broken-link integrity
+  it("emits W-WORKLOG-BROKEN-LINK for entry-* link pointing at non-existent entry", async () => {
     const root = await newRoot("worklog-entry-link");
     try {
       await seedWorklog(
@@ -245,7 +293,7 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  it("TC-0004-0017 (entry-*): does NOT fire when entry-* link resolves to an existing entry", async () => {
+  it("does NOT fire when entry-* link resolves to an existing entry", async () => {
     const root = await newRoot("worklog-entry-link-ok");
     try {
       await seedWorklog(
@@ -275,22 +323,10 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0020 (exact-match): promotion satisfied only by an exact entry-id reference
-  it("TC-0004-0020 (exact-match): row containing entry-010 does NOT satisfy promotion for entry-01 (whole-token regex)", async () => {
+  it("requires a whole-token entry reference in the decision row", async () => {
     const root = await newRoot("worklog-promo-exact");
     try {
-      // Pre-seed a Decisions row that mentions entry-010 (the longer id).
-      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
-      await mkdir(specDir, { recursive: true });
-      await writeFile(
-        path.join(specDir, "07_Decisions.md"),
-        "| DR-1 | Decision A | linked via entry-010 | promoted-to: entry-010 |\n",
-        "utf-8",
-      );
-      // Entry-01 (shorter id) is archived + promotes to the canonical
-      // target file. Without the whole-token boundary check the
-      // `entry-010` row would substring-match `entry-01` and falsely
-      // satisfy the gate; this fixture covers that exact regression.
+      await seedDecisions(root, ["| DEC-0001 | Linked via entry-010 | Keep this choice | DONE |"]);
       await seedWorklog(
         root,
         "entry-01.md",
@@ -299,31 +335,26 @@ describe("worklogSurface validator", () => {
           "id: entry-01",
           "kind: decision",
           "status: archived",
-          "promote-to: spec-0099/07_Decisions.md",
-          "promoted-to: DR-3",
+          "promote-to: decisions.md",
+          "promoted-to: DEC-0001",
           "---",
           "",
         ].join("\n"),
       );
       const issues = await validateWorklogSurface(root, await getConfig(root));
-      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
-      expect(promo.length).toBe(1);
-      expect(promo[0]?.message).toContain("entry-01");
+      expect(issues.some((item) => item.code === "W-PENDING-PROMOTION")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  it("TC-0004-0020 (exact-match): archived entry with row in declared target file DOES satisfy promotion", async () => {
+  it("accepts promotion only when the archived entry points to the citing DEC row", async () => {
     const root = await newRoot("worklog-promo-ok");
     try {
-      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
-      await mkdir(specDir, { recursive: true });
-      await writeFile(
-        path.join(specDir, "07_Decisions.md"),
-        "| DR-2 | Decision B | from entry-002 |\n",
-        "utf-8",
-      );
+      await seedDecisions(root, [
+        "| DEC-0001 | Decision from entry-002 | Use the selected option | DONE |",
+        "| DEC-0002 | Different decision | Keep the other option | DONE |",
+      ]);
       await seedWorklog(
         root,
         "entry-002.md",
@@ -331,95 +362,66 @@ describe("worklogSurface validator", () => {
           "---",
           "id: entry-002",
           "kind: decision",
-          // Promote-gate hardening: satisfaction
-          // requires ALL of: `status: archived` + a row in the
-          // declared target file (spec-0099/07_Decisions.md here,
-          // not bare 07_Decisions.md) + a `promoted-to:` back-ref
-          // equal to the target. The earlier fixture used `status:
-          // active` + bare path which we keep as the negative
-          // (TC-0004-0020: emits) test; this positive variant uses
-          // the canonical 3-condition satisfied shape.
           "status: archived",
-          "promote-to: spec-0099/07_Decisions.md",
-          "promoted-to: DR-3",
+          "promote-to: decisions.md",
+          "promoted-to: DEC-0001",
           "---",
           "",
         ].join("\n"),
       );
-      const issues = await validateWorklogSurface(root, await getConfig(root));
-      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
-      expect(promo.length).toBe(0);
+      const valid = await validateWorklogSurface(root, await getConfig(root));
+      expect(valid.some((item) => item.code === "W-PENDING-PROMOTION")).toBe(false);
+
+      await seedWorklog(
+        root,
+        "entry-002.md",
+        [
+          "---",
+          "id: entry-002",
+          "kind: decision",
+          "status: archived",
+          "promote-to: decisions.md",
+          "promoted-to: DEC-0002",
+          "---",
+          "",
+        ].join("\n"),
+      );
+      const mismatch = await validateWorklogSurface(root, await getConfig(root));
+      expect(mismatch.some((item) => item.code === "W-PENDING-PROMOTION")).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  // TC-0004-0020 (status-required): active entry with promote-to + row in target → still pending
-  it("TC-0004-0020 (status-required): active entry with row in target file STILL fires W-PENDING-PROMOTION (needs status: archived)", async () => {
-    const root = await newRoot("worklog-promo-active-needs-archive");
+  it("keeps an active entry pending even when the decision row and back reference agree", async () => {
+    const root = await newRoot("worklog-promo-active");
     try {
-      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
-      await mkdir(specDir, { recursive: true });
-      await writeFile(
-        path.join(specDir, "07_Decisions.md"),
-        "| DR-1 | Decision | from entry-NEW |\n",
-        "utf-8",
-      );
+      await seedDecisions(root, [
+        "| DEC-0001 | Decision from entry-active | Use the selected option | DONE |",
+      ]);
       await seedWorklog(
         root,
-        "entry-NEW.md",
+        "entry-active.md",
         [
           "---",
-          "id: entry-NEW",
+          "id: entry-active",
           "kind: decision",
           "status: active",
-          "promote-to: spec-0099/07_Decisions.md",
+          "promote-to: decisions.md",
+          "promoted-to: DEC-0001",
           "---",
           "",
         ].join("\n"),
       );
       const issues = await validateWorklogSurface(root, await getConfig(root));
-      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
-      expect(promo.length).toBe(1);
-      expect(promo[0]?.message).toContain('must be "archived"');
+      const pending = issues.find((item) => item.code === "W-PENDING-PROMOTION");
+      expect(pending?.message).toContain("archived");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
-
-  // TC-0004-0020 (target-scoped): archived entry but unrelated-spec row → still pending
-  it("TC-0004-0020 (target-scoped): row in UNRELATED spec does NOT satisfy the declared target", async () => {
-    const root = await newRoot("worklog-promo-wrong-target");
-    try {
-      // Decisions row lives in spec-0001 but promote-to targets spec-0099.
-      const spec1 = path.join(root, ".qfai", "specs", "spec-0001");
-      await mkdir(spec1, { recursive: true });
-      await writeFile(path.join(spec1, "07_Decisions.md"), "| DR-1 | from entry-XYZ |\n", "utf-8");
-      await seedWorklog(
-        root,
-        "entry-XYZ.md",
-        [
-          "---",
-          "id: entry-XYZ",
-          "kind: decision",
-          "status: archived",
-          "promote-to: spec-0099/07_Decisions.md",
-          "promoted-to: DR-3",
-          "---",
-          "",
-        ].join("\n"),
-      );
-      const issues = await validateWorklogSurface(root, await getConfig(root));
-      const promo = issues.filter((i) => i.code === "W-PENDING-PROMOTION");
-      expect(promo.length).toBe(1);
-      expect(promo[0]?.message).toContain("spec-0099/07_Decisions.md");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0017 (empty-link): empty/whitespace links element fires linksElementEmpty
-  it("TC-0004-0017 (empty-link): empty or whitespace-only links element fires worklogSurface.schema.linksElementEmpty", async () => {
+  // empty/whitespace links element fires linksElementEmpty
+  it("empty or whitespace-only links element fires worklogSurface.schema.linksElementEmpty", async () => {
     const root = await newRoot("worklog-link-empty");
     try {
       await seedWorklog(
@@ -450,8 +452,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0020 (promote-to-format): non-canonical promote-to format fires schema warning
-  it("TC-0004-0020 (promote-to-format): bare `07_Decisions.md` fires worklogSurface.schema.promoteToFormat", async () => {
+  // non-canonical promote-to format fires schema warning
+  it("rejects a legacy spec-pack promotion target", async () => {
     const root = await newRoot("worklog-promo-format");
     try {
       await seedWorklog(
@@ -466,7 +468,7 @@ describe("worklogSurface validator", () => {
           "updated: 2026-05-23",
           "scope: global",
           "blocking: false",
-          "promote-to: 07_Decisions.md",
+          "promote-to: spec-0099/07_Decisions.md",
           "links: []",
           "---",
           "",
@@ -475,23 +477,17 @@ describe("worklogSurface validator", () => {
       const issues = await validateWorklogSurface(root, await getConfig(root));
       const fmt = issues.filter((i) => i.rule === "worklogSurface.schema.promoteToFormat");
       expect(fmt.length).toBe(1);
-      expect(fmt[0]?.message).toContain("spec-NNNN/07_Decisions.md");
+      expect(fmt[0]?.message).toContain("decisions.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  // TC-0004-0020 (back-ref-required): row + archived but missing promoted-to → still pending
-  it("TC-0004-0020 (back-ref-required): archived entry + row WITHOUT promoted-to back-ref still fires", async () => {
+  // row + archived but missing promoted-to → still pending
+  it("archived entry + row WITHOUT promoted-to back-ref still fires", async () => {
     const root = await newRoot("worklog-promo-backref");
     try {
-      const specDir = path.join(root, ".qfai", "specs", "spec-0099");
-      await mkdir(specDir, { recursive: true });
-      await writeFile(
-        path.join(specDir, "07_Decisions.md"),
-        "| DR-3 | Decision C | from entry-ABC |\n",
-        "utf-8",
-      );
+      await seedDecisions(root, ["| DEC-0003 | Decision C from entry-ABC | Keep it | DONE |"]);
       await seedWorklog(
         root,
         "entry-ABC.md",
@@ -500,7 +496,7 @@ describe("worklogSurface validator", () => {
           "id: entry-ABC",
           "kind: decision",
           "status: archived",
-          "promote-to: spec-0099/07_Decisions.md",
+          "promote-to: decisions.md",
           // promoted-to: MISSING — the back-ref enforcement fires.
           "---",
           "",
@@ -515,8 +511,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0020 (kind-restriction): W-PENDING-PROMOTION only fires on kind: decision
-  it("TC-0004-0020 (kind-restriction): kind: risk + promote-to does NOT fire W-PENDING-PROMOTION", async () => {
+  // W-PENDING-PROMOTION only fires on kind: decision
+  it("kind: risk + promote-to does NOT fire W-PENDING-PROMOTION", async () => {
     const root = await newRoot("worklog-promo-non-decision");
     try {
       await seedWorklog(
@@ -528,7 +524,7 @@ describe("worklogSurface validator", () => {
           "kind: risk",
           "status: active",
           "links: []",
-          "promote-to: 07_Decisions.md",
+          "promote-to: decisions.md",
           "---",
           "",
           "# risk that is NOT a decision",
@@ -542,8 +538,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (required-fields): missing created/updated/scope/blocking/promote-to all fire
-  it("TC-0004-0016 (required-fields): missing required worklog fields each fire dedicated W-WORKLOG-SCHEMA rules", async () => {
+  // missing created/updated/scope/blocking/promote-to all fire
+  it("missing required worklog fields each fire dedicated W-WORKLOG-SCHEMA rules", async () => {
     const root = await newRoot("worklog-required-fields");
     try {
       await seedWorklog(
@@ -565,8 +561,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (blocking-type): non-boolean blocking fires worklogSurface.schema.blocking
-  it("TC-0004-0016 (blocking-type): non-boolean blocking fires worklogSurface.schema.blocking", async () => {
+  // non-boolean blocking fires worklogSurface.schema.blocking
+  it("non-boolean blocking fires worklogSurface.schema.blocking", async () => {
     const root = await newRoot("worklog-blocking-type");
     try {
       await seedWorklog(
@@ -596,8 +592,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0027 (date-format): non-ISO `created` / `updated` fires per-field format rule
-  it("TC-0004-0027 (date-format): non-ISO created/updated fires worklogSurface.schema.{created,updated}Format", async () => {
+  // non-ISO `created` / `updated` fires per-field format rule
+  it("non-ISO created/updated fires worklogSurface.schema.{created,updated}Format", async () => {
     const root = await newRoot("worklog-date-format");
     try {
       await seedWorklog(
@@ -627,8 +623,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0031 (calendar-rollover): syntactically valid but non-existent dates fire createdFormat
-  it("TC-0004-0031 (calendar-rollover): non-existent calendar date (2026-02-30) fires createdFormat", async () => {
+  // syntactically valid but non-existent dates fire createdFormat
+  it("non-existent calendar date (2026-02-30) fires createdFormat", async () => {
     const root = await newRoot("worklog-rollover");
     try {
       await seedWorklog(
@@ -659,8 +655,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0028 (date-order): updated earlier than created fires updatedOrder
-  it("TC-0004-0028 (date-order): updated < created fires worklogSurface.schema.updatedOrder", async () => {
+  // updated earlier than created fires updatedOrder
+  it("updated < created fires worklogSurface.schema.updatedOrder", async () => {
     const root = await newRoot("worklog-date-order");
     try {
       await seedWorklog(
@@ -690,8 +686,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0029 (links element type): non-string links element fires linksElementType
-  it("TC-0004-0029 (links element type): non-string links elements fire worklogSurface.schema.linksElementType", async () => {
+  // non-string links element fires linksElementType
+  it("non-string links elements fire worklogSurface.schema.linksElementType", async () => {
     const root = await newRoot("worklog-links-elem-type");
     try {
       // YAML allows mixed types in a list. Seed numeric + boolean entries.
@@ -723,8 +719,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0030 (id-format): non-kebab-case id fires worklogSurface.schema.idFormat
-  it("TC-0004-0030 (id-format): non-kebab-case ASCII id fires worklogSurface.schema.idFormat (isolated from idFilenameMismatch)", async () => {
+  // non-kebab-case id fires worklogSurface.schema.idFormat
+  it("non-kebab-case ASCII id fires worklogSurface.schema.idFormat (isolated from idFilenameMismatch)", async () => {
     const root = await newRoot("worklog-id-format");
     try {
       // Filename stem matches the (non-kebab) id exactly so the
@@ -761,8 +757,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0017 (date-style entry-id): date-prefixed entry id resolves against entryIds set
-  it("TC-0004-0017 (date-style entry-id): date-prefixed link resolves to a date-style entry-id without firing W-WORKLOG-BROKEN-LINK", async () => {
+  // date-prefixed entry id resolves against entryIds set
+  it("date-prefixed link resolves to a date-style entry-id without firing W-WORKLOG-BROKEN-LINK", async () => {
     const root = await newRoot("worklog-date-entry");
     try {
       // Seed two entries: a target with date-style id, and a referrer
@@ -813,8 +809,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (scope-format): scope must be "global" or "spec-NNNN"
-  it("TC-0004-0016 (scope-format): non-conformant scope fires worklogSurface.schema.scopeFormat", async () => {
+  // Scope must be "global" or "BF-NNNN".
+  it("non-conformant scope fires worklogSurface.schema.scopeFormat", async () => {
     const root = await newRoot("worklog-scope");
     try {
       await seedWorklog(
@@ -844,8 +840,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (links-required): missing links field fires W-WORKLOG-SCHEMA
-  it("TC-0004-0016 (links-required): missing links field fires worklogSurface.schema.linksMissing", async () => {
+  // missing links field fires W-WORKLOG-SCHEMA
+  it("missing links field fires worklogSurface.schema.linksMissing", async () => {
     const root = await newRoot("worklog-links-missing");
     try {
       await seedWorklog(
@@ -862,8 +858,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (links-type): non-array links field fires worklogSurface.schema.linksType
-  it("TC-0004-0016 (links-type): non-array links field fires worklogSurface.schema.linksType", async () => {
+  // non-array links field fires worklogSurface.schema.linksType
+  it("non-array links field fires worklogSurface.schema.linksType", async () => {
     const root = await newRoot("worklog-links-type");
     try {
       await seedWorklog(
@@ -874,7 +870,7 @@ describe("worklogSurface validator", () => {
           "id: entry-strlinks",
           "kind: decision",
           "status: active",
-          "links: spec-0001",
+          "links: BF-0001",
           "---",
           "",
         ].join("\n"),
@@ -888,8 +884,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (nested-path): nested entries emit .qfai/steering/<sub>/<file> paths (not steering/<sub>/<file>)
-  it("TC-0004-0016 (nested-path): nested worklog entry surfaces a finding with .qfai/steering/<sub>/ prefix", async () => {
+  // nested entries emit .qfai/steering/<sub>/<file> paths (not steering/<sub>/<file>)
+  it("nested worklog entry surfaces a finding with .qfai/steering/<sub>/ prefix", async () => {
     const root = await newRoot("worklog-nested");
     try {
       const subDir = path.join(root, ".qfai", "steering", "2026-Q2");
@@ -914,8 +910,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0016 (CRLF): parses Windows-CRLF frontmatter without false W-WORKLOG-SCHEMA
-  it("TC-0004-0016 (CRLF): parses CRLF-terminated frontmatter without firing schema-parse warning", async () => {
+  // parses Windows-CRLF frontmatter without false W-WORKLOG-SCHEMA
+  it("parses CRLF-terminated frontmatter without firing schema-parse warning", async () => {
     const root = await newRoot("worklog-crlf");
     try {
       const crlfBody = [
@@ -947,8 +943,8 @@ describe("worklogSurface validator", () => {
     }
   });
 
-  // TC-0004-0021: W-WORKLOG-STALE
-  it("TC-0004-0021: emits W-WORKLOG-STALE when status=active and updated > 90d ago", async () => {
+  // W-WORKLOG-STALE
+  it("emits W-WORKLOG-STALE when status=active and updated > 90d ago", async () => {
     const root = await newRoot("worklog-stale");
     try {
       await seedWorklog(

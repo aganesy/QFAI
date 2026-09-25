@@ -6,9 +6,8 @@
 # ONE schema per invocation, and "how a test-case table is shaped" is a
 # different contract from "how a user story is shaped".
 #
-# `{specsDir}` expands to `paths.specsDir` from `qfai.config.yaml`, so an
-# adopter who keeps specs somewhere other than `.qfai/specs` is covered without
-# editing this file.
+# `{specsDir}` and `{contractsDir}` expand from `qfai.config.yaml`, so an
+# adopter who moves either tree is covered without editing this file.
 #
 # Patterns are repository-root-relative and support `*` (one path segment) and
 # `**` (any depth). A pattern that matches nothing is not an error: a pack that
@@ -121,3 +120,72 @@ documents:
   - id: policies-slice-policy
     schema: policies/11_Slice-Policy.mdschema.yml
     pattern: "{specsDir}/_policies/11_Slice-Policy.md"
+
+  # ── Story tree ────────────────────────────────────────────────────
+  - id: story-decisions
+    schema: story/decisions.mdschema.yml
+    pattern: "{specsDir}/decisions.md"
+
+  - id: story-open-questions
+    schema: story/open-questions.mdschema.yml
+    pattern: "{specsDir}/open-questions.md"
+
+  - id: story-objective
+    schema: story/01_policy/objective.mdschema.yml
+    pattern: "{specsDir}/01_policy/objective.md"
+
+  - id: story-initiative
+    schema: story/01_policy/initiative.mdschema.yml
+    pattern: "{specsDir}/01_policy/initiative.md"
+
+  - id: story-principle
+    schema: story/01_policy/principle.mdschema.yml
+    pattern: "{specsDir}/01_policy/principle.md"
+
+  - id: story-glossary
+    schema: story/01_policy/glossary.mdschema.yml
+    pattern: "{specsDir}/01_policy/glossary.md"
+
+  - id: story-constraint
+    schema: story/01_policy/constraint.mdschema.yml
+    pattern: "{specsDir}/01_policy/constraint.md"
+
+  - id: story-business-flows
+    schema: story/02_business-flow/business-flows.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flows.md"
+
+  - id: story-business-flow
+    schema: story/02_business-flow/business-flow-NNNN/business-flow.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/business-flow.md"
+
+  - id: story-user-stories
+    schema: story/02_business-flow/business-flow-NNNN/user-stories.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-stories.md"
+
+  - id: story-user-story
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/01_User-story.md"
+
+  - id: story-acceptance-criteria
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/02_Acceptance-Criteria.md"
+
+  - id: story-example
+    schema: story/02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.mdschema.yml
+    pattern: "{specsDir}/02_business-flow/business-flow-*/user-story-*/03_Example.md"
+
+  - id: story-contracts
+    schema: story/03_contract/contracts.mdschema.yml
+    pattern: "{contractsDir}/contracts.md"
+
+  - id: story-tech
+    schema: story/03_contract/tech.mdschema.yml
+    pattern: "{contractsDir}/tech.md"
+
+  - id: story-structure
+    schema: story/03_contract/structure.mdschema.yml
+    pattern: "{contractsDir}/structure.md"
+
+  - id: story-cli-contract
+    schema: story/03_contract/cli/contract.mdschema.yml
+    pattern: "{contractsDir}/cli/*.md"

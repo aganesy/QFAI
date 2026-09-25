@@ -1,0 +1,284 @@
+## Operations
+- .qfai/spec/03_contract/cli/delivery-workflow.md: write
+- .qfai/spec/03_contract/cli/story-tree-authoring.md: write
+- .qfai/spec/03_contract/cli/qfai-validate.md: write
+- .qfai/spec/03_contract/cli/assistant-routing.md: write
+- .qfai/spec/03_contract/structure.md: write
+- .qfai/spec/03_contract/tech.md: write
+- .qfai/spec/03_contract/cli/qfai-init.md: write
+- .qfai/spec/03_contract/cli/qfai-discussion.md: write
+- .qfai/spec/03_contract/cli/shipped-workflows.md: write
+- .qfai/spec/03_contract/cli/worklog-entry.schema.md: write
+- .qfai/spec/03_contract/cli/qfai-report.md: write
+- .qfai/spec/03_contract/cli/qfai-doctor.md: write
+- .qfai/spec/03_contract/cli/qfai-guardrails.md: write
+- .qfai/spec/03_contract/cli/qfai-atdd-scaffold.md: write
+- .qfai/spec/03_contract/cli/configuration.md: write
+- .qfai/spec/03_contract/cli/qfai-prototyping.md: write
+- .qfai/spec/03_contract/cli/qfai-prototyping-iterate.md: write
+- .qfai/spec/03_contract/cli/qfai-audit.md: write
+- .qfai/spec/03_contract/cli/qfai-handoff-upgrade.md: write
+- .qfai/spec/03_contract/cli/research-protocol.md: write
+- .qfai/spec/03_contract/cli/qfai-migration-spec-to-story.md: write
+- .qfai/evidence/migration-spec-to-story/retired/spec-0001/04_Business-Rules.md: write
+- .qfai/spec/spec-0001/04_Business-Rules.md: write
+- .qfai/spec/spec-0002/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/04_Business-Rules.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0003/04_Business-Rules.md: write
+- .qfai/spec/spec-0003/04_Business-Rules.md: write
+- .qfai/evidence/migration-spec-to-story/retired/spec-0004/04_Business-Rules.md: write
+- .qfai/spec/spec-0004/04_Business-Rules.md: write
+- .qfai/spec/spec-0005/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/04_Business-Rules.md: move
+- .qfai/spec/spec-0006/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/04_Business-Rules.md: move
+- .qfai/spec/spec-0007/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/04_Business-Rules.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0008/04_Business-Rules.md: write
+- .qfai/spec/spec-0008/04_Business-Rules.md: write
+- .qfai/evidence/migration-spec-to-story/retired/spec-0009/04_Business-Rules.md: write
+- .qfai/spec/spec-0009/04_Business-Rules.md: write
+- .qfai/spec/spec-0010/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/04_Business-Rules.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0011/04_Business-Rules.md: write
+- .qfai/spec/spec-0011/04_Business-Rules.md: write
+- .qfai/evidence/migration-spec-to-story/retired/spec-0012/04_Business-Rules.md: write
+- .qfai/spec/spec-0012/04_Business-Rules.md: write
+- .qfai/evidence/migration-spec-to-story/retired/spec-0013/04_Business-Rules.md: write
+- .qfai/spec/spec-0013/04_Business-Rules.md: write
+- .qfai/spec/spec-0014/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/04_Business-Rules.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0015/04_Business-Rules.md: write
+- .qfai/spec/spec-0015/04_Business-Rules.md: write
+- .qfai/spec/spec-0016/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/04_Business-Rules.md: move
+- .qfai/spec/spec-0017/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/04_Business-Rules.md: move
+- .qfai/spec/spec-0018/04_Business-Rules.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/04_Business-Rules.md: move
+- .qfai/spec/spec-0001/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0001/01_Spec.md: move
+- .qfai/spec/spec-0002/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/01_Spec.md: move
+- .qfai/spec/spec-0003/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0003/01_Spec.md: move
+- .qfai/spec/spec-0004/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md: move
+- .qfai/spec/spec-0005/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/01_Spec.md: move
+- .qfai/spec/spec-0006/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/01_Spec.md: move
+- .qfai/spec/spec-0007/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/01_Spec.md: move
+- .qfai/spec/spec-0008/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0008/01_Spec.md: move
+- .qfai/spec/spec-0009/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0009/01_Spec.md: move
+- .qfai/spec/spec-0010/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md: move
+- .qfai/spec/spec-0011/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0011/01_Spec.md: move
+- .qfai/spec/spec-0012/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/01_Spec.md: move
+- .qfai/spec/spec-0013/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0013/01_Spec.md: move
+- .qfai/spec/spec-0014/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/01_Spec.md: move
+- .qfai/spec/spec-0015/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0015/01_Spec.md: move
+- .qfai/spec/spec-0016/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/01_Spec.md: move
+- .qfai/spec/spec-0017/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/01_Spec.md: move
+- .qfai/spec/spec-0018/01_Spec.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/01_Spec.md: move
+- .qfai/spec/spec-0002: remove empty directory
+- .qfai/spec/spec-0005: remove empty directory
+- .qfai/spec/spec-0006: remove empty directory
+- .qfai/spec/spec-0007: remove empty directory
+- .qfai/spec/spec-0010: remove empty directory
+- .qfai/spec/spec-0014: remove empty directory
+- .qfai/spec/spec-0017: remove empty directory
+- .qfai/spec/spec-0018: remove empty directory
+
+## For a person
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0001: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0002: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0003: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0004: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0005: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0006: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0010: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0011: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0012: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0013: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0014: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0015: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0016: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0020: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0022: no contract placement in plan
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0011: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0017: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0018: no contract placement in plan
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0020: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0025: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0001: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0002: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0029: no mapped example cites the rule
+- .qfai/spec/spec-0008/04_Business-Rules.md: BR-0008-0003: no mapped example cites the rule
+- .qfai/spec/spec-0008/04_Business-Rules.md: BR-0008-0004: no mapped example cites the rule
+- .qfai/spec/spec-0009/04_Business-Rules.md: BR-0009-0002: no mapped example cites the rule
+- .qfai/spec/spec-0011/04_Business-Rules.md: BR-0011-0002: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0002: retired status superseded by BR-0012-0030 (reviewer-driven Playwright; no capture artifacts) and BR-0012-0035 (per-spec iter-dir namespacing; review.json only). See `09_delta.md` CHG-002 OP-PURGE-077.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0003: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0004: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0005: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0008: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0010: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0017: retired status superseded by BR-0012-0029 (cycles 0..9, per-spec single lineage under multi-spec). See `09_delta.md` CHG-002 OP-PURGE-078.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0018: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0019: retired status superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0021: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0023: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0024: retired status superseded by BR-0012-0032 (qualitative AND-aggregator across all spec × screen pairs) + BR-0012-0029 (10-cycle terminator at `index === 9`) + BR-0012-0034 (hard-stop class catalog). DESIGN.md sha256 mismatch on cycle ≥ 1 (exit 2) remains active via BR-0012-0026. See `09_delta.md` CHG-002 OP-PURGE-080.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0025: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0026: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0029: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0036: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0040: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0060: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0061: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0062: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0063: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0064: no mapped example cites the rule
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0001: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0002: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0004: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0005: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0006: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0007: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0008: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0010: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0009: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0018: no contract placement in plan
+- .qfai/spec/spec-0015/04_Business-Rules.md: BR-0015-0001: no mapped example cites the rule
+- .qfai/spec/spec-0015/04_Business-Rules.md: BR-0015-0005: no mapped example cites the rule
+- .qfai/spec/spec-0001/01_Spec.md: Applicable NFR: - NFR-0101: Spec-SSOT 整合性 — specLayout.ts と specs が矛盾しない
+- NFR-0102: Spec 更新容易性 — SSOT 参照先を明記
+- NFR-0105: Validate 互換性 — qfai validate error=0
+- NFR-0106: トレーサビリティ完全性
+- discussion-20260923063306456#NFR-0006: Layout has one description — `mdschemaSchemas.test.ts` has no failure, and
+  `pnpm lint:mdschema` and `pnpm lint:mermaid` pass on the sample tree; contracts: cli/delivery-workflow.md, cli/story-tree-authoring.md, cli/qfai-validate.md, cli/assistant-routing.md, structure.md, tech.md, cli/qfai-init.md
+- .qfai/spec/spec-0002/01_Spec.md: Applicable NFR: - NFR-0001: OQ completeness
+- NFR-0002: discussion pack completeness
+- NFR-0003: UI-bearing sidecars are generated only when classification requires them
+- NFR-0004: downstream truth remains contracts-first; contracts: cli/qfai-discussion.md
+- .qfai/spec/spec-0003/01_Spec.md: Applicable NFR: - NFR-0012: 冪等性 - 同一入力に対して同一出力を保証
+- NFR-0040: エラーメッセージ品質 - 各 Issue に code, message, suggested_action
+- NFR-0042: CLI ヘルプ - 各コマンドに `--help` で使用方法表示
+- NFR-S0001: ラッパー同期コスト排除 - skill 更新時にラッパー更新が不要
+- NFR-S0002: クロスプラットフォーム互換性 - macOS, Linux, Windows (Developer Mode) で動作
+- NFR-S0003: Git symlink 追跡の正確性 - `git ls-files -s` で mode `120000` として追跡
+- NFR-S0004: エラーメッセージの明確性 - Windows fallback 時にユーザーが対処法を理解可能
+- NFR-S0005: 後方互換性 - 旧ラッパー形式のプロジェクトが `--force` で移行可能
+- NFR-S0006: init 実行時間 - symlink 生成は既存 writeFile と同等以下の速度
+- NFR-C0003 (CHG-007 NFR-0003): credential-free layers structurally cannot require a secret - 配布 workflow に secret 宣言 / secret context 参照 / secret 式 / secret 継承がゼロ
+- NFR-C0005 (CHG-007 NFR-0005): distributed-surface defence keeps its breadth - leakage guard は配布ツリーに対して exit 0、planted version marker / planted internal spec id で exit 1。pattern set の変更（narrowing でも additive でも）は 3 code site + 規約文書を 1 PR で動かし、同じ diff にテンプレート編集を含めない
+- NFR-C0006 (CHG-007 NFR-0006): new assets are lint-clean - 配布 asset ツリーは Markdown-lint 対象外なので、formatter と shipping lint が実効ゲートになる。コピー元 YAML は boolean の引用符表記が混在するため「verbatim コピー」は成立しない
+- NFR-C0007 (CHG-007 NFR-0007): every job is bounded and least-privileged - 配布 set の全 job が timeout と job-reachable permission block を持つ（100%、reachability ルール = workflow レベル block も可）
+- NFR-C0008 (CHG-007 NFR-0008): install and any refresh are idempotent - 同一 temp dir に 2 回 init して byte-identical、2 回目は skipped 報告。refresh が出荷された場合も 2 回目は no-op
+- NFR-C0009 (CHG-007 NFR-0009): existing adopters are not broken by a template change - 旧テンプレートのまま再 init していない adopter ツリーが新パッケージで validate を通過する。テンプレート変更は adopter の作業を要求しない
+- NFR-C0011 (CHG-007 NFR-0011): shipped workflows are self-explanatory - 各配布 workflow が header block で repository variable と default、担当 layer、inert 化の条件、fail-open 挙動を明記する
+- NFR-C0012 (CHG-007 NFR-0012): shipped supply-chain surface stays at the package-manager minimum - 配布 set の third-party action 参照は closed sanctioned set（現在 1 件）に限定し allow-list として assert する。sanctioned entry は SHA pin、他は first-party
+- NFR-C0013 (CHG-007 NFR-0013): shipped steps degrade in the direction their input permits - degraded run が「確立していない結果を green と主張する」なら fail closed、そうでなければ warning annotation 付きで conservative superset を続行する（substitution test）
+- NFR-C0014 (CHG-007 NFR-0014): gate placement is effective, not nominal - 本 spec が導入する gate は pull request で実行される。release 専用 aggregate には置かない
+- NFR-C0016 (CHG-007 NFR-0016): adopter cost does not rise on install - an adopter that declares no optional test script executes zero test lanes. Three shipped jobs declare a dependency install: the document-check job, the test lane and the validation job. Every other job installs nothing: change detection, the document scope and each file's aggregate. All three installing jobs carry a matrix, so the count is of job instances per event at each matrix's bound: a pull request runs nine (two document checks, five test legs, two validation profiles) and a push runs eight (two document checks, five test legs, one validation profile). The five test legs are the bound of the layer-named scripts the detection probe looks for. A leg runs only for a script the adopter declared, so an adopter declaring none starts none of them. That repeated setup is the scheduling cost the parallel legs buy, in exchange for checks that run independently of each other; contracts: cli/qfai-init.md, cli/shipped-workflows.md
+- .qfai/spec/spec-0004/01_Spec.md: Applicable NFR: - NFR-0001: Medium-size project validation completes within existing validate budget
+- NFR-0002: Same input yields same validate result
+- NFR-0003: Non-UI packs do not over-fire UI-bearing validators
+- NFR-0004: Actionable issues include concrete file/rule guidance
+- discussion-20260923063306456#NFR-0005: A complete default-profile `qfai validate --fail-on error` on the story tree written by the new `qfai init` takes at most 120% of the median for the complete validation of the pre-change `qfai init` tree on the same machine; contracts: cli/qfai-validate.md, cli/worklog-entry.schema.md
+- .qfai/spec/spec-0005/01_Spec.md: Applicable NFR: - NFR-0040: エラーメッセージ品質 - 各 Issue に code, message, suggested_action
+- NFR-0042: CLI ヘルプ - 各コマンドに `--help` で使用方法表示
+- NFR-0012: 冪等性 - 同一入力に対して同一出力を保証; contracts: cli/qfai-report.md
+- .qfai/spec/spec-0006/01_Spec.md: Applicable NFR: - NFR-0040: エラーメッセージ品質 - 各 Issue に code, message, suggested_action
+- NFR-0041: 日本語サポート - doctor コマンドの日本語メッセージ対応
+- NFR-0042: CLI ヘルプ - 各コマンドに `--help` で使用方法表示; contracts: cli/qfai-doctor.md
+- .qfai/spec/spec-0007/01_Spec.md: Applicable NFR: - NFR-0040: エラーメッセージ品質 - 各 Issue に code, message, suggested_action
+- NFR-0042: CLI ヘルプ - 各コマンドに `--help` で使用方法表示; contracts: cli/qfai-guardrails.md
+- .qfai/spec/spec-0008/01_Spec.md: Applicable NFR: - NFR-0001: Coverage completeness -- all required US covered by E2E, all required TC by Integration, all required CON-API by API tests; on the story tree, every BF covered by an E2E test and every AC by an integration or API test
+- NFR-0002: Annotation consistency -- every generated ATDD test includes correct QFAI annotations per layer
+- NFR-0003: Forbidden reference enforcement -- zero TC annotations in E2E/API test files; on the story tree, zero `QFAI:AC-`/`QFAI:EX-` annotations in E2E test files and zero `QFAI:BF-` outside E2E
+- NFR-0004: Evidence completeness -- evidence file includes work orders, coverage checklist, execution logs, and reviewer notes; contracts: cli/qfai-validate.md, cli/delivery-workflow.md, cli/qfai-atdd-scaffold.md
+- .qfai/spec/spec-0009/01_Spec.md: Applicable NFR: - NFR-0001: Minimal diff -- config changes are focused on traceability globs only; on the story tree, `paths.specsDir` when absent, and with the `rule/ skill/ agent/ prompt/` assistant tree, the overrides the user asked for
+- NFR-0002: Evidence-based -- glob patterns backed by actual file matches (5-15 samples)
+- NFR-0003: Non-destructive -- no test or source code modifications
+- NFR-0004: Steering accuracy -- steering files filled from repository evidence only, TBD when unverifiable; contracts: cli/configuration.md
+- .qfai/spec/spec-0010/01_Spec.md: Applicable NFR: - NFR-0001: UI-bearing sidecars are generated only when classification requires them
+- NFR-0002: planner artifacts are concrete enough for downstream normalization
+- NFR-0003: discussion artifacts do not pre-empt prototyping winner selection; contracts: cli/qfai-discussion.md
+- .qfai/spec/spec-0011/01_Spec.md: Applicable NFR: - NFR-0001: Serial execution -- items processed one test at a time by default
+- NFR-0002: Forward-only lifecycle -- backward transitions prohibited (e.g., green -> red); on the story tree, no ledger status moves backwards
+- NFR-0003: Fresh evidence -- stale evidence from previous runs must not be reused
+- NFR-0004: QA gatekeeper authority -- sole authority for RED/GREEN observation confirmation; implementation self-certification prohibited
+- NFR-0005: Reviewer independence -- implementation workers cannot serve as their own completion/code-quality reviewers; contracts: cli/delivery-workflow.md
+- .qfai/spec/spec-0012/01_Spec.md: Applicable NFR: - NFR-0001: routing policy remains centralized (orchestrator owns delegation)
+- NFR-0002: specialist responsibilities stay explicit (generator ≠ evaluator)
+- NFR-0003: first delegation failure hard-stops the stage
+- NFR-0004 (this delta): per-cycle wall-time per spec (per UI contract on the story tree) ≤ 5 min target with soft-warning on overrun
+- NFR-0005 (this delta): bounded Playwright retries (N=3, exponential backoff) before recording FAIL
+- NFR-0006 (this delta): all artifacts under per-spec evidence root `.qfai/evidence/prototyping/iter-NN/spec-NNNN/` (`iter-NN/CON-UI-NNNN/` on the story tree)
+- NFR-0007 (this delta): single SSOT for `MAX_ITERATIONS` in `core/prototyping/iteration.ts`; CI lint rejects literal `10` / `15` cycle constants outside SSOT
+- NFR-0008 (this delta): autonomous run with zero stdin prompts (CI fixture asserts no-prompt completion)
+- NFR-0009 (this delta): single-command operator UX produces runnable per-spec (per UI contract on the story tree) artifacts + handoff yaml without follow-up prompts
+- NFR-0010 (this delta): 100% of `imageSources[]` rows carry non-empty `{url(https), license, attribution, source}` drawn from the frozen cycle-0 catalog (validator-enforced); contracts: cli/qfai-prototyping.md, cli/qfai-prototyping-iterate.md
+- .qfai/spec/spec-0013/01_Spec.md: Applicable NFR: - NFR-0001: Phase order -- Contracts-first -> Outline -> Slice -> Plan -> Delta must be preserved
+- NFR-0002: Reference direction -- upper-to-lower references forbidden, lower-to-upper allowed
+- NFR-0003: Required edges -- US -> AC -> BR -> EX -> TC chain completeness
+- NFR-0004: Validate gate -- `qfai validate --fail-on error` must produce error=0
+- NFR-0005: Contract alignment -- `_policies/05_Contracts.md` index and `.qfai/contracts/**` files must be aligned
+- NFR-0006: Mermaid compliance -- `_policies/04_Business-Flow.md` must include Mermaid flowchart or sequenceDiagram; contracts: cli/story-tree-authoring.md, cli/qfai-validate.md
+- .qfai/spec/spec-0014/01_Spec.md: Applicable NFR: - NFR-0001: verify always performs full-scan gates
+- NFR-0002: validate/verify outputs are deterministic for the same input
+- NFR-0003: non-UI packs do not produce stray UI validator errors; contracts: cli/delivery-workflow.md, cli/qfai-prototyping-iterate.md, cli/qfai-prototyping.md
+- .qfai/spec/spec-0015/01_Spec.md: Applicable NFR: - NFR-0001: routing policy remains centralized
+- NFR-0002: specialist responsibilities stay explicit
+- NFR-0003: first delegation failure hard-stops the stage; contracts: cli/assistant-routing.md, cli/qfai-audit.md, cli/qfai-handoff-upgrade.md
+- .qfai/spec/spec-0016/01_Spec.md: Applicable NFR: - NFR-0001: Prompt Injection Resistance (100% block rate against OWASP test suite)
+- NFR-0002: Secret Non-Exposure (zero credential exposure)
+- NFR-0003: Sandbox Default-Deny (zero unauthorized domain access)
+- NFR-0004: Search Latency (p95 < 5s)
+- NFR-0005: Fetch+Extract Latency (p95 < 15s/URL)
+- NFR-0006: MCP Failure Recovery (< 10s)
+- NFR-0007: Rate Limit Compliance (zero violations after initial 429)
+- NFR-0008: Configuration Portability (2/3 CLI agent compatibility)
+- NFR-0009: Research Audit Trail (100% log completeness)
+- NFR-0010: Setup Time (< 15min for experienced developer)
+- NFR-0011: Node.js Version (18 LTS + 22 LTS)
+- NFR-0012: OWASP LLM Top 10 (documented mitigation); contracts: cli/research-protocol.md
+- .qfai/spec/spec-0017/01_Spec.md: Applicable NFR: Own-CI halves only. The shipped-surface halves of NFR-0011, NFR-0013 and NFR-0016, and the
+shipped half of NFR-0012, belong to `spec-0003`.
+
+- NFR-0001: Pull-request wall clock does not regress — no worse than the captured baseline on a
+  code-path pull request; at most 3 minutes end to end on a documentation-only one. The baseline
+  is unmeasured today and capturing it is a precondition of any cost-shaping change.
+- NFR-0002: Runner-minute consumption falls on a documentation-only pull request — from a baseline
+  of 14 job instances / 13 frozen-lockfile installs / 6 bundler builds per pull request to at most
+  5 executed instances on a documentation-only path, 4 once the job named `build` may carry a
+  condition, which `OQ-0022` releases. The fifth instance is the lane running the
+  agent-integration mirror guards: it takes a runner of its own because five lint lanes on one
+  four-core runner made it the run's critical path, and lane selection may never skip it. A code
+  path makes no falling claim here. Its lane set was widened on purpose, so a code-path pull
+  request expands to more job instances and more frozen-lockfile installs than the baseline. What
+  that path costs is recorded as a pin instead, re-pinned by the change that moves it. The shorter
+  wall clock the widening buys is NFR-0001's claim.
+- NFR-0003: Credential-free layers structurally cannot require a secret — zero secret-inheritance
+  uses anywhere in `.github/workflows/**`.
+- NFR-0004: Flake budget — 3 consecutive green aggregate-verdict runs on every parallelism
+  pull request before merge; at most 1 rerun-to-green per 20 default-branch verdict runs
+  afterwards; zero retry settings in the vitest workspace.
+- NFR-0005: The distributed-surface defence keeps its breadth — any change to the forbidden-pattern
+  set moves all three code sites plus the rule document in one pull request with zero template
+  edits in the same diff.
+- NFR-0006: New assets are lint-clean — the lint aggregate exits 0 with every new and edited
+  YAML, Markdown and script present. Copied YAML needs reformatting (DTC-14).
+- NFR-0007: Every job is bounded and least-privileged — 100% of jobs carry both a
+  `timeout-minutes` and a job-reachable permission block. Stated as a percentage precisely so it
+  survives the own-CI denominator falling from 12 to 11.
+- NFR-0010: Adding a lane costs one edit, not two — the verdict iterates its serialized needs
+  map, so no verdict-body edit and no settings change is needed to add a job.
+- NFR-0012 (own-CI half): Own-CI pins are 100% full-SHA with a bump owner named in a durable
+  repository artifact.
+- NFR-0014: Gate placement is effective, not nominal — every gate this spec introduces runs on a
+  pull request; none is placed in the release-only gate aggregate (DTC-18).
+- NFR-0015: The layer vocabulary does not grow — the layer-vocabulary warning count is unchanged
+  and the built-in layer token set is untouched after every change.; contracts: tech.md, cli/shipped-workflows.md
+- .qfai/spec/spec-0018/01_Spec.md: Applicable NFR: The NFR IDs below are those of the discussion pack
+`discussion-20260923063306456`.
+
+- NFR-0001: A second run of any step on a migrated tree changes 0 files, and an
+  interrupted run completes when run again.
+- NFR-0002: A dry run writes 0 files and prints every operation the real run
+  performs.
+- NFR-0003: Every `06_Test-Cases` row whose EX-Ref is `—` appears in the
+  report, as a new EX or as unresolved.
+- NFR-0008: A step writes only inside its write set, and makes no network call.
+  The write set includes the configured `paths.specsDir` and
+  `paths.contractsDir` where either lies outside `.qfai/`, as the user decided
+  for P2C-05b in the Phase 2c grilling decisions of
+  `.qfai/evidence/sdd-batch-20260923100952585.md`.
+- NFR-0010: After migration no path under `.qfai/evidence/decision/` is ignored
+  by git.; contracts: cli/qfai-migration-spec-to-story.md

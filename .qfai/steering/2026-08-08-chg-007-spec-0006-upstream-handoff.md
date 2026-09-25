@@ -4,12 +4,14 @@ status: active
 kind: handoff
 created: 2026-08-08
 updated: 2026-08-17
-scope: spec-0006
+scope: BF-0003
 blocking: false
 promote-to: null
 links:
-  - spec-0006
-  - spec-0003
+  - BF-0003
+  - BF-0001
+  - BF-0002
+  - BF-0004
   - CR-20260807-0001
   - CR-20260807-0002
 ---

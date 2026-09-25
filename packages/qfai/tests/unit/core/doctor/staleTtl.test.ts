@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0023
+// QFAI:EX-0003-0008-01
 //
 // Unit-level boundary check for the review-pack TTL helper. The helper
 // `isReviewPackArchiveEligible(mtimeMs, ttlDays, nowMs)` powers the

@@ -179,7 +179,7 @@ describe("a workflows directory reached through a link is not this tree's to wri
   }
 });
 
-// QFAI:SPEC-0003:TC-0003-0052
+// QFAI:EX-0002-0007-06
 describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives a retired-name predicate", () => {
   it("exports pruneMatchingEntries as a function (module-private would force a parallel re-implementation)", () => {
     // Membership is asserted via the namespace object so a missing export
@@ -308,7 +308,7 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0045
+// QFAI:EX-0002-0007-01
 describe("TC-0003-0045 (TDD-0045): write and prune sets equal the shipped and retired name lists, not a glob", () => {
   // A qfai-prefixed name deliberately in NEITHER list: the falsifying
   // oracle for any prefix-glob-driven write or prune. The reserved prefix
@@ -381,7 +381,7 @@ describe("TC-0003-0045 (TDD-0045): write and prune sets equal the shipped and re
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0046
+// QFAI:EX-0002-0007-02
 describe("TC-0003-0046 (TDD-0046): adopter-authored name collision is left byte-identical across four record states", () => {
   // The shipped name itself: an adopter who authored a file under this
   // name BEFORE installing QFAI must keep it untouched forever.
@@ -520,7 +520,7 @@ describe("TC-0003-0046 (TDD-0046): adopter-authored name collision is left byte-
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0047
+// QFAI:EX-0002-0007-03
 describe("TC-0003-0047 (TDD-0047): the five file states resolve and prune stays zero in all of them", () => {
   // Scope notes (delivery-planner ruling for this row):
   // - The TC bullet "declined is not recreated" is TDD-0051's obligation
@@ -810,7 +810,7 @@ describe("TC-0003-0047 (TDD-0047): the five file states resolve and prune stays 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0054
+// QFAI:EX-0002-0007-05
 describe("TC-0003-0054 (TDD-0054): an absent (never-installed) name is written and recorded, unlike declined", () => {
   // Scope notes (delivery-planner ruling for this row):
   // - This row owns the provenance WRITE path: after runInit over a fresh
@@ -922,7 +922,7 @@ describe("TC-0003-0054 (TDD-0054): an absent (never-installed) name is written a
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0051
+// QFAI:EX-0002-0007-05
 describe("TC-0003-0051 (TDD-0051): declined name is excluded from the copy set before the copy runs", () => {
   // Scope notes:
   // - This row owns the copy-set EXCLUSION joint: a declined name must be
@@ -1067,7 +1067,7 @@ describe("TC-0003-0051 (TDD-0051): declined name is excluded from the copy set b
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0048
+// QFAI:EX-0002-0007-04
 describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem call of its own", () => {
   // Scope reading (disclosed): the scanned set is the workflows-directory
   // write/removal path — the three workflow-path functions plus the

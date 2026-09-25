@@ -1,0 +1,1954 @@
+# Four-flow grouping confirmed by the user. Run only after parser, fixture and reviewer gates close.
+flows:
+  - title: 'Develop and verify a QFAI project'
+    from: '_policies/04_Business-Flow.md'
+    stories:
+      - id: US-0001-0004
+        criteria:
+          - AC-0001-0005
+      - id: US-0001-0007
+        criteria:
+          - AC-0001-0009
+      - id: US-0001-0008
+        criteria:
+          - AC-0001-0011
+      - id: US-0001-0009
+        criteria:
+          - AC-0001-0012
+      - id: US-0001-0010
+        criteria:
+          - AC-0001-0013
+          - AC-0001-0014
+          - AC-0001-0015
+      - id: US-0001-0011
+        criteria:
+          - AC-0001-0016
+          - AC-0001-0017
+      - id: US-0001-0012
+        criteria:
+          - AC-0001-0018
+          - AC-0001-0019
+          - AC-0001-0020
+      - id: US-0001-0013
+        criteria:
+          - AC-0001-0021
+          - AC-0001-0022
+      - id: US-0001-0014
+        criteria:
+          - AC-0001-0023
+          - AC-0001-0024
+          - AC-0001-0025
+      - id: US-0001-0015
+        criteria:
+          - AC-0001-0026
+          - AC-0001-0027
+      - id: US-0001-0016
+        criteria:
+          - AC-0001-0028
+          - AC-0001-0029
+      - id: US-0001-0017
+        criteria:
+          - AC-0001-0030
+          - AC-0001-0031
+      - id: US-0002-0001
+        criteria:
+          - AC-0002-0001
+      - id: US-0002-0002
+      - id: US-0002-0003
+        criteria:
+          - AC-0002-0010
+      - id: US-0002-0005
+        criteria:
+          - AC-0002-0008
+      - id: US-0002-0008
+      - id: US-0002-0009
+        criteria:
+          - AC-0002-0009
+      - id: US-0002-0010
+      - id: US-0003-0001
+        criteria:
+          - AC-0003-0001
+      - id: US-0003-0002
+        criteria:
+          - AC-0003-0002
+      - id: US-0003-0003
+        criteria:
+          - AC-0003-0003
+      - id: US-0003-0004
+        criteria:
+          - AC-0003-0004
+      - id: US-0003-0005
+        criteria:
+          - AC-0003-0005
+      - id: US-0003-0006
+        criteria:
+          - AC-0003-0006
+          - AC-0003-0037
+      - id: US-0003-0007
+        criteria:
+          - AC-0003-0007
+      - id: US-0003-0008
+        criteria:
+          - AC-0003-0008
+      - id: US-0003-0009
+        criteria:
+          - AC-0003-0009
+          - AC-0003-0010
+      - id: US-0003-0010
+      - id: US-0003-0011
+        criteria:
+          - AC-0003-0011
+          - AC-0003-0012
+      - id: US-0003-0012
+        criteria:
+          - AC-0003-0013
+      - id: US-0003-0013
+        criteria:
+          - AC-0003-0014
+      - id: US-0003-0015
+        criteria:
+          - AC-0003-0015
+          - AC-0003-0016
+      - id: US-0003-0016
+        criteria:
+          - AC-0003-0017
+          - AC-0003-0018
+      - id: US-0003-0017
+        criteria:
+          - AC-0003-0019
+          - AC-0003-0020
+      - id: US-0003-0019
+        criteria:
+          - AC-0003-0022
+      - id: US-0003-0020
+        criteria:
+          - AC-0003-0023
+          - AC-0003-0024
+      - id: US-0003-0029
+        criteria:
+          - AC-0003-0039
+          - AC-0003-0040
+          - AC-0003-0041
+          - AC-0003-0042
+          - AC-0003-0043
+      - id: US-0004-0001
+        criteria:
+          - AC-0004-0001
+      - id: US-0004-0016
+        criteria:
+          - AC-0004-0003
+          - AC-0004-0004
+          - AC-0004-0005
+      - id: US-0004-0020
+        criteria:
+          - AC-0004-0002
+      - id: US-0004-0027
+        criteria:
+          - AC-0004-0006
+          - AC-0004-0007
+          - AC-0004-0008
+          - AC-0004-0009
+          - AC-0004-0010
+          - AC-0004-0011
+          - AC-0004-0012
+          - AC-0004-0013
+          - AC-0004-0014
+      - id: US-0004-0028
+        criteria:
+          - AC-0004-0015
+      - id: US-0004-0029
+        criteria:
+          - AC-0004-0016
+          - AC-0004-0017
+          - AC-0004-0026
+          - AC-0004-0027
+          - AC-0004-0028
+          - AC-0004-0029
+          - AC-0004-0030
+      - id: US-0004-0030
+        criteria:
+          - AC-0004-0018
+          - AC-0004-0019
+      - id: US-0004-0031
+        criteria:
+          - AC-0004-0020
+          - AC-0004-0021
+      - id: US-0004-0032
+        criteria:
+          - AC-0004-0022
+          - AC-0004-0023
+      - id: US-0004-0033
+        criteria:
+          - AC-0004-0024
+          - AC-0004-0025
+      - id: US-0004-0034
+        criteria:
+          - AC-0004-0031
+          - AC-0004-0032
+      - id: US-0004-0036
+        criteria:
+          - AC-0004-0035
+      - id: US-0004-0037
+        criteria:
+          - AC-0004-0036
+      - id: US-0004-0038
+        criteria:
+          - AC-0004-0037
+      - id: US-0004-0040
+        criteria:
+          - AC-0004-0041
+          - AC-0004-0042
+          - AC-0004-0043
+          - AC-0004-0044
+          - AC-0004-0045
+      - id: US-0004-0041
+        criteria:
+          - AC-0004-0046
+          - AC-0004-0047
+      - id: US-0004-0042
+        criteria:
+          - AC-0004-0048
+          - AC-0004-0049
+          - AC-0004-0050
+          - AC-0004-0051
+          - AC-0004-0052
+      - id: US-0004-0043
+        criteria:
+          - AC-0004-0053
+          - AC-0004-0054
+          - AC-0004-0055
+          - AC-0004-0056
+          - AC-0004-0075
+      - id: US-0004-0044
+        criteria:
+          - AC-0004-0057
+          - AC-0004-0058
+          - AC-0004-0059
+          - AC-0004-0060
+          - AC-0004-0061
+          - AC-0004-0062
+      - id: US-0004-0045
+        criteria:
+          - AC-0004-0063
+          - AC-0004-0064
+          - AC-0004-0065
+          - AC-0004-0066
+          - AC-0004-0067
+          - AC-0004-0068
+      - id: US-0004-0048
+        criteria:
+          - AC-0004-0072
+          - AC-0004-0073
+          - AC-0004-0074
+      - id: US-0005-0001
+        criteria:
+          - AC-0005-0001
+      - id: US-0005-0002
+        criteria:
+          - AC-0005-0002
+      - id: US-0005-0003
+        criteria:
+          - AC-0005-0003
+      - id: US-0005-0004
+        criteria:
+          - AC-0005-0004
+          - AC-0005-0008
+      - id: US-0005-0005
+        criteria:
+          - AC-0005-0005
+      - id: US-0005-0006
+        criteria:
+          - AC-0005-0006
+      - id: US-0005-0007
+        criteria:
+          - AC-0005-0007
+      - id: US-0005-0008
+        criteria:
+          - AC-0005-0009
+          - AC-0005-0010
+      - id: US-0005-0009
+        criteria:
+          - AC-0005-0011
+          - AC-0005-0012
+          - AC-0005-0013
+      - id: US-0008-0001
+        criteria:
+          - AC-0008-0001
+      - id: US-0008-0002
+        criteria:
+          - AC-0008-0002
+      - id: US-0008-0003
+        criteria:
+          - AC-0008-0003
+      - id: US-0008-0004
+        criteria:
+          - AC-0008-0004
+      - id: US-0008-0005
+        criteria:
+          - AC-0008-0005
+          - AC-0008-0006
+          - AC-0008-0007
+          - AC-0008-0008
+          - AC-0008-0016
+      - id: US-0008-0006
+        criteria:
+          - AC-0008-0009
+      - id: US-0008-0007
+        criteria:
+          - AC-0008-0010
+          - AC-0008-0011
+          - AC-0008-0015
+      - id: US-0008-0008
+        criteria:
+          - AC-0008-0012
+          - AC-0008-0013
+          - AC-0008-0014
+      - id: US-0009-0001
+        criteria:
+          - AC-0009-0001
+      - id: US-0009-0002
+        criteria:
+          - AC-0009-0002
+          - AC-0009-0003
+          - AC-0009-0008
+      - id: US-0009-0003
+        criteria:
+          - AC-0009-0004
+      - id: US-0009-0004
+        criteria:
+          - AC-0009-0005
+      - id: US-0009-0005
+        criteria:
+          - AC-0009-0006
+          - AC-0009-0007
+      - id: US-0010-0001
+      - id: US-0010-0002
+      - id: US-0010-0003
+      - id: US-0010-0004
+      - id: US-0010-0005
+      - id: US-0010-0006
+        criteria:
+          - AC-0010-0001
+      - id: US-0010-0007
+        criteria:
+          - AC-0010-0005
+      - id: US-0010-0008
+        criteria:
+          - AC-0010-0006
+      - id: US-0010-0009
+        criteria:
+          - AC-0010-0007
+      - id: US-0010-0010
+        criteria:
+          - AC-0010-0008
+      - id: US-0010-0011
+        criteria:
+          - AC-0010-0009
+          - AC-0010-0010
+      - id: US-0010-0012
+        criteria:
+          - AC-0010-0011
+          - AC-0010-0012
+      - id: US-0011-0001
+        criteria:
+          - AC-0011-0001
+          - AC-0011-0011
+          - AC-0011-0012
+          - AC-0011-0013
+          - AC-0011-0014
+      - id: US-0011-0003
+        criteria:
+          - AC-0011-0003
+      - id: US-0011-0005
+        criteria:
+          - AC-0011-0005
+      - id: US-0011-0006
+        criteria:
+          - AC-0011-0006
+          - AC-0011-0007
+          - AC-0011-0008
+          - AC-0011-0015
+      - id: US-0011-0007
+        criteria:
+          - AC-0011-0016
+      - id: US-0011-0008
+        criteria:
+          - AC-0011-0010
+      - id: US-0012-0084
+        criteria:
+          - AC-0012-0004
+      - id: US-0012-0085
+        criteria:
+          - AC-0012-0006
+          - AC-0012-0007
+          - AC-0012-0050
+      - id: US-0012-0086
+        criteria:
+          - AC-0012-0001
+      - id: US-0012-0087
+        criteria:
+          - AC-0012-0002
+      - id: US-0012-0088
+      - id: US-0012-0089
+        criteria:
+          - AC-0012-0005
+      - id: US-0012-0090
+      - id: US-0012-0098
+      - id: US-0012-0099
+        criteria:
+          - AC-0012-0023
+          - AC-0012-0026
+          - AC-0012-0027
+      - id: US-0012-0100
+      - id: US-0012-0101
+      - id: US-0012-0102
+        criteria:
+          - AC-0012-0024
+          - AC-0012-0025
+      - id: US-0012-0103
+        criteria:
+          - AC-0012-0032
+      - id: US-0012-0104
+      - id: US-0012-0105
+        criteria:
+          - AC-0012-0034
+      - id: US-0012-0106
+        criteria:
+          - AC-0012-0035
+      - id: US-0012-0107
+      - id: US-0012-0108
+        criteria:
+          - AC-0012-0036
+      - id: US-0012-0109
+        criteria:
+          - AC-0012-0009
+          - AC-0012-0037
+      - id: US-0012-0110
+        criteria:
+          - AC-0012-0040
+      - id: US-0012-0111
+        criteria:
+          - AC-0012-0041
+          - AC-0012-0042
+          - AC-0012-0048
+      - id: US-0012-0112
+        criteria:
+          - AC-0012-0043
+      - id: US-0012-0113
+        criteria:
+          - AC-0012-0044
+          - AC-0012-0045
+      - id: US-0012-0114
+        criteria:
+          - AC-0012-0046
+      - id: US-0012-0115
+        criteria:
+          - AC-0012-0047
+      - id: US-0012-0116
+        criteria:
+          - AC-0012-0049
+          - AC-0012-0051
+          - AC-0012-0052
+      - id: US-0012-0117
+        criteria:
+          - AC-0012-0083
+      - id: US-0012-0118
+        criteria:
+          - AC-0012-0038
+          - AC-0012-0039
+      - id: US-0012-0119
+        criteria:
+          - AC-0012-0053
+      - id: US-0012-0120
+        criteria:
+          - AC-0012-0054
+      - id: US-0012-0121
+        criteria:
+          - AC-0012-0055
+      - id: US-0012-0122
+        criteria:
+          - AC-0012-0056
+      - id: US-0012-0123
+        criteria:
+          - AC-0012-0057
+      - id: US-0012-0124
+        criteria:
+          - AC-0012-0058
+      - id: US-0012-0125
+        criteria:
+          - AC-0012-0059
+      - id: US-0012-0126
+        criteria:
+          - AC-0012-0060
+      - id: US-0012-0127
+        criteria:
+          - AC-0012-0061
+      - id: US-0012-0128
+        criteria:
+          - AC-0012-0062
+      - id: US-0012-0129
+        criteria:
+          - AC-0012-0063
+      - id: US-0012-0130
+        criteria:
+          - AC-0012-0064
+      - id: US-0012-0131
+        criteria:
+          - AC-0012-0065
+          - AC-0012-0082
+      - id: US-0012-0132
+        criteria:
+          - AC-0012-0066
+      - id: US-0012-0133
+        criteria:
+          - AC-0012-0067
+      - id: US-0012-0134
+        criteria:
+          - AC-0012-0068
+      - id: US-0012-0135
+        criteria:
+          - AC-0012-0069
+      - id: US-0012-0136
+        criteria:
+          - AC-0012-0070
+      - id: US-0012-0137
+        criteria:
+          - AC-0012-0071
+      - id: US-0012-0138
+        criteria:
+          - AC-0012-0072
+          - AC-0012-0073
+      - id: US-0012-0139
+        criteria:
+          - AC-0012-0074
+          - AC-0012-0075
+      - id: US-0012-0140
+        criteria:
+          - AC-0012-0076
+          - AC-0012-0077
+      - id: US-0012-0141
+        criteria:
+          - AC-0012-0078
+          - AC-0012-0079
+      - id: US-0012-0142
+        criteria:
+          - AC-0012-0080
+          - AC-0012-0081
+      - id: US-0013-0001
+        criteria:
+          - AC-0013-0028
+          - AC-0013-0029
+          - AC-0013-0030
+          - AC-0013-0031
+          - AC-0013-0032
+          - AC-0013-0033
+          - AC-0013-0035
+      - id: US-0013-0003
+        criteria:
+          - AC-0013-0003
+      - id: US-0013-0005
+        criteria:
+          - AC-0013-0034
+      - id: US-0013-0006
+        criteria:
+          - AC-0013-0007
+          - AC-0013-0014
+          - AC-0013-0036
+      - id: US-0013-0008
+        criteria:
+          - AC-0013-0008
+          - AC-0013-0009
+      - id: US-0013-0009
+        criteria:
+          - AC-0013-0015
+      - id: US-0013-0010
+        criteria:
+          - AC-0013-0016
+          - AC-0013-0017
+      - id: US-0013-0011
+        criteria:
+          - AC-0013-0018
+          - AC-0013-0019
+      - id: US-0013-0012
+        criteria:
+          - AC-0013-0020
+          - AC-0013-0021
+      - id: US-0013-0014
+        criteria:
+          - AC-0013-0024
+          - AC-0013-0025
+      - id: US-0014-0013
+        criteria:
+          - AC-0014-0001
+          - AC-0014-0003
+          - AC-0014-0027
+      - id: US-0014-0014
+        criteria:
+          - AC-0014-0002
+          - AC-0014-0005
+      - id: US-0014-0018
+        criteria:
+          - AC-0014-0004
+          - AC-0014-0024
+          - AC-0014-0025
+      - id: US-0014-0019
+        criteria:
+          - AC-0014-0006
+          - AC-0014-0023
+          - AC-0014-0026
+      - id: US-0014-0020
+        criteria:
+          - AC-0014-0022
+      - id: US-0015-0001
+        criteria:
+          - AC-0015-0001
+          - AC-0015-0010
+          - AC-0015-0023
+          - AC-0015-0024
+      - id: US-0015-0002
+        criteria:
+          - AC-0015-0002
+      - id: US-0015-0003
+        criteria:
+          - AC-0015-0003
+          - AC-0015-0011
+          - AC-0015-0012
+      - id: US-0015-0004
+        criteria:
+          - AC-0015-0004
+          - AC-0015-0005
+      - id: US-0015-0005
+        criteria:
+          - AC-0015-0006
+          - AC-0015-0007
+      - id: US-0015-0006
+        criteria:
+          - AC-0015-0008
+      - id: US-0015-0007
+        criteria:
+          - AC-0015-0013
+      - id: US-0015-0008
+        criteria:
+          - AC-0015-0014
+      - id: US-0015-0009
+        criteria:
+          - AC-0015-0015
+      - id: US-0015-0010
+        criteria:
+          - AC-0015-0016
+      - id: US-0015-0011
+        criteria:
+          - AC-0015-0017
+      - id: US-0015-0012
+        criteria:
+          - AC-0015-0018
+      - id: US-0015-0013
+        criteria:
+          - AC-0015-0019
+      - id: US-0015-0014
+        criteria:
+          - AC-0015-0020
+      - id: US-0015-0015
+        criteria:
+          - AC-0015-0021
+      - id: US-0015-0016
+        criteria:
+          - AC-0015-0022
+      - id: US-0016-0001
+        criteria:
+          - AC-0016-0001
+          - AC-0016-0002
+          - AC-0016-0003
+      - id: US-0016-0002
+        criteria:
+          - AC-0016-0004
+          - AC-0016-0005
+          - AC-0016-0006
+          - AC-0016-0019
+      - id: US-0016-0003
+        criteria:
+          - AC-0016-0007
+          - AC-0016-0008
+      - id: US-0016-0004
+        criteria:
+          - AC-0016-0009
+          - AC-0016-0010
+      - id: US-0016-0005
+        criteria:
+          - AC-0016-0011
+          - AC-0016-0012
+          - AC-0016-0013
+          - AC-0016-0020
+      - id: US-0016-0006
+        criteria:
+          - AC-0016-0014
+      - id: US-0016-0007
+        criteria:
+          - AC-0016-0015
+      - id: US-0016-0008
+        criteria:
+          - AC-0016-0016
+          - AC-0016-0017
+          - AC-0016-0018
+  - title: 'Run and assess pull request CI'
+    from: 'CHG-007 — Layered CI Lane Topology (CAP-0017 / CAP-0003)'
+    stories:
+      - id: US-0003-0021
+        criteria:
+          - AC-0003-0025
+          - AC-0003-0047
+      - id: US-0003-0022
+        criteria:
+          - AC-0003-0027
+          - AC-0003-0028
+      - id: US-0003-0023
+        criteria:
+          - AC-0003-0029
+          - AC-0003-0030
+          - AC-0003-0038
+      - id: US-0003-0024
+        criteria:
+          - AC-0003-0031
+      - id: US-0003-0025
+        criteria:
+          - AC-0003-0032
+      - id: US-0003-0026
+        criteria:
+          - AC-0003-0026
+          - AC-0003-0033
+      - id: US-0003-0027
+        criteria:
+          - AC-0003-0034
+          - AC-0003-0036
+      - id: US-0003-0028
+        criteria:
+          - AC-0003-0035
+      - id: US-0003-0031
+        criteria:
+          - AC-0003-0046
+      - id: US-0004-0035
+        criteria:
+          - AC-0004-0033
+          - AC-0004-0034
+      - id: US-0004-0039
+        criteria:
+          - AC-0004-0038
+          - AC-0004-0039
+      - id: US-0004-0047
+        criteria:
+          - AC-0004-0071
+      - id: US-0017-0001
+        criteria:
+          - AC-0017-0001
+          - AC-0017-0002
+          - AC-0017-0003
+          - AC-0017-0004
+          - AC-0017-0005
+          - AC-0017-0006
+      - id: US-0017-0002
+        criteria:
+          - AC-0017-0007
+          - AC-0017-0008
+          - AC-0017-0009
+          - AC-0017-0010
+          - AC-0017-0011
+      - id: US-0017-0003
+        criteria:
+          - AC-0017-0012
+          - AC-0017-0013
+      - id: US-0017-0004
+        criteria:
+          - AC-0017-0014
+          - AC-0017-0015
+          - AC-0017-0016
+          - AC-0017-0017
+          - AC-0017-0039
+      - id: US-0017-0005
+        criteria:
+          - AC-0017-0018
+          - AC-0017-0035
+          - AC-0017-0036
+          - AC-0017-0040
+      - id: US-0017-0006
+        criteria:
+          - AC-0017-0019
+          - AC-0017-0020
+          - AC-0017-0021
+          - AC-0017-0022
+          - AC-0017-0023
+          - AC-0017-0024
+          - AC-0017-0025
+      - id: US-0017-0007
+        criteria:
+          - AC-0017-0026
+          - AC-0017-0027
+          - AC-0017-0028
+          - AC-0017-0029
+      - id: US-0017-0008
+        criteria:
+          - AC-0017-0030
+          - AC-0017-0031
+      - id: US-0017-0009
+        criteria:
+          - AC-0017-0032
+          - AC-0017-0033
+          - AC-0017-0034
+      - id: US-0017-0010
+        criteria:
+          - AC-0017-0037
+      - id: US-0017-0011
+        criteria:
+          - AC-0017-0038
+  - title: 'Diagnose and repair a QFAI workspace'
+    stories:
+      - id: US-0006-0001
+        criteria:
+          - AC-0006-0001
+          - AC-0006-0002
+      - id: US-0006-0002
+        criteria:
+          - AC-0006-0003
+      - id: US-0006-0003
+        criteria:
+          - AC-0006-0004
+      - id: US-0006-0004
+        criteria:
+          - AC-0006-0005
+      - id: US-0006-0005
+        criteria:
+          - AC-0006-0006
+          - AC-0006-0009
+      - id: US-0006-0006
+        criteria:
+          - AC-0006-0010
+          - AC-0006-0011
+          - AC-0006-0012
+      - id: US-0006-0007
+        criteria:
+          - AC-0006-0013
+          - AC-0006-0014
+      - id: US-0006-0008
+        criteria:
+          - AC-0006-0015
+          - AC-0006-0016
+      - id: US-0006-0009
+        criteria:
+          - AC-0006-0017
+          - AC-0006-0018
+      - id: US-0006-0010
+        criteria:
+          - AC-0006-0019
+          - AC-0006-0020
+      - id: US-0006-0011
+        criteria:
+          - AC-0006-0021
+          - AC-0006-0022
+          - AC-0006-0023
+          - AC-0006-0024
+          - AC-0006-0025
+          - AC-0006-0026
+      - id: US-0006-0012
+        criteria:
+          - AC-0006-0007
+          - AC-0006-0008
+      - id: US-0007-0001
+        criteria:
+          - AC-0007-0001
+          - AC-0007-0002
+      - id: US-0007-0002
+        criteria:
+          - AC-0007-0003
+          - AC-0007-0004
+      - id: US-0007-0003
+        criteria:
+          - AC-0007-0005
+          - AC-0007-0006
+      - id: US-0007-0004
+        criteria:
+          - AC-0007-0007
+          - AC-0007-0008
+  - title: 'Migrate a spec-pack project to the story tree'
+    stories:
+      - id: US-0003-0030
+        criteria:
+          - AC-0003-0044
+          - AC-0003-0045
+      - id: US-0004-0046
+        criteria:
+          - AC-0004-0069
+      - id: US-0018-0001
+        criteria:
+          - AC-0018-0001
+          - AC-0018-0002
+          - AC-0018-0003
+          - AC-0018-0004
+          - AC-0018-0005
+          - AC-0018-0006
+          - AC-0018-0007
+      - id: US-0018-0002
+        criteria:
+          - AC-0018-0008
+          - AC-0018-0009
+      - id: US-0018-0003
+        criteria:
+          - AC-0018-0010
+          - AC-0018-0011
+      - id: US-0018-0004
+        criteria:
+          - AC-0018-0012
+          - AC-0018-0013
+      - id: US-0018-0005
+        criteria:
+          - AC-0018-0014
+          - AC-0018-0015
+      - id: US-0018-0006
+        criteria:
+          - AC-0018-0016
+          - AC-0018-0017
+          - AC-0018-0018
+      - id: US-0018-0007
+        criteria:
+          - AC-0018-0019
+          - AC-0018-0020
+      - id: US-0018-0008
+        criteria:
+          - AC-0018-0021
+          - AC-0018-0022
+      - id: US-0018-0009
+        criteria:
+          - AC-0018-0023
+          - AC-0018-0024
+      - id: US-0018-0010
+        criteria:
+          - AC-0018-0025
+          - AC-0018-0026
+          - AC-0018-0027
+rules:
+  - id: BR-0001-0007
+    contract: cli/delivery-workflow.md
+  - id: BR-0001-0008
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0009
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0017
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0018
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0019
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0021
+    contract: cli/delivery-workflow.md
+  - id: BR-0001-0023
+    contract: cli/delivery-workflow.md
+  - id: BR-0001-0024
+    contract: cli/assistant-routing.md
+  - id: BR-0001-0025
+    contract: structure.md
+  - id: BR-0001-0026
+    contract: structure.md
+  - id: BR-0001-0027
+    contract: structure.md
+  - id: BR-0001-0028
+    contract: structure.md
+  - id: BR-0001-0029
+    contract: structure.md
+  - id: BR-0001-0030
+    contract: structure.md
+  - id: BR-0001-0031
+    contract: tech.md
+  - id: BR-0001-0032
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0033
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0034
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0035
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0036
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0037
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0038
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0039
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0040
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0041
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0042
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0043
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0044
+    contract: cli/story-tree-authoring.md
+  - id: BR-0001-0045
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0046
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0047
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0048
+    contract: cli/qfai-validate.md
+  - id: BR-0001-0049
+    contract: tech.md
+  - id: BR-0001-0050
+    contract: cli/qfai-init.md
+  - id: BR-0001-0051
+    contract: cli/qfai-init.md
+  - id: BR-0002-0001
+    contract: cli/qfai-discussion.md
+  - id: BR-0002-0008
+    contract: cli/qfai-discussion.md
+  - id: BR-0002-0009
+    contract: cli/qfai-discussion.md
+  - id: BR-0002-0010
+    contract: cli/qfai-discussion.md
+  - id: BR-0003-0001
+    contract: cli/qfai-init.md
+  - id: BR-0003-0002
+    contract: cli/qfai-init.md
+  - id: BR-0003-0003
+    contract: cli/qfai-init.md
+  - id: BR-0003-0004
+    contract: cli/qfai-init.md
+  - id: BR-0003-0005
+    contract: cli/qfai-init.md
+  - id: BR-0003-0006
+    contract: cli/qfai-init.md
+  - id: BR-0003-0007
+    contract: cli/qfai-init.md
+  - id: BR-0003-0008
+    contract: cli/qfai-init.md
+  - id: BR-0003-0009
+    contract: cli/qfai-init.md
+  - id: BR-0003-0010
+    contract: cli/qfai-init.md
+  - id: BR-0003-0011
+    contract: cli/qfai-init.md
+  - id: BR-0003-0012
+    contract: cli/qfai-init.md
+  - id: BR-0003-0013
+    contract: cli/qfai-init.md
+  - id: BR-0003-0014
+    contract: cli/qfai-init.md
+  - id: BR-0003-0015
+    contract: cli/qfai-init.md
+  - id: BR-0003-0016
+    contract: cli/qfai-init.md
+  - id: BR-0003-0017
+    contract: cli/qfai-init.md
+  - id: BR-0003-0019
+    contract: cli/qfai-init.md
+  - id: BR-0003-0020
+    contract: cli/qfai-init.md
+  - id: BR-0003-0021
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0022
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0023
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0024
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0025
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0026
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0027
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0028
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0029
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0030
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0031
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0032
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0033
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0034
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0035
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0036
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0037
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0038
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0039
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0040
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0041
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0042
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0043
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0044
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0045
+    contract: cli/qfai-init.md
+  - id: BR-0003-0046
+    contract: cli/qfai-init.md
+  - id: BR-0003-0047
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0048
+    contract: cli/shipped-workflows.md
+  - id: BR-0003-0049
+    contract: cli/qfai-init.md
+  - id: BR-0003-0050
+    contract: cli/qfai-init.md
+  - id: BR-0003-0051
+    contract: cli/qfai-init.md
+  - id: BR-0003-0052
+    contract: cli/qfai-init.md
+  - id: BR-0003-0053
+    contract: cli/qfai-init.md
+  - id: BR-0003-0054
+    contract: cli/qfai-init.md
+  - id: BR-0003-0055
+    contract: cli/qfai-init.md
+  - id: BR-0003-0056
+    contract: cli/qfai-init.md
+  - id: BR-0003-0057
+    contract: cli/qfai-init.md
+  - id: BR-0003-0058
+    contract: cli/qfai-init.md
+  - id: BR-0003-0059
+    contract: cli/qfai-init.md
+  - id: BR-0004-0001
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0002
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0003
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0004
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0005
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0006
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0007
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0008
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0009
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0010
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0011
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0012
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0013
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0014
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0015
+    contract: cli/worklog-entry.schema.md
+  - id: BR-0004-0016
+    contract: cli/worklog-entry.schema.md
+  - id: BR-0004-0017
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0018
+    contract: cli/worklog-entry.schema.md
+  - id: BR-0004-0019
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0020
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0021
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0022
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0023
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0024
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0025
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0026
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0027
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0028
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0029
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0030
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0031
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0032
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0033
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0043
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0044
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0045
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0046
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0047
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0048
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0049
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0050
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0051
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0052
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0053
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0054
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0055
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0056
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0057
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0058
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0059
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0060
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0061
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0062
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0063
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0064
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0065
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0066
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0067
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0068
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0069
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0070
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0071
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0072
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0073
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0074
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0075
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0077
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0078
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0079
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0080
+    contract: cli/qfai-validate.md
+  - id: BR-0004-0081
+    contract: cli/qfai-validate.md
+  - id: BR-0005-0001
+    contract: cli/qfai-report.md
+  - id: BR-0005-0002
+    contract: cli/qfai-report.md
+  - id: BR-0005-0003
+    contract: cli/qfai-report.md
+  - id: BR-0005-0004
+    contract: cli/qfai-report.md
+  - id: BR-0005-0013
+    contract: cli/qfai-report.md
+  - id: BR-0005-0014
+    contract: cli/qfai-report.md
+  - id: BR-0005-0015
+    contract: cli/qfai-report.md
+  - id: BR-0005-0016
+    contract: cli/qfai-report.md
+  - id: BR-0006-0001
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0002
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0003
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0004
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0005
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0006
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0007
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0008
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0009
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0010
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0011
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0012
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0013
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0014
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0015
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0016
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0017
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0018
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0019
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0020
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0021
+    contract: cli/qfai-doctor.md
+  - id: BR-0006-0022
+    contract: cli/qfai-doctor.md
+  - id: BR-0007-0001
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0002
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0003
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0004
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0005
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0006
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0007
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0008
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0009
+    contract: cli/qfai-guardrails.md
+  - id: BR-0007-0010
+    contract: cli/qfai-guardrails.md
+  - id: BR-0008-0001
+    contract: cli/qfai-validate.md
+  - id: BR-0008-0002
+    contract: cli/qfai-validate.md
+  - id: BR-0008-0003
+    contract: cli/qfai-validate.md
+  - id: BR-0008-0004
+    contract: cli/assistant-routing.md
+  - id: BR-0008-0005
+    contract: cli/qfai-validate.md
+  - id: BR-0008-0006
+    contract: cli/delivery-workflow.md
+  - id: BR-0008-0007
+    contract: cli/delivery-workflow.md
+  - id: BR-0008-0008
+    contract: cli/qfai-atdd-scaffold.md
+  - id: BR-0008-0009
+    contract: cli/qfai-atdd-scaffold.md
+  - id: BR-0008-0010
+    contract: cli/delivery-workflow.md
+  - id: BR-0008-0011
+    contract: cli/delivery-workflow.md
+  - id: BR-0008-0012
+    contract: cli/delivery-workflow.md
+  - id: BR-0008-0013
+    contract: cli/qfai-atdd-scaffold.md
+  - id: BR-0008-0014
+    contract: cli/delivery-workflow.md
+  - id: BR-0009-0001
+    contract: cli/configuration.md
+  - id: BR-0009-0002
+    contract: cli/configuration.md
+  - id: BR-0009-0003
+    contract: cli/configuration.md
+  - id: BR-0009-0004
+    contract: cli/configuration.md
+  - id: BR-0009-0005
+    contract: cli/configuration.md
+  - id: BR-0009-0006
+    contract: cli/configuration.md
+  - id: BR-0009-0007
+    contract: cli/configuration.md
+  - id: BR-0009-0008
+    contract: cli/configuration.md
+  - id: BR-0010-0001
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0005
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0006
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0007
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0008
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0009
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0010
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0011
+    contract: cli/qfai-discussion.md
+  - id: BR-0010-0012
+    contract: cli/qfai-discussion.md
+  - id: BR-0011-0001
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0003
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0004
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0005
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0006
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0008
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0009
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0010
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0011
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0012
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0013
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0014
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0015
+    contract: cli/delivery-workflow.md
+  - id: BR-0011-0016
+    contract: cli/delivery-workflow.md
+  - id: BR-0012-0001
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0004
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0005
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0006
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0007
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0009
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0018
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0020
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0021
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0022
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0023
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0026
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0027
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0028
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0029
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0030
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0031
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0032
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0033
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0034
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0035
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0036
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0037
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0038
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0039
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0040
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0041
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0042
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0043
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0044
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0045
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0046
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0047
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0048
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0049
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0050
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0051
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0052
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0053
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0054
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0055
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0056
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0057
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0058
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0059
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0060
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0061
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0062
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0063
+    contract: cli/qfai-prototyping.md
+  - id: BR-0012-0065
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0012-0064
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0013-0003
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0011
+    contract: cli/qfai-validate.md
+  - id: BR-0013-0012
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0013
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0014
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0015
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0016
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0017
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0019
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0020
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0021
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0022
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0023
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0024
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0025
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0026
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0027
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0028
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0029
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0030
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0031
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0032
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0033
+    contract: cli/story-tree-authoring.md
+  - id: BR-0013-0034
+    contract: cli/story-tree-authoring.md
+  - id: BR-0014-0001
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0002
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0003
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0004
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0005
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0006
+    contract: cli/qfai-prototyping-iterate.md
+  - id: BR-0014-0025
+    contract: cli/qfai-prototyping.md
+  - id: BR-0014-0026
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0027
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0028
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0029
+    contract: cli/delivery-workflow.md
+  - id: BR-0014-0030
+    contract: cli/delivery-workflow.md
+  - id: BR-0015-0001
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0002
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0003
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0004
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0005
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0006
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0007
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0008
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0009
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0010
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0011
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0012
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0013
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0014
+    contract: cli/qfai-audit.md
+  - id: BR-0015-0015
+    contract: cli/qfai-handoff-upgrade.md
+  - id: BR-0015-0016
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0017
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0018
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0019
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0020
+    contract: cli/assistant-routing.md
+  - id: BR-0015-0021
+    contract: cli/assistant-routing.md
+  - id: BR-0016-0001
+    contract: cli/research-protocol.md
+  - id: BR-0016-0002
+    contract: cli/research-protocol.md
+  - id: BR-0016-0003
+    contract: cli/research-protocol.md
+  - id: BR-0016-0004
+    contract: cli/research-protocol.md
+  - id: BR-0016-0005
+    contract: cli/research-protocol.md
+  - id: BR-0016-0006
+    contract: cli/research-protocol.md
+  - id: BR-0016-0007
+    contract: cli/research-protocol.md
+  - id: BR-0016-0008
+    contract: cli/research-protocol.md
+  - id: BR-0016-0009
+    contract: cli/research-protocol.md
+  - id: BR-0016-0010
+    contract: cli/research-protocol.md
+  - id: BR-0016-0011
+    contract: cli/research-protocol.md
+  - id: BR-0016-0012
+    contract: cli/research-protocol.md
+  - id: BR-0016-0013
+    contract: cli/research-protocol.md
+  - id: BR-0016-0014
+    contract: cli/research-protocol.md
+  - id: BR-0016-0015
+    contract: cli/research-protocol.md
+  - id: BR-0016-0016
+    contract: cli/research-protocol.md
+  - id: BR-0016-0017
+    contract: cli/research-protocol.md
+  - id: BR-0016-0018
+    contract: cli/research-protocol.md
+  - id: BR-0016-0019
+    contract: cli/research-protocol.md
+  - id: BR-0016-0020
+    contract: cli/research-protocol.md
+  - id: BR-0017-0001
+    contract: tech.md
+  - id: BR-0017-0002
+    contract: tech.md
+  - id: BR-0017-0003
+    contract: tech.md
+  - id: BR-0017-0004
+    contract: tech.md
+  - id: BR-0017-0005
+    contract: tech.md
+  - id: BR-0017-0006
+    contract: tech.md
+  - id: BR-0017-0007
+    contract: tech.md
+  - id: BR-0017-0008
+    contract: tech.md
+  - id: BR-0017-0009
+    contract: tech.md
+  - id: BR-0017-0010
+    contract: tech.md
+  - id: BR-0017-0011
+    contract: tech.md
+  - id: BR-0017-0012
+    contract: tech.md
+  - id: BR-0017-0013
+    contract: tech.md
+  - id: BR-0017-0014
+    contract: tech.md
+  - id: BR-0017-0015
+    contract: tech.md
+  - id: BR-0017-0016
+    contract: tech.md
+  - id: BR-0017-0017
+    contract: tech.md
+  - id: BR-0017-0018
+    contract: tech.md
+  - id: BR-0017-0019
+    contract: tech.md
+  - id: BR-0017-0020
+    contract: tech.md
+  - id: BR-0017-0021
+    contract: tech.md
+  - id: BR-0017-0022
+    contract: tech.md
+  - id: BR-0017-0023
+    contract: tech.md
+  - id: BR-0017-0024
+    contract: tech.md
+  - id: BR-0017-0025
+    contract: tech.md
+  - id: BR-0017-0026
+    contract: tech.md
+  - id: BR-0017-0027
+    contract: tech.md
+  - id: BR-0017-0028
+    contract: tech.md
+  - id: BR-0017-0029
+    contract: tech.md
+  - id: BR-0017-0030
+    contract: tech.md
+  - id: BR-0017-0031
+    contract: tech.md
+  - id: BR-0017-0032
+    contract: tech.md
+  - id: BR-0017-0033
+    contract: tech.md
+  - id: BR-0017-0034
+    contract: tech.md
+  - id: BR-0017-0035
+    contract: tech.md
+  - id: BR-0017-0036
+    contract: tech.md
+  - id: BR-0017-0037
+    contract: tech.md
+  - id: BR-0017-0038
+    contract: tech.md
+  - id: BR-0017-0039
+    contract: tech.md
+  - id: BR-0017-0040
+    contract: tech.md
+  - id: BR-0017-0041
+    contract: tech.md
+  - id: BR-0017-0042
+    contract: tech.md
+  - id: BR-0017-0043
+    contract: tech.md
+  - id: BR-0017-0044
+    contract: tech.md
+  - id: BR-0017-0045
+    contract: tech.md
+  - id: BR-0017-0046
+    contract: cli/shipped-workflows.md
+  - id: BR-0017-0047
+    contract: tech.md
+  - id: BR-0017-0048
+    contract: tech.md
+  - id: BR-0017-0049
+    contract: tech.md
+  - id: BR-0017-0050
+    contract: tech.md
+  - id: BR-0017-0051
+    contract: tech.md
+  - id: BR-0017-0052
+    contract: tech.md
+  - id: BR-0017-0053
+    contract: tech.md
+  - id: BR-0017-0054
+    contract: tech.md
+  - id: BR-0017-0055
+    contract: tech.md
+  - id: BR-0017-0056
+    contract: tech.md
+  - id: BR-0017-0057
+    contract: tech.md
+  - id: BR-0017-0058
+    contract: tech.md
+  - id: BR-0017-0059
+    contract: tech.md
+  - id: BR-0017-0060
+    contract: tech.md
+  - id: BR-0017-0061
+    contract: tech.md
+  - id: BR-0017-0062
+    contract: tech.md
+  - id: BR-0017-0063
+    contract: tech.md
+  - id: BR-0017-0064
+    contract: tech.md
+  - id: BR-0017-0065
+    contract: tech.md
+  - id: BR-0017-0066
+    contract: tech.md
+  - id: BR-0017-0067
+    contract: tech.md
+  - id: BR-0017-0068
+    contract: tech.md
+  - id: BR-0017-0069
+    contract: tech.md
+  - id: BR-0017-0070
+    contract: tech.md
+  - id: BR-0017-0071
+    contract: tech.md
+  - id: BR-0017-0072
+    contract: tech.md
+  - id: BR-0018-0001
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0002
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0003
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0004
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0005
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0006
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0007
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0008
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0009
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0010
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0011
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0012
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0013
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0014
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0015
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0016
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0017
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0018
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0019
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0020
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0021
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0022
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0023
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0024
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0025
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0026
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0027
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0028
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0029
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0030
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0031
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0032
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0033
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0034
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0035
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0036
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0037
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0038
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0039
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0040
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0041
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0042
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0043
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0044
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0045
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0046
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0047
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0048
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0049
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0050
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0051
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0052
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0053
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0054
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0055
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0056
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0057
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0058
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0059
+    contract: cli/qfai-migration-spec-to-story.md
+  - id: BR-0018-0060
+    contract: cli/qfai-migration-spec-to-story.md

@@ -8,7 +8,7 @@ wins when it disagrees with one.
 ## 言語
 
 Output language is decided by the Absolute Rule in
-`.qfai/assistant/constitution/constitution.md`: write every output in the
+`.qfai/assistant/rule/constitution.md`: write every output in the
 language the user is working in for this session. This file pins no language,
 and neither may any other.
 
@@ -36,19 +36,21 @@ would create one.
   repository alone is a real file in that directory.
 - リポジトリのルート直下にディレクトリ・ファイルを新規追加する際は事前にユーザー確認を必須とする（既存ルートファイルの編集は対象外）。詳細: `.agents/rules/root-additions-policy.md`。
 
-### `.qfai/contracts/cli/`
+### `.qfai/spec/03_contract/cli/`
 
 `api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
 shipped `qfai-sdd` skill governs them
-(`assets/init/.qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md`).
+(`assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`).
 `cli/` is this repository's alone: the contracts for QFAI's own command surface,
 and for the files QFAI writes into a consuming project.
 
 - Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
   contract validators do not scan them.
-- Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
+- Indexed in `.qfai/spec/03_contract/contracts.md`, with `CLI-*`
   short ids.
-- Named `qfai-<command>.md` for one command's surface. A subject name instead —
+- Named `qfai-<command>.md` for one command's surface, and after the skill
+  (`qfai-migration-spec-to-story.md`) for the scripts one skill bundles, since
+  those scripts are not a `qfai` command. A subject name instead —
   `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
   schema or an ownership boundary that more than one command shares.
 

@@ -1,5 +1,5 @@
 /**
- * `assistant/catalog/cli-ux-guidelines.md` is shipped by `qfai init` and declares
+ * `assistant/rule/cli-ux-guidelines.md` is shipped by `qfai init` and declares
  * the line grammar of `qfai validate --format text` (the default format). Nothing
  * else binds that document to the emitter, so this test rebuilds the expected
  * lines from the grammar the guideline actually ships and compares them against
@@ -19,15 +19,14 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { captureStdout } from "../../helpers/stdout.js";
-import { emitText, runValidate } from "../../../src/cli/commands/validate.js";
-import { warnIfTruncated } from "../../../src/cli/lib/warnings.js";
+import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
 const GUIDELINE_PATH = path.resolve(
   __dirname,
-  "../../../assets/init/.qfai/assistant/catalog/cli-ux-guidelines.md",
+  "../../../assets/init/.qfai/assistant/rule/cli-ux-guidelines.md",
 );
 
 const OPTIONAL_SLOTS = {
@@ -37,6 +36,15 @@ const OPTIONAL_SLOTS = {
 } as const;
 
 const DETAIL_LABELS = ["error_code", "target", "expected", "current", "fix"] as const;
+
+it("directs agent routing repairs to package defaults or project config overrides", () => {
+  for (const code of ["QFAI-AGENT-015", "QFAI-AGENT-017", "QFAI-AGENT-018", "QFAI-AGENT-019"]) {
+    const fix = resolveIssueFix({ code, severity: "error", category: "canonical", message: code });
+    expect(fix).toContain("packages/qfai/assets/defaults/");
+    expect(fix).toContain("qfai.config.yaml");
+    expect(fix).not.toContain(".qfai/assistant/manifest/");
+  }
+});
 
 async function readGuideline(): Promise<string> {
   const content = await readFile(GUIDELINE_PATH, "utf-8");
@@ -127,21 +135,10 @@ function resultOf(issues: Issue[]): ValidationResult {
       warning: counted.filter((i) => i.severity === "warning").length,
       error: counted.filter((i) => i.severity === "error").length,
     },
-    traceability: {
-      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-      testFiles: {
-        globs: [],
-        excludeGlobs: [],
-        matchedFileCount: 0,
-        truncated: false,
-        limit: 0,
-      },
-    },
   };
 }
 
 type LineKind =
-  | "warn"
   | "header"
   | "counts"
   | "fail-on"
@@ -168,9 +165,6 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
   let section: "none" | "message" | "detail" = "none";
   let severity: string | undefined;
   return lines.map((line) => {
-    if (line.startsWith("[warn] ")) {
-      return { kind: "warn" as const, line };
-    }
     const header = /^\[(info|warning|error)\] /.exec(line);
     if (header) {
       section = "message";
@@ -257,7 +251,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "warning",
     category: "canonical",
     message: "location and refs",
-    file: ".qfai/specs/spec-0001/01_Spec.md",
+    file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
     refs: ["semantic.color.primary", "semantic.color.accent"],
     rule: "test.refs",
   },
@@ -266,7 +260,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "warning",
     category: "canonical",
     message: "suppressed by a waiver",
-    file: ".qfai/specs/spec-0001/01_Spec.md",
+    file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
     suppressed: true,
     rule: "test.suppressed",
   },
@@ -275,7 +269,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "error",
     category: "change",
     message: "multi-line suggested action",
-    file: ".qfai/assistant/skills/qfai-verify/SKILL.md",
+    file: ".qfai/assistant/skill/qfai-verify/SKILL.md",
     suggested_action: MULTILINE_FIX.join("\n"),
     rule: "test.multiline",
   },
@@ -310,7 +304,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         // the issue's refs, so the real line for this finding carries a
         // `refs=` slot. Dropping it here would let the example drift.
         message: "Circular reference detected: semantic.color.primary",
-        file: ".qfai/contracts/design/design-tokens.yaml",
+        file: ".qfai/spec/03_contract/design/design-tokens.yaml",
         refs: ["semantic.color.primary"],
       },
       {
@@ -318,7 +312,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
         severity: "error",
         category: "canonical",
         message: "External URL reference in HTML Mock: https://cdn.example.com/style.css",
-        file: ".qfai/specs/spec-0001/01_Spec.md",
+        file: ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md",
       },
     ];
 
@@ -436,13 +430,37 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     expect(output).toContain("counts: info=1 warning=2 error=1\n");
   });
 
+  it("reports an incomplete story test scan as a counted error issue", async () => {
+    const guideline = await readGuideline();
+    expect(guideline).toContain("`QFAI-SCAN-002` が `error` の issue");
+    expect(guideline).not.toContain("[warn] <command>: test-file scan stopped");
+
+    const output = await captureStdout(() => {
+      emitText(
+        resultOf([
+          {
+            code: "QFAI-SCAN-002",
+            severity: "error",
+            category: "canonical",
+            message: "Story-tree test scan stopped at the 20000 file limit; coverage is incomplete",
+          },
+        ]),
+        DEFAULT_FAIL_ON,
+      );
+      return Promise.resolve();
+    });
+    expect(output).toContain("[error] QFAI-SCAN-002 Story-tree test scan stopped");
+    expect(output).toContain("counts: info=0 warning=0 error=1");
+    expect(output).not.toContain("[warn] ");
+  });
+
   it("ends the real `--format text` run with the documented run-log line", async () => {
     const guideline = await readGuideline();
     expect(fenceWith(guideline, "run-log:").trim()).toBe("run-log: <path>");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
-      await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
       const output = await captureStdout(async () => {
         await runValidate({ root, strict: false, format: "text" });
       });
@@ -470,7 +488,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
       await writeFile(
         path.join(designDir, "anti-patterns.yaml"),
@@ -501,83 +519,37 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   });
 
   /**
-   * `runValidate` calls `warnIfTruncated` before `emitText`, and that warning
-   * goes to stdout. A guideline claiming to be the complete stdout contract has
-   * to declare it, or a conforming parser meets an undeclared line on any repo
-   * whose test-file scan hits the limit.
-   */
-  it("declares the scan-truncation warning line the CLI prints before the issues", async () => {
-    const guideline = await readGuideline();
-    expect(fenceWith(guideline, "test-file scan stopped").trim()).toBe(
-      "[warn] <command>: test-file scan stopped at the <n>-file cap; traceability/ATDD coverage in this run is computed over a partial file set",
-    );
-
-    const truncated = await captureStdout(() => {
-      warnIfTruncated(
-        { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
-        "validate",
-      );
-      return Promise.resolve();
-    });
-    expect(truncated).toBe(
-      "[warn] validate: test-file scan stopped at the 20000-file cap; traceability/ATDD coverage in this run is computed over a partial file set\n",
-    );
-
-    const complete = await captureStdout(() => {
-      warnIfTruncated(
-        { globs: [], excludeGlobs: [], matchedFileCount: 12, truncated: false, limit: 20000 },
-        "validate",
-      );
-      return Promise.resolve();
-    });
-    expect(complete).toBe("");
-  });
-
-  /**
    * "Anything that does not start with `[<severity>] ` continues the previous
    * message" is only safe once the structural lines are matched first. This
    * runs the documented precedence over one real run that carries all of them
-   * at once: a truncation warning, a multi-line `QFAI-BPAP-002` message, an
+   * at once: a multi-line `QFAI-BPAP-002` message, an
    * error detail block, `counts:` and `run-log:`.
    */
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
-    expect(rules).toHaveLength(8);
-    const anchors = [
-      "[warn] ",
-      "[info] ",
-      "counts: ",
-      "fail-on: ",
-      "timings: ",
-      "run-log: ",
-      "error_code:",
-    ];
+    expect(rules).toHaveLength(7);
+    const anchors = ["[info] ", "counts: ", "fail-on: ", "timings: ", "run-log: ", "error_code:"];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
     try {
-      const designDir = path.join(root, ".qfai", "contracts", "design");
+      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
       await mkdir(designDir, { recursive: true });
-      await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
       await writeFile(
         path.join(designDir, "anti-patterns.yaml"),
         "- id: AP-0001\n  title: [unclosed\n",
         "utf-8",
       );
 
-      const output = await captureStdout(async () => {
-        warnIfTruncated(
-          { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
-          "validate",
-        );
-        await runValidate({ root, strict: false, format: "text" });
-      });
+      const output = await captureStdout(() =>
+        runValidate({ root, strict: false, format: "text" }).then(() => undefined),
+      );
       const classified = classifyByGuideline(output.trimEnd().split("\n"), DEFAULT_FAIL_ON);
 
-      expect(classified[0]?.kind).toBe("warn");
       expect(classified.at(-1)?.kind).toBe("run-log");
       expect(classified.at(-2)?.kind).toBe("fail-on");
       expect(classified.at(-3)?.kind).toBe("counts");

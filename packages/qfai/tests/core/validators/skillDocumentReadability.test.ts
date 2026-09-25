@@ -41,7 +41,7 @@ vi.mock("node:fs/promises", async () => {
 });
 
 async function writeSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", "demo-skill");
   const referencesDir = path.join(skillDir, "references");
   await mkdir(referencesDir, { recursive: true });
   await writeFile(
@@ -62,7 +62,7 @@ async function writeSkillFixture(root: string): Promise<string> {
 
 /** A skill whose own `SKILL.md` cannot be read. */
 async function writeUnreadableSkillFixture(root: string): Promise<string> {
-  const skillDir = path.join(root, ".qfai", "assistant", "skills", UNREADABLE_SKILL_DIR);
+  const skillDir = path.join(root, ".qfai", "assistant", "skill", UNREADABLE_SKILL_DIR);
   await mkdir(skillDir, { recursive: true });
   const skillFile = path.join(skillDir, "SKILL.md");
   await writeFile(skillFile, "# unreadable-skill\n\n[DRIFT-PROTOCOL:MANDATORY]\n", "utf-8");

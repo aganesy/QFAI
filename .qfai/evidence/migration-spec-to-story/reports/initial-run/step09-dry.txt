@@ -1,0 +1,23 @@
+## Operations
+none
+
+## For a person
+- left alone .github/agents/acceptance-test-engineer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/architecture-reviewer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/backend-engineer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/completion-reviewer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/delivery-planner.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/devops-ci-engineer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/discovery-analyst.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/doc-steward.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/frontend-engineer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/implementation-reviewer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/orchestrator.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/product-experience-architect.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/product-surface-reviewer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/qa-gatekeeper.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/qa-strategist.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/requirements-analyst.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/requirements-reviewer.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/solution-architect.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent
+- left alone .github/agents/test-design-analyst.agent.md: canonical source has a linked parent at C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-specs-restructure-ec45fd\.qfai\assistant\agent

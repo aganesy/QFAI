@@ -108,6 +108,13 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -284,7 +291,7 @@ describe("iterate --capture: (4) no-capture default preserved (DR-0012-0029)", (
   });
 });
 
-describe("iterate --capture: (5) writes evidenceRefs[] bijection on success", () => {
+describe("iterate --capture: (5) writes per-screen capture files on success", () => {
   it("writes a PNG and HTML for each screen captured", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -388,6 +395,7 @@ async function seedUiContract(
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
   const yamlBody = [
+    "# QFAI-CONTRACT-ID: CON-UI-0001",
     "screens:",
     ...screens.flatMap((screen) => {
       const lines = [`  - id: ${screen.id}`, `    route: ${screen.route}`];
@@ -445,9 +453,8 @@ describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
   it("warns and exits 0 when capture=true is set but no UI contracts are present", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
-    // Deliberately no UI contracts — the auto-derivation path returns
-    // an empty list, and `runCapturePath` surfaces the documented
-    // "no screens[] declared" warning + exit 0 (graceful no-op).
+    await rm(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"));
+    // The early UI-contract precheck returns a deterministic no-op.
     const writes: string[] = [];
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation((c) => {
       writes.push(String(c));
@@ -465,7 +472,7 @@ describe("iterate --capture: (8) auto-derive screens from UI contracts", () => {
         capture: true,
       });
       expect(exit).toBe(0);
-      expect(writes.join("\n")).toMatch(/no screens\[\] declared/i);
+      expect(writes.join("\n")).toMatch(/no UI-bearing contracts resolved/i);
     } finally {
       stdoutSpy.mockRestore();
       stderrSpy.mockRestore();
@@ -601,6 +608,7 @@ describe("iterate --capture: (10) auto-derive screens accepts `.yml` UI contract
     // point so future regressions in the glob are catchable.
     const root = await newTempDir();
     await seedMinimal(root);
+    await rm(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"));
     await seedUiContract(
       root,
       "spec-0001",

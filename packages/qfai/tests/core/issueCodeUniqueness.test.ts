@@ -197,11 +197,7 @@ describe("issue code uniqueness", () => {
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
-  "D-SURFACE-TYPE-MISSING",
-  "QFAI-AC-001",
-  "QFAI-AGENT-004",
   "QFAI-AGENT-005",
-  "QFAI-AGENT-006",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
   "QFAI-AGENT-009",
@@ -211,8 +207,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-AGENT-013",
   "QFAI-ASSETS-001",
   "QFAI-ASSETS-002",
-  "QFAI-ATDD-104",
-  "QFAI-ATDD-115",
   "QFAI-CONTRACT-010",
   "QFAI-CONTRACT-011",
   "QFAI-CONTRACT-012",
@@ -220,10 +214,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-014",
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
-  "QFAI-COV-101",
-  "QFAI-COV-102",
-  "QFAI-COV-103",
-  "QFAI-COV-104",
   "QFAI-CRIT-001",
   "QFAI-CRIT-002",
   "QFAI-CRIT-003",
@@ -241,25 +231,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-DT-008",
   "QFAI-DT-009",
   "QFAI-DT-010",
-  "QFAI-EX-001",
-  "QFAI-EX-002",
-  "QFAI-EX-003",
-  "QFAI-EX-004",
-  "QFAI-EX-005",
-  "QFAI-EX-007",
-  "QFAI-ID-001",
-  "QFAI-LAYER-100",
-  "QFAI-LAYER-101",
-  "QFAI-LAYER-102",
-  "QFAI-LAYER-103",
-  "QFAI-LAYER-104",
-  "QFAI-LAYER-105",
-  "QFAI-LAYER-106",
-  "QFAI-LEDGER-001",
-  "QFAI-MMD-001",
-  "QFAI-MMD-002",
-  "QFAI-MMD-003",
-  "QFAI-MMD-004",
   "QFAI-MOCK-001",
   "QFAI-MOCK-002",
   "QFAI-MOCK-003",
@@ -268,11 +239,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-NAV-001",
-  "QFAI-NAV-004",
-  "QFAI-NAV-005",
-  "QFAI-PLAN-001",
-  "QFAI-PLAN-005",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -295,48 +261,12 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
   "QFAI-SPACK-090",
-  "QFAI-SPACK-101",
-  "QFAI-SPLIT-100",
-  "QFAI-SPLIT-101",
-  "QFAI-SPLIT-102",
-  "QFAI-SPLIT-103",
-  "QFAI-SPLIT-104",
-  "QFAI-SPLIT-105",
-  "QFAI-STATUS-001",
-  "QFAI-STATUS-002",
-  "QFAI-STATUS-003",
-  "QFAI-STATUS-004",
-  "QFAI-STATUS-005",
-  "QFAI-STATUS-006",
-  "QFAI-TC-001",
-  "QFAI-TRACE-001",
-  "QFAI-TRACE-100",
-  "QFAI-TRACE-101",
-  "QFAI-TRACE-102",
-  "QFAI-TRACE-103",
-  "QFAI-TRACE-104",
-  "QFAI-TRACE-105",
-  "QFAI-TRACE-106",
-  "QFAI-TRACE-107",
-  "QFAI-TRACE-108",
-  "QFAI-TRACE-109",
-  "QFAI-TRACE-110",
-  "QFAI-TRACE-111",
-  "QFAI-TRACE-112",
-  "QFAI-TRACE-113",
-  "QFAI-TRACE-114",
   "QFAI-TRACE-118",
   "QFAI-TRACE-119",
   "QFAI-TRACE-120",
   "QFAI-TRACE-121",
   "QFAI-TRACE-122",
   "QFAI-TRACE-123",
-  "QFAI-TRACE-124",
-  "QFAI-TRIAGE-002",
-  "QFAI-TRIAGE-003",
-  "QFAI-TRIAGE-004",
-  "QFAI-TRIAGE-005",
-  "QFAI-TRIAGE-006",
   "QFAI-WAIVER-001",
   "QFAI-WAIVER-002",
   "QFAI_CONFIG_INVALID",
@@ -348,21 +278,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_BLOCKED_MISSING_REF",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_EVIDENCE_EMPTY",
-  "TDDLIST_EXCEPTION_MISSING_DR",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
-  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
-  "TRACE_DOWNSTREAM_REF",
-  "TRACE_SHARED_SCOPE_VIOLATION",
   // The `core/uiux/**` validators route every finding through a file-local
   // `Issue` factory rather than calling `issue(...)` directly, so none of these
   // codes reached the census until factory call sites were counted. They are
@@ -409,10 +324,7 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
 
 const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
-  "QFAI-AC-001",
-  "QFAI-AGENT-004",
   "QFAI-AGENT-005",
-  "QFAI-AGENT-006",
   "QFAI-AGENT-007",
   "QFAI-AGENT-008",
   "QFAI-AGENT-009",
@@ -438,21 +350,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-DT-008",
   "QFAI-DT-009",
   "QFAI-DT-010",
-  "QFAI-EX-001",
-  "QFAI-EX-002",
-  "QFAI-EX-003",
-  "QFAI-EX-004",
-  "QFAI-EX-005",
-  "QFAI-EX-007",
-  "QFAI-ID-001",
-  "QFAI-LAYER-100",
-  "QFAI-LAYER-101",
-  "QFAI-LAYER-102",
-  "QFAI-LAYER-103",
-  "QFAI-LAYER-104",
-  "QFAI-LAYER-105",
-  "QFAI-LAYER-106",
-  "QFAI-LEDGER-001",
   "QFAI-MOCK-001",
   "QFAI-MOCK-002",
   "QFAI-MOCK-003",
@@ -461,9 +358,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-MOCK-010",
   "QFAI-MOCK-011",
   "QFAI-MOCK-012",
-  "QFAI-NAV-001",
-  "QFAI-NAV-004",
-  "QFAI-NAV-005",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -493,29 +387,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-REVIEW-007",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
-  "QFAI-SPLIT-100",
-  "QFAI-SPLIT-101",
-  "QFAI-SPLIT-102",
-  "QFAI-SPLIT-103",
-  "QFAI-SPLIT-104",
-  "QFAI-SPLIT-105",
-  "QFAI-TC-001",
-  "QFAI-TRACE-001",
-  "QFAI-TRACE-100",
-  "QFAI-TRACE-101",
-  "QFAI-TRACE-102",
-  "QFAI-TRACE-103",
-  "QFAI-TRACE-104",
-  "QFAI-TRACE-105",
-  "QFAI-TRACE-106",
-  "QFAI-TRACE-107",
-  "QFAI-TRACE-108",
-  "QFAI-TRACE-109",
-  "QFAI-TRACE-110",
-  "QFAI-TRACE-111",
-  "QFAI-TRACE-112",
-  "QFAI-TRACE-113",
-  "QFAI-TRACE-114",
   "QFAI-TRACE-118",
   "QFAI-TRACE-119",
   "QFAI-TRACE-120",
@@ -532,15 +403,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
-  "TDDLIST_DUPLICATE_ID",
-  "TDDLIST_INVALID_ID",
-  "TDDLIST_INVALID_OBLIGATION_REF",
-  "TDDLIST_INVALID_STATUS",
-  "TDDLIST_REQUIRED_COLUMN_MISSING",
-  "TDDLIST_TABLE_MISSING",
-  "TDDLIST_TC_NOT_COVERED",
-  "TDDLIST_TEST_FILE_MISSING",
-  "TRACE_SHARED_SCOPE_VIOLATION",
   "W-SKILL-DOC-BROKEN-REF",
 ]);
 
@@ -595,20 +457,20 @@ describe("issue report metadata", () => {
     });
   });
 
-  it("counts codes a caller hands to a validator's own emission helper", async () => {
-    const usage = await collectErrorCapableUsage();
-    // `validators/orphanProhibition.ts` raises eight codes through one
-    // `validateParentExists({ …, missingCode, unknownCode })` helper. The code
-    // is a literal at every call site, one frame above the `issue(...)` the
-    // helper writes, so dropping the unresolvable argument hid the whole ladder
-    // behind a helper that only looks dynamic.
-    for (const code of [100, 101, 102, 103, 104, 105, 108, 109]) {
-      expect(usage.has(`QFAI-ORPHAN-${code}`)).toBe(true);
-    }
+  it("counts codes a caller hands to an emission helper", async () => {
+    const usage = await censusOf(`
+      function emit(input: { missingCode: string }): Issue {
+        return issue(input.missingCode, "missing", "error", "f", "r");
+      }
+      export function check() {
+        return emit({ missingCode: "QFAI-SAMPLE-001" });
+      }
+    `);
+    expect(usage.has("QFAI-SAMPLE-001")).toBe(true);
     // The pin: a helper whose code really is runtime data stays out.
     // `designAudit.findingToIssue` forwards `finding.ruleId`, and its call
     // sites pass a value rather than an object literal.
-    expect(usage.has("QFAI-AUD-001")).toBe(false);
+    expect((await collectErrorCapableUsage()).has("QFAI-AUD-001")).toBe(false);
   });
 
   it("counts only object literals that build an Issue, not look-alike records", async () => {
@@ -659,15 +521,6 @@ describe("issue report metadata", () => {
     // decide: the census errs towards demanding metadata.
     expect(usage.get("C-ONE-ERROR")?.errorCapable).toBe(true);
     expect(usage.get("C-UNRESOLVABLE")?.errorCapable).toBe(true);
-  });
-
-  it("keeps TDDLIST_MISSING out of the error census", async () => {
-    // The rule reports `warning` for a spec that owes ledger rows and `info`
-    // for one that owes none. Neither branch is an `error`, and the escalation
-    // it carries is `TDDLIST_TC_NOT_COVERED`, which is in the census.
-    const usage = await collectErrorCapableUsage();
-    expect(usage.has("TDDLIST_MISSING")).toBe(false);
-    expect(usage.has("TDDLIST_TC_NOT_COVERED")).toBe(true);
   });
 
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {

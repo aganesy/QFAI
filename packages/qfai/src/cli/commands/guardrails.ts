@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { loadConfig, resolvePath } from "../../core/config.js";
 import {
   checkDecisionGuardrails,
   filterDecisionGuardrailsByKeyword,
@@ -40,8 +41,11 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
   }
 
   const root = path.resolve(options.root);
+  const { config } = await loadConfig(root);
   const { entries, errors } = await loadDecisionGuardrails(root, {
     paths: options.paths,
+    specsRoot: path.join(resolvePath(root, config, "specsDir"), "01_policy"),
+    contractsRoot: resolvePath(root, config, "contractsDir"),
   });
 
   if (errors.length > 0) {

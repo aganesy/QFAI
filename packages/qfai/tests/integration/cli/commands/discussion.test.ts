@@ -5,8 +5,8 @@
  * and multiple candidate `discussion-*` dirs exist, `list --active`
  * exits non-zero naming the candidates and the recovery command.
  */
-// QFAI:SPEC-0010:TC-0010-0012
-// QFAI:SPEC-0010:TC-0010-0013
+// QFAI:EX-0001-0093-01
+// QFAI:EX-0001-0093-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

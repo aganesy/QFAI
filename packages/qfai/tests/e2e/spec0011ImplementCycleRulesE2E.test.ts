@@ -1,26 +1,13 @@
-/**
- * E2E: the rules the shipped `qfai-implement` skill states (spec-0011).
- *
- * Each block reads the skill an adopter receives and holds the rule its story
- * states. The skill document is the deliverable for these stories: there is no
- * runtime to drive, so what ships is what can be observed.
- */
+/** The shipped implementation workflow is the observable contract for this skill. */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
-const skillDir = path.join(
-  repoRoot,
-  "packages",
-  "qfai",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "skills",
-  "qfai-implement",
+const skillDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../assets/init/.qfai/assistant/skill/qfai-implement",
 );
 
 async function skill(): Promise<string> {
@@ -31,76 +18,46 @@ async function reference(name: string): Promise<string> {
   return readFile(path.join(skillDir, "references", name), "utf-8");
 }
 
-// QFAI:SPEC-0011:US-0011-0001
-describe("E2E: the TDD micro-cycle runs one test at a time from the ledger (US-0011-0001)", () => {
-  it("names the four phases in order", async () => {
+// QFAI:BF-0001
+describe("E2E: implementation follows flow-scoped example obligations", () => {
+  it("selects the lowest owed EX from a fresh validator result", async () => {
     const content = await skill();
-    expect(content).toMatch(/`todo` -> `red` -> `green` -> `refactor` -> `done`/);
+    expect(content).toContain("qfai validate --profile tdd --flow BF-NNNN");
+    expect(content).toContain("generatedAt");
+    expect(content).toContain("lowest EX ID");
+    expect(content).toContain("test-obligation EX findings");
+    expect(content).toContain("Re-run validation before selecting the next unassigned EX");
   });
 
-  it("holds at most one row in red or green at a time, and names the ledger it reads", async () => {
+  it("runs one falsifiable RED, GREEN and Refactor cycle per EX", async () => {
     const content = await skill();
-    expect(content).toContain("one test at a time");
-    expect(content).toContain("at most one row is in `red` or `green` at any moment");
-    expect(content).toContain("test-list.md");
-  });
-});
-
-// QFAI:SPEC-0011:US-0011-0002
-describe("E2E: the status lifecycle is forward-only (US-0011-0002)", () => {
-  it("prohibits a backward transition and names the one that is not allowed", async () => {
-    const content = await skill();
-    expect(content).toContain("Backward transitions are prohibited");
-    expect(content).toContain("`green` -> `red` is not allowed");
+    expect(content).toContain("### Red, Green, Refactor");
+    expect(content).toContain("A load error, missing dependency, or broken fixture is");
+    expect(content).toContain("qa-gatekeeper checks the observed RED and GREEN evidence");
+    expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
   });
 
-  it("points at one complete edge list rather than letting the summary be read as one", async () => {
-    // The summary lists five edges and the reference lists more, so a reader
-    // who treats the summary as complete refuses a legal transition.
+  it("binds independent review to the same final evidence revision", async () => {
     const content = await skill();
-    expect(content).toContain("references/execution-ledger.md#allowed-transitions");
-    expect(content).toMatch(/complete (and only )?list/);
-  });
-});
-
-// QFAI:SPEC-0011:US-0011-0003
-describe("E2E: RED and GREEN are confirmed by the qa-gatekeeper alone (US-0011-0003)", () => {
-  it("routes both observations to the gatekeeper and gives it the verdict", async () => {
-    const content = await skill();
-    expect(content).toContain("submits the RED run to `qa-gatekeeper`");
-    expect(content).toContain("`qa-gatekeeper` confirms or rejects each observation");
+    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("Each required reviewer must pass the same final revision");
+    expect(content).toContain("reviewer verdicts, and open findings");
   });
 
-  it("refuses the implementer's own account of the run", async () => {
+  it("requires a final scoped gate even when no EX work remains", async () => {
     const content = await skill();
-    expect(content).toContain("never the author's own account");
-    expect(content).toContain("self-attestation this gate exists to prevent");
-  });
-});
-
-// QFAI:SPEC-0011:US-0011-0004
-describe("E2E: an exception row carries a DR-ID (US-0011-0004)", () => {
-  it("requires the identifier in the skill and in the ledger reference", async () => {
-    const content = await skill();
-    expect(content).toContain("an `exception` requires a DR-ID");
-
-    const ledger = await reference("execution-ledger.md");
-    expect(ledger).toMatch(/exception[\s\S]{0,400}DR-/);
-  });
-});
-
-// QFAI:SPEC-0011:US-0011-0005
-describe("E2E: parallel dispatch is bounded to independent slices (US-0011-0005)", () => {
-  it("defaults to serial and states the conditions as write conflicts", async () => {
-    const content = await skill();
-    expect(content).toContain("**Default**: Serial execution");
-    expect(content).toContain("concurrent write conflicts");
+    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
+    expect(content).toContain(
+      "When no EX work remains at entry, still run the current flow checkpoint",
+    );
   });
 
-  it("separates workers by worktree and verifies the merged result", async () => {
+  it("bounds parallel work by ownership and integration", async () => {
     const content = await skill();
-    expect(content).toContain("Post-parallel integration verify");
-    expect(content).toContain("Under worktree separation");
-    expect(content).toContain("run integration verify on the merged result");
+    const policy = await reference("parallelization-policy.md");
+    expect(content).toContain("Work one EX at a time by default");
+    expect(content).toMatch(/disjoint\s+writes, a passing technical gate/);
+    expect(content).toMatch(/Review the\s+integrated result after slices join/);
+    expect(policy).toContain("explicit user approval");
   });
 });

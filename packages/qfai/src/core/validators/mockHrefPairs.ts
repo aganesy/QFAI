@@ -25,7 +25,7 @@
  * pair check stays deterministic and cheap.
  */
 export const MOCK_HREF_TEMPLATE_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-discussion/templates/03_Story-Workshop.md";
 
 // Follows the classification, not the filename. The same-origin branch moved to `htmlMockDom.ts` when
 // jsdom was put behind a dynamic import; a manifest left pointing at the old file reads an unchanged

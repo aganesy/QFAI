@@ -4,11 +4,11 @@ status: active
 kind: scope-up
 created: 2026-08-17
 updated: 2026-08-18
-scope: spec-0006
+scope: BF-0003
 blocking: false
 promote-to: null
 links:
-  - spec-0006
+  - BF-0003
   - CR-20260807-0001
   - CR-20260807-0002
   - CR-20260810-0001

@@ -8,7 +8,7 @@ import {
   checkRequiredSections,
   hasCanonicalSurfaceDocumentation,
   hasCliSurfaceDocumentation,
-  hasUiBearingFalseExclusion,
+  hasUiContractScope,
   isStaticFirstAligned,
   scanBannedPhrases,
   hasDelegationScopeTable,
@@ -22,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROTOTYPING_SKILL_ASSET_DIR = path.resolve(
   __dirname,
   "../..",
-  "assets/init/.qfai/assistant/skills/qfai-prototyping",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping",
 );
 
 async function readPrototypingAsset(relativePath: string): Promise<string> {
@@ -36,7 +36,7 @@ const VALID_SKILL_CONTENT = [
   "",
   "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
   "cli is not a prototyping execution target and is rejected.",
-  "ui_bearing: false specs are not prototyping execution targets.",
+  "Only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] enter prototyping execution.",
   "",
   "## Required References",
   "Read the reference documents before execution.",
@@ -55,8 +55,10 @@ const VALID_SKILL_CONTENT = [
   "screenshots, HTML snapshots, axisDefs, previousScore, designSystemChecklist",
   "",
   "## Delegation Scope Table",
-  "| Playwright CLI execution & capture | devops-ci-engineer |",
-  "| Evaluation scoring | product-surface-reviewer, product-experience-architect |",
+  "| Generation and implementation | product-experience-architect |",
+  "| Live Playwright review and evaluation scoring | product-surface-reviewer |",
+  "| Build | devops-ci-engineer, backend-engineer |",
+  "| Optional Playwright CLI execution & capture | devops-ci-engineer |",
   "",
   "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png",
   "HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html",
@@ -81,8 +83,9 @@ describe("prototyping skill validator", () => {
     expect(hasCliSurfaceDocumentation(VALID_SKILL_CONTENT)).toBe(true);
   });
 
-  it("documents ui_bearing: false exclusion", () => {
-    expect(hasUiBearingFalseExclusion(VALID_SKILL_CONTENT)).toBe(true);
+  it("limits prototyping to UI contracts with declared screens", () => {
+    expect(hasUiContractScope(VALID_SKILL_CONTENT)).toBe(true);
+    expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
   });
 
   it("documents static-first semantics", () => {
@@ -167,60 +170,20 @@ describe("prototyping skill validator", () => {
   });
 });
 
-// QFAI:SPEC-0012:TC-0012-0356
-describe("prototyping skill asset — multi-spec wiring (spec-0012 CHG-002)", () => {
-  // TC-0012-0356: SKILL.md and the iteration-loop reference must no
-  // longer prompt for a per-invocation primary spec; instead they must
-  // reference the multi-spec resolver `resolveAllUiBearingSpecs`.
-  it("SKILL.md does not contain a per-invocation primary-spec selection prompt", async () => {
+describe("prototyping skill asset — UI contract scope", () => {
+  it("requires canonical UI contracts with screens and no spec-pack primary pin", async () => {
     const skillContent = await readPrototypingAsset("SKILL.md");
-
-    // Literal absence checks for prior single-spec selection phrasing.
-    // These were the exact prompts the v2.0 / UX-loop SKILL.md used to
-    // ask the operator to pick one spec per invocation; under the
-    // multi-spec rewrite there must be no such prompt anywhere in the
-    // asset. The `## Default Autopilot Policy` block is excluded from
-    // this scan because it MAY (and does) list `primarySpecId` as a
-    // hard-required field name; that listing is a contract reference,
-    // not a per-invocation selection prompt.
-    const policyHeadingRe = /^##\s+Default Autopilot Policy\s*$/m;
-    const nextHeadingRe = /^##\s+/m;
-    let scannableContent = skillContent;
-    const headingMatch = policyHeadingRe.exec(skillContent);
-    if (headingMatch) {
-      const start = headingMatch.index;
-      const afterStart = start + headingMatch[0].length;
-      const next = nextHeadingRe.exec(skillContent.slice(afterStart));
-      const end = next ? afterStart + next.index : skillContent.length;
-      scannableContent = skillContent.slice(0, start) + skillContent.slice(end);
-    }
-
-    const forbiddenPhrases = [
-      "selected spec is UI-bearing",
-      "select a primary spec",
-      "select the primary spec",
-      "select primary spec",
-      "primary spec id",
-      "primary_spec_id",
-      "primarySpecId",
-      "プライマリ spec",
-      "プライマリスペック",
-    ];
-    const lower = scannableContent.toLowerCase();
-    for (const phrase of forbiddenPhrases) {
-      expect(lower.includes(phrase.toLowerCase()), `SKILL.md should not contain '${phrase}'`).toBe(
-        false,
-      );
-    }
+    expect(skillContent).toContain("CON-UI-NNNN");
+    expect(skillContent).toContain("screens[]");
+    expect(skillContent).toContain("primaryUiContract");
+    expect(skillContent).not.toContain("primarySpecId");
+    expect(skillContent).not.toMatch(/select (?:a|the) primary spec/i);
   });
 
-  it("SKILL.md references the multi-spec resolver resolveAllUiBearingSpecs", async () => {
-    const skillContent = await readPrototypingAsset("SKILL.md");
-    expect(skillContent).toContain("resolveAllUiBearingSpecs");
-    // The wording must be unambiguous about "one invocation / multi-spec"
-    // semantics so downstream operators do not re-introduce a per-spec
-    // selection step.
-    expect(skillContent.toLowerCase()).toMatch(/every ui-bearing spec[\s\S]{0,80}one invocation/i);
+  it("places review evidence under full UI contract IDs", async () => {
+    const loop = await readPrototypingAsset("references/iteration-loop.md");
+    expect(loop).toContain("CON-UI-NNNN");
+    expect(loop).not.toContain("iter-NN/spec-NNNN/");
   });
 });
 
@@ -234,25 +197,71 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     return next < 0 ? body : body.slice(0, next);
   }
 
-  // QFAI:SPEC-0012:TC-0012-0294
-  it("the reviewer prompt names every input class the reviewer reads", async () => {
+  it("the reviewer prompt requires live operation and treats capture inputs as optional", async () => {
     const inputs = section(await readPrototypingAsset("references/reviewer-prompt.md"), "Inputs");
-    for (const input of ["Screenshot:", "HTML snapshot:", "Prior reviews:", "Root `DESIGN.md`"]) {
+    for (const input of [
+      "live prototype URL",
+      "your own Playwright session",
+      "When `iterate --capture` is selected",
+      "They are absent by default",
+      "Prior reviews:",
+      "Root `DESIGN.md`",
+    ]) {
       expect(inputs, `the Inputs section names ${input}`).toContain(input);
     }
   });
 
-  // QFAI:SPEC-0012:TC-0012-0336
   it("the reviewer prompt leaves brand identity to root DESIGN.md and carries the lap-* catalog", async () => {
     const prompt = await readPrototypingAsset("references/reviewer-prompt.md");
     expect(prompt).toMatch(/Brand identity \([^)]*\) is\s+locked by root `DESIGN\.md`/);
     expect(prompt).toMatch(/^## Layout anti-pattern matching \(`lap-\*`\)$/m);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0351
   it("SKILL.md delegates generation and evaluation to two different sub-agents", async () => {
     const skill = await readPrototypingAsset("SKILL.md");
-    expect(skill).toMatch(/^\|\s*Generation\s*\|\s*product-experience-architect\s*\|/m);
-    expect(skill).toMatch(/^\|\s*Evaluation scoring\s*\|\s*product-surface-reviewer\s*\|/m);
+    expect(skill).toMatch(
+      /^\|\s*Generation and implementation\s*\|\s*product-experience-architect\s*\|/m,
+    );
+    expect(skill).toMatch(
+      /^\|\s*Live Playwright review and evaluation scoring\s*\|\s*product-surface-reviewer\s*\|/m,
+    );
+    expect(skill).toContain("does not require a third sub-agent identity");
+    expect(skill).toContain("optional `iterate --capture` CLI operation");
+    expect(skill).toContain("The reviewer operates Playwright live");
+  });
+
+  it("requires the reviewer to score four ordinal axes while retaining six per-screen Feel fields", async () => {
+    const prompt = await readPrototypingAsset("references/reviewer-prompt.md");
+    for (const axis of [
+      "informationArchitecture",
+      "navigationFlow",
+      "usability",
+      "functionality",
+    ]) {
+      expect(prompt).toContain(`${axis}: "weak" | "acceptable" | "strong" | "exceptional"`);
+    }
+    expect(prompt).toContain("six bounded `impressions.*Feel` fields");
+    expect(prompt).toContain("A favorable");
+    expect(prompt).toContain("numeric AC-pass or");
+    expect(prompt).toContain("Good: on `checkout`");
+    expect(prompt).toContain("Bad: record only");
+    expect(prompt).not.toContain("No axis, no rating, no aggregate");
+  });
+
+  it("assigns review evidence conversion and screen coverage to the skill writer", async () => {
+    const [skill, loop, prompt] = await Promise.all([
+      readPrototypingAsset("SKILL.md"),
+      readPrototypingAsset("references/iteration-loop.md"),
+      readPrototypingAsset("references/reviewer-prompt.md"),
+    ]);
+    expect(skill).toContain("The CLI writes a seed iteration");
+    expect(skill).toContain("Check the summary's `evidenceRefs[]` array");
+    expect(skill).toContain("reject duplicate screen/kind pairs, missing screens");
+    expect(skill).toMatch(/With `--capture`, require a screenshot and HTML\s+path/);
+    expect(skill).toContain("Without `--capture`, store `evidenceRefs: []`");
+    expect(skill).toContain("`buildEvidenceRefs()` is a pure helper, not an automatic");
+    expect(loop).toMatch(/each declared screen must have exactly one entry per required kind/);
+    expect(loop).toContain("The closed");
+    expect(prompt).toContain('evidenceRefs: { kind: "screenshot" | "html"; path: string }[]');
   });
 });

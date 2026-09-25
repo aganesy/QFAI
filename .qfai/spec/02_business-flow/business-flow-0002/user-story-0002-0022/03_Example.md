@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                          | Expected                                                                                                                                                                                          |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0022-01 | AC-0002-0022-01 | The repository-root `.qfai/assistant/` tree after `pnpm sync:ssot` over a packaged tree that holds the `rule/`, `skill/`, `agent/` and `prompt/` directories, and the `pnpm ci:gate:ssot` diff | The repository-root `rule/`, `skill/`, `agent/` and `prompt/` are links resolving to the packaged assets. No `catalog/` or repository-root-only path exists, and the `ci:gate:ssot` diff is empty |
+| EX-0002-0022-02 | AC-0002-0022-01 | Two planted repository-root trees: one keeping a `skills` link under `.qfai/assistant/`, one keeping a migration memo under `.qfai/assistant/process/migrations/`                              | `link-assistant-tree --check` exits 1 over each, and its output names the leftover path. A retired name is drift whether it is a link or a real directory                                         |

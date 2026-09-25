@@ -5,6 +5,7 @@ import path from "node:path";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
@@ -13,7 +14,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { PROTOTYPING_SUPPORTED_SURFACES } from "../../src/core/review/prototyping.js";
 import { parseAllMarkdownTables } from "../../src/core/specPackParsers.js";
-import { findTableArityMismatches } from "../../src/core/validators/markdownTableArity.js";
+import { findTableArityMismatches } from "../helpers/markdownTableArity.js";
 import { validateSkillDocReferences } from "../../src/core/validators/skillDocReferences.js";
 import {
   findRepositoryAttribution,
@@ -42,6 +43,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
 const templateRootDir = path.join(templateRoot, "root");
 const templateQfaiDir = path.join(templateRoot, ".qfai");
+const assistantDir = path.join(templateQfaiDir, "assistant");
+const defaultsDir = path.join(repoRoot, "packages", "qfai", "assets", "defaults");
 
 // --- shipped iteration-budget vocabulary -----------------------------------
 // Two skills talk about the same budget under opposite obligations:
@@ -167,6 +170,27 @@ const VERSION_SHAPES: readonly RegExp[] = [
   new RegExp(String.raw`\b(?:${VERSION_BEARING})[\s@:]+v?\d+\.\d+(?:\.\d+)?\b`, "gi"),
 ];
 
+// A number a contract requires a document to state. It names a fixed thing
+// rather than something the adopter runs on, so it does not go stale. Each
+// entry is one file and one exact match: any other version in that file fails.
+const REQUIRED_VERSION_MENTIONS: readonly { readonly file: string; readonly version: string }[] = [
+  // The value the review artifact contract fixes for `summary.json`.
+  { file: "review-artifact-layout.md", version: "version 2.0" },
+  // The release the migration guide is about. The migration contract requires
+  // the guide to name it, without a `v`.
+  {
+    file: "qfai-migration-spec-to-story/references/migration-guide.md",
+    version: "QFAI 2.0.0",
+  },
+];
+
+function isRequiredVersionMention(filePath: string, version: string): boolean {
+  const normalized = filePath.split(path.sep).join("/");
+  return REQUIRED_VERSION_MENTIONS.some(
+    (entry) => normalized.endsWith(`/${entry.file}`) && version === entry.version,
+  );
+}
+
 /** Every version a document pins, as written. Empty means it pins none. */
 function hardCodedVersions(markdown: string): string[] {
   return VERSION_SHAPES.flatMap((shape) => [...markdown.matchAll(shape)].map((match) => match[0]));
@@ -202,7 +226,7 @@ describe("assets guardrails", () => {
 
   it("ensures skills include completion contract and navigation sections", async () => {
     const files = [
-      path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping", "SKILL.md"),
+      path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping", "SKILL.md"),
     ];
 
     const missing: string[] = [];
@@ -223,7 +247,7 @@ describe("assets guardrails", () => {
   });
 
   it("ensures canonical skills include delegation guardrails", async () => {
-    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skill");
     const canonical = await fg(["*/SKILL.md"], {
       cwd: canonicalDir,
       absolute: true,
@@ -231,43 +255,28 @@ describe("assets guardrails", () => {
 
     expect(canonical.length).toBeGreaterThan(0);
 
-    // v2.0 (spec-0012 v2.0 absorbed): qfai-prototyping no longer ships the v1.x
-    // delegation guardrail block. The shared baseline (referenced by
-    // gate-failure-autorepair-protocol assertion below) covers cross-
-    // skill delegation contracts. Apply the v1.x guardrail to all
-    // skills *except* qfai-prototyping.
-    const requiredPhrases = [
-      "## Sub-agent Delegation (MANDATORY)",
-      "### Orchestrator Protocol (MUST)",
-      "### Capability Probe (MUST)",
-      "### Delegation Failure (Hard Stop)",
-      "Do not simulate roles",
-      "## Work Orders Summary",
-      // The reviewer-budget branch mandates recording an
-      // un-runnable gate as `PENDING`, so the status vocabulary each skill
-      // declares has to admit it. `PASS/REVISE` is a prefix of the
-      // required value rather than the whole of it.
-      "Status (PASS/REVISE/PENDING)",
-      "### Reviewer Gate (MUST)",
-      "Reviewer",
-      "PASS",
-      "REVISE",
-    ];
-
+    const delegated = new Set([
+      "qfai-atdd",
+      "qfai-implement",
+      "qfai-migration-spec-to-story",
+      "qfai-sdd",
+    ]);
     const missing = (
       await Promise.all(
         canonical
-          .filter((p) => !p.includes("qfai-prototyping"))
+          .filter((filePath) => delegated.has(path.basename(path.dirname(filePath))))
           .map(async (filePath) => {
             const content = await readFile(filePath, "utf-8");
-            const missingPhrases = requiredPhrases.filter((phrase) => !content.includes(phrase));
-            if (missingPhrases.length === 0) {
-              return null;
-            }
-            return `${path.relative(repoRoot, filePath)}: ${missingPhrases.join(", ")}`;
+            return content.includes("rule/shared-skill-delegation-baseline.md")
+              ? null
+              : path.relative(repoRoot, filePath);
           }),
       )
     ).filter((result): result is string => result !== null);
+
+    expect(
+      canonical.filter((filePath) => delegated.has(path.basename(path.dirname(filePath)))),
+    ).toHaveLength(delegated.size);
 
     expect(missing).toEqual([]);
   });
@@ -276,7 +285,7 @@ describe("assets guardrails", () => {
     const baselinePath = path.join(
       templateQfaiDir,
       "assistant",
-      "constitution",
+      "rule",
       "shared-skill-delegation-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
@@ -305,7 +314,7 @@ describe("assets guardrails", () => {
     const baselinePath = path.join(
       templateQfaiDir,
       "assistant",
-      "constitution",
+      "rule",
       "shared-skill-operating-baseline.md",
     );
     const baseline = await readFile(baselinePath, "utf-8");
@@ -334,23 +343,19 @@ describe("assets guardrails", () => {
   });
 
   it("ensures gate-running QFAI skills reference the autorepair protocol", async () => {
-    // v2.0 (spec-0012 v2.0 absorbed): qfai-prototyping replaces the autorepair-protocol
-    // reference with deterministic `qfai prototyping iterate` exit codes
-    // (0/64/65/2). Apply the legacy reference to other gate-running skills.
-    const skills = [
-      "qfai-discussion",
-      "qfai-sdd",
-      "qfai-atdd",
-      "qfai-implement",
-      "qfai-verify",
-      "qfai-configure",
-    ];
-    const requiredPhrase = "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol";
+    const requiredBySkill = new Map([
+      ["qfai-discussion", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
+      ["qfai-sdd", "gate-failure repair protocol in the shared operating baseline"],
+      ["qfai-atdd", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
+      ["qfai-implement", "rule/shared-skill-operating-baseline.md"],
+      ["qfai-verify", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
+      ["qfai-configure", "shared-skill-operating-baseline.md#gate-failure-autorepair-protocol"],
+    ]);
 
     const missing = (
       await Promise.all(
-        skills.map(async (skill) => {
-          const skillPath = path.join(templateQfaiDir, "assistant", "skills", skill, "SKILL.md");
+        [...requiredBySkill].map(async ([skill, requiredPhrase]) => {
+          const skillPath = path.join(templateQfaiDir, "assistant", "skill", skill, "SKILL.md");
           const content = await readFile(skillPath, "utf-8");
           return content.includes(requiredPhrase) ? null : skill;
         }),
@@ -361,7 +366,7 @@ describe("assets guardrails", () => {
   });
 
   it("ensures canonical skills avoid deprecated simulation fallback wording", async () => {
-    const canonicalDir = path.join(templateQfaiDir, "assistant", "skills");
+    const canonicalDir = path.join(templateQfaiDir, "assistant", "skill");
     const canonical = await fg(["*/SKILL.md"], {
       cwd: canonicalDir,
       absolute: true,
@@ -421,15 +426,15 @@ describe("assets guardrails", () => {
   });
 
   it("ensures configure and verify delegation order follows routing SSOT", async () => {
-    const routingPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-routing.yml");
+    const routingPath = path.join(defaultsDir, "agent-routing.yml");
     const configurePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-configure",
       "SKILL.md",
     );
-    const verifyPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const verifyPath = path.join(templateQfaiDir, "assistant", "skill", "qfai-verify", "SKILL.md");
 
     const [routing, configure, verify] = await Promise.all([
       readFile(routingPath, "utf-8"),
@@ -441,9 +446,10 @@ describe("assets guardrails", () => {
     expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
     expect(routing).toContain("skill: qfai-verify");
     expect(routing).toContain("mandatory_agents: [delivery-planner, qa-strategist]");
+    expect(existsSync(path.join(assistantDir, "manifest"))).toBe(false);
 
     expect(configure).toContain(
-      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
+      "Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.",
     );
     expect(configure).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `analysis` phase.",
@@ -455,9 +461,7 @@ describe("assets guardrails", () => {
       "Do not prepend non-routed roles before the first required delegation attempt.",
     );
 
-    expect(verify).toContain(
-      "Use `.qfai/assistant/manifest/agent-routing.yml` as the routing SSOT.",
-    );
+    expect(verify).toContain("Use `.qfai/assistant/rule/agent-selection.md` as the routing SSOT.");
     expect(verify).toContain(
       "First required delegation / Capability Probe: `delivery-planner` in the `plan` phase.",
     );
@@ -470,7 +474,7 @@ describe("assets guardrails", () => {
   });
 
   it("keeps qfai-verify fix-until-PASS contract", async () => {
-    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const skillPath = path.join(templateQfaiDir, "assistant", "skill", "qfai-verify", "SKILL.md");
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain(
@@ -481,7 +485,7 @@ describe("assets guardrails", () => {
   });
 
   it("keeps qfai-verify evidence summary contract", async () => {
-    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-verify", "SKILL.md");
+    const skillPath = path.join(templateQfaiDir, "assistant", "skill", "qfai-verify", "SKILL.md");
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain("A concise evidence summary exists (copy‑paste for PR).");
@@ -491,7 +495,7 @@ describe("assets guardrails", () => {
   });
 
   it("ensures qfai-prototyping v2.0 SKILL.md preserves drift protocol and 4 references", async () => {
-    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
     const skillPath = path.join(skillDir, "SKILL.md");
     const content = await readFile(skillPath, "utf-8");
 
@@ -509,7 +513,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "SKILL.md",
     );
@@ -517,17 +521,17 @@ describe("assets guardrails", () => {
 
     expect(content).toMatch(/qfai prototyping iterate/);
     expect(content).toMatch(/10 iterations|10 cycles|up to 10/);
-    expect(content).toContain(".qfai/contracts/ui/*.yaml");
+    expect(content).toContain("<contractsDir>/ui/*.yaml");
     // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml; legacy
     // per-aspect brand yaml references are dropped from this skill.
     expect(content).toContain("DESIGN.md");
-    expect(content).toContain(".qfai/contracts/design/DESIGN.md.lock.yaml");
-    expect(content).toContain(".qfai/prototypes/iter-00/index.html");
+    expect(content).toContain("<contractsDir>/design/DESIGN.md.lock.yaml");
+    expect(content).toContain(".qfai/prototype/iter-00/index.html");
     expect(content).toContain("certify --check");
   });
 
   it("ensures qfai-prototyping v2.0 references and handoff sample exist", async () => {
-    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
     const handoffTemplatePath = path.join(
       skillDir,
       "templates",
@@ -576,7 +580,7 @@ describe("assets guardrails", () => {
         path.join(
           tree,
           "assistant",
-          "skills",
+          "skill",
           "qfai-prototyping",
           "references",
           "generator-prompt.md",
@@ -604,13 +608,7 @@ describe("assets guardrails", () => {
     // iteration's HTML, discarding whatever the Reviewer recorded. An
     // operator who believed the promise had no legal way forward.
     for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
-      const referencesDir = path.join(
-        tree,
-        "assistant",
-        "skills",
-        "qfai-prototyping",
-        "references",
-      );
+      const referencesDir = path.join(tree, "assistant", "skill", "qfai-prototyping", "references");
       const [generatorRef, reviewerRef] = await Promise.all([
         readFile(path.join(referencesDir, "generator-prompt.md"), "utf-8"),
         readFile(path.join(referencesDir, "reviewer-prompt.md"), "utf-8"),
@@ -634,8 +632,8 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      // The stop is decided by three arrays, and by nothing else: a prompt
-      // that named any subset of them would leave the generator unable to
+      // The stop requires four exceptional scores and three empty arrays. A prompt
+      // that named only a subset of the findings would leave the generator unable to
       // explain why a well-reviewed run did not stop, or what to fix next.
       expect(generatorRef).toMatch(/\*\*all three finding arrays empty\*\*/);
       expect(generatorRef).toMatch(
@@ -676,24 +674,8 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/certify --upgrade-scope full` is not an issuing/);
       expect(generatorRef).toMatch(/without\s+re-scanning HTML/);
       expect(generatorRef).toMatch(/certify --check`/);
-      expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
-      expect(reviewerRef).toMatch(/on a convergence stop/);
-      expect(reviewerRef).toMatch(/gate is\s+non-waivable/);
-      // The reviewer half must carry the same `--upgrade-scope full`
-      // carve-out as the generator half: `runPrototypingCertify` branches
-      // to `runUpgradeScopeFull` before the HTML scan, so an unqualified
-      // "certify re-scans unconditionally" here would tell a Reviewer that
-      // promoting a scope-limited certificate re-checks HTML it never
-      // reads. `--check` is the named recovery on both sides.
-      // The reviewer half carries the same readability scoping, or a Reviewer
-      // reads "the re-scan result wins" as a guarantee the evidence was read.
-      expect(reviewerRef).toMatch(/\*\*present and readable\*\*/);
-      expect(reviewerRef).toMatch(/yields no findings and lets the stop through/);
-      expect(reviewerRef).toMatch(/captured HTML before it seals/);
-      expect(reviewerRef).toMatch(/never opens the\s+authoring `prototypes\/` tree/);
-      expect(reviewerRef).toMatch(/certify --upgrade-scope full` is not\s+an issuing path/);
-      expect(reviewerRef).toMatch(/without re-scanning HTML/);
-      expect(reviewerRef).toMatch(/certify --check`/);
+      expect(reviewerRef).toContain("re-scan result wins over a manually emptied array");
+      expect(reviewerRef).toContain("readable HTML is re-scanned on convergence and certification");
 
       // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
       // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
@@ -724,41 +706,6 @@ describe("assets guardrails", () => {
       expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
       expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
     }
-  });
-
-  it("never explains the convergence stop by an axis value", async () => {
-    // `isConverged` reads `designMdViolations`, `layoutAntiPatternsDetected`
-    // and `blockingFindings`. The four UX axes are still scored and still
-    // reported; they stopped deciding the stop. An agent reading that exit 64
-    // needs an axis at `exceptional` would keep iterating a run that already
-    // converged, and could not explain one that did not.
-    //
-    // Pinned as a sweep rather than per sentence: the claim had been restated
-    // in the goal, the stop-condition table, the loop reference and the
-    // generator prompt, so a rule that names the files it knows about is one
-    // paragraph away from being wrong again.
-    //
-    // The subject is an axis VALUE, not the axes. Naming an axis near the stop
-    // is fine — the reviewer still scores four of them and the loop still
-    // reports them — so the vocabulary that must not appear is the ordinal a
-    // score is drawn from. A paraphrase of it ("all four at their best") is
-    // out of reach here and is left to review.
-    const AXIS_VALUES = /\b(weak|acceptable|strong|exceptional)\b/i;
-    const offenders: string[] = [];
-    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
-      const skillDir = path.join(tree, "assistant", "skills", "qfai-prototyping");
-      const files = await fg("**/*.md", { cwd: skillDir, absolute: true, dot: false });
-      for (const file of files) {
-        const text = await readFile(file, "utf-8");
-        for (const paragraph of text.split(/\n\s*\n/)) {
-          if (!/converg/i.test(paragraph) && !/\b64\b/.test(paragraph)) continue;
-          if (!AXIS_VALUES.test(paragraph)) continue;
-          offenders.push(`${path.relative(repoRoot, file)}: ${paragraph.trim().slice(0, 120)}`);
-        }
-      }
-    }
-
-    expect(offenders).toEqual([]);
   });
 
   it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
@@ -813,7 +760,7 @@ describe("assets guardrails", () => {
         path.join(
           tree,
           "assistant",
-          "skills",
+          "skill",
           "qfai-prototyping",
           "references",
           "generator-prompt.md",
@@ -859,7 +806,7 @@ describe("assets guardrails", () => {
         path.join(
           tree,
           "assistant",
-          "skills",
+          "skill",
           "qfai-prototyping",
           "references",
           "generator-prompt.md",
@@ -929,7 +876,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "SKILL.md",
     );
@@ -944,7 +891,7 @@ describe("assets guardrails", () => {
     const contractRulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "references",
       "contract-artifact-rules.md",
@@ -955,7 +902,7 @@ describe("assets guardrails", () => {
     const uiContractTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
       "contracts",
@@ -980,7 +927,7 @@ describe("assets guardrails", () => {
     const iterationLoopPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "references",
       "iteration-loop.md",
@@ -998,7 +945,7 @@ describe("assets guardrails", () => {
   });
 
   it("keeps shipped prototyping cycle literals aligned with the iteration budget", async () => {
-    const skillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-prototyping");
+    const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
     const files = await fg(["SKILL.md", "references/*.md"], { cwd: skillDir, absolute: true });
 
     expect(files.length).toBeGreaterThan(0);
@@ -1057,7 +1004,7 @@ describe("assets guardrails", () => {
   });
 
   it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
-    const discussionDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const discussionDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-discussion");
     const files = [
       path.join(discussionDir, "references", "discussion-artifact-rules.md"),
       path.join(discussionDir, "templates", "prototyping.yaml"),
@@ -1075,7 +1022,7 @@ describe("assets guardrails", () => {
       const content = await readFile(filePath, "utf-8");
       const rel = path.relative(repoRoot, filePath);
       expect(findBudgetRestatements(content), `${rel} restates the budget`).toEqual([]);
-      expect(content).toContain(".qfai/assistant/skills/qfai-prototyping/SKILL.md");
+      expect(content).toContain(".qfai/assistant/skill/qfai-prototyping/SKILL.md");
     }
 
     // The matcher itself is the deliverable here, so pin what it rejects:
@@ -1095,7 +1042,7 @@ describe("assets guardrails", () => {
     // …and what it must not reject: the pointer form these files actually use.
     for (const allowed of [
       "The single-thread evolution loop owns its iteration budget; see the skill.",
-      "# budget is owned by `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.",
+      "# budget is owned by `.qfai/assistant/skill/qfai-prototyping/SKILL.md`.",
     ]) {
       expect(findBudgetRestatements(allowed), `must allow: ${allowed}`).toEqual([]);
     }
@@ -1113,7 +1060,7 @@ describe("assets guardrails", () => {
   });
 
   it("ships qa-gatekeeper agent card", async () => {
-    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "qa-gatekeeper.md");
+    const agentPath = path.join(templateQfaiDir, "assistant", "agent", "qa-gatekeeper.md");
     const content = await readFile(agentPath, "utf-8");
 
     expect(content).toContain("QA Gatekeeper");
@@ -1325,47 +1272,11 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
-  it("ensures product.md has no backward compatibility posture", async () => {
-    const productPath = path.join(templateQfaiDir, "assistant", "catalog", "product.md");
-    const content = await readFile(productPath, "utf-8");
-    const bannedPhrases = [
-      "Maintain backward compatibility",
-      "Breaking changes deferred until v2.0",
-      "Migration guide required",
-      "Migration guide (docs/migrations/) required",
-      "deferred to v2.0",
-      "legacy deprecation",
-      "reconsidered in v2.0",
-      "accepted for backward compatibility",
-    ];
-    for (const phrase of bannedPhrases) {
-      expect(content, `product.md must not contain "${phrase}"`).not.toContain(phrase);
-    }
-    expect(content).not.toMatch(/deferred\s+to\s+v2/i);
-  });
-
-  it("ensures manifest.md has no v2.0 defer or migration guide posture", async () => {
-    const manifestPath = path.join(templateQfaiDir, "assistant", "catalog", "manifest.md");
-    const content = await readFile(manifestPath, "utf-8");
-    const bannedPhrases = [
-      "Breaking changes deferred until v2.0",
-      "Migration guide required",
-      "deferred to v2.0",
-      "legacy deprecation",
-      "reconsidered in v2.0",
-      "accepted for backward compatibility",
-    ];
-    for (const phrase of bannedPhrases) {
-      expect(content, `manifest.md must not contain "${phrase}"`).not.toContain(phrase);
-    }
-    expect(content).not.toMatch(/reconsidered\s+in\s+v2/i);
-  });
-
   it("ensures contract artifact rules have no legacy acceptance wording", async () => {
     const contractRulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "references",
       "contract-artifact-rules.md",
@@ -1392,7 +1303,9 @@ describe("assets guardrails", () => {
       [
         "**/README.md",
         "specs/spec-XXXX/**",
+        "spec/spec-XXXX/**",
         "assistant/skills.local/**",
+        "assistant/skill.local/**",
         "evidence/calibration.yaml",
       ],
       {
@@ -1403,8 +1316,10 @@ describe("assets guardrails", () => {
     );
 
     const artifactOnly = forbidden.filter((relativePath) => !relativePath.startsWith("assistant/"));
-    const deprecatedAssistantOnly = forbidden.filter((relativePath) =>
-      relativePath.startsWith("assistant/skills.local/"),
+    const deprecatedAssistantOnly = forbidden.filter(
+      (relativePath) =>
+        relativePath.startsWith("assistant/skill.local/") ||
+        relativePath.startsWith("assistant/skills.local/"),
     );
 
     expect([...artifactOnly, ...deprecatedAssistantOnly].sort()).toEqual([]);
@@ -1421,7 +1336,9 @@ describe("assets guardrails", () => {
 
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
-      const found = hardCodedVersions(await readFile(filePath, "utf-8"));
+      const found = hardCodedVersions(await readFile(filePath, "utf-8")).filter(
+        (version) => !isRequiredVersionMention(filePath, version),
+      );
       if (found.length > 0) {
         matches.push(`${path.relative(repoRoot, filePath)}: ${found.join(", ")}`);
       }
@@ -1464,14 +1381,14 @@ describe("assets guardrails", () => {
     const discussSkillPath = path.resolve(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
     const discussionRcpFooterPath = path.resolve(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "rcp_footer.md",
@@ -1479,23 +1396,22 @@ describe("assets guardrails", () => {
     const sddRcpFooterPath = path.resolve(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "references",
       "rcp_footer.md",
     );
     const approvedJapanesePaths = new Set([
-      path.resolve(templateQfaiDir, "assistant", "constitution", "agent-selection.md"),
       path.resolve(
         templateQfaiDir,
         "assistant",
-        "skills",
+        "skill",
         "qfai-atdd",
         "references",
         "test-case-depth-checklist.md",
       ),
-      path.resolve(templateQfaiDir, "assistant", "catalog", "cli-ux-guidelines.md"),
-      path.resolve(templateQfaiDir, "assistant", "constitution", "research-first-protocol.md"),
+      path.resolve(templateQfaiDir, "assistant", "rule", "cli-ux-guidelines.md"),
+      path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
     const matches: string[] = [];
     for (const filePath of markdownFiles) {
@@ -1521,44 +1437,32 @@ describe("assets guardrails", () => {
     expect(matches).toEqual([]);
   });
 
-  it("keeps 09_delta and waivers template guardrails", async () => {
-    const deltaTemplatePath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "skills",
-      "qfai-sdd",
-      "templates",
-      "specs",
-      "spec",
-      "09_delta.md",
+  it("keeps story-tree skeleton and waivers template guardrails", async () => {
+    const storyTemplate = await readFile(
+      path.join(
+        assistantDir,
+        "skill",
+        "qfai-sdd",
+        "templates",
+        "spec",
+        "02_business-flow",
+        "business-flow-NNNN",
+        "user-story-NNNN-NNNN",
+        "01_User-story.md",
+      ),
+      "utf-8",
     );
-    const deltaTemplate = await readFile(deltaTemplatePath, "utf-8");
-    expect(deltaTemplate).toContain("# 09 Delta");
-    expect(deltaTemplate).toContain("## Change Summary");
-    // The sections `parseDeltaV1` reads. Without them the file is invisible to
-    // `qfai report`, which then prints zeros as if the run were clean.
-    // The parse itself is pinned in tests/assets/deltaTemplateParses.test.ts.
-    expect(deltaTemplate).toContain("## Update History");
-    expect(deltaTemplate).toContain("## Decision Log");
-    expect(deltaTemplate).toContain("### DL-0001");
-    expect(deltaTemplate).toContain("#### Meta");
-    expect(deltaTemplate).toContain("#### Verification");
-    expect(deltaTemplate).toContain("## Rationale");
-    expect(deltaTemplate).toContain("## Candidates Considered");
-    expect(deltaTemplate).toContain("## Adopted");
-    expect(deltaTemplate).toContain("## Rejected");
-    expect(deltaTemplate).toContain("## Impact");
-    expect(deltaTemplate).toContain("## Follow-ups");
-    expect(deltaTemplate).toContain("DO NOT");
-    expect(deltaTemplate).toContain("Temptation");
+    expect(storyTemplate).toContain("# US-0001-0001:");
+    expect(storyTemplate).toContain("## User Story");
+    expect(existsSync(path.join(assistantDir, "skill", "qfai-sdd", "templates", "specs"))).toBe(
+      false,
+    );
 
     const waiversTemplatePath = path.join(templateQfaiDir, "waivers.yml");
     const waiversTemplate = await readFile(waiversTemplatePath, "utf-8");
     expect(waiversTemplate).toContain("version: 1");
     expect(waiversTemplate).toContain("waivers: []");
-    // The worked example must name a rule some validator actually emits, in the
-    // spelling `validate.json` prints. `COMPAT-003` was neither.
-    expect(waiversTemplate).toContain("rule: TDDLIST_UNKNOWN_LEVEL");
+    expect(waiversTemplate).toContain("rule:");
     expect(waiversTemplate).not.toContain("COMPAT-");
     expect(waiversTemplate).toContain("expires:");
     expect(waiversTemplate).toContain("evidence:");
@@ -1642,12 +1546,7 @@ describe("assets guardrails", () => {
     // The attributes file is create-only, so a project that already had one
     // keeps it and can still produce an EOL-flipped diff. The protocol has to
     // tell the reviewer adjudicating that diff how to read it.
-    const protocolPath = path.join(
-      templateQfaiDir,
-      "assistant",
-      "constitution",
-      "drift-protocol.md",
-    );
+    const protocolPath = path.join(templateQfaiDir, "assistant", "rule", "drift-protocol.md");
     const protocol = await readFile(protocolPath, "utf-8");
 
     expect(protocol).toContain(".gitattributes");
@@ -1692,7 +1591,7 @@ describe("assets guardrails", () => {
       // `--upgrade-assistant-tree` is the remedy the deprecation finding
       // prints at operators, and the migration copies instead of deleting.
       expect(readme).toContain("D-DEPRECATED-PATH");
-      expect(readme).toContain("copied, never deleted");
+      expect(readme).toContain("without deleting a source or overwriting a destination");
     }
 
     // SSOT drift guard: the documented set is DERIVED from the actual flag
@@ -1825,7 +1724,7 @@ describe("assets guardrails", () => {
       "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.",
     );
     expect(readme).toContain(
-      "`qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,",
+      "Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree",
     );
   });
 
@@ -1836,7 +1735,7 @@ describe("assets guardrails", () => {
     const normalizedNpm = normalizeReadme(stripUrls(npmReadme));
     // v2.0 (spec-0012 v2.0 absorbed): replaced v1.x phrasing with single-thread loop language.
     expect(normalizedNpm).toMatch(/single-thread evolution loop|qfai prototyping iterate/);
-    expect(normalizedNpm).toMatch(/per-iter evidence|screenshot.*html.*review\.json/i);
+    expect(normalizedNpm).toMatch(/per-iteration evidence[\s\S]*?review\.json/i);
   });
 
   it("keeps root copilot-instructions aligned with skill symlink guidance", async () => {
@@ -1858,6 +1757,10 @@ describe("assets guardrails", () => {
         format: "text",
       });
       await runReport({ root, format: "md" });
+
+      for (const file of ["agent-routing.yml", "review-profiles.yml", "agent-catalog.yml"]) {
+        expect(existsSync(path.join(root, ".qfai", "assistant", "manifest", file))).toBe(false);
+      }
 
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
       const reportPath = path.join(root, ".qfai", "report", "report.md");
@@ -1911,7 +1814,7 @@ describe("assets guardrails", () => {
   it("ensures old tdd skills are abolished (not shipped)", () => {
     for (const skillId of ["qfai-tdd-red", "qfai-tdd-green", "qfai-tdd-refactor"]) {
       expect(
-        existsSync(path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md")),
+        existsSync(path.join(templateQfaiDir, "assistant", "skill", skillId, "SKILL.md")),
       ).toBe(false);
     }
   });
@@ -1920,17 +1823,18 @@ describe("assets guardrails", () => {
     const implementPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-implement",
       "SKILL.md",
     );
     const content = await readFile(implementPath, "utf-8");
 
-    expect(content).toContain("one test at a time");
-    expect(content).toContain("failing test");
-    expect(content).toContain("watch it fail");
-    expect(content).toContain("watch it pass");
-    expect(content).toContain("test-list.md");
+    expect(content).toContain("Work one EX at a time by default");
+    expect(content).toContain("Observe the assertion fail for the intended behavior");
+    expect(content).toContain("Write the minimum production code that makes this test pass");
+    expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
+    expect(content).toContain("--flow BF-NNNN");
+    expect(content).not.toContain("test-list.md");
     expect(content).not.toContain("qfai-tdd-red");
     expect(content).not.toContain("qfai-tdd-green");
     expect(content).not.toContain("qfai-tdd-refactor");
@@ -1942,7 +1846,7 @@ describe("assets guardrails", () => {
     const contractsTemplatesDir = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
       "contracts",
@@ -1963,16 +1867,16 @@ describe("assets guardrails", () => {
       ].sort(),
     );
 
-    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
+    const skillPath = path.join(templateQfaiDir, "assistant", "skill", "qfai-sdd", "SKILL.md");
     const skillContent = await readFile(skillPath, "utf-8");
-    expect(skillContent).toContain("templates/contracts");
+    expect(skillContent).toContain("references/contract-artifact-rules.md");
   });
 
   it("ensures qfai-discussion skill contains required coverage topics", async () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -1994,14 +1898,14 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2026,7 +1930,7 @@ describe("assets guardrails", () => {
     const discussPromptPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -2044,7 +1948,7 @@ describe("assets guardrails", () => {
     const discussionTemplatesDir = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
     );
@@ -2075,11 +1979,25 @@ describe("assets guardrails", () => {
     );
   });
 
+  it("keeps discussion handoff references on the story tree", async () => {
+    const discussionDir = path.join(assistantDir, "skill", "qfai-discussion");
+    const documents = await fg(["**/*.md"], { cwd: discussionDir, absolute: true });
+    expect(documents.length).toBeGreaterThan(15);
+    for (const file of documents) {
+      const content = await readFile(file, "utf-8");
+      expect(content, file).not.toMatch(/\.qfai\/(?:specs|contracts)\//);
+      expect(content, file).not.toContain("Phase 0");
+    }
+    const skill = await readFile(path.join(discussionDir, "SKILL.md"), "utf-8");
+    expect(skill).toContain("<paths.specsDir>/02_business-flow/**");
+    expect(skill).toContain("<paths.contractsDir>/**");
+  });
+
   it("keeps 01_Context.md prototyping-surface guidance aligned with the execution surface set", async () => {
     const contextTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
       "01_Context.md",
@@ -2121,7 +2039,7 @@ describe("assets guardrails", () => {
     const inceptionTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
       "02_Inception-Deck.md",
@@ -2129,7 +2047,7 @@ describe("assets guardrails", () => {
     const storyTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "templates",
       "03_Story-Workshop.md",
@@ -2145,32 +2063,57 @@ describe("assets guardrails", () => {
     expect(storyTemplate).toContain("```css");
   });
 
-  it("ensures review gate rules and review templates exist", async () => {
-    const rulesPath = path.join(templateQfaiDir, "assistant", "catalog", "review-gate.rules.yml");
-    const rules = await readFile(rulesPath, "utf-8");
-    expect(rules).toContain("required:");
-    expect(rules).toContain("optional:");
-    expect(rules).toContain("reviewers:");
-    expect(rules).toContain("agent-routing.yml");
-    expect(rules).toContain("review-profiles.yml");
+  it("ships agent cards and package routing defaults without project manifests", async () => {
+    for (const directory of ["rule", "skill", "agent", "prompt"]) {
+      expect(existsSync(path.join(assistantDir, directory)), directory).toBe(true);
+    }
+    expect(existsSync(path.join(assistantDir, "catalog"))).toBe(false);
+    const layers = await readFile(path.join(assistantDir, "rule", "test-layers.md"), "utf-8");
+    expect(layers).toContain("# Test Layers Policy");
+    expect(existsSync(path.join(assistantDir, "catalog", "test-layers.md"))).toBe(false);
+    for (const retired of ["manifest", "process", "constitution", "skills", "agents"]) {
+      expect(existsSync(path.join(assistantDir, retired)), retired).toBe(false);
+    }
 
-    const catalogPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-catalog.yml");
-    const routingPath = path.join(templateQfaiDir, "assistant", "manifest", "agent-routing.yml");
-    const profilesPath = path.join(templateQfaiDir, "assistant", "manifest", "review-profiles.yml");
-    const [catalog, routing, profiles] = await Promise.all([
-      readFile(catalogPath, "utf-8"),
-      readFile(routingPath, "utf-8"),
-      readFile(profilesPath, "utf-8"),
-    ]);
-    expect(catalog).toContain("schema_version:");
-    expect(catalog).toContain("agents:");
+    const cardDir = path.join(assistantDir, "agent");
+    const cards = await fg(["*.md"], { cwd: cardDir });
+    expect(cards).toHaveLength(19);
+    expect(existsSync(path.join(cardDir, "agent-catalog.yml"))).toBe(false);
+    for (const file of cards) {
+      const card = await readFile(path.join(cardDir, file), "utf-8");
+      const frontmatter = card.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      expect(frontmatter, file).not.toBeNull();
+      const parsed: unknown = parseYaml(frontmatter?.[1] ?? "");
+      expect(parsed, file).toMatchObject({ name: path.basename(file, ".md") });
+      for (const key of [
+        "kind",
+        "domain",
+        "mission",
+        "replaces",
+        "owned_artifacts",
+        "tool_profile",
+        "permission_profile",
+        "specialization_tags",
+      ]) {
+        expect(parsed, `${file}: ${key}`).toHaveProperty(key);
+      }
+    }
+
+    const routing = await readFile(path.join(defaultsDir, "agent-routing.yml"), "utf-8");
+    const profiles = await readFile(path.join(defaultsDir, "review-profiles.yml"), "utf-8");
     expect(routing).toContain("routing:");
     expect(profiles).toContain("profiles:");
+    for (const file of ["agent-routing.yml", "review-profiles.yml", "agent-catalog.yml"]) {
+      expect(existsSync(path.join(assistantDir, file)), file).toBe(false);
+      expect(existsSync(path.join(assistantDir, "manifest", file)), file).toBe(false);
+    }
+  });
 
+  it("keeps discussion and SDD review templates at their skill paths", async () => {
     const discussionRcpFooterPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "rcp_footer.md",
@@ -2178,7 +2121,7 @@ describe("assets guardrails", () => {
     const sddRcpFooterPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "references",
       "rcp_footer.md",
@@ -2197,14 +2140,15 @@ describe("assets guardrails", () => {
     expect(discussionRcpFooter).toContain("Review Target（固定）");
     expect(discussionRcpFooter).toContain("discussion-<YYYYMMDDhhmmssSSS>");
     expect(sddRcpFooter).toContain("Review Cycle");
-    expect(sddRcpFooter).toContain(".qfai/specs/spec-");
+    expect(sddRcpFooter).toContain("BF-NNNN");
+    expect(sddRcpFooter).toContain(".qfai/evidence/sdd-BF-NNNN.md");
 
     const skillIds = ["qfai-discussion"];
     for (const skillId of skillIds) {
       const reviewTemplateDir = path.join(
         templateQfaiDir,
         "assistant",
-        "skills",
+        "skill",
         skillId,
         "templates",
         "review",
@@ -2223,7 +2167,7 @@ describe("assets guardrails", () => {
     const discussionPlaybookPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "review-cycle-playbook.md",
@@ -2231,7 +2175,7 @@ describe("assets guardrails", () => {
     const sddPlaybookPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "references",
       "review-cycle-playbook.md",
@@ -2242,12 +2186,13 @@ describe("assets guardrails", () => {
     ]);
 
     expect(discussionPlaybook).toContain('target.kind` must be `"discussion"`');
-    expect(sddPlaybook).toContain('target.kind` must be `"spec"`');
-    expect(`${discussionPlaybook}\n${sddPlaybook}`).not.toContain("require");
+    expect(sddPlaybook).toContain("target.kind: flow");
+    expect(sddPlaybook).toContain("target.path for the business-flow-NNNN directory");
+    expect(sddPlaybook).toContain("producer is sdd");
   });
 
   it("pins the discussion review-pack write paths to the shared review tree", async () => {
-    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skills", "qfai-discussion");
+    const discussionSkillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-discussion");
     const discussionPlaybookPath = path.join(
       discussionSkillDir,
       "references",
@@ -2311,7 +2256,7 @@ describe("assets guardrails", () => {
     const legacySpecPackDir = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
       "spec-pack",
@@ -2324,7 +2269,7 @@ describe("assets guardrails", () => {
     const removedSkills = ["qfai-sdd-planning", "qfai-sdd-refinement"];
     for (const skillId of removedSkills) {
       expect(
-        existsSync(path.join(templateQfaiDir, "assistant", "skills", skillId, "SKILL.md")),
+        existsSync(path.join(templateQfaiDir, "assistant", "skill", skillId, "SKILL.md")),
       ).toBe(false);
     }
   });
@@ -2334,7 +2279,7 @@ describe("assets guardrails", () => {
       const reportTemplatePath = path.join(
         templateQfaiDir,
         "assistant",
-        "skills",
+        "skill",
         skillId,
         "templates",
         "report",
@@ -2353,11 +2298,11 @@ describe("assets guardrails", () => {
       path.join(
         templateQfaiDir,
         "assistant",
-        "skills",
+        "skill",
         "qfai-sdd",
         "templates",
         "evidence",
-        "sdd-spec.md",
+        "sdd-flow.md",
       ),
       "utf-8",
     );
@@ -2366,25 +2311,25 @@ describe("assets guardrails", () => {
     // committed — so the shape this asserted was one no evidence file could land.
     // The id satisfies the same obligation more exactly: it names the one run,
     // where the rewritten pointer names whichever ran last.
-    const preflightSection = sectionOf(evidenceTemplate, "## Preflight summary path");
-    expect(preflightSection).toMatch(/^- Preflight run id `<run-id>`:/m);
-    expect(preflightSection).not.toMatch(/^- `\.qfai\/report\//m);
+    const provenanceSection = sectionOf(evidenceTemplate, "## Inputs and provenance");
+    expect(provenanceSection).toContain("Discussion requirement or import source");
 
     const sddSkill = await readFile(
-      path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md"),
+      path.join(templateQfaiDir, "assistant", "skill", "qfai-sdd", "SKILL.md"),
       "utf-8",
     );
-    expect(sddSkill).toContain("`.qfai/report/preflight/run-<timestamp>/preflight_summary.md`");
+    expect(sddSkill).toContain("`npx qfai sdd preflight` and use its `selectedInputPath`");
 
     const businessFlowTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
-      "specs",
-      "_policies",
-      "04_Business-Flow.md",
+      "spec",
+      "02_business-flow",
+      "business-flow-NNNN",
+      "business-flow.md",
     );
     const businessFlowTemplate = await readFile(businessFlowTemplatePath, "utf-8");
     expect(businessFlowTemplate).toContain("```mermaid");
@@ -2393,98 +2338,57 @@ describe("assets guardrails", () => {
     const contractsTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
-      "specs",
-      "_policies",
-      "05_Contracts.md",
+      "spec",
+      "03_contract",
+      "contracts.md",
     );
     const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
-    expect(contractsTemplate).toContain("```mermaid");
-    expect(contractsTemplate).toContain("erDiagram");
+    expect(contractsTemplate).toContain("## Contract Index");
   });
 
-  it("keeps 05_Contracts example rows aligned with their own table header", async () => {
-    // The three commented example rows must carry the full column count:
-    // dropping a cell would trip QFAI-TABLE-001 for an author who does what
-    // the comment asks — copies the row into the table — and parks a purpose
-    // string in `Depends On`. Copying a shipped example row under its own
-    // header must produce a well-formed row.
+  it("keeps the story-tree contract index table well formed", async () => {
     const contractsTemplatePath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-sdd",
       "templates",
-      "specs",
-      "_policies",
-      "05_Contracts.md",
+      "spec",
+      "03_contract",
+      "contracts.md",
     );
     const contractsTemplate = await readFile(contractsTemplatePath, "utf-8");
-    const lines = contractsTemplate.split(/\r?\n/);
-
-    const examples = [
-      { rowPrefix: "| DB-001", entityColumn: "Entity" },
-      { rowPrefix: "| API-001", entityColumn: "Router" },
-      { rowPrefix: "| UI-001", entityColumn: "Screen" },
-    ];
-    for (const { rowPrefix, entityColumn } of examples) {
-      const headerIndex = lines.findIndex(
-        (line) => line.startsWith("| Short ID |") && line.includes(`| ${entityColumn} |`),
-      );
-      expect(headerIndex).toBeGreaterThan(-1);
-      const exampleRow = lines.find((line) => line.startsWith(rowPrefix));
-      expect(exampleRow).toBeDefined();
-
-      const copied = [lines[headerIndex], lines[headerIndex + 1], exampleRow].join("\n");
-      expect(findTableArityMismatches(copied)).toEqual([]);
-
-      const [table] = parseAllMarkdownTables(copied);
-      expect(table).toBeDefined();
-      const dependsOn = table?.headers.indexOf("Depends On") ?? -1;
-      expect(dependsOn).toBeGreaterThan(-1);
-      // Mapping Rules give the column exactly two legal shapes: `-` for "no
-      // dependency", or the `CON-*` ids applied before this one. A purpose
-      // string — what the five-cell rows used to shift into this column —
-      // matches neither, which is the defect this guard exists to catch.
-      const dependsOnCell = table?.rows[0]?.[dependsOn];
-      expect(dependsOnCell).toBeDefined();
-      expect(dependsOnCell).toMatch(
-        /^(?:-|CON-(?:API|DB|UI)-\d{4}(?:, ?CON-(?:API|DB|UI)-\d{4})*)$/,
-      );
-    }
+    expect(findTableArityMismatches(contractsTemplate)).toEqual([]);
+    const [table] = parseAllMarkdownTables(contractsTemplate);
+    expect(table?.headers).toEqual([
+      "Short ID",
+      "Entity",
+      "Declared ID",
+      "File",
+      "Depends On",
+      "Reconciled With",
+      "Purpose",
+    ]);
   });
 
-  it("ensures qfai-sdd no-argument mode uses all-spec batch delegation", async () => {
-    const skillPath = path.join(templateQfaiDir, "assistant", "skills", "qfai-sdd", "SKILL.md");
-    const workflowPath = path.join(templateQfaiDir, "assistant", "constitution", "workflow.md");
+  it("keeps qfai-sdd scoped to business flows", async () => {
+    const skillPath = path.join(templateQfaiDir, "assistant", "skill", "qfai-sdd", "SKILL.md");
+    const workflowPath = path.join(templateQfaiDir, "assistant", "rule", "workflow.md");
     const [skill, workflow] = await Promise.all([
       readFile(skillPath, "utf-8"),
       readFile(workflowPath, "utf-8"),
     ]);
 
-    // The Drift Protocol's rerun step names a contract-scoped target, in
-    // addition to the two existing modes. Its placeholder is
-    // `<CON-ID-or-path>` because `.qfai/contracts/design/**` — which declares
-    // no `QFAI-CONTRACT-ID` — needs an addressable rerun.
-    expect(skill).toContain(
-      'argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"',
-    );
-    expect(skill).toContain("## Arguments and Target Selection (Mandatory)");
-    expect(skill).toContain(
-      "Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.",
-    );
-    expect(skill).toContain("### No-argument batch delegation (MUST)");
-    expect(skill).toContain("Delegate Slice in parallel per spec");
-    expect(skill).toContain(
-      "Validate gate and Review gate run once at batch tail after all target specs are integrated.",
-    );
-
-    expect(workflow).toContain("Stage 3 (`/qfai-sdd`) target policy:");
-    expect(workflow).toContain(
-      "Without argument (`/qfai-sdd`): scope is all capabilities from `.qfai/specs/_policies/03_Capabilities.md` in order.",
-    );
+    expect(skill).toContain("01_policy/");
+    expect(skill).toContain("02_business-flow/");
+    expect(skill).toContain("03_contract/");
+    expect(skill).toContain("--flow BF-NNNN");
+    expect(skill).not.toContain("No-argument batch delegation");
+    expect(skill).not.toContain("--spec <spec-id>");
+    expect(workflow).not.toContain(".qfai/specs/_policies/03_Capabilities.md");
   });
 
   it("keeps every shipped assistant asset inside the line ceiling", async () => {
@@ -2564,11 +2468,11 @@ describe("assets guardrails", () => {
 
   it("holds the narrowed workflow baselines and skill bodies to the default width", async () => {
     for (const relativePath of [
-      "assistant/constitution/shared-skill-delegation-baseline.md",
-      "assistant/constitution/shared-skill-operating-baseline.md",
-      "assistant/skills/qfai-atdd/SKILL.md",
-      "assistant/skills/qfai-discussion/SKILL.md",
-      "assistant/skills/qfai-sdd/SKILL.md",
+      "assistant/rule/shared-skill-delegation-baseline.md",
+      "assistant/rule/shared-skill-operating-baseline.md",
+      "assistant/skill/qfai-atdd/SKILL.md",
+      "assistant/skill/qfai-discussion/SKILL.md",
+      "assistant/skill/qfai-sdd/SKILL.md",
     ]) {
       expect(WIDTH_BUDGET_BACKLOG.has(relativePath), relativePath).toBe(false);
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
@@ -2579,46 +2483,24 @@ describe("assets guardrails", () => {
     const issues = await validateSkillDocReferences(templateRoot, defaultConfig);
     expect(issues.filter((entry) => entry.rule === "skillDocReferences.projectMemory")).toEqual([]);
     const atdd = await readFile(
-      path.join(templateQfaiDir, "assistant/skills/qfai-atdd/SKILL.md"),
+      path.join(templateQfaiDir, "assistant/skill/qfai-atdd/SKILL.md"),
       "utf-8",
     );
     const atddMemory = atdd.split(/^project_memory:\s*$/m)[1] ?? "";
-    for (const match of atddMemory.matchAll(/tests\/(?:e2e|api|integration)\/\*\*/g)) {
-      expect(atddMemory.slice(match.index - 1, match.index + match[0].length + 1)).toBe(
-        `\`${match[0]}\``,
-      );
-    }
-    for (const clause of [
-      /tests\/e2e\/\*\* must cover all required US.*tests\/api\/\*\* all active CON-API.*tests\/integration\/\*\* all active CON-DB/,
-      /L1\/Unit and L2\/Component owe no ATDD annotation/,
-      /L3\/Integration.*tests\/integration/,
-      /L4\/API.*tests\/api.*L5\/E2E.*tests\/e2e/,
-      /blank.*unreadable.*system \/ acceptance.*tests\/integration/,
-      /planned.*whole.*file.*never.*operation/,
-      /top-level key.*column-0 comment/,
-      /standalone.*SQL.*leading whitespace.*trailing SQL/,
-      /Only an out-of-slice CON-DB owned by the current spec may receive that marker; in-slice coverage remains required/,
-      /sibling.*cross-spec obligation.*never.*planned/,
-      /surface.*project-wide.*opt-in/,
-    ]) {
-      expect(atddMemory.replace(/`([^`\n]+)`/g, "$1")).toMatch(clause);
-    }
+    expect(atddMemory).toContain("BF maps to E2E; AC maps to integration or API");
+    expect(atddMemory).toContain("EX tests belong to implement");
+    expect(atddMemory).toContain(
+      "Placeholders and unasserted annotations discharge no obligation.",
+    );
+    expect(atddMemory).not.toMatch(/TC-|TDD-ID|test-list\.md/);
     const sdd = await readFile(
-      path.join(templateQfaiDir, "assistant/skills/qfai-sdd/SKILL.md"),
+      path.join(templateQfaiDir, "assistant/skill/qfai-sdd/SKILL.md"),
       "utf-8",
     );
     const sddMemory = sdd.split(/^project_memory:\s*$/m)[1] ?? "";
-    for (const clause of [
-      /existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence/,
-      /E2E\/API rows split.*boundar.*US-Refs \/ CON-API-Refs.*not.*TC-Refs/,
-      /eight-column ledger.*US-Refs \/ CON-API-Refs.*moving.*TC-Refs.*Layer owns/,
-      /integration-level TC group.*blank.*unrecognized.*system \/ acceptance/,
-      /surface typing is unused.*every.*US-\*/,
-      /Tier.*Layer.*infrastructure.*public API.*persisted schema.*criticality/,
-      /Write.*Tier column.*never.*Evidence/,
-    ]) {
-      expect(sddMemory).toMatch(clause);
-    }
+    expect(sddMemory).toMatch(/business.flow|BF-/i);
+    expect(sddMemory).toContain("03_contract/tech.md");
+    expect(sddMemory).not.toMatch(/TC-|TDD-ID|test-list\.md|06_Test-Cases\.md/);
   });
 
   it("pins every width backlog entry to the file's real width", async () => {
@@ -2677,7 +2559,7 @@ describe("assets guardrails", () => {
     // different number - and for a project that has only the published package
     // that prose is the only copy of the rule it can read.
     const baseline = await readFile(
-      path.join(templateQfaiDir, "assistant", "constitution", "shared-skill-operating-baseline.md"),
+      path.join(templateQfaiDir, "assistant", "rule", "shared-skill-operating-baseline.md"),
       "utf-8",
     );
     expect(baseline).toContain(`**${SKILL_MD_MAX_LINES} lines per assistant asset file**`);
@@ -2703,49 +2585,35 @@ describe("assets guardrails", () => {
     }
   });
 
-  it("ensures v1.4.36 layered spec templates exist for sdd", async () => {
+  it("ships the complete story-tree templates for sdd", async () => {
     const expected = [
-      // The four _policies templates and spec/10_Plan.md are Mandatory
-      // Outputs with a shipped skeleton. Coverage against the
-      // required-file registry is pinned in sddTemplateCoverage.test.ts.
-      "_policies/01_Objective.md",
-      "_policies/02_Initiative.md",
-      "_policies/03_Capabilities.md",
-      "_policies/04_Business-Flow.md",
-      "_policies/05_Contracts.md",
-      "_policies/06_Glossary.md",
-      "_policies/07_Constraints.md",
-      "_policies/08_Decisions.md",
-      "_policies/09_Open-questions.md",
-      "_policies/10_delta.md",
-      "_policies/11_Slice-Policy.md",
-      "spec/01_Spec.md",
-      // The same document once its spec has retired: the record of why the
-      // obligation went away, which the live schema cannot describe.
-      "spec/01_Spec-retired.md",
-      "spec/02_User-stories.md",
-      "spec/03_Acceptance-Criteria.md",
-      "spec/04_Business-Rules.md",
-      "spec/05_Examples.md",
-      "spec/06_Test-Cases.md",
-      "spec/07_Decisions.md",
-      "spec/08_Open-questions.md",
-      "spec/09_delta.md",
-      "spec/10_Plan.md",
-      // The TDD execution ledger `/qfai-implement` selects from.
-      "spec/tdd/test-list.md",
-      // The traceability ledger QFAI-TRACE-001 requires.
-      "spec/16_Traceability-ledger.md",
+      "01_policy/constraint.md",
+      "01_policy/glossary.md",
+      "01_policy/initiative.md",
+      "01_policy/objective.md",
+      "01_policy/principle.md",
+      "02_business-flow/business-flows.md",
+      "02_business-flow/business-flow-NNNN/business-flow.md",
+      "02_business-flow/business-flow-NNNN/user-stories.md",
+      "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md",
+      "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
+      "03_contract/cli/command.md",
+      "03_contract/contracts.md",
+      "03_contract/structure.md",
+      "03_contract/tech.md",
+      "decisions.md",
+      "open-questions.md",
     ].sort();
 
     for (const skillId of ["qfai-sdd"]) {
       const templatesDir = path.join(
         templateQfaiDir,
         "assistant",
-        "skills",
+        "skill",
         skillId,
         "templates",
-        "specs",
+        "spec",
       );
       const files = await fg(["**/*.*"], {
         cwd: templatesDir,
@@ -2756,7 +2624,7 @@ describe("assets guardrails", () => {
   });
 
   it("ensures solution-architect agent contains required contract constraints", async () => {
-    const agentPath = path.join(templateQfaiDir, "assistant", "agents", "solution-architect.md");
+    const agentPath = path.join(templateQfaiDir, "assistant", "agent", "solution-architect.md");
     const content = await readFile(agentPath, "utf-8");
 
     expect(content).toMatch(/architecture boundaries/i);
@@ -2772,7 +2640,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2788,7 +2656,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2802,7 +2670,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2810,7 +2678,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -2835,7 +2703,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -2850,7 +2718,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2866,7 +2734,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2880,7 +2748,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2896,7 +2764,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2918,7 +2786,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -2939,12 +2807,12 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/brand direction is the exception/i);
   });
 
-  // QFAI:SPEC-0002:TC-0002-0011
+  // QFAI:EX-0001-0015-01
   it("artifact rules and SKILL.md share namespaced-only semantics for prototyping.yaml", async () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -2952,7 +2820,7 @@ describe("assets guardrails", () => {
     const skillPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "SKILL.md",
     );
@@ -2981,7 +2849,7 @@ describe("assets guardrails", () => {
     const rulesPath = path.join(
       templateQfaiDir,
       "assistant",
-      "skills",
+      "skill",
       "qfai-discussion",
       "references",
       "discussion-artifact-rules.md",
@@ -3008,7 +2876,7 @@ describe("assets guardrails", () => {
     // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
     // `validateAutopilotPolicy` emits from, rather than by a test written out
     // again here: two copies of this rule are how one hole reaches both at once.
-    const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
+    const skillDocs = await fg(["assistant/skill/qfai-*/SKILL.md"], {
       cwd: templateQfaiDir,
       absolute: false,
     });
@@ -3018,11 +2886,6 @@ describe("assets guardrails", () => {
     for (const relativePath of skillDocs.sort()) {
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const entries = collectHardRequiredEntries(content);
-      expect(
-        entries.length,
-        `${relativePath} declares no hard-required entry: the bucket is absent, or it is there ` +
-          `and empty`,
-      ).toBeGreaterThan(0);
       const skillId = path.basename(path.dirname(relativePath));
       const classified = classifyHardRequiredEntries(entries, skillId);
       offenders.push(
@@ -3067,7 +2930,7 @@ describe("assets guardrails", () => {
       "",
       "<!-- the two the run cannot infer -->",
       "  prose that belongs to the entry above",
-      "  - `primarySpecId`",
+      "  - a usable requirement source",
       "## Next section",
       "  - never reached",
       "",
@@ -3075,7 +2938,7 @@ describe("assets guardrails", () => {
 
     expect(collectHardRequiredEntries(policy)).toEqual([
       "brand intent prose that belongs to the entry above",
-      "`primarySpecId`",
+      "a usable requirement source",
     ]);
   });
 
@@ -3086,23 +2949,32 @@ describe("assets guardrails", () => {
     for (const smuggled of [
       "brand intent / companyName",
       "brand intent, companyName",
-      "`primarySpecId` + companyName",
+      "a usable requirement source + companyName",
     ]) {
       expect(
-        classifyHardRequiredEntries([smuggled, "brand intent", "`primarySpecId`"]).retired,
+        classifyHardRequiredEntries([smuggled, "brand intent"]).retired,
         `a bullet naming two entries must be reported: ${smuggled}`,
       ).toContain(smuggled);
     }
 
-    // The decoration the shipped tree really uses reports nothing, including
-    // the long qualifier whose own dash sits inside its parentheses.
+    // Current SDD inputs are skill-specific. A selectable UI contract is not
+    // a hard-required input because the resolver can select one from inventory.
     expect(
-      classifyHardRequiredEntries([
-        "brand intent",
-        "`primarySpecId` (when absent from inputs)",
-        "`primarySpecId` (only when Spec Auto-Discovery cannot resolve one — zero candidates)",
-      ]),
+      classifyHardRequiredEntries(
+        [
+          "brand intent",
+          "a usable requirement source",
+          "an identifiable affected flow or an explicit decision to create one",
+        ],
+        "qfai-sdd",
+      ),
     ).toEqual({ retired: [], unknown: [] });
+    expect(classifyHardRequiredEntries(["`primarySpecId`"], "qfai-prototyping").retired).toEqual([
+      "`primarySpecId`",
+    ]);
+    expect(classifyHardRequiredEntries(["primaryUiContract"], "qfai-prototyping").unknown).toEqual([
+      "primaryUiContract",
+    ]);
 
     // A narrowed bucket is lawful and reports nothing.
     expect(classifyHardRequiredEntries(["brand intent"])).toEqual({ retired: [], unknown: [] });
@@ -3122,7 +2994,7 @@ describe("assets guardrails", () => {
     for (const smuggled of [
       "brand intent / `testFileGlobs`",
       "brand intent, testFileGlobs",
-      "`primarySpecId` — a `testFileGlobs` proposal",
+      "brand intent — a `testFileGlobs` proposal",
     ]) {
       expect(
         classifyHardRequiredEntries([smuggled], "qfai-verify").unknown,
@@ -3132,8 +3004,8 @@ describe("assets guardrails", () => {
       // declaration rather than a ban.
       expect(classifyHardRequiredEntries([smuggled], "qfai-configure").unknown).toEqual([]);
     }
-    expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
-    expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname"]);
+    expect(HARD_REQUIRED_COMMON_ENTRIES).toEqual(["brand intent"]);
+    expect(RETIRED_HARD_REQUIRED_ENTRIES).toEqual(["companyname", "primaryspecid"]);
   });
 });
 
@@ -3397,7 +3269,7 @@ async function expectSkillSymlinkPointsToCanonical(
   skillId: string,
 ): Promise<string> {
   const integrationSkill = path.join(root, integration, "skills", skillId);
-  const canonicalSkill = path.join(root, ".qfai", "assistant", "skills", skillId);
+  const canonicalSkill = path.join(root, ".qfai", "assistant", "skill", skillId);
   const integrationStat = await lstat(integrationSkill);
 
   expect(integrationStat.isSymbolicLink()).toBe(true);

@@ -95,9 +95,25 @@ async function listFilesRecursive(dir: string): Promise<string[]> {
 }
 
 describe("dispatchReviewerToPair (interface stub)", () => {
+  it("rejects a noncanonical UI contract ID before launching or persisting", async () => {
+    let launched = false;
+    const outcome = await dispatchReviewerToPair("../CON-UI-0012", "dashboard", {
+      playwrightRunner: async () => {
+        launched = true;
+        return { ok: true, reviewJson: {} };
+      },
+      persistReviewJson: async () => {
+        throw new Error("must not persist");
+      },
+    });
+    expect(outcome.finalStatus).toBe("launchFailed");
+    expect(launched).toBe(false);
+    expect(outcome.attempts[0]?.errorMessage).toMatch(/CON-UI-NNNN/);
+  });
+
   it("returns finalStatus 'ok' on first successful attempt", async () => {
     let calls = 0;
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         calls += 1;
@@ -112,7 +128,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 
   it("retries up to attemptLimit and returns 'retryExhausted' when every attempt fails", async () => {
     let calls = 0;
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         calls += 1;
@@ -132,7 +148,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   });
 
   it("captures thrown runner errors as failed attempts", async () => {
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 2,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         throw new Error("boom");
@@ -148,7 +164,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   });
 
   it("returns 'launchFailed' immediately when no runner is injected", async () => {
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
     });
     expect(outcome.finalStatus).toBe("launchFailed");
@@ -158,7 +174,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 
   it("defaults attemptLimit to DEFAULT_REVIEWER_ATTEMPT_LIMIT (= 3) when omitted", async () => {
     let calls = 0;
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         calls += 1;
         return { ok: false, error: "fail" };
@@ -172,7 +188,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   it("invokes the backoff strategy between failed attempts (skips after last)", async () => {
     const waited: number[] = [];
     let calls = 0;
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         calls += 1;
@@ -190,7 +206,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 
   it("does not sleep after a successful attempt", async () => {
     const waited: number[] = [];
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
@@ -212,7 +228,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   // attempt that names the missing payload and fall through to
   // retryExhausted.
   it("records `ok: true` without reviewJson as retryExhausted and names the missing payload", async () => {
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 1,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
@@ -234,8 +250,8 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   // floor and `reviewJsonPath` is never set either — production callers
   // would get `finalStatus: "ok"` with neither payload nor path.
   it("propagates the runner's reviewJson payload on a first-attempt success", async () => {
-    const payload = { specId: "0012", screen: "dashboard", axes: { aesthetics: 5 } };
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const payload = { uiContractId: "CON-UI-0012", screen: "dashboard", axes: { aesthetics: 5 } };
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
@@ -250,8 +266,8 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 
   it("propagates the runner's reviewJson payload after a retry-then-ok", async () => {
     let calls = 0;
-    const payload = { specId: "0012", screen: "dashboard", note: "second-try" };
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const payload = { uiContractId: "CON-UI-0012", screen: "dashboard", note: "second-try" };
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 3,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => {
         calls += 1;
@@ -270,7 +286,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
   });
 
   it("omits reviewJson when every attempt fails (retryExhausted)", async () => {
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 2,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: false,
@@ -287,31 +303,31 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     let writtenSpec = "";
     let writtenScreen = "";
     let writtenPayload: unknown = null;
-    const payload = { specId: "0012", screen: "dashboard", axes: {} };
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const payload = { uiContractId: "CON-UI-0012", screen: "dashboard", axes: {} };
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 1,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
         reviewJson: payload,
       }),
-      persistReviewJson: async (specId, screen, body): Promise<string> => {
-        writtenSpec = specId;
+      persistReviewJson: async (uiContractId, screen, body): Promise<string> => {
+        writtenSpec = uiContractId;
         writtenScreen = screen;
         writtenPayload = body;
-        return "/abs/path/iter-00/spec-0012/dashboard.review.json";
+        return "/abs/path/iter-00/CON-UI-0012/dashboard.review.json";
       },
     });
     expect(outcome.finalStatus).toBe("ok");
-    expect(writtenSpec).toBe("0012");
+    expect(writtenSpec).toBe("CON-UI-0012");
     expect(writtenScreen).toBe("dashboard");
     expect(writtenPayload).toEqual(payload);
-    expect(outcome.reviewJsonPath).toBe("/abs/path/iter-00/spec-0012/dashboard.review.json");
+    expect(outcome.reviewJsonPath).toBe("/abs/path/iter-00/CON-UI-0012/dashboard.review.json");
     expect(outcome.reviewJson).toEqual(payload);
   });
 
   it("records persister failure as a synthetic attempt and falls out of the success path", async () => {
-    const payload = { specId: "0012", screen: "dashboard" };
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const payload = { uiContractId: "CON-UI-0012", screen: "dashboard" };
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 1,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
@@ -334,7 +350,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
 });
 
 describe("reviewer dispatch source-grep", () => {
-  // QFAI:SPEC-0012:TC-0012-0362
+  // QFAI:EX-0001-0119-01
   it("prototypingIterate.ts contains no orchestrator-side captureScreenshots() call", async () => {
     const source = await readFile(PROTOTYPING_ITERATE_SRC, "utf-8");
     const code = stripComments(source);
@@ -367,9 +383,9 @@ describe("reviewer cycle leaves zero heavy artifacts under iter-NN/", () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  // QFAI:SPEC-0012:TC-0012-0363
+  // QFAI:EX-0001-0119-02
   it("dispatch with a stub runner writes only the review JSON (no .png/.html/interaction.json)", async () => {
-    const iterDir = path.join(tmpDir, "iter-00", "spec-0012");
+    const iterDir = path.join(tmpDir, "iter-00", "CON-UI-0012");
     await mkdir(iterDir, { recursive: true });
     // Pre-seed the canonical reviewer artifact (the only file the
     // Reviewer cycle is allowed to persist). The injected runner does
@@ -378,15 +394,15 @@ describe("reviewer cycle leaves zero heavy artifacts under iter-NN/", () => {
     const reviewJsonAbs = path.join(iterDir, "dashboard.review.json");
     await writeFile(
       reviewJsonAbs,
-      `${JSON.stringify({ specId: "0012", screen: "dashboard", scores: {} }, null, 2)}\n`,
+      `${JSON.stringify({ uiContractId: "CON-UI-0012", screen: "dashboard", scores: {} }, null, 2)}\n`,
       "utf-8",
     );
 
-    const outcome = await dispatchReviewerToPair("0012", "dashboard", {
+    const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 1,
       playwrightRunner: async (): Promise<ReviewerPlaywrightAttempt> => ({
         ok: true,
-        reviewJson: { specId: "0012", screen: "dashboard", scores: {} },
+        reviewJson: { uiContractId: "CON-UI-0012", screen: "dashboard", scores: {} },
       }),
     });
     expect(outcome.finalStatus).toBe("ok");
@@ -399,6 +415,6 @@ describe("reviewer cycle leaves zero heavy artifacts under iter-NN/", () => {
     expect(html).toEqual([]);
     expect(interaction).toEqual([]);
     // Sanity: the review JSON we pre-seeded is still the only artifact.
-    expect(files).toEqual(["spec-0012/dashboard.review.json"]);
+    expect(files).toEqual(["CON-UI-0012/dashboard.review.json"]);
   });
 });

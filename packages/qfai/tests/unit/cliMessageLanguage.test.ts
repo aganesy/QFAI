@@ -73,7 +73,7 @@ const GUIDELINES_MD = path.join(
   "init",
   ".qfai",
   "assistant",
-  "catalog",
+  "rule",
   "cli-ux-guidelines.md",
 );
 
@@ -139,10 +139,10 @@ describe("operator-facing CLI message language", () => {
    *
    * A merge absorbing the base's new messages is the case that legitimately
    * adds entries, and it still moves this number — which is the point. The
-   * addition stops being an invisible edit inside a 700-line data file and
+   * addition stops being an invisible edit inside the allowlist and
    * becomes a line a reviewer is asked about.
    */
-  const ALLOWLISTED_MESSAGE_COUNT = 733;
+  const ALLOWLISTED_MESSAGE_COUNT = 297;
 
   it("holds the allowlist to a count that only a reviewed change moves", () => {
     const counted = Object.values(SRC_JAPANESE_ALLOWLIST).reduce(
@@ -249,6 +249,11 @@ describe("operator-facing CLI message language", () => {
 
     expect(diff.added).toEqual(['core/sample.ts:1: error("新しい日本語メッセージ");']);
     expect(diff.migrated).toEqual(["core/sample.ts: 古い日本語メッセージ"]);
+  });
+
+  it("does not treat a Japanese input matcher as an operator message", () => {
+    const source = ["const key = /(?:reason|理由):/;", 'error("日本語");'].join("\n");
+    expect(findJapaneseLines(source)).toEqual([{ line: 2, text: 'error("日本語");' }]);
   });
 
   it("reports an extra copy of a message the allowlist already names", () => {

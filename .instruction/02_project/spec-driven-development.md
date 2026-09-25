@@ -15,17 +15,20 @@ version: 1.0.0
 
 # 仕様書駆動開発（QFAI Toolkit）運用ガイド
 
-QFAI は `.qfai/` 配下の成果物を SSOT として扱い、検証とレポートで整合性を担保する。
-契約参照の SSOT は Spec（QFAI-CONTRACT-REF）とする。
+QFAI treats the story tree under `.qfai/spec/` as the specification source.
+The discussion pack supplies upstream context. Contract rules derive from
+examples in the business flows.
 
 ## 全体フロー（成果物ベース）
 
 ```text
-.qfai/discussion（任意の上流入力）
+.qfai/discussion (upstream input when available)
         ↓
-.qfai/specs（_policies + spec-NNNN）
+.qfai/spec/01_policy
         ↓
-.qfai/contracts（ui / api / db / design）
+.qfai/spec/02_business-flow (BF → US → AC → EX)
+        ↓
+.qfai/spec/03_contract (BR → EX)
         ↓
 qfai validate → .qfai/report/validate.json
         ↓
@@ -40,22 +43,24 @@ qfai report → .qfai/report/report.md
   optional. A spec set taken in without one is recorded as import-lite evidence
   instead.
 
-### Phase 1: Spec Pack 作成
+### Phase 1: Policy and business flows
 
-- 配置: `.qfai/specs/spec-NNNN/`
-- The required files are `01_Spec.md` through `09_delta.md`, plus `10_Plan.md`.
-  `_policies/` requires `01_Objective.md` through `11_Slice-Policy.md`. Both sets
-  are listed in `02_project/naming.md`, and `E_SPEC_MISSING_FILESET` reports a
-  missing one.
-- `09_delta.md` is append-only. It records what changed, and the Triage table
-  records which requirement drove it and who approved the operation.
+- Write policy first, then each concrete business flow and its stories,
+  acceptance criteria and examples. This repository groups its stories into
+  four flows: development, pull request CI, workspace diagnosis, and migration.
+- Each story has `01_User-story.md`, `02_Acceptance-Criteria.md` and
+  `03_Example.md`. Each EX cites one AC. See `02_project/naming.md`.
+- Record decisions and unresolved questions in `decisions.md` and
+  `open-questions.md`. Explicit `DG-NNNN` entries in policy or contract Markdown
+  supply decision guardrails.
 
 ### Phase 2: Contracts の作成
 
-- Place each contract under its kind's directory in `.qfai/contracts/`, with
-  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` at the top of the file.
-- Keep the Contract Index in `_policies/05_Contracts.md` current. An indexed
-  file that does not exist stops the run.
+- Write contract rules from the agreed examples. A BR belongs to one contract
+  and cites the EX IDs it explains.
+- Place contracts under `.qfai/spec/03_contract/` and keep
+  `03_contract/contracts.md` current. API, DB, UI and design contracts retain
+  their `QFAI-CONTRACT-ID` declarations; CLI contracts use indexed `CLI-*` IDs.
 
 ### Phase 3: 検証とレポート
 
@@ -64,11 +69,11 @@ qfai report → .qfai/report/report.md
 
 ## 品質ゲート（最低限）
 
-- Spec Pack が 1 つ以上存在する
-- Every required file of each pack is present
-- ID の形式が正しい（`spec-NNNN` / `US` / `AC` / `BR` / `EX` / `TC` / `CON-*`）
-- The `AC → BR → EX → TC` chain resolves, with no reference to an unregistered ID
-- Each spec declares its contract references
+- Each business flow and story has its required files and valid IDs.
+- The `BF → US → AC → EX ← BR` links resolve, with no undeclared ID.
+- Every BF has an E2E test, every AC an integration or API test, and every EX
+  a selected non-E2E test, unless a `DONE` decision row exempts its own item.
+- Contract index entries resolve to their files.
 - `validate` の error が 0
 
 ## 実装に進む前の確認

@@ -3168,7 +3168,7 @@ const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
   ["integration", "integration"],
 ]);
 
-type TestLayerRoots = {
+export type TestLayerRoots = {
   root: string;
   testsDirName: string;
   e2eRoot: string;
@@ -3177,10 +3177,23 @@ type TestLayerRoots = {
   isPackageRoot: (absoluteDir: string) => boolean;
 };
 
+/** Shared directory crosswalk for acceptance checks and migration. */
+export function createTestLayerRoots(root: string, config: QfaiConfig): TestLayerRoots {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  return {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+}
+
 /** An acceptance layer a file answers, and the layer directory it sits in. */
 type TestLayer = { kind: AtddTestKind; layerDir: string };
 
-function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
+export function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
   return resolveTestLayer(filePath, roots)?.kind ?? null;
 }
 
@@ -3224,15 +3237,7 @@ export function atddTestOwnerProbe(
   root: string,
   config: QfaiConfig,
 ): (absolutePath: string) => string | null {
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const roots: TestLayerRoots = {
-    root,
-    testsDirName: testsDirName(root, config),
-    e2eRoot: path.join(testsRoot, "e2e"),
-    apiRoot: path.join(testsRoot, "api"),
-    integrationRoot: path.join(testsRoot, "integration"),
-    isPackageRoot: packageRootProbe(),
-  };
+  const roots = createTestLayerRoots(root, config);
   return (absolutePath) => {
     const layer = resolveTestLayer(absolutePath, roots);
     return layer === null ? null : layerSpecNumber(layer, absolutePath);

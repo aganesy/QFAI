@@ -1,0 +1,997 @@
+## Operations
+- .qfai/evidence/migration-spec-to-story/id-map.json: write
+- .qfai/spec/02_business-flow/business-flows.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/business-flow.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-stories.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0002/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0002/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0002/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0003/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0003/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0003/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0004/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0004/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0004/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0005/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0005/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0005/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0006/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0006/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0006/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0007/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0007/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0007/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0008/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0008/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0008/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0009/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0009/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0009/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0010/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0010/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0010/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0011/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0011/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0011/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0012/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0012/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0012/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0013/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0013/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0013/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0014/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0014/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0014/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0015/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0015/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0015/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0016/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0016/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0016/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0017/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0017/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0017/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0018/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0018/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0018/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0019/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0019/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0019/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0020/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0020/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0020/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0021/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0021/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0021/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0022/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0022/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0022/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0023/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0023/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0023/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0024/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0024/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0024/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0025/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0025/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0025/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0026/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0026/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0026/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0027/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0027/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0027/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0028/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0028/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0028/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0029/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0029/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0029/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0030/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0030/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0030/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0031/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0031/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0031/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0032/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0032/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0032/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0033/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0033/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0033/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0034/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0034/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0034/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0035/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0035/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0035/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0036/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0036/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0036/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0037/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0037/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0037/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0038/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0038/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0038/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0039/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0039/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0039/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0040/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0040/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0040/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0041/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0041/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0041/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0042/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0042/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0042/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0043/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0043/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0043/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0044/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0044/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0044/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0045/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0045/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0045/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0046/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0046/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0046/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0047/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0047/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0047/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0048/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0048/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0048/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0049/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0049/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0049/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0050/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0050/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0050/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0051/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0051/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0051/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0052/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0052/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0052/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0053/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0053/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0053/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0054/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0054/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0054/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0055/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0055/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0055/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0056/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0056/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0056/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0057/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0057/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0057/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0058/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0058/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0058/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0059/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0059/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0059/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0060/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0060/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0060/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0061/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0061/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0061/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0062/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0062/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0062/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0063/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0063/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0063/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0064/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0064/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0064/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0065/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0065/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0065/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0066/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0066/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0066/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0067/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0068/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0068/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0068/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0069/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0069/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0069/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0070/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0070/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0070/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0071/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0071/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0071/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0072/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0072/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0072/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0073/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0073/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0073/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0074/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0074/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0074/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0075/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0075/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0075/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0076/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0077/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0077/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0077/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0078/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0078/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0078/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0079/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0080/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0080/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0080/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0081/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0081/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0081/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0082/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0082/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0082/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0083/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0083/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0083/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0084/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0085/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0085/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0085/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0086/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0086/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0086/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0087/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0087/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0087/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0088/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0088/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0088/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0089/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0089/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0089/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0090/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0090/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0090/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0091/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0092/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0092/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0092/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0093/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0093/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0093/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0094/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0094/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0094/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0095/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0095/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0095/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0096/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0096/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0096/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0097/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0097/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0097/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0098/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0098/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0098/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0099/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0099/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0099/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0100/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0100/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0100/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0101/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0101/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0101/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0102/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0102/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0102/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0103/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0103/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0103/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0104/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0104/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0104/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0105/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0105/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0105/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0106/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0106/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0106/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0107/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0107/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0107/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0108/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0109/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0109/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0109/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0110/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0110/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0110/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0111/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0111/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0111/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0112/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0112/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0112/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0113/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0113/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0113/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0114/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0114/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0114/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0115/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0115/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0115/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0116/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0116/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0116/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0117/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0117/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0117/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0118/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0118/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0118/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0119/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0119/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0119/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0120/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0120/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0120/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0121/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0121/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0121/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0122/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0122/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0122/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0123/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0123/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0123/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0124/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0124/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0124/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0125/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0125/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0125/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0126/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0126/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0126/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0127/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0127/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0127/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0128/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0128/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0128/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0129/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0129/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0129/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0130/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0130/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0130/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0131/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0131/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0131/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0132/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0132/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0132/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0133/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0133/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0133/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0134/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0134/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0134/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0135/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0135/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0135/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0136/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0136/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0136/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0137/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0137/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0137/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0138/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0138/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0138/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0139/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0139/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0139/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0140/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0140/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0140/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0141/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0141/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0141/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0142/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0142/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0142/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0143/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0143/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0143/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0144/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0144/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0144/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0145/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0145/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0145/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0146/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0146/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0146/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0147/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0148/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0148/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0148/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0149/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0149/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0149/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0150/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0150/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0150/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0151/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0151/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0151/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0152/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0152/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0152/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0153/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0153/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0153/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0154/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0154/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0154/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0155/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0155/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0155/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0156/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0156/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0156/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0157/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0157/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0157/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0158/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0159/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0159/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0159/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0160/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0160/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0160/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0161/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0161/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0161/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0162/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0162/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0162/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0163/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0163/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0163/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0164/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0165/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0166/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0167/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0167/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0167/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0168/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0168/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0168/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0169/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0169/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0169/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0170/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0170/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0170/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0171/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0171/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0171/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0172/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0172/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0172/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0173/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0173/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0173/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0174/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0174/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0174/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0175/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0175/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0175/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0176/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0176/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0176/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0177/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0177/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0177/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0178/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0178/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0178/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0179/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0179/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0179/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0180/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0181/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0181/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0181/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0182/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0182/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0182/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0183/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0183/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0183/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0184/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0184/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0184/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0185/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0185/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0185/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0186/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0186/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0186/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0187/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0187/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0187/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0188/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0188/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0188/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0189/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0189/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0189/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0190/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0190/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0190/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/business-flow.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-stories.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0001/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0001/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0001/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0002/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0002/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0002/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0003/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0003/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0003/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0004/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0004/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0004/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0005/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0005/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0005/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0006/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0006/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0006/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0007/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0007/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0007/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0008/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0008/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0008/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0009/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0009/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0009/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0010/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0010/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0010/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0011/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0011/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0011/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0012/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0012/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0012/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0013/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0013/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0013/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0014/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0014/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0014/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0015/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0015/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0015/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0016/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0016/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0016/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0017/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0017/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0017/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0018/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0018/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0018/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0019/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0019/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0019/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0020/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0020/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0020/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0021/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0021/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0021/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0022/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0022/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0022/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0023/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0023/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0023/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/business-flow.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-stories.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0001/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0001/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0001/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0002/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0002/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0002/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0003/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0003/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0003/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0004/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0004/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0004/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0005/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0005/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0005/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0006/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0006/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0006/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0007/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0007/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0007/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0008/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0008/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0008/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0009/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0009/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0009/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0010/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0010/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0010/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0011/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0011/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0011/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0012/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0012/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0012/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0013/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0013/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0013/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0014/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0014/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0014/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0015/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0015/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0015/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0016/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0016/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0003/user-story-0003-0016/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/business-flow.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-stories.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0001/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0001/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0001/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0002/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0002/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0002/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0003/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0003/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0003/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0004/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0004/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0004/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0005/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0005/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0005/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0006/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0006/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0006/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0007/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0007/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0007/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0008/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0008/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0008/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0009/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0009/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0009/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0010/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0010/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0010/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0011/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0011/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0011/03_Example.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0012/01_User-story.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0012/02_Acceptance-Criteria.md: write
+- .qfai/spec/02_business-flow/business-flow-0004/user-story-0004-0012/03_Example.md: write
+- .qfai/spec/spec-0001/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0001/02_User-stories.md: move
+- .qfai/spec/spec-0001/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0001/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0001/05_Examples.md: write
+- .qfai/spec/spec-0001/05_Examples.md: write
+- .qfai/spec/spec-0001/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0001/06_Test-Cases.md: move
+- .qfai/spec/spec-0001/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0001/10_Plan.md: move
+- .qfai/spec/spec-0001/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0001/tdd: move
+- .qfai/spec/spec-0002/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/02_User-stories.md: move
+- .qfai/spec/spec-0002/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0002/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/05_Examples.md: move
+- .qfai/spec/spec-0002/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/06_Test-Cases.md: move
+- .qfai/spec/spec-0002/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0002/10_Plan.md: move
+- .qfai/spec/spec-0002/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0002/tdd: move
+- .qfai/spec/spec-0003/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0003/02_User-stories.md: move
+- .qfai/spec/spec-0003/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0003/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0003/05_Examples.md: write
+- .qfai/spec/spec-0003/05_Examples.md: write
+- .qfai/spec/spec-0003/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0003/06_Test-Cases.md: move
+- .qfai/spec/spec-0003/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0003/10_Plan.md: move
+- .qfai/spec/spec-0003/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0003/tdd: move
+- .qfai/spec/spec-0004/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md: move
+- .qfai/spec/spec-0004/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0004/05_Examples.md: write
+- .qfai/spec/spec-0004/05_Examples.md: write
+- .qfai/spec/spec-0004/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/06_Test-Cases.md: move
+- .qfai/spec/spec-0004/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/10_Plan.md: move
+- .qfai/spec/spec-0004/16_Traceability-ledger.md → .qfai/evidence/migration-spec-to-story/retired/spec-0004/16_Traceability-ledger.md: move
+- .qfai/spec/spec-0004/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0004/tdd: move
+- .qfai/spec/spec-0005/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/02_User-stories.md: move
+- .qfai/spec/spec-0005/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0005/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/05_Examples.md: move
+- .qfai/spec/spec-0005/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/06_Test-Cases.md: move
+- .qfai/spec/spec-0005/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0005/10_Plan.md: move
+- .qfai/spec/spec-0005/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0005/tdd: move
+- .qfai/spec/spec-0006/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/02_User-stories.md: move
+- .qfai/spec/spec-0006/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0006/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/05_Examples.md: move
+- .qfai/spec/spec-0006/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/06_Test-Cases.md: move
+- .qfai/spec/spec-0006/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0006/10_Plan.md: move
+- .qfai/spec/spec-0006/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0006/tdd: move
+- .qfai/spec/spec-0007/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/02_User-stories.md: move
+- .qfai/spec/spec-0007/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0007/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/05_Examples.md: move
+- .qfai/spec/spec-0007/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/06_Test-Cases.md: move
+- .qfai/spec/spec-0007/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0007/10_Plan.md: move
+- .qfai/spec/spec-0007/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0007/tdd: move
+- .qfai/spec/spec-0008/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0008/02_User-stories.md: move
+- .qfai/spec/spec-0008/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0008/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0008/05_Examples.md: write
+- .qfai/spec/spec-0008/05_Examples.md: write
+- .qfai/spec/spec-0008/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0008/06_Test-Cases.md: move
+- .qfai/spec/spec-0008/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0008/10_Plan.md: move
+- .qfai/spec/spec-0008/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0008/tdd: move
+- .qfai/spec/spec-0009/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0009/02_User-stories.md: move
+- .qfai/spec/spec-0009/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0009/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0009/05_Examples.md: write
+- .qfai/spec/spec-0009/05_Examples.md: write
+- .qfai/spec/spec-0009/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0009/06_Test-Cases.md: move
+- .qfai/spec/spec-0009/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0009/10_Plan.md: move
+- .qfai/spec/spec-0009/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0009/tdd: move
+- .qfai/spec/spec-0010/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md: move
+- .qfai/spec/spec-0010/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0010/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/05_Examples.md: move
+- .qfai/spec/spec-0010/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/06_Test-Cases.md: move
+- .qfai/spec/spec-0010/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0010/10_Plan.md: move
+- .qfai/spec/spec-0010/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0010/tdd: move
+- .qfai/spec/spec-0011/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0011/02_User-stories.md: move
+- .qfai/spec/spec-0011/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0011/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0011/05_Examples.md: write
+- .qfai/spec/spec-0011/05_Examples.md: write
+- .qfai/spec/spec-0011/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0011/06_Test-Cases.md: move
+- .qfai/spec/spec-0011/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0011/10_Plan.md: move
+- .qfai/spec/spec-0011/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0011/tdd: move
+- .qfai/spec/spec-0012/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/02_User-stories.md: move
+- .qfai/spec/spec-0012/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0012/05_Examples.md: write
+- .qfai/spec/spec-0012/05_Examples.md: write
+- .qfai/spec/spec-0012/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/06_Test-Cases.md: move
+- .qfai/spec/spec-0012/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/10_Plan.md: move
+- .qfai/spec/spec-0012/16_Traceability-ledger.md → .qfai/evidence/migration-spec-to-story/retired/spec-0012/16_Traceability-ledger.md: move
+- .qfai/spec/spec-0012/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0012/tdd: move
+- .qfai/spec/spec-0013/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0013/02_User-stories.md: move
+- .qfai/spec/spec-0013/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0013/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0013/05_Examples.md: write
+- .qfai/spec/spec-0013/05_Examples.md: write
+- .qfai/spec/spec-0013/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0013/06_Test-Cases.md: move
+- .qfai/spec/spec-0013/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0013/10_Plan.md: move
+- .qfai/spec/spec-0013/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0013/tdd: move
+- .qfai/spec/spec-0014/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/02_User-stories.md: move
+- .qfai/spec/spec-0014/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0014/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/05_Examples.md: move
+- .qfai/spec/spec-0014/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/06_Test-Cases.md: move
+- .qfai/spec/spec-0014/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/10_Plan.md: move
+- .qfai/spec/spec-0014/16_Traceability-ledger.md → .qfai/evidence/migration-spec-to-story/retired/spec-0014/16_Traceability-ledger.md: move
+- .qfai/spec/spec-0014/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0014/tdd: move
+- .qfai/spec/spec-0015/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0015/02_User-stories.md: move
+- .qfai/spec/spec-0015/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0015/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0015/05_Examples.md: write
+- .qfai/spec/spec-0015/05_Examples.md: write
+- .qfai/spec/spec-0015/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0015/06_Test-Cases.md: move
+- .qfai/spec/spec-0015/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0015/10_Plan.md: move
+- .qfai/spec/spec-0015/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0015/tdd: move
+- .qfai/spec/spec-0016/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/02_User-stories.md: move
+- .qfai/spec/spec-0016/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/03_Acceptance-Criteria.md: move
+- .qfai/evidence/migration-spec-to-story/retired/spec-0016/05_Examples.md: write
+- .qfai/spec/spec-0016/05_Examples.md: write
+- .qfai/spec/spec-0016/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/06_Test-Cases.md: move
+- .qfai/spec/spec-0016/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0016/10_Plan.md: move
+- .qfai/spec/spec-0016/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0016/tdd: move
+- .qfai/spec/spec-0017/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/02_User-stories.md: move
+- .qfai/spec/spec-0017/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0017/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/05_Examples.md: move
+- .qfai/spec/spec-0017/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/06_Test-Cases.md: move
+- .qfai/spec/spec-0017/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/10_Plan.md: move
+- .qfai/spec/spec-0017/16_Traceability-ledger.md → .qfai/evidence/migration-spec-to-story/retired/spec-0017/16_Traceability-ledger.md: move
+- .qfai/spec/spec-0017/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0017/tdd: move
+- .qfai/spec/spec-0018/02_User-stories.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/02_User-stories.md: move
+- .qfai/spec/spec-0018/03_Acceptance-Criteria.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/03_Acceptance-Criteria.md: move
+- .qfai/spec/spec-0018/05_Examples.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/05_Examples.md: move
+- .qfai/spec/spec-0018/06_Test-Cases.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/06_Test-Cases.md: move
+- .qfai/spec/spec-0018/10_Plan.md → .qfai/evidence/migration-spec-to-story/retired/spec-0018/10_Plan.md: move
+- .qfai/spec/spec-0018/tdd → .qfai/evidence/migration-spec-to-story/retired/spec-0018/tdd: move
+- .qfai/spec/_policies/03_Capabilities.md → .qfai/evidence/migration-spec-to-story/retired/_policies/03_Capabilities.md: move
+- .qfai/spec/_policies/04_Business-Flow.md → .qfai/evidence/migration-spec-to-story/retired/_policies/04_Business-Flow.md: move
+- .qfai/spec/_policies: remove empty directory
+- .qfai/steering/2026-08-05-chg-007-toolchain-capability.md: write
+- .qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md: write
+- .qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md: write
+- .qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md: write
+- .qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md: write
+- .qfai/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md: write
+- .qfai/steering/2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement.md: write
+
+## For a person
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0001 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0002 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0003 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0004 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0005 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0006 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0008 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0009 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0010 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0011 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0012 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0016 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0018 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0023 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0024 has no single derived criterion
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0001 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0003 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0004 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0005 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0006 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0011 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0012 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0013 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0014 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0015 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0016 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0020 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0022 has no contract in plan.yaml
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0007 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0020 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0021 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0023 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0028 has no single derived criterion
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0018 has no contract in plan.yaml
+- .qfai/spec/spec-0004/05_Examples.md: EX-0004-0004 has no single derived criterion
+- .qfai/spec/spec-0004/05_Examples.md: EX-0004-0037 has no single derived criterion
+- .qfai/spec/spec-0005/06_Test-Cases.md: TC-0005-0009 has ambiguous EX-Ref
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0001 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0002 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0005 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0017 has no single derived criterion
+- .qfai/spec/spec-0009/05_Examples.md: EX-0009-0001 has no single derived criterion
+- .qfai/spec/spec-0009/05_Examples.md: EX-0009-0003 has no single derived criterion
+- .qfai/spec/spec-0011/05_Examples.md: EX-0011-0002 has no single derived criterion
+- .qfai/spec/spec-0011/05_Examples.md: EX-0011-0003 has no single derived criterion
+- .qfai/spec/spec-0011/04_Business-Rules.md: BR-0011-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0001 is superseded — see EX-0012-0136 / EX-0012-0137 (per-spec iter-dir layout, `.review.json`-only; PNG/HTML capture retired by new model).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0002 is superseded — see EX-0012-0137 (no `.png` written by new model; Reviewer-driven Playwright replaces capture step).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0003 is superseded — see EX-0012-0137 (no `.html` written by new model; Reviewer-driven Playwright replaces capture step).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0089 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0098 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0102 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0110 is superseded — see EX-0012-0124 (10-cycle terminator) and EX-0012-0130 (AND-across-spec×screen qualitative convergence). 15-cycle narrative retired.; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0111 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0112 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0113 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0115 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0116 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0117 is superseded — see EX-0012-0128 (new payload contains 6 qualitative `*Feel` fields + 4 ordinal axes; path moves to `iter-NN/spec-NNNN/<screen>.review.json`).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0120 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0121 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0123 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0124 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0125 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0134 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0135 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0138 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0140 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0143 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0144 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0145 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0148 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0152 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0153 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0181 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0182 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0183 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0184 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0185 has no single derived criterion
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0291 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0330 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0333 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0337 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0339 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0344 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0349 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0351 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0375 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0390 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0397 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0404 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0409 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0410 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0002 is superseded by BR-0012-0030 (reviewer-driven Playwright; no capture artifacts) and BR-0012-0035 (per-spec iter-dir namespacing; review.json only). See `09_delta.md` CHG-002 OP-PURGE-077.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0003 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0008 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0017 is superseded by BR-0012-0029 (cycles 0..9, per-spec single lineage under multi-spec). See `09_delta.md` CHG-002 OP-PURGE-078.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0019 is superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0024 is superseded by BR-0012-0032 (qualitative AND-aggregator across all spec × screen pairs) + BR-0012-0029 (10-cycle terminator at `index === 9`) + BR-0012-0034 (hard-stop class catalog). DESIGN.md sha256 mismatch on cycle ≥ 1 (exit 2) remains active via BR-0012-0026. See `09_delta.md` CHG-002 OP-PURGE-080.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0025 has no contract in plan.yaml
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0001 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0002 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0005 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0006 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0007 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0008 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0010 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0009 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0018 has no single derived criterion
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0001 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0004 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0005 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0006 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0007 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0008 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0009 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0018 has no contract in plan.yaml
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0001 has no single derived criterion
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0002 has no single derived criterion
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0004 has no single derived criterion
+- .qfai/spec/spec-0016/05_Examples.md: EX-0016-0014 has no single derived criterion
+- .qfai/evidence/migration-spec-to-story/plan.yaml: Diagnose and repair a QFAI workspace has no old flow diagram
+- .qfai/evidence/migration-spec-to-story/plan.yaml: Migrate a spec-pack project to the story tree has no old flow diagram
+- .qfai/steering/2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement.md: scope spec-0003 maps to 3 flows

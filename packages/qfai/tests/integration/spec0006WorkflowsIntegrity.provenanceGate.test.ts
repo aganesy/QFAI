@@ -27,8 +27,8 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-// QFAI:SPEC-0006:TC-0006-0031
-// QFAI:SPEC-0006:TC-0006-0030
+// QFAI:EX-0003-0011-04
+// QFAI:EX-0003-0011-03
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";

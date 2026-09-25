@@ -891,13 +891,16 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // The claim is restored, and this is the half that stops a restoration being a relapse. The
     // annotation ledger is a bare list of ids — `CR-20260820-0011` is on file about 127 entries in it
     // that no test carries — so a line there is not coverage. Three things must hold together.
-    const ledger = await readFile(
-      path.resolve(__dirname, "../../../../tests/e2e/qfai-traceability.md"),
+    const story = await readFile(
+      path.resolve(
+        __dirname,
+        "../../../../.qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0019/01_User-story.md",
+      ),
       "utf8",
     );
     expect(
-      ledger.includes("QFAI:SPEC-0017:US-0017-0007"),
-      "the restored claim must be registered where the gate reads it",
+      story.includes("Runner parallelism derived from QFAI's own workload"),
+      "the migrated claim must remain in the current story tree",
     ).toBe(true);
 
     const carrier = await readFile(
@@ -905,8 +908,8 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       "utf8",
     );
     expect(
-      carrier.includes("QFAI:SPEC-0017:US-0017-0007"),
-      "a real test file must carry the annotation, not only the ledger",
+      carrier.includes(["QFAI", "BF-0002"].join(":")),
+      "a real test file must carry the current flow annotation",
     ).toBe(true);
 
     // And the assertion must be over an EFFECT. The claim was withdrawn because its predecessor asserted

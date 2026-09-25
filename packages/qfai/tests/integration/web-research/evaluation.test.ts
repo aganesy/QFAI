@@ -11,7 +11,7 @@ const skillPath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
   "SKILL.md",
 );
@@ -21,7 +21,7 @@ async function readSkill(): Promise<string> {
 }
 
 describe("web-research evaluation metrics and HITL gates", () => {
-  // QFAI:SPEC-0016:TC-0016-0017 (TDD-0025)
+  // QFAI:EX-0001-0189-01 (TDD-0025)
   it("golden task evaluation - 4 metrics scored", async () => {
     const content = await readSkill();
 
@@ -35,7 +35,7 @@ describe("web-research evaluation metrics and HITL gates", () => {
     expect(content).toMatch(/golden[_\s-]?task/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0018 (TDD-0026)
+  // QFAI:EX-0001-0190-01 (TDD-0026)
   it("HITL gate triggers for high-risk conclusions", async () => {
     const content = await readSkill();
 
@@ -47,7 +47,7 @@ describe("web-research evaluation metrics and HITL gates", () => {
     expect(content).toMatch(/trigger|gate/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0019 (TDD-0027)
+  // QFAI:EX-0001-0190-02 (TDD-0027)
   it("HITL gate auto-approves low-risk", async () => {
     const content = await readSkill();
 
@@ -56,7 +56,7 @@ describe("web-research evaluation metrics and HITL gates", () => {
     expect(content).toMatch(/auto[_\s-]?approv/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0020 (TDD-0028)
+  // QFAI:EX-0001-0190-03 (TDD-0028)
   it("security gate bypass prevention - --yolo ignored for security", async () => {
     const content = await readSkill();
 

@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/completion-reviewer.md
+../../.qfai/assistant/agent/completion-reviewer.md

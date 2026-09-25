@@ -10,7 +10,7 @@
  * are asserted alongside the per-iteration mode record and certify
  * refusal.
  */
-// QFAI:SPEC-0012:US-0012-0140
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -82,12 +82,11 @@ async function seedProject(
   await writeFile(path.join(root, "DESIGN.md"), MODE_DESIGN_MD, "utf-8");
   const configLines = [
     "paths:",
-    "  contractsDir: .qfai/contracts",
-    "  specsDir: .qfai/specs",
+    "  contractsDir: .qfai/spec/03_contract",
+    "  specsDir: .qfai/spec",
     "  discussionDir: .qfai/discussion",
-    "  outDir: .qfai/out",
-    "  skillsDir: .qfai/assistant/skills",
-    "  promptsDir: .qfai/assistant/skills",
+    "  outDir: .qfai/report",
+    "  skillsDir: .qfai/assistant/skill",
     "  srcDir: src",
     "  testsDir: tests",
     "validation:",
@@ -98,11 +97,11 @@ async function seedProject(
     configLines.push(`  mode: ${configMode}`);
   }
   await writeFile(path.join(root, "qfai.config.yaml"), configLines.join("\n"), "utf-8");
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
+  await mkdir(uiDir, { recursive: true });
   await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
+    path.join(uiDir, "home.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
 }

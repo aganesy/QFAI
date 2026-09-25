@@ -3,12 +3,17 @@ id: 2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement
 status: archived
 kind: blocker
 created: 2026-09-23
-updated: 2026-09-23
-scope: spec-0003
+updated: 2026-09-25
+scope: global
 blocking: false
 promote-to: null
-closure-rationale: CR-20260923-0003 was applied and the six rows returned to todo, so nothing is blocked any more.
-links: ["spec-0003"]
+closure-rationale: CR-20260923-0003 was applied and the six rows returned to
+  todo. The archived blocker spans BF-0001, BF-0002, and BF-0004, so its scope
+  is global while the three links preserve the specific migration destinations.
+links:
+  - BF-0001
+  - BF-0002
+  - BF-0004
 ---
 
 # Six spec-0003 rows wait on the document-lane restatement

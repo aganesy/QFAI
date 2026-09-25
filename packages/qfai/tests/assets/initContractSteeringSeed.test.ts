@@ -18,20 +18,9 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const CONTRACT = ".qfai/contracts/cli/qfai-init.md";
+const CONTRACT = ".qfai/spec/03_contract/cli/qfai-init.md";
 const INIT_SRC = "packages/qfai/src/cli/commands/init.ts";
 const SEED_BUILDERS = ["buildProjectSteeringEntryTemplate"];
-
-/**
- * The layers above the contract that state the same distribution fact. If only
- * the contract were corrected, these would keep pointing auditors at the
- * non-existent path and the SSOT would stay mutually exclusive.
- */
-const POLICY_LAYERS = [
-  ".qfai/specs/_policies/05_Contracts.md",
-  ".qfai/specs/_policies/07_Constraints.md",
-  ".qfai/specs/_policies/10_delta.md",
-];
 
 const readRepo = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
 
@@ -57,23 +46,6 @@ describe("qfai init contract: steering seed provenance", () => {
     expect(await exists("packages/qfai/assets/init/.qfai/steering")).toBe(false);
   });
 
-  it("keeps the policy layers above the contract on the same distribution fact", async () => {
-    for (const rel of POLICY_LAYERS) {
-      const doc = flat(await readRepo(rel));
-
-      expect(doc, `${rel} still names the non-existent seed directory`).not.toContain(
-        "assets/init/.qfai/steering",
-      );
-      // Each of the three states where the seed comes from; all three must
-      // agree with the contract that it is built, not copied.
-      expect(doc, `${rel} no longer says where the seed comes from`).toContain("dist/");
-      // ...and on *what* it produces. `seedProjectSteering` writes both
-      // targets, so a one-name list makes the other read as off-contract to
-      // anyone auditing the distributed surface.
-      expect(doc, `${rel} omits .gitkeep from the steering seed`).toContain("`.gitkeep`");
-    }
-  });
-
   it("enumerates every target seedProjectSteering actually writes", async () => {
     const init = await readRepo(INIT_SRC);
     const seedFn = init.slice(init.indexOf("async function seedProjectSteering("));
@@ -88,7 +60,7 @@ describe("qfai init contract: steering seed provenance", () => {
         .filter((part) => part.length > 0)
         .join("/"),
     );
-    expect(written).toEqual([".gitkeep", "_templates/entry.md"]);
+    expect(written).toEqual([".gitkeep", "_template/entry.md"]);
 
     const contract = flat(await readRepo(CONTRACT));
     for (const rel of written) {

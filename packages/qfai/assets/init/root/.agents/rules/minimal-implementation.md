@@ -62,8 +62,9 @@ is still a Change Request.
 The ladder trims code, not obligations. These stay whatever rung you stop at.
 
 - Required traceability annotations.
-  The execution ledger and full Article V chain also stay: Require → Spec →
-  US → AC → BR → EX → TC → Tests → Code → Verification evidence.
+  The execution ledger and Article V links also stay: BF → US → AC → EX →
+  Tests → Code → Verification evidence. A BR lives in its enforcing contract
+  and cites the relevant EX.
 - Repository quality gates and their verification evidence.
 - Validation of input crossing a trust boundary.
 - Error handling that prevents data loss.
@@ -102,12 +103,12 @@ rejections at that trust boundary. Do not make the callback async and assume
 its ignored outer promise is consumed. An ignored return is a dropped promise,
 not propagation.
 
-An observation has a test-case row in
-`<paths.specsDir>/spec-*/06_Test-Cases.md`. Resolve `paths.specsDir` from
-`qfai.config.yaml`; `.qfai/specs` is only the default.
+An observed failure has an example in the owning story's `03_Example.md` and
+a test that annotates its EX ID. Resolve `paths.specsDir` from
+`qfai.config.yaml`; the default is `.qfai/spec`.
 The process entry point is a trust boundary and handles failures that propagate
 that far. A dropped rejection remains a correctness defect under
-`.qfai/assistant/constitution/drift-protocol.md`.
+`.qfai/assistant/rule/drift-protocol.md`.
 
 ## 3. Marking a deliberate simplification
 
@@ -138,6 +139,6 @@ the standard library has one is not a simplification; it is rung 3.
 
 - Writing standard for the comment you leave: `documentation-clarity.md`
 - Scope of a single change, and how an expansion is declared:
-  Article VII of `.qfai/assistant/constitution/constitution.md`
+  Article VII of `.qfai/assistant/rule/constitution.md`
 - The same ladder for a screen's components and layouts:
-  `.qfai/assistant/catalog/ui-procurement.md`
+  `.qfai/assistant/rule/ui-procurement.md`

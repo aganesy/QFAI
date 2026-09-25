@@ -1,9 +1,9 @@
 paths:
-  specsDir: .qfai/specs
-  contractsDir: .qfai/contracts
+  specsDir: .qfai/spec
+  contractsDir: .qfai/spec/03_contract
   discussionDir: .qfai/discussion
   outDir: .qfai/report
-  skillsDir: .qfai/assistant/skills
+  skillsDir: .qfai/assistant/skill
   srcDir: src
   testsDir: tests
   # Where the project's migrations live. Left unset because qfai cannot guess
@@ -20,8 +20,6 @@ validation:
   require:
     specSections: []
   testStrategy:
-    maxE2eScenarioRatio: null
-    maxE2eScenarioCount: null
     # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
     # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
     # to false is the documented opt-out.
@@ -34,7 +32,6 @@ validation:
     # decision that needs a human reviewer, not one the gate will catch.
     forbidTestTodoStubs: true
   traceability:
-    scMustHaveTest: true
     # `qfai init` fills this from the repository it runs in: each layout in the
     # list below is matched against the real tree, and the ones that select at
     # least one file are written here. A repository with no test file yet keeps
@@ -45,9 +42,8 @@ validation:
     # seeded regardless of the tree selects zero files on every other stack, and
     # the stub scan then reports nothing about a repository it never read — a
     # clean result that means only that the globs missed. So the value is
-    # derived and never guessed. Run /qfai-configure to set or refine it;
-    # `qfai validate` reports QFAI-TRACE-124 while this is unset or matches zero
-    # files. `qfai init` never rewrites an existing config,
+    # derived and never guessed. Run /qfai-configure to set or refine it.
+    # `qfai init` never rewrites an existing config,
     # so a value tuned here stays.
     #
     # This key also selects the files scanned by the test-stub gate
@@ -64,7 +60,6 @@ validation:
     #   Cucumber:   features/**/*.feature
     testFileGlobs: []
     testFileExcludeGlobs: []
-    unknownContractIdSeverity: error
 output:
   validateJsonPath: .qfai/report/validate.json
 # uiux:
@@ -75,7 +70,7 @@ output:
 #   # goes; a URL without it resolves nothing and is rejected.
 #   #
 #   # Which registry is primary, and what the look comes from, is prose in
-#   # `.qfai/assistant/catalog/tech.md`. Nothing here ranks them.
+#   # `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
 #   #
 #   # Left out entirely by a project with no user interface.
 #   registries:
@@ -92,5 +87,5 @@ atdd:
   # warning to error. 0 disables the escalation and keeps it a warning forever.
   # This is the in-code default, restated here so the knob the ATDD skill
   # advertises is readable from the file it sends you to. See
-  # `.qfai/assistant/skills/qfai-atdd/references/scaffolding.md`.
+  # `.qfai/assistant/skill/qfai-atdd/references/scaffolding.md`.
   scaffoldEscalateCycles: 3

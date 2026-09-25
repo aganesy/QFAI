@@ -1,7 +1,7 @@
 /**
- * A constitution file may only point at files `qfai init` actually writes.
+ * A shared rule may only point at files `qfai init` actually writes.
  *
- * `assistant/constitution/agent-selection.md` was ported verbatim out of this
+ * `assistant/rule/agent-selection.md` was ported verbatim out of this
  * repository's own `.instruction/` tree, so it kept citing
  * `.instruction/00_universal/development-principles-checklist.md` and
  * `.instruction/02_project/mcp.md` — plus two rootless front-matter
@@ -34,7 +34,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
  */
 const CONSUMER_ROOTS = ["packages/qfai/assets/init", "."];
 
-const AGENT_SELECTION = ".qfai/assistant/constitution/agent-selection.md";
+const AGENT_SELECTION = ".qfai/assistant/rule/agent-selection.md";
 
 /**
  * The file `agent-selection.md` now sends MCP questions to. A pointer is only
@@ -42,10 +42,10 @@ const AGENT_SELECTION = ".qfai/assistant/constitution/agent-selection.md";
  * Integration" section names a configuration-template directory per server,
  * and those directories used to sit in `packages/qfai/assets/mcp-templates`,
  * outside the init payload — shipped in the tarball, copied into no project.
- * Following the constitution therefore ran straight into a second unresolvable
+ * Following the shared rule therefore ran straight into a second unresolvable
  * reference, which is the defect this file exists to keep out.
  */
-const MCP_GUIDANCE = ".qfai/assistant/skills/web-research/SKILL.md";
+const MCP_GUIDANCE = ".qfai/assistant/skill/web-research/SKILL.md";
 
 /** A backticked, slash-bearing markdown path — how this tree cites a file. */
 const CITED_MARKDOWN_PATH = /`([^`\s]+\/[^`\s]+\.md)`/g;
@@ -62,7 +62,7 @@ const CITED_TEMPLATE_DIR = /^Configuration templates:\s+`([^`\s]+)`\s*$/gm;
  * Whether a cited path lands on something the payload ships.
  *
  * A `<placeholder>` segment names a family of files rather than one file —
- * `.qfai/assistant/agents/<id>.md` is the naming rule for the per-agent bodies,
+ * `.qfai/assistant/agent/<id>.md` is the naming rule for the per-agent bodies,
  * not a filename — so `existsSync` on the literal string is false for a
  * citation that is perfectly honest. Skipping those outright would let a typo
  * in the concrete half through, so the directory that holds the family is

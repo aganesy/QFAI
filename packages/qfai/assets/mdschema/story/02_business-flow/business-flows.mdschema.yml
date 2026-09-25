@@ -1,0 +1,19 @@
+# Document schema: 02_business-flow/business-flows.md
+structure:
+  - heading:
+      pattern: "^# Business Flows$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Flows$"
+          regex: true
+        description: Flows section.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - BF-ID
+              - Flow
+              - Path

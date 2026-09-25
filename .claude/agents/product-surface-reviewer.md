@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/product-surface-reviewer.md
+../../.qfai/assistant/agent/product-surface-reviewer.md

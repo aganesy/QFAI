@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                  | Expected                                                                                                                                                                                                      |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0001-01 | AC-0002-0001-01 | 配布 workflow set の全 job 定義を parse する                                                                                                           | 全 job が job-reachable な `permissions:` と `timeout-minutes` を持つ。orchestrator の verdict job の permission map は空。artifact upload を持つ job は cancellation で skip し欠損許容で retention 7 日以下 |
+| EX-0002-0001-02 | AC-0002-0001-01 | 配布 checkout step から `persist-credentials: false` を 1 箇所削除して hygiene lane を実行                                                             | lane が exit 1 し、違反ファイル / job / rule 名を出力する。削除前の clean な状態では exit 0。full history 要求は当該 job のみに現れ、workflow default には現れない                                            |
+| EX-0002-0001-03 | AC-0002-0001-02 | Given the package `engines` declaration and every shipped workflow header When the Node support floor stated in each header is compared with `engines` | Then no header claims a Node floor absent from the package declaration                                                                                                                                        |

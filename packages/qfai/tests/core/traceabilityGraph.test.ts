@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { legacyLayoutConfig as defaultConfig } from "./legacyLayoutConfig.js";
 import { writeValidateRunLog } from "../../src/core/runLog.js";
 import type { ValidationResult } from "../../src/core/types.js";
 import { buildLayeredTraceabilityGraph } from "../../src/core/validators/traceability.js";

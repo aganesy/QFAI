@@ -5,21 +5,13 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { isEnoent } from "./fs/errno.js";
-import {
-  HANDOFF_REQUIRED_SECTIONS,
-  PROJECT_STEERING_DIR,
-  PROJECT_STEERING_TEMPLATES_SUBDIR,
-  WORKLOG_ENTRY_STATUSES,
-} from "./paths/assistantPaths.js";
+import { PROJECT_STEERING_DIR, PROJECT_STEERING_TEMPLATES_SUBDIR } from "./paths/assistantPaths.js";
 
 /**
  * The reader for the `.qfai/steering/` work-log surface.
  *
- * Two validators open these files: `worklogSurface` polices the schema of the
- * entries that exist, and `tddList` asks whether one exists for a ledger row
- * that stopped. A second walk would let the directory-skip rules, the BOM
- * tolerance and the CRLF tolerance drift between them, so both read the
- * surface through this module.
+ * `worklogSurface` uses this reader so directory skips, BOM handling, and
+ * CRLF handling have one implementation.
  */
 
 /**
@@ -61,137 +53,13 @@ export type WorklogEntry = {
   readError: string | null;
 };
 
-/** The `kind` values whose entry records a run that stopped. */
-export const WORKLOG_STOP_KINDS: readonly string[] = ["blocker", "handoff"];
-
 /**
- * Every `.qfai/steering/**\/*.md` entry under `root`, or `[]` when the surface
- * does not exist. A file that cannot be read is returned with a `null`
- * frontmatter, its read error on `readError` and an `<<unreadable: …>>` body
- * rather than throwing, so one bad entry cannot abort a whole `qfai validate`
- * run — see `readError` for what a caller owes that entry.
+ * Read every Markdown entry under the project work-log directory.
+ * An unreadable entry is returned with its read error so validation can report it.
  */
 export async function collectWorklogEntries(root: string): Promise<WorklogEntry[]> {
   return collectFrom(path.join(root, PROJECT_STEERING_DIR), root);
 }
-
-/**
- * The `status` values whose entry still accounts for a stop that is in force.
- *
- * `archived` is excluded: it is the closed state, so a resolved blocker from
- * three months ago must not stand in for the entry a stop today owes. Leaving
- * it in would let one spec's first blocker silence the check forever.
- */
-const OPEN_WORKLOG_STATUSES: readonly string[] = WORKLOG_ENTRY_STATUSES.filter(
-  (status) => status !== "archived",
-);
-
-/**
- * The spec ids that an open `blocker` / `handoff` entry accounts for.
- *
- * Both association routes count, but they are not symmetric:
- *
- * - `scope: spec-NNNN` names the one spec the entry applies to.
- * - `links[]` resolves the spec set of a `scope: global` entry only — a handoff
- *   spanning several specs is written once with the specs in `links`, and
- *   requiring `scope` would ask the author to duplicate it per spec. On a
- *   `scope: spec-NNNN` entry `links` is a plain cross-reference, and the specs
- *   it names never read the entry (implementation skills filter on
- *   `scope ∈ {global, current-spec}`), so it cannot account for their stop.
- *
- * An entry is counted only when its frontmatter has the shape the work-log
- * contract requires. `--profile tdd` does not run `validateWorklogSurface`, so
- * without this gate a file carrying nothing but `kind:` and `scope:` — never a
- * work-log by the schema, and never reported under that profile — would
- * suppress the finding.
- */
-export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<string> {
-  const specIds = new Set<string>();
-  for (const entry of entries) {
-    const fm = entry.frontmatter;
-    if (fm === null) continue;
-    if (typeof fm.kind !== "string" || !WORKLOG_STOP_KINDS.includes(fm.kind)) continue;
-    if (!hasStopRecordShape(fm, fm.kind, entry.body)) continue;
-    const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
-    if (SPEC_ID.test(scope)) {
-      specIds.add(scope);
-      continue;
-    }
-    if (scope !== "global") continue;
-    if (!Array.isArray(fm.links)) continue;
-    for (const link of fm.links) {
-      if (typeof link !== "string") continue;
-      const trimmed = link.trim();
-      if (SPEC_ID.test(trimmed)) specIds.add(trimmed);
-    }
-  }
-  return specIds;
-}
-
-/**
- * The entries whose file could not be read at all.
- *
- * A caller that concludes "no entry accounts for this stop" from an empty
- * `collectStoppedSpecIds` result must consult this first: an entry that could
- * not be opened is silently absent from that set, and reporting the omission
- * would accuse the author of not writing a record that may well be there.
- */
-export function unreadableWorklogEntries(
-  entries: readonly WorklogEntry[],
-): Array<{ relativePath: string; detail: string }> {
-  const unreadable: Array<{ relativePath: string; detail: string }> = [];
-  for (const entry of entries) {
-    if (entry.readError === null) continue;
-    unreadable.push({ relativePath: entry.relativePath, detail: entry.readError });
-  }
-  return unreadable;
-}
-
-/**
- * Whether the entry carries the required fields of `worklog-entry.schema.md`
- * in the required shapes, and — on a `handoff` — the body the schema requires.
- *
- * Shape only — `worklogSurface` stays the authority on the values (calendar
- * validity of the dates, `id`-to-filename agreement, link resolution) and is
- * the validator that reports them. This asks the narrower question the stop
- * check needs an answer to: is this file a work-log entry at all?
- *
- * The body is checked on `handoff` for the same reason `promote-to` is checked
- * above. `worklogSurface` reports a handoff missing any of
- * {@link HANDOFF_REQUIRED_SECTIONS} as `R-HANDOFF-INCOMPLETE`, and that
- * validator does not run under `--profile tdd`. Without this, a file whose
- * frontmatter is perfect and whose body is empty suppressed the stop finding
- * while raising nothing itself: the ledger said the run stopped, and the one
- * artifact that was supposed to say what the next session picks up carried no
- * state, no next action and no constraints. Section presence only — their
- * contents are `worklogSurface`'s to judge.
- */
-function hasStopRecordShape(fm: WorklogFrontmatter, kind: string, body: string): boolean {
-  if (kind === "handoff" && !HANDOFF_REQUIRED_SECTIONS.every((h) => body.includes(h))) return false;
-  if (typeof fm.id !== "string" || fm.id.length === 0) return false;
-  if (typeof fm.status !== "string" || !OPEN_WORKLOG_STATUSES.includes(fm.status)) return false;
-  if (typeof fm.blocking !== "boolean") return false;
-  if (!Array.isArray(fm.links)) return false;
-  // Required key, `string | null` — `worklogSurface` reports its absence as
-  // `W-WORKLOG-SCHEMA` ("use null when no promotion target"), and that
-  // validator does not run under `--profile tdd`. Without this line a file
-  // missing it counts as a stop record here while being schema-invalid
-  // everywhere else.
-  if (!("promote-to" in fm)) return false;
-  const promoteTo = fm["promote-to"];
-  if (promoteTo !== null && typeof promoteTo !== "string") return false;
-  const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
-  if (scope !== "global" && !SPEC_ID.test(scope)) return false;
-  for (const field of ["created", "updated"] as const) {
-    const value = fm[field];
-    if (typeof value !== "string" || !ISO_DATE.test(value.trim())) return false;
-  }
-  return true;
-}
-
-const SPEC_ID = /^spec-\d{4}$/;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 async function collectFrom(dir: string, baseRoot: string): Promise<WorklogEntry[]> {
   // baseRoot is the project root (NOT `dir`) so that nested entries still
   // produce `.qfai/steering/<sub>/<file>.md` style paths, not the

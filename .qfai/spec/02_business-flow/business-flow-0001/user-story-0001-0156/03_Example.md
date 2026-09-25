@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                            | Expected                                                                                                                                         |
+| --------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EX-0001-0156-01 | AC-0001-0156-01 | SDD preflight finds no discussion pack, import-lite input, or explicit user requirement.                                         | Preflight stops and identifies that no usable source exists; it does not invent a story tree.                                                    |
+| EX-0001-0156-02 | AC-0001-0156-02 | A selected discussion pack has usable requirements, an incomplete markdown file, an open OQ, and no optional `prototyping.yaml`. | Preflight can pass the pack to SDD as source material; SDD records unresolved matters in its own evidence and does not repair or rerun the pack. |

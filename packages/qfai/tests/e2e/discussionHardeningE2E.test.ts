@@ -12,7 +12,7 @@ const skillPath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
   "SKILL.md",
 );

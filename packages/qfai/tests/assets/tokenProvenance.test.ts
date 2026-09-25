@@ -23,7 +23,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const SKILLS = "assistant/skills";
+const SKILLS = "assistant/skill";
 const AUTHORING = `${SKILLS}/qfai-sdd/references/design-md-authoring.md`;
 const SPEC = `${SKILLS}/qfai-prototyping/references/design-md-spec.md`;
 const SAMPLE = `${SKILLS}/qfai-prototyping/templates/DESIGN.md.sample`;

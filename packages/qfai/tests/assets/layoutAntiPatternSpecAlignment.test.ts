@@ -27,13 +27,13 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const REGISTRY_REL = "packages/qfai/assets/validators/layoutAntiPatterns.json";
 
 /** Where a stale identifier does damage: what a reviewer measures against. */
-const SCANNED = [".qfai/specs/**/*.md", ".qfai/contracts/cli/*.md"];
+const SCANNED = [".qfai/spec/02_business-flow/**/*.md", ".qfai/spec/03_contract/cli/*.md"];
 
 /**
  * Two documents exist to record what an identifier used to be, so naming a
  * retired one there is the point rather than a defect.
  */
-const EXEMPT_FILE = /(^\.qfai\/decisions\/|09_delta\.md$)/;
+const EXEMPT_FILE = /(^\.qfai\/spec\/decisions\.md$)/;
 
 /**
  * Elsewhere the exemption is per line, not per file: to cite an identifier the
@@ -42,7 +42,7 @@ const EXEMPT_FILE = /(^\.qfai\/decisions\/|09_delta\.md$)/;
  * the next claim in that file through unread.
  */
 const DISCLAIMED =
-  /(earlier revision|no longer|retired|superseded|does not declare|not in the registry)/i;
+  /(earlier revision|no longer|retired|superseded|does not declare|not in the registry|undeclared|unknown|not declare)/i;
 
 const LAP_ID_RE = /`(lap-[0-9a-z-]+)`/g;
 
@@ -95,7 +95,10 @@ describe("the layout anti-pattern vocabulary is one list", () => {
   it("the spec names the finding code the validator actually reports", async () => {
     // `QFAI-PROT-025` was specified for an unregistered token and is emitted by
     // nothing. A consumer building against it waits for a code that never comes.
-    const files = await fg([".qfai/specs/**/*.md"], { cwd: repoRoot, absolute: false });
+    const files = await fg([".qfai/spec/02_business-flow/**/*.md"], {
+      cwd: repoRoot,
+      absolute: false,
+    });
     const offenders: string[] = [];
     for (const rel of files) {
       const posix = rel.replace(/\\/g, "/");

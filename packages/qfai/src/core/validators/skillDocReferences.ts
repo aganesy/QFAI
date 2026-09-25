@@ -23,19 +23,21 @@ export function brokenRefSeverity(): "error" {
 const NON_CANONICAL_REFS: Array<{ pattern: RegExp; reason: string }> = [
   {
     pattern: /\.qfai\/assistant\/steering\/agent-routing\.yml/,
-    reason: "agent-routing.yml has moved to .qfai/assistant/manifest/agent-routing.yml.",
+    reason:
+      "Agent routing defaults are shipped with qfai; project overrides live in qfai.config.yaml.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/agent-catalog\.yml/,
-    reason: "agent-catalog.yml has moved to .qfai/assistant/manifest/agent-catalog.yml.",
+    reason: "Agent definitions live in .qfai/assistant/agent/ card frontmatter.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/review-profiles\.yml/,
-    reason: "review-profiles.yml has moved to .qfai/assistant/manifest/review-profiles.yml.",
+    reason:
+      "Review profile defaults are shipped with qfai; project overrides live in qfai.config.yaml.",
   },
   {
     pattern: /\.qfai\/assistant\/steering\/test-layers\.md/,
-    reason: "test-layers.md has moved to .qfai/assistant/catalog/test-layers.md.",
+    reason: "test-layers.md has moved to .qfai/assistant/rule/test-layers.md.",
   },
 ];
 
@@ -55,7 +57,7 @@ export async function validateSkillDocReferences(
   // Honor `config.paths.skillsDir` via the canonical resolvePath
   // helper so a project that relocates its skills tree (relative
   // OR absolute) is still scanned. Pre-fix the validator hardcoded
-  // `.qfai/assistant/skills` and silently SKIPped every qfai-* SKILL
+  // `.qfai/assistant/skill` and silently SKIPped every qfai-* SKILL
   // file under the actual configured location — letting
   // W-SKILL-DOC-BROKEN-REF / W-SKILL-PROJECT-MEMORY drift go
   // unreported. The fix mirrors the sister validators
@@ -79,7 +81,7 @@ export async function validateSkillDocReferences(
     const skillDoc = path.join(skillsDir, skillId, "SKILL.md");
     // Operator-facing relPath derived from the actual scan path so
     // relocated skillsDir surfaces under its real (root-relative or
-    // absolute) location — not the hardcoded `.qfai/assistant/skills/`
+    // absolute) location — not a hardcoded default skill directory.
     // legacy.
     const skillDocRelPath = path.relative(root, skillDoc).replace(/\\/g, "/");
     let body: string;
@@ -91,7 +93,7 @@ export async function validateSkillDocReferences(
     }
 
     // W-SKILL-DOC-BROKEN-REF — scoped to qfai-* skills per contract.
-    // User-defined non-qfai-* skills under .qfai/assistant/skills/ are
+    // User-defined non-qfai-* skills under the configured skill directory are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
     // The severity matches the qfai-validate.md contract.

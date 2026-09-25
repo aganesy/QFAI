@@ -36,7 +36,15 @@ import workspace from "../../vitest.workspace";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(
+  REPO_ROOT,
+  ".qfai",
+  "evidence",
+  "migration-spec-to-story",
+  "retired",
+  "spec-0017",
+  "07_Decisions.md",
+);
 
 /** A GitHub Actions run identifier: a long bare integer. */
 const RUN_ID = /\b\d{9,14}\b/g;
@@ -126,7 +134,7 @@ function unjustifiedMoves(moved: readonly string[], sections: readonly string[])
   return out;
 }
 
-// QFAI:SPEC-0017:TC-0017-0069
+// QFAI:EX-0002-0019-07
 describe("at most one runner project is moved off the declared parallelism value", () => {
   it("reads every project, and finds the departing set holds no more than the largest one", async () => {
     const projects = readProjects();
@@ -190,7 +198,7 @@ describe("at most one runner project is moved off the declared parallelism value
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0083
+// QFAI:EX-0002-0019-12
 describe("a moved project carries the run identifiers that justify the move", () => {
   it("requires three recorded runs against the change that moved it, and none against no change", async () => {
     const projects = readProjects();
@@ -260,7 +268,7 @@ function budgetHolds(input: {
   return !exceeds || input.reopened;
 }
 
-// QFAI:SPEC-0017:TC-0017-0070
+// QFAI:EX-0002-0019-08
 describe("a rerun-to-green rate above one in twenty reopens the setting", () => {
   it("holds the post-merge budget open, and finds no merged tuning change owing it anything", async () => {
     // The antecedent, read rather than assumed: a merged tuning change would be recorded, because

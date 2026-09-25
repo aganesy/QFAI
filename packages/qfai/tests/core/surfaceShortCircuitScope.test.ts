@@ -8,11 +8,11 @@
  * `validateAssistantAssets` open that tree, and they run under `verify` /
  * `full` alone — so `discussion`, `sdd`, `atdd` and `tdd` were being stopped
  * for damage none of their validators would have touched, hiding every
- * independent defect in the spec packs, the ledger and the discussion packs
+ * independent defect in the story tree, the ledger and the discussion packs
  * until the surface had been repaired and the run repeated.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,34 +23,25 @@ import { validateProject } from "../../src/core/validate.js";
 async function withDamagedCanonical(task: (root: string) => Promise<boolean>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
   try {
-    // A regular file where the skills **directory** belongs: the one shape a
+    // A regular file where the skill **directory** belongs: the one shape a
     // later `readdir` cannot survive. A leaf replaced by a file is not — `stat`
     // succeeds on it and the parent listing skips it — and neither is a
     // symlink, cycle or not, which `withFileTypes` lists and never descends
     // into.
     await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
-    await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
+    await writeFile(path.join(root, ".qfai", "assistant", "skill"), "not a directory\n", "utf-8");
+    const wrapper = path.join(root, ".claude", "skills", "qfai-sdd");
+    await mkdir(path.dirname(wrapper), { recursive: true });
+    await symlink(path.join("..", "..", ".qfai", "assistant", "skill", "qfai-sdd"), wrapper);
     // Enough of a surface that init counts as having run here.
     await mkdir(path.join(root, ".qfai"), { recursive: true });
     await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
     // An obligation the ATDD validators own and nothing discharges — a defect
     // that has nothing to do with the assistant tree, and the one the profile
     // was being stopped from reporting.
-    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(specDir, { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
-    await writeFile(
-      path.join(specDir, "02_User-stories.md"),
-      ["# 02 User stories", "", "## US-0001: a story", "- Parent: CAP-0001", ""].join("\n"),
-      "utf-8",
-    );
-    await writeFile(
-      path.join(specDir, "06_Test-Cases.md"),
-      ["# 06 Test cases", "", "## TC-0001: a case", "- Level: L4", "- US-Refs: US-0001", ""].join(
-        "\n",
-      ),
-      "utf-8",
-    );
+    const flowDir = path.join(root, ".qfai", "spec", "02_business-flow", "business-flow-0001");
+    await mkdir(flowDir, { recursive: true });
+    await writeFile(path.join(flowDir, "business-flow.md"), "# BF-0001: a flow\n", "utf-8");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -67,15 +58,15 @@ describe("the short-circuit follows the configured skills directory", () => {
       // for damage sitting outside every walk it performs.
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
       try {
-        const moved = path.join(root, "assistant-tree", "skills");
+        const moved = path.join(root, "assistant-tree", "skill");
         await mkdir(moved, { recursive: true });
         await writeFile(
           path.join(root, "qfai.config.yaml"),
-          ["paths:", "  skillsDir: assistant-tree/skills", ""].join("\n"),
+          ["paths:", "  skillsDir: assistant-tree/skill", ""].join("\n"),
           "utf-8",
         );
         // The abandoned default location holds the damage.
-        const stale = path.join(root, ".qfai", "assistant", "skills");
+        const stale = path.join(root, ".qfai", "assistant", "skill");
         await mkdir(path.dirname(stale), { recursive: true });
         await writeFile(stale, "not a directory\n", "utf-8");
         await mkdir(path.join(root, ".qfai"), { recursive: true });
@@ -95,22 +86,27 @@ describe("the short-circuit follows the configured skills directory", () => {
   );
 });
 
-describe("the short-circuit does not reach a sibling of the skills directory", () => {
+describe("the short-circuit covers the agent directory read by full", () => {
   // POSIX only: the ENOTDIR shape, which Windows folds into ENOENT.
   it.skipIf(process.platform === "win32")(
-    "lets `full` run when only the agents tree is a regular file",
+    "stops `full` when the agent directory is a regular file",
     async () => {
-      // `validateSkillsIntegrity` and `validateAssistantAssets` walk the skills
-      // directory, not its parent, and a missing agent is an ordinary finding
-      // rather than an exception — so damage confined to the sibling stops
-      // nothing, and the spec packs and ledger are still reported.
+      // `validateAgentDefinition` lists the agent directory under `full`.
+      // A file at that path must surface as a repairable link finding before
+      // the profile reaches its own `readdir`.
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-scope-"));
       try {
-        await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
+        await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
         await writeFile(
-          path.join(root, ".qfai", "assistant", "agents"),
+          path.join(root, ".qfai", "assistant", "agent"),
           "not a directory\n",
           "utf-8",
+        );
+        const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+        await mkdir(path.dirname(wrapper), { recursive: true });
+        await symlink(
+          path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+          wrapper,
         );
         await mkdir(path.join(root, ".qfai"), { recursive: true });
         await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
@@ -119,7 +115,7 @@ describe("the short-circuit does not reach a sibling of the skills directory", (
         const codes = new Set(result.issues.map((entry) => entry.code));
 
         expect(codes.has("QFAI-LINK-001")).toBe(true);
-        expect(codes.size).toBeGreaterThan(1);
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -128,29 +124,38 @@ describe("the short-circuit does not reach a sibling of the skills directory", (
 });
 
 describe("the agents tree is walked by the profiles that read it", () => {
-  it("stops `full` when a canonical agent is not a regular file", async () => {
-    // `validateAgentDefinition` opens the agent pathname directly, so a
-    // directory gives it `EISDIR` and a FIFO blocks it — either way taking the
-    // repairable finding down with the run.
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
-    try {
-      await mkdir(path.join(root, ".qfai", "assistant", "skills"), { recursive: true });
-      const agents = path.join(root, ".qfai", "assistant", "agents");
-      await mkdir(agents, { recursive: true });
-      await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
-      // The document the roster names, replaced by a directory.
-      await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
-      await mkdir(path.join(root, ".qfai"), { recursive: true });
-      await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
+  it.skipIf(process.platform === "win32")(
+    "stops `full` when a canonical agent is not a regular file",
+    async () => {
+      // `validateAgentDefinition` opens the agent pathname directly, so a
+      // directory gives it `EISDIR` and a FIFO blocks it — either way taking the
+      // repairable finding down with the run.
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-surface-agents-"));
+      try {
+        await mkdir(path.join(root, ".qfai", "assistant", "skill"), { recursive: true });
+        const agents = path.join(root, ".qfai", "assistant", "agent");
+        await mkdir(agents, { recursive: true });
+        await writeFile(path.join(agents, "README.md"), "# readme\n", "utf-8");
+        // The document the roster names, replaced by a directory.
+        await mkdir(path.join(agents, "completion-reviewer.md"), { recursive: true });
+        const wrapper = path.join(root, ".claude", "agents", "completion-reviewer.md");
+        await mkdir(path.dirname(wrapper), { recursive: true });
+        await symlink(
+          path.join("..", "..", ".qfai", "assistant", "agent", "completion-reviewer.md"),
+          wrapper,
+        );
+        await mkdir(path.join(root, ".qfai"), { recursive: true });
+        await writeFile(path.join(root, ".qfai", "install-provenance.json"), "{}\n", "utf-8");
 
-      const result = await validateProject(root, undefined, { profile: "full" });
-      const codes = new Set(result.issues.map((entry) => entry.code));
+        const result = await validateProject(root, undefined, { profile: "full" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
 
-      expect([...codes]).toEqual(["QFAI-LINK-001"]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
+        expect([...codes]).toEqual(["QFAI-LINK-001"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 describe("the short-circuit is scoped to the profiles that walk the damage", () => {
@@ -207,16 +212,19 @@ describe("the short-circuit is scoped to the profiles that walk the damage", () 
     },
   );
 
-  it("lets `atdd` report its own findings, which do not touch that tree", async () => {
-    await withDamagedCanonical(async (root) => {
-      const result = await validateProject(root, undefined, { profile: "atdd" });
-      const codes = new Set(result.issues.map((entry) => entry.code));
+  it.skipIf(process.platform === "win32")(
+    "lets `atdd` report its own findings, which do not touch that tree",
+    async () => {
+      await withDamagedCanonical(async (root) => {
+        const result = await validateProject(root, undefined, { profile: "atdd" });
+        const codes = new Set(result.issues.map((entry) => entry.code));
 
-      expect(codes.has("QFAI-LINK-001")).toBe(true);
-      // The surface is still reported — it is just no longer a reason to say
-      // nothing about the spec packs and the ledger.
-      expect(codes.size).toBeGreaterThan(1);
-      return true;
-    });
-  });
+        expect(codes.has("QFAI-LINK-001")).toBe(true);
+        // The surface is still reported — it is just no longer a reason to say
+        // nothing about the story tree and the ledger.
+        expect(codes.size).toBeGreaterThan(1);
+        return true;
+      });
+    },
+  );
 });

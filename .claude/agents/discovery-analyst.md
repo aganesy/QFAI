@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/discovery-analyst.md
+../../.qfai/assistant/agent/discovery-analyst.md

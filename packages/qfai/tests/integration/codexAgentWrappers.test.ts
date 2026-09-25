@@ -15,8 +15,7 @@ import {
   buildCodexAgentToml,
   escapeTomlBasicString,
   isGeneratedCodexAgentToml,
-  parseAgentCatalogDeclarations,
-  parseAgentCatalogKinds,
+  parseAgentCardKind,
   renderCodexAgentToml,
 } from "../../src/core/codexAgentToml.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -30,18 +29,7 @@ const templateAgentsDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "agents",
-);
-const templateCatalogPath = path.join(
-  repoRoot,
-  "packages",
-  "qfai",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "manifest",
-  "agent-catalog.yml",
+  "agent",
 );
 
 const createdRoots: string[] = [];
@@ -83,10 +71,18 @@ const PROJECT_AGENT_ID = "house-style-reviewer";
 const PROJECT_AGENT_MARKDOWN = [
   "---",
   `name: ${PROJECT_AGENT_ID}`,
+  "kind: reviewer",
   "description: Reviews a change against this project's own house style.",
   "tools:",
   "  - Read",
   "  - Grep",
+  "domain: test",
+  "mission: test",
+  "replaces: []",
+  "owned_artifacts: []",
+  "tool_profile: standard",
+  "permission_profile: default",
+  "specialization_tags: []",
   "---",
   "",
   `# ${PROJECT_AGENT_ID}`,
@@ -97,43 +93,11 @@ const PROJECT_AGENT_MARKDOWN = [
   "",
 ].join("\n");
 
-function projectCatalogPath(root: string): string {
-  return path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
-}
-
-async function readProjectCatalog(root: string): Promise<string> {
-  return (await readFile(projectCatalogPath(root), "utf-8")).replace(/\r\n/g, "\n");
-}
-
-async function writeProjectCatalog(root: string, content: string): Promise<void> {
-  await writeFile(projectCatalogPath(root), content, "utf-8");
-}
-
-/** Drops one `agents[]` entry whole — every field, not just its `kind`. */
-function removeCatalogEntry(catalog: string, id: string): string {
-  const lines = catalog.split("\n");
-  const start = lines.indexOf(`  - id: ${id}`);
-  if (start < 0) {
-    throw new Error(`catalog entry not found: ${id}`);
-  }
-  let end = start + 1;
-  while (end < lines.length && !lines[end].startsWith("  - id: ")) {
-    end += 1;
-  }
-  lines.splice(start, end - start);
-  return lines.join("\n");
-}
-
 async function addProjectAgent(root: string, kind: "worker" | "reviewer"): Promise<void> {
   await writeFile(
-    path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`),
-    PROJECT_AGENT_MARKDOWN,
+    path.join(root, ".qfai", "assistant", "agent", `${PROJECT_AGENT_ID}.md`),
+    PROJECT_AGENT_MARKDOWN.replace("kind: reviewer", `kind: ${kind}`),
     "utf-8",
-  );
-  const catalog = await readProjectCatalog(root);
-  await writeProjectCatalog(
-    root,
-    `${catalog.replace(/\n*$/, "\n")}  - id: ${PROJECT_AGENT_ID}\n    kind: ${kind}\n`,
   );
 }
 
@@ -145,7 +109,7 @@ afterEach(async () => {
   }
 });
 
-// QFAI:SPEC-0003:TC-0003-0055
+// QFAI:EX-0001-0025-03
 // The defect: nothing shipped a `.codex/agents/` tree and `init` generated no
 // TOML, so a project that installed qfai got Claude and GitHub agent wrappers
 // and Codex got nothing — including after `qfai init --force`, the documented
@@ -162,20 +126,22 @@ describe("qfai init generates the Codex agent profiles", () => {
     expect(written).toEqual(expected.map((name) => `${name}${CODEX_AGENT_WRAPPER_SUFFIX}`));
   });
 
+  // QFAI:EX-0001-0025-02
   it("carries the canonical body, frontmatter metadata and the reviewer sandbox", async () => {
     const root = await initProject();
-    const catalog = parseAgentCatalogKinds(await readFile(templateCatalogPath, "utf-8"));
-    expect(catalog.size).toBeGreaterThan(0);
-
-    for (const [name, kind] of catalog) {
+    const kinds = new Set<string>();
+    for (const name of await canonicalAgentNames()) {
       const raw = await readFile(codexAgentPath(root, name), "utf-8");
       const profile = parseTomlDocument(raw);
       expect(profile["name"], `${name}: name`).toBe(name);
 
       const canonical = await readFile(
-        path.join(root, ".qfai", "assistant", "agents", `${name}.md`),
+        path.join(root, ".qfai", "assistant", "agent", `${name}.md`),
         "utf-8",
       );
+      const kind = parseAgentCardKind(canonical, name);
+      expect(kind, `${name}: kind`).not.toBeNull();
+      if (kind) kinds.add(kind);
       const frontmatter = canonical.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? "";
       const parsedFrontmatter: unknown = parseYaml(frontmatter);
       const description =
@@ -193,6 +159,7 @@ describe("qfai init generates the Codex agent profiles", () => {
         expect("sandbox_mode" in profile, `${name}: worker must not pin a sandbox`).toBe(false);
       }
     }
+    expect(kinds).toEqual(new Set(["reviewer", "worker"]));
   });
 
   it("leaves an existing profile alone, and --force regenerates the stale one", async () => {
@@ -207,100 +174,39 @@ describe("qfai init generates the Codex agent profiles", () => {
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     expect(await readFile(target, "utf-8")).toContain('description = "stale"');
 
-    // `--force` regenerates `assistant/agents/**`; the Codex profile is a
+    // `--force` regenerates `assistant/agent/**`; the Codex profile is a
     // snapshot of exactly that, so it has to come along.
     await runInit({ dir: root, force: true, dryRun: false, yes: true });
     expect(await readFile(target, "utf-8")).toBe(generated);
   });
 
-  // A project's own agent is a supported declaration — `validateAgentDefinition`
-  // accepts a catalog entry plus a canonical markdown file, and `--force` keeps
-  // both. Enumerating the shipped assets alone left it with the same
-  // one-integration-behind split this step exists to close.
-  it("generates a profile for a project's own agent, and drops it once the catalog stops classifying it", async () => {
+  it("uses a project's agent card and refuses one with an invalid kind", async () => {
     const root = await initProject();
     await addProjectAgent(root, "reviewer");
-
     await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    const generated = await readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8");
-    const profile = parseTomlDocument(generated);
-    expect(profile["name"]).toBe(PROJECT_AGENT_ID);
+    const profile = parseTomlDocument(
+      await readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8"),
+    );
     expect(profile["sandbox_mode"]).toBe("read-only");
 
-    // Its classification is gone, so the profile cannot be regenerated. Leaving
-    // the old one behind would keep Codex loading an agent whose write access
-    // nothing can vouch for any more.
-    const catalog = await readProjectCatalog(root);
-    await writeProjectCatalog(
-      root,
-      catalog.replace(
-        `  - id: ${PROJECT_AGENT_ID}\n    kind: reviewer\n`,
-        `  - id: ${PROJECT_AGENT_ID}\n`,
-      ),
+    const card = path.join(root, ".qfai", "assistant", "agent", PROJECT_AGENT_ID + ".md");
+    await writeFile(
+      card,
+      PROJECT_AGENT_MARKDOWN.replace("kind: reviewer", "kind: helper"),
+      "utf-8",
     );
-    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("has no valid kind");
     await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
       code: "ENOENT",
     });
   });
 
-  // `assistant/manifest/**` is create-only, so a project initialised by an older
-  // release keeps its catalog verbatim. Reading only that copy left every agent
-  // a later release added permanently un-classified and its profile never written.
-  it("classifies an agent the project's own catalog never heard of", async () => {
-    const root = await initProject();
-    const catalog = await readProjectCatalog(root);
-    await writeProjectCatalog(root, removeCatalogEntry(catalog, "doc-steward"));
-    await rm(codexAgentPath(root, "doc-steward"), { force: true });
-
-    await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    const rendered = renderCodexAgentToml(
-      await readFile(path.join(root, ".qfai", "assistant", "agents", "doc-steward.md"), "utf-8"),
-      "worker",
-      "doc-steward",
-    );
-    expect(rendered.ok).toBe(true);
-    if (!rendered.ok) return;
-    const written = await readFile(codexAgentPath(root, "doc-steward"), "utf-8");
-    expect(written.replace(/\r\n/g, "\n")).toBe(rendered.toml);
-  });
-
-  // Filling in the shipped kind is for IDs the project never mentions. An ID it
-  // mentions without classifying is a broken local statement about that agent,
-  // and answering it with the shipped `worker` would hand back exactly the write
-  // access the classification guard withholds.
-  it("does not fill in the shipped kind for an entry the project declares without one", async () => {
-    const root = await initProject();
-    const catalog = await readProjectCatalog(root);
-    await writeProjectCatalog(
-      root,
-      catalog.replace("  - id: doc-steward\n    kind: worker\n", "  - id: doc-steward\n"),
-    );
-
-    const output = await captureStdout(async () => {
-      await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    });
-    expect(output).toContain("doc-steward");
-    await expect(readFile(codexAgentPath(root, "doc-steward"), "utf-8")).rejects.toMatchObject({
-      code: "ENOENT",
-    });
-  });
-
-  // A catalog that is not a catalog classifies nobody: falling back to the
-  // shipped document wholesale would re-grant every kind the project meant to
-  // override.
-  it("refuses every profile when the project catalog cannot be parsed", async () => {
-    const root = await initProject();
-    await writeProjectCatalog(root, "agents:\n  - id: [unbalanced\n");
-
-    await runInit({ dir: root, force: true, dryRun: false, yes: true });
-    const left = await readdir(path.join(root, ...CODEX_AGENT_WRAPPER_DIR.split("/")));
-    expect(left.filter((name) => name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX))).toEqual([]);
-  });
-
   // The generated profile is a self-contained snapshot, not a symlink that goes
-  // dangling with its referent, so an agent deleted from the catalog and from
-  // `assistant/agents/` kept working in Codex — and only in Codex.
+  // dangling with its referent, so an agent deleted from `assistant/agent/`
+  // kept working in Codex — and only in Codex.
   it("--force prunes the profile of an agent that left the roster, keeping hand-written ones", async () => {
     const root = await initProject();
     await addProjectAgent(root, "worker");
@@ -322,9 +228,7 @@ describe("qfai init generates the Codex agent profiles", () => {
       "utf-8",
     );
 
-    const catalog = await readProjectCatalog(root);
-    await writeProjectCatalog(root, removeCatalogEntry(catalog, PROJECT_AGENT_ID));
-    await rm(path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`), {
+    await rm(path.join(root, ".qfai", "assistant", "agent", `${PROJECT_AGENT_ID}.md`), {
       force: true,
     });
 
@@ -408,7 +312,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
   });
 
-  // The roster accepts whatever `.qfai/assistant/agents/` holds, symlinks
+  // The roster accepts whatever `.qfai/assistant/agent/` holds, symlinks
   // included, so an unbounded `readFile` there was a hang (a FIFO) or an OOM
   // (`/dev/zero`) away.
   it("refuses a canonical document that is not a bounded regular file", async () => {
@@ -416,7 +320,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     await addProjectAgent(root, "reviewer");
     await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-    const canonical = path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`);
+    const canonical = path.join(root, ".qfai", "assistant", "agent", `${PROJECT_AGENT_ID}.md`);
     await rm(canonical, { force: true });
     await symlink(path.join(root, ".qfai", "assistant"), canonical, "dir");
 
@@ -438,7 +342,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     await addProjectAgent(root, "reviewer");
 
     await writeFile(
-      path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`),
+      path.join(root, ".qfai", "assistant", "agent", `${PROJECT_AGENT_ID}.md`),
       `${PROJECT_AGENT_MARKDOWN}\n${"x".repeat(5 * 1024 * 1024)}\n`,
       "utf-8",
     );
@@ -452,7 +356,7 @@ describe("qfai init generates the Codex agent profiles", () => {
     });
   });
 
-  // `--force` overwrites `assistant/agents/**` from the assets one step before
+  // `--force` overwrites `assistant/agent/**` from the assets one step before
   // this generator runs — but `--dry-run` only announces that copy. Reading the
   // destination made the preview describe a state the real run replaces.
   it("--force --dry-run previews the profile the real --force writes", async () => {
@@ -462,7 +366,7 @@ describe("qfai init generates the Codex agent profiles", () => {
 
     // A stale copy from an older release, missing the heading the renderer
     // needs. `--force` replaces it before the profile is rendered.
-    const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+    const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
     const stale = (await readFile(canonical, "utf-8")).replace(/^## Mission\b/m, "## Purpose");
     await writeFile(canonical, stale, "utf-8");
 
@@ -527,9 +431,24 @@ describe("the TOML renderer", () => {
 
   it("reports a canonical document with no Mission section instead of emitting one", () => {
     const result = renderCodexAgentToml(
-      ["---", "name: demo", 'description: "d"', "tools: [Read]", "---", "", "# Demo", ""].join(
-        "\n",
-      ),
+      [
+        "---",
+        "name: demo",
+        'description: "d"',
+        "kind: worker",
+        "tools: [Read]",
+        "domain: test",
+        "mission: test",
+        "replaces: []",
+        "owned_artifacts: []",
+        "tool_profile: standard",
+        "permission_profile: default",
+        "specialization_tags: []",
+        "---",
+        "",
+        "# Demo",
+        "",
+      ].join("\n"),
       "worker",
       "demo",
     );
@@ -547,7 +466,15 @@ describe("the TOML renderer", () => {
         "---",
         "name: demo",
         'description: "Keep the ## Mission section short"',
+        "kind: worker",
         "tools: [Read]",
+        "domain: test",
+        "mission: test",
+        "replaces: []",
+        "owned_artifacts: []",
+        "tool_profile: standard",
+        "permission_profile: default",
+        "specialization_tags: []",
         "---",
         "",
         "# Demo",
@@ -576,7 +503,15 @@ describe("the TOML renderer", () => {
       "---",
       "name: demo",
       'description: "d"',
+      "kind: worker",
       "tools: [Read]",
+      "domain: test",
+      "mission: test",
+      "replaces: []",
+      "owned_artifacts: []",
+      "tool_profile: standard",
+      "permission_profile: default",
+      "specialization_tags: []",
       "---",
       "",
       "# Demo",
@@ -602,7 +537,15 @@ describe("the TOML renderer", () => {
       "---",
       "name: bar",
       'description: "d"',
+      "kind: worker",
       "tools: [Read]",
+      "domain: test",
+      "mission: test",
+      "replaces: []",
+      "owned_artifacts: []",
+      "tool_profile: standard",
+      "permission_profile: default",
+      "specialization_tags: []",
       "---",
       "",
       "# Bar",
@@ -619,29 +562,14 @@ describe("the TOML renderer", () => {
     expect(renderCodexAgentToml(mismatched, "worker", "bar").ok).toBe(true);
   });
 
-  it("drops catalog entries that declare no usable kind", () => {
-    const kinds = parseAgentCatalogKinds(
-      ["agents:", "  - id: good", "    kind: reviewer", "  - id: bad", "    kind: helper", ""].join(
-        "\n",
+  it("reads the kind from the card frontmatter", () => {
+    expect(parseAgentCardKind(PROJECT_AGENT_MARKDOWN, PROJECT_AGENT_ID)).toBe("reviewer");
+    expect(
+      parseAgentCardKind(
+        PROJECT_AGENT_MARKDOWN.replace("kind: reviewer", "kind: helper"),
+        PROJECT_AGENT_ID,
       ),
-    );
-    expect([...kinds]).toEqual([["good", "reviewer"]]);
-  });
-
-  // "declared but unclassifiable" and "not declared at all" are different
-  // statements, and only the second may be answered by the shipped default.
-  it("separates an unclassified declaration from an absent one", () => {
-    const declarations = parseAgentCatalogDeclarations(
-      ["agents:", "  - id: good", "    kind: reviewer", "  - id: bad", "    kind: helper", ""].join(
-        "\n",
-      ),
-    );
-    expect([...declarations.kinds]).toEqual([["good", "reviewer"]]);
-    expect([...declarations.unclassified]).toEqual(["bad"]);
-    expect(declarations.unusable).toBe(false);
-
-    expect(parseAgentCatalogDeclarations("agents:\n  - id: [oops\n").unusable).toBe(true);
-    expect(parseAgentCatalogDeclarations("roster: []\n").unusable).toBe(true);
+    ).toBeNull();
   });
 
   it("recognises its own output, and only its own", () => {
@@ -700,61 +628,47 @@ describe("this repository's own Codex profiles", () => {
       "solution-architect",
     ];
     const reuseRoles = ["backend-engineer", "frontend-engineer", "devops-ci-engineer"];
-    const firstRungMeaning =
-      /the first rung is this stage's — whether the thing needs to exist\.\s+After a spec row is agreed, that question is a Change Request\./;
-    const reuseMeaning =
-      /check this codebase before the\s+standard library, native platform features and installed dependencies\.\s+Mark\s+a deliberate shortcut with its ceiling and the condition that lifts it\./;
-    const catalogs: unknown[] = await Promise.all(
-      [templateCatalogPath, projectCatalogPath(repoRoot)].map(async (catalogPath) =>
-        parseYaml(await readFile(catalogPath, "utf-8")),
-      ),
+    const rule = await readFile(
+      path.join(repoRoot, ".agents", "rules", "minimal-implementation.md"),
+      "utf-8",
     );
-
-    for (const [roles, meaning] of [
-      [firstRungRoles, firstRungMeaning],
-      [reuseRoles, reuseMeaning],
-    ] as const) {
+    expect(rule).toContain("Once a spec row is agreed, asking");
+    expect(rule).toContain("a Change Request");
+    expect(rule).toContain("Is it already in this codebase?");
+    expect(rule).toContain("Does the standard library do it?");
+    expect(rule).toContain("Does a native platform feature cover it?");
+    expect(rule).toContain("Does an already-installed dependency solve it?");
+    expect(rule).toContain("the condition that lifts it");
+    for (const roles of [firstRungRoles, reuseRoles]) {
       for (const role of roles) {
         for (const directory of [
           templateAgentsDir,
-          path.join(repoRoot, ".qfai", "assistant", "agents"),
+          path.join(repoRoot, ".qfai", "assistant", "agent"),
         ]) {
-          expect(await readFile(path.join(directory, `${role}.md`), "utf-8"), role).toMatch(
-            meaning,
+          expect(await readFile(path.join(directory, `${role}.md`), "utf-8"), role).toContain(
+            ".agents/rules/minimal-implementation.md",
           );
         }
         const profile = parseTomlDocument(await readFile(codexAgentPath(repoRoot, role), "utf-8"));
         expect(profile["developer_instructions"], `${role}.toml`).toEqual(
-          expect.stringMatching(meaning),
+          expect.stringContaining(".agents/rules/minimal-implementation.md"),
         );
-        for (const catalog of catalogs) {
-          expect(catalog, `${role} catalog entry`).toMatchObject({
-            agents: expect.arrayContaining([
-              expect.objectContaining({
-                id: role,
-                developer_instructions: expect.stringMatching(meaning),
-              }),
-            ]),
-          });
-        }
       }
     }
   });
 
   it("match what the generator produces from the canonical agents", async () => {
-    const kinds = parseAgentCatalogKinds(
-      await readFile(
-        path.join(repoRoot, ".qfai", "assistant", "manifest", "agent-catalog.yml"),
-        "utf-8",
-      ),
-    );
-    expect(kinds.size).toBeGreaterThan(0);
+    const names = await canonicalAgentNames();
+    expect(names.length).toBeGreaterThan(0);
 
-    for (const [name, kind] of kinds) {
+    for (const name of names) {
       const canonical = await readFile(
-        path.join(repoRoot, ".qfai", "assistant", "agents", `${name}.md`),
+        path.join(repoRoot, ".qfai", "assistant", "agent", `${name}.md`),
         "utf-8",
       );
+      const kind = parseAgentCardKind(canonical, name);
+      expect(kind, `${name}: kind`).not.toBeNull();
+      if (kind === null) continue;
       const rendered = renderCodexAgentToml(canonical, kind, name);
       expect(rendered.ok, `${name}: canonical markdown did not render`).toBe(true);
       if (!rendered.ok) continue;

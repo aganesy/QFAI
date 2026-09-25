@@ -174,7 +174,7 @@ describe("README content the guard now keeps in sync", () => {
     for (const body of [root, pkg]) {
       expect(body).toMatch(/\.qfai\/steering\//);
       expect(body).toMatch(/worklog-entry\.schema\.md/);
-      expect(body).toMatch(/66 license-verify failure/);
+      expect(body).toMatch(/66 \(license-verify failure\)/);
       expect(body).toMatch(/<screen>\.review\.json/);
     }
     // The stale root README promised artifacts the CLI never writes.

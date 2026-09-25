@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                                     | Expected                                                                                                                                                       |
+| --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0179-01 | AC-0001-0179-01 | Given two records in `.qfai/evidence/decision/`, one with `scope: "scope-expansion"` and one with `scope: "skill-envelope"` When the operator runs `qfai audit log --scope scope-expansion --format json` | Then only the scope-expansion record is emitted as JSON; running `qfai audit log` with no filter lists both newest-first in a table (default `--format table`) |

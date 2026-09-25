@@ -2,9 +2,9 @@
  * Reviewer sub-agent dispatch boundary.
  *
  * The prototyping evolution loop dispatches a Reviewer sub-agent per
- * `(specId, screen)` pair. The Reviewer is the role that drives
+ * `(uiContractId, screen)` pair. The Reviewer is the role that drives
  * Playwright (loads the prototype, navigates menu entries, inspects DOM /
- * a11y) and emits the `iter-NN/spec-NNNN/<screen>.review.json` payload
+ * a11y) and emits the `iter-NN/CON-UI-NNNN/<screen>.review.json` payload
  * that downstream `iterate` / `certify` steps consume.
  *
  * Two structural invariants this module exists to enforce:
@@ -37,7 +37,7 @@ export type ReviewerAttemptResult = {
  *
  * Mirrors the per-`<screen>.review.json#sessionStatus` enum in the
  * shipped reference
- * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`):
+ * (`.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`):
  *
  *   - `ok`             — Reviewer Playwright session completed.
  *   - `retryExhausted` — every attempt in the bounded retry budget
@@ -57,7 +57,7 @@ export type ReviewerAttemptResult = {
 export type ReviewerSessionStatus = "ok" | "retryExhausted" | "launchFailed";
 
 export type ReviewerOutcome = {
-  readonly specId: string;
+  readonly uiContractId: string;
   readonly screen: string;
   readonly attempts: readonly ReviewerAttemptResult[];
   readonly finalStatus: ReviewerSessionStatus;
@@ -94,7 +94,7 @@ export type ReviewerPlaywrightAttempt = {
 };
 
 export type ReviewerPlaywrightRunner = (
-  specId: string,
+  uiContractId: string,
   screen: string,
 ) => Promise<ReviewerPlaywrightAttempt>;
 
@@ -104,7 +104,7 @@ export type ReviewerPlaywrightRunner = (
  * next attempt. Returning a non-positive number skips the wait.
  *
  * The retry policy documented in the shipped reference
- * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
+ * (`.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`
  * §`sessionStatus` and the retry policy) is `N = 3` with
  * exponential backoff. The default backoff
  * ({@link defaultExponentialBackoff}) realises that policy as `base *
@@ -113,7 +113,7 @@ export type ReviewerPlaywrightRunner = (
 export type ReviewerBackoffStrategy = (attemptIndex: number) => number;
 
 /**
- * Default contract retry budget: N = 3 attempts per `(specId, screen)`
+ * Default contract retry budget: N = 3 attempts per `(uiContractId, screen)`
  * pair. Callers can override via {@link ReviewerDispatchOptions.attemptLimit}.
  */
 export const DEFAULT_REVIEWER_ATTEMPT_LIMIT = 3;
@@ -135,7 +135,7 @@ export const defaultExponentialBackoff: ReviewerBackoffStrategy = (attemptIndex)
 
 export type ReviewerDispatchOptions = {
   /**
-   * Maximum number of Playwright attempts per `(specId, screen)` pair.
+   * Maximum number of Playwright attempts per `(uiContractId, screen)` pair.
    * The dispatcher returns on the first successful attempt; if every
    * attempt fails, the outcome is `retryExhausted` and the caller is
    * expected to treat the pair as a hard-stop (do not declare
@@ -178,7 +178,7 @@ export type ReviewerDispatchOptions = {
    * (consistent with the runner-throw path).
    */
   readonly persistReviewJson?: (
-    specId: string,
+    uiContractId: string,
     screen: string,
     payload: unknown,
   ) => Promise<string>;
@@ -196,7 +196,7 @@ function defaultSleep(ms: number): Promise<void> {
 }
 
 /**
- * Dispatch the Reviewer sub-agent against a single `(specId, screen)`
+ * Dispatch the Reviewer sub-agent against a single `(uiContractId, screen)`
  * pair, retrying up to `options.attemptLimit` times with the configured
  * backoff between attempts.
  *
@@ -221,14 +221,24 @@ function defaultSleep(ms: number): Promise<void> {
  *     missing) so callers can name the pair in stderr.
  */
 export async function dispatchReviewerToPair(
-  specId: string,
+  uiContractId: string,
   screen: string,
   options: ReviewerDispatchOptions,
 ): Promise<ReviewerOutcome> {
+  if (!/^CON-UI-\d{4}$/.test(uiContractId)) {
+    return {
+      uiContractId,
+      screen,
+      attempts: [
+        { ok: false, attemptIndex: 0, errorMessage: "uiContractId must match CON-UI-NNNN" },
+      ],
+      finalStatus: "launchFailed",
+    };
+  }
   const runner = options.playwrightRunner;
   if (!runner) {
     return {
-      specId,
+      uiContractId,
       screen,
       attempts: [
         {
@@ -245,7 +255,7 @@ export async function dispatchReviewerToPair(
   const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? rawLimit : 0;
   if (limit === 0) {
     return {
-      specId,
+      uiContractId,
       screen,
       attempts: [],
       finalStatus: "retryExhausted",
@@ -259,7 +269,7 @@ export async function dispatchReviewerToPair(
   for (let i = 0; i < limit; i += 1) {
     let result: ReviewerPlaywrightAttempt;
     try {
-      result = await runner(specId, screen);
+      result = await runner(uiContractId, screen);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       attempts.push({ ok: false, attemptIndex: i, errorMessage: message });
@@ -311,9 +321,9 @@ export async function dispatchReviewerToPair(
       const successPayload = result.reviewJson;
       if (options.persistReviewJson !== undefined) {
         try {
-          const writtenPath = await options.persistReviewJson(specId, screen, successPayload);
+          const writtenPath = await options.persistReviewJson(uiContractId, screen, successPayload);
           return {
-            specId,
+            uiContractId,
             screen,
             attempts,
             finalStatus: "ok",
@@ -334,7 +344,7 @@ export async function dispatchReviewerToPair(
         }
       }
       return {
-        specId,
+        uiContractId,
         screen,
         attempts,
         finalStatus: "ok",
@@ -362,7 +372,7 @@ export async function dispatchReviewerToPair(
   }
 
   return {
-    specId,
+    uiContractId,
     screen,
     attempts,
     finalStatus: "retryExhausted",

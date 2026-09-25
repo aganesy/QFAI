@@ -1114,7 +1114,12 @@ const tracked = trackedPaths();
  * backlog.
  */
 const evidenceFiles = [...tracked.files]
-  .filter((file) => file.startsWith(".qfai/evidence/") && /\.(?:md|jsonl?|ya?ml)$/.test(file))
+  .filter(
+    (file) =>
+      file.startsWith(".qfai/evidence/") &&
+      !file.startsWith(".qfai/evidence/migration-spec-to-story/retired/") &&
+      /\.(?:md|jsonl?|ya?ml)$/.test(file),
+  )
   .sort();
 
 /**
@@ -2099,6 +2104,14 @@ describe("a committed record cites what the repository has", () => {
     // identical to a green run.
     expect(evidenceFiles.length, "git tracks no evidence file").toBeGreaterThan(0);
     expect((await measureCitations()).length, "no citation was measured").toBeGreaterThan(0);
+    expect(evidenceFiles).toContain(
+      ".qfai/evidence/migration-spec-to-story/p7-execution-checklist.md",
+    );
+    expect(
+      evidenceFiles.some((file) =>
+        file.startsWith(".qfai/evidence/migration-spec-to-story/retired/"),
+      ),
+    ).toBe(false);
   });
 
   it("reads every evidence record the tree carries as a file", () => {

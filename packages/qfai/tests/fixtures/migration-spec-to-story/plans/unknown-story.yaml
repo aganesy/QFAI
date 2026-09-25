@@ -1,0 +1,5 @@
+flows:
+  - title: Place an order
+    stories:
+      - id: US-0001-9999
+rules: []

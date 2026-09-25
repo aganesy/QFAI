@@ -213,17 +213,16 @@ function mdschemaEntryPoint(packageDir) {
 }
 
 /**
- * Reads `paths.specsDir` out of `qfai.config.yaml`.
+ * Reads one directory under `paths` out of `qfai.config.yaml`.
  *
  * A hand-rolled read of two known keys rather than a YAML parse: this script
  * runs before (and independently of) the package build, and the value is a
  * single scalar under a single mapping. A missing or unreadable config is not
  * an error — the documented default is what a fresh tree has.
  *
- * @returns {string} Repository-root-relative specs directory.
+ * @returns {string} Configured directory, or its default.
  */
-function readSpecsDir(root) {
-  const fallback = ".qfai/specs";
+function readConfiguredDir(root, key, fallback) {
   const config = path.join(root, "qfai.config.yaml");
   if (!existsSync(config)) {
     return fallback;
@@ -234,11 +233,13 @@ function readSpecsDir(root) {
   } catch {
     return fallback;
   }
-  // `paths:` at column 0, then `specsDir:` indented beneath it. Anchored to the
-  // block so an unrelated `specsDir:` under another mapping cannot win.
+  // `paths:` at column 0, then the requested key indented beneath it. Anchored
+  // to the block so an unrelated key under another mapping cannot win.
   const block = /^paths:[ \t]*$([\s\S]*?)^(?=\S)/m.exec(`${text}\n￿`);
   const scope = block === null ? text : block[1];
-  const found = /^[ \t]+specsDir:[ \t]*["']?([^"'\r\n#]+)["']?[ \t]*$/m.exec(scope);
+  const found = new RegExp(`^[ \\t]+${key}:[ \\t]*["']?([^"'\\r\\n#]+)["']?[ \\t]*$`, "m").exec(
+    scope,
+  );
   if (found === null) {
     return fallback;
   }
@@ -256,8 +257,7 @@ function readSpecsDir(root) {
  *
  * @returns {{ id: string, schema: string, pattern: string }[]}
  */
-function readManifest() {
-  const text = readFileSync(MANIFEST, "utf-8");
+export function parseManifest(text) {
   const entries = [];
   /** @type {{ id?: string, schema?: string, pattern?: string, when?: string }} */
   let current = {};
@@ -287,6 +287,24 @@ function readManifest() {
   }
   flush();
   return entries;
+}
+
+export function readManifest() {
+  return parseManifest(readFileSync(MANIFEST, "utf-8"));
+}
+
+function expandPattern(pattern, { specsDir, contractsDir }) {
+  return pattern.replaceAll("{specsDir}", specsDir).replaceAll("{contractsDir}", contractsDir);
+}
+
+/** Files without exactly one unconditional schema entry, in input order. */
+export function documentsWithoutOneEntry(manifestText, files, paths) {
+  const entries = parseManifest(manifestText).filter((entry) => entry.when === undefined);
+  return files.filter(
+    (file) =>
+      entries.filter((entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file))
+        .length !== 1,
+  );
 }
 
 /**
@@ -710,12 +728,11 @@ function fileAtRev(rev, file, root) {
  * @param {{ id: string, pattern: string, when?: string }[]} entries
  * @param {string} file
  * @param {string} text
- * @param {string} specsDir
+ * @param {{ specsDir: string, contractsDir: string }} paths
  * @returns {string | null}
  */
-function routeOf(entries, file, text, specsDir) {
-  const matches = (entry) =>
-    patternToRegExp(entry.pattern.replace("{specsDir}", specsDir)).test(file);
+function routeOf(entries, file, text, paths) {
+  const matches = (entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file);
   for (const entry of entries) {
     if (entry.when !== undefined && matches(entry) && new RegExp(entry.when, "mu").test(text)) {
       return entry.id;
@@ -772,7 +789,7 @@ function ownsViolations(context, entryId, file) {
     // this is the first run that could have reported it.
     return true;
   }
-  if (routeOf(context.entries, file, before, context.specsDir) !== entryId) {
+  if (routeOf(context.entries, file, before, context.paths) !== entryId) {
     return true;
   }
   const verdict = checkText(context.mdschema, context.schemaPath, file, before);
@@ -871,19 +888,25 @@ export function main() {
     return 2;
   }
 
-  const specsDir = readSpecsDir(root);
+  const specsDir = readConfiguredDir(root, "specsDir", ".qfai/spec");
+  const contractsDir = readConfiguredDir(root, "contractsDir", ".qfai/spec/03_contract");
+  const paths = { specsDir, contractsDir };
   const entries = readManifest();
   if (entries.length === 0) {
     console.error("check-mdschema: the manifest declares no documents");
     return 2;
   }
 
-  // The candidate universe, computed once: the manifest patterns are all rooted
-  // at the specs directory, so the walk is bounded by it rather than by the
-  // repository.
-  const specsAbs = path.join(root, specsDir);
-  const universe =
-    existsSync(specsAbs) && statSync(specsAbs).isDirectory() ? walk(specsAbs, root) : [];
+  // Each configured tree is walked once. A contract directory nested in the
+  // spec tree is deduplicated before any document is routed to a schema.
+  const universe = [
+    ...new Set(
+      [specsDir, contractsDir].flatMap((dir) => {
+        const absolute = path.resolve(root, dir);
+        return existsSync(absolute) && statSync(absolute).isDirectory() ? walk(absolute, root) : [];
+      }),
+    ),
+  ];
 
   /** @type {string[] | null} */
   let restrictTo = null;
@@ -938,7 +961,7 @@ export function main() {
   const claimed = new Set();
   for (const entry of entries) {
     if (entry.when === undefined) continue;
-    const re = patternToRegExp(entry.pattern.replace("{specsDir}", specsDir));
+    const re = patternToRegExp(expandPattern(entry.pattern, paths));
     const predicate = new RegExp(entry.when, "mu");
     for (const file of universe) {
       if (re.test(file) && predicate.test(contentOf(file))) claimed.add(file);
@@ -951,7 +974,7 @@ export function main() {
       console.error(`check-mdschema: ${entry.id}: schema not found at ${entry.schema}`);
       return 2;
     }
-    const re = patternToRegExp(entry.pattern.replace("{specsDir}", specsDir));
+    const re = patternToRegExp(expandPattern(entry.pattern, paths));
     const predicate = entry.when === undefined ? null : new RegExp(entry.when, "mu");
     const inScope = universe
       .filter((file) => re.test(file))
@@ -995,7 +1018,7 @@ export function main() {
       const wasWrong =
         before !== null &&
         !optsOutOfSchema(before) &&
-        routeOf(entries, file, before, specsDir) === entry.id &&
+        routeOf(entries, file, before, paths) === entry.id &&
         rootHeadingVerdict(schemaText, before)?.ok === false;
       (wasWrong ? rootHeld : rootOwed).push(
         describeRootMismatch(schemaText, path.relative(root, file), contentOf(file)),
@@ -1042,7 +1065,7 @@ export function main() {
     }
 
     const split = splitByOwnership(
-      { mdschema, schemaPath, root, entries, specsDir, baseRev },
+      { mdschema, schemaPath, root, entries, paths, baseRev },
       entry.id,
       gradable,
     );

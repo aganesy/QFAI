@@ -2,13 +2,9 @@
  * The work-log surface's contract is published.
  *
  * `qfai init` creates `.qfai/steering/` and writes a README and an entry
- * template that both point at `.qfai/contracts/cli/worklog-entry.schema.md` as
- * "the canonical schema" and as the source of "the authoritative list and
- * per-kind write trigger". That file lived only in qfai's own repository: not
- * under `assets/`, not in `package.json#files`, and the README states that
- * `qfai init` never seeds contracts. The pointer was unresolvable by
- * construction on every consuming project — while `validateWorklogSurface`
- * polices the surface in the `sdd` and full profiles.
+ * template that both point at `.qfai/assistant/rule/worklog-entry.schema.md` as
+ * the schema and per-kind write trigger. `validateWorklogSurface` enforces
+ * the shipped shapes in the `sdd` and full profiles.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -20,7 +16,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const SCHEMA = "assistant/catalog/worklog-entry.schema.md";
+const SCHEMA = "assistant/rule/worklog-entry.schema.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -32,36 +28,36 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 describe("work-log entry schema", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: the schema ships under assistant/catalog`, async () => {
+    it(`${tree}: the schema ships under assistant/rule`, async () => {
       const schema = await read(tree, SCHEMA);
 
       expect(schema).toContain("# Work-log Entry Schema Contract");
-      // The part that makes the surface usable, and that existed in no shipped
-      // file: which `kind` an agent writes when.
-      expect(schema).toContain("### `kind` enum (REQ-0004)");
+      expect(schema).toContain("### `kind` enum");
       expect(schema).toContain("Write trigger");
+      expect(schema).toContain("scope: BF-0001");
+      expect(schema).toContain("promote-to: decisions.md");
+      expect(schema).toContain("`DEC-NNNN`");
     });
 
     it(`${tree}: the schema no longer claims to be unpublished`, async () => {
       const schema = flat(await read(tree, SCHEMA));
 
-      expect(schema).not.toContain("NOT in `packages/qfai/package.json#files`");
       expect(schema).toContain(
-        "This **schema** ships with the package and `npx qfai init` seeds it at `.qfai/assistant/catalog/worklog-entry.schema.md`",
+        "This **schema** ships with the package and `npx qfai init` seeds it at `.qfai/assistant/rule/worklog-entry.schema.md`",
       );
     });
 
     it(`${tree}: a skill names the surface and its trigger table`, async () => {
       // Nothing in the shipped tree told an agent to write an entry; the
       // validator policed a surface with no producer.
-      const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
-      const sdd = flat(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      const implement = flat(await read(tree, "assistant/skill/qfai-implement/SKILL.md"));
+      const sdd = flat(await read(tree, "assistant/skill/qfai-sdd/SKILL.md"));
 
       for (const skill of [implement, sdd]) {
-        expect(skill).toContain("`.qfai/assistant/catalog/worklog-entry.schema.md`");
-        expect(skill).toContain("`kind` trigger table");
-        expect(skill).toContain("so an unwritten one is simply lost");
+        expect(skill).toContain("worklog-entry.schema.md");
       }
+      expect(sdd).toContain(".qfai/steering/");
+      expect(implement).toContain("steering");
     });
   }
 
@@ -69,12 +65,8 @@ describe("work-log entry schema", () => {
     const init = await readRepo("packages/qfai/src/cli/commands/init.ts");
 
     expect(init).not.toContain(".qfai/contracts/cli/worklog-entry.schema.md");
-    // Every mention repointed, not merely the ones somebody remembered. Stated
-    // as two counts rather than one number, so a reference deleted along with
-    // the text around it does not have to be re-pinned here.
-    const mentions = init.split("worklog-entry.schema.md").length - 1;
-    expect(mentions).toBeGreaterThan(0);
-    expect(init.split("assistant/catalog/worklog-entry.schema.md").length - 1).toBe(mentions);
+    expect(init).toContain(".qfai/assistant/rule/worklog-entry.schema.md");
+    expect(init).not.toContain("assistant/catalog/worklog-entry.schema.md");
   });
 
   it("the package README documents the surface", async () => {

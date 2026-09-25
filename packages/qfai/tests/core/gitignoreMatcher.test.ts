@@ -270,7 +270,7 @@ describe("glob overlap is decided from both patterns, not from one instance of o
       MANAGED,
       "",
       "# a comment mentioning .qfai/evidence/coverage-depth-anything.md",
-      "!.qfai/evidence/decisions/",
+      "!.qfai/evidence/decision/",
     ];
     expect(
       negationsOutrankLaterIgnores(lines, [MANAGED]),
@@ -306,8 +306,8 @@ describe("a directory negation re-includes the directory, not everything under i
     ".qfai/review/*",
     "!.qfai/",
     "!.qfai/evidence/",
-    "!.qfai/evidence/decisions/",
-    "!.qfai/evidence/decisions/**",
+    "!.qfai/evidence/decision/",
+    "!.qfai/evidence/decision/**",
     "!.qfai/evidence/coverage-depth-*.md",
   ];
 
@@ -336,7 +336,7 @@ describe("a directory negation re-includes the directory, not everything under i
     // the records with them: each has its own negation below, and a `**`
     // negation says descendants in its own text.
     expect(verdict(BLOCK, ".qfai/evidence/coverage-depth-0001.md")).toBe(false);
-    expect(verdict(BLOCK, ".qfai/evidence/decisions/20260101.json")).toBe(false);
+    expect(verdict(BLOCK, ".qfai/evidence/decision/20260101.json")).toBe(false);
     expect(verdict(BLOCK, ".qfai/evidence")).toBe(false);
     expect(verdict(BLOCK, ".qfai")).toBe(false);
   });

@@ -20,9 +20,7 @@
  *      accesses and `param.prop` reads of a parameter its callers fill with an
  *      object literal are resolved back to the string literal they name.
  *   2. rendered report signals — a `*_SIGNAL_CODE` constant interpolated into
- *      report text. `QFAI-COV-207` is written into the coverage report body
- *      rather than emitted as an `Issue`, and `resolveIssueExpected` is pinned
- *      to answer for it (tests/core/layerCoverage.test.ts).
+ *      report text, rather than emitted as an `Issue`.
  *
  * A comment, a message string or a filter list satisfies neither position.
  */

@@ -37,12 +37,12 @@ afterEach(async () => {
 function makeConfig(): QfaiConfig {
   return {
     paths: {
-      contractsDir: ".qfai/contracts",
-      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/spec/03_contract",
+      specsDir: ".qfai/spec",
       discussionDir: ".qfai/discussion",
       outDir: ".qfai/out",
-      skillsDir: ".qfai/assistant/skills",
-      promptsDir: ".qfai/assistant/skills",
+      skillsDir: ".qfai/assistant/skill",
+      promptsDir: ".qfai/assistant/skill",
       srcDir: "src",
       testsDir: "tests",
     },
@@ -52,15 +52,11 @@ function makeConfig(): QfaiConfig {
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,
-        maxE2eScenarioRatio: null,
-        maxE2eScenarioCount: null,
         forbidTestTodoStubs: true,
       },
       traceability: {
-        scMustHaveTest: true,
         testFileGlobs: [],
         testFileExcludeGlobs: [],
-        unknownContractIdSeverity: "warning",
       },
     },
     output: { validateJsonPath: ".qfai/output/validate.json" },
@@ -140,7 +136,9 @@ describe("validateCompletionCertificateIssues", () => {
       },
       iterationCount: 1,
       polishCycleCount: 0,
-      specsCovered: ["0012"],
+      uiContractsCovered: ["CON-UI-0012"],
+      convergedUiContracts: ["CON-UI-0012"],
+      laggingUiContracts: [],
     });
     await writeCompletionCertificate(root, cert);
 
@@ -169,7 +167,9 @@ describe("validateCompletionCertificateIssues", () => {
       },
       iterationCount: 1,
       polishCycleCount: 0,
-      specsCovered: ["0012"],
+      uiContractsCovered: ["CON-UI-0012"],
+      convergedUiContracts: ["CON-UI-0012"],
+      laggingUiContracts: [],
     });
     await writeCompletionCertificate(root, cert);
 

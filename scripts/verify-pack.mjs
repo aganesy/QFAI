@@ -6,7 +6,6 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -26,6 +25,7 @@ import {
   readBaseline,
   writeBaseline,
 } from "./fresh-init-findings.mjs";
+import { assertPackagedGithubTopology } from "./lib/pack-github-topology.mjs";
 
 function toPosix(p) {
   return p.split(path.sep).join("/");
@@ -36,6 +36,21 @@ function normalizeForComparison(p) {
   return process.platform === "win32" ? n.toLowerCase() : n;
 }
 
+function runNpm(args, options) {
+  if (process.platform !== "win32") return execFileSync("npm", args, options);
+  const npmCli = path.join(
+    path.dirname(process.execPath),
+    "node_modules",
+    "npm",
+    "bin",
+    "npm-cli.js",
+  );
+  if (!existsSync(npmCli)) {
+    throw new Error(`npm CLI was not found beside Node at ${npmCli}.`);
+  }
+  return execFileSync(process.execPath, [npmCli, ...args], options);
+}
+
 const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const pkgDir = path.join(root, "packages", "qfai");
 const tmpDir = path.join(root, "tmp", "pack");
@@ -43,20 +58,52 @@ const sandboxDir = path.join(tmpDir, "sandbox");
 const outputDir = path.join(sandboxDir, "out");
 const reportPath = path.join(outputDir, ".qfai", "report", "report.md");
 
-rmSync(tmpDir, { recursive: true, force: true });
+function removePackTree(target) {
+  const absolute = path.resolve(target);
+  const relative = path.relative(tmpDir, absolute);
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`Refusing recursive removal outside ${tmpDir}: ${absolute}`);
+  }
+
+  let walked = root;
+  for (const segment of path.relative(root, absolute).split(path.sep)) {
+    walked = path.join(walked, segment);
+    try {
+      if (lstatSync(walked).isSymbolicLink()) {
+        throw new Error(`Refusing recursive removal through linked path: ${walked}`);
+      }
+    } catch (error) {
+      if (error?.code === "ENOENT") break;
+      throw error;
+    }
+  }
+  rmSync(absolute, { recursive: true, force: true });
+}
+
+function hasEntry(target) {
+  try {
+    lstatSync(target);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+removePackTree(tmpDir);
 mkdirSync(tmpDir, { recursive: true });
 
-const packOutput = execFileSync("npm", ["pack"], {
+const packOutput = runNpm(["pack", "--pack-destination", tmpDir], {
   cwd: pkgDir,
   encoding: "utf-8",
 }).trim();
 const packLines = packOutput.split(/\r?\n/).filter(Boolean);
 const tarballName = packLines[packLines.length - 1];
-if (!tarballName) {
+if (!tarballName || path.basename(tarballName) !== tarballName) {
   throw new Error("npm pack failed to produce a tarball name.");
 }
 
-const tarballPath = path.join(pkgDir, tarballName);
+const tarballPath = path.join(tmpDir, tarballName);
 execFileSync(
   "tar",
   ["-xzf", toPosix(path.relative(root, tarballPath)), "-C", toPosix(path.relative(root, tmpDir))],
@@ -98,6 +145,7 @@ const requiredSkills = [
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
+  "qfai-migration-spec-to-story",
 ];
 const deprecatedSkillIds = [
   "qfai-spec",
@@ -112,11 +160,23 @@ const deprecatedSkillIds = [
 ];
 
 for (const skillId of requiredSkills) {
-  const canonicalSkillPath = path.join(templateDir, "assistant", "skills", skillId, "SKILL.md");
+  const canonicalSkillPath = path.join(templateDir, "assistant", "skill", skillId, "SKILL.md");
   if (!existsSync(canonicalSkillPath)) {
     throw new Error(
-      `assets/init/.qfai/assistant/skills/${skillId}/SKILL.md is missing from the packed artifact.`,
+      `assets/init/.qfai/assistant/skill/${skillId}/SKILL.md is missing from the packed artifact.`,
     );
+  }
+}
+
+for (const layer of ["skill", "agent", "rule", "prompt"]) {
+  const packed = path.join(templateDir, "assistant", layer);
+  if (!existsSync(packed) || !lstatSync(packed).isDirectory()) {
+    throw new Error(`assets/init/.qfai/assistant/${layer} must be a directory.`);
+  }
+}
+for (const legacy of ["skills", "agents", "rules", "prompts", "catalog"]) {
+  if (hasEntry(path.join(templateDir, "assistant", legacy))) {
+    throw new Error(`assets/init/.qfai/assistant/${legacy} must not ship.`);
   }
 }
 
@@ -126,70 +186,19 @@ for (const removedDir of [".claude", ".codex"]) {
   }
 }
 
-// `qfai init` ships
-// `.github/workflows/qfai-validate.yml` to downstream consumers, so the
-// `.github` subtree itself is required (not optional). The previous
-// `if (existsSync(rootGithubDir))` wrapper would have silently allowed
-// a packed artifact missing `assets/init/root/.github` entirely.
-// Allow-list the immediate children of `.github` (only `workflows/`) so
-// misplaced files such as `dependabot.yml`, `ISSUE_TEMPLATE/`, or any
-// other future GitHub config directory cannot accidentally be packed —
-// runInit synthesizes those wrappers via symlinks at init time, not
-// from the packed tarball.
 const rootGithubDir = path.join(rootAssetsDir, ".github");
-if (!existsSync(rootGithubDir)) {
-  throw new Error("assets/init/root/.github must exist.");
-}
-// Confirm `.github` itself is a directory before iterating; otherwise
-// readdirSync would surface as an ENOTDIR stack trace and obscure the
-// real packaging defect.
-if (!lstatSync(rootGithubDir).isDirectory()) {
-  throw new Error("assets/init/root/.github must be a directory (got non-directory entry).");
-}
-const allowedRootGithubEntries = new Set(["workflows"]);
-const githubEntries = readdirSync(rootGithubDir);
-// workflows/ is required, not just allowed. An empty .github/ would
-// silently strip the qfai-validate.yml shipping path
-// on downstream init consumers, so reject it here.
-if (!githubEntries.includes("workflows")) {
-  throw new Error("assets/init/root/.github must contain workflows/.");
-}
-for (const entry of githubEntries) {
-  if (!allowedRootGithubEntries.has(entry)) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must not exist (only workflows/ is permitted).`,
-    );
-  }
-  // Allow-list passes only if the entry is a real directory. A regular file
-  // or broken symlink at .github/workflows would corrupt downstream `qfai
-  // init` consumers, so reject anything that is not a directory.
-  const entryPath = path.join(rootGithubDir, entry);
-  if (!lstatSync(entryPath).isDirectory()) {
-    throw new Error(
-      `assets/init/root/.github/${entry} must be a directory (got non-directory entry).`,
-    );
-  }
-}
-// Confirm the actual workflow file ships. workflows/ existing without
-// qfai-validate.yml inside it is the same downstream regression as a
-// missing workflows/ — the file is the contract, not just the folder.
-const workflowFile = path.join(rootGithubDir, "workflows", "qfai-validate.yml");
-if (!existsSync(workflowFile) || !lstatSync(workflowFile).isFile()) {
-  throw new Error(
-    "assets/init/root/.github/workflows/qfai-validate.yml must exist as a regular file.",
-  );
-}
+assertPackagedGithubTopology(rootGithubDir);
 
-rmSync(sandboxDir, { recursive: true, force: true });
+removePackTree(sandboxDir);
 mkdirSync(sandboxDir, { recursive: true });
-execFileSync("npm", ["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
-execFileSync("npm", ["install", tarballPath], {
+runNpm(["init", "-y"], { cwd: sandboxDir, stdio: "inherit" });
+runNpm(["install", tarballPath], {
   cwd: sandboxDir,
   stdio: "inherit",
 });
 
 rmSync(tarballPath, { force: true });
-rmSync(outputDir, { recursive: true, force: true });
+removePackTree(outputDir);
 mkdirSync(outputDir, { recursive: true });
 
 const cliPath = path.join(sandboxDir, "node_modules", "qfai", "dist", "cli", "index.mjs");
@@ -231,32 +240,71 @@ if (missingPatterns.length > 0) {
   );
 }
 
-const skillsDir = path.join(qfaiDir, "assistant", "skills");
+const assistantDir = path.join(qfaiDir, "assistant");
+for (const layer of ["skill", "agent", "rule", "prompt"]) {
+  const generated = path.join(assistantDir, layer);
+  if (!existsSync(generated) || !lstatSync(generated).isDirectory()) {
+    throw new Error(`init did not generate .qfai/assistant/${layer} directory.`);
+  }
+}
+for (const legacy of ["skills", "agents", "rules", "prompts", "catalog"]) {
+  if (hasEntry(path.join(assistantDir, legacy))) {
+    throw new Error(`init generated deprecated .qfai/assistant/${legacy} directory.`);
+  }
+}
+
+const skillsDir = path.join(assistantDir, "skill");
 if (!existsSync(skillsDir)) {
-  throw new Error("init did not generate .qfai/assistant/skills directory.");
+  throw new Error("init did not generate .qfai/assistant/skill directory.");
 }
 for (const skillId of requiredSkills) {
   const generatedSkillPath = path.join(skillsDir, skillId, "SKILL.md");
   if (!existsSync(generatedSkillPath)) {
-    throw new Error(`init did not generate .qfai/assistant/skills/${skillId}/SKILL.md.`);
+    throw new Error(`init did not generate .qfai/assistant/skill/${skillId}/SKILL.md.`);
   }
 }
 
 const skillsLocalDir = path.join(qfaiDir, "assistant", "skills.local");
-if (existsSync(skillsLocalDir)) {
+if (hasEntry(skillsLocalDir)) {
   throw new Error("init generated deprecated .qfai/assistant/skills.local directory.");
 }
 
-const legacyPromptsDir = path.join(qfaiDir, "assistant", "prompts");
-if (existsSync(legacyPromptsDir)) {
-  throw new Error("init generated deprecated .qfai/assistant/prompts directory.");
+const specDir = path.join(qfaiDir, "spec");
+const specTemplateDir = path.join(
+  templateDir,
+  "assistant",
+  "skill",
+  "qfai-sdd",
+  "templates",
+  "spec",
+);
+for (const relative of [
+  "decisions.md",
+  "open-questions.md",
+  "01_policy/glossary.md",
+  "01_policy/constraint.md",
+  "02_business-flow/business-flows.md",
+  "03_contract/contracts.md",
+]) {
+  const seeded = path.join(specDir, relative);
+  const template = path.join(specTemplateDir, relative);
+  if (!existsSync(seeded) || readFileSync(seeded, "utf-8") !== readFileSync(template, "utf-8")) {
+    throw new Error(`init did not seed .qfai/spec/${relative} from its packed template.`);
+  }
+}
+for (const kind of ["api", "db", "ui", "cli", "design"]) {
+  const contractDir = path.join(specDir, "03_contract", kind);
+  if (!existsSync(contractDir) || !lstatSync(contractDir).isDirectory()) {
+    throw new Error(`init did not generate .qfai/spec/03_contract/${kind} directory.`);
+  }
+}
+if (hasEntry(path.join(qfaiDir, "specs")) || hasEntry(path.join(qfaiDir, "contracts"))) {
+  throw new Error("init generated an obsolete spec or contract directory.");
 }
 
-const syntheticSpecDir = path.join(outputDir, ".qfai", "specs", "spec-0000");
-mkdirSync(syntheticSpecDir, { recursive: true });
-const syntheticDeltaPath = path.join(syntheticSpecDir, "18_delta.md");
+const syntheticDecisionPath = path.join(specDir, "01_policy", "verify-pack-guardrail.md");
 writeFileSync(
-  syntheticDeltaPath,
+  syntheticDecisionPath,
   [
     "# Delta",
     "",
@@ -264,7 +312,7 @@ writeFileSync(
     "",
     "### DG-0001: Synthetic guardrail for verify-pack",
     "- Type: trade-off",
-    "- Scope: specs/*",
+    "- Scope: .qfai/spec/*",
     "- Guardrail: Do not implement the rejected synthetic option.",
     "- Reason: verify-pack smoke test entry",
     "- Reconsider: never",
@@ -274,10 +322,10 @@ writeFileSync(
 );
 execFileSync(
   "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDeltaPath, "--max", "20"],
+  [cliPath, "guardrails", "extract", "--path", syntheticDecisionPath, "--max", "20"],
   { stdio: "inherit" },
 );
-rmSync(syntheticSpecDir, { recursive: true, force: true });
+rmSync(syntheticDecisionPath, { force: true });
 
 // Symlink-based integration directories (v1.5.4+)
 const skillIntegrationDirs = [
@@ -692,28 +740,27 @@ execFileSync("node", [cliPath, "init", "--dir", outputDir, "--force"], {
   stdio: "inherit",
 });
 
-if (existsSync(skillsLocalDir)) {
+if (hasEntry(skillsLocalDir)) {
   throw new Error("init --force generated deprecated .qfai/assistant/skills.local directory.");
 }
 
-// Stand in for the `/qfai-configure` run a project makes before it gates. The
-// four Stage 0 catalogs ship as placeholders, and `qfai init` copies them
-// verbatim: a sandbox that never fills them is a project that never ran Stage
-// 0, and gating one of those at `--fail-on error` measures the fixture rather
-// than the package. Every angle-bracket slot becomes a value, and every bare
-// TODO / TBD goes, which is what the rule reads.
-for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
-  const catalogPath = path.join(outputDir, ".qfai", "assistant", "catalog", catalogFile);
-  if (!existsSync(catalogPath)) {
+// Stand in for the `/qfai-configure` run a project makes before it gates.
+// Contract steering files ship as placeholders, and gating without filling
+// them measures the fixture rather than the package.
+const steeringFiles = ["structure.md", "tech.md"].map((name) =>
+  path.join(outputDir, ".qfai", "spec", "03_contract", name),
+);
+for (const steeringFile of steeringFiles) {
+  if (!existsSync(steeringFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next
     // question is whether the file was renamed or whether init stopped writing
     // it — which is what decides whether the fill or the package is wrong.
     throw new Error(
-      `init --force wrote no ${catalogPath}. The four Stage 0 catalogs are what a project fills ` +
+      `init --force wrote no ${steeringFile}. Stage 0 steering files are what a project fills ` +
         `before it gates, so this fill has nothing to stand in for.`,
     );
   }
-  const before = readFileSync(catalogPath, "utf-8");
+  const before = readFileSync(steeringFile, "utf-8");
   // One value for both placeholder forms: they stand for the same thing, and a
   // reader should not have to compare two strings to see that.
   const fixtureValue = "verify-pack fixture value";
@@ -722,11 +769,11 @@ for (const catalogFile of ["manifest.md", "product.md", "structure.md", "tech.md
     .replace(/\b(?:TODO|TBD)\b/g, fixtureValue);
   if (after === before) {
     throw new Error(
-      `${catalogFile} carries no placeholder to fill. The shipped catalogs are what this stands ` +
+      `${steeringFile} carries no placeholder to fill. The shipped steering files are what this stands ` +
         `in for, so a copy with none means the fixture is measuring nothing.`,
     );
   }
-  writeFileSync(catalogPath, after);
+  writeFileSync(steeringFile, after);
 }
 
 execFileSync(

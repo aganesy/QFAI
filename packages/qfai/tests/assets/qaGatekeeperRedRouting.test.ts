@@ -26,14 +26,11 @@ import { describe, expect, it } from "vitest";
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const ROUTING_FILES = [
-  "packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml",
-  ".qfai/assistant/manifest/agent-routing.yml",
-];
+const ROUTING_FILES = ["packages/qfai/assets/defaults/agent-routing.yml"];
 
 const SKILL_FILES = [
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-  ".qfai/assistant/skills/qfai-implement/SKILL.md",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
+  ".qfai/assistant/skill/qfai-implement/SKILL.md",
 ];
 
 type Phase = {
@@ -122,60 +119,37 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 });
 
 describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) => {
-  it("tells Phase: Red to obtain confirmation while nothing makes the assertion pass", async () => {
+  it("requires an observed RED before the production change", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
-    // Not "before any code implementing the row's predicate exists": that
-    // phrasing excluded the row `red-provenance.md` branch 1 sends here from
-    // its own step 2 note — an existing surface that implements the predicate
-    // wrongly, where a correct test fails on its first run. The predicate is
-    // written there, so the producer could not submit the handoff the gate is
-    // required to PASS.
     expect(flat).toContain(
-      "Submit that run to `qa-gatekeeper` and obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none, and neither does a surface that already exists and implements the row's predicate wrongly",
+      "Observe the assertion fail for the intended behavior before changing production code",
     );
-    expect(flat).not.toContain(
-      "obtain confirmation **before** any code implementing the row's predicate exists",
+    expect(flat).toContain(
+      "A load error, missing dependency, or broken fixture is not an admissible RED",
     );
   });
 
-  it("states the routing phases run per row", async () => {
+  it("keeps the selected EX as the implementation and review unit", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
-    expect(skill.replace(/\s+/g, " ")).toContain("iteration: per-ledger-item");
+    expect(skill).toContain("An EX is the unit of implementation review");
+    expect(skill).toContain("Work one EX at a time by default");
+    expect(skill).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
   });
 
-  it("drops acceptance-test-engineer from `roles:` and says why in the roster", async () => {
-    // It was declared in the frontmatter and named exactly once in the body —
-    // to say it was unavailable. The roster documented seven roles and not
-    // this one, so nothing in the skill described what the routed role could
-    // do, while the Non-goals forbade the only thing it does.
+  it("keeps acceptance test authorship in ATDD", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const frontmatter = skill.slice(0, skill.indexOf("\n---", 4));
     expect(frontmatter).not.toContain("acceptance-test-engineer");
-    const flat = skill.replace(/\s+/g, " ");
-    expect(flat).toContain(
-      "`acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`",
-    );
+    expect(skill).toContain("Preserve the BF E2E and AC integration");
+    expect(skill).toContain("or API coverage owned by `/qfai-atdd`");
   });
 
-  it("splits the handoff contract into a RED and a GREEN submission", async () => {
+  it("asks the gatekeeper to check both observed outcomes", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
-    // Scoped to what makes the row's assertion pass, not to "no production
-    // code exists" and not to "no code implementing the predicate exists":
-    // Phase Red step 3a puts the seam in the production tree *before* the RED
-    // is taken, and an existing surface that implements the predicate wrongly
-    // has that predicate written already. Both older phrasings made the
-    // contract unsatisfiable for a row the gate is required to PASS.
-    expect(flat).toContain(
-      "submits the RED run to `qa-gatekeeper` **while no implementation makes that assertion pass — neither the Phase Red step 3a seam nor a surface that already exists and implements the row's predicate wrongly does**",
-    );
-    expect(flat).not.toContain("**while no production code exists**");
-    expect(flat).not.toContain(
-      "**before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
-    );
-    // The old text asked for one combined "RED/GREEN execution evidence"
-    // submission, which is only satisfiable after the fact.
-    expect(flat).not.toContain("Implementation agent submits RED/GREEN execution evidence");
+    expect(flat).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
+    expect(flat).toContain("RED, GREEN, and Refactor commands and observed results");
+    expect(flat).toContain("The implementation reviewer and qa-gatekeeper check the selected EX");
   });
 });

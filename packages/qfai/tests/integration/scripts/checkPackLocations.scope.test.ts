@@ -9,7 +9,7 @@
  * pass silently — the untouched legacy pack is not re-flagged because
  * scope is the staged/changed paths only, not a full-tree walk.
  */
-// QFAI:SPEC-0004:TC-0004-0073
+// QFAI:EX-0002-0011-02
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";

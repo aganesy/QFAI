@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/acceptance-test-engineer.md
+../../.qfai/assistant/agent/acceptance-test-engineer.md

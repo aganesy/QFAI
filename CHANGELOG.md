@@ -6,6 +6,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Specs move to the story tree.** Projects using the former
+  `.qfai/specs/spec-*` layout must run the bundled
+  `qfai-migration-spec-to-story` skill before adopting this release, or stay on
+  QFAI 1.x until migration is complete. Assistant assets use singular
+  `agent/`, `prompt/`, `rule/`, and `skill/` directories.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at

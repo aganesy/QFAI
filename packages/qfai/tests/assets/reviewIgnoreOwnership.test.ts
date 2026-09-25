@@ -1,6 +1,5 @@
 /**
- * Nothing under a review directory is in version control, and nothing inside
- * one gets to decide that.
+ * New review packs are ignored by the repository's root policy.
  *
  * The two directories used to be ignored by different owners: `.qfai/review/`
  * by the managed block in the repo-root `.gitignore`, and
@@ -10,11 +9,9 @@
  * paragraph further down in the same file said the opposite. Both readings
  * were available at once for as long as nobody compared them to the directory.
  *
- * Those statements are gone with the files that made them, so the check is no
- * longer "does the README match the directory". It is the arrangement itself:
- * the root block is the only owner, and a nested ignore file inside one of
- * these directories would outrank it silently, because git applies the deepest
- * matching file.
+ * This repository explicitly tracked three rounds of the source discussion's
+ * review as provenance. They are cited by its stage evidence. The allowlist
+ * below preserves that record while refusing additional tracked review output.
  *
  * Asked of git rather than of the filesystem. Packs stay on an operator's disk
  * after they leave the index, so `access` answers about one checkout while the
@@ -32,6 +29,23 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** The directories a review round writes into. Neither is tracked. */
 const REVIEW_DIRECTORIES: readonly string[] = [".qfai/review", ".qfai/review_archive"];
+const DISCUSSION_REVIEW_PACKS = [
+  "review-20260923081445724",
+  "review-20260923083100177",
+  "review-20260923085931611",
+] as const;
+const DISCUSSION_REVIEW_FILES = [
+  "R01_completion-reviewer.md",
+  "R02_requirements-reviewer.md",
+  "R03_architecture-reviewer.md",
+  "review_request.md",
+  "summary.json",
+] as const;
+const TRACKED_DISCUSSION_REVIEWS = DISCUSSION_REVIEW_PACKS.flatMap((pack, index) =>
+  DISCUSSION_REVIEW_FILES.filter((file) => index < 2 || file !== "R01_completion-reviewer.md").map(
+    (file) => `.qfai/review/${pack}/${file}`,
+  ),
+).sort();
 
 /** Repository-relative paths tracked under `directory`, POSIX-separated as git reports them. */
 function trackedUnder(directory: string): string[] {
@@ -65,12 +79,11 @@ function ignoredByGit(samplePath: string): boolean {
 }
 
 describe("no review directory reaches version control", () => {
-  it.each(REVIEW_DIRECTORIES)("tracks nothing under %s", (directory) => {
+  it.each(REVIEW_DIRECTORIES)("tracks only approved provenance under %s", (directory) => {
     expect(
-      trackedUnder(directory),
-      `${directory} is generated output. A file tracked here is one an operator's next round ` +
-        `overwrites, and it reaches a commit only because something re-included it.`,
-    ).toEqual([]);
+      trackedUnder(directory).sort(),
+      `${directory} may contain only the source discussion's reviewed provenance.`,
+    ).toEqual(directory === ".qfai/review" ? TRACKED_DISCUSSION_REVIEWS : []);
   });
 
   it.each(REVIEW_DIRECTORIES)("leaves git ignoring a pack inside %s", (directory) => {

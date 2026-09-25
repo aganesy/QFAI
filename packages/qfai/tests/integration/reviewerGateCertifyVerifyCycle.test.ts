@@ -9,8 +9,8 @@
  * R-CERTIFY-VERIFY-CIRCULAR (error). When scope="prototyping" (or no
  * prototyping-phase context exists) the gate stays silent.
  */
-// QFAI:SPEC-0015:TC-0015-0017
-// QFAI:SPEC-0015:TC-0015-0018
+// QFAI:EX-0001-0173-01
+// QFAI:EX-0001-0173-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -2,8 +2,10 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { QfaiConfig } from "../config.js";
+import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { resolveStoryTreeRoots } from "../storyTree/layout.js";
+import { parseRecordTable, type RecordRow } from "../storyTree/tables.js";
 import {
   HANDOFF_REQUIRED_SECTIONS,
   PROJECT_STEERING_DIR,
@@ -14,7 +16,7 @@ import type { Issue } from "../types.js";
 import { collectWorklogEntries, type WorklogEntry as ParsedEntry } from "../worklogEntries.js";
 import { exists, issue } from "./utils.js";
 
-// MUST match `worklog-entry.schema.md#kind enum` exactly (REQ-0004).
+// MUST match `worklog-entry.schema.md#kind enum` exactly.
 // Sourced from a single SSOT (WORKLOG_ENTRY_KINDS in assistantPaths.ts)
 // so the enum cannot drift between the validator and the seeded
 // README / template.
@@ -27,7 +29,7 @@ const REQUIRED_HANDOFF_SECTIONS: readonly string[] = HANDOFF_REQUIRED_SECTIONS;
 
 // Sourced from WORKLOG_ENTRY_STATUSES (assistantPaths.ts SSOT) so the
 // enum cannot drift between the validator and any seeded template.
-// Contract: worklog-entry.schema.md#status enum (spec-0004 REQ-0035).
+// Contract: worklog-entry.schema.md#status enum.
 const ALLOWED_STATUS = new Set<string>(WORKLOG_ENTRY_STATUSES);
 
 // Contract: worklog-entry.schema.md#created/updated — ISO-8601 calendar
@@ -64,7 +66,7 @@ const MS_PER_DAY = 86_400_000;
 
 export async function validateWorklogSurface(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
   now: Date = new Date(),
 ): Promise<Issue[]> {
   const dir = path.join(root, PROJECT_STEERING_DIR);
@@ -73,11 +75,11 @@ export async function validateWorklogSurface(
   const entries = await collectWorklogEntries(root);
   const issues: Issue[] = [];
 
-  // Pre-build a Set of registered spec ids, discussion timestamps, and
-  // worklog entry ids for link-integrity checks.
-  const specIds = await collectSpecIds(root);
-  const discussionIds = await collectDiscussionIds(root);
-  const decisionRowsByTarget = await readDecisionRowsByTarget(root);
+  const { specsDir } = resolveStoryTreeRoots(root, config);
+  const flowIds = await collectFlowIds(specsDir);
+  const discussionIds = await collectDiscussionIds(resolvePath(root, config, "discussionDir"));
+  const decisionRows = await readDecisionRows(specsDir);
+  const decisionIds = new Set(decisionRows.map((row) => row.id));
   const entryIds = new Set<string>();
   for (const e of entries) {
     const fmId = e.frontmatter && typeof e.frontmatter.id === "string" ? e.frontmatter.id : "";
@@ -199,14 +201,14 @@ export async function validateWorklogSurface(
       );
     }
 
-    // scope: "global" OR "spec-NNNN" (kebab-case spec id). Contract:
+    // scope: "global" OR a business flow ID. Contract:
     // worklog-entry.schema.md#scope enum.
     if (typeof fm.scope === "string" && fm.scope.length > 0) {
-      if (fm.scope !== "global" && !/^spec-\d{4}$/.test(fm.scope)) {
+      if (fm.scope !== "global" && !/^BF-\d{4}$/.test(fm.scope)) {
         issues.push(
           issue(
             "W-WORKLOG-SCHEMA",
-            `${entry.relativePath}: scope="${fm.scope}" is not "global" or a "spec-NNNN" id.`,
+            `${entry.relativePath}: scope="${fm.scope}" is not "global" or a "BF-NNNN" id.`,
             "warning",
             entry.relativePath,
             "worklogSurface.schema.scopeFormat",
@@ -229,15 +231,14 @@ export async function validateWorklogSurface(
       );
     }
     // promote-to format check: contract worklog-entry.schema.md#promote-to
-    // requires the non-null value to match `spec-NNNN/07_Decisions.md`
-    // (no legacy bare-filename, no arbitrary path). Garbage values
+    // requires the non-null value to be `decisions.md`. Garbage values
     // would otherwise silently lookup-miss in the promotion gate.
     if (typeof fm["promote-to"] === "string" && fm["promote-to"].length > 0) {
-      if (!/^spec-\d{4}\/07_Decisions\.md$/.test(fm["promote-to"])) {
+      if (fm["promote-to"] !== "decisions.md") {
         issues.push(
           issue(
             "W-WORKLOG-SCHEMA",
-            `${entry.relativePath}: promote-to="${fm["promote-to"]}" must match \`spec-NNNN/07_Decisions.md\` (per worklog-entry.schema.md).`,
+            `${entry.relativePath}: promote-to="${fm["promote-to"]}" must be \`decisions.md\` (per worklog-entry.schema.md).`,
             "warning",
             entry.relativePath,
             "worklogSurface.schema.promoteToFormat",
@@ -341,7 +342,7 @@ export async function validateWorklogSurface(
           issues.push(
             issue(
               "W-WORKLOG-SCHEMA",
-              `${entry.relativePath}: links[] element is empty / whitespace-only; every element MUST be a non-empty reference (spec-NNNN, discussion-*, or registered entry id).`,
+              `${entry.relativePath}: links[] element is empty / whitespace-only; every element MUST be a non-empty reference (BF-NNNN, DEC-NNNN, discussion-*, or registered entry id).`,
               "warning",
               entry.relativePath,
               "worklogSurface.schema.linksElementEmpty",
@@ -349,12 +350,24 @@ export async function validateWorklogSurface(
           );
           continue;
         }
-        if (link.startsWith("spec-")) {
-          if (!specIds.has(link)) {
+        if (/^BF-\d{4}$/.test(link)) {
+          if (!flowIds.has(link)) {
             issues.push(
               issue(
                 "W-WORKLOG-BROKEN-LINK",
-                `${entry.relativePath}: link "${link}" points to a non-existent spec.`,
+                `${entry.relativePath}: link "${link}" points to a non-existent business flow.`,
+                "warning",
+                entry.relativePath,
+                "worklogSurface.links.unresolved",
+              ),
+            );
+          }
+        } else if (/^DEC-\d{4}$/.test(link)) {
+          if (!decisionIds.has(link)) {
+            issues.push(
+              issue(
+                "W-WORKLOG-BROKEN-LINK",
+                `${entry.relativePath}: link "${link}" points to a non-existent decision.`,
                 "warning",
                 entry.relativePath,
                 "worklogSurface.links.unresolved",
@@ -383,7 +396,7 @@ export async function validateWorklogSurface(
             issues.push(
               issue(
                 "W-WORKLOG-BROKEN-LINK",
-                `${entry.relativePath}: link "${link}" does not resolve to a known spec-NNNN, discussion-*, or worklog entry id.`,
+                `${entry.relativePath}: link "${link}" does not resolve to a known BF-NNNN, DEC-NNNN, discussion-*, or worklog entry id.`,
                 "warning",
                 entry.relativePath,
                 "worklogSurface.links.unresolved",
@@ -454,36 +467,16 @@ export async function validateWorklogSurface(
       typeof promo.entry.frontmatter?.status === "string" ? promo.entry.frontmatter.status : "";
     const promotedToRaw = promo.entry.frontmatter?.["promoted-to"];
     const promotedToBackRef = typeof promotedToRaw === "string" ? promotedToRaw.trim() : "";
-    // Promotion satisfaction requires ALL
-    // THREE of:
-    //   1. A row in the DECLARED target file references this entry's
-    //      id. The target is matched against per-spec
-    //      `07_Decisions.md` keys (`spec-NNNN/07_Decisions.md`); a
-    //      mention in an unrelated spec does NOT count.
-    //   2. `status: archived` — the entry has been closed.
-    //   3. A non-empty `promoted-to:` back-ref pointing at the same
-    //      target file — the entry records WHERE it was promoted to.
-    // Legacy bare `07_Decisions.md` (without spec-NNNN prefix)
-    // intentionally does NOT match the canonical map keys, so the
-    // lookup miss surfaces ambiguous bare paths as
-    // W-PENDING-PROMOTION so users fix the promote-to value to a
-    // fully-qualified target.
-    const targetKey = promo.target.trim();
-    const targetRows = decisionRowsByTarget.get(targetKey) ?? [];
-    const referenced = entryId.length > 0 && rowsReferenceEntryId(targetRows, entryId);
+    const targetRows = promo.target === "decisions.md" ? decisionRows : [];
+    const referencedRows =
+      entryId.length === 0 ? [] : targetRows.filter((row) => rowReferencesEntryId(row, entryId));
     const isArchived = status === "archived";
-    // `promoted-to:` back-ref semantics: the value
-    // is the DR-ID (Decision Row id, e.g. `DR-3`) that was appended
-    // to the target file when the decision was promoted, NOT the
-    // file path. We only check that the back-ref is set; format
-    // validation of the DR-ID itself is left to spec-side gates so
-    // this validator doesn't need to know the per-spec DR
-    // numbering scheme.
-    const hasBackRef = promotedToBackRef.length > 0;
-    const satisfied = referenced && isArchived && hasBackRef;
+    const hasBackRef = /^DEC-\d{4}$/.test(promotedToBackRef);
+    const sameRow = referencedRows.some((row) => row.id === promotedToBackRef);
+    const satisfied = referencedRows.length > 0 && isArchived && hasBackRef && sameRow;
     if (!satisfied) {
       const reasons: string[] = [];
-      if (!referenced) {
+      if (referencedRows.length === 0) {
         reasons.push(`${promo.target} has no row referencing ${entryId || "this entry"}`);
       }
       if (!isArchived) {
@@ -491,7 +484,11 @@ export async function validateWorklogSurface(
       }
       if (!hasBackRef) {
         reasons.push(
-          `\`promoted-to:\` back-ref is missing (must contain the DR-ID of the appended row in ${promo.target})`,
+          `\`promoted-to:\` must contain the DEC-NNNN ID of the matching row in ${promo.target}`,
+        );
+      } else if (!sameRow) {
+        reasons.push(
+          `\`promoted-to:\` names ${promotedToBackRef}, not the row referencing this entry`,
         );
       }
       const detail = reasons.join("; ");
@@ -511,38 +508,37 @@ export async function validateWorklogSurface(
 }
 
 /**
- * Tests whether any decision row references `entryId` as a whole token
+ * Tests whether a decision row references `entryId` as a whole token
  * (rather than as a substring). Without this, `entry-01` would falsely
  * match a row that only contains `entry-010`, silently suppressing
  * W-PENDING-PROMOTION for the unrelated parent entry.
  */
-function rowsReferenceEntryId(rows: string[], entryId: string): boolean {
+function rowReferencesEntryId(row: RecordRow, entryId: string): boolean {
   const escaped = entryId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`(^|[^A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`);
-  return rows.some((row) => pattern.test(row));
+  return pattern.test(`${row.content} ${row.approach} ${row.status}`);
 }
 
-async function collectSpecIds(root: string): Promise<Set<string>> {
+async function collectFlowIds(specsDir: string): Promise<Set<string>> {
   const ids = new Set<string>();
-  const specsDir = path.join(root, ".qfai", "specs");
-  if (!(await exists(specsDir))) return ids;
+  const flowsDir = path.join(specsDir, "02_business-flow");
+  if (!(await exists(flowsDir))) return ids;
   let entries: Dirent[];
   try {
-    entries = await readdir(specsDir, { withFileTypes: true });
+    entries = await readdir(flowsDir, { withFileTypes: true });
   } catch {
     return ids;
   }
   for (const entry of entries) {
-    if (entry.isDirectory() && /^spec-\d{4}$/.test(entry.name)) {
-      ids.add(entry.name);
+    if (entry.isDirectory() && /^business-flow-\d{4}$/.test(entry.name)) {
+      ids.add(`BF-${entry.name.slice("business-flow-".length)}`);
     }
   }
   return ids;
 }
 
-async function collectDiscussionIds(root: string): Promise<Set<string>> {
+async function collectDiscussionIds(discDir: string): Promise<Set<string>> {
   const ids = new Set<string>();
-  const discDir = path.join(root, ".qfai", "discussion");
   if (!(await exists(discDir))) return ids;
   let entries: Dirent[];
   try {
@@ -559,35 +555,16 @@ async function collectDiscussionIds(root: string): Promise<Set<string>> {
 }
 
 /**
- * Read every `<spec>/07_Decisions.md` under `.qfai/specs/` and index
- * the rows by their normalized target key (`spec-NNNN/07_Decisions.md`).
- * The promotion-gate check looks up each entry's `promote-to:` target
- * against this map so a mention in an unrelated spec cannot
- * incorrectly satisfy the gate (P2 r3292030149).
+ * Read the decision table under the configured specification root.
  */
-async function readDecisionRowsByTarget(root: string): Promise<Map<string, string[]>> {
-  const byTarget = new Map<string, string[]>();
-  const specsDir = path.join(root, ".qfai", "specs");
-  if (!(await exists(specsDir))) return byTarget;
-  let entries: Dirent[];
+async function readDecisionRows(specsDir: string): Promise<RecordRow[]> {
   try {
-    entries = await readdir(specsDir, { withFileTypes: true });
-  } catch {
-    return byTarget;
+    const body = await readFile(path.join(specsDir, "decisions.md"), "utf-8");
+    return parseRecordTable(body, "decisions").rows;
+  } catch (err: unknown) {
+    if (isEnoent(err)) return [];
+    throw err;
   }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const decisionFile = path.join(specsDir, entry.name, "07_Decisions.md");
-    try {
-      const body = await readFile(decisionFile, "utf-8");
-      const rows = body.split("\n");
-      const targetKey = `${entry.name}/07_Decisions.md`;
-      byTarget.set(targetKey, rows);
-    } catch (err: unknown) {
-      if (!isEnoent(err)) throw err;
-    }
-  }
-  return byTarget;
 }
 
 // Side-channel for the test suite to surface a stable stat-aware "now"

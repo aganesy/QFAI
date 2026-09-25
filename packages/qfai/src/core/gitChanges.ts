@@ -13,6 +13,13 @@ export function normalizeRepoPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
+/** File content at the merge base used by branch-drift checks, if available. */
+export function readFileAtBase(root: string, baseBranch: string, file: string): string | null {
+  const revision = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
+  if (!revision) return null;
+  return gitStdout(root, ["show", `${revision}:${normalizeRepoPath(file)}`]);
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
 function gitStdout(root: string, args: readonly string[]): string | null {
   try {

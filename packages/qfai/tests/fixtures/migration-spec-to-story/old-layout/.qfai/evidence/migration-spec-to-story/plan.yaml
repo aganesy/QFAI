@@ -1,0 +1,15 @@
+flows:
+  - title: Place an order
+    from: "CHG-0001: Order flow"
+    stories:
+      - id: US-0001-0001
+        criteria:
+          - AC-0001-0001
+          - AC-0001-0002
+rules:
+  - id: BR-0001-0001
+    contract: api/order.yaml
+  - id: BR-0001-0002
+    contract: db/orders.sql
+  - id: BR-0001-0003
+    contract: design/order.md

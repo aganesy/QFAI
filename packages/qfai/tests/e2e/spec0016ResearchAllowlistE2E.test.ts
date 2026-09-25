@@ -21,7 +21,7 @@ beforeAll(async () => {
   projectRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-research-"));
   await captureStdout(() => runInit({ dir: projectRoot, force: false, dryRun: false, yes: true }));
   researchSkill = await readFile(
-    path.join(projectRoot, ".qfai", "assistant", "skills", "web-research", "SKILL.md"),
+    path.join(projectRoot, ".qfai", "assistant", "skill", "web-research", "SKILL.md"),
     "utf-8",
   );
 });
@@ -32,7 +32,7 @@ afterAll(async () => {
   }
 });
 
-// QFAI:SPEC-0016:US-0016-0005
+// QFAI:BF-0001
 describe("E2E: the research pipeline fetches only allowlisted domains (US-0016-0005)", () => {
   it("declares the allowlist in the project's own configuration file", () => {
     expect(researchSkill).toContain("`qfai.config.yaml` under `webResearch.allowlist`");

@@ -6,9 +6,9 @@
  * screenshot+html and produces a reviewer review.json carrying the
  * findings that block it, prose critique, layout-anti-pattern
  * detection, DESIGN.md compliance violations, and a pivot directive.
- * Stop is deterministic: either nothing is open against the iteration —
- * no blocking finding, no layout anti-pattern, no DESIGN.md violation —
- * or the iteration index reaches the budget.
+ * Stop is deterministic: convergence requires four exceptional UX axes and
+ * no blocking finding, layout anti-pattern, or DESIGN.md violation. The
+ * budget stops a non-converged run at the final index.
  */
 
 import type { DesignMdViolation } from "./designMdViolations.js";
@@ -20,19 +20,43 @@ export type PivotDirective = "continue" | "refine" | "pivot";
 
 export const PIVOT_DIRECTIVES: readonly PivotDirective[] = ["continue", "refine", "pivot"] as const;
 
+export type UxScore = "weak" | "acceptable" | "strong" | "exceptional";
+
+export type UxScores = {
+  readonly informationArchitecture: UxScore;
+  readonly navigationFlow: UxScore;
+  readonly usability: UxScore;
+  readonly functionality: UxScore;
+};
+
+export const UX_SCORE_AXES = [
+  "informationArchitecture",
+  "navigationFlow",
+  "usability",
+  "functionality",
+] as const;
+
+const UX_SCORES = ["weak", "acceptable", "strong", "exceptional"] as const;
+
+export function isUxScores(value: unknown): value is UxScores {
+  if (!isRecord(value) || Object.keys(value).length !== UX_SCORE_AXES.length) return false;
+  return UX_SCORE_AXES.every(
+    (axis) =>
+      typeof value[axis] === "string" && (UX_SCORES as readonly string[]).includes(value[axis]),
+  );
+}
+
 export type Iteration = {
   readonly index: number;
   readonly commitSha: string;
-  /** What must be fixed before this iteration ships. Empty is converged. */
+  /** Findings that must close before this iteration can converge. */
   readonly blockingFindings: readonly string[];
+  readonly scores: UxScores;
   readonly proseCritique: string;
   readonly layoutAntiPatternsDetected: readonly string[];
   readonly designMdViolations: readonly DesignMdViolation[];
   readonly pivotDirective: PivotDirective;
-  readonly evidenceRefs: {
-    readonly screenshot: string;
-    readonly html: string;
-  };
+  readonly evidenceRefs: readonly EvidenceRef[];
 };
 
 export type StopReason = "converged" | "max-iterations" | "license-verify-fail" | "input-error";
@@ -60,48 +84,50 @@ export function shouldStop(iterations: readonly unknown[]): StopReason | null {
   return null;
 }
 
-export type PerSpecScreenIter = {
-  readonly specId: string;
+export type PerUiContractScreenIter = {
+  readonly uiContractId: string;
   readonly screen: string;
   readonly latestIteration: Iteration;
 };
 
-export type MultiSpecStopResult = {
+export type MultiUiContractStopResult = {
   readonly stopReason: StopReason | null;
-  readonly laggingSpecs: readonly string[];
+  readonly laggingUiContracts: readonly string[];
 };
 
 /**
- * Decide global prototyping convergence across multiple (spec × screen)
+ * Decide global prototyping convergence across multiple (UI contract × screen)
  * pairs. Convergence is an AND across every pair: a single pair with
  * anything open blocks the global stop. When convergence is
- * not achieved, `laggingSpecs` lists every spec ID (unique, sorted) that
+ * not achieved, `laggingUiContracts` lists every UI contract ID (unique, sorted) that
  * has at least one non-converged pair, so the orchestrator can route the
- * next iteration at spec granularity.
+ * next iteration at UI contract granularity.
  *
- * Pure function. No I/O. Max-iterations stop semantics for multi-spec
+ * Pure function. No I/O. Max-iterations stop semantics for multi-contract
  * runs are handled at the caller level (each pair owns its own index
  * sequence); this function only decides convergence.
  */
-export function shouldStopAcrossSpecs(pairs: readonly PerSpecScreenIter[]): MultiSpecStopResult {
+export function shouldStopAcrossSpecs(
+  pairs: readonly PerUiContractScreenIter[],
+): MultiUiContractStopResult {
   if (pairs.length === 0) {
-    return { stopReason: null, laggingSpecs: [] };
+    return { stopReason: null, laggingUiContracts: [] };
   }
   const laggingSet = new Set<string>();
   for (const pair of pairs) {
     if (!iterationConverged(pair.latestIteration)) {
-      laggingSet.add(pair.specId);
+      laggingSet.add(pair.uiContractId);
     }
   }
   if (laggingSet.size === 0) {
-    return { stopReason: "converged", laggingSpecs: [] };
+    return { stopReason: "converged", laggingUiContracts: [] };
   }
-  const laggingSpecs = Array.from(laggingSet).sort();
-  return { stopReason: null, laggingSpecs };
+  const laggingUiContracts = Array.from(laggingSet).sort();
+  return { stopReason: null, laggingUiContracts };
 }
 
 /**
- * Whether an iteration record has nothing open against it.
+ * Whether an iteration has exceptional scores and no blockers.
  *
  * Reads an `unknown` record because it also runs against on-disk
  * evidence reloaded as JSON, where the type is gone.
@@ -111,7 +137,10 @@ export function iterationConverged(iter: unknown): boolean {
   if (!Array.isArray(iter.blockingFindings)) return false;
   if (!Array.isArray(iter.layoutAntiPatternsDetected)) return false;
   if (!Array.isArray(iter.designMdViolations)) return false;
+  if (!isUxScores(iter.scores)) return false;
+  const scores = iter.scores;
   return (
+    UX_SCORE_AXES.every((axis) => scores[axis] === "exceptional") &&
     iter.blockingFindings.length === 0 &&
     iter.layoutAntiPatternsDetected.length === 0 &&
     iter.designMdViolations.length === 0
