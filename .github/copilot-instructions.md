@@ -50,3 +50,4 @@ Key rules to follow:
 - `.agents/rules/user-questions.md` — every question arrives in the shape its answer has: a choice where the candidates can be listed, a plain request where they cannot; the fallback keeps the same parts.
 - `.agents/rules/shipped-ci-parity.md` — a change to this repository's CI either reaches the workflow templates the package ships or says in the diff why it does not.
 - `.agents/rules/api-budget.md` — ask git before REST and REST before GraphQL; one call for the whole set; the allowance belongs to the account and every session draws on it at once.
+- `.agents/rules/action-reversibility.md` — classify an action by how hard it is to undo before it runs; a destructive, hard-to-reverse or visible action needs the user or a standing instruction.
