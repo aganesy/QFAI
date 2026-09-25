@@ -1370,11 +1370,11 @@ describe("rule overlays", () => {
         "EX-NNNN-NNNN-NN",
         "BR-NNNN",
         "every four-digit segment",
-        // The three exceptions: the sample IDs, the manifest version, and the
-        // migration memo whose file name the guards neutralise before scanning.
+        // The three exceptions — the sample IDs, the manifest version and the
+        // story-tree sample band — and the absence of any file-name exemption.
         "spec-0001",
         "is the released version",
-        "cannot be renamed",
+        "No file name is exempt",
         // Versions that belong to something else, and the matcher's ceiling.
         "A version that belongs to something else",
         "project-qualified form",

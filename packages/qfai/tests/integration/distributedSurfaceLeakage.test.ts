@@ -191,7 +191,7 @@ describe("distributed surface leakage smoke", () => {
   // The walk above only proves that today's tree happens to be clean —
   // which is exactly the state a content-only scan also reported. Pin the
   // name matcher itself on synthetic paths so the dimension stays alive.
-  it("name pass flags path-borne tokens and honours the migration-memo exemption", async () => {
+  it("name pass flags path-borne tokens, a version-stamped migration memo name included", async () => {
     expect(await scanSingleName(path.join(".qfai", "assistant", "notes-v2.0-draft.md"))).toEqual([
       "internal version marker",
     ]);
@@ -202,26 +202,18 @@ describe("distributed surface leakage smoke", () => {
       "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
     ]);
 
+    // No path is exempt: a name shaped like the migration memo `qfai init`
+    // no longer writes carries a version marker like any other name.
     const memoDir = path.join(".qfai", "assistant", "process", "migrations");
-    expect(await scanSingleName(path.join(memoDir, "v1.4.27-atdd-alignment.md"))).toEqual([]);
-    // The exemption is scoped to the version class only.
+    expect(await scanSingleName(path.join(memoDir, "v1.4.27-atdd-alignment.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(await scanSingleName(path.join(memoDir, "v2.0.0.md"))).toEqual([
+      "internal version marker",
+    ]);
     expect(await scanSingleName(path.join(memoDir, "spec-0042-recut.md"))).toEqual([
       "internal spec id (spec-0010+)",
     ]);
-    // ...and to the sanctioned name shape only: a file that merely sits in
-    // the memo directory, a nested directory, or the same fragment in
-    // another tree all keep the version scan.
-    expect(await scanSingleName(path.join(memoDir, "notes-v2.0-draft.md"))).toEqual([
-      "internal version marker",
-    ]);
-    expect(await scanSingleName(path.join(memoDir, "drafts-v2.0", "clean.md"))).toEqual([
-      "internal version marker",
-    ]);
-    expect(
-      await scanSingleName(
-        path.join("docs", "assistant", "process", "migrations", "v2.0.0-notes.md"),
-      ),
-    ).toEqual(["internal version marker"]);
     expect(
       await scanSingleName(path.join(".qfai", "assistant", "steering", "test-layers.md")),
     ).toEqual([]);

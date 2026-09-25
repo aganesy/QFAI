@@ -53,13 +53,9 @@ the identifier does not belong in it.
   segment outside that sample band is internal. The short `DEC-NNNN` and
   `OQ-NNNN` patterns do not consume the leading segment of a legacy
   `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject those.
-- The version in the **file name** of
-  `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` stands.
-  `qfai init --upgrade-assistant-tree` writes one memo per upgrade and other
-  documents cite it by name, so it cannot be renamed. The guards neutralise that
-  one basename shape before scanning. A memo's body, the spec and trace IDs
-  inside it, and any other name — `notes-v2.0-draft.md`, `drafts-v2.0/` — are
-  still scanned.
+
+No file name is exempt. The guards scan every path with the same patterns they
+apply to content.
 
 ## The version a shipped file may name
 

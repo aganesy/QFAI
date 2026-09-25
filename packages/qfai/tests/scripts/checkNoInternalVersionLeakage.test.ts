@@ -18,10 +18,7 @@
  *     legitimately have no `dist/`).
  *   - filename pass: `grep -rn` only ever matches line content, so a
  *     marker encoded in a path component used to ship green. The name
- *     scan must report it with its own message, while honouring the
- *     documented version exemption — which covers only the exact
- *     `.qfai/assistant/process/migrations/v<X.Y.Z>[-*].md` name shape,
- *     not everything sharing that path fragment.
+ *     scan must report it with its own message, and no path is exempt.
  *   - name pass scope: the name regexes run over paths relative to
  *     `$ROOT`, so an absolute `QFAI_LEAKAGE_SCAN_ROOT` whose own
  *     ancestors carry a version marker does not fail a clean surface.
@@ -288,63 +285,30 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     if (status === 1) expect(r.stderr).toContain(id);
   });
 
-  it("exempts version-stamped migration memo names from the name pass (exit 0)", async () => {
-    // `assistant/process/migrations/<version>-*.md` names are stamped on
-    // purpose — see the exemption block in the guard.
+  // No path is exempt from the name pass: a name shaped like the migration
+  // memo `qfai init` no longer writes is a version marker like any other.
+  it.each([
+    "init/.qfai/assistant/process/migrations/v1.4.27-atdd-alignment.md",
+    "init/.qfai/assistant/process/migrations/v2.0.0.md",
+  ])("flags the version stamp in a migration-memo-shaped name %s (exit 1)", async (name) => {
     const tmp = await newTempDir();
-    await stageAssets(tmp, [
-      ["init/.qfai/assistant/process/migrations/v1.4.27-atdd-alignment.md", "clean body\n"],
-    ]);
-    const r = runGuard(tmp);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toMatch(/OK: no internal spec ids/);
-  });
-
-  it("keeps a spec id inside a migration memo name a failure (exit 1)", async () => {
-    // The exemption is scoped to the version class only.
-    const tmp = await newTempDir();
-    await stageAssets(tmp, [
-      ["init/.qfai/assistant/process/migrations/spec-0042-recut.md", "clean body\n"],
-    ]);
+    await stageAssets(tmp, [[name, "clean body\n"]]);
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toContain(path.posix.basename(name));
   });
 
-  it("keeps a non-memo-shaped name in the migrations directory a failure (exit 1)", async () => {
-    // The exemption covers `<version>-*.md` names minted by
-    // `migrationMemoRelativePath()`, not every file that happens to sit
-    // in the memo directory.
+  it("reports a version-marker name and a spec-id name from the same surface (exit 1)", async () => {
     const tmp = await newTempDir();
     await stageAssets(tmp, [
-      ["init/.qfai/assistant/process/migrations/notes-v2.0-draft.md", "clean body\n"],
+      ["init/notes-v2.0-draft.md", "clean body\n"],
+      ["init/spec-0042-recut.md", "clean body\n"],
     ]);
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
     expect(r.stderr).toMatch(/notes-v2[.]0-draft[.]md/);
-  });
-
-  it("keeps a version-stamped subdirectory under migrations/ a failure (exit 1)", async () => {
-    const tmp = await newTempDir();
-    await stageAssets(tmp, [
-      ["init/.qfai/assistant/process/migrations/drafts-v2.0/clean.md", "clean body\n"],
-    ]);
-    const r = runGuard(tmp);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
-    expect(r.stderr).toMatch(/drafts-v2[.]0/);
-  });
-
-  it("keeps the same path fragment in an unrelated tree a failure (exit 1)", async () => {
-    // The exemption is anchored at `.qfai/assistant/process/migrations/`;
-    // a look-alike directory elsewhere in the surface is not exempt.
-    const tmp = await newTempDir();
-    await stageAssets(tmp, [["docs/assistant/process/migrations/v2.0.0-notes.md", "clean body\n"]]);
-    const r = runGuard(tmp);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
-    expect(r.stderr).toMatch(/v2[.]0[.]0-notes[.]md/);
+    expect(r.stderr).toMatch(/spec-0042-recut[.]md/);
   });
 
   it("ignores version markers in the scan root's own ancestors (exit 0)", async () => {

@@ -69,29 +69,17 @@ const TEXT_EXTENSIONS = new Set([
   ".txt",
 ]);
 const TEXT_BASENAMES = new Set([".gitkeep", ".gitignore", ".gitattributes"]);
-// Only the sanctioned migration memo basename loses its version stamp in
-// the name pass. Its body and all other path segments still receive scanning.
-const MIGRATION_MEMO_STAMP_RE =
-  /(^|[/\\])\.qfai[/\\]assistant[/\\]process[/\\]migrations[/\\]v[0-9]+\.[0-9]+\.[0-9]+(-[^/\\]*)?\.md$/;
 
 function isScannableTextFile(file: string): boolean {
   return TEXT_EXTENSIONS.has(path.extname(file)) || TEXT_BASENAMES.has(path.basename(file));
-}
-
-function stripSanctionedMemoStamp(relativePath: string): string {
-  return relativePath.replace(MIGRATION_MEMO_STAMP_RE, (_full, lead: string, tail?: string) =>
-    [lead, ".qfai/assistant/process/migrations/MEMO", tail ?? "", ".md"].join(""),
-  );
 }
 
 function scanPathName(relativePath: string): SurfaceHit[] {
   const found: SurfaceHit[] = [];
   for (const { name, re } of PATTERNS) {
     if (name === "schemaVersion field") continue;
-    const subject =
-      name === "internal version marker" ? stripSanctionedMemoStamp(relativePath) : relativePath;
     re.lastIndex = 0;
-    const match = re.exec(subject);
+    const match = re.exec(relativePath);
     if (match) {
       found.push({ file: relativePath, line: 0, match: match[0], className: name });
     }

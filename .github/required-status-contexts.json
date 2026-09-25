@@ -404,7 +404,7 @@
         "Verify the toolchain action before running it": "859cc6b4346fe29f",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "07e9409297112e7e",
-        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "ab3992bc885d45c7",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "feeb72510482cc88",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "b6ef9102a1a21993",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "3223507c0ac759e9",
         "QFAI self-validate this repo (dogfooding — full profile)": "09ca2f044d5f1a37",
