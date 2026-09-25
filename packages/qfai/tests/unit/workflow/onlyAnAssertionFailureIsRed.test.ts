@@ -1,4 +1,5 @@
 // QFAI:SPEC-0018:TC-0018-0047
+// Fault seeds: FAULT-012, FAULT-013
 
 import { expect, it } from "vitest";
 

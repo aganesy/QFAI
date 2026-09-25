@@ -424,6 +424,7 @@
     "tests/integration/workflow/aLaterCauseStopsChaining.test.ts",
     "tests/integration/workflow/finishCompletionPersistence.test.ts",
     "tests/integration/workflow/operatorFacingLanguage.test.ts",
+    "tests/integration/workflow/evalFixtures.test.ts",
     "tests/integration/workflow/plans.test.ts",
     "tests/integration/workflow/schemas.test.ts",
     "tests/integration/workflow/shippedAssets.test.ts",

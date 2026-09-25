@@ -21,6 +21,7 @@
 // QFAI:SPEC-0018:TC-0018-0234
 // QFAI:SPEC-0018:TC-0018-0237
 // QFAI:SPEC-0018:TC-0018-0242
+// Fault seeds: FAULT-001, FAULT-002, FAULT-005, FAULT-006, FAULT-022
 
 import { spawnSync } from "node:child_process";
 import { createHash, createHmac } from "node:crypto";

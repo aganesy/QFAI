@@ -321,6 +321,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0311 | TC-0018-0070 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0312 | TC-0018-0071 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0313 | TC-0018-0072 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0314 | TC-0018-0075 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0316 | TC-0018-0102 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0317 | TC-0018-0103 | Closed `exception` under DR-0298; per-row review waived |
@@ -363,6 +364,8 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0354 | TC-0018-0138 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0357 | TC-0018-0159 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0358 | TC-0018-0160 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0359 | TC-0018-0161 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0360 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0361 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
@@ -371,6 +374,10 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0364 | TC-0018-0163 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0365 | TC-0018-0164 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0366 | TC-0018-0166 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0367 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0368 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0369 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0370 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0371 | TC-0018-0168 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0372 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0373 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
@@ -407,6 +414,23 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0405 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0406 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0407 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0409 | TC-0018-0191 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0410 | TC-0018-0192 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0411 | TC-0018-0193 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0413 | TC-0018-0196 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0414 | TC-0018-0197 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0415 | TC-0018-0198 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0416 | TC-0018-0199 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0417 | TC-0018-0200 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0418 | TC-0018-0201 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0419 | TC-0018-0202 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0420 | TC-0018-0203 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0421 | TC-0018-0204 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0422 | TC-0018-0205 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0423 | TC-0018-0206 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0424 | TC-0018-0207 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0425 | TC-0018-0208 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0426 | TC-0018-0209 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0429 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0430 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0431 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
@@ -434,6 +458,13 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0469 | TC-0018-0240 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0470 | TC-0018-0241 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0471 | TC-0018-0242 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0472 | TC-0018-0243 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0473 | TC-0018-0244 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0474 | TC-0018-0245 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0475 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0476 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0477 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0478 | TC-0018-0167 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0479 | TC-0018-0246 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0480 | TC-0018-0247 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0481 | TC-0018-0248 | Closed `exception` under DR-0298; per-row review waived |
@@ -455,6 +486,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0497 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0498 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0499 | TC-0018-0251 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0500 | TC-0018-0252 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0502 | TC-0018-0254 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0503 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0504 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
@@ -5124,6 +5156,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/onlySddAppendAddsARow.test.ts > TC-0018-0072 (TDD-0313): An sdd_append result after which the ledger holds one more row`
 - Production files: none beyond TDD-0312
 
+### TDD-0314
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0075 (TDD-0314): Read the routing-seed fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0075 \(TDD-0314\): Read the routing-seed fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [] to deeply equal [ [ 'bounded-change' ] ]`, `tests/integration/workflow/evalFixtures.test.ts:95`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0075 (TDD-0314): Read the routing-seed fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
 ### TDD-0315
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -5544,6 +5586,26 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0157 (TDD-0356): Read the request-kind guidance of the shipped qfai-run`
 - Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/SKILL.md`
 
+### TDD-0357
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0159 (TDD-0357): Read the routing-seed fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0159 \(TDD-0357\): Read the routing-seed fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [] to deeply equal [ true ]`, `tests/integration/workflow/evalFixtures.test.ts:104`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0159 (TDD-0357): Read the routing-seed fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0358
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0160 (TDD-0358): Read the routing-seed fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0160 \(TDD-0358\): Read the routing-seed fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ undefined, undefined ] to deeply equal [ [ 'read_only', …(1) ], …(1) ]`, `tests/integration/workflow/evalFixtures.test.ts:112`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0160 (TDD-0358): Read the routing-seed fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
 ### TDD-0359
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -5623,6 +5685,46 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the shipped `qfai-maintain` skill; the role, routing and autopilot validators report nothing for it
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0166 (TDD-0366): Read the shipped qfai-maintain skill`
 - Production files: none
+
+### TDD-0367
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0367): dependency`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0367\): dependency' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0367): dependency`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0368
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0368): workflow-ci`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0368\): workflow-ci' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0368): workflow-ci`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0369
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0369): authorization-condition`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0369\): authorization-condition' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0369): authorization-condition`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0370
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0370): normative-readme-command`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0370\): normative-readme-command' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0370): normative-readme-command`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
 
 ### TDD-0371
 
@@ -5988,6 +6090,176 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0407): discovery-ends-routing`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
 
+### TDD-0409
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0191 (TDD-0409): Read the tracked fault-seed and routing-seed fixtures`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0191 \(TDD-0409\): Read the tracked fault-seed and routing-seed fixtures' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { faults: [], routes: +0 } to deeply equal { Object (faults, routes) }`, `tests/integration/workflow/evalFixtures.test.ts:148`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0191 (TDD-0409): Read the tracked fault-seed and routing-seed fixtures`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`
+
+### TDD-0410
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0192 (TDD-0410): Scan every seed's expected result`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0192 \(TDD-0410\): Scan every seed's expected result' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { seeds: +0, retired: [], …(1) } to deeply equal { seeds: 64, retired: [], …(1) }`, `tests/integration/workflow/evalFixtures.test.ts:167`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0192 (TDD-0410): Scan every seed's expected result`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`
+
+### TDD-0411
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0193 (TDD-0411): Scan every routing prompt and rationale`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0193 \(TDD-0411\): Scan every routing prompt and rationale' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { seeds: +0, cjk: [], phone: 1, …(1) } to deeply equal { seeds: 64, cjk: [], phone: 1, …(1) }`, `tests/integration/workflow/evalFixtures.test.ts:180`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0193 (TDD-0411): Scan every routing prompt and rationale`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0413
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0196 (TDD-0413): Read FAULT-015 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0196 \(TDD-0413\): Read FAULT-015 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ 'same_obligation_done_repair', …(1) ]`, `tests/integration/workflow/evalFixtures.test.ts:186`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0196 (TDD-0413): Read FAULT-015 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`
+
+### TDD-0414
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0197 (TDD-0414): Read FAULT-016 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0197 \(TDD-0414\): Read FAULT-016 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(2) ]`, `tests/integration/workflow/evalFixtures.test.ts:195`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0197 (TDD-0414): Read FAULT-016 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`
+
+### TDD-0415
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0198 (TDD-0415): Read ROUTE-007 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0198 \(TDD-0415\): Read ROUTE-007 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(4) ]`, `tests/integration/workflow/evalFixtures.test.ts:204`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0198 (TDD-0415): Read ROUTE-007 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0416
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0199 (TDD-0416): Read ROUTE-014 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0199 \(TDD-0416\): Read ROUTE-014 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(4) ]`, `tests/integration/workflow/evalFixtures.test.ts:217`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0199 (TDD-0416): Read ROUTE-014 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0417
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0200 (TDD-0417): Read ROUTE-035 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0200 \(TDD-0417\): Read ROUTE-035 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(3) ]`, `tests/integration/workflow/evalFixtures.test.ts:228`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0200 (TDD-0417): Read ROUTE-035 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0418
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0201 (TDD-0418): Read ROUTE-036 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0201 \(TDD-0418\): Read ROUTE-036 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(4) ]`, `tests/integration/workflow/evalFixtures.test.ts:240`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0201 (TDD-0418): Read ROUTE-036 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0419
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0202 (TDD-0419): Read ROUTE-044 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0202 \(TDD-0419\): Read ROUTE-044 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal { …(7) }`, `tests/integration/workflow/evalFixtures.test.ts:262`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0202 (TDD-0419): Read ROUTE-044 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0420
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0203 (TDD-0420): Read ROUTE-047 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0203 \(TDD-0420\): Read ROUTE-047 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ Array(2) ]`, `tests/integration/workflow/evalFixtures.test.ts:270`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0203 (TDD-0420): Read ROUTE-047 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0421
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0204 (TDD-0421): Read ROUTE-048 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0204 \(TDD-0421\): Read ROUTE-048 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(2) ]`, `tests/integration/workflow/evalFixtures.test.ts:279`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0204 (TDD-0421): Read ROUTE-048 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0422
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0205 (TDD-0422): Read ROUTE-049 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0205 \(TDD-0422\): Read ROUTE-049 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(2) ]`, `tests/integration/workflow/evalFixtures.test.ts:288`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0205 (TDD-0422): Read ROUTE-049 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0423
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0206 (TDD-0423): Read ROUTE-055 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0206 \(TDD-0423\): Read ROUTE-055 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(3) ]`, `tests/integration/workflow/evalFixtures.test.ts:297`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0206 (TDD-0423): Read ROUTE-055 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0424
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0207 (TDD-0424): Read ROUTE-056 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0207 \(TDD-0424\): Read ROUTE-056 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(3) ]`, `tests/integration/workflow/evalFixtures.test.ts:307`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0207 (TDD-0424): Read ROUTE-056 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0425
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0208 (TDD-0425): Read ROUTE-058 in the fixture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0208 \(TDD-0425\): Read ROUTE-058 in the fixture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal [ …(2) ]`, `tests/integration/workflow/evalFixtures.test.ts:317`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0208 (TDD-0425): Read ROUTE-058 in the fixture`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0426
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0209 (TDD-0426): Scan the tracked test tree`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0209 \(TDD-0426\): Scan the tracked test tree' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { faults: +0, uncited: [], …(1) } to deeply equal { Object (faults, uncited, ...) }`, `tests/integration/workflow/evalFixtures.test.ts:349`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0209 (TDD-0426): Scan the tracked test tree`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`; a `// Fault seeds:` citation line in the sixteen workflow test files the `## Fault seed index` of `06_Test-Cases.md` maps each seed to
+
 ### TDD-0429
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6267,6 +6539,76 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0242 (TDD-0471): the tracked summary copies nothing of settled`
 - Production files: none beyond TDD-0354
 
+### TDD-0472
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0243 (TDD-0472): ROUTE-045 equals its rewrite`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0243 \(TDD-0472\): ROUTE-045 equals its rewrite' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal { …(7) }`, `tests/integration/workflow/evalFixtures.test.ts:353`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0243 (TDD-0472): ROUTE-045 equals its rewrite`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0473
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0244 (TDD-0473): ROUTE-022 equals its rewrite`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0244 \(TDD-0473\): ROUTE-022 equals its rewrite' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal { …(7) }`, `tests/integration/workflow/evalFixtures.test.ts:359`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0244 (TDD-0473): ROUTE-022 equals its rewrite`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0474
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0245 (TDD-0474): ROUTE-024 equals its rewrite`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0245 \(TDD-0474\): ROUTE-024 equals its rewrite' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal { …(7) }`, `tests/integration/workflow/evalFixtures.test.ts:365`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0245 (TDD-0474): ROUTE-024 equals its rewrite`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0475
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0475): environment-setting`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0475\): environment-setting' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0475): environment-setting`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0476
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0476): sql-file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0476\): sql-file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0476): sql-file`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0477
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0477): generated-file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0477\): generated-file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0477): generated-file`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0478
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0167 (TDD-0478): qfai-skills-constitution`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0167 \(TDD-0478\): qfai-skills-constitution' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected 0 to be greater than 0`, `tests/integration/workflow/evalFixtures.test.ts:140`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0167 (TDD-0478): qfai-skills-constitution`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
 ### TDD-0479
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6479,6 +6821,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 - Design choice (settled between agents): CLI-WF `### Work order` says `scope.digest` covers `scope` only and CLI-WFFILE names no further inputs, so the digest is the SHA-256, the helper the ledger row-set digest already uses, of the JSON of the other four scope fields in a fixed order: `writeAreas`, `protectedTargets`, `allowedEffects`, `nonGoals`. The scope's `SIMPLIFIED` marker now names only what is still missing: the plan carries no protected targets and nothing supplies non-goals, so the digest reads each as empty until the checked plan keeps them.
+
+### TDD-0500
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0252 (TDD-0500): ROUTE-028 equals its rewrite`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0252 \(TDD-0500\): ROUTE-028 equals its rewrite' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected undefined to deeply equal { Object (userPrompt, repoFacts, ...) }`, `tests/integration/workflow/evalFixtures.test.ts:371`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0252 (TDD-0500): ROUTE-028 equals its rewrite`
+- Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
 
 ### TDD-0502
 
