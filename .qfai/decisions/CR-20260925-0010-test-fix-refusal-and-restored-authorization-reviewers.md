@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260925-0008`
+- ID: `CR-20260925-0010`
 - Title: `State what a test-fix meaning refusal and a restored authorization check change`
 - Raised by: `/qfai-implement orchestrator`
 - Raised at: `2026-09-25T02:59:15Z`

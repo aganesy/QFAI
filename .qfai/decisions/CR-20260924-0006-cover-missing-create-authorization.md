@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0002`
+- ID: `CR-20260924-0006`
 - Title: `Cover a missing CREATE authorization before the SDD work order`
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-24T14:38:18Z`
@@ -52,7 +52,7 @@ Cover `next` on a `ready` feature snapshot with a CREATE approval that has the c
 - The 526 ledger rows were screened by their TC, selector and journey. The listed rows are the complete affected set for this missing-ID CREATE authorization path. `TDD-0001` observes the routing question before authorization; `TDD-0004` observes the two-capability question round. `TDD-0454` uses a minimal-project CLI fixture and does not exercise CREATE.
 - Overlapping open CRs: `CR-20260925-0004` also blocks `TDD-0455`.
   `CR-20260925-0003` touches the spec-0018 ledger but blocks `TDD-0014`,
-  outside this CR's blocked set. `CR-20260924-0001` is approved and applied.
+  outside this CR's blocked set. `CR-20260924-0005` is approved and applied.
 
 ## Impact scope
 

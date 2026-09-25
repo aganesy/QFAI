@@ -34,7 +34,7 @@ In the SDD Phase 2b ledger seed, change only `spec-0018/TDD-0014`'s `Owning modu
 | `spec-0018/TDD-0014` | `ledger-row` | Its seeded production owner cannot satisfy its JSON-verdict assertion. |
 
 - Not blocked by this CR: `TDD-0015` onward and `TDD-0261`, whose obligations and owners do not change.
-- Related CR: `CR-20260924-0002` names the same ledger but does not block `TDD-0014`. It was applied before this owner rerun.
+- Related CR: `CR-20260924-0006` names the same ledger but does not block `TDD-0014`. It was applied before this owner rerun.
 
 ## Impact scope
 
@@ -51,10 +51,10 @@ Approve the correction of `TDD-0014`'s owning module to `decide.ts`, keeping the
 
 ## Approved actions (owner skill rerun plan)
 
-1. On approval and after `CR-20260924-0002` is applied, run `/qfai-sdd spec-0018` Phase 2b in `re-derive` mode for the ledger owner field. Record this correction in `spec-0018/09_delta.md`.
+1. On approval and after `CR-20260924-0006` is applied, run `/qfai-sdd spec-0018` Phase 2b in `re-derive` mode for the ledger owner field. Record this correction in `spec-0018/09_delta.md`.
 2. Sweep the spec-0018 ledger. `TDD-0014`'s obligation is unchanged, so release `blocked -> todo` after the owner rerun. Reset or retire no rows.
 3. Resume `TDD-0014` against the corrected owner and record the outcome here.
 
 ## Resolution
 
-Approved by the user. The timestamp above records when this approval was entered; the answer's original timestamp is unavailable. After `CR-20260924-0002` was applied, `/qfai-sdd spec-0018` ran in `re-derive` mode for Phase 2b. `TDD-0014` now names `packages/qfai/src/core/workflow/decide.ts` and is released from `blocked` to `todo`. Its `TC-0018-0010` obligation, test file, selector, layer, tier and evidence remain unchanged. `TDD-0261` still owns the shipped skill-text assertion. The ledger sweep found no changed `TC`, `US` or `CON-API` obligation, so no row was reset or retired. CR4's parked rows remain blocked. Implementation resumes in a separate run.
+Approved by the user. The timestamp above records when this approval was entered; the answer's original timestamp is unavailable. After `CR-20260924-0006` was applied, `/qfai-sdd spec-0018` ran in `re-derive` mode for Phase 2b. `TDD-0014` now names `packages/qfai/src/core/workflow/decide.ts` and is released from `blocked` to `todo`. Its `TC-0018-0010` obligation, test file, selector, layer, tier and evidence remain unchanged. `TDD-0261` still owns the shipped skill-text assertion. The ledger sweep found no changed `TC`, `US` or `CON-API` obligation, so no row was reset or retired. CR4's parked rows remain blocked. Implementation resumes in a separate run.

@@ -968,11 +968,20 @@ policy layer stated both globally.
 | CR ID            | Upstream artifact                                                                                                   | Mode      | Approved by                                             | Applied at           |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | -------------------- |
 | CR-20260913-0007 | `_policies/08_Decisions.md`                                                                                         | re-derive | user (current session's delegated implementation scope) | -                    |
-| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-24T18:26:35Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                              | re-derive | user                                                    | 2026-09-24T19:00:08Z |
 | CR-20260912-0003 | `_policies/05_Contracts.md`; `_policies/06_Glossary.md`; `_policies/07_Constraints.md`; `_policies/08_Decisions.md` | re-derive | user                                                    | 2026-09-25T00:21:41Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-25T02:36:35Z |
-| CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-25T03:00:14Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-25T03:00:14Z |
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                              | re-derive | user                                                    | 2026-09-25T03:23:20Z |
 
 - DR-0012-002 cites this CR in Related. Source profile/catalog changes and their operating mirrors are physically applied. Scoped SDD validation has zero errors; full scoped and global SDD validation retain 61 and 96 baseline errors. Current attestations remain pending, Applied at remains unset and no baseline finding is waived.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.

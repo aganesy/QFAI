@@ -404,7 +404,7 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | 4 | backend-engineer | /root/tdd0001_red | Verify TDD-0001 refactor stage | Cross-spec ownership and relevant-suite rules; current code | No code edit; cross-spec check and narrow test result below | PASS |
 | 5 | completion-reviewer | /root/completion_review | Review TDD-0001 specification coverage | TC-0018-0001; Round 1 phase evidence | `review-20260924182257625/R01_completion-reviewer.md` | PASS |
 | 6 | implementation-reviewer | /root/tdd0001_code_review | Review TDD-0001 code and architecture | `decide.ts`; owning Plan; Round 1 phase evidence | `review-20260924182257625/R02_implementation-reviewer.md` | REVISE |
-| 7 | solution-architect | /root/cr0001_sdd | Apply approved Plan correction | `CR-20260924-0001`; `01_Spec.md` Design; TC-0018-0001 | `10_Plan.md` exception and `09_delta.md` CR row | PASS |
+| 7 | solution-architect | /root/cr0001_sdd | Apply approved Plan correction | `CR-20260924-0005`; `01_Spec.md` Design; TC-0018-0001 | `10_Plan.md` exception and `09_delta.md` CR row | PASS |
 | 8 | architecture-reviewer | /root/cr0001_review | Review CR application | Plan, delta and CR resolution | Focused re-review after record correction | PASS |
 | 9 | completion-reviewer | /root/completion_review | Re-review TDD-0001 after Plan correction | Round 1 phase evidence; approved CR; current revision | `review-20260924205303198/R01_completion-reviewer.md` | PASS |
 | 10 | implementation-reviewer | /root/tdd0001_code_review | Re-review TDD-0001 after Plan correction | `decide.ts`; owning Plan; current revision | `review-20260924205303198/R02_implementation-reviewer.md` | PASS |
@@ -615,11 +615,11 @@ Tests       1 failed (1)
 - Refactor decision: no code edit. The sole transition already names its guards and question fields directly; extracting helpers now would add an abstraction before another case uses it. No test file edit is needed.
 - Relevant suite: narrow suite, reverse dependency closure resolved. The new production module has no production importer; the only test importer is this row's test, and no test imports that test file.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
-- Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0001`. No source or test file changed in this review fix.
+- Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0005`. No source or test file changed in this review fix.
 - Refactor verify revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` (two consecutive calculations agreed; 2,495 path records).
 - Round 1: Review pack (attempt 1): `review-20260924182257625` (not committed).
 - Round 1: Review pack seal (attempt 1): `c8fe3a3493e4ba295c17cb6ea37da07e8a40043400305134232521bd44dcbd2b` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
-- Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0001`; the next review stays in Round 1.
+- Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0005`; the next review stays in Round 1.
 - Round 1: Review pack (attempt 2): `review-20260924205303198` (not committed).
 - Round 1: Review pack seal (attempt 2): `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286` (four files, Markdown normalized and JSON raw).
 - Round 1: reviewer verdict (attempt 2): PASS. Both completion and implementation reviewers independently matched `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` and audited evidence hash `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`. The Plan now records the narrow pure-decision-function exception and its requiring obligation.
@@ -984,7 +984,7 @@ Tests  1 failed | 1 skipped (2)
 - Checkpoint verification revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
 - Checkpoint verification seal: `23e1c7229e251f931727c205a6fe17e21b456536d84f5000951b1285edea3449` (the canonical revision, command and result lines above).
 
-#### Fixture correction under CR-20260924-0002
+#### Fixture correction under CR-20260924-0006
 
 - The ready-snapshot `approval` now carries `authorizationId: "authorization-4"`. `next` no longer issues an SDD work order for a CREATE approval without a persisted ID, so the fixture's ID-less approval stopped reaching SDD.
 - Before the fixture change, with the missing-ID check in `decide.ts`: exit 1; the comparison at `tests/unit/workflow/oneCreateQuestionAtRouting.test.ts:233:6` failed.
@@ -1137,7 +1137,7 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
 - Round 1: Review pack seal (attempt 1): `c0ea171f89875ed76b17a5f514b2e1aa1995ed734239e2e954e62e4ffb8470c5` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE
 
-#### Review fix under CR-20260924-0002
+#### Review fix under CR-20260924-0006
 
 - The Round 1 blocking finding is fixed: `next` issues the SDD work order only when the CREATE approval carries a persisted `authorizationId`, and the order's `authorizationRefs` holds exactly that record's path. A missing ID opens a new `create` question instead (TDD-0527). The `SIMPLIFIED` marker that deferred this check is removed.
 - `decide.ts` TS2322 fixed: the decision branch narrows `snapshot.scopeDigest` to `string` before building the authorization record.
@@ -5490,5 +5490,5 @@ None. Before considering a source or test edit, all 18 other specs' ledgers were
 | `rg -l 'workflow/decide\|oneCreateQuestionAtRouting\|core\.workflow\.decide' packages/qfai/src packages/qfai/tests` | Only this row's test imports the new source; no other importer found |
 | Refactor verify Vitest command from `packages/qfai` | Exit 0; one selected test passed |
 | `node tmp/revision-tdd0001-refactor.mjs` from repository root, twice | Both exit 0 and report `working-tree+7d838c868b8b5e07c264bc62ca5ae61447c6c1546c04aef9ce8e8a6ddc5bfea8`; 2,494 path records |
-| Refactor verify Vitest command after `CR-20260924-0001` from `packages/qfai` | Exit 0; one selected test passed |
+| Refactor verify Vitest command after `CR-20260924-0005` from `packages/qfai` | Exit 0; one selected test passed |
 | `node tmp/revision-tdd0001-after-cr.mjs` from repository root, twice | Both exit 0 and report `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`; 2,495 path records; temporary helper removed |

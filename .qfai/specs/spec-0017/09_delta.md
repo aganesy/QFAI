@@ -262,7 +262,7 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
   `windows-parity` job on `windows-latest` runs the control-core suites and the init and
   migration suites through the `test:windows-parity` script, is selected like the other test
   lanes, and joins the aggregate verdict.
-- Appended: US-0017-0016; AC-0017-0037..0039; BR-0017-0070..0073; DR-0017-0024. Modified:
+- Appended: US-0017-0016; AC-0017-0037..0039; BR-0017-0071..0073; DR-0017-0024. Modified:
   none. `US-0017-0010..0015` are skipped because `spec-0012/09_delta.md` cites them for a retired
   spec that once held this number.
 - Resolved pack question: `discussion-20260923171450572#OQ-0012` (how Windows parity is
@@ -320,3 +320,16 @@ notes: The user's answer A to the pack's question on Windows verification; the j
   reason: build would be skipped whenever detection skips the job, and a skipped job reports success
   do_not: put a conditional job under the required-context job
   temptation: it would gate merges today
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- `BR-0017-0070`..`BR-0017-0073` became `BR-0017-0071`..`BR-0017-0074`.
+- `EX-0017-0071`..`EX-0017-0074` became `EX-0017-0072`..`EX-0017-0075`.
+- `TC-0017-0093`..`TC-0017-0099` became `TC-0017-0094`..`TC-0017-0100`.
+- `TDD-0102`..`TDD-0109` became `TDD-0111`..`TDD-0118`.
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.

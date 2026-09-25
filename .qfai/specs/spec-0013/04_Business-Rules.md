@@ -157,7 +157,7 @@
 
 ## BR-0013-0022: Stage 1 checks the routing-time approval instead of asking
 
-- AC-Refs: AC-0013-0028
+- AC-Refs: AC-0013-0043
 
 - Inside a run, Stage 1 does not ask the `CREATE` question: it checks the cited `human_decision` as CLI-WF `## Authorizations` states and, when the check passes, persists the row with `Authorization-Ref` and with `Approved By` copied from the record as CLI-WFFILE `## Authorization record` states.
 

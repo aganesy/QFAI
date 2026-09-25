@@ -996,5 +996,5 @@ file, so an entry here is what makes that citation checkable.
   pin is unchanged. The code-path pin moves and is re-pinned in the same change.
   A test red on the trial run is classed as platform-inapplicable, a parity
   defect or a test defect, and no test leaves the list for being red.
-- Related: AC-0017-0037, AC-0017-0038, AC-0017-0039, BR-0017-0070, BR-0017-0071,
-  BR-0017-0072, BR-0017-0073; OQ-0017-0002; CLI-INIT `### Windows parity`.
+- Related: AC-0017-0037, AC-0017-0038, AC-0017-0039, BR-0017-0071, BR-0017-0072,
+  BR-0017-0073, BR-0017-0074; OQ-0017-0002; CLI-INIT `### Windows parity`.

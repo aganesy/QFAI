@@ -241,10 +241,10 @@ observable:
 | CR ID            | Upstream artifact                                                                          | Mode      | Approved by                                                    | Applied at           |
 | ---------------- | ------------------------------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------- |
 | CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
-| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-24T19:00:08Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T02:36:35Z |
-| CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T03:00:14Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T03:00:14Z |
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-25T03:23:20Z |
 
 ## Triage (2026-09-15)
@@ -374,3 +374,13 @@ notes: One mechanism carries the review directive and the entry directive, with 
   reason: it adds a file every adopter keeps, and still needs a citation to reach the agent
   do_not: add a rule document to carry one sentence
   temptation: a rule master is cited from every entry point
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- `TDD-0093`..`TDD-0124` became `TDD-0094`..`TDD-0125`.
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.

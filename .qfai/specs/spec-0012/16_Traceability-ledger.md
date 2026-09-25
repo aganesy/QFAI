@@ -144,8 +144,8 @@ Evidence`). For these rows, `tdd/test-list.md` is the SSOT and this
 | —        | TC-0012-0393 | planned | prototyping-e2e     | e2e: full 10-cycle no-convergence run hard-stops at end of cycle 9 (REQ-0002)             |
 | —        | TC-0012-0394 | planned | prototyping-e2e     | e2e: Reviewer-driven Playwright session writes per-spec review.json (REQ-0003)            |
 | TDD-0394 | TC-0012-0395 | planned | prototyping-core    | contract: licenseVerify rejects non-allowlisted source with structured error (REQ-0006)   |
-| TDD-0567 | TC-0012-0324 | planned | prototyping-cli     | Cycle convergence exits 64 through the real iterate command                               |
-| TDD-0568 | TC-0012-0335 | planned | prototyping-handoff | Actual post-handoff writer emits the DESIGN.md token mirror                               |
+| TDD-0583 | TC-0012-0324 | planned | prototyping-cli     | Cycle convergence exits 64 through the real iterate command                               |
+| TDD-0584 | TC-0012-0335 | planned | prototyping-handoff | Actual post-handoff writer emits the DESIGN.md token mirror                               |
 
 ## CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch (2026-05-19)
 

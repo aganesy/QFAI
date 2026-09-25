@@ -277,7 +277,7 @@ Tracked for separate implementation as OQ-0016
 ## TC-0013-0038: Stage 1 checks a matching routing-time approval
 
 - EX-Ref: EX-0013-0022
-- AC-Refs: AC-0013-0028
+- AC-Refs: AC-0013-0043
 - Type: normal
 - Level: L3
 - Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, state that the check passes only when the record exists, matches the row's operation and capability, and is not stale, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.

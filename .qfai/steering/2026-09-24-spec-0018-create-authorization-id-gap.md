@@ -18,7 +18,7 @@ links: ["spec-0018"]
 
 ## Why it waits
 
-`next` can issue an SDD work order with an empty `authorizationRefs` list when the apparent CREATE approval has no persisted ID. The existing test case covers only the valid authorization path. `CR-20260924-0002` records the proposed negative test, the missing `ready` → `awaiting_input` contract edge and the owner-skill reruns. Its approval is pending.
+`next` can issue an SDD work order with an empty `authorizationRefs` list when the apparent CREATE approval has no persisted ID. The existing test case covers only the valid authorization path. `CR-20260924-0006` records the proposed negative test, the missing `ready` → `awaiting_input` contract edge and the owner-skill reruns. Its approval is pending.
 
 ## What releases it
 

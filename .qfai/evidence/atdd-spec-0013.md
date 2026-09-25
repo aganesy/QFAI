@@ -355,7 +355,7 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
-### TDD-0046
+### TDD-0114
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -366,7 +366,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
 
-### TDD-0047
+### TDD-0115
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -377,7 +377,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
 
-### TDD-0050
+### TDD-0118
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -388,7 +388,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
 
-### TDD-0051
+### TDD-0119
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -399,7 +399,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
 
-### TDD-0052
+### TDD-0120
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -410,7 +410,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
 
-### TDD-0054
+### TDD-0122
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -421,7 +421,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
 
-### TDD-0055
+### TDD-0123
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -432,7 +432,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
 
-### TDD-0056
+### TDD-0124
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -444,7 +444,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
 - Note: The Operations table this test reads was written for spec-0001 TDD-0039, before this test existed, so no RED was observed.
 
-### TDD-0057
+### TDD-0125
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -455,7 +455,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
 
-### TDD-0044
+### TDD-0112
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -467,7 +467,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
 
-### TDD-0045
+### TDD-0113
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -479,7 +479,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the three staleness conditions and that the clock alone never makes an approval stale.
 
-### TDD-0048
+### TDD-0116
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -491,7 +491,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the value form `run-<17 digits>/<authorizationId>` instead of a contract citation.
 
-### TDD-0049
+### TDD-0117
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -504,7 +504,7 @@ failed, 2 passed (7).
 - Reopened by: CR-20260925-0006 part A; the case asserts that the row is for behaviour the spec already states and files no Change Request, with no decision ID.
 - The shipped text names the work order by its operation, `defect-row-seeding`; `sdd_append` is the stage kind the core issues it under and does not ship.
 
-### TDD-0053
+### TDD-0121
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -516,7 +516,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case dropped its citation clause.
 
-### TDD-0061
+### TDD-0129
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -528,14 +528,14 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 2 passed (2)
 - Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
 
-### TDD-0062
+### TDD-0130
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
 - Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
 - Selector: `TC-0013-0037: Invalid or legacy optional side artifact leaves preflight ready`
-- RED command (cwd `packages/qfai`): as TDD-0061
+- RED command (cwd `packages/qfai`): as TDD-0129
 - RED result: already satisfied: exit 0 on the first run; a schema-invalid namespaced file and a legacy-only file each leave the verdict `ready` with no blockers
 - GREEN result: exit 0; 2 passed (2)
 - Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`

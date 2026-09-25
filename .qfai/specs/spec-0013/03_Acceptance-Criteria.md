@@ -143,12 +143,12 @@ Given a contract stub the Contracts-first phase wrote, when it is validated, the
 
 Given an invocation with no argument, when capabilities are assigned spec identifiers, then the order in `_policies/03_Capabilities.md` decides the assignment and an identifier already assigned keeps it; reordering is a Change Request.
 
-## AC-0013-0028: Stage 1 checks a matching routing-time approval and asks nothing
+## AC-0013-0043: Stage 1 checks a matching routing-time approval and asks nothing
 
 - US-Refs: US-0013-0015
 
 ```gherkin
-# AC-0013-0028
+# AC-0013-0043
 # Source: discussion-20260923171450572#DAC-001-02
 Scenario: A fresh, matching human decision approves the CREATE row
   Given an SDD work order that cites a human_decision approving a new capability

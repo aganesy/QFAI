@@ -120,7 +120,7 @@ before a shipped schema or parser is written.
   `TDD-0026` to `TDD-0030` start from a checked plan and test stage order
   without reading reference fields. `TDD-0460` is read-only. The impact audit
   screened 526 ledger rows and found no direct row in another spec.
-- Related CRs: `CR-20260924-0002` and `CR-20260925-0003` were applied
+- Related CRs: `CR-20260924-0006` and `CR-20260925-0003` were applied
   before this rerun. Neither authorized this reference representation decision.
 - The schema/parser rows and shipped-skill rows above are included for every
   option: each option changes the producer and the shipped reference schema.
@@ -169,7 +169,7 @@ an existence observation can be refused without guessing from its spelling.
 
 ## Approved actions (owner skill rerun plan)
 
-1. After `CR-20260924-0002` is applied, run
+1. After `CR-20260924-0006` is applied, run
    `/qfai-sdd --contract .qfai/contracts/cli/qfai-workflow.md` and
    `/qfai-sdd --contract .qfai/contracts/cli/workflow-files.schema.md` in
    `re-derive` mode for the

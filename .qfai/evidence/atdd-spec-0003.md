@@ -581,7 +581,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Checkpoint verification revision: 6368454b0f56a50611aa309f82eb80e8cc35b758
 - Checkpoint verification seal: ecd5b72e49e725620486d0370fe1c18deab941ccc61d2159b62402b80904256f
 
-### TDD-0093
+### TDD-0094
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -592,7 +592,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
 
-### TDD-0094
+### TDD-0095
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -604,7 +604,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
 - An upgrade adds `.qfai/runs/` to an existing block that lacks it; every other ignore line keeps the rule that init never re-adds one the block does not have.
 
-### TDD-0095
+### TDD-0096
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -615,7 +615,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/windowsParity.test.ts`
 
-### TDD-0096
+### TDD-0097
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -626,7 +626,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/process/workflows/`, `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
 
-### TDD-0097
+### TDD-0098
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -638,7 +638,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
 - The test carries only this spec's annotation. The spec-0018 host-adapter case it also discharges is an open row of that spec, whose ledger this change does not edit.
 
-### TDD-0098
+### TDD-0099
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -649,7 +649,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
 
-### TDD-0099
+### TDD-0100
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -660,7 +660,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
 
-### TDD-0108
+### TDD-0109
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -671,7 +671,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`process/workflows` in `GOVERNED_ASSISTANT_LAYERS`, the `governedLayerOf` helper, the lock-key parse through it, the layer-root boundary for a two-segment layer), `packages/qfai/src/core/governedAssistantManifest.ts` and `packages/qfai/scripts/generate-governed-assistant-manifest.mjs` (the build-time list of shipped governed files), `packages/qfai/src/core/paths/assistantPaths.ts` (`joinAssistantLayer` takes a two-segment layer), `packages/qfai/src/cli/commands/init.ts` (the copy exclusion now routes the plans to the governed writer), `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/core/assistantAssetProvenance.test.ts` (its fixture copies every governed layer)
 
-### TDD-0109
+### TDD-0110
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -680,10 +680,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo' --reporter=verbose`
 - RED result: exit 1; `AssertionError: expected Buffer[ 35, 32, 65, 110, 32, 101, …(-50) ] to deeply equal Buffer[ 114, 111, 117, 116, 101, …(193) ]` (the older plan kept its earlier body)
 - GREEN result: exit 0; 1 passed (1)
-- Changed files: as TDD-0108, plus `packages/qfai/src/cli/commands/init.ts` (an unmodified plan is refreshed on a plain run, not only under `--force`) and `packages/qfai/tests/integration/init/upgradeStates.ts` (overlays `older-plan`, `edited-plan`, `edited-memo`)
+- Changed files: as TDD-0109, plus `packages/qfai/src/cli/commands/init.ts` (an unmodified plan is refreshed on a plain run, not only under `--force`) and `packages/qfai/tests/integration/init/upgradeStates.ts` (overlays `older-plan`, `edited-plan`, `edited-memo`)
 - Design choice: the plain-run refresh applies to the plans layer only. `constitution/` and `catalog/` keep refreshing under `--force` alone, which is the behaviour BR-0003-0053 leaves untouched.
 
-### TDD-0111
+### TDD-0112
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -694,7 +694,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1), with the plans governed and the lock carrying the package version
 - Changed files: `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` now captures the report written to stdout, and the case asserts the summary was captured)
 
-### TDD-0112
+### TDD-0113
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -704,9 +704,9 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED result: exit 1; `AssertionError: expected undefined to be '1.12.2' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`packageVersion` in the lock), `packages/qfai/src/cli/commands/init.ts` (the governed sync writes the running version), `packages/qfai/tests/integration/init/upgradeRecord.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `older-lock`)
-- The conflict list BR-0003-0054 also records is TDD-0113, which waits for the correspondence check.
+- The conflict list BR-0003-0054 also records is TDD-0114, which waits for the correspondence check.
 
-### TDD-0114
+### TDD-0115
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -717,7 +717,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1), with the two-segment `process/workflows/…` keys
 - Changed files: `packages/qfai/tests/integration/init/windowsParity.test.ts`
 
-### TDD-0119
+### TDD-0120
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -728,7 +728,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `absent-route`)
 
-### TDD-0123
+### TDD-0124
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -739,7 +739,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/cli/commands/init.ts` (`countDifferingSkills` and the summary line), `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stdout)
 
-### TDD-0100
+### TDD-0101
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -750,7 +750,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/root/AGENTS.md` and `packages/qfai/assets/init/root/CLAUDE.md` (the entry directive as their first line), `packages/qfai/src/core/agentEntryPoints.ts` (`addEntryPointDirectives`; the operative-copy scan reads the code spans the directive itself holds as visible text), `packages/qfai/src/cli/commands/init.ts` (the directives go through the entry-point writer, and its report names each directive it added), `packages/qfai/tests/integration/init/entryDirective.test.ts`
 
-### TDD-0101
+### TDD-0102
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -759,10 +759,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept' --reporter=verbose`
 - RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
-- Changed files: as TDD-0100
+- Changed files: as TDD-0101
 - The entry directive is followed by the line break alone, so the project's bytes start on the next line. The review directive keeps its blank line.
 
-### TDD-0102
+### TDD-0103
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -771,10 +771,10 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0068: Entry directive with and without REVIEW.md' --reporter=verbose`
 - RED result: exit 1; `AssertionError: AGENTS.md carries the entry directive: expected [] to have a length of 1 but got +0`
 - GREEN result: exit 0; 1 passed (1)
-- Changed files: as TDD-0100, plus the existing entry-point tests in `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, whose projects now keep a `REVIEW.md` where they expect the review directive
+- Changed files: as TDD-0101, plus the existing entry-point tests in `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, whose projects now keep a `REVIEW.md` where they expect the review directive
 - Design choice: follows TC-0003-0068 over the previous unconditional behaviour. Init adds the review directive to an existing entry point only when the project has `REVIEW.md`. A fresh copy of the template still carries it, as the template's own sentence is conditional on the file.
 
-### TDD-0103
+### TDD-0104
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -783,9 +783,9 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence' --reporter=verbose`
 - RED result: exit 1; `AssertionError: the shipped AGENTS.md carries the entry directive: expected undefined to be defined`
 - GREEN result: exit 0; 1 passed (1)
-- Changed files: as TDD-0100
+- Changed files: as TDD-0101
 
-### TDD-0104
+### TDD-0105
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -796,7 +796,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/entryDirective.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stderr, where the refusal is written)
 
-### TDD-0105
+### TDD-0106
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -807,27 +807,27 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 3 passed (3)
 - Changed files: `packages/qfai/src/cli/commands/init.ts` (`workflowModeLine` after the run report), `packages/qfai/tests/integration/init/modeLine.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` takes `yes`)
 
-### TDD-0106
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: Integration
-- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
-- Selector: `TC-0003-0072: Upgrade with no mode key: config unchanged, mode active`
-- RED command (cwd `packages/qfai`): as TDD-0105
-- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config was already byte-identical)
-- GREEN result: exit 0; 3 passed (3)
-- Changed files: as TDD-0105
-
 ### TDD-0107
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0072: Upgrade with no mode key: config unchanged, mode active`
+- RED command (cwd `packages/qfai`): as TDD-0106
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config was already byte-identical)
+- GREEN result: exit 0; 3 passed (3)
+- Changed files: as TDD-0106
+
+### TDD-0108
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
 - Selector: `TC-0003-0073: Mode line for active, shadow, off and an invalid value`
-- RED command (cwd `packages/qfai`): as TDD-0105
+- RED command (cwd `packages/qfai`): as TDD-0106
 - RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` on the first of the four installs
 - GREEN result: exit 0; 3 passed (3); the invalid value prints `Workflow mode: "bogus" is invalid; expected active, shadow or off`
-- Changed files: as TDD-0105
+- Changed files: as TDD-0106
 
 ## Coverage Depth Matrix
 

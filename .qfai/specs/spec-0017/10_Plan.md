@@ -139,17 +139,17 @@ lane and its command. They serve NFR-0011 of
 `discussion-20260923171450572`.
 
 Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implementation order`. Everything here is **U5**. It lands after U1 and U4,
-once every suite entry resolves (BR-0017-0073), and does not wait for U6:
+once every suite entry resolves (BR-0017-0074), and does not wait for U6:
 
 - In `.github/workflows/ci.yml`, a `windows-parity` job:
   - it needs `detect` with the `test` job's condition, and is listed in
-    `ci-pass`'s `needs` (BR-0017-0071);
+    `ci-pass`'s `needs` (BR-0017-0072);
   - `permissions: contents: read`, SHA pins and the shared setup action;
-  - an in-job build (BR-0017-0072), and `TEMP` and `TMP` under a path with a
+  - an in-job build (BR-0017-0073), and `TEMP` and `TMP` under a path with a
     space;
   - a `SHIPPED-CI: not-applicable` marker.
 - `test:windows-parity` in `packages/qfai/package.json`, listing exactly the
-  declared suites (BR-0017-0070).
+  declared suites (BR-0017-0071).
 - The job's entry in the expected-context declaration.
 
 Left out: the eval runner and its no-workflow guard (spec-0018); any change to
@@ -200,7 +200,7 @@ Levels follow `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure
 
 | Layer       | What it proves                                                                                                                                                              | Where                                                                  |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| integration | TC-0017-0093..0099 over the parsed `ci.yml` and `test:windows-parity` script: the suite list and its resolution, the temp root, detection and the verdict, the in-job build | `packages/qfai/tests/integration/windowsParity/`, one module per BR    |
+| integration | TC-0017-0094..0099 over the parsed `ci.yml` and `test:windows-parity` script: the suite list and its resolution, the temp root, detection and the verdict, the in-job build | `packages/qfai/tests/integration/windowsParity/`, one module per BR    |
 | E2E         | US-0017-0016, one annotated describe                                                                                                                                        | a new file, `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts` |
 
 These cases read the workflow tree and the package script. What the job did at run time is
@@ -211,19 +211,19 @@ DR-0017-0024.
 
 | Module under `tests/integration/windowsParity/` | BR           | Cases                      |
 | ----------------------------------------------- | ------------ | -------------------------- |
-| `suiteList.test.ts`                             | BR-0017-0070 | TC-0017-0093, TC-0017-0095 |
-| `selectionAndVerdict.test.ts`                   | BR-0017-0071 | TC-0017-0096, TC-0017-0097 |
-| `inJobBuild.test.ts`                            | BR-0017-0072 | TC-0017-0098, TC-0017-0099 |
-| `suitesLandFirst.test.ts`                       | BR-0017-0073 | TC-0017-0094               |
+| `suiteList.test.ts`                             | BR-0017-0071 | TC-0017-0094, TC-0017-0096 |
+| `selectionAndVerdict.test.ts`                   | BR-0017-0072 | TC-0017-0097, TC-0017-0098 |
+| `inJobBuild.test.ts`                            | BR-0017-0073 | TC-0017-0099, TC-0017-0100 |
+| `suitesLandFirst.test.ts`                       | BR-0017-0074 | TC-0017-0095               |
 
 **Cases that stand alone.**
 
-- **The suite list is compared both ways** (TC-0017-0093), so an extra suite fails as a
+- **The suite list is compared both ways** (TC-0017-0094), so an extra suite fails as a
   missing one does.
-- **Each list entry resolves to a collected test file** (TC-0017-0094). vitest stays green
+- **Each list entry resolves to a collected test file** (TC-0017-0095). vitest stays green
   when one of several filters matches nothing, so without this case a renamed directory
   shrinks the suite silently.
-- **The kept failure** is TC-0017-0097: the real `ci-pass` body, run over a needs map in
+- **The kept failure** is TC-0017-0098: the real `ci-pass` body, run over a needs map in
   which only the Windows job failed, exits 1. It is integration, not unit, because its oracle
   needs the job's real name and the real body. A unit row could never be taken RED, since the
   verdict already fails on any failing need.
@@ -245,8 +245,8 @@ DR-0017-0024.
 init suite are green, per `### Order in which the rows go green` there, and does not wait for
 the journeys. It lands only in the change where every suite entry has a test file:
 `tests/unit/workflow/` and `tests/integration/workflow/` (spec-0018), and
-`tests/integration/init/` (spec-0003). Landing it earlier fails TC-0017-0094 by design
-(BR-0017-0073). The E2E journey lands with the job.
+`tests/integration/init/` (spec-0003). Landing it earlier fails TC-0017-0095 by design
+(BR-0017-0074). The E2E journey lands with the job.
 
 **Windows parity, as the job runs it.**
 
@@ -255,7 +255,7 @@ the journeys. It lands only in the change where every suite entry has a test fil
 - Links a case needs are made at run time in its temp root. No tracked link is on the suite
   list, so the checkout needs no `core.symlinks` step.
 - The temp root comes from the environment: the job points `TEMP` and `TMP` at a directory
-  whose name contains a space (TC-0017-0095), and every case reads it through `os.tmpdir()`.
+  whose name contains a space (TC-0017-0096), and every case reads it through `os.tmpdir()`.
 - A case that is red on the trial run is classed as platform-inapplicable, a parity defect or
   a test defect, and none leaves the list.
 
@@ -268,7 +268,7 @@ infrastructure to `T2`. The older rows of this ledger keep the tier they were se
 | Finding                                                                                                           | Why it is expected                                                                                                                                                                              | Until                                                                                                           |
 | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `QFAI-ATDD-111` for US-0017-0016                                                                                  | The journey file does not exist yet                                                                                                                                                             | The job and its journey land                                                                                    |
-| `QFAI-ATDD-112` for TC-0017-0093..0099                                                                            | The integration tests do not exist yet                                                                                                                                                          | ATDD writes them                                                                                                |
+| `QFAI-ATDD-112` for TC-0017-0094..0099                                                                            | The integration tests do not exist yet                                                                                                                                                          | ATDD writes them                                                                                                |
 | `QFAI-TRACE-001` × 3: BR-0017-0068 and BR-0017-0069 on `release.yml`, and BR-0017-0069 on the root `package.json` | This spec's `03` and `04` changed and those files did not. The user accepted them as known (Y1 = A). CI never reports them: the `build` job has no `origin/main`, so the check is skipped there | A change that narrows the check to changed BRs. Revisit if the count differs, or if `build` gains `origin/main` |
 | The `tdd` pin of 140 errors on `tdd/test-list.md`                                                                 | Pre-existing; this change appends rows and repairs none                                                                                                                                         | A later change that repairs them                                                                                |
 
@@ -320,7 +320,7 @@ log is read against that list.
 - **`discussion-20260923171450572#NFR-0011`, own-CI half: the control-core suites and the init and
   migration suites run on Windows on every code-path pull request.** Met by the `windows-parity`
   job, which runs the `test:windows-parity` list under a temp root with a space and builds the
-  package on its own runner (BR-0017-0070..0072). Breach: a red `windows-parity`, read on `ci-pass`
+  package on its own runner (BR-0017-0071..0072). Breach: a red `windows-parity`, read on `ci-pass`
   because the job gates no merge (the risk row below). The trial run's per-suite counts and
   timings, recorded in DR-0017-0024, are the baseline a later run is compared with.
 - **NFR-0001 and NFR-0002 for the added job.** A documentation-only pull request skips the job, so

@@ -1457,7 +1457,7 @@
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
 - Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
 
-## TC-0012-0489
+## TC-0012-0491
 
 - EX-Ref: EX-0012-0192
 - AC-Refs: AC-0012-0176
@@ -1465,7 +1465,7 @@
 - Level: L3
 - Verify the entry check: the shipped `qfai-prototyping/SKILL.md` has exactly one line citing `references/orchestrated-mode.md`, and that reference cites the entry check of the shared operating baseline.
 
-## TC-0012-0490
+## TC-0012-0492
 
 - EX-Ref: EX-0012-0193
 - AC-Refs: AC-0012-0177
@@ -1473,7 +1473,7 @@
 - Level: L3
 - Verify the Operations table: in the shipped `qfai-prototyping/references/orchestrated-mode.md`, the first table under `## Operations` has a first column headed `Operation` whose backticked IDs are exactly the set the test holds, `existing-runtime-contract`.
 
-## TC-0012-0491
+## TC-0012-0493
 
 - EX-Ref: EX-0012-0194
 - AC-Refs: AC-0012-0178
@@ -1481,7 +1481,7 @@
 - Level: L3
 - Verify the work-order scope: the shipped `qfai-prototyping/references/orchestrated-mode.md` states that under a work order the skill works only on the spec its `target` names, settles the one visual decision within the existing `DESIGN.md` and contracts, and creates no contract, and that a standalone invocation still resolves every UI-bearing spec.
 
-## TC-0012-0492
+## TC-0012-0494
 
 - EX-Ref: EX-0012-0195
 - AC-Refs: AC-0012-0178

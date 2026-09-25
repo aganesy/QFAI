@@ -147,46 +147,46 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 
 ## Ledger rows advanced
 
-### TDD-0563
+### TDD-0579
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
-- Selector: `TC-0012-0490 (TDD-0563): The Operations table lists exactly existing-runtime-contract`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingOperationsSpec0012.test.ts --testNamePattern='TC-0012-0490 \(TDD-0563\): The Operations table lists exactly existing-runtime-contract' --reporter=verbose`
+- Selector: `TC-0012-0492 (TDD-0579): The Operations table lists exactly existing-runtime-contract`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingOperationsSpec0012.test.ts --testNamePattern='TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract' --reporter=verbose`
 - RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the Operations table landed with the plan skills' orchestrated-mode references before this test was written
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
 
-### TDD-0564
+### TDD-0580
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
-- Selector: `TC-0012-0491 (TDD-0564): A work order confines the stage to its target spec`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0491 \(TDD-0564\): A work order confines the stage to its target spec' --reporter=verbose`
+- Selector: `TC-0012-0493 (TDD-0580): A work order confines the stage to its target spec`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec' --reporter=verbose`
 - RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
 
-### TDD-0565
+### TDD-0581
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
-- Selector: `TC-0012-0492 (TDD-0565): A target that is not UI-bearing is returned blocked`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0492 \(TDD-0565\): A target that is not UI-bearing is returned blocked' --reporter=verbose`
+- Selector: `TC-0012-0494 (TDD-0581): A target that is not UI-bearing is returned blocked`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked' --reporter=verbose`
 - RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
 
-### TDD-0562
+### TDD-0578
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
-- Selector: `TC-0012-0489 (TDD-0562): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0489 \(TDD-0562\)' --reporter=verbose`
+- Selector: `TC-0012-0491 (TDD-0578): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0491 \(TDD-0578\)' --reporter=verbose`
 - RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the citation line and the reference landed with the plan skills' orchestrated-mode references
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
@@ -215,7 +215,7 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - GREEN result: exit 0; 3 passed | 105 skipped (108)
 - Changed files: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 
-### TDD-0567
+### TDD-0583
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration

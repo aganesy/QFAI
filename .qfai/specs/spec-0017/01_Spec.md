@@ -147,8 +147,8 @@ something else in the list above:
 - `discussion-20260923171450572#NFR-0011`, own-CI half: the control-core suites and the init
   and migration suites run on `windows-latest` on every code-path pull request, and the
   aggregate verdict fails when they fail. The property itself is held by those suites (their
-  owners are named under `### Out`); this spec holds the job that runs them: BR-0017-0070,
-  BR-0017-0071, BR-0017-0072 and BR-0017-0073.
+  owners are named under `### Out`); this spec holds the job that runs them: BR-0017-0071,
+  BR-0017-0072, BR-0017-0073 and BR-0017-0074.
 
 ## Applicable Policy
 
@@ -336,7 +336,7 @@ The requirement of this spec's row in `## Triage (2026-09-24 intent-driven entry
 
 | Requirement                             | Home                                                                                  |
 | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0017-0070, BR-0017-0071, BR-0017-0072, BR-0017-0073 |
+| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0017-0071, BR-0017-0072, BR-0017-0073, BR-0017-0074 |
 
 ## Entry points
 

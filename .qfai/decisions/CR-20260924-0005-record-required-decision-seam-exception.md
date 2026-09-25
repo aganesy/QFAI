@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0001`
+- ID: `CR-20260924-0005`
 - Title: `Record the required decision seam exception in the implementation plan`
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-24T09:46:02Z`

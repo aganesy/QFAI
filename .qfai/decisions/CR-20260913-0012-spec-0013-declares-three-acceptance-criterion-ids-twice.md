@@ -235,7 +235,7 @@ first AC-0013-0008/0009/0010 headings retain their IDs; the contradictory
 second AC-0013-0008 and superseded second AC-0013-0010 are removed with
 REQ-0014 and REQ-0016..0018. The live optional side-artifact criterion is
 AC-0013-0042, with BR-0013-0021, EX-0013-0021, TC-0013-0036 and
-TC-0013-0037. Phase 2b seeded TDD-0061 and TDD-0062 at `todo` with this CR
+TC-0013-0037. Phase 2b seeded TDD-0129 and TDD-0130 at `todo` with this CR
 in `DR-ID`. No existing row changed status, obligation or evidence. The
 Plan's obsolete duplicate-ID pin and pending-application statements were
 removed as direct consequences of the chosen option.
