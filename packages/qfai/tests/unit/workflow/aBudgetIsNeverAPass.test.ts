@@ -70,8 +70,9 @@ it("TC-0018-0155 (TDD-0209): Four replans in one run", () => {
   const fourth = decisions[3]?.verdict;
   const blockedRun = fourth?.run;
   if (!blockedRun) throw new Error("the fourth replan returns the run");
+  const { outstandingWorkOrder: _issued, ...diagnosed } = diagnosing(3);
   const finished = decide(
-    { ...diagnosing(3), run: blockedRun, outstandingWorkOrder: undefined },
+    { ...diagnosed, run: blockedRun },
     { operation: "finish" },
     { completion: completion() },
   );

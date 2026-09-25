@@ -144,9 +144,10 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
     completion: {
       ...completion(),
       verifyReport: {
-        ...completion().verifyReport,
         runId: run.id,
         stageInstanceId: "direct-verify",
+        status: "PASS",
+        scope: "full",
       },
       changedPaths: ["README.md"],
     },

@@ -531,7 +531,7 @@ for (const [title, state] of [
   ["TC-0018-0149 (TDD-0201): completed", "completed"],
   ["TC-0018-0149 (TDD-0202): cancelled", "cancelled"],
   ["TC-0018-0149 (TDD-0203): failed", "failed"],
-]) {
+] satisfies [string, string][]) {
   it(title, () => {
     const snapshot = inState(state);
     const outcomes = [

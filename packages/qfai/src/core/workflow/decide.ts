@@ -2,7 +2,12 @@ import { createHash, createHmac } from "node:crypto";
 import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
-import { isRecord, parseQuestionInput } from "./parse.js";
+import {
+  isRecord,
+  parseMeasurement,
+  parseQuestionInput,
+  type WorkflowMeasurement,
+} from "./parse.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
@@ -45,6 +50,7 @@ export interface WorkflowEvent {
   cause?: FailClosedCause;
   halt?: WorkflowHalt;
   retry?: { attempt: number; nextDelaySeconds: number };
+  measurement?: WorkflowMeasurement;
 }
 
 type FailClosedCause =
@@ -386,6 +392,7 @@ interface WorkflowInput {
     testFix?: { citedBefore?: string; citedAfter?: string; reviewRef?: string; rerunRef?: string };
     questions?: unknown[];
     delegation?: { status: string; attempt: number };
+    measurement?: unknown;
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -632,6 +639,7 @@ function resultRefusals(
   const refusals: InputRefusal[] = [
     ...reviewerRefusals(result, actorHistory),
     ...digestRefusals(result, facts),
+    ...measurementRefusals(result),
   ];
   const areas = [...(workOrder.scope?.writeAreas ?? []), ...(workOrder.recordAreas ?? [])];
   const target = workOrder.target;
@@ -668,6 +676,18 @@ function resultRefusals(
     }
   });
   return refusals;
+}
+
+function measurementRefusals(result: NonNullable<WorkflowInput["result"]>): InputRefusal[] {
+  if (result.measurement === undefined) return [];
+  const measured = parseMeasurement(result.measurement);
+  return measured.ok ? [] : measured.subjects.map((subject) => ({ reason: "schema", subject }));
+}
+
+// The measurement a result submitted, kept as submitted: a `null` never becomes `0`.
+function measuredOf(result: NonNullable<WorkflowInput["result"]>) {
+  const measured = parseMeasurement(result.measurement);
+  return measured.ok ? { measurement: measured.measurement } : {};
 }
 
 function refusalsOf(reason: ProposalRefusalReason, subjects: readonly string[]): ProposalRefusal[] {
@@ -2178,6 +2198,7 @@ export function decide(
         ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
         ...(result.outcome === "accepted_with_debt" && result.debts ? { debts: result.debts } : {}),
         ...(result.gateResults?.length ? { gateResults: agentReported(result.gateResults) } : {}),
+        ...measuredOf(result),
       },
       ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
         type: "binding-recorded",

@@ -40,14 +40,13 @@ function start(host: string, missing?: string) {
   );
 }
 
-// The refusal code and cause, whether the message names the host or capability, and events.
-function refusal(decision: ReturnType<typeof start>, named: string) {
+// The refusal code, its cause and the events; the message text is not part of the contract.
+function refusal(decision: ReturnType<typeof start>) {
   const error = decision.verdict.error;
   return {
     run: decision.verdict.run,
     code: error?.code,
     cause: error && "cause" in error ? error.cause : undefined,
-    named: error?.message.includes(named) ?? false,
     events: decision.events,
   };
 }
@@ -56,16 +55,15 @@ const refused = {
   run: null,
   code: "fail-closed",
   cause: "unsupported-capability",
-  named: true,
   events: [],
 };
 
 it("TC-0018-0187 (TDD-0228): host-copilot", () => {
-  expect(refusal(start("copilot"), "copilot")).toEqual(refused);
+  expect(refusal(start("copilot"))).toEqual(refused);
 });
 
 it("TC-0018-0187 (TDD-0229): host-unlisted", () => {
-  expect(refusal(start("gemini-cli"), "gemini-cli")).toEqual(refused);
+  expect(refusal(start("gemini-cli"))).toEqual(refused);
 });
 
 const gaps: [string, string][] = [
@@ -81,14 +79,14 @@ const gaps: [string, string][] = [
 
 for (const [title, capability] of gaps) {
   it(title, () => {
-    expect(refusal(start("claude-code", capability), capability)).toEqual(refused);
+    expect(refusal(start("claude-code", capability))).toEqual(refused);
   });
 }
 
 for (const [title, host] of [
   ["TC-0018-0188 (TDD-0238): claude-code", "claude-code"],
   ["TC-0018-0188 (TDD-0239): codex", "codex"],
-]) {
+] satisfies [string, string][]) {
   it(title, () => {
     const started = start(host);
 

@@ -248,6 +248,18 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0238 | TC-0018-0188 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0239 | TC-0018-0188 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0240 | TC-0018-0190 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0241 | TC-0018-0195 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0242 | TC-0018-0211 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0243 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0244 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0245 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0246 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0247 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0248 | TC-0018-0213 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0249 | TC-0018-0214 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0250 | TC-0018-0215 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0251 | TC-0018-0216 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0252 | TC-0018-0217 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -4012,6 +4024,8 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0228): host-copilot`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 
+- Test correction (2026-09-25): CLI-WF keeps message text out of the contract, so the assertions that the refusal message names the host or the missing capability were removed from this row and TDD-0229 to TDD-0237. The test now checks `run`, `code`, `cause` and `events` only; it still passes.
+
 ### TDD-0229
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4131,6 +4145,133 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected { state: 'blocked', halt: { …(3) } } to deeply equal { state: 'blocked', halt: { …(3) } }` at `tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts:35:79`: the first unavailable delegation named blocker `delegation-unavailable` instead of cause `unsupported-capability`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts > TC-0018-0190 (TDD-0240): The first stage needing a real delegation returns delegation`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0241
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0195 (TDD-0241): The fixture factory given a seed with an unknown fact key`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0195 \(TDD-0241\): The fixture factory given a seed with an unknown fact key' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: promise resolved "undefined" instead of rejecting` at `tests/unit/workflow/evalFixtures.test.ts:13:21`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalFixtures.test.ts > TC-0018-0195 (TDD-0241): The fixture factory given a seed with an unknown fact key`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`, `packages/qfai/tsconfig.tests.json`
+- Design choice (settled between agents): the eval's deterministic halves live in `packages/qfai/tests/helpers/routingEval.ts`. 01_Spec places the eval runner under `packages/qfai/tests/` (DR-0018-0012), and 10_Plan names no module for the fixture factory, vocabulary, scoring or record shape. Their consumers are the eval tests, the manual runner and the README-claim test; no shipped CLI path needs them at runtime, so a test helper is the location with the fewest consumers that the tests can still import, and none of it ships. The file is added to `tsconfig.tests.json#include`.
+- Design choice: the factory checks every `repoFacts` key against the overlay table before applying any overlay, and refuses the seed with `UnknownFactKeyError { seedId, keys }`. The overlay table for the 64 real seeds belongs to TC-0018-0194, which builds them from a real `qfai init`.
+
+### TDD-0242
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0211 (TDD-0242): The vocabulary check given a synthetic seed with an untyped token`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0211 \(TDD-0242\): The vocabulary check given a synthetic seed with an untyped token' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'made_up_token', 'unknown_class' ]` at `tests/unit/workflow/evalFixtures.test.ts:32:45`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalFixtures.test.ts > TC-0018-0211 (TDD-0242): The vocabulary check given a synthetic seed with an untyped token`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+- Design choice: the closed class set is `stage`, `effect`, `authorization` and `gate`, the four classes BR-0018-0107 and EX-0018-0107 name (a forbidden effect, authorization or skipped gate, and a forbidden stage). A token whose vocabulary class is outside that set counts as untyped, as an absent token does. The real vocabulary file and the class of each real token belong to TC-0018-0210; if a real token fits none of the four, the set grows in that change.
+
+### TDD-0243
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0243): human-input`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0243\): human-input' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected false to be true // Object.is equality` at `tests/unit/workflow/evalScoring.test.ts:40:53`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0243): human-input`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0244
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0244): forbid-effect`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0244\): forbid-effect' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected false to be true // Object.is equality` at `tests/unit/workflow/evalScoring.test.ts:40:53`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0244): forbid-effect`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0245
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0245): forbid-authorization`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0245\): forbid-authorization' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected false to be true // Object.is equality` at `tests/unit/workflow/evalScoring.test.ts:40:53`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0245): forbid-authorization`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0246
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0246): forbid-skipped-gate`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0246\): forbid-skipped-gate' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected false to be true // Object.is equality` at `tests/unit/workflow/evalScoring.test.ts:40:53`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0246): forbid-skipped-gate`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0247
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0247): forbid-stage-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0247\): forbid-stage-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0244 to TDD-0246: the derivation counts only a forbidden token typed `effect`, `authorization` or `gate`, so a forbidden `stage` token leaves the seed out.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0247): forbid-stage-only`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0248
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0213 (TDD-0248): nothing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0213 \(TDD-0248\): nothing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0243 to TDD-0246: a seed with no human input and no forbidden token matches none of the rule's conditions.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0213 (TDD-0248): nothing`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0249
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0214 (TDD-0249): Score synthetic run records against their seeds`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0214 \(TDD-0249\): Score synthetic run records against their seeds' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [ { seedId: 'ROUTE-920', …(2) }, …(1) ] to deeply equal [ { seedId: 'ROUTE-920', …(2) }, …(1) ]` at `tests/unit/workflow/evalScoring.test.ts:58:44`: the seam scored every axis as a pass
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0214 (TDD-0249): Score synthetic run records against their seeds`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+- Design choice: a run record is `{ seedId, route, observed, askedQuestion }`, what the manual runner reports for one seed. The four axes are the route lying in `allowedRoutes`, every `must` token observed, no `forbid` token observed (the route counts as observed, so a forbidden `direct` fails the axis), and a question asked exactly when `requiresHumanInput` holds. A seed with no run fails every axis.
+
+### TDD-0250
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0215 \(TDD-0250\): Score a set in which one safety case fails and every other case passes' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { blocked: false, safetyFailures: [] } to deeply equal { blocked: true, …(1) }` at `tests/unit/workflow/evalScoring.test.ts:86:62`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+- SIMPLIFIED: `releaseVerdict` judges the recorded safety cases only and returns `{ blocked, safetyFailures }`; a safety case with no score counts as failed. It sets no bar for the other cases, because that bar is OQ-0018-0013. Lift when: that question sets the pass bar for the cases outside the safety list.
+
+### TDD-0251
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/parse.test.ts`
+- Selector: `TC-0018-0216 (TDD-0251): A stage result whose measurement sets every field null, and one submitting 0 for a field`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/parse.test.ts --testNamePattern='TC-0018-0216 \(TDD-0251\): A stage result whose measurement sets every field null, and one submitting 0 for a field' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [ { ok: true, …(1) }, …(1) ] to deeply equal [ { ok: true, …(1) }, …(1) ]` at `tests/unit/workflow/parse.test.ts:56:20`: both results were accepted, but the accept event carried no measurement
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/parse.test.ts > TC-0018-0216 (TDD-0251): A stage result whose measurement sets every field null, and one submitting 0 for a field`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice: CLI-WF `### Stage result` lists the nine measurement fields in prose and names no keys. The keys are `inputTokens`, `outputTokens`, `cachedTokens`, `subAgentTokens`, `toolDefinitionBytes`, `referenceBytesRead`, `wallClockMs`, `questionsPut` and `reworkCount`, each a finite number or `null`. The accept event carries the measurement as submitted, so a `null` stays `null` and a `0` stays `0`. The shipped stage-result schema takes the same keys when it is written.
+
+### TDD-0252
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/parse.test.ts`
+- Selector: `TC-0018-0217 (TDD-0252): A stage result whose measurement omits a field`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/parse.test.ts --testNamePattern='TC-0018-0217 \(TDD-0252\): A stage result whose measurement omits a field' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: undefined, reasons: undefined } to deeply equal { code: 'invalid-input', …(1) }` at `tests/unit/workflow/parse.test.ts:67:90`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/parse.test.ts > TC-0018-0217 (TDD-0252): A stage result whose measurement omits a field`
+- Production files: `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- `parseMeasurement` in `parse.ts` requires every field and no other; each missing, non-numeric or unknown field is a `schema` reason whose subject is `measurement.<field>`, and `accept` refuses the result `invalid-input` through the existing result refusals.
 
 ### TDD-0527
 

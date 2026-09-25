@@ -165,3 +165,45 @@ function parseDecisionQuestion(value: unknown): DecisionQuestionInput | undefine
     ...(typeof recommendation === "string" ? { recommendation } : {}),
   };
 }
+
+// Each field is a number, or `null` where the host exposes nothing; never `0` in its place.
+const MEASUREMENT_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cachedTokens",
+  "subAgentTokens",
+  "toolDefinitionBytes",
+  "referenceBytesRead",
+  "wallClockMs",
+  "questionsPut",
+  "reworkCount",
+] as const;
+
+export type WorkflowMeasurement = Record<(typeof MEASUREMENT_FIELDS)[number], number | null>;
+
+export type ParsedMeasurement =
+  { ok: true; measurement: WorkflowMeasurement } | { ok: false; subjects: string[] };
+
+function isMeasured(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function measurementSubjects(value: Record<string, unknown>): string[] {
+  const known: readonly string[] = MEASUREMENT_FIELDS;
+  return [
+    ...MEASUREMENT_FIELDS.filter(
+      (field) => !Object.hasOwn(value, field) || !isMeasured(value[field]),
+    ),
+    ...Object.keys(value).filter((key) => !known.includes(key)),
+  ].map((field) => `measurement.${field}`);
+}
+
+function isMeasurement(value: unknown): value is WorkflowMeasurement {
+  return isRecord(value) && measurementSubjects(value).length === 0;
+}
+
+/** Requires every field and no other, each a number or `null`, and keeps the values as submitted. */
+export function parseMeasurement(value: unknown): ParsedMeasurement {
+  if (isMeasurement(value)) return { ok: true, measurement: value };
+  return { ok: false, subjects: isRecord(value) ? measurementSubjects(value) : ["measurement"] };
+}
