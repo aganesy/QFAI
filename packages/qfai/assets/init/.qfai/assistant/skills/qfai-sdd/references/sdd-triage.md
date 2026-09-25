@@ -197,6 +197,18 @@ A single requirement frequently affects multiple specs. The agent MUST:
      allocation reissues it
      (`spec-traceability-rules.md#tdd-execution-ledger`). This path raises no
      Change Request, so its tombstone cites the Triage row, not a `CR-*`.
+     One removal touches every place the item is written. Make all of these
+     edits in the same pass:
+     1. Its row in `04_Business-Rules.md`, `05_Examples.md` or
+        `06_Test-Cases.md`.
+     2. The items it leaves unreferenced. A BR whose last EX goes fails
+        `QFAI-COV-202`, and an EX whose last TC goes fails `QFAI-COV-203`.
+        Remove each such item in the same row, or give it a new reference.
+     3. The ledger row of each removed coverage-target `TC` in
+        `tdd/test-list.md`, with the tombstone above.
+     4. The TC annotation in test code. A leftover one fails `QFAI-ATDD-102`.
+        `/qfai-sdd` does not edit tests, so name each test's owner in this
+        row, as `sdd-phase-checklists.md` asks for any deleted ledger row.
    - Glossary / contract impact → record in `_policies/10_delta.md`.
 3. Emit one Triage row per affected spec. The same `Source` (REQ ID) may
    appear on multiple rows — this is the canonical cascade pattern.

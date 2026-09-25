@@ -12,6 +12,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The Triage enum errors list the values they accept** (#2263).
+  `QFAI-TRIAGE-003` and `QFAI-TRIAGE-004` now name every allowed Operation
+  or Sub-op in the message, in English. When the Operation cell holds a Sub-op
+  word such as `REMOVE`, or the `UPDATE:REMOVE` shorthand, the fix says to
+  write `UPDATE` in Operation and the word in Sub-op. The `qfai-sdd` triage
+  reference now lists every place one item removal has to touch.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

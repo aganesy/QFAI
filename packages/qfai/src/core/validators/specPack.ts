@@ -741,6 +741,29 @@ function findOperationObjectItemIds(subject: string): string[] {
 const TRIAGE_TOP_LEVEL_LABELS = new Set<string>([...TRIAGE_TOP_LEVEL_OPS, "UPDATE"]);
 const TRIAGE_SUB_OPS = new Set<string>(TRIAGE_UPDATE_SUBOPS);
 
+/** Every value the `Operation` cell accepts, in the order the skill lists them. */
+const TRIAGE_OPERATION_LABELS = [
+  "CREATE",
+  "UPDATE",
+  "DELETE",
+  "SPLIT",
+  "MERGE",
+  "SUPERSEDE",
+] as const;
+
+/**
+ * Remediation for a rejected `Operation` cell. A Sub-op word (`REMOVE`) or the
+ * colon shorthand (`UPDATE:REMOVE`) names an UPDATE, so the fix names the two
+ * cells it belongs in rather than the list alone.
+ */
+function triageOperationFix(opUpper: string): string {
+  const subOp = opUpper.startsWith("UPDATE:") ? opUpper.slice("UPDATE:".length).trim() : opUpper;
+  if (isTriageUpdateSubOp(subOp)) {
+    return `Write Operation = UPDATE and Sub-op = ${subOp}. ${subOp} is a Sub-op, not an Operation.`;
+  }
+  return `Set Operation to one of ${TRIAGE_OPERATION_LABELS.join(" / ")}. To change items inside a spec, write Operation = UPDATE and put ${TRIAGE_UPDATE_SUBOPS.join(" / ")} in the Sub-op cell; removing an item is Operation = UPDATE, Sub-op = REMOVE.`;
+}
+
 /**
  * Type guard for the canonical triage Operation labels (top-level + UPDATE).
  * Replaces a bare `as` assertion at the call site.
@@ -1315,13 +1338,13 @@ function validateTriageRows(
       issues.push(
         issue(
           "QFAI-TRIAGE-003",
-          `Triage の Operation が不正です (${rowLabel}): ${opCell || "(empty)"}`,
+          `Triage Operation is not an allowed value (${rowLabel}): ${opCell || "(empty)"}. Allowed: ${TRIAGE_OPERATION_LABELS.join(", ")}`,
           "error",
           deltaPath,
           "triage.operation",
           [opCell],
           "canonical",
-          `Operation を CREATE / UPDATE / DELETE / SPLIT / MERGE / SUPERSEDE のいずれかに修正してください。UPDATE:APPEND のようなコロン形式は散文上の略記であり、セル値ではありません。Operation に UPDATE を、Sub-op に APPEND / MODIFY / REMOVE を分けて記載してください。`,
+          triageOperationFix(opUpperRaw),
         ),
       );
       continue;
@@ -1343,13 +1366,13 @@ function validateTriageRows(
         issues.push(
           issue(
             "QFAI-TRIAGE-004",
-            `Triage UPDATE の Sub-op が不正です (${rowLabel}): ${subCell || "(empty)"}`,
+            `Triage UPDATE Sub-op is not an allowed value (${rowLabel}): ${subCell || "(empty)"}. Allowed: ${TRIAGE_UPDATE_SUBOPS.join(", ")}`,
             "error",
             deltaPath,
             "triage.subOp",
             [subCell],
             "canonical",
-            `Sub-op を APPEND / MODIFY / REMOVE のいずれかに設定してください。`,
+            `Set Sub-op to one of ${TRIAGE_UPDATE_SUBOPS.join(" / ")}.`,
           ),
         );
         // Fail-fast: skip the QFAI-TRIAGE-005 (approval) check for this
