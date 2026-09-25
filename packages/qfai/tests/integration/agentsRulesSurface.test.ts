@@ -1217,6 +1217,24 @@ describe("a no-question run opens every node, on every surface that says so", ()
   });
 });
 
+describe("the reporting contract covers what an agent says while it works", () => {
+  // The final report's shape alone leaves the running commentary and the
+  // handling of an earlier mistake to each agent's defaults.
+  it.each([
+    ".qfai/assistant/constitution/communication.md",
+    "packages/qfai/assets/init/.qfai/assistant/constitution/communication.md",
+  ])("%s states cadence, correction and outcome-first", async (rel) => {
+    const text = await readFile(path.join(ROOT, rel), "utf-8");
+    expect(text).toMatch(/^Lead with the outcome\./m);
+    expect(text).toMatch(/^## While the work runs$/m);
+    expect(text).toMatch(/Before the first tool call, say in one sentence/);
+    expect(text).toMatch(/something important is found or the direction\s+changes/);
+    expect(text).toMatch(/^## Correcting an earlier statement$/m);
+    expect(text).toMatch(/would change the user's code,\s+conclusions or decisions/);
+    expect(text).toMatch(/Fix a slip that changes none of those without mentioning it/);
+  });
+});
+
 describe("this repository's pull-request description", () => {
   it("keeps the operative adoption bar in the existing policy and template", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
