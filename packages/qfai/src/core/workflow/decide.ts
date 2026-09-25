@@ -27,6 +27,7 @@ export interface WorkflowEvent {
   plan?: WorkflowPlan;
   notRun?: WorkflowNotRun;
   seamRequest?: { targetTestId: string };
+  repairs?: WorkflowDebt[];
 }
 
 type WorkflowNotRun =
@@ -53,6 +54,13 @@ interface WorkflowWorkOrder {
   inputs?: { path: string; digest: string }[];
   ledger?: { specId: string; rowIds: string[]; rowSetDigest: string };
   priorStageReceiptRefs?: { ref: string; validity: "valid" | "stale" | "unknown" }[];
+  actorHistory?: WorkflowActor[];
+}
+
+interface WorkflowActor {
+  role: string;
+  agentInstance: string;
+  stageInstanceId?: string;
 }
 
 interface WorkflowAuthorization {
@@ -109,7 +117,9 @@ type InputRefusalReason =
   | "result-id-reused"
   | "write-scope"
   | "unbound-capability"
-  | "regression-fix-receipt";
+  | "regression-fix-receipt"
+  | "test-fix-receipt"
+  | "reviewer-not-independent";
 
 interface InputRefusal {
   reason: InputRefusalReason;
@@ -171,8 +181,10 @@ interface WorkflowSnapshot {
   };
   acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
   seamRequest?: WorkflowSeamRequest;
+  repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   attempts?: Record<string, number>;
   receiptRefs?: string[];
+  actorHistory?: WorkflowActor[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
 }
 
@@ -207,6 +219,8 @@ interface WorkflowInput {
     changedFiles?: { path: string; digest: string }[];
     red?: { testId: string; failureKind: string };
     regressionFix?: { testId?: string; rerunRef?: string; reviewRef?: string };
+    reviewResults?: { role: string; agentInstance: string; verdict: string; reportRef: string }[];
+    testFix?: { citedBefore?: string; citedAfter?: string; reviewRef?: string; rerunRef?: string };
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -250,7 +264,10 @@ interface WorkflowFacts {
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
   itemReferences?: Record<string, "resolved" | "unresolved">;
   fileDigests?: Record<string, string>;
-  ledger?: { specId: string; rows: { rowId: string; status: string; digest: string }[] };
+  ledger?: {
+    specId: string;
+    rows: { rowId: string; status: string; digest: string; layer?: string; tcLevels?: string[] }[];
+  };
 }
 
 type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
@@ -372,12 +389,30 @@ function areaCovers(area: string, filePath: string): boolean {
   );
 }
 
+// SIMPLIFIED: a reviewer recorded as an author or recommender anywhere in the run is refused.
+// Lift when: a review result names the stage it reviewed.
+function reviewerRefusals(
+  result: NonNullable<WorkflowInput["result"]>,
+  actorHistory: readonly WorkflowActor[],
+): InputRefusal[] {
+  return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
+    actorHistory.some(
+      (actor) =>
+        actor.agentInstance === review.agentInstance &&
+        (actor.role === "author" || actor.role === "recommender"),
+    )
+      ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
+      : [],
+  );
+}
+
 function resultRefusals(
   result: NonNullable<WorkflowInput["result"]>,
   workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
+  actorHistory: readonly WorkflowActor[],
 ): InputRefusal[] {
-  const refusals: InputRefusal[] = [];
+  const refusals: InputRefusal[] = reviewerRefusals(result, actorHistory);
   const areas = [...(workOrder.scope?.writeAreas ?? []), ...(workOrder.recordAreas ?? [])];
   const target = workOrder.target;
   (result.bindings ?? []).forEach((binding, index) => {
@@ -398,6 +433,10 @@ function resultRefusals(
   const fix = result.regressionFix;
   if (workOrder.stageKind === "regression_fix" && (!fix?.rerunRef || !fix.reviewRef)) {
     refusals.push({ reason: "regression-fix-receipt", subject: "regressionFix" });
+  }
+  const testFix = result.testFix;
+  if (workOrder.stageKind === "test_fix" && (!testFix?.reviewRef || !testFix.rerunRef)) {
+    refusals.push({ reason: "test-fix-receipt", subject: "testFix" });
   }
   (result.debts ?? []).forEach((debt, index) => {
     if (!debt.resolvingOwner?.trim()) {
@@ -621,6 +660,24 @@ function diagnosisInputs(
   return [{ path: diagnosis.reproductionRef, digest }];
 }
 
+// SIMPLIFIED: a test fix whose defective row the ledger fact does not describe keeps the plan's skill.
+// Lift when: the command adapter always supplies the bound spec's ledger rows.
+function executorSkill(
+  stage: PlanStages[number],
+  diagnosis: WorkflowSnapshot["diagnosis"],
+  facts: WorkflowFacts,
+): string | undefined {
+  if (stage.stageKind !== "test_fix") return stage.skill;
+  const rowId = diagnosis?.matchedRowIds[0];
+  const row = facts.ledger?.rows.find((candidate) => candidate.rowId === rowId);
+  if (!row?.layer) return stage.skill;
+  const acceptanceLayer =
+    row.layer === "E2E" ||
+    row.layer === "API" ||
+    (row.layer === "Integration" && (row.tcLevels ?? []).includes("L3"));
+  return acceptanceLayer ? "qfai-atdd" : "qfai-implement";
+}
+
 // The row set covers each row's ID, status and digest, so a moved status changes it.
 // The work order itself carries row IDs only.
 function ledgerOf(
@@ -672,7 +729,10 @@ function outcomeIsAcceptable(
     case "unrun":
       return true;
     case "needs_repair":
-      return stageKind === "acceptance" && result.seamRequest !== undefined;
+      return (
+        (stageKind === "acceptance" && result.seamRequest !== undefined) ||
+        (result.debts ?? []).length > 0
+      );
     default:
       return false;
   }
@@ -944,21 +1004,31 @@ export function decide(
     }
 
     if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
-    const stage = selectedStages[acceptedStages.length];
+    // SIMPLIFIED: a repair goes to the plan stage the first finding's owner serves.
+    // Lift when: a repair owned by no plan stage returns the run to routing, and the
+    // detecting stage is reissued after the repair is accepted.
+    const repairOwner = snapshot.repairRequest?.debts[0]?.resolvingOwner;
+    const stage = repairOwner
+      ? plan.stages.find((candidate) => candidate.skill === repairOwner)
+      : selectedStages[acceptedStages.length];
+    if (!stage && repairOwner) return refusedInput(run, "The repair work order is not ready.");
     if (!stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
 
     const attempt = (snapshot.attempts?.[stage.stageInstanceId] ?? 0) + 1;
+    const skill = executorSkill(stage, snapshot.diagnosis, facts);
     const nextWorkOrder: WorkflowWorkOrder = {
       workOrderId: `work-order-${stage.stageInstanceId}-${attempt}`,
       stageInstanceId: stage.stageInstanceId,
       attempt,
       stageKind: stage.stageKind,
-      ...(stage.skill ? { executor: { skill: stage.skill } } : {}),
+      ...(skill ? { executor: { skill } } : {}),
       ...(stage.operation ? { operation: stage.operation } : {}),
       // SIMPLIFIED: the scope carries the plan's write areas and nothing else.
       // Lift when: a work order's scope digest, protected targets, effects or non-goals are read.
       ...(plan.writeScope ? { scope: { writeAreas: plan.writeScope } } : {}),
     };
+    const actorHistory = snapshot.actorHistory ?? [];
+    if (actorHistory.length > 0) nextWorkOrder.actorHistory = actorHistory;
     const receiptRefs = snapshot.receiptRefs ?? [];
     if (receiptRefs.length > 0) {
       nextWorkOrder.priorStageReceiptRefs = receiptRefs.map((ref) => ({
@@ -1075,7 +1145,7 @@ export function decide(
       ((plan.route === "direct" || plan.route === "bugfix" || plan.route === "bounded-change") &&
         (workOrder.target?.kind !== "spec" ||
           workOrder.target.specId !== snapshot.specBinding?.specId ||
-          workOrder.executor?.skill !== nextStage.skill ||
+          workOrder.executor?.skill !== executorSkill(nextStage, snapshot.diagnosis, facts) ||
           workOrder.operation !== nextStage.operation)) ||
       (plan.route === "bugfix" &&
         nextStage.stageKind === "diagnose" &&
@@ -1103,7 +1173,7 @@ export function decide(
       };
     }
 
-    const inputRefusals = resultRefusals(result, workOrder, facts);
+    const inputRefusals = resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []);
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
     if (result.outcome === "unrun") return blockOnUnrun(run, result);
     const approvedCapability = snapshot.approval?.target?.capability;
@@ -1132,6 +1202,7 @@ export function decide(
         outcome: result.outcome,
         ...(result.notRun ? { notRun: result.notRun } : {}),
         ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
+        ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
       },
       ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
         type: "binding-recorded",

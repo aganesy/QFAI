@@ -75,6 +75,18 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0088 | TC-0018-0073 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0089 | TC-0018-0074 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0090 | TC-0018-0076 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0091 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0092 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0093 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0094 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0095 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0096 | TC-0018-0077 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0097 | TC-0018-0078 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0098 | TC-0018-0079 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0099 | TC-0018-0080 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0101 | TC-0018-0082 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0102 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0103 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2215,6 +2227,130 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ … TC-0018-0076 (TDD-0090)`, 1 passed
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 - Note: the snapshot gains `receiptRefs`, every result the run has accepted, which survives a replan. Each work order lists them as `priorStageReceiptRefs`, the validity read from the `receiptValidity` fact and `unknown` where the fact is absent.
+
+### TDD-0091
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0091): e2e`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0091\): e2e' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; the plan's own `test_fix` stage names `qfai-atdd`, which is the expected executor for this layer.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0091)`, 1 passed; stays green once the core derives the executor from the row's layer
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0092
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0092): api`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0092\): api' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; the plan's own `test_fix` stage names `qfai-atdd`, which is the expected executor for this layer.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0092)`, 1 passed; stays green once the core derives the executor from the row's layer
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0093
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0093): integration-l3`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0093\): integration-l3' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; the plan's own `test_fix` stage names `qfai-atdd`, which is the expected executor for this layer.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0093)`, 1 passed; stays green once the core derives the executor from the row's layer
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0094
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0094): integration-l1-l2`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0094\): integration-l1-l2' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(testFixSkillFor(...)).toEqual([...])` at `tests/unit/workflow/theTestFixBranch.test.ts:60:46` — the executor was the plan's `qfai-atdd`, not `qfai-implement`.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0094)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+- Note: the `ledger` fact's rows gain `layer` and `tcLevels`. The core derives a `test_fix` executor from the first matched row; a row the fact does not describe keeps the plan's skill, marked `SIMPLIFIED` in `decide.ts`.
+
+### TDD-0095
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0095): unit`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0095\): unit' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(testFixSkillFor(...)).toEqual([...])` at `tests/unit/workflow/theTestFixBranch.test.ts:60:46` — the executor was the plan's `qfai-atdd`, not `qfai-implement`.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0095)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0096
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theTestFixBranch.test.ts`
+- Selector: `TC-0018-0077 (TDD-0096): component`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theTestFixBranch.test.ts --testNamePattern='TC-0018-0077 \(TDD-0096\): component' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(testFixSkillFor(...)).toEqual([...])` at `tests/unit/workflow/theTestFixBranch.test.ts:60:46` — the executor was the plan's `qfai-atdd`, not `qfai-implement`.
+- GREEN result: exit 0; `✓ … TC-0018-0077 (TDD-0096)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0097
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts`
+- Selector: `TC-0018-0078 (TDD-0097): A test_fix result with citedBefore equal to citedAfter, a review receipt and a re-run receipt`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts --testNamePattern='TC-0018-0078 \(TDD-0097\): A test_fix result with citedBefore equal to citedAfter, a review receipt and a re-run receipt' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts:109:6` — `ok` was `false`: accept compared the `qfai-implement` executor against the plan's `qfai-atdd` and refused the result.
+- GREEN result: exit 0; `✓ … TC-0018-0078 (TDD-0097)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0098
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts`
+- Selector: `TC-0018-0079 (TDD-0098): Issue work orders across a run with an author, a recommender and a reviewer recorded`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts --testNamePattern='TC-0018-0079 \(TDD-0098\): Issue work orders across a run with an author, a recommender and a reviewer recorded' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect([...]).toEqual([actorHistory, actorHistory])` at `tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts:90:6` — both work orders' `actorHistory` were `undefined`.
+- GREEN result: exit 0; `✓ … TC-0018-0079 (TDD-0098)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: the snapshot gains `actorHistory`, entries of `{ role, agentInstance, stageInstanceId }`, and every issued work order copies it. A review result whose reviewer instance the history shows as an author or recommender anywhere in the run is refused, marked `SIMPLIFIED` in `decide.ts` until a review result names the stage it reviewed.
+
+### TDD-0099
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts`
+- Selector: `TC-0018-0080 (TDD-0099): A review result whose reviewer instance the actor history shows as the author`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts --testNamePattern='TC-0018-0080 \(TDD-0099\): A review result whose reviewer instance the actor history shows as the author' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/reviewIsIndependentAcrossTheRun.test.ts:144:6` — the result was accepted and the run moved to `ready`.
+- GREEN result: exit 0; `✓ … TC-0018-0080 (TDD-0099)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0101
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theFindingSOwnerRepairsIt.test.ts`
+- Selector: `TC-0018-0082 (TDD-0101): A verify result needs_repair whose finding sits in a spec file with resolvingOwner qfai-sdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theFindingSOwnerRepairsIt.test.ts --testNamePattern='TC-0018-0082 \(TDD-0101\): A verify result needs_repair whose finding sits in a spec file with resolvingOwner qfai-sdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/theFindingSOwnerRepairsIt.test.ts:87:6` — the `needs_repair` verify result was refused, the run stayed `running` and no repair work order was issued.
+- GREEN result: exit 0; `✓ … TC-0018-0082 (TDD-0101)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: a `needs_repair` result with debts is now accepted, and its `accept-nonfinal-result` event carries them as `repairs`. The snapshot's `repairRequest` sends `next` to the plan stage the first finding's owner serves. Marked `SIMPLIFIED` in `decide.ts`: a repair owned by no plan stage is refused rather than returning the run to routing, and reissuing the detecting stage after the repair waits on a later row.
+
+### TDD-0102
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts`
+- Selector: `TC-0018-0083 (TDD-0102): no-review-ref`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts --testNamePattern='TC-0018-0083 \(TDD-0102\): no-review-ref' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(refusalOf(...)).toEqual(refused)` at `tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts:119:51` — `reasons` was empty.
+- GREEN result: exit 0; `✓ … TC-0018-0083 (TDD-0102)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0103
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts`
+- Selector: `TC-0018-0083 (TDD-0103): no-rerun-ref`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts --testNamePattern='TC-0018-0083 \(TDD-0103\): no-rerun-ref' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(refusalOf(...)).toEqual(refused)` at `tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts:125:50` — `reasons` was empty.
+- GREEN result: exit 0; `✓ … TC-0018-0083 (TDD-0103)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0212
 
