@@ -13,6 +13,7 @@
 | CR-20260923-0014 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T20:55:46Z |
 | CR-20260924-0001 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
 | CR-20260924-0002 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
+| CR-20260925-0030 | `spec-0012/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                                         | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-25T10:05:00Z |
 
 ## 2026-09-04
 
