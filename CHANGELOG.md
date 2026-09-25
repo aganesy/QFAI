@@ -84,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The README claim check accepts a committed routing eval record**
+  (#2301). `TC-0018-0220` required both READMEs and the eval records to claim
+  no host, so committing a passing record and claiming its host failed the
+  check. It now requires each README to claim exactly the hosts with a passing
+  record for the package version, which is still none today.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
