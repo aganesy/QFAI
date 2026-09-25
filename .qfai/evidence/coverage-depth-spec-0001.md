@@ -96,9 +96,8 @@ Six rows name an expected state that the tree contradicts. Each was checked dire
    optional.
 2. `REQUIRED_LAYERED_SHARED_FILES_V1421` lists eleven `_policies` files, `11_Slice-Policy.md`
    included. `TC-0001-0002` expects ten.
-3. `.qfai/specs/_policies/` holds spec IDs: `02_Initiative.md`, `03_Capabilities.md`,
-   `07_Constraints.md`, `08_Decisions.md`, `09_Open-questions.md`, `10_delta.md` and
-   `11_Slice-Policy.md` all match `spec-NNNN` or a `US`/`AC`/`BR`/`EX`/`TC` ID.
+3. `.qfai/specs/_policies/` holds spec IDs: nine of its eleven files match `spec-NNNN` or a
+   `US`/`AC`/`BR`/`EX`/`TC` ID. Only `01_Objective.md` and `04_Business-Flow.md` hold none.
    `TC-0001-0010` expects none. The only upward-reference rule in `src/**`,
    `E_UPWARD_REF_FORBIDDEN` in `validators/specPack.ts`, checks files inside one spec of the older
    spec-pack layout and never reads `_policies`.

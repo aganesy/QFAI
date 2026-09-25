@@ -134,7 +134,15 @@ packages/qfai/tests/integration/stageSkillEntryCheckSpec0001.test.ts
 
 ## Coverage Depth Matrix
 
+See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: ✅ 75 / ⚠️ 50 / ❌ 153.
+
 ## Work Orders Summary
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | test-design-analyst | test-design-analyst#2 | Write the Coverage Depth Matrix for spec-0001 | 02_User-stories.md, 04_Business-Rules.md, 06_Test-Cases.md, the annotated tests | coverage-depth-spec-0001.md | PASS |
+| 2 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0035` and `TDD-0036` on the falsifiability branch | the test file, the shipped baseline | #tdd-0035, #tdd-0036 | PASS |
+| 3 | - | n/a | grilling(-@2026-09-25T10:14:05.606Z/none): none | - | - | PASS |
 
 ## Cross-spec obligations
 
@@ -146,4 +154,10 @@ Recorded per row above.
 
 ## Gaps / Open risks
 
+- `TDD-0035` is `blocked` on `CR-20260925-0285`. Its handover entry stands for the `pass-on` state once the row is re-scoped.
+- The matrix records findings this run does not act on: six places where the spec and the shipped files disagree, 24 test cases whose one test reads spec-0001's own text, and ten stories with no E2E test. See its `## Findings`.
+- This file does not close the `/qfai-atdd` stage for spec-0001. No stage review pack was opened.
+
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
+
+FAIL for the stage: only `TDD-0036` is taken through its reviews in this run, and `TDD-0035` waits on a Change Request. The stage review is not run.
