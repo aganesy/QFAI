@@ -628,7 +628,7 @@ jobs:
   # SHIPPED-CI: not-applicable
   # Because: the shipped test lanes run the adopter's own scripts on the runner the adopter names, so the shipped set has no QFAI suite or fixed platform to add.
   windows-parity:
-    needs: [detect]
+    needs: [detect, build]
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
     # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
