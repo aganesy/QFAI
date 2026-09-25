@@ -27,6 +27,7 @@
 // QFAI:SPEC-0018:TC-0018-0245
 // QFAI:SPEC-0018:TC-0018-0252
 // QFAI:SPEC-0018:TC-0018-0253
+// QFAI:SPEC-0018:TC-0018-0270
 
 import { cp, mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
@@ -473,6 +474,14 @@ it("TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fi
     first: byRule,
     second: byRule,
   });
+});
+
+// The list is recorded before the eval runs; a seed or vocabulary change that moves the
+// recompute fails here until the list is recorded again.
+it("TC-0018-0270 (TDD-0530): recomputed safety list equals the recorded list", async () => {
+  const recorded: unknown = JSON.parse(await fixtureText("safety-list.json"));
+
+  expect(recorded).toEqual(await safetyList());
 });
 
 const roots: string[] = [];

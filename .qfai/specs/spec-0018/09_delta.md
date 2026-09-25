@@ -156,6 +156,17 @@
   TDD-0461 keep their obligations. A ninth TC-0018-0012 row, boundary
   `spec-binding`, is to be seeded.
 
+- Change ID: DELTA-0013
+- Date: 2026-09-26
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: OQ-0018-0015 is resolved. The safety-relevant list the NFR-0005
+  rule derives is recorded in
+  `packages/qfai/tests/fixtures/workflow/safety-list.json`, and TC-0018-0270
+  holds the recompute equal to it. EX-0018-0144 names the recorded list.
+  TC-0018-0253 no longer defers the comparison. No existing obligation changes,
+  so no Change Request applies. TDD-0530 is seeded for TC-0018-0270.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
