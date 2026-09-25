@@ -64,7 +64,11 @@ type SteeringSeed = Readonly<Record<string, string>>;
 async function run(
   ledger: string,
   steering: SteeringSeed = {},
-  opts: { readonly steeringIsRegularFile?: boolean } = {},
+  opts: {
+    readonly steeringIsRegularFile?: boolean;
+    /** `.qfai/decisions/<name>` files to seed alongside the ledger. */
+    readonly decisions?: SteeringSeed;
+  } = {},
 ): Promise<Array<{ code: string; severity: string; message: string; suggested: string }>> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-blocked-"));
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -92,6 +96,14 @@ async function run(
       await mkdir(steeringDir, { recursive: true });
       for (const name of steeringNames) {
         await writeFile(path.join(steeringDir, name), steering[name] ?? "", "utf-8");
+      }
+    }
+    const decisions = opts.decisions ?? {};
+    if (Object.keys(decisions).length > 0) {
+      const decisionsDir = path.join(root, ".qfai", "decisions");
+      await mkdir(decisionsDir, { recursive: true });
+      for (const [name, body] of Object.entries(decisions)) {
+        await writeFile(path.join(decisionsDir, name), body, "utf-8");
       }
     }
     const issues = await validateTddList(root, defaultConfig);
@@ -524,5 +536,317 @@ describe("QFAI-TDDLIST-015 — a stop must leave a steering record", () => {
     const codes = issues.map((i) => i.code);
     expect(codes).not.toContain("QFAI-TDDLIST-016");
     expect(codes).not.toContain("QFAI-TDDLIST-015");
+  });
+});
+
+/**
+ * A Change Request record in the shape the shipped template writes, with the
+ * template's own trailing comments kept so the header parser meets them. The
+ * body quotes an approved status on purpose: only the header is the record.
+ */
+function changeRequest(fields: {
+  status: string;
+  appliedAt?: string;
+  id?: string;
+  changeClass?: string;
+  approvedBy?: string;
+  approvedOption?: string;
+  supersededBy?: string;
+  /** The `## Resolution` body; the default records what was done. */
+  resolution?: string;
+  /** Lines placed between the title and the header list. */
+  preamble?: string;
+  /** The `## Blocked downstream items` body; the section is left out when absent. */
+  blockedItems?: string;
+}): string {
+  return [
+    "# Change Request",
+    "",
+    ...(fields.preamble === undefined ? [] : [fields.preamble, ""]),
+    `- ID: \`${fields.id ?? "CR-20260801-0001"}\``,
+    `- Class: \`${fields.changeClass ?? "defect"}\``,
+    `- Status: \`${fields.status}\` <!-- open | approved | rejected | superseded -->`,
+    `- Approved by: \`${fields.approvedBy ?? "user"}\``,
+    "- Approved at: `2026-08-02T00:00:00Z`",
+    `- Approved option: \`${fields.approvedOption ?? "-"}\``,
+    `- Applied at: \`${fields.appliedAt ?? "-"}\` <!-- YYYY-MM-DDThh:mm:ssZ -->`,
+    `- Superseded by: \`${fields.supersededBy ?? "-"}\``,
+    "",
+    ...(fields.blockedItems === undefined
+      ? []
+      : ["## Blocked downstream items", "", fields.blockedItems, ""]),
+    "## Resolution",
+    "",
+    fields.resolution ?? "- Status: `approved`\n- Applied at: `2026-08-03T00:00:00Z`",
+    "",
+  ].join("\n");
+}
+
+const CR_FILE = "CR-20260801-0001-a-settled-question.md";
+
+describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", () => {
+  // Ordinary selection skips a `blocked` row and nothing else writes
+  // `blocked -> todo`, so a row parked on a request that has since been decided
+  // stays parked with no finding pointing at it.
+  const blockedOnCr = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260801-0001 — blocked at todo |`;
+
+  it("warns when the Change Request in Blocked-By is approved and applied", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({ status: "approved", appliedAt: "2026-08-03T00:00:00Z" }),
+        },
+      },
+    );
+    const found = issues.find((i) => i.code === "QFAI-TDDLIST-021");
+    expect(found?.severity).toBe("warning");
+    expect(found?.message).toContain("TDD-0001");
+    expect(found?.message).toContain("CR-20260801-0001 (approved and applied)");
+    expect(found?.suggested).toContain("/qfai-implement");
+    expect(found?.suggested).toContain("`blocked -> todo`");
+  });
+
+  it("says nothing while the Change Request is still open", async () => {
+    // The body's `- Status: approved` line is prose about the record, so it
+    // must not stand in for the header's own `open`.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "open" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing while an approved Change Request has not been applied", async () => {
+    // The template treats an approved request as unresolved until `Applied at`
+    // is filled, and the row still owes the obligation in its old form.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "approved" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing when the Change Request resolves to no record", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0002-another-question.md": changeRequest({
+            status: "approved",
+            appliedAt: "2026-08-03T00:00:00Z",
+          }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing while Blocked-By names another blocker beside the Change Request", async () => {
+    // The other blocker can still be holding the row, so "waiting on nothing"
+    // would be false.
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260801-0001, spec-0006:TDD-0034 — blocked at todo |`;
+    const issues = await run(
+      `${NINE_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("reads the Evidence cell when the ledger has no Blocked-By to read", async () => {
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | BLOCKED by CR-20260801-0001, which names this row |`;
+    const issues = await run(
+      `${EIGHT_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    const found = issues.find((i) => i.code === "QFAI-TDDLIST-021");
+    expect(found?.severity).toBe("warning");
+    expect(found?.message).toContain("Evidence");
+    expect(found?.message).toContain("CR-20260801-0001 (rejected)");
+  });
+
+  it("says nothing while the Evidence cell names another blocker beside the Change Request", async () => {
+    // Evidence is prose, so a row reference beside the request can still be
+    // holding the row.
+    const row = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | BLOCKED by CR-20260801-0001 and spec-0006:TDD-0034 |`;
+    const issues = await run(
+      `${EIGHT_COL}\n${row}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected" }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  describe("a half-filled record is not settled", () => {
+    const cases: ReadonlyArray<[string, Parameters<typeof changeRequest>[0]]> = [
+      ["a rejected request with no approver", { status: "rejected", approvedBy: "-" }],
+      ["a superseded request that names no successor", { status: "superseded" }],
+      [
+        "a rejected request whose Resolution holds only the template comment",
+        { status: "rejected", resolution: "<!-- Record what was actually done. -->" },
+      ],
+      [
+        "an approved intent request with no approved option",
+        { status: "approved", appliedAt: "2026-08-03T00:00:00Z", changeClass: "intent" },
+      ],
+    ];
+    it.each(cases)("says nothing for %s", async (_label, fields) => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        { decisions: { [CR_FILE]: changeRequest(fields) } },
+      );
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+    });
+  });
+
+  it("warns for a superseded request that names its successor", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({ status: "superseded", supersededBy: "CR-20260801-0009" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  it("warns for an approved intent request that records its option", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          [CR_FILE]: changeRequest({
+            status: "approved",
+            appliedAt: "2026-08-03T00:00:00Z",
+            changeClass: "intent",
+            approvedOption: "2",
+          }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing when the record's declared id is not the one its file name carries", async () => {
+    // A copy renamed without its header moving: the declared id is the
+    // record's, so the row naming the file-name id has no record.
+    const settledCopy = changeRequest({ status: "rejected", id: "CR-20260801-0003" });
+    const namingFileId = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: settledCopy } },
+    );
+    expect(namingFileId.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+
+    const namingDeclaredId = await run(
+      `${NINE_COL}\n${blockedOnCr.replace("CR-20260801-0001", "CR-20260801-0003")}\n`,
+      {},
+      { decisions: { [CR_FILE]: settledCopy } },
+    );
+    expect(namingDeclaredId.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("says nothing when two file names carry the same id", async () => {
+    // Either file may be the record, and the second one is still open.
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0001-a.md": changeRequest({ status: "rejected" }),
+          "CR-20260801-0001-b.md": changeRequest({ status: "open" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("finds a record whose slug is in the project's own language", async () => {
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      {
+        decisions: {
+          "CR-20260801-0001-révision_des_bornes.v2.md": changeRequest({ status: "rejected" }),
+        },
+      },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  it("does not read a fenced example ahead of the header as the record", async () => {
+    // The example's `Status` would otherwise win as the first occurrence.
+    const preamble = ["```markdown", "- Status: `rejected`", "```"].join("\n");
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "open", preamble }) } },
+    );
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+  });
+
+  it("does not end the header at a heading inside a fenced example", async () => {
+    const preamble = ["```markdown", "## Example", "```"].join("\n");
+    const issues = await run(
+      `${NINE_COL}\n${blockedOnCr}\n`,
+      {},
+      { decisions: { [CR_FILE]: changeRequest({ status: "rejected", preamble }) } },
+    );
+    expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+  });
+
+  describe("a row another unresolved request still blocks", () => {
+    // The ledger cell names only the settled request; the open one lists the
+    // row in its own blocked set, which is the union the release recomputes.
+    const openRequest = (item: string): string =>
+      changeRequest({
+        id: "CR-20260801-0002",
+        status: "open",
+        blockedItems: [
+          "| Item | Kind | Why it depends on the artifact |",
+          "| ---- | ---- | ------------------------------ |",
+          `| \`${item}\` | \`ledger-row\` | Its TC is what this request changes |`,
+          "",
+          "- Not blocked by this CR: `spec-0001/TDD-0009`",
+        ].join("\n"),
+      });
+
+    it("says nothing while the open request lists the row", async () => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        {
+          decisions: {
+            [CR_FILE]: changeRequest({ status: "rejected" }),
+            "CR-20260801-0002-overlapping.md": openRequest("spec-0001/TDD-0001"),
+          },
+        },
+      );
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-TDDLIST-021");
+    });
+
+    it("still warns when the open request lists the same row id in another spec", async () => {
+      const issues = await run(
+        `${NINE_COL}\n${blockedOnCr}\n`,
+        {},
+        {
+          decisions: {
+            [CR_FILE]: changeRequest({ status: "rejected" }),
+            "CR-20260801-0002-overlapping.md": openRequest("spec-0002/TDD-0001"),
+          },
+        },
+      );
+      expect(issues.map((i) => i.code)).toContain("QFAI-TDDLIST-021");
+    });
   });
 });

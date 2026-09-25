@@ -6,10 +6,10 @@
 - Raised at: `2026-09-18T03:05:00Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `user` — explicit selection of Option 1 in this session
-- Approved at: `2026-09-24T19:43:11Z` (approval recorded; exact reply time unavailable)
+- Approved by: `user` (2026-09-24 reply; Claude Code selected option 1 on 2026-09-22)
+- Approved at: `2026-09-24T08:55:00Z`
 - Approved option: `1`
-- Applied at: `2026-09-24T19:55:40Z`
+- Applied at: `2026-09-24T09:46:00Z`
 - Superseded by: `-`
 
 ## Context
@@ -101,8 +101,7 @@ Option 1.
 1. The first heading of each pair keeps its id. None of the six references
    above moves.
 2. **Optional Side Artifact Does Not Block Preflight** takes the next free
-   criterion id, `AC-0013-0042` after the intent-driven additions recorded
-   in `09_delta.md`. It gains the
+   criterion id, `AC-0013-0028` in the current tree. It gains the
    chain `REQ-0011` requires of every criterion:
    - one business rule, `BR-0013-0021`, stating that the preflight's result
      does not depend on whether an optional side artifact is present, absent,
@@ -127,7 +126,7 @@ Option 1.
    `BR-0013-0003`, `EX-0013-0003` and `TC-0013-0003` already state the rule for
    an incomplete pack. `US-0013-0008` is restated without its first clause, "to
    block only on discussion-pack markdown readiness", leaving the side-artifact
-   clause, which is what `AC-0013-0026` answers.
+   clause, which is what `AC-0013-0028` answers.
 4. **Design Contract Normalization** is removed, with `REQ-0016`, `REQ-0017`
    and `REQ-0018`. `AC-0013-0016` and `AC-0013-0017` already state the active
    design-contract set.
@@ -153,8 +152,8 @@ the same file, which is how this duplicate went unreported.
   heading.
 - Overlapping open CRs:
   - `CR-20260912-0003` names "the side-artifact `AC-0013-0009`", and says its
-    option `2B` cannot be approved until this repair lands. After this owner
-    rerun, that criterion is `AC-0013-0042`, and `CR-20260912-0003` is read
+    option `2B` cannot be approved until this repair lands. Once this record is
+    applied, that criterion is `AC-0013-0028`, and `CR-20260912-0003` is read
     with that id.
   - The other open records that edit `spec-0013`'s upstream files name none of
     the ids this record removes, renumbers or allocates. **This record is
@@ -225,28 +224,31 @@ requirements beneath them?
 
 ## Resolution
 
-The user explicitly selected Option 1 in this session, replacing the earlier
-agent-entered approval recorded in the prior version of this file. The
-`Approved at` field is the time this explicit selection was recorded; the
-reply's original timestamp is unavailable. This option removes the two
-criteria the rest of the pack already contradicts or supersedes, and keeps
-the one that is live. `/qfai-sdd spec-0013` ran in `re-derive` mode. The
-first AC-0013-0008/0009/0010 headings retain their IDs; the contradictory
-second AC-0013-0008 and superseded second AC-0013-0010 are removed with
-REQ-0014 and REQ-0016..0018. The live optional side-artifact criterion is
-AC-0013-0042, with BR-0013-0021, EX-0013-0021, TC-0013-0036 and
-TC-0013-0037. Phase 2b seeded TDD-0061 and TDD-0062 at `todo` with this CR
-in `DR-ID`. No existing row changed status, obligation or evidence. The
-Plan's obsolete duplicate-ID pin and pending-application statements were
-removed as direct consequences of the chosen option.
+Approved under option 1, the recommendation. It removes the two criteria the
+rest of the pack already contradicts or supersedes, and keeps the one that is
+live, so it adds the least of the three and restores nothing an approved record
+retired. The user explicitly ratified this option on 2026-09-24. The owner
+rerun applied it on 2026-09-24, after the ledger repair.
 
-The SDD and drift profiles pass at error 0. The next execution is the
-approved-action handoff: `/qfai-implement spec-0013` preflight, then
-`/qfai-atdd spec-0013` for the two new rows and other owed ATDD rows, then
-`/qfai-implement spec-0013` resume. The ATDD pass must preserve the
-spec-0002 TDD-0001 test-file hash as the precondition below states. The
-repository's dogfood backlog pin also needs a gate-owner refresh after the
-duplicate-ID errors disappear.
+At application, `AC-0013-0026` and `AC-0013-0027` already exist. The
+approved next-free-ID rule therefore selects `AC-0013-0028`.
+
+The intent-driven work applied the same option a second time, on a line that
+had not seen this application. The user selected option 1 again, recorded at
+`2026-09-24T19:43:11Z`, and that rerun applied it at `2026-09-24T19:55:40Z` as
+`AC-0013-0042` with rows `spec-0013/TDD-0061` and `TDD-0062`. When the two
+lines were merged on 2026-09-25, this application stood and the second was
+withdrawn. No approved decision changed:
+
+- `AC-0013-0042` is removed from `03_Acceptance-Criteria.md`, and its ID stays reserved.
+  `AC-0013-0028` states the same criterion.
+- Its rows, renumbered to `spec-0013/TDD-0129` and `TDD-0130` by the merge, are
+  retired with tombstones in `tdd/test-list.md`.
+- Its test file, `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`,
+  is deleted. Its two checks that this application's test lacked moved into
+  `packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts`: the
+  command's exit code and JSON report, and the same verdict with a valid
+  artifact present.
 
 One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
 is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`

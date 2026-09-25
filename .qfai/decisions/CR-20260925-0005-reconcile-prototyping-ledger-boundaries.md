@@ -317,7 +317,7 @@ The owner rerun then completed actions 1, 3 and 5. `TC-0012-0334` and the
 superseded `TC-0012-0321` left active `06_Test-Cases.md`; their wording is kept
 in `09_delta.md`. `TC-0012-0325` stays declared as superseded. `TDD-0336`,
 `TDD-0337` and `TDD-0338` were re-scoped to `TC-0012-0329`, `TC-0012-0323`
-and `TC-0012-0326`. `TDD-0567` (`TC-0012-0324`) and `TDD-0568`
+and `TC-0012-0326`. `TDD-0583` (`TC-0012-0324`) and `TDD-0584`
 (`TC-0012-0335`, now `L3`) were seeded as `todo` Integration rows. The six
 rows in action 3 were retired with tombstones in `tdd/test-list.md`. The
 `certificate.test.ts` test `writes to canonical path and load returns the same
@@ -330,7 +330,7 @@ Action 2, the `/qfai-implement` preflight, reset exactly `TDD-0336`,
 each row's `DR-ID`. Each Evidence cell now cites this request. The former
 `TC-Refs`, selector, status and verbatim Evidence of each row are kept as
 withdrawn history in `.qfai/evidence/implement-spec-0012.md`. No other row was
-reset. The reset rows and the seeded `TDD-0567` point at tests that already
+reset. The reset rows and the seeded `TDD-0583` point at tests that already
 exist, so they were added to the open-but-tested backlog until their
 re-execution reaches `done`.
 
@@ -343,7 +343,7 @@ review of the test fix is still owed, as are the `Oracle proof` re-takes and
 reviewer verdicts for the re-verified rows.
 
 `Applied at` records the completed owner rerun and ledger sweep. Two later
-stage runs remain: `/qfai-atdd spec-0012` writes the `TDD-0567` and
-`TDD-0568` Integration tests, and `TDD-0568` needs the real handoff writer or
+stage runs remain: `/qfai-atdd spec-0012` writes the `TDD-0583` and
+`TDD-0584` Integration tests, and `TDD-0584` needs the real handoff writer or
 a faithful workflow harness. `/qfai-implement spec-0012` re-executes the three
 reset rows.

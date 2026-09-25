@@ -216,15 +216,11 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("reports a ledger row still pointing at the rename's source", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
       "src/core/old.ts": MODULE_BODY,
     });
-    await write(
-      root,
-      ".qfai/specs/spec-0001/04_Business-Rules.md",
-      "# BR\n\n- BR-0001-0001: revised\n",
-    );
+    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     git(root, "add", "-A");
     git(root, "commit", "-m", "revise the rule and move the module");
@@ -241,15 +237,11 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("reports a row pointing at a move git calls a delete plus an add", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
       "src/core/old.ts": MODULE_BODY,
     });
-    await write(
-      root,
-      ".qfai/specs/spec-0001/04_Business-Rules.md",
-      "# BR\n\n- BR-0001-0001: revised\n",
-    );
+    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
     git(root, "rm", "src/core/old.ts");
     await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
     git(root, "add", "-A");
@@ -269,6 +261,27 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     expect(stale[0]?.file).toBe("src/core/old.ts");
   });
 
+  it("fails closed when a changed rule has no parseable BR-ID obligation", async () => {
+    const root = await newRepo({
+      ...layeredSpecBase,
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
+      "src/core/module.ts": MODULE_BODY,
+    });
+    await write(
+      root,
+      ".qfai/specs/spec-0001/04_Business-Rules.md",
+      "# BR\n\n- BR-0001-0001: revised\n",
+    );
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "revise an unparseable rule");
+
+    const issues = await validateTraceabilityIntegrity(root, config);
+    expect(
+      issues.some((entry) => entry.code === "QFAI-TRACE-003" && entry.severity === "error"),
+    ).toBe(true);
+  });
+
   // Pruning the removed paths before deriving the spec set hid the deletion
   // that most needs reporting: the spec's own BR/AC file is gone, so nothing
   // named the spec, and the code for "its ledger can no longer be read" never
@@ -276,7 +289,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("reports a spec directory the branch deleted whole", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
       "src/core/module.ts": MODULE_BODY,
     });
@@ -314,7 +327,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     async (specsDir) => {
       const root = await newRepo({
         ...layeredSpecBase,
-        ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+        ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
         ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
         "src/core/module.ts": MODULE_BODY,
       });
@@ -338,7 +351,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
     const specsDir = ".qfai\\specs";
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
       "src/core/module.ts": MODULE_BODY,
     });
@@ -362,7 +375,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("reports a specs directory that is not in the repository", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
       "src/core/module.ts": MODULE_BODY,
     });
@@ -380,7 +393,7 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("says nothing about a specs directory that is there", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/module.ts"),
       "src/core/module.ts": MODULE_BODY,
     });
@@ -393,15 +406,11 @@ describe("validateTraceabilityIntegrity across a rename", () => {
   it("passes a ledger row updated to the rename's destination", async () => {
     const root = await newRepo({
       ...layeredSpecBase,
-      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR\n\n- BR-0001-0001: original\n",
+      ".qfai/specs/spec-0001/04_Business-Rules.md": "# BR-0001-0001: original\n",
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": ledgerFor("src/core/old.ts"),
       "src/core/old.ts": MODULE_BODY,
     });
-    await write(
-      root,
-      ".qfai/specs/spec-0001/04_Business-Rules.md",
-      "# BR\n\n- BR-0001-0001: revised\n",
-    );
+    await write(root, ".qfai/specs/spec-0001/04_Business-Rules.md", "# BR-0001-0001: revised\n");
     git(root, "mv", "src/core/old.ts", "src/core/new.ts");
     await write(
       root,

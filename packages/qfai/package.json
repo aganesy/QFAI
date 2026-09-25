@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.12.2",
+  "version": "1.12.3",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,7 @@
     "lint:md:shipped": "markdownlint-cli2 --config shipped.markdownlint-cli2.jsonc \"assets/**/*.md\" \"assets/**/*.md.sample\"",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
     "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
-    "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts tests/core/prFixSkillDocs.test.ts tests/core/prMergeSkillDocs.test.ts",
+    "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts",
     "generate:rule-codes": "node scripts/generate-emitted-rule-codes.mjs",
     "generate:governed-manifest": "node scripts/generate-governed-assistant-manifest.mjs",
     "check-types": "tsc --noEmit",
@@ -53,14 +53,12 @@
     "test:cli": "vitest run --project cli",
     "test:unit": "vitest run --project unit",
     "test:scripts": "vitest run --project scripts",
-    "test:pr-fix": "vitest run --project pr-fix",
-    "test:pr-merge": "vitest run --project pr-merge",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },
   "dependencies": {
-    "@cucumber/gherkin": "^37.0.1",
-    "@cucumber/messages": "^31.1.0",
+    "@cucumber/gherkin": "^42.0.0",
+    "@cucumber/messages": "^34.0.0",
     "fast-glob": "^3.3.2",
     "jsdom": "^29.1.1",
     "yaml": "^2.5.1"
@@ -73,12 +71,13 @@
     "@types/jsdom": "^30.0.0",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.0.0",
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-v8": "^4.1.11",
     "ajv": "^8.20.0",
-    "markdown-it": "^14.1.1",
+    "markdown-it": "^15.0.0",
     "smol-toml": "^1.6.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.8"
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^4.1.11"
   }
 }

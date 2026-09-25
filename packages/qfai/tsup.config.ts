@@ -18,7 +18,13 @@ export default defineConfig({
     "cli/index": "src/cli/index.ts",
   },
   format: ["esm", "cjs"],
-  dts: true,
+  // SIMPLIFIED: silences one deprecation, and only inside the declaration rollup.
+  // The bundler builds that rollup with `baseUrl: compilerOptions.baseUrl || "."`,
+  // unconditionally, and TypeScript 6 makes `baseUrl` an error rather than a warning.
+  // This package declares neither `baseUrl` nor `paths`, so the option being silenced
+  // is the bundler's and not ours, and nothing here relies on what it does.
+  // Lift when: the bundler stops injecting it, or the declarations stop coming from it.
+  dts: { compilerOptions: { ignoreDeprecations: "6.0" } },
   sourcemap: true,
   clean: true,
   target: "node20",

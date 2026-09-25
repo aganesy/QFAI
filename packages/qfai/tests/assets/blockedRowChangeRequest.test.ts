@@ -35,14 +35,7 @@ const SPECS = path.join(repoRoot, ".qfai", "specs");
  * because the assertion below is an equality: a row that leaves the set without
  * leaving this list fails exactly as a new one does.
  */
-const KNOWN_BLOCKED_OVER_A_DECISION: readonly string[] = [
-  "spec-0017 TDD-0016 CR-20260818-0007 approved",
-  "spec-0017 TDD-0030 CR-20260820-0001 approved",
-  "spec-0017 TDD-0032 CR-20260820-0007 approved",
-  "spec-0017 TDD-0033 CR-20260820-0007 approved",
-  "spec-0017 TDD-0034 CR-20260820-0007 approved",
-  "spec-0017 TDD-0035 CR-20260820-0007 approved",
-];
+const KNOWN_BLOCKED_OVER_A_DECISION: readonly string[] = [];
 
 /** The one `Status` a change request carries while it still blocks anything. */
 const OPEN = "open";
@@ -82,20 +75,26 @@ async function blockedRows(): Promise<BlockedRow[]> {
     // The `Status` column is read by its header: `blocked` is also a workflow
     // state, so a `Boundary` or `Selector` cell may carry the same word.
     let statusColumn = -1;
+    let blockedByIndex = -1;
     for (const line of text.split(/\r?\n/)) {
       if (!line.startsWith("|")) {
         statusColumn = -1;
+        blockedByIndex = -1;
         continue;
       }
       const cells = line.split("|").map((cell) => cell.trim());
       const tdd = cells[1] ?? "";
       if (tdd === "TDD-ID") {
         statusColumn = cells.indexOf("Status");
+        blockedByIndex = cells.indexOf("Blocked-By");
         continue;
       }
       if (!/^TDD-\d{4}$/.test(tdd)) continue;
       if ((cells[statusColumn] ?? "").toLowerCase() !== "blocked") continue;
-      rows.push({ pack, tdd, requests: [...new Set(line.match(CHANGE_REQUEST) ?? [])] });
+      // DR-ID records the approved reset that created a row. Only Blocked-By
+      // names the decisions that currently prevent that row from proceeding.
+      const blockedBy = cells[blockedByIndex] ?? "";
+      rows.push({ pack, tdd, requests: [...new Set(blockedBy.match(CHANGE_REQUEST) ?? [])] });
     }
   }
   return rows;

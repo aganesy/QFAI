@@ -38,8 +38,9 @@ is why the internal-version-leakage guard has no jurisdiction here.
   it reads.
 - Test-runner configuration: `packages/qfai/vitest.config.ts`, `packages/qfai/vitest.workspace.ts`,
   and the per-project pool / worker / concurrency / file-parallelism / hook-timeout knobs.
-- Slice-surface alignment: the vitest project set, the `test:<slice>` script set, and the matrix
-  slice list of every CI job that expands over the slice set, held to one shared name set.
+- Slice-surface alignment: the vitest project set, the `test:<slice>` script set,
+  the `test` and `node-floor` CI matrices, the `gate-tests` and `gate-floor`
+  release matrices, and release verify's `SUITE_SLICES`, held to one shared name set.
 - The layer-to-CI-lane mapping document, authored under
   `packages/qfai/assets/init/.qfai/assistant/catalog/` so the SSOT mirror gate stays satisfied.
 - Retirement of the repository's own duplicate of the shipped validate workflow, and the fold
@@ -147,8 +148,8 @@ something else in the list above:
 - `discussion-20260923171450572#NFR-0011`, own-CI half: the control-core suites and the init
   and migration suites run on `windows-latest` on every code-path pull request, and the
   aggregate verdict fails when they fail. The property itself is held by those suites (their
-  owners are named under `### Out`); this spec holds the job that runs them: BR-0017-0070,
-  BR-0017-0071, BR-0017-0072 and BR-0017-0073.
+  owners are named under `### Out`); this spec holds the job that runs them: BR-0017-0071,
+  BR-0017-0072, BR-0017-0073 and BR-0017-0074.
 
 ## Applicable Policy
 
@@ -249,9 +250,11 @@ this spec owns the own-CI half only.
   land before any requirement that adds a job.
   (upstream: `discussion-20260804173914356#REQ-0006`, `own-CI`, must)
 - REQ-0007: Own-CI change detection and change-derived lane selection — a full-history detection
-  job derives which slices must run; every matrix leg stays **declared** and an unneeded leg is
-  _skipped_ by a derived condition rather than removed, so its check name persists and it consumes
-  no runner minutes. Any diff failure fails open with a warning annotation and runs everything, as
+  job derives which current slices must run; every retained matrix leg stays **declared** and an
+  unneeded leg is _skipped_ by a derived condition, so its check name persists and it consumes no
+  runner minutes. A leg whose slice and owned test suite are retired by an approved change is
+  removed from every slice surface and the check-name inventory. Any diff failure fails open with
+  a warning annotation and runs everything, as
   does a change outside the recognized directories. A lane is exempt from selection when skipping
   it would leave a gate with nothing to check, or report a green nobody earned. Exempt today are
   the job carrying a required status context (temporary, released by `OQ-0022`; the general rule
@@ -279,11 +282,12 @@ this spec owns the own-CI half only.
   retry setting is added.
   (upstream: `discussion-20260804173914356#REQ-0010`, `own-CI`, must)
 - REQ-0011: Slice-surface alignment — delete the vitest project that matches zero files, is
-  absent from the CI matrix, and would fail on an unfiltered run; add the two missing per-slice
-  scripts, so the vitest project set, the per-slice script set and the matrix slice list of every
-  CI job that expands over the slice set hold the same names as each other — nine, because each of
-  the two test files that spawn a process per case takes a slice of its own. A CI job sliced later
-  is one more surface, held to the same set.
+  absent from the CI matrix, and would fail on an unfiltered run. The vitest project set and
+  `test:<slice>` script set hold the same seven names as the `test` and `node-floor` CI
+  matrices, the `gate-tests` and `gate-floor` release matrices, and release verify's
+  `SUITE_SLICES`. Every declared project matches at least one test file. A job sliced later
+  is one more surface, held to the same set. Retiring a suite removes its project, script
+  and matrix legs together through an approved change.
   (upstream: `discussion-20260804173914356#REQ-0011`, `own-CI`, must)
 - REQ-0012: Workflow-hygiene lint lane over own workflows — a repository script, run from the
   lint aggregate that pull requests actually execute, asserts over `.github/workflows/**`: every
@@ -336,7 +340,7 @@ The requirement of this spec's row in `## Triage (2026-09-24 intent-driven entry
 
 | Requirement                             | Home                                                                                  |
 | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0017-0070, BR-0017-0071, BR-0017-0072, BR-0017-0073 |
+| `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0017-0071, BR-0017-0072, BR-0017-0073, BR-0017-0074 |
 
 ## Entry points
 

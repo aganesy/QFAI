@@ -4,8 +4,158 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
+  dedicated test suites. CI and release checks now run seven test slices. An
+  older tag with the retired slices uses the whole-suite release gate.
+
+### Changed
+
+- **The test runner moves to its fourth major, and the coverage provider with
+  it** (#2173). The two move as a pair: the provider's peer range names the
+  runner version exactly, so a provider a major ahead of the runner fails at
+  import rather than at install. Three declarations follow the runner's own
+  changes — the project list is imported by the root configuration instead of
+  being discovered by file name, isolation is declared directly rather than
+  inside a pool block, and `vite` is declared as the peer the runner requires
+  instead of being resolved for it. The supported Node range is unchanged.
+
+- **The type checker moves to TypeScript 6.** The seventh major ships the
+  compiler as a native binary and no longer exposes the classic compiler API
+  from its main entry, which the test tree and the declaration build both read;
+  the linter refuses to load against it at all. The sixth is the newest release
+  every part of this toolchain supports, and it reports the deprecations the
+  seventh turns into errors. The forward lane keeps type-checking against the
+  seventh, so nothing stops tracking it.
+
+  One deprecation is silenced, inside the declaration rollup only: the bundler
+  builds that rollup with `baseUrl` whatever the project declares, and this
+  package declares neither `baseUrl` nor `paths`. The lifting condition is
+  written beside it, and the forward lane now names any such exemption on a
+  passing run instead of reading only the compiler configuration.
+
 ### Fixed
 
+- **A review pack's request may list its `TDD-ID`s under a heading, and a
+  response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
+  round's ids only from one `TDD-ID:` line, so a `review_request.md` naming
+  them as a `## TDD IDs` bullet list was refused although the review-artifact
+  layout asks for a list. The heading must appear once, and every item under
+  it must be one `TDD-NNNN` id. The per-id `Audited evidence hash` in a
+  response was also compared as raw text, so `sha256:<hex>` failed against the
+  row's bare hex. It is now compared with the prefix and case removed, as the
+  gate's other hash checks already were.
+- **A ledger row that owes a test case and names none is reported**
+  (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
+  holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
+  `REQ-0012-0075 (REQ-0109 follow-up)`. The other checks on the column read
+  only the ids it holds, so such a row passed them all. Every row is read
+  except `E2E` and `API` rows and an `Integration` row carrying a `CON-DB-*`
+  contract, which record their obligation in another column.
+  The seven spec-0012 rows it reported now name a case or are retired:
+  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
+  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
+  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
+
+- **spec-0012 states what `--auto-serve` does when its teardown fails**
+  (#2208). A case once required a failed teardown to be reported, and that
+  clause was lost when the case was rewritten, so the report could be removed
+  with no test failing. `REQ-0012-0062` now states it as the product behaves:
+  iterate prints a line on stdout naming the `--auto-serve` teardown and the
+  reason it failed, and returns the exit code the cycle would otherwise have
+  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
+  it.
+
+- **A `done` row whose test case only an annotation carrier names is
+  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
+  lists obligations and declares no test, so no runner selects a case named
+  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
+  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
+  not reported, and neither is an `exception` row. The finding names the row,
+  the case and the carrier. The fix is to annotate the test that discharges the
+  case. Where no test does, the row leaves `done` only through an upstream
+  reset approved by a Change Request. A test scan that passes its file limit or
+  cannot read a file is reported under the same code rather than read as a
+  pass. The 33 existing findings are carried as a backlog in
+  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
+  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
+
+- **A `done` row goes stale only when something its test reached changed**
+  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
+  every observation. In an active repository every completed row therefore went
+  stale within hours, whatever changed, and full-history validation failed on
+  rows whose test and module had not moved. A `done` row is now measured over
+  its test file, the files its newest `RED test manifest` lists, and the files
+  under `srcDir` those import, directly or transitively. Relative imports are
+  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
+  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
+  installed packages are outside the project. Where an import cannot be
+  followed — an alias no pattern resolves, a computed `import()` or
+  `require()`, a relative path that names no file, or a test file that is not
+  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
+  and the finding says why. The finding now names the covered set it measured.
+  `evidence-revision.md` states the at-rest scope; the in-flight check before
+  submitting still covers the whole source directory.
+
+- **A blocked ledger row whose Change Request is settled is reported**
+  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
+  the request was decided, and nothing said so. `validate` now warns with
+  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
+  Requests — or, with no blocker there, its `Evidence` cell names some — and
+  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
+  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
+  is the resumption edge. An open request, an approved one not yet applied, an
+  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
+  another blocker as well report nothing.
+
+- **The rest of spec-0003 states what `qfai init` and the shipped workflows
+  do now** (#2203). Sixteen more statements still described the product before
+  a deliberate change. They said init creates the artifact directories and a
+  steering README, and that the `.gitignore` block carries README negations.
+  They also said a legacy layout only warns on stdout, two jobs install, one
+  job requests full history, the shape pins nine dimensions, and a second
+  runner tier is deferred. Each now says what the tests and the source do. The
+  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
+  never asserted that init leaves the artifact directories out.
+
+- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
+  hashes it** (#2256). The skill said the hash took the revision manifest's
+  shape, whose `mode` is four octal digits. The gate hashes six digits spelled
+  like git's tree mode — `100644`, `100755` or `120000` — so a hash computed as
+  the skill said never matched, and `validate` refused evidence that was
+  complete. The six-digit form is the intended one: the gate recomputes the
+  hash on whichever checkout runs it, and every permission bit but the execute
+  bits follows that checkout's umask. The skill now names the three values and
+  says where the execute bit is read from. The revision manifest keeps its own
+  four digits.
+
+- **The RED test hash reads the execute bit where git reads it** (#2257).
+  `validate` took a manifest file's execute bit off the disk. Windows has none,
+  so a file git marks executable hashed as `100644` on a Windows checkout and
+  `100755` on a POSIX one, and evidence recorded on one was refused on the
+  other. The gate now reads the bit the way `git add` does: from the index where
+  `core.fileMode` is `false`, as in a repository git created on Windows, and
+  from the owner's execute bit on disk everywhere else. An execute bit held
+  only by the group or others no longer selects `100755`; git never recorded
+  it either.
+
+  Two kinds of recorded evidence now hash differently, and `validate` refuses
+  them until their `RED test hash` is recorded again: evidence recorded on
+  Windows whose manifest names a file git marks executable, and evidence whose
+  manifest names a file executable by the group or others but not its owner.
+  POSIX checkouts already refused the first kind.
+
+- **A BR or AC heading is read with or without a title after a colon.** The
+  check that compares a spec's rules and criteria with their merge-base copy
+  accepted `## AC-0001: Title` but not `## AC-0001`, nor the `# AC-0001` comment
+  the shipped template opens each Gherkin scenario with. A file written only in
+  those shapes therefore held no obligations. Editing it raised
+  `QFAI-TRACE-003` ("could not be compared") instead of `QFAI-TRACE-001` for
+  the criterion that changed. Both shapes are read now. A `# AC-0001` comment
+  inside a `## AC-0001` section still counts as part of that criterion, not as
+  a second copy of it. Only a spec whose rules or criteria changed on the
+  branch is affected. No count in `scripts/dogfood-backlog.json` moves.
 - **`prototyping.yaml` is offered only to a pack that can use it.** The README
   and the discussion skill offered the file to every UI-bearing discussion
   pack, a cli-only pack included, while the skill forbids the file for one:
@@ -16,16 +166,77 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
 
-- **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
-  completed row's evidence record after its review moves the bytes the review
-  hashed, so the recorded `Audited evidence hash` no longer recomputes. The
-  procedure the skill prescribes answers that with a re-attestation in a review
-  pack of its own, but the gate never read it, so a repaired row could not pass
-  `QFAI-TDDLIST-008`. A verdict whose hash disagrees now passes when the entry's
-  `Record re-attestation` equals the recomputed hash. The re-attestation owes a
-  canonical `Record re-attestation pack` and a sha256
-  `Record re-attestation pack seal`, and the seal is recomputed when the pack is
-  in the checkout. The three fields sit outside the audited subject, so writing
+## [1.12.3] - 2026-09-24
+
+### Fixed
+
+- **spec-0012 states the auto-serve SIGINT path as the runner contract**
+  (#2201). `TC-0012-0462` still described iterate killing child server
+  processes, while iterate only invokes the teardown its server runner
+  returns. The case now names three clauses:
+  - the handler is installed after the runner returns and removed at the end of
+    the cycle;
+  - teardown and removal still run when the cycle fails;
+  - a SIGINT runs the teardown once, within 2 seconds.
+
+  Each clause has its own row. `NFR-0106` now states the 2-second bound the
+  case cites. The first row's test also checks the handler is not installed
+  before the runner is called, and the bound check runs unconditionally.
+
+- **spec-0013 records the change request behind its repointed rules** (#2133).
+  Five rules were repointed at the criterion about their own subject with no
+  change request on record, and the coverage record still said they were
+  broken. `CR-20260923-0010` confirms the repair and is recorded in the pack's
+  delta, and finding 7 of the coverage record says what was done. No spec
+  obligation, test or ledger row changed.
+
+- **The shipped-workflow aggregate check has a case for each job-shape
+  clause** (#2194). The check rejects an aggregate with a second step, or with
+  `continue-on-error` set on the job, and no case failed when either clause
+  was removed. `TC-0003-0058` now states that obligation, and a new two-case
+  test covers it. The three completed rows that read the same test file are
+  re-verified against the edited file.
+  A re-verified row is no longer reported stale (`QFAI-TDDLIST-009`) for the
+  edit its re-verify covered: the interval now starts at the re-verify
+  record's `Revision`, and a later change still makes the row stale.
+
+- **spec-0003 states what `qfai init` and the shipped workflows do now**
+  (#2190). Five of its obligations described the product before a deliberate
+  change and the tests asserted the opposite. They said init creates six
+  artifact directories, writes a nine-line `.gitignore` block, and seeds a
+  steering README. They also said a legacy path only warns, and two jobs
+  install. Five more partly disagreed. Each statement now says what the tests
+  and the source do. No test or product code changed, so no ledger row is
+  reopened.
+
+- **spec-0012 states `--auto-serve` as a runner contract, and its five rows
+  are complete** (#2179). The spec said iterate spawns a server, kills child
+  processes with `tree-kill` and force-kills an earlier iterate. The product
+  calls a server runner, invokes the teardown it returns, and by default serves
+  in-process and refuses a port another process holds. The requirement, story,
+  criterion, rule, example and test case now say the same, one ledger row that
+  named four boundaries is split into four, and a new case covers the default
+  runner's refusal. Each row's test is shown to fail when the predicate it pins
+  is broken.
+
+- **The completion gate reads a record re-attestation, one per verdict**
+  (#2196, #2205). Repairing a completed row's evidence record after its review
+  moves the bytes the review hashed, so the recorded `Audited evidence hash` no
+  longer recomputes. The procedure the skill prescribes answers that with a
+  re-attestation in a review pack of its own, but the gate never read it, so a
+  repaired row could not pass `QFAI-TDDLIST-008`. A verdict whose hash disagrees
+  now passes when the re-attestation recorded under that verdict's own prefix —
+  `Spec record re-attestation`, `Code quality record re-attestation` or
+  `Prototype parity record re-attestation` — equals the recomputed hash. Each
+  owes a canonical `<prefix> record re-attestation pack` and a sha256
+  `<prefix> record re-attestation pack seal`, and each seal is recomputed when
+  the pack is in the checkout; two verdicts may name the same pack. The fields
+  are per verdict because one hash cannot answer for two subjects: a
+  `Prototype parity` verdict hashes the captures its `Surface artifacts`
+  manifest names beside the entry's fields, so on a UI-affecting row it never
+  recomputes to the value the other verdicts read. An `n/a` (not UI-affecting)
+  row refuses a parity re-attestation, as it already refuses a parity hash and
+  pack. Every one of these fields sits outside the audited subject, so writing
   them does not move the hash they re-attest.
 
 - **The completion gate accepts the `qa-gatekeeper` forms the skill documents**

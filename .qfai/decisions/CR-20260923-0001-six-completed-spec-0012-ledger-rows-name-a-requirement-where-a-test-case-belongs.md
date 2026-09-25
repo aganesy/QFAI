@@ -9,7 +9,7 @@
 - Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
 - Approved at: `2026-09-22T22:45:00Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-23T11:25:00Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
@@ -543,4 +543,35 @@ Approved under option 1, the recommendation. It removes the one duplicate row
 and puts each of the other five on a case that states what its test verifies,
 adding a chain only for the peek, which no criterion states. Option 4 is
 smaller but certifies cases that do not state the rows' tests, and option 3
-states three obligations twice. Not yet applied.
+states three obligations twice.
+
+Applied under option 1, with three differences from `## Proposed change`.
+
+- `TC-0012-0485` leaves out the busy-port refusal. `CR-20260923-0002`, applied
+  first, states it as `TC-0012-0489`, which `TDD-0561` holds, so the new case
+  names that case instead of stating the refusal twice. The `TDD-0515`
+  selector proposed in step 9 loses its block (7) entry for the same reason.
+- The `E2E` row seeded for `US-0012-0143` is `TDD-0567`. `TDD-0561` to
+  `TDD-0564` were taken before this record was applied, and `TDD-0565` and
+  `TDD-0566` are taken on a branch not yet merged.
+- The five `Selector` cells are left as they were. `Selector` is the owner
+  stage's cell, so the stage that takes each reset row up writes it; step 9
+  lists the values.
+
+What was written:
+
+- `REQ-0012-0078` is restated with the file the peek reads.
+- `US-0012-0143`, `AC-0012-0083`, `BR-0012-0066`, `BR-0012-0067`,
+  `EX-0012-0187` to `EX-0012-0189` and `TC-0012-0484` to `TC-0012-0488` are
+  added. `AC-0012-0059`, `-0060` and `-0061` gain `REQ-0012-0075`, `-0076` and
+  `-0077`.
+- `TDD-0496` is removed and tombstoned under `## TDD-ID reservations`.
+- `TDD-0497`, `TDD-0514`, `TDD-0515`, `TDD-0516` and `TDD-0517` name their new
+  cases and are reset to `todo`, with this record in `DR-ID`. `TDD-0567` is
+  seeded at `todo`.
+- `16_Traceability-ledger.md` carries the step 10 rows.
+- `spec-0012/09_delta.md` records this request.
+- `completedRowNamesItsTestCase.test.ts` no longer carries the six rows.
+
+Approved actions step 3, the `/qfai-atdd` and `/qfai-implement` work on the
+reset rows, has not run.

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { defaultConfig, type QfaiConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const BASE_HEADERS =
@@ -13,21 +13,35 @@ const BASE_HEADERS =
 const BASE_SEP =
   "| -------- | ------- | ----- | --------------- | -------- | ------ | ----- | -------- |";
 
+/** What a case adds to the spec pack the helper writes. */
+interface LedgerFixture {
+  /** `01_Spec.md`'s content. */
+  readonly spec?: string;
+  /** Further files, keyed by their path relative to the project root. */
+  readonly files?: Readonly<Record<string, string>>;
+  readonly config?: QfaiConfig;
+}
+
 async function withLedger(
   lines: string[],
   assertion: (issues: Awaited<ReturnType<typeof validateTddList>>) => void,
   testCases = "# TC\n",
+  fixture: LedgerFixture = {},
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-oblig-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
     await mkdir(path.join(specDir, "tdd"), { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "01_Spec.md"), fixture.spec ?? "# Spec\n", "utf-8");
     await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
     await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
     await writeFile(path.join(specDir, "06_Test-Cases.md"), testCases, "utf-8");
     await writeFile(path.join(specDir, "tdd", "test-list.md"), lines.join("\n"), "utf-8");
-    assertion(await validateTddList(root, defaultConfig));
+    for (const [relative, content] of Object.entries(fixture.files ?? {})) {
+      await mkdir(path.dirname(path.join(root, relative)), { recursive: true });
+      await writeFile(path.join(root, relative), content, "utf-8");
+    }
+    assertion(await validateTddList(root, fixture.config ?? defaultConfig));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -421,6 +435,499 @@ describe("the Layer enum is checked on every row", () => {
       ],
       (issues) => {
         expect(issues.filter((entry) => entry.code === "TDDLIST_UNKNOWN_LAYER")).toEqual([]);
+      },
+    );
+  });
+});
+
+describe("a done row rests on a test, not on an annotation carrier", () => {
+  const carrierOnly = (
+    issues: Awaited<ReturnType<typeof validateTddList>>,
+  ): Awaited<ReturnType<typeof validateTddList>> =>
+    issues.filter((entry) => entry.code === "QFAI-TDDLIST-023");
+
+  const CARRIER = "tests/integration/qfai-traceability.md";
+
+  /** A carrier naming two cases, and a unit test annotating the second. */
+  const files = {
+    [CARRIER]: [
+      "# Traceability",
+      "",
+      "- QFAI:SPEC-0001:TC-0001-0001",
+      "- QFAI:SPEC-0001:TC-0001-0002",
+      "",
+    ].join("\n"),
+    "tests/unit/b.test.ts": ["// QFAI:SPEC-0001:TC-0001-0002", 'it("case b", () => {});', ""].join(
+      "\n",
+    ),
+  };
+
+  /** Reaches `tests/unit/`, which the acceptance scan leaves out. */
+  const config: QfaiConfig = {
+    ...defaultConfig,
+    validation: {
+      ...defaultConfig.validation,
+      traceability: {
+        ...defaultConfig.validation.traceability,
+        testFileGlobs: ["tests/**/*.test.ts"],
+      },
+    },
+  };
+
+  it("reports a done row whose case only the carrier names", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", CARRIER]);
+        expect(found[0]?.message).toContain(`TC-0001-0001 is named only by ${CARRIER}`);
+        expect(found[0]?.suggested_action).toContain("QFAI:SPEC-0001:TC-0001-0001");
+        expect(found[0]?.suggested_action).toContain(
+          "approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement",
+        );
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("leaves a row a test annotates, and a case nothing names", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+        "| TDD-0002 | TC-0001-0001, TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+        "| TDD-0003 | TC-0001-0003 | Unit | tests/unit/c.test.ts | case c | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("reads done alone", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | todo | - | - |",
+        "| TDD-0002 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | exception | DR-0001 | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("leaves a row whose Layer does not own TC-Refs", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | E2E | tests/e2e/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("counts a test declared through a computed binding", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          "tests/unit/b.test.ts": [
+            "// QFAI:SPEC-0001:TC-0001-0002",
+            "const deployed = process.env.LIVE ? test : test.skip;",
+            'deployed("case b", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
+  it("does not count a computed binding shown in a Markdown carrier", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", CARRIER],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          ...files,
+          [CARRIER]: [
+            "# Traceability",
+            "",
+            "- QFAI:SPEC-0001:TC-0001-0001",
+            "",
+            "const run = LIVE ? test : test.skip;",
+            'run("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config,
+      },
+    );
+  });
+
+  it("does not count a computed binding in a feature file's description", async () => {
+    const feature = "tests/integration/a.feature";
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", feature],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          "tests/unit/b.test.ts": files["tests/unit/b.test.ts"],
+          [feature]: [
+            "# QFAI:SPEC-0001:TC-0001-0001",
+            "Feature: case a",
+            "  const run = LIVE ? test : test.skip;",
+            '  run("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config: {
+          ...config,
+          validation: {
+            ...config.validation,
+            traceability: {
+              ...config.validation.traceability,
+              testFileGlobs: ["tests/**/*.test.ts", "tests/**/*.feature"],
+            },
+          },
+        },
+      },
+    );
+  });
+
+  it("does not count a computed binding in a prose file of another format", async () => {
+    const prose = "tests/integration/notes.rst";
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues).map((entry) => entry.refs)).toEqual([
+          ["TDD-0001", "TC-0001-0001", prose],
+        ]);
+      },
+      "# TC\n",
+      {
+        files: {
+          "tests/unit/b.test.ts": files["tests/unit/b.test.ts"],
+          [prose]: [
+            "QFAI:SPEC-0001:TC-0001-0001",
+            "",
+            "const run = LIVE ? test : test.skip;",
+            'run("case a", () => {});',
+            "",
+          ].join("\n"),
+        },
+        config: {
+          ...config,
+          validation: {
+            ...config.validation,
+            traceability: {
+              ...config.validation.traceability,
+              testFileGlobs: ["tests/**/*.test.ts", "tests/**/*.rst"],
+            },
+          },
+        },
+      },
+    );
+  });
+
+  it("reads the unit tests under paths.testsDir with no project glob", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toEqual([]);
+      },
+      "# TC\n",
+      { files },
+    );
+  });
+
+  it("reads a decomposed token through the case it resolves to", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", CARRIER]);
+      },
+      UNIT_TEST_CASE,
+      { files: { [CARRIER]: "- QFAI:SPEC-0001:TC-0001\n" }, config },
+    );
+  });
+
+  it("reports a decomposed token once when carriers name both of its forms", async () => {
+    const other = "tests/integration/more-traceability.md";
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.refs).toEqual(["TDD-0001", "TC-0001-0001", other, CARRIER]);
+      },
+      UNIT_TEST_CASE,
+      {
+        files: {
+          [CARRIER]: "- QFAI:SPEC-0001:TC-0001\n",
+          [other]: "- QFAI:SPEC-0001:TC-0001-0001\n",
+        },
+        config,
+      },
+    );
+  });
+
+  it("reports a case once when the row names it twice", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001, tc-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        expect(carrierOnly(issues)).toHaveLength(1);
+      },
+      "# TC\n",
+      { files, config },
+    );
+  });
+
+  it("reports a test scan with a gap instead of passing", async () => {
+    const refused: QfaiConfig = {
+      ...config,
+      validation: {
+        ...config.validation,
+        traceability: {
+          ...config.validation.traceability,
+          testFileGlobs: ["tests/**/*\u0000.test.ts"],
+        },
+      },
+    };
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0002 | Unit | tests/unit/b.test.ts | case b | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.refs).toEqual(["TDD-0001"]);
+        expect(found[0]?.message).toContain("were not checked for a test");
+      },
+      "# TC\n",
+      { files, config: refused },
+    );
+  });
+
+  it("demotes the finding on a retired spec", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 | Unit | tests/unit/a.test.ts | case a | done | - | - |",
+      ],
+      (issues) => {
+        const found = carrierOnly(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("info");
+      },
+      "# TC\n",
+      {
+        files,
+        config,
+        spec: [
+          "# SPEC-0001 Sample",
+          "",
+          "- Status: deprecated",
+          "- Deprecated-at: 2026-01-01",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+});
+
+describe("a row that owes a test case names one in TC-Refs", () => {
+  const noTestCase = (
+    issues: Awaited<ReturnType<typeof validateTddList>>,
+  ): Awaited<ReturnType<typeof validateTddList>> =>
+    issues.filter((entry) => entry.code === "QFAI-TDDLIST-022");
+
+  it("reports a dash, at every status", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+        "| TDD-0002 | -       | Unit  | tests/b.test.ts | case b   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001", "TDD-0002"]);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.message).toContain('TC-Refs "-"');
+        expect(found[0]?.suggested_action).toContain("/qfai-sdd");
+        expect(found[0]?.suggested_action).toContain("retire the row");
+      },
+    );
+  });
+
+  it("reports a requirement id, which fills the cell and names no test case", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | REQ-0001-0001 (follow-up) | Integration | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("REQ-0001-0001 (follow-up)");
+      },
+    );
+  });
+
+  it("accepts a test case beside other text", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 (follow-up) | Unit | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("reports an empty TC-Refs cell", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 |         | Unit  | tests/a.test.ts | case a   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("holds an empty TC-Refs");
+      },
+    );
+  });
+
+  it("reports a CON-DB-* contract on a row whose Layer is not Integration", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | CON-DB-0001 | Unit | tests/a.test.ts | a | todo | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001"]);
+        expect(found[0]?.message).toContain('TC-Refs "CON-DB-0001"');
+      },
+    );
+  });
+
+  it("exempts a row whose Layer records its obligation in another column", async () => {
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs | CON-API-Refs | CON-DB-Refs |`,
+        `${BASE_SEP} ------- | ------------ | ----------- |`,
+        "| TDD-0001 | - | E2E         | tests/e2e/a.ts  | a | done | - | - | US-0001-0001 | -            | -           |",
+        "| TDD-0002 | - | API         | tests/api/a.ts  | b | done | - | - | -            | CON-API-0001 | -           |",
+        "| TDD-0003 | - | Integration | tests/a.test.ts | c | done | - | - | -            | -            | CON-DB-0001 |",
+        "| TDD-0004 | CON-DB-0002 | Integration | tests/b.test.ts | d | todo | - | - | - | - | -  |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("demotes the finding on a retired spec", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("info");
+      },
+      "# TC\n",
+      {
+        spec: [
+          "# SPEC-0001 Sample",
+          "",
+          "- Status: deprecated",
+          "- Deprecated-at: 2026-01-01",
+          "",
+        ].join("\n"),
       },
     );
   });

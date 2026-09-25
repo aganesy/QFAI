@@ -59,7 +59,10 @@
 - EX-Ref: EX-0013-0005
 - AC-Refs: AC-0013-0027
 - Verify that an invocation with no argument targets every capability in
-  `_policies/03_Capabilities.md` and delegates Slice per spec.
+  `_policies/03_Capabilities.md` and delegates Slice per spec; that a catalog
+  which moves an assigned spec id to another capability, by its `Spec` cell or
+  by its row order, is reported; and that the skill requires a Change Request
+  to reorder the capability-to-spec mapping.
 
 ## TC-0013-0011: Plan Finalized After A Slice Is Grounded
 
@@ -258,26 +261,26 @@ Tracked for separate implementation as OQ-0016
 - Level: integration
 - Verify a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys (closed schema violation), is rejected by `auditProfile.ts` (DR-0268).
 
-## TC-0013-0036: Missing optional side artifact leaves preflight ready
+## TC-0013-0036: Missing Optional Side Artifact Leaves Preflight Ready
 
 - EX-Ref: EX-0013-0021
-- AC-Refs: AC-0013-0042
+- AC-Refs: AC-0013-0028
 - Type: normal
 - Level: integration
-- Verify that a usable pack without `prototyping.yaml` leaves SDD preflight ready and adds no optional-artifact blocker.
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` is absent.
 
-## TC-0013-0037: Invalid or legacy optional side artifact leaves preflight ready
+## TC-0013-0037: Invalid or Legacy Optional Side Artifact Leaves Preflight Ready
 
 - EX-Ref: EX-0013-0021
-- AC-Refs: AC-0013-0042
+- AC-Refs: AC-0013-0028
 - Type: error
 - Level: integration
-- Verify that a usable pack with an invalid namespaced `prototyping.yaml` schema or a legacy-only file without the `prototyping` namespace leaves SDD preflight ready and adds no optional-artifact blocker.
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` has an invalid schema or a legacy format without a `prototyping` namespace.
 
 ## TC-0013-0038: Stage 1 checks a matching routing-time approval
 
 - EX-Ref: EX-0013-0022
-- AC-Refs: AC-0013-0028
+- AC-Refs: AC-0013-0043
 - Type: normal
 - Level: L3
 - Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, state that the check passes only when the record exists, matches the row's operation and capability, and is not stale, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.

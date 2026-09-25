@@ -18,7 +18,7 @@ links: ["spec-0018"]
 
 ## Why it waits
 
-The ledger assigns the JSON verdict's plan test to the `qfai-run` skill asset, but the verdict comes from the workflow core. `CR-20260925-0003` asks for the SDD-owned `Owning module` correction. The CR is open and depends on the earlier ledger change in `CR-20260924-0002` being applied first.
+The ledger assigns the JSON verdict's plan test to the `qfai-run` skill asset, but the verdict comes from the workflow core. `CR-20260925-0003` asks for the SDD-owned `Owning module` correction. The CR is open and depends on the earlier ledger change in `CR-20260924-0006` being applied first.
 
 ## What releases it
 

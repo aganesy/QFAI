@@ -1907,6 +1907,13 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("under `Shared-artifact re-verify`");
     expect(shared).toContain("**A row whose re-run fails is not re-verified**");
   });
+  it("starts a re-verified row's staleness check at the re-verify's revision", async () => {
+    // The validator reads an accepted record's `Revision` as the start of the
+    // consumer's staleness interval, so the reference has to say so.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain("`Revision` is also where the consumer's staleness check starts");
+    expect(shared).toContain("a later change to the test file or the source tree still does");
+  });
   it("gives the seam a body the selector can decode", async () => {
     // A selector that decodes JSON before asserting raises a parse error on an
     // empty body, which the admissibility rule rejects as a non-assertion
@@ -1991,6 +1998,26 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // this hash is the only thing still watching the test-owned artifacts.
     const provenance = flat(await readProvenance(tree));
     expect(provenance).toContain("`path + NUL + kind + NUL + mode + NUL + blob hash`");
+  });
+
+  it("spells the RED test manifest's mode the way the gate hashes it", async () => {
+    // The gate recomputes the hash with a six-digit mode, because the other
+    // permission bits follow the checkout's umask. Sending the author to the
+    // revision manifest's four octal digits gave a hash no gate reproduces.
+    const provenance = flat(await readProvenance(tree));
+    expect(provenance).toContain(
+      "**`mode` is six digits spelled like git's tree mode, not the revision manifest's four octal digits**: `120000` for a symlink, `100755` for a file `git add` would record as executable, and `100644` for any other file.",
+    );
+    expect(provenance).not.toContain("the same shape the revision manifest uses");
+    // The gate reads the execute bit where git does, which is what carries it
+    // between Windows, whose disk has none, and POSIX. Read off the disk on
+    // both, a file git marks executable hashed differently on each.
+    expect(provenance).toContain(
+      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index — `100755` when `git ls-files -s` says so, and `100644` for a file git does not track. Everywhere else, take the owner's execute bit off the disk: a `0654` file is `100644`.",
+    );
+    expect(provenance).toContain("the gate rejects an unmerged index entry");
+    expect(provenance).not.toContain("does not cross between Windows and POSIX");
+    expect(provenance).not.toContain("any bit of `0111`");
   });
 
   it("invalidates the proof whenever the test changed, on either branch", async () => {

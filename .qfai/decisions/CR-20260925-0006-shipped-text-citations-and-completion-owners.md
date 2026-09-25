@@ -23,11 +23,11 @@ a reference only this repository holds.
 | Test case      | Ledger row           | Required citation                              |
 | -------------- | -------------------- | ---------------------------------------------- |
 | `TC-0011-0021` | `spec-0011/TDD-0029` | `DR-0297`                                      |
-| `TC-0013-0038` | `spec-0013/TDD-0044` | CLI-WF `## Authorizations`                     |
-| `TC-0013-0039` | `spec-0013/TDD-0045` | CLI-WF, for the staleness conditions           |
-| `TC-0013-0042` | `spec-0013/TDD-0048` | CLI-VAL `## Triage authorization reference`    |
-| `TC-0013-0043` | `spec-0013/TDD-0049` | `DR-0297`                                      |
-| `TC-0013-0047` | `spec-0013/TDD-0053` | CLI-WF `### Work order` and `### Stage result` |
+| `TC-0013-0038` | `spec-0013/TDD-0112` | CLI-WF `## Authorizations`                     |
+| `TC-0013-0039` | `spec-0013/TDD-0113` | CLI-WF, for the staleness conditions           |
+| `TC-0013-0042` | `spec-0013/TDD-0116` | CLI-VAL `## Triage authorization reference`    |
+| `TC-0013-0043` | `spec-0013/TDD-0117` | `DR-0297`                                      |
+| `TC-0013-0047` | `spec-0013/TDD-0121` | CLI-WF `### Work order` and `### Stage result` |
 
 The distributed-surface guards refuse a `DR-NNNN` ID in a shipped file
 (`.agents/rules/distributed-surface.local.md`). The contracts under
@@ -120,11 +120,11 @@ minimum and was not presented.
 | Item                                   | Kind         | Why it depends on the artifact |
 | -------------------------------------- | ------------ | ------------------------------ |
 | `spec-0011/TDD-0029`                   | `ledger-row` | `TC-Refs` names `TC-0011-0021` |
-| `spec-0013/TDD-0044`                   | `ledger-row` | `TC-Refs` names `TC-0013-0038` |
-| `spec-0013/TDD-0045`                   | `ledger-row` | `TC-Refs` names `TC-0013-0039` |
-| `spec-0013/TDD-0048`                   | `ledger-row` | `TC-Refs` names `TC-0013-0042` |
-| `spec-0013/TDD-0049`                   | `ledger-row` | `TC-Refs` names `TC-0013-0043` |
-| `spec-0013/TDD-0053`                   | `ledger-row` | `TC-Refs` names `TC-0013-0047` |
+| `spec-0013/TDD-0112`                   | `ledger-row` | `TC-Refs` names `TC-0013-0038` |
+| `spec-0013/TDD-0113`                   | `ledger-row` | `TC-Refs` names `TC-0013-0039` |
+| `spec-0013/TDD-0116`                   | `ledger-row` | `TC-Refs` names `TC-0013-0042` |
+| `spec-0013/TDD-0117`                   | `ledger-row` | `TC-Refs` names `TC-0013-0043` |
+| `spec-0013/TDD-0121`                   | `ledger-row` | `TC-Refs` names `TC-0013-0047` |
 | `spec-0018/TDD-0035`                   | `ledger-row` | `TC-Refs` names `TC-0018-0031` |
 | `spec-0018/TDD-0055`                   | `ledger-row` | `TC-Refs` names `TC-0018-0043` |
 | `.qfai/contracts/cli/qfai-workflow.md` | `contract`   | Part C changes `## Completion` |
@@ -175,8 +175,8 @@ Approve each of parts A to D with option 1, or name another option for a part.
    `## Impact scope`. No ID is added, removed or renumbered.
 3. Downstream ledger sweep:
    - Reset to `todo`, recording this CR's ID in their `DR-ID` column:
-     `spec-0011/TDD-0029`, `spec-0013/TDD-0044`, `spec-0013/TDD-0045`,
-     `spec-0013/TDD-0048`, `spec-0013/TDD-0049`, `spec-0013/TDD-0053`,
+     `spec-0011/TDD-0029`, `spec-0013/TDD-0112`, `spec-0013/TDD-0113`,
+     `spec-0013/TDD-0116`, `spec-0013/TDD-0117`, `spec-0013/TDD-0121`,
      `spec-0018/TDD-0035`, `spec-0018/TDD-0055`. Each is at `todo` already, so
      only the `DR-ID` cell changes.
    - Retire: none.

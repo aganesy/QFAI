@@ -305,6 +305,31 @@ describe("TC-0003-0058: aggregate failure protection", () => {
       'qfai-docs.yml: job "docs" survives a failed install but is not a result-only aggregate',
     ]);
   });
+
+  // QFAI:SPEC-0003:TC-0003-0058
+  it.each<[string, (job: ShippedJob) => void]>([
+    [
+      "a second step that does work of its own",
+      (job) => {
+        job.steps = [...job.steps, { shell: "bash", run: 'echo "docs checked"' }];
+      },
+    ],
+    [
+      "continue-on-error set on the job",
+      (job) => {
+        job.job = { ...job.job, "continue-on-error": true };
+      },
+    ],
+  ])(
+    "TC-0003-0058 (TDD-0093): rejects an aggregate job whose shape cannot preserve failure: %s",
+    async (_shape, plant) => {
+      const job = await documentAggregate();
+      plant(job);
+      expect(await aggregateFailureViolations(job, ["checks"])).toEqual([
+        'qfai-docs.yml: job "docs" survives a failed install but is not a result-only aggregate',
+      ]);
+    },
+  );
 });
 
 // QFAI:SPEC-0003:TC-0003-0043

@@ -68,6 +68,21 @@ Two rules in this pack were contradicted by the product that satisfies them.
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                       | Mode      | Approved by | Applied at           |
-| ---------------- | ----------------------------------------------------------------------- | --------- | ----------- | -------------------- |
-| CR-20260912-0003 | `spec-0002/01_Spec.md` (REQ-0012, REQ-0005) and the layers beneath them | re-derive | user        | 2026-09-25T00:21:41Z |
+| CR ID            | Upstream artifact                                                       | Mode      | Approved by             | Applied at           |
+| ---------------- | ----------------------------------------------------------------------- | --------- | ----------------------- | -------------------- |
+| CR-20260924-0003 | `spec-0002/tdd/test-list.md`                                            | re-derive | user (2026-09-24 reply) | 2026-09-24           |
+| CR-20260912-0003 | `spec-0002/01_Spec.md` (REQ-0012, REQ-0005) and the layers beneath them | re-derive | user                    | 2026-09-25T00:21:41Z |
+
+### CR-20260924-0003: Correct unsupported ledger completion claims
+
+`TC-0002-0009` remains outstanding. `TDD-0009` returns to `todo` with no test file or selector because its former skill-guidance test did not prove the planner-first violation. Its former Evidence was `current e2e guidance test pass`.
+
+`TDD-0010` is retired and its ID is reserved. Its former preflight test covered optional artifact handling rather than the cited case. Its former Evidence was `current preflight unit test pass`. The runtime tests belong to `spec-0013` under `CR-20260913-0012`. The separate product decision remains open in `CR-20260912-0003`.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work met two dispositions of `TDD-0009`.
+`CR-20260924-0003` reset it to `todo`, because its former skill-guidance test did not
+prove `TC-0002-0009`. The later `CR-20260912-0003` rerun re-derived `TC-0002-0009`,
+rewrote that test to prove it, and closed the row. The closed row stands, and its
+`DR-ID` names both requests. No approved decision changed.

@@ -84,10 +84,13 @@ supersedes is left untouched.** A verdict is stored in a review pack fixed by a
 hash line where it is stored breaks that seal, and rewriting only the evidence
 file's copy leaves the sealed reviewer response carrying a hash nothing agrees
 with. The superseded verdict keeps what it recorded, correct over the bytes it
-read; the evidence entry gains `Record re-attestation`,
-`Record re-attestation pack` and `Record re-attestation pack seal` beside it,
-and the gate recomputes the superseding hash and both seals. No code runs and
-no round is spent — it opens none, so it is not a `Round N:` pack. A repair
+read; the evidence entry gains `<prefix> record re-attestation`,
+`<prefix> record re-attestation pack` and `<prefix> record re-attestation pack
+seal` beside it, under the prefix of the verdict superseded, and the gate
+recomputes the superseding hash and both seals. A row whose `Prototype parity`
+verdict also went stale re-attests that verdict under its own prefix: its
+subject holds the captures, so the value is not the one the other verdicts
+carry. No code runs and no round is spent — it opens none, so it is not a `Round N:` pack. A repair
 that would move the revision is not a record repair; it is a change to the
 deliverable.
 

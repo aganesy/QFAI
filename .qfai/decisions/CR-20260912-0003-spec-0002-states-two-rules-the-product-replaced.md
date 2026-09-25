@@ -51,9 +51,11 @@ and TC-0002-0011 asks that README and skill wording match the active rule.
 
 The shipped wording says the opposite, in one sentence three documents are
 required to carry verbatim: UI-bearing discussion packs **may** include
-`prototyping.yaml` as an optional recommendation artifact. The preflight agrees
-— `tests/core/sddPreflight.test.ts` requires a UI-bearing pack missing the file
-not to block, and requires a malformed one not to block either.
+`prototyping.yaml` as an optional recommendation artifact. The preflight agrees:
+`tests/integration/sddOptionalArtifactPreflight.test.ts` requires a UI-bearing
+pack missing the file not to block, and requires a malformed one not to block
+either. These runtime cases are tracked by `spec-0013` after
+`CR-20260924-0003` corrected their former `spec-0002` ledger attribution.
 
 So a test that checks the wording against the product passes while
 contradicting the acceptance criterion, and a test that enforced the criterion
@@ -66,11 +68,11 @@ from the options below, and sweep the ledger rows that rest on them.
 
 ## Options (at least 3) and recommendation
 
-| #   | Option                                                                                                                                                                                                                                                                                        | Cost                                                                                                                                                                                                                                                                                                                                                | Risk                                                                                                                                                                                                              | Recommended |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional for a pack with a visual prototyping surface and not carried by a cli-only one                                                            | Edit four upstream statements, and the optional-artifact sentence in three shipped documents, which offers the file to cli-only packs too. Reset `TDD-0008`, `-0009`, `-0012`; **retire `TDD-0010`**; re-verify `TDD-0011` in place. **Plus the `spec-0010` owner re-derivation**, both chains and its ledger, which every statement-A outcome owes | Records today's behaviour as intended. If either narrowing was a regression, it becomes the specification. One row is removed rather than re-pointed                                                              | ✅          |
-| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) — not for every UI-bearing pack, since a cli-only one is UI-bearing and cannot emit the artifact | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without                                                                                                                                                                                               | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
-| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them                                                                                                                                              | Smallest edit **to `spec-0002`**, and the `spec-0010` re-derivation beside it like every other statement-A outcome. Retiring the direction rule here leaves `spec-0010`'s own copy of it to be withdrawn or restated, which is an edit rather than an absence                                                                                       | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
+| #   | Option                                                                                                                                                                                                                                                                                        | Cost                                                                                                                                                                                                                                                          | Risk                                                                                                                                                                                                              | Recommended |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Narrow the spec to the product: REQ-0012 and AC-0002-0008 bind the screen explorations only; REQ-0005 and AC-0002-0010 say the artifact is optional for a pack with a visual prototyping surface and not carried by a cli-only one                                                            | Edit four upstream statements and the three shipped sentences. Reset TDD-0008, -0009 and -0012; TDD-0010 is already retired; re-verify TDD-0011. Re-derive both spec-0010 chains and its ledger.                                                              | Records today's behaviour as intended. If the narrowing was a regression, it becomes the specification; TDD-0010 remains reserved.                                                                                | ✅          |
+| 2   | Restore the product to the spec: reinstate a winner check, and make `prototyping.yaml` a readiness blocker for packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) — not for every UI-bearing pack, since a cli-only one is UI-bearing and cannot emit the artifact | New validator work, a breaking change for adopters, and — for the requiredness half — a `spec-0013` owner re-derivation it cannot be approved without                                                                                                         | Reverses a deliberate design move without the record of why it was made. `2B` reverses `spec-0013` REQ-0015 outright, so approving it alone would leave two active packs prescribing opposite preflight behaviour |             |
+| 3   | Retire the four obligations: withdraw REQ-0012, AC-0002-0008, REQ-0005's requiredness half and AC-0002-0010, and delete the rows resting on them                                                                                                                                              | Smallest edit **to `spec-0002`**, and the `spec-0010` re-derivation beside it like every other statement-A outcome. Retiring the direction rule here leaves `spec-0010`'s own copy of it to be withdrawn or restated, which is an edit rather than an absence | Loses the record that the question was ever settled, so the next reader re-derives it                                                                                                                             |             |
 
 **Every outcome owes `spec-0010` a re-derivation, this one included.** That pack
 requires `/qfai-discussion` to author root `DESIGN.md` **and** owns the direction
@@ -92,7 +94,6 @@ spec catching up, not the product going back.
 | -------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `spec-0002/TDD-0008` | `ledger-row` | `TC-0002-0008` asks that discussion completion not require a direction                                                                  |
 | `spec-0002/TDD-0009` | `ledger-row` | `TC-0002-0009` asks that a pack asserting a single final winner be refused                                                              |
-| `spec-0002/TDD-0010` | `ledger-row` | second row on `TC-0002-0009`                                                                                                            |
 | `spec-0002/TDD-0012` | `ledger-row` | `TC-0002-0011` asks that the wording match the active requiredness rule                                                                 |
 | `spec-0010/TDD-0006` | `ledger-row` | `TC-0010-0006`, the direction rule every statement-A outcome re-derives; the row is `done`                                              |
 | `spec-0010/TDD-0007` | `ledger-row` | `TC-0010-0006` again; the row is `done`                                                                                                 |
@@ -100,12 +101,23 @@ spec catching up, not the product going back.
 | `spec-0010/TDD-0010` | `ledger-row` | `TC-0010-0006` is the direction rule itself, which every statement-A outcome re-derives, and the row is `todo`                          |
 | `spec-0010/TDD-0011` | `ledger-row` | `TC-0010-0007` asks that discussion author root `DESIGN.md`, the producer every statement-A outcome re-derives                          |
 | `spec-0013/TDD-0016` | `ledger-row` | `TC-0013-0022` asks that `/qfai-sdd` Phase 0 write `DESIGN.md.lock.yaml`, which `2a` moves into `/qfai-prototyping`                     |
+| `spec-0013/TDD-0081` | `ledger-row` | `TC-0013-0036` checks that an absent optional artifact does not block preflight, which `2B` reverses                                    |
+| `spec-0013/TDD-0082` | `ledger-row` | `TC-0013-0037` checks that a malformed optional artifact does not block preflight, which `2B` reverses                                  |
+| `spec-0013/TDD-0083` | `ledger-row` | `TC-0013-0037` checks that a legacy optional artifact does not block preflight, which `2B` reverses                                     |
+| `spec-0013/TDD-0038` | `ledger-row` | `US-0013-0008` E2E row for an absent optional artifact, which `2B` reverses                                                             |
+| `spec-0013/TDD-0088` | `ledger-row` | `US-0013-0008` E2E row for a malformed optional artifact, which `2B` reverses                                                           |
+| `spec-0013/TDD-0089` | `ledger-row` | `US-0013-0008` E2E row for a legacy optional artifact, which `2B` reverses                                                              |
+| `spec-0013/TDD-0039` | `ledger-row` | `US-0013-0009` E2E row for the design lock, which `2a` moves into `/qfai-prototyping`                                                   |
+| `spec-0013/TDD-0090` | `ledger-row` | `US-0013-0009` E2E row for a missing design source, which `2a` moves into `/qfai-prototyping`                                           |
 | `spec-0004/TDD-0008` | `ledger-row` | Under `2a` only: `TC-0004-0008` becomes a `QFAI-DCON-030` a pack that has not reached prototyping is exempt from, and the row is `done` |
 | `spec-0002/TDD-0016` | `ledger-row` | The `E2E` row seeded for `US-0002-0005`, the planner-first story statement A narrows; the row is `todo`                                 |
 | `spec-0010/TDD-0025` | `ledger-row` | The `E2E` row seeded for `US-0010-0008`, the direction rule; the row is `todo`                                                          |
 | `spec-0010/TDD-0026` | `ledger-row` | The `E2E` row seeded for `US-0010-0009`, the producer; the row is `todo`                                                                |
 
-**Every row an outcome resets or retires is here, whichever pack owns it.** The
+`spec-0002/TDD-0010` is already retired and reserved by
+`CR-20260924-0003`; no outcome re-retires it.
+
+**Every active row an outcome resets or retires is here, whichever pack owns it.** The
 three completed `spec-0010` rows and `spec-0004/TDD-0008` carry recorded
 evidence against an obligation an outcome changes, so a completion left
 unsuppressed would re-assert the old requirement while the choice is open.
@@ -153,19 +165,12 @@ to do with. A row whose obligation is unchanged waits on nobody.
   changes — so each is a prerequisite: it lands first, and the disposition here
   is refreshed against the row as it then reads. `TDD-0033`, `TDD-0018` and
   `TDD-0019` are held by neither and keep their in-place terms.
-- **The `spec-0013` ledger repair is
-  owed and unwritten**, like `spec-0002`'s, `spec-0010`'s, `spec-0004`'s and
-  `spec-0012`'s. It re-derives that ledger to its template with no statement
-  moving: the six columns it lacks, the `Integration` and `E2E` rows Phase 2b
-  owes, and the split of all thirteen progressed rows that run several
-  boundaries behind one `Selector`, `TDD-0019`, `TDD-0021` and `TDD-0022` among
-  them. It edits `.qfai/specs/spec-0013/tdd/test-list.md` and
-  `.qfai/specs/spec-0013/09_delta.md`, which this record also edits under `2B`
-  and `2a`, the two outcomes that re-derive `spec-0013`. So the two are ordered:
-  the repair is written and lands first, and this record is refreshed against
-  what it actually wrote before `2B` or `2a` is approved. Until then neither
-  outcome is applicable, because the prerequisite names no record an operator
-  can open.
+- **The `spec-0013` ledger repair has landed** under
+  `CR-20260913-0009`. Its template columns, Phase 2b `Integration` and `E2E`
+  rows, and independently observable splits are present. This record is
+  refreshed against those rows before either `2B` or `2a` is approved.
+  The separate ledger repairs for `spec-0010`, `spec-0004` and `spec-0012`
+  remain prerequisites for outcomes that re-derive those packs.
 
 ## Impact scope
 
@@ -344,18 +349,18 @@ internally contradictory.
    applying an approved change with no approved disposition for a row the change
    invalidates.
 
-2. **`spec-0013`, under `2B` only, and not before the duplicate id is
-   repaired.** `/qfai-sdd` re-derives `REQ-0015` and the side-artifact
-   `AC-0013-0009` — with the story, business rule, example and test case beneath
-   them — to say that a pack **with a visual prototyping surface** (`web`,
+2. **`spec-0013`, under `2B` only.** `/qfai-sdd` re-derives `REQ-0015` and
+   the side-artifact `AC-0013-0028` — with the story, business rule, example
+   and test case beneath them — to say that a pack **with a visual prototyping
+   surface** (`web`,
    `mobile`, `desktop` or `mixed`) owes a `prototyping.yaml` that parses against
    its schema, so an absent file and a malformed one each block its readiness,
    the old-format file `REQ-0015` exempts included. **Not "UI-bearing"**, for
    the reason in the next paragraph. **`2B` is not approved without it**:
    approving the option alone would leave two active packs prescribing
-   opposite preflight behaviour, with the product free to satisfy either. And it is not approved before the duplicate id lands either:
-   that repair is a separate record (`## Impact scope`), and a rerun keyed to
-   `AC-0013-0009` before it sweeps whichever criterion the reader finds.
+   opposite preflight behaviour, with the product free to satisfy either.
+   `CR-20260913-0012` has already repaired the duplicate criterion id, so
+   the rerun targets the unique `AC-0013-0028`.
 
    **The re-derived rule is not "UI-bearing".** A cli-only pack is
    `ui_bearing: true` and the discussion playbook forbids `prototyping.yaml` for
@@ -440,40 +445,31 @@ internally contradictory.
 5. `/qfai-sdd` rerun scope: the statements the chosen option names, plus the
    `06_Test-Cases.md` rows that read them.
 
-   The seven ledger rows the seeding contract requires and this pack does not
-   have are **not** in this Change Request, and they are **a prerequisite to
-   it**. Every selectable outcome invokes a `re-derive` of `spec-0002`, whose
-   phase order runs Phase 2b, and Phase 2b seeds those rows and migrates the
-   ledger's columns. No `re-derive` mode skips it. So an instruction to leave
-   the ledger untouched cannot be followed: a rerun under this approval either
-   performs the repair unauthorised, or stops short of a phase its owner skill
-   requires, and neither completes the Change Request.
+   The `spec-0002` ledger now has its seven Phase 2b rows.
+   `CR-20260924-0003` reset `TDD-0009` to `todo`,
+   retired and reserved `TDD-0010`, and transferred the three optional-artifact
+   runtime cases to `spec-0013`. A rerun under this request starts from that
+   corrected ledger and does not repeat its retired-row disposition.
 
    **The same holds for every other pack an approved outcome re-derives.**
-   `spec-0004`, `spec-0012` and `spec-0013` have nine-column ledgers with `E2E`
-   rows for 3 of 16, 19 of 52 and 1 of 14 stories, so a `2a` rerun of them, or a
-   `2B` rerun of `spec-0013`, would migrate each table to the template's columns
-   and seed the missing rows as well. Their ledger repairs are prerequisites on
-   the same terms, and **none of the five is written** — not `spec-0002`'s,
-   `spec-0010`'s, `spec-0004`'s, `spec-0012`'s or `spec-0013`'s. So an outcome
-   that re-derives one of those packs is not approved until its repair
-   is written and has landed. This record is refreshed after each repair to
-   name, by id, any seeded row whose story an approved outcome changes, with its
-   disposition. Two are known now: the `spec-0013` repair seeds the `E2E` rows for
-   `US-0013-0009`, the lock story, which are reset to `todo` with this `CR-*` in
-   `DR-ID` under `2a`, and for `US-0013-0008`, the side-artifact story, reset
-   the same way under `2B`. Each is left as it stands under every other
-   outcome.
+   The `spec-0013` ledger repair has also landed under `CR-20260913-0009`.
+   `US-0013-0009`, the lock story, has `TDD-0039` and `TDD-0090`; both reset
+   to `todo` with this `CR-*` in `DR-ID` under `2a`.
+   `US-0013-0008`, the side-artifact story, has `TDD-0038`, `TDD-0088` and
+   `TDD-0089`; its cases also have `TDD-0081` to `TDD-0083`. All six reset
+   the same way under `2B`. These rows remain as they stand under other
+   outcomes. The `spec-0010`, `spec-0004` and
+   `spec-0012` repairs remain prerequisites for outcomes that re-derive those
+   packs. Refresh this record against their seeded rows before approval.
 
    **A progressed matrix row stops a rerun at that row, in every pack this plan
    re-derives.** Phase 2b re-scopes a `done` row that runs several independently
    observable cases behind one `Selector` only under a Change Request naming the
    row, its boundaries and the order of its split
    (`.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`), and
-   this record names no such split. The `spec-0013` ledger repair owes one for
-   each of the thirteen rows of that shape in that pack, and it is not written
-   yet, so a `spec-0013` rerun under this plan meets none. No record names one
-   for the other packs either, whose ledgers hold these rows today:
+   this record names no such split. `CR-20260913-0009` completed the
+   `spec-0013` splits. No record names one for the other packs, whose ledgers
+   hold these rows today:
 
    | Pack        | Progressed rows whose `Selector` runs more than one case                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Re-derived under          |
    | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
@@ -490,23 +486,18 @@ internally contradictory.
    it un-split for good. Writing those requests before `2a` is approved spares
    that rerun the wait.
 
-   The repair is recorded in `.qfai/evidence/coverage-depth-spec-0002.md`
-   finding 7 and needs its own record. **That record lands first**, and this one
-   is applied after it, against a ledger Phase 2b has nothing left to seed.
+   `.qfai/evidence/coverage-depth-spec-0002.md` finding 7 recorded the former
+   gap. `CR-20260924-0003` corrected it before this request is approved.
 
-   **One of the rows that repair seeds is statement A's.** Phase 2b gives
-   `US-0002-0005`, the planner-first story, an `E2E` row, and that story is
-   statement A's obligation. So once the repair lands, this record is refreshed
-   before approval: the row joins `## Blocked downstream items` by its id, with
-   this disposition —
+   **`TDD-0016` is statement A's seeded E2E row.** It carries
+   `US-0002-0005`, the planner-first story, and joins
+   `## Blocked downstream items` with this disposition:
 
    | Outcome    | The `US-0002-0005` row                                                     |
    | ---------- | -------------------------------------------------------------------------- |
    | `1A`, `2b` | reset to `todo` with this `CR-*` in `DR-ID` — both narrow the story        |
    | `2a`       | left as it stands — the story comes back unchanged                         |
    | `3A`       | retired with the story, its id written out here and reserved in the ledger |
-
-   Until the refresh it cannot be named by id, because it does not exist.
 
    The `10_Plan.md` row citing `TC-0002-0026`, which this spec's table does not
    declare, is **not** in this Change Request. It is independent of both
@@ -530,7 +521,7 @@ internally contradictory.
    | `05_Examples.md`            | `EX-0002-0008`, `EX-0002-0009`     | `EX-0002-0011`                      |
    | `06_Test-Cases.md`          | `TC-0002-0008`, `TC-0002-0009`     | `TC-0002-0011`                      |
    | `07_Decisions.md`           | `DR-0002-0001`, `DR-0002-0003`     | —                                   |
-   | `tdd/test-list.md`          | `TDD-0008`, `TDD-0009`, `TDD-0010` | `TDD-0012`                          |
+   | `tdd/test-list.md`          | `TDD-0008`, `TDD-0009`, `TDD-0016` | `TDD-0012`                          |
 
    `US-0002-0005` is statement A's: it is the planner-first story — discussion
    defines conditions and anti-goals **without selecting a visual winner**, so
@@ -566,6 +557,8 @@ internally contradictory.
    the statements, and the tests pinning it move with it (`## Impact scope`).
    - Reset to `todo`, recording this CR's ID in `DR-ID`:
      `spec-0002/TDD-0008`, `spec-0002/TDD-0009`, `spec-0002/TDD-0012`
+     and `spec-0002/TDD-0016`. `TDD-0009` is already `todo` after
+     `CR-20260924-0003`; record this CR as the reason for its new obligation.
    - Re-scope `spec-0002/TDD-0012` in the same `/qfai-sdd` rerun, before the
      reset is any use. **That rerun's mode is `re-derive`, not `confirm-only`**:
      the drift protocol admits those two and no others, and `confirm-only`
@@ -595,14 +588,9 @@ internally contradictory.
      replacement would therefore be acting outside this approval, so the
      instruction is the narrower one.
 
-   - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`.
-     **Its test disposition is "none to dispose of".** The row's `Selector`
-     resolves to no case in the file it names, so the retirement leaves behind
-     no surviving assertion for a later sweep to find and nothing to delete or
-     re-point. What is disposed of is the stale selector itself, which goes with
-     the row. The retirement procedure asks for an explicit disposition for
-     every removed row, and "no matching test exists" is one; leaving the field
-     out would make the eventual `Resolution` unable to account for the row.
+   - `spec-0002/TDD-0010` needs no action here. `CR-20260924-0003` already
+     retired and reserved it, preserving its former evidence. The former
+     selector resolved to no case, so it left no assertion to dispose of.
 
    **Option 2 — restore the product to the spec.** Statement A's upstream
    statements do not change, and `/qfai-sdd`'s mode is nonetheless `re-derive`:
@@ -679,20 +667,17 @@ internally contradictory.
      `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
      admits the approved reset only for a row an approved **upstream** change has
      invalidated. `TDD-0008` and `TDD-0009` keep the obligations they already
-     had; what changes is the product beneath them and the assertions that were
-     written against the old behaviour. That is the in-place repair
-     path: the shared-artifact re-verification, plus falsifiability evidence for
-     each corrected assertion — break the production predicate the new assertion
-     names, run the row's `Selector`, confirm an admissible failure, revert and
-     re-run for the restored GREEN — recorded on the row's own line at the
-     mutated tree's `Falsifiability revision`.
+     had; what changes is the product beneath them. `TDD-0008` takes in-place
+     re-verification with a corrected assertion and falsifiability evidence:
+     break the production predicate, confirm a selector failure, revert, and
+     re-run GREEN. `TDD-0009` is already `todo` with no current assertion or
+     observation; implement it against `TC-0002-0009` and record fresh evidence.
 
-     **`TDD-0008` and `TDD-0009` need their selectors replaced before any of
-     that.** Both name a test title that occurs nowhere in the file they point
-     at, so every command above selects no test: no mutation failure, no
-     restored GREEN, nothing to record. Use the unresolved-selector carve-out to
-     write the corrected assertion names into both rows first, then begin the
-     re-verification. Routing them to a reset would
+     **`TDD-0008` needs its selector replaced; `TDD-0009` needs a test and
+     selector.** The first names a title absent from its file, while the second
+     is now `todo` with placeholders after `CR-20260924-0003`. Supply selectors
+     that assert each row's obligation before falsifiability work. Routing the
+     first to a reset would
      demand an authorization this record cannot legitimately give, and would
      leave each row holding a gate it can never clear.
 
@@ -701,12 +686,9 @@ internally contradictory.
      — and is here because the restored preflight check edits
      `sddPreflight.test.ts`, the file its observation covers. That check is the
      requiredness rule, so `1A/2B` reaches the row and `2A/1B` leaves it alone.
-   - Retire: `spec-0002/TDD-0010` — `current preflight unit test pass`, as under
-     option 1. Restoring a winner validator gives `TC-0002-0009` no second
-     boundary: the test case defines one violation, and this row points at a
-     preflight selector about a missing `prototyping.yaml` that the restored
-     check does not touch. Keeping it would preserve the duplicate row this CR
-     exists to clear.
+   - `spec-0002/TDD-0010` remains retired and reserved by
+     `CR-20260924-0003`. Restoring a winner validator creates no second
+     boundary under `TC-0002-0009`.
 
    **Option 3 — retire the four obligations.** `/qfai-sdd` re-derives every layer
    that carries them, not only the three that name them most visibly:
@@ -722,14 +704,17 @@ internally contradictory.
    are the last layer and the easiest to leave behind: naming `07_Decisions.md`
    in the impact scope authorises the edit and does not ask for one, so a pack
    can retire the requirement and keep the two decisions that state it.
-   - Reset to `todo`: none.
+   - Reset to `todo`: none. `TDD-0016` retires with `US-0002-0005` under
+     statement A; under a statement B-only disposition it stays `todo`.
    - Retire, each with its `Evidence` cell verbatim:
      `spec-0002/TDD-0008` — `current template integration test pass`;
-     `spec-0002/TDD-0009` — `current e2e guidance test pass`;
-     `spec-0002/TDD-0010` — `current preflight unit test pass`;
+     `spec-0002/TDD-0009` — its current cell is `-`, with former evidence
+     preserved by `CR-20260924-0003`;
      `spec-0002/TDD-0012` — `current three-layer validator pass`.
-     The first three retirements delete no test: each of their files carries
-     coverage for other rows and survives intact. **`TDD-0012` follows the
+     `TDD-0010` was retired and reserved by `CR-20260924-0003`.
+     `TDD-0016` has no observation and is reserved when statement A retires.
+     `TDD-0008`'s test file carries other coverage, while `TDD-0009` has no
+     current test file. **`TDD-0012` follows the
      selected `3a` or `3b` instead**, and under `3b` its case is deleted — the
      table below says so, and a blanket "no test is deleted" would leave an
      operator preserving a case that outcome removes. Each retired row's test
@@ -757,7 +742,10 @@ internally contradictory.
      `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`,
      `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts` and
      `packages/qfai/tests/core/sddPreflight.test.ts` all carry coverage for
-     other rows; `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
+     other rows; the optional-artifact cases are now in
+     `packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts`
+     under `spec-0013`.
+     `packages/qfai/tests/validators/uix/threeLayer.test.ts` stays
      with `spec-0002/TDD-0011`.
 
 7. `spec-0002/TDD-0011` is **re-verified, not reset**, under every option. Its
@@ -778,12 +766,12 @@ internally contradictory.
    section before the row is deleted. The ledger allocates the next id as
    `max + 1`, so deleting the highest row hands its number to the next one
    written, and two runs then share an identifier that this Change Request is
-   the only record of. Option 1 reserves `spec-0002/TDD-0010`; option 2 the
-   same; option 3 reserves `spec-0002/TDD-0008`, `spec-0002/TDD-0009`,
-   `spec-0002/TDD-0010` and `spec-0002/TDD-0012`, the last of which is that
-   pack's current maximum and so the one that would be reused first. **Every id
-   here carries its pack**, because this Change Request now touches four of
-   them and `spec-0010` has a `TDD-0008` of its own: a deleted row cannot say
+   the only record of. `spec-0002/TDD-0010` is already reserved by
+   `CR-20260924-0003`, so no option reserves it again. Option 3 reserves
+   `spec-0002/TDD-0008`, `spec-0002/TDD-0009`,
+   `spec-0002/TDD-0012` and, under statement A, `spec-0002/TDD-0016`.
+   **Every id here carries its pack**, because this Change Request touches four
+   packs and `spec-0010` has a `TDD-0008` of its own: a deleted row cannot say
    afterwards which ledger it came from, so the reservation has to.
 
 9. **The coverage records are regenerated by `/qfai-atdd spec-0002`, after

@@ -1,5 +1,19 @@
 # 09 Delta
 
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                                                                                                                        | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0002 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T06:43:33Z |
+| CR-20260923-0005 | `spec-0012/01_Spec.md`, `02_User-stories.md`, `05_Examples.md`                                                                                                                           | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T07:32:21Z |
+| CR-20260923-0008 | `spec-0012/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                                         | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:46:05Z |
+| CR-20260923-0009 | `spec-0012/01_Spec.md`                                                                                                                                                                   | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T09:27:13Z |
+| CR-20260923-0001 | `spec-0012/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `16_Traceability-ledger.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:25:00Z |
+| CR-20260923-0012 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:25:00Z |
+| CR-20260923-0014 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T20:55:46Z |
+| CR-20260924-0001 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
+| CR-20260924-0002 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
+
 ## 2026-09-04
 
 - `CR-20260904-0002` (`confirm-only`, `/qfai-sdd 0012`): recorded
@@ -456,7 +470,7 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
   TC-0012-0484..0488. This pack's history has used AC IDs up to AC-0012-0175,
   BR IDs up to BR-0012-0135, EX IDs up to EX-0012-0191 and DR IDs up to
   DR-0012-0058. New IDs start above both: US-0012-0144, AC-0012-0176,
-  BR-0012-0136, EX-0012-0192 and TC-0012-0489.
+  BR-0012-0136, EX-0012-0192 and TC-0012-0491.
 - Size signal: AC 73 → 76 and TC 179 and above, both over the thresholds. No
   split, because spec-0012 owns only CAP-0012.
 - Obligation reconciliation: BR-0012-0138 and AC-0012-0178 list the non-UI cause of a
@@ -467,11 +481,11 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
 
 | CR ID            | Upstream artifact                                                                         | Mode      | Approved by | Applied at           |
 | ---------------- | ----------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
-| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-24T19:00:08Z |
 | CR-20260925-0005 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md` | re-derive | user        | 2026-09-24T23:35:15Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T02:36:35Z |
-| CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T03:00:14Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T03:00:14Z |
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-25T03:23:20Z |
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T06:04:36Z |
 
@@ -503,7 +517,7 @@ superseded index-14 obligation.
 | UPDATE    | MODIFY | `TC-0012-0335`; `TDD-0344`, `0370` | Moved the generated token-mirror oracle to L3 Integration over actual post-handoff output. Retired both false Unit rows.                                                     |
 | UPDATE    | MODIFY | `TDD-0336`, `0337`, `0338`         | Re-scoped to `TC-0012-0329`, `0323`, `0326` respectively. Their prior `done` cycles require `/qfai-implement` Change-Request preflight reset; SDD changed row identity only. |
 | UPDATE    | REMOVE | `TDD-0365`, `0368`                 | Retired the superseded index-14 row and the duplicate purity row. Surviving selectors remain with `TDD-0372` and `TDD-0339`.                                                 |
-| UPDATE    | APPEND | `TDD-0567`, `0568`                 | Seeded Integration coverage for `TC-0012-0324` and `0335` at `todo`. The handoff writer or faithful workflow harness remains required before `0568` can complete.            |
+| UPDATE    | APPEND | `TDD-0583`, `0568`                 | Seeded Integration coverage for `TC-0012-0324` and `0335` at `todo`. The handoff writer or faithful workflow harness remains required before `0568` can complete.            |
 
 All six retired rows had `Status = done` and descriptive, unanchored Evidence
 cells. Their exact strings are recorded in the CR and the `## TDD-ID reservations`
@@ -512,3 +526,14 @@ tombstones. The records do not establish whether the old cycles executed.
 downstream test fix against its existing `lap-007-state-not-represented` case.
 `TDD-0545` remains the independent E2E story. No allocation in `10_Plan.md`
 named the reconciled case or row IDs, so that plan required no edit.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- `TC-0012-0489`..`TC-0012-0492` became `TC-0012-0491`..`TC-0012-0494`.
+- `TDD-0562`..`TDD-0568` became `TDD-0578`..`TDD-0584`.
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.

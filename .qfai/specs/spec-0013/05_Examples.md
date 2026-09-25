@@ -145,13 +145,18 @@
 - When `auditProfile.ts` evaluates them during the deprecation window
 - Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)
 
-## EX-0013-0021: Optional prototyping side artifact does not block preflight
+## EX-0013-0021: Optional Side Artifact States
 
 - BR-Ref: BR-0013-0021
-- Given a usable discussion pack with complete required markdown and no `prototyping.yaml`
+- Given a discussion pack with usable markdown and no `prototyping.yaml`
 - When SDD preflight runs
-- Then it reports ready and no blocker for the absent optional artifact
-- The same readiness holds when `prototyping.yaml` is present with an invalid namespaced schema or a legacy-only format
+- Then it reports ready without treating the absent side artifact as a blocker
+- Given the same pack with a `prototyping.yaml` whose namespaced schema is invalid
+- When SDD preflight runs
+- Then it reports ready without treating the malformed optional artifact as a blocker
+- Given the same pack with a legacy-only `prototyping.yaml` that has no `prototyping` namespace
+- When SDD preflight runs
+- Then it reports ready without treating the legacy optional artifact as a blocker
 
 ## EX-0013-0022: A matching routing-time approval is checked, not asked
 

@@ -88,17 +88,20 @@ edited, and neither is the product.
 
 ## Blocked downstream items
 
-| Item                                                                    | Kind         | Why it depends on the artifact                                                                                              |
-| ----------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `spec-0013/TDD-0019`                                                    | `ledger-row` | Carries `TC-0013-0025`, whose obligation this fix changes                                                                   |
-| The row `CR-20260913-0009` appends for `TC-0013-0025`                   | `ledger-row` | The same obligation, for the guide's instruction                                                                            |
-| `spec-0013/TDD-0022`                                                    | `ledger-row` | Carries `US-0013-0011`, the story this fix restates; its case asserts only a list, under a header describing the empty slot |
-| The four `spec-0013` rows `CR-20260913-0009` appends for `US-0013-0011` | `ledger-row` | The same story                                                                                                              |
+| Item                 | Kind         | Why it depends on the artifact                                                         |
+| -------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| `spec-0013/TDD-0019` | `ledger-row` | The former `TC-0013-0025` aggregate row keeps the template slot value this CR changes. |
+| `spec-0013/TDD-0022` | `ledger-row` | The former `US-0013-0011` aggregate row keeps the template slot value this CR changes. |
 
-- Not blocked by this CR: `spec-0013/TDD-0020` and the row
-  `CR-20260913-0009` appends beside it. They carry `TC-0013-0026`, which is the
-  half the product satisfies and which this fix leaves as it is. No other
-  `spec-0013` row reads the template's slot value.
+The old→new mapping is `TDD-0019 → 0019/0061` and `TDD-0022 →
+0022/0077/0078/0079/0080`. The added `TDD-0061` and `TDD-0077` rows carry the
+guide's instruction, which this CR expressly preserves. The other E2E sibling
+rows cover the lane and preflight outcomes, which this CR does not restate.
+
+- Not blocked by this CR: `spec-0013/TDD-0061` and `TDD-0077` (guide
+  instruction), `TDD-0020/0062` and `TDD-0078/0079` (empty-task lane and
+  preflight), and `TDD-0021/0063` and `TDD-0080` (non-empty lane and
+  preflight). None reads the template's slot value this CR changes.
 - Overlapping open CRs: `CR-20260913-0009` re-derives `spec-0013`'s ledger to
   its template, splitting every progressed row that runs several boundaries
   behind one `Selector`, `TDD-0019` and `TDD-0022` among them. **It is applied

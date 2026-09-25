@@ -7,15 +7,15 @@
  * they read the refs the cell holds, and a cell holding none has nothing to
  * disagree with.
  *
- * Six of the rows below name a REQUIREMENT instead, which is the shape that
- * shows why an empty cell is not the whole of it: `REQ-0012-0075 (REQ-0109
- * follow-up)` fills the column, reads as a reference, and ties the row to no
+ * An empty cell is not the whole of it. A requirement id such as
+ * `REQ-0012-0075` fills the column, reads as a reference, and ties the row to no
  * case at all. So the check asks for the identifier's shape rather than for the
  * cell to be non-empty.
  *
- * **Rows that have not claimed completion are outside this.** A `todo` row may
- * not have its case yet, 191 of them do not, and reporting those would bury the
- * few that claim one.
+ * **This test reads only the rows that claim completion.** `validate` reports
+ * the same defect at every status as `QFAI-TDDLIST-022`; this test holds the
+ * repository's own ledgers to it on the rows whose trace must already be
+ * complete.
  *
  * **Nor are rows whose obligation is not a test case.** `/qfai-sdd` Phase 2b
  * seeds an `E2E` row per user story, an `API` row per `CON-API-*` contract and
@@ -57,15 +57,7 @@ const OTHER_OBLIGATIONS: ReadonlyArray<readonly [string, RegExp]> = [
  * equality, so a row repaired without its entry being struck fails exactly as a
  * new one does.
  */
-const KNOWN_WITHOUT_A_TEST_CASE: readonly string[] = [
-  "spec-0012 TDD-0420 done",
-  "spec-0012 TDD-0496 done",
-  "spec-0012 TDD-0497 done",
-  "spec-0012 TDD-0514 done",
-  "spec-0012 TDD-0515 done",
-  "spec-0012 TDD-0516 done",
-  "spec-0012 TDD-0517 done",
-];
+const KNOWN_WITHOUT_A_TEST_CASE: readonly string[] = [];
 
 describe("a row claiming completion names the test case it discharges", () => {
   it("reports every completed row whose TC-Refs holds no test case", async () => {

@@ -4,7 +4,7 @@
  * Validates that the /qfai-sdd skill (spec-0013) requirements are covered
  * by existing implementation: SKILL.md template and validator modules.
  *
- * All 10 TDD items are Exception-pattern backfill (DR-0013-0001).
+ * TDD-0001 to TDD-0010 are Exception-pattern backfill (DR-0013-0001).
  */
 // QFAI:SPEC-0013:TC-0013-0001
 // QFAI:SPEC-0013:TC-0013-0002
@@ -22,7 +22,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { QfaiConfig } from "../../src/core/config.js";
+import { defaultConfig } from "../../src/core/config.js";
+import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
+import { validateSpecSplitByCapability } from "../../src/core/validators/specSplitByCapability.js";
 
 const roots: string[] = [];
 
@@ -93,27 +96,31 @@ describe("TC-0013-0002: Contract Index Alignment", () => {
 });
 
 // TC-0013-0003: Usable-Source Preflight Stop
-//
-// The obligation is the narrower one: an incomplete or contradictory pack
-// continues, and only the absence of every source stops the stage. Asserting
-// only that SKILL.md contains the token `discussion-pack` and mentions
-// preflight would also pass a stage that stopped on any thin pack. Both
-// directions are asserted, because the token check would pass on a stage
-// that had lost either half.
 describe("TC-0013-0003: Usable-Source Preflight Stop", () => {
-  it("SKILL.md stops Stage 0 only when no usable source exists", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/preflight/i);
-    expect(content).toContain("Stop only when there is no usable source at all");
+  it("continues with a selected discussion pack even when it is incomplete", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-preflight-"));
+    roots.push(root);
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "06_REQ.md"),
+      "# Requirements\n\n- REQ-0001: Save a draft.\n",
+    );
+
+    const result = await runSddPreflight(root, defaultConfig, { packDir });
+    expect(result.status).toBe("ready");
+    expect(result.selectedInputPath).toBe(packDir);
+    expect(result.packGaps.length).toBeGreaterThan(0);
   });
 
-  it("SKILL.md does not stop on an incomplete, contradictory or OQ-carrying pack", async () => {
-    const content = (await readFile(SKILL_PATH, "utf-8")).replace(/\s+/g, " ");
-    expect(content).toContain(
-      "an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage",
-    );
-    // And the pack is not the thing to repair when it is the source of the gap.
-    expect(content).toContain("Do NOT edit, repair or re-run a pack");
+  it("stops when no usable discussion or import-lite source exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-preflight-"));
+    roots.push(root);
+
+    const result = await runSddPreflight(root, defaultConfig);
+    expect(result.status).toBe("blocked");
+    expect(result.selectedInputPath).toBeNull();
+    expect(result.blockers.length).toBeGreaterThan(0);
   });
 });
 
@@ -183,6 +190,103 @@ describe("TC-0013-0010: Batch Mode Targets Every Capability", () => {
     // things, and only the second is what the example describes.
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toContain("Delegate Slice in parallel per spec");
+  });
+});
+
+/**
+ * Writes a capability catalog and one spec directory per entry of `specs`.
+ * Each spec's `01_Spec.md` names the capability it was created for, which is
+ * how the tree records an assignment the catalog can then contradict.
+ */
+async function seedCapabilityTree(
+  root: string,
+  catalogRows: readonly string[],
+  specs: ReadonlyArray<{ readonly specId: string; readonly capId: string }>,
+): Promise<void> {
+  const specsDir = path.join(root, ".qfai", "specs");
+  await mkdir(path.join(specsDir, "_policies"), { recursive: true });
+  await writeFile(
+    path.join(specsDir, "_policies", "03_Capabilities.md"),
+    ["# 03 Capabilities", "", "## CAP Catalog", "", ...catalogRows, ""].join("\n"),
+  );
+  for (const { specId, capId } of specs) {
+    const specDir = path.join(specsDir, specId);
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), `# 01 Spec\n\n- Parent: ${capId}\n`);
+    await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User Stories\n");
+    await writeFile(path.join(specDir, "05_Examples.md"), "# 05 Examples\n");
+  }
+}
+
+// TC-0013-0010: an assigned spec id keeps its capability, and reordering is a Change Request
+describe("TC-0013-0010: Batch Mode Keeps The Capability Mapping", () => {
+  const assigned = [
+    { specId: "spec-0001", capId: "CAP-0001" },
+    { specId: "spec-0002", capId: "CAP-0002" },
+  ];
+  const catalogs = {
+    "declared, as assigned": [
+      "| CAP ID | Spec | Statement |",
+      "| --- | --- | --- |",
+      "| CAP-0001 | spec-0001 | first |",
+      "| CAP-0002 | spec-0002 | second |",
+    ],
+    "declared, with the Spec cells swapped": [
+      "| CAP ID | Spec | Statement |",
+      "| --- | --- | --- |",
+      "| CAP-0001 | spec-0002 | first |",
+      "| CAP-0002 | spec-0001 | second |",
+    ],
+    "by row order, as assigned": [
+      "| CAP ID | Statement |",
+      "| --- | --- |",
+      "| CAP-0001 | first |",
+      "| CAP-0002 | second |",
+    ],
+    "by row order, with the rows swapped": [
+      "| CAP ID | Statement |",
+      "| --- | --- |",
+      "| CAP-0002 | second |",
+      "| CAP-0001 | first |",
+    ],
+  };
+
+  const splitFindings = async (catalogRows: readonly string[]) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-mapping-"));
+    roots.push(root);
+    await seedCapabilityTree(root, catalogRows, assigned);
+    const issues = await validateSpecSplitByCapability(root, defaultConfig);
+    return issues
+      .filter((issue) => issue.code === "QFAI-SPLIT-105")
+      .map((issue) => issue.refs ?? []);
+  };
+
+  it("reports a spec id the catalog moves to another capability", async () => {
+    // The spec ids were assigned in the order shown, and each spec names its
+    // capability. Moving an id, by its Spec cell or by reordering the rows,
+    // pairs each spec with a capability it does not name.
+    expect(await splitFindings(catalogs["declared, as assigned"])).toEqual([]);
+    expect(await splitFindings(catalogs["by row order, as assigned"])).toEqual([]);
+
+    expect(await splitFindings(catalogs["declared, with the Spec cells swapped"])).toEqual([
+      ["spec-0002", "CAP-0001"],
+      ["spec-0001", "CAP-0002"],
+    ]);
+    expect(await splitFindings(catalogs["by row order, with the rows swapped"])).toEqual([
+      ["spec-0001", "CAP-0002"],
+      ["spec-0002", "CAP-0001"],
+    ]);
+  });
+
+  it("SKILL.md makes reordering the capability-to-spec mapping a Change Request", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    const start = content.indexOf("## Arguments and Target Selection (Mandatory)");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const next = content.indexOf("\n## ", start + 1);
+    const section = content.slice(start, next === -1 ? undefined : next);
+    expect(section).toContain(
+      "Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.",
+    );
   });
 });
 

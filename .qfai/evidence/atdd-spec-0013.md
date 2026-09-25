@@ -2,8 +2,9 @@
 
 ## Objective
 
-Carry the proof for four of this spec's twelve `done` ledger rows. The other
-eight are not backfilled and the reasons are under Gaps.
+The original backfill proves four of the twelve rows that were `done` at that
+run. The other eight are listed under Gaps. This update adds falsifiability
+evidence for three newly seeded optional-side-artifact rows.
 
 ## Inputs reviewed (files/paths)
 
@@ -99,9 +100,36 @@ records proof for a test that already existed.
 Unchanged by this run. The spec's obligations and their coverage are scored in
 the Coverage Depth Matrix below.
 
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-25T01:55:05.779Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260925-0008` fixes the two rows, the boundary each
+owns and the test case both verify. The verify text names both catalog shapes
+the first case builds, and the skill section the second case reads. Nothing
+surfaced during the run that the spec or the change request leaves open.
+
+### /qfai-implement — run started 2026-09-25T02:02:32.686Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260925-0008` fixes the two rows and the boundary
+each owns, and the `/qfai-atdd` handover names each predicate and its
+mutation. Both named lines hold the named text at this revision, and nothing
+surfaced during the run that the spec, the change request or the handover
+leave open.
+
 ## Ledger rows advanced
 
-No row changed status. Every row below was already `done`.
+The original four rows were already `done`. The three new rows remain `todo`
+until the orchestrator writes their ledger cells after implementation gates.
+
+The run started 2026-09-25T01:55:05.779Z adds `TDD-0110` and `TDD-0111`, the two rows
+`CR-20260925-0008` seeds on `TC-0013-0010`. Both cases passed on their first
+run, so both take branch 2. `/qfai-implement` Phase Red step 3c applies each
+mutation and writes the falsifiability trio into the row's entry.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
@@ -109,6 +137,11 @@ No row changed status. Every row below was already `done`.
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
+| `TDD-0081` | `TC-0013-0036`  | integration | falsifiability | todo   |
+| `TDD-0082` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0083` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0110` | `TC-0013-0010`  | integration | falsifiability | todo   |
+| `TDD-0111` | `TC-0013-0010`  | integration | falsifiability | todo   |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -355,7 +388,342 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
-### TDD-0046
+### Optional side artifact handoff (TDD-0081 to TDD-0083)
+
+The three tests use a usable markdown discussion pack and exercise SDD
+preflight through `runSddPreflight`. `TC-0013-0036` covers absence;
+`TC-0013-0037` has separate invalid and legacy selectors. The `01_Context.md`
+fixture does not claim a UI classification, so the missing-artifact test title
+was narrowed to the input it actually supplies before the final proof.
+
+Live falsifiability observations ran in an isolated worktree at HEAD
+`c0fba3fb3c9786a497fbdcc7fc36e0aab3c260b0`. The scratch tree held an
+identical copy of the test and production source. Each mutation was retained
+while an independent `qa-gatekeeper` inspected the source, test, command,
+assertion failure, SHA-256 values and content-addressed revision. After each
+PASS verdict, the source was restored byte-for-byte and the same selector
+passed. The restored source SHA-256 was
+`9214217580cf6aa0c20ab374749ca81899ed6ff864a88a01d40c59b2ba2dff53`.
+The restored scratch revision was
+`working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f`.
+The test file SHA-256 in scratch and the PR worktree was
+`da430c65829cd4921f596bcba29a942c113896dd600ccc4ae357347da01a3e1e`.
+The direct PR-worktree run of all three cases passed (one file, three tests).
+
+Commands below ran from the isolated `packages/qfai` directory via the
+`tmp/hold-spec0013-optional-mutant.mjs` wrapper. That wrapper inserted the
+stated condition after `resolvePreflightBlockers(readiness)`, ran the exact
+Vitest command, and left the mutated source for live inspection. Its `restore`
+action restored the production source before the same command ran again.
+The ignored `tmp/` logs were inspection aids, not committed evidence.
+
+### TDD-0081
+
+- TDD-ID: TDD-0081
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when a usable discussion pack is missing prototyping.yaml
+- TC-ref: TC-0013-0036
+- RED provenance: falsifiability, branch 2; the production path already made
+  this assertion pass before the test was moved.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; absence of an optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 37, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when a usable discussion pack is missing prototyping.yaml
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:37:29
+```
+
+- Round 1: Falsifiability revision: working-tree+4402324589c0660a78330be7b125a7767b1b0bee89e3bcf538b3ed6f30db0141
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when its content is
+empty. The mutant source SHA-256 was
+`f35493eac5773cb4456ac16531960bfecc5ee761f437ba2577e5614c782e1647`.
+
+### TDD-0082
+
+- TDD-ID: TDD-0082
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml exists but namespaced schema is invalid
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; an invalid optional
+  `prototyping.yaml` does not enter the blocker list.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 57, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml exists but namespaced schema is invalid
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:57:29
+```
+
+- Round 1: Falsifiability revision: working-tree+601b350bffcaa514b48cf4e0a259157bd856d5b89adba669703745e60b3c0274
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it has a
+`prototyping:` namespace without the expected `full-harness` recommendation.
+The mutant source SHA-256 was
+`bb45b400a7c82a7ce1c82d46fe215efabc748c64ad3d49312309c800c5ed47f0`.
+
+### TDD-0083
+
+- TDD-ID: TDD-0083
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml uses legacy-only schema
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; a legacy optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 83, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:83:29
+```
+
+- Round 1: Falsifiability revision: working-tree+7bf3bef2b6fd19caa142e497b55b3c294a3aa3555570f400c086a6d29dac16ac
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it exists
+without a `prototyping:` namespace. The mutant source SHA-256 was
+`7fe08b235fd2a0053fc7bfe5995689cef3e572cd521e8c94f9402e60d5c36667`.
+
+These three rows still require an integrated-tree checkpoint, review-pack seal,
+and completion-reviewer verdict before the ledger can reach `done`. The old
+Coverage Depth Matrix below predates `BR-0013-0021` and these two new TCs;
+its revision is a separate stage-wide obligation.
+
+### TDD-0110
+
+- TDD-ID: TDD-0110
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+- Selector: reports a spec id the catalog moves to another capability
+- TC-ref: TC-0013-0010
+- Branch: falsifiability — the validator already reports a moved spec id, so the case passed on its first run
+- Predicate to break: packages/qfai/src/core/validators/specSplitByCapability.ts:552, `capReferenceIssues` — `if (specText.trim().length === 0 || !specText.includes(capId)) {`, the check that a spec's `01_Spec.md` names the capability the catalog pairs it with
+- Mutation: `if (specText.trim().length === 0 || !specText.includes(capId)) {` to `if (specText.trim().length === 0) {`
+- Why it fails: every fixture spec has a non-empty `01_Spec.md`, so the mutated check reports nothing. The row-order catalog reaches the same check through `expectedSpecIds`, so it also reports nothing under this mutation; that failure is not observed, because the case stops at line 271.
+  The two catalogs that keep the assignment still return `[]`.
+  The catalog with its `Spec` cells swapped also returns `[]` where the case expects two `QFAI-SPLIT-105` findings, so `toEqual` fails as an assertion at `tests/integration/sddSkillSpec0013.test.ts:271`
+- Type check: the mutated condition is still a boolean, and the line passes `tsc`
+- Other rows: `TDD-0111` and `TDD-0010` still pass, because neither case calls the validator
+- Classification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), at working-tree+8780ce78c6acf9aece8eaa7511b618d8c7b70b6c555c5f7ad8b3ef85928c2cbe
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/validators/specSplitByCapability.ts, `capReferenceIssues` — `QFAI-SPLIT-105` for a spec whose `01_Spec.md` does not name the capability the catalog pairs it with
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: expected [] to deeply equal [ [ 'spec-0002', 'CAP-0001' ], …(1) ]` at `tests/integration/sddSkillSpec0013.test.ts:271:84`
+
+The edit, the capability check dropped from the condition at line 552:
+
+```diff
+-    if (specText.trim().length === 0 || !specText.includes(capId)) {
++    if (specText.trim().length === 0) {
+```
+
+- Round 1: Falsifiability revision: working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+```
+
+- Round 1: Revision: b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/src/core/validators/specSplitByCapability.ts`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (specSplitByCapability.ts:552 capability check dropped) working-tree+18cbf677… at HEAD b05f9c0ae; AssertionError at sddSkillSpec0013.test.ts:271:84; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the ledger moved the row to `review-fix` (56bb4b16c) and back to `refactor` (f06af3786) as a member of its T1 group keyed `BR-0013-0007`, and the group was reviewed again once the plan phase was recorded in `implement-spec-0013.md`
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120100000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4993fe8d2df94d24a308085642eecf00da6b031006307eaaa65720d9853b6737
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Spec review: PASS
+- Spec reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Spec audited evidence hash: d2b5d01d4f740a982a34404f93b2c25022fa3d91f27cb29d4339cae88151a087
+- Spec review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Code quality review: PASS
+- Code quality reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Code quality audited evidence hash: d2b5d01d4f740a982a34404f93b2c25022fa3d91f27cb29d4339cae88151a087
+- Code quality review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification seal: 3130415110be88e4f514d4b5528b21ee49f7d002fe1ad7902e4b6a8277d1acd5
+
+### TDD-0111
+
+- TDD-ID: TDD-0111
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+- Selector: SKILL.md makes reordering the capability-to-spec mapping a Change Request
+- TC-ref: TC-0013-0010
+- Branch: falsifiability — the skill already states the rule, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md:267, the `## Arguments and Target Selection (Mandatory)` bullet `- Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.`
+- Mutation: delete line 267
+- Why it fails: the section no longer holds the sentence, so `expect(section).toContain(...)` fails as an assertion at `tests/integration/sddSkillSpec0013.test.ts:287`.
+  The heading is still there, so the `start` check above it passes and the failure is the rule's own
+- Type check: the edit is to a Markdown file, so no type-checked file changes
+- Other rows: `TDD-0110` and `TDD-0010` still pass. No other case in the file reads that sentence, and `TDD-0010`'s cases read the `### No-argument batch delegation (MUST)` block
+- Classification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL.md makes reordering the capability-to-spec mapping a Change Request"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), at working-tree+8780ce78c6acf9aece8eaa7511b618d8c7b70b6c555c5f7ad8b3ef85928c2cbe
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md, `## Arguments and Target Selection (Mandatory)` — the bullet making a reorder of the capability-to-spec mapping a Change Request
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL\.md makes reordering the capability-to-spec mapping a Change Request"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: expected '## Arguments and Target Selection (Ma…' to contain 'Reordering capability-to-spec mapping…'` at `tests/integration/sddSkillSpec0013.test.ts:287:21`
+
+The edit, line 267 deleted:
+
+```diff
+-- Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
+```
+
+- Round 1: Falsifiability revision: working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+```
+
+- Round 1: Revision: b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL\.md makes reordering the capability-to-spec mapping a Change Request"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (qfai-sdd SKILL.md:267 bullet deleted) working-tree+398b1495… at HEAD b05f9c0ae; toContain AssertionError at sddSkillSpec0013.test.ts:287:21; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the ledger moved the row to `review-fix` (56bb4b16c) and back to `refactor` (f06af3786) as a member of its T1 group keyed `BR-0013-0007`, and the group was reviewed again once the plan phase was recorded in `implement-spec-0013.md`
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120100000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4993fe8d2df94d24a308085642eecf00da6b031006307eaaa65720d9853b6737
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Spec review: PASS
+- Spec reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Spec audited evidence hash: da9c01b0be72f58c63ab7ae2daaa86c36534bed440f3840169e9e1e590e3ec23
+- Spec review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Code quality review: PASS
+- Code quality reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Code quality audited evidence hash: da9c01b0be72f58c63ab7ae2daaa86c36534bed440f3840169e9e1e590e3ec23
+- Code quality review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification seal: 3130415110be88e4f514d4b5528b21ee49f7d002fe1ad7902e4b6a8277d1acd5
+
+### TDD-0114
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -366,7 +734,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
 
-### TDD-0047
+### TDD-0115
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -377,7 +745,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
 
-### TDD-0050
+### TDD-0118
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -388,7 +756,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
 
-### TDD-0051
+### TDD-0119
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -399,7 +767,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
 
-### TDD-0052
+### TDD-0120
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -410,7 +778,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
 
-### TDD-0054
+### TDD-0122
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -421,7 +789,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
 
-### TDD-0055
+### TDD-0123
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -432,7 +800,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
 
-### TDD-0056
+### TDD-0124
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -444,7 +812,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
 - Note: The Operations table this test reads was written for spec-0001 TDD-0039, before this test existed, so no RED was observed.
 
-### TDD-0057
+### TDD-0125
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -455,7 +823,7 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
 
-### TDD-0044
+### TDD-0112
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -467,7 +835,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
 
-### TDD-0045
+### TDD-0113
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -479,7 +847,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the three staleness conditions and that the clock alone never makes an approval stale.
 
-### TDD-0048
+### TDD-0116
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -491,7 +859,7 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case asserts the value form `run-<17 digits>/<authorizationId>` instead of a contract citation.
 
-### TDD-0049
+### TDD-0117
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -504,7 +872,7 @@ failed, 2 passed (7).
 - Reopened by: CR-20260925-0006 part A; the case asserts that the row is for behaviour the spec already states and files no Change Request, with no decision ID.
 - The shipped text names the work order by its operation, `defect-row-seeding`; `sdd_append` is the stage kind the core issues it under and does not ship.
 
-### TDD-0053
+### TDD-0121
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
@@ -516,8 +884,9 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case dropped its citation clause.
 
-### TDD-0061
+### TDD-0129
 
+- Retired: row deleted 2026-09-25 in the merge reconciliation. It duplicated origin/main's application of the same approved option of CR-20260913-0012, and TDD-0081 now owns its case. Its test file was deleted; the checks it made that TDD-0081's test lacked moved there. The record below is kept as it was written.
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
@@ -528,14 +897,15 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 2 passed (2)
 - Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
 
-### TDD-0062
+### TDD-0130
 
+- Retired: row deleted 2026-09-25 in the merge reconciliation. It duplicated origin/main's application of the same approved option of CR-20260913-0012, and TDD-0082 and TDD-0083 now own its case. Its test file was deleted; the checks it made that TDD-0082 and TDD-0083's test lacked moved there. The record below is kept as it was written.
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
 - Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
 - Selector: `TC-0013-0037: Invalid or legacy optional side artifact leaves preflight ready`
-- RED command (cwd `packages/qfai`): as TDD-0061
+- RED command (cwd `packages/qfai`): as TDD-0129
 - RED result: already satisfied: exit 0 on the first run; a schema-invalid namespaced file and a legacy-only file each leave the verdict `ready` with no blockers
 - GREEN result: exit 0; 2 passed (2)
 - Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
@@ -554,6 +924,29 @@ every total.
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
 | completion-reviewer | Audit every claim this file makes against the repository | PENDING |
+
+### Rows for the run started 2026-09-25T01:55:05.779Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | acceptance-test-engineer | Write the `TDD-0110` and `TDD-0111` cases under a `TC-0013-0010` describe the `TDD-0010` selector does not match | CR-20260925-0008, 06_Test-Cases.md `TC-0013-0010` | `sddSkillSpec0013.test.ts` | PASS |
+| 2 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0110` and `TDD-0111` on the falsifiability branch | the test file, `specSplitByCapability.ts`, the `qfai-sdd` `SKILL.md` | #tdd-0110, #tdd-0111 | PASS |
+| 3 | - | n/a | grilling(-@2026-09-25T01:55:05.779Z/none): none | - | - | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-25T02:02:32.686Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 4 | - | n/a | grilling(-@2026-09-25T02:02:32.686Z/none): none | - | - | PASS |
+| 5 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 falsifiability run with the capability check dropped at line 552, then the revert and the restored GREEN | #tdd-0110, `specSplitByCapability.ts` | Round 1 | PASS |
+| 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
+| 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 and TDD-0111 refactor verify on the committed tree | #tdd-0110, #tdd-0111 | Refactor verify fields | PASS |
+| 8 | qa-gatekeeper | qa-gatekeeper#1, qa-gatekeeper#2 | /qfai-implement: TDD-0110 and TDD-0111 RED phase gate on the rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0110, #tdd-0111 | qa-gatekeeper fields | PASS |
+| 9 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120100000 <!-- qfai:not-a-citation --> | REVISE |
+| 10 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120100000 <!-- qfai:not-a-citation --> | PASS |
+| 11 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 2 | #tdd-0110, #tdd-0111 | review-20260925120200000 <!-- qfai:not-a-citation --> | PASS |
+| 12 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 2 | #tdd-0110, #tdd-0111 | review-20260925120200000 <!-- qfai:not-a-citation --> | PASS |
+| 13 | orchestrator | orchestrator | /qfai-implement: TDD-0110 and TDD-0111 group checkpoint verification, off a checkpoint boundary | #tdd-0110, #tdd-0111 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
@@ -603,6 +996,37 @@ None.
 
 Recorded per row above, and summarized in the table under
 "Commands executed + key outputs".
+
+### Checks for the run started 2026-09-25T01:55:05.779Z
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "<Selector>"
+  TDD-0110 reports a spec id the catalog moves to another capability   Tests 1 passed | 23 skipped (24)
+  TDD-0111 SKILL.md makes reordering the capability-to-spec mapping a Change Request   Tests 1 passed | 23 skipped (24)
+  TDD-0010 TC-0013-0010: Batch Mode Targets Every Capability   Tests 2 passed | 22 skipped (24)
+pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+  Test Files 1 passed (1); Tests 24 passed (24)
+eslint and prettier --check on the test file   -> exit 0
+RED test hash over the manifest                 -> 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+```
+
+`TDD-0010`'s selector still selects its own two cases and neither new one.
+`tsconfig.tests.json` does not list the test file, so `tsc` ran on a scratch
+config that extends it and includes only that file, with exit 0. The scratch
+config is deleted.
+
+### Checks for the /qfai-implement run started 2026-09-25T02:02:32.686Z
+
+```text
+pnpm -C packages/qfai build                                              -> exit 0
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  no finding names TDD-0110, TDD-0111 or TC-0013-0010
+node scripts/check-dogfood-backlog.mjs --profile tdd                     -> 935 errors, all within the pinned backlog
+node scripts/check-dogfood-backlog.mjs --profile full                    -> 951 errors, all within the pinned backlog
+node scripts/pin-stage-evidence-counts.mjs                               -> already current; nothing to write
+```
+
+`.qfai/report` was restored after each run.
 
 ## Gaps / Open risks
 
@@ -686,9 +1110,21 @@ the second over the UI contracts. The two message texts and severities are
 maintained separately. Nothing here depends on that, and no test covers the
 pair, so a change to one can silently diverge from the other.
 
+**The Coverage Depth Matrix predates `TDD-0110` and `TDD-0111`.** Its
+`TC-0013-0010` and `BR-0013-0007` rows still score the case as it was before
+the two clauses had a test. Rescoring them is part of the stage-wide matrix
+revision, as it is for the three optional-side-artifact rows.
+
 ## Final status
 
-PASS for the four rows recorded here, each for the part of its obligation named
+Historical PASS for the original four rows, each for the part of its obligation named
 under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
 the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
 rather than claimed.
+
+The three new rows have live P1d falsifiability PASS and focused GREEN. Their
+full checkpoint, review pack and completion verdict remain pending.
+
+`TDD-0110` and `TDD-0111` are handed over on the falsifiability branch. Their
+mutation runs, `qa-gatekeeper` verdicts, GREEN, review packs and checkpoint are
+`/qfai-implement`'s, and remain pending.

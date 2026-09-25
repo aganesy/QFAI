@@ -8,7 +8,12 @@ import { resolvePath } from "../config.js";
 import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
-import { changedFilesSince } from "../gitChanges.js";
+import { changedFilesSince, gitStdout } from "../gitChanges.js";
+import {
+  observationReach,
+  type ObservationReach,
+  type ObservationReachCache,
+} from "../observationReach.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
@@ -20,10 +25,13 @@ import {
 // The `DR-*` id class and its two declaration files, shared with the re-open
 // gate in `specPack.ts` so both resolve a `DR-*` against the same files.
 import {
+  type ChangeRequestHeader,
   collectDeclaredDrIds,
   DR_DECLARATION_FILES,
   DR_ID_FORMAT,
   DR_POLICY_DECLARATION_FILE,
+  isChangeRequestSettled,
+  parseChangeRequestHeader,
 } from "../decisionRecords.js";
 import { PROJECT_STEERING_DIR } from "../paths/assistantPaths.js";
 import {
@@ -43,6 +51,7 @@ import {
   resolveDeclaredTcId,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
+  TDD_DONE_STATUSES,
   TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
@@ -50,6 +59,13 @@ import {
 // The coverage-target TC set `qfai report` also reads, so the gate and the
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
+// The acceptance scan's own reading of an annotation, and of a file that
+// declares no test, so this validator and `QFAI-ATDD-119` call the same file a
+// carrier.
+import {
+  collectTestCaseAnnotationHomes,
+  type TestCaseAnnotationHomes,
+} from "../atddTraceability.js";
 import type { Issue } from "../types.js";
 import { UiAffectingClauses } from "../uiAffectingClauses.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
@@ -1324,7 +1340,7 @@ const EVIDENCE_COMMAND_NOT_RUN = [
   /\b(?:wasn|weren|isn|aren|hasn|haven|didn|don|doesn|couldn)['’]t\s+(?:been\s+)?(?:run|ran|executed|invoked)\b/i,
 ];
 
-function isExecutedEvidenceCommand(value: string): boolean {
+export function isExecutedEvidenceCommand(value: string): boolean {
   return hasCommandShape(value) && !EVIDENCE_COMMAND_NOT_RUN.some((form) => form.test(value));
 }
 
@@ -1367,7 +1383,7 @@ function evidenceResultOutcomeText(value: string): string {
 const EVIDENCE_RESULT_RAN_NOTHING =
   /\b(?:0|zero)\s+(?:tests?|specs?|examples?)\b(?!\s*(?:failed|failing|failures?|errors?))|\b0\s+passed\b|\bno\s+tests?\s+(?:ran|run|found|matched|executed)\b|\bno\s+test\s+files?\s+found\b/i;
 
-function isPassingEvidenceResult(value: string): boolean {
+export function isPassingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
   // A COUNTED outcome is what a runner reports about the cases it was given:
   // `0 failed` says there were no failures, and `35 skipped` says the suite
@@ -1392,7 +1408,7 @@ function isPassingEvidenceResult(value: string): boolean {
   );
 }
 
-function isFailingEvidenceResult(value: string): boolean {
+export function isFailingEvidenceResult(value: string): boolean {
   const outcome = evidenceResultOutcomeText(value);
   const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
   if (/\b(?:not|never|did\s+not)\s+(?:fail(?:ed)?|error)\b/i.test(outcome)) return false;
@@ -1495,7 +1511,7 @@ function normalizeAuditArtifact(value: string): string {
 // repaired entry, so its fields end the audited subject as the verdicts do.
 // Were they inside it, writing them would move the very hash they re-attest.
 const GATE_COMPLETED_EVIDENCE_FIELD =
-  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Record re-attestation(?: pack(?: seal)?)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:(?:Spec|Code quality|Prototype parity) record re-attestation(?: pack(?: seal)?)?|Spec review(?:ed revision| pack(?: seal)?)?|Spec audited evidence hash|Code quality review(?:ed revision| pack(?: seal)?)?|Code quality audited evidence hash|Prototype parity(?: reviewed revision| review pack(?: seal)?| audited evidence hash)?|Checkpoint verification (?:command|result|seal|revision|note))(?:\*\*)?\s*(?::|\|)/i;
 
 const PHASE_AUTHORED_EVIDENCE_FIELD =
   /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?(?:TDD-ID|Layer|Test file|Selector|TC-ref|US-ref|CON-API-ref|Revision|RED revision|Replacement proof revision|RED test hash|RED test manifest|RED command|RED result|GREEN command|GREEN result|Satisfied-by|Falsifiability command|Falsifiability result|Falsifiability revision|reviewer verdict|RED failure mode|Refactor verify command|Refactor verify result|Refactor verify revision|Oracle proof|qa-gatekeeper|Shared-artifact re-verify|Surface artifacts)(?:\*\*)?\s*(?::|\|)/i;
@@ -1931,7 +1947,71 @@ async function hasPlainParentComponents(root: string, safePath: string): Promise
   return true;
 }
 
-async function artifactRecord(root: string, relativePath: string): Promise<string | null> {
+/**
+ * The paths among `paths` that git's index marks `100755`. `null` means git
+ * reads the disk; `undefined` means the index could not be read safely.
+ *
+ * The execute bit is read the way `git add` reads it, because git is what
+ * carries it between checkouts. Where `core.fileMode` is `false` — as git sets
+ * it in a repository it creates on Windows, whose file system has no execute
+ * bit — git keeps the mode the index already holds, and a file it does not
+ * track is `100644`. Everywhere else git reads the owner's bit off the disk,
+ * and a checkout writes that bit from the index. Either way, two checkouts of
+ * one commit read the same mode. Read off the disk on Windows, a file git
+ * marks executable would be `100644` there and `100755` on a POSIX checkout,
+ * and evidence recorded on one would be refused on the other.
+ *
+ * A directory git cannot answer for — no `git`, no repository — reads the
+ * disk. An index read failure or an unmerged entry invalidates the manifest.
+ */
+function indexExecutablesWhereGitIgnoresDisk(
+  root: string,
+  paths: readonly string[],
+): ReadonlySet<string> | null | undefined {
+  if (gitStdout(root, ["config", "--bool", "core.fileMode"])?.trim() !== "false") return null;
+  // A global setting can be false even when `root` is outside a repository.
+  if (gitStdout(root, ["rev-parse", "--is-inside-work-tree"])?.trim() !== "true") return null;
+  const executables = new Set<string>();
+  // Keep both the Windows command line and gitStdout's output buffer bounded.
+  // `--literal-pathspecs` prevents `*` and `[` in a manifest path from widening a batch.
+  for (let offset = 0; offset < paths.length;) {
+    const batch: string[] = [];
+    let characters = 0;
+    while (
+      offset < paths.length &&
+      batch.length < 100 &&
+      (batch.length === 0 || characters + (paths[offset]?.length ?? 0) < 8000)
+    ) {
+      const next = paths[offset];
+      if (next === undefined) return undefined;
+      batch.push(next);
+      characters += next.length;
+      offset += 1;
+    }
+    const listing = gitStdout(root, [
+      "--literal-pathspecs",
+      "ls-files",
+      "-s",
+      "-z",
+      "--",
+      ...batch,
+    ]);
+    if (listing === null) return undefined;
+    for (const entry of listing.split("\0")) {
+      if (entry.length === 0) continue;
+      const tab = entry.indexOf("\t");
+      if (tab < 0 || entry[tab - 1] !== "0") return undefined;
+      if (entry.startsWith("100755 ")) executables.add(entry.slice(tab + 1));
+    }
+  }
+  return executables;
+}
+
+async function artifactRecord(
+  root: string,
+  relativePath: string,
+  indexExecutables: ReadonlySet<string> | null,
+): Promise<string | null> {
   const safePath = safeRepoRelativePath(relativePath);
   if (safePath === null) return null;
   if (!(await hasPlainParentComponents(root, safePath))) return null;
@@ -1962,17 +2042,26 @@ async function artifactRecord(root: string, relativePath: string): Promise<strin
   // tracked content reads `664` under one umask, `644` under another and `666`
   // on Windows, so evidence recorded on one checkout could not recompute on any
   // other and every handed-over row went unresolved for a difference Git does
-  // not even store. The executable bit is the one permission that travels.
-  const mode = kind === "symlink" ? "120000" : (metadata.mode & 0o111) === 0 ? "100644" : "100755";
+  // not even store. The owner's execute bit is the one permission that
+  // travels, and `indexExecutablesWhereGitIgnoresDisk` says where it is read
+  // from.
+  const executable =
+    indexExecutables === null ? (metadata.mode & 0o100) !== 0 : indexExecutables.has(safePath);
+  const mode = kind === "symlink" ? "120000" : executable ? "100755" : "100644";
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
-async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
-  const paths = manifest
+/** The paths a `RED test manifest` value lists, one per line. */
+function redTestManifestPaths(manifest: string): string[] {
+  return manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
+}
+
+export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
+  const paths = redTestManifestPaths(manifest);
   if (
     paths.length === 0 ||
     new Set(paths).size !== paths.length ||
@@ -1983,9 +2072,13 @@ async function redTestManifestHash(root: string, manifest: string): Promise<stri
   ) {
     return null;
   }
+  const safePaths = paths.map(safeRepoRelativePath);
+  if (!safePaths.every((entry): entry is string => entry !== null)) return null;
+  const indexExecutables = indexExecutablesWhereGitIgnoresDisk(root, safePaths);
+  if (indexExecutables === undefined) return null;
   const records: string[] = [];
   for (const entry of paths) {
-    const record = await artifactRecord(root, entry);
+    const record = await artifactRecord(root, entry, indexExecutables);
     if (record === null) return null;
     records.push(record);
   }
@@ -2474,7 +2567,7 @@ async function isAuditedCompletedEntry(
     return (
       recorded !== null &&
       SHA256_VALUE.test(recorded) &&
-      (bareSha256(recorded) === expectedHash || reattestsSubject(section, expectedHash))
+      (bareSha256(recorded) === expectedHash || reattestsSubject(section, prefix, expectedHash))
     );
   });
   if (!hashesRecompute) return false;
@@ -2624,13 +2717,19 @@ function stagePackRecordsPass(
   );
 }
 
-/** One `Shared-artifact re-verify` subsection, judged on its own fields. */
-async function isCurrentReverifyRecord(
+/**
+ * One `Shared-artifact re-verify` subsection, judged on its own fields.
+ *
+ * Answers the record's `Revision` when the record is current, and `null` when
+ * it is not. The revision is the tree the re-verify ran on, which is where the
+ * consumer's staleness interval starts once the record is accepted.
+ */
+async function currentReverifyRecordRevision(
   root: string,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
   section: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const revision = rowEvidenceFieldValue(section, "Revision");
   const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
   const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
@@ -2661,21 +2760,24 @@ async function isCurrentReverifyRecord(
     recordedHash === null ||
     !SHA256_VALUE.test(recordedHash)
   ) {
-    return false;
+    return null;
   }
   const manifestPaths = manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
-  if (!manifestPaths.includes(expected.testFile)) return false;
+  if (!manifestPaths.includes(expected.testFile)) return null;
   const computed = await redTestManifestHash(root, manifest);
-  return computed !== null && bareSha256(recordedHash) === computed;
+  return computed !== null && bareSha256(recordedHash) === computed ? revision : null;
 }
 
 /**
- * True when some **audited** record re-verifies this row against the current
- * shared artifact.
+ * The `Revision` of every **audited** record that re-verifies this row against
+ * the current shared artifact, in the order the records are found.
+ *
+ * A generator, so a caller that needs only the first answer stops the walk
+ * there instead of judging every entry in `.qfai/evidence/`.
  *
  * Where the record may live is half the rule. Any Markdown under
  * `.qfai/evidence/` used to qualify, and nothing tied the block to the change
@@ -2696,18 +2798,18 @@ async function isCurrentReverifyRecord(
  *   response and `summary.json` record the stage reviewer's PASS over that
  *   stage's own spec (`hasSealedStageStatus`).
  */
-async function hasCurrentSharedArtifactReverify(
+async function* currentSharedArtifactReverifyRevisions(
   context: CompletedEvidenceContext,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
-): Promise<boolean> {
+): AsyncGenerator<string, void, undefined> {
   const root = context.root;
   const evidenceDir = path.join(root, ".qfai", "evidence");
   let entries: Dirent[];
   try {
     entries = await readdir(evidenceDir, { withFileTypes: true });
   } catch {
-    return false;
+    return;
   }
   const target = `spec-${expected.specNumber}/${expected.tddId}`;
   for (const entry of entries) {
@@ -2728,7 +2830,8 @@ async function hasCurrentSharedArtifactReverify(
       if (stageSpecNumber === undefined) continue;
       if (!(await hasSealedStageStatus(context, stageSpecNumber, content))) continue;
       for (const section of sharedArtifactReverifySections(content, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
       continue;
     }
@@ -2740,11 +2843,23 @@ async function hasCurrentSharedArtifactReverify(
       if (!(await isAuditedCompletedEntry(context, ownerFile, ownerSection, ownerTddId))) continue;
       const audited = phaseAuthoredEvidence(ownerSection, ownerTddId);
       for (const section of sharedArtifactReverifySections(audited, target)) {
-        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
+        const revision = await currentReverifyRecordRevision(root, evidenceFile, expected, section);
+        if (revision !== null) yield revision;
       }
     }
   }
-  return false;
+}
+
+/** True when some audited record re-verifies this row against the current shared artifact. */
+async function hasCurrentSharedArtifactReverify(
+  context: CompletedEvidenceContext,
+  evidenceFile: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<boolean> {
+  const revisions = currentSharedArtifactReverifyRevisions(context, evidenceFile, expected);
+  const first = await revisions.next();
+  await revisions.return(undefined);
+  return first.done !== true;
 }
 
 /**
@@ -3161,6 +3276,11 @@ function missingCompletedEvidenceFields(
       "Prototype parity audited evidence hash",
       "Prototype parity review pack",
       "Prototype parity review pack seal",
+      // A re-attestation supersedes a verdict, and this row has none to
+      // supersede.
+      "Prototype parity record re-attestation",
+      "Prototype parity record re-attestation pack",
+      "Prototype parity record re-attestation pack seal",
       "Surface artifacts",
     ]) {
       if (rowEvidenceFieldValue(section, field) !== null) {
@@ -3473,76 +3593,102 @@ function missingCompletedEvidenceFields(
   return missing;
 }
 
-const RECORD_REATTESTATION = "Record re-attestation";
+/**
+ * The verdicts a repaired record can be re-attested for, in the prefix each
+ * one's fields already carry.
+ */
+const REATTESTABLE_VERDICTS = ["Spec", "Code quality", "Prototype parity"] as const;
 
 /**
- * The fields a `Record re-attestation` owes beside it, each in its form.
+ * The field one verdict's re-attestation is recorded under.
+ *
+ * A re-attestation supersedes one verdict, not the entry. The parity verdict's
+ * subject takes the captures its `Surface artifacts` manifest names, so on a
+ * UI-affecting row it never recomputes to the value the field-subject verdicts
+ * read, and one hash beside the entry reaches only one of those subjects.
+ */
+function recordReattestationField(prefix: string): string {
+  return `${prefix} record re-attestation`;
+}
+
+/**
+ * The fields each `<prefix> record re-attestation` owes beside it, in its form.
  *
  * The re-attestation is a review pack of its own, and the gate recomputes that
  * pack's seal. A hash recorded without its pack and seal is one nobody can
  * trace to a reviewer, so the three are owed together.
  */
 function recordReattestationFieldDefects(section: string): string[] {
-  const hash = rowEvidenceFieldValue(section, RECORD_REATTESTATION);
-  if (hash === null) return [];
   const defects: string[] = [];
-  if (!SHA256_VALUE.test(hash)) defects.push(`${RECORD_REATTESTATION}: sha256`);
-  const pack = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack`);
-  if (pack === null) {
-    defects.push(`${RECORD_REATTESTATION} pack`);
-  } else if (!CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
-    defects.push(
-      `${RECORD_REATTESTATION} pack: canonical .qfai/review/review-<17-digit timestamp> path`,
-    );
-  }
-  const seal = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack seal`);
-  if (seal === null) {
-    defects.push(`${RECORD_REATTESTATION} pack seal`);
-  } else if (!SHA256_VALUE.test(seal)) {
-    defects.push(`${RECORD_REATTESTATION} pack seal: sha256`);
+  for (const prefix of REATTESTABLE_VERDICTS) {
+    const field = recordReattestationField(prefix);
+    const hash = rowEvidenceFieldValue(section, field);
+    if (hash === null) continue;
+    if (!SHA256_VALUE.test(hash)) defects.push(`${field}: sha256`);
+    const pack = rowEvidenceFieldValue(section, `${field} pack`);
+    if (pack === null) {
+      defects.push(`${field} pack`);
+    } else if (!CANONICAL_REVIEW_PACK.test(recordedPackPath(pack))) {
+      defects.push(`${field} pack: canonical .qfai/review/review-<17-digit timestamp> path`);
+    }
+    const seal = rowEvidenceFieldValue(section, `${field} pack seal`);
+    if (seal === null) {
+      defects.push(`${field} pack seal`);
+    } else if (!SHA256_VALUE.test(seal)) {
+      defects.push(`${field} pack seal: sha256`);
+    }
   }
   return defects;
 }
 
 /**
- * True when the entry's `Record re-attestation` is the hash `recomputed` has
+ * True when this verdict's own re-attestation is the hash `recomputed` has
  * now: a reviewer re-read the repaired record and attested these bytes.
+ *
+ * Another verdict's re-attestation does not answer for this one. Each names
+ * the subject its reviewer read, and on a repaired UI-affecting row those
+ * subjects differ.
  */
-function reattestsSubject(section: string, recomputed: string): boolean {
-  // SIMPLIFIED: an entry carries one re-attestation hash, so it re-attests only
-  // the verdicts whose subjects recompute to that one value.
-  // Lift when: a repaired UI-affecting row needs its parity verdict re-attested
-  // beside the two field-subject verdicts.
-  const hash = rowEvidenceFieldValue(section, RECORD_REATTESTATION);
+function reattestsSubject(section: string, prefix: string, recomputed: string): boolean {
+  const hash = rowEvidenceFieldValue(section, recordReattestationField(prefix));
   return hash !== null && SHA256_VALUE.test(hash) && bareSha256(hash) === recomputed;
 }
 
 /**
- * The re-attestation pack's seal, recomputed from the pack it names when that
+ * Each re-attestation pack's seal, recomputed from the pack it names when that
  * pack is in the checkout.
  *
  * Review packs are local-only, so an absent pack is not a failure, as for the
  * verdicts' own packs. The field forms are reported elsewhere, and a value in
  * the wrong form is not read here.
  */
-async function invalidRecordReattestationPack(root: string, section: string): Promise<string[]> {
-  if (rowEvidenceFieldValue(section, RECORD_REATTESTATION) === null) return [];
-  const pack = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack`);
-  const seal = rowEvidenceFieldValue(section, `${RECORD_REATTESTATION} pack seal`);
-  if (pack === null || seal === null || !SHA256_VALUE.test(seal)) return [];
-  const packPath = recordedPackPath(pack);
-  if (!CANONICAL_REVIEW_PACK.test(packPath)) return [];
-  try {
-    await lstat(path.join(root, ...packPath.split("/")));
-  } catch (error) {
-    if (isEnoent(error)) return [];
-    return [`${RECORD_REATTESTATION} pack path readable when present`];
+async function invalidRecordReattestationPacks(root: string, section: string): Promise<string[]> {
+  const invalid: string[] = [];
+  for (const prefix of REATTESTABLE_VERDICTS) {
+    const field = recordReattestationField(prefix);
+    if (rowEvidenceFieldValue(section, field) === null) continue;
+    const pack = rowEvidenceFieldValue(section, `${field} pack`);
+    const seal = rowEvidenceFieldValue(section, `${field} pack seal`);
+    if (pack === null || seal === null || !SHA256_VALUE.test(seal)) continue;
+    const packPath = recordedPackPath(pack);
+    if (!CANONICAL_REVIEW_PACK.test(packPath)) continue;
+    try {
+      await lstat(path.join(root, ...packPath.split("/")));
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      invalid.push(`${field} pack path readable when present`);
+      continue;
+    }
+    const files = await collectReviewPackFiles(root, packPath);
+    if (files === null) {
+      invalid.push(`${field} pack resolving to regular files`);
+      continue;
+    }
+    if (reviewPackSeal(files) !== bareSha256(seal)) {
+      invalid.push(`${field} pack seal matching pack contents`);
+    }
   }
-  const files = await collectReviewPackFiles(root, packPath);
-  if (files === null) return [`${RECORD_REATTESTATION} pack resolving to regular files`];
-  return reviewPackSeal(files) === bareSha256(seal)
-    ? []
-    : [`${RECORD_REATTESTATION} pack seal matching pack contents`];
+  return invalid;
 }
 
 /**
@@ -3569,11 +3715,7 @@ async function invalidCompletedEvidenceArtifacts(
       const manifest = roundEvidenceFieldValue(section, round, "RED test manifest");
       const recorded = roundEvidenceFieldValue(section, round, "RED test hash");
       if (manifest !== null && recorded !== null && SHA256_VALUE.test(recorded)) {
-        const manifestPaths = manifest
-          .replace(/\r\n/g, "\n")
-          .split("\n")
-          .map((line) => line.trim().replace(/^[-*]\s+/, ""))
-          .filter((line) => line.length > 0);
+        const manifestPaths = redTestManifestPaths(manifest);
         const computed = await redTestManifestHash(root, manifest);
         if (!manifestPaths.includes(expected.testFile) || computed === null) {
           invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
@@ -3630,7 +3772,7 @@ async function invalidCompletedEvidenceArtifacts(
       auditedHash !== null &&
       SHA256_VALUE.test(auditedHash) &&
       bareSha256(auditedHash) !== recomputed &&
-      !reattestsSubject(section, recomputed)
+      !reattestsSubject(section, prefix, recomputed)
     ) {
       invalid.push(`${prefix} audited evidence hash matching ${subject}`);
     }
@@ -3693,7 +3835,7 @@ async function invalidCompletedEvidenceArtifacts(
       );
     }
   }
-  invalid.push(...(await invalidRecordReattestationPack(root, section)));
+  invalid.push(...(await invalidRecordReattestationPacks(root, section)));
 
   // The attempt the last round closed on is the review the row-level verdicts
   // record, so each routed reviewer answered there once, over the tree and
@@ -4626,22 +4768,35 @@ async function isRecordFile(dir: string, entry: Dirent, projectRoot: string): Pr
  * and re-scanned the same names once for each spec. Indexing the ids also turns
  * an exception row's lookup into a hash probe rather than a scan over every
  * record file.
+ */
+function collectDeclaredRecordIds(recordNames: readonly string[]): ReadonlySet<string> {
+  const ids = new Set<string>();
+  for (const name of recordNames) {
+    for (const id of recordFileDeclaredIds(name)) ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * The names of the record files under `.qfai/decisions/`, sorted.
+ *
+ * One listing serves both readers of the directory: the `DR-*` index above and
+ * the Change Request lookup.
  *
  * An absent directory is the common case (no anomaly has been recorded yet) and
- * an unreadable one must not fail the whole ledger check, so both yield an
- * empty set. Directories are dropped rather than indexed: a directory called
- * `DR-<id>-<slug>.md/` would otherwise satisfy the existence check that the
- * Decision Record itself is supposed to satisfy. A symlink is resolved and
- * counts only while it lands inside the project — see `isRecordFile`.
+ * an unreadable one must not fail the whole ledger check, so both yield no
+ * names. Directories are dropped: a directory called `DR-<id>-<slug>.md/` would
+ * otherwise satisfy the existence check that the Decision Record itself is
+ * supposed to satisfy. A symlink is resolved and counts only while it lands
+ * inside the project — see `isRecordFile`.
  */
-async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<string>> {
-  const ids = new Set<string>();
+async function listRecordFileNames(root: string): Promise<string[]> {
   const dir = path.join(root, DR_RECORD_DIR);
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    return ids;
+    return [];
   }
   const projectRoot = await resolvedRoot(root);
   const names = await Promise.all(
@@ -4649,11 +4804,86 @@ async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<strin
       (await isRecordFile(dir, entry, projectRoot)) ? entry.name : null,
     ),
   );
-  for (const name of names) {
-    if (name === null) continue;
-    for (const id of recordFileDeclaredIds(name)) ids.add(id);
+  return names.filter((name): name is string => name !== null).sort();
+}
+
+/**
+ * A Change Request record filename: the id, an optional `-<slug>`, and `.md`.
+ * The slug is free text in the project's own language, as the template leaves
+ * it.
+ */
+const CHANGE_REQUEST_FILE = /^(CR-\d{8}-\d{4})(?:-.+)?\.md$/i;
+
+/** The Change Request records under `.qfai/decisions/`, read on demand. */
+type ChangeRequestLookup = {
+  /**
+   * The header of the Change Request a `CR-*` id names, or `null` when no
+   * record file carries that id in both its name and its `- ID:` field.
+   */
+  header: (crId: string) => Promise<ChangeRequestHeader | null>;
+  /** The `## Blocked downstream items` text of every record not yet settled. */
+  unresolvedBlockedItems: () => Promise<readonly string[]>;
+};
+
+/** What `.qfai/decisions/` holds, read once per run and shared by every spec. */
+type DecisionsIndex = {
+  recordIds: ReadonlySet<string>;
+  changeRequests: ChangeRequestLookup;
+};
+
+/**
+ * Index the Change Request records by id, reading each one only when a ledger
+ * row asks for it.
+ *
+ * Most runs ask about no Change Request at all, so the files are read on
+ * demand and each at most once. An id that two file names carry answers
+ * nothing: which of them is the record cannot be told, and either may be the
+ * one still open.
+ *
+ * The declared `- ID:` is the record's id; the file name only locates it. A
+ * file whose name and declared id disagree — renamed or copied without its
+ * header moving — answers for neither, so a row cannot borrow the status of a
+ * record that is not the one it names.
+ *
+ * The blocked sets of the unresolved records are read across every file,
+ * ambiguous and mismatched ones included: a record that cannot be told apart
+ * may still be the one holding a row.
+ */
+function buildChangeRequestLookup(
+  root: string,
+  recordNames: readonly string[],
+): ChangeRequestLookup {
+  const files = new Map<string, string[]>();
+  for (const name of recordNames) {
+    const id = CHANGE_REQUEST_FILE.exec(name)?.[1]?.toUpperCase();
+    if (id !== undefined) files.set(id, [...(files.get(id) ?? []), name]);
   }
-  return ids;
+  const headers = new Map<string, Promise<ChangeRequestHeader>>();
+  const read = (name: string): Promise<ChangeRequestHeader> => {
+    let header = headers.get(name);
+    if (header === undefined) {
+      header = readSafe(path.join(root, DR_RECORD_DIR, name)).then(parseChangeRequestHeader);
+      headers.set(name, header);
+    }
+    return header;
+  };
+  let unresolved: Promise<string[]> | undefined;
+  return {
+    header: async (crId) => {
+      const id = crId.toUpperCase();
+      const candidates = files.get(id) ?? [];
+      const name = candidates.length === 1 ? candidates[0] : undefined;
+      if (name === undefined) return null;
+      const parsed = await read(name);
+      return parsed.id === id ? parsed : null;
+    },
+    unresolvedBlockedItems: async () => {
+      unresolved ??= Promise.all([...files.values()].flat().map(read)).then((all) =>
+        all.filter((h) => !isChangeRequestSettled(h)).map((h) => h.blockedItems),
+      );
+      return await unresolved;
+    },
+  };
 }
 
 /**
@@ -4808,6 +5038,32 @@ export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
 
 /**
+ * Finding code for a ledger row that owes a test case and whose `TC-Refs`
+ * names none.
+ *
+ * Every other check on the column reads the ids the cell holds. A cell holding
+ * `-`, `n/a` or a requirement id gives them nothing to disagree with, so the
+ * row passes all of them while tracing to no test case.
+ *
+ * The shape of the cell decides, not whether it is empty: `REQ-… (follow-up)`
+ * fills the column and reads as a reference.
+ */
+export const TC_REFS_NAME_NO_TEST_CASE_CODE = "QFAI-TDDLIST-022";
+
+const CON_DB_TOKEN = /^CON-DB-\d+$/;
+
+/**
+ * Finding code for a `done` row whose test case only an annotation carrier
+ * names.
+ *
+ * A carrier lists obligations and declares no test, so no runner selects a
+ * case named only there. The acceptance gate is satisfied by the annotation it
+ * reads, and `QFAI-ATDD-119` reports the obligation at `info`. The row adds a
+ * claim that work was done, which is why it is an error here.
+ */
+export const COMPLETED_ROW_CARRIER_ONLY_CODE = "QFAI-TDDLIST-023";
+
+/**
  * `Revision` names a tree that files the observation covered have moved past.
  *
  * `evidence-revision.md#what-makes-evidence-stale` defines staleness
@@ -4936,7 +5192,7 @@ function normalizeSelector(selector: string): string | null {
  * comma rule: before the array form a multi-entry cell was a comma-separated list, and read as one
  * name such a row can never resolve again.
  */
-function selectorResolves(selector: string, content: string): boolean {
+export function selectorResolves(selector: string, content: string): boolean {
   const entries = selectorEntries(selector);
   if (entries.every((entry) => entryResolves(entry, content))) {
     return true;
@@ -5128,6 +5384,150 @@ function blockedWithoutWorklog(
   ];
 }
 
+/** The finding for a `blocked` row whose Change Request blockers are all settled. */
+const BLOCKED_BY_CLOSED_CR_CODE = "QFAI-TDDLIST-021";
+
+/** A `CR-*` id anywhere in a cell, with or without the slug that follows it. */
+const CHANGE_REQUEST_ID_IN_TEXT = /\bCR-\d{8}-\d{4}\b/gi;
+
+/** A blocker other than a Change Request: a ledger row, or a contract path. */
+const OTHER_BLOCKER_IN_TEXT = /\bTDD-\d{4}\b|\.qfai\/contracts\//i;
+
+/** A row named with its spec: `spec-NNNN/TDD-NNNN`, or with `:` in place of `/`. */
+const QUALIFIED_ROW_IN_TEXT = /\bspec-(\d{4})\s*[/:]\s*(TDD-\d{4})\b/gi;
+const BARE_ROW_IN_TEXT = /\bTDD-\d{4}\b/gi;
+/** The template's line for what a request does not block. */
+const NOT_BLOCKED_LINE = /^\s*[-*]\s*Not blocked by this CR\s*:.*$/gim;
+
+/**
+ * True when a Change Request's blocked items name this spec's row.
+ *
+ * SIMPLIFIED: a bare `TDD-NNNN` is taken to name the row in every spec, and an
+ * item written as prose ("every row whose TC-Refs names ...") names nothing.
+ * Both err towards silence, which is the safe side for a warning that tells
+ * the operator to release a row.
+ * Lift when: the template fixes a grammar for a blocked item.
+ */
+function blockedItemsNameRow(items: string, specNumber: string, tddId: string): boolean {
+  const row = tddId.toUpperCase();
+  if (row.length === 0) return false;
+  const text = items.replace(NOT_BLOCKED_LINE, "");
+  for (const match of text.matchAll(QUALIFIED_ROW_IN_TEXT)) {
+    if (match[1] === specNumber && match[2]?.toUpperCase() === row) return true;
+  }
+  const bare = text.replace(QUALIFIED_ROW_IN_TEXT, " ");
+  return [...bare.matchAll(BARE_ROW_IN_TEXT)].some((match) => match[0].toUpperCase() === row);
+}
+
+/** Every distinct `CR-*` id a cell names, upper-cased, in order of appearance. */
+function changeRequestIdsIn(text: string): string[] {
+  return [...new Set([...text.matchAll(CHANGE_REQUEST_ID_IN_TEXT)].map((m) => m[0].toUpperCase()))];
+}
+
+/** How a settled Change Request's status reads in a finding. */
+function describeSettledStatus(status: string | null): string {
+  return status === "approved" ? "approved and applied" : (status ?? "");
+}
+
+/**
+ * The Change Requests a `blocked` row waits on, and the cell they were read
+ * from; `null` when the row may be waiting on something else.
+ *
+ * `Blocked-By` is where the blocker belongs, and it counts only when its
+ * blocker half names Change Requests and nothing more: a contract path or
+ * another spec's row beside them can still be holding the row. `Evidence` is
+ * read only when `Blocked-By` names no blocker at all — an empty cell, or a
+ * ledger without the column — and `TDDLIST_BLOCKED_MISSING_REF` already reports
+ * that cell. A malformed `Blocked-By` is left to the same finding.
+ *
+ * `Evidence` is prose, so it cannot be held to the Change-Request-only shape
+ * `Blocked-By` is. It counts only while it names none of the other blockers a
+ * `Blocked-By` cell admits: a ledger row, here or in another spec, or a
+ * contract path.
+ */
+function changeRequestBlockers(ref: LedgerRowRef): { column: string; ids: string[] } | null {
+  const parsed = parseBlockedBy(cell(ref, BLOCKED_BY_COLUMN));
+  if (parsed.ok) {
+    return isChangeRequestRefsOnly(parsed.blocker)
+      ? { column: BLOCKED_BY_COLUMN, ids: changeRequestIdsIn(parsed.blocker) }
+      : null;
+  }
+  if (parsed.reason !== "missing-blocker") return null;
+  const evidence = cell(ref, "Evidence");
+  if (OTHER_BLOCKER_IN_TEXT.test(evidence)) return null;
+  const ids = changeRequestIdsIn(evidence);
+  return ids.length > 0 ? { column: "Evidence", ids } : null;
+}
+
+/**
+ * The Change Requests a `blocked` row waits on, each with its status, when
+ * every one of them is settled; `null` when it waits on none, or when any one
+ * does not resolve to a record or is still open.
+ */
+async function settledBlockers(
+  ref: LedgerRowRef,
+  lookup: ChangeRequestLookup,
+): Promise<{ column: string; blockers: string[] } | null> {
+  const named = changeRequestBlockers(ref);
+  if (named === null) return null;
+  const { column, ids } = named;
+  const headers = await Promise.all(ids.map(lookup.header));
+  const blockers: string[] = [];
+  for (const [index, header] of headers.entries()) {
+    if (header === null || !isChangeRequestSettled(header)) return null;
+    blockers.push(`${ids[index] ?? ""} (${describeSettledStatus(header.status)})`);
+  }
+  return { column, blockers };
+}
+
+/**
+ * A `blocked` row whose Change Request blockers are all settled.
+ *
+ * Nothing else reports it. The row is parked on a decision that has already
+ * been made, ordinary selection skips it, and `QFAI-TDDLIST-015` is satisfied
+ * by the work-log entry written when it stopped — so the ledger keeps saying
+ * the row cannot start long after it can.
+ *
+ * A `warning`: the row's obligation is still visible as unfinished, and the
+ * finding is there so a reader sees that the stop has outlived its cause.
+ *
+ * A row can sit in more than one Change Request's blocked set, and the ledger
+ * cell need not name them all. So a row that an unresolved request still lists
+ * under `## Blocked downstream items` is not reported: it is still held.
+ */
+async function blockedByClosedChangeRequest(
+  blockedRows: readonly LedgerRowRef[],
+  specNumber: string,
+  relPath: string,
+  lookup: ChangeRequestLookup,
+): Promise<Issue[]> {
+  const settled = await Promise.all(blockedRows.map((ref) => settledBlockers(ref, lookup)));
+  if (settled.every((found) => found === null)) return [];
+  const stillHeld = await lookup.unresolvedBlockedItems();
+  const issues: Issue[] = [];
+  for (const [index, ref] of blockedRows.entries()) {
+    const found = settled[index];
+    if (found === null || found === undefined) continue;
+    const tddId = cell(ref, "TDD-ID");
+    if (stillHeld.some((items) => blockedItemsNameRow(items, specNumber, tddId))) continue;
+    const rowKey = tddId.length > 0 ? tddId : ref.label;
+    issues.push(
+      issue(
+        BLOCKED_BY_CLOSED_CR_CODE,
+        `TDD item "${rowKey}" in spec-${specNumber} is still Status=blocked, but every Change Request its ${found.column} cell names is settled: ${found.blockers.join(", ")}. The blocker is closed and the row is waiting on nothing`,
+        "warning",
+        relPath,
+        "tddList.blockedByClosedChangeRequest",
+        undefined,
+        "change",
+        `Release the row through \`/qfai-implement\`. Its Change Request preflight takes \`blocked -> todo\`, the resumption edge: \`Blocked-By\` is cleared and the resumed round records \`Resumed-from-blocked\`. Where an approved request changed what the row asserts, the preflight takes the upstream reset to \`todo\` instead and records the request in \`DR-ID\`.`,
+        { dl_id: rowKey },
+      ),
+    );
+  }
+  return issues;
+}
+
 /**
  * The steering surface reduced to the answer the stop check needs, plus the
  * findings raised by reading it.
@@ -5243,7 +5643,9 @@ export async function validateTddList(
   const entries = await collectSpecEntries(specsRoot);
   // `.qfai/decisions/` is one shared directory, so it is read once here and
   // handed to each spec rather than re-scanned per spec.
-  const recordIds = await collectDeclaredRecordIds(root);
+  const recordNames = await listRecordFileNames(root);
+  const recordIds = collectDeclaredRecordIds(recordNames);
+  const changeRequests = buildChangeRequestLookup(root, recordNames);
   const issues: Issue[] = [];
 
   // Read once for the whole run: the steering surface is project-wide, and one
@@ -5256,6 +5658,11 @@ export async function validateTddList(
   // check.
   const { issues: steeringIssues, ...gateFields } = await readSteeringIndex(root);
   let steeringIssuesDrained = false;
+  // The test tree is read at most once, and only once a ledger holds a `done`
+  // row that names a test case.
+  let annotationHomes: Promise<TestCaseAnnotationHomes | null> | undefined;
+  const readAnnotationHomes = (): Promise<TestCaseAnnotationHomes | null> =>
+    (annotationHomes ??= collectTestCaseAnnotationHomes(root, config));
   const gate: BlockedWorklogGate = {
     ...gateFields,
     drainUnreadable: () => {
@@ -5275,9 +5682,10 @@ export async function validateTddList(
       entry,
       specsRoot,
       gate,
-      recordIds,
+      { recordIds, changeRequests },
       srcRelDir,
       config.paths.contractsDir,
+      readAnnotationHomes,
     );
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
@@ -5388,6 +5796,12 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * is shallow — telling them apart needs a signal this check does not have — and
  * the rule still cannot run in a lane that blocks a merge until the checkout
  * there carries the history the revisions name.
+ *
+ * `reach` narrows what the observation covered. Without it the covered files
+ * are the test file and all of `srcDir`, which is the question to ask while a
+ * row is in flight: the code under test is still being written. A row at rest
+ * passes the files its test reached (`observationReach`), so a change its test
+ * never imports does not stale it.
  */
 export function staleEvidenceFiles(
   root: string,
@@ -5395,19 +5809,49 @@ export function staleEvidenceFiles(
   section: string,
   testFile: string,
   cache: Map<string, ChangedSince> = new Map(),
+  reach: ReadonlySet<string> | null = null,
 ): readonly string[] | null {
-  const revision = observationRevision(section);
+  const changes = coveredChangesSince(
+    root,
+    srcRelDir,
+    observationRevision(section),
+    testFile,
+    cache,
+    reach,
+  );
+  return changes.kind === "stale" ? changes.files : null;
+}
+
+/**
+ * What moved under the covered files since `revision`: `reach` where given,
+ * otherwise the test file and `srcDir`.
+ *
+ * `unchecked` is kept apart from `current`: a revision that names no commit
+ * this clone holds, or no commit at all, says nothing about the tree. A caller
+ * that clears a finding on `current` must not clear it on `unchecked`.
+ */
+type CoveredChanges =
+  { kind: "stale"; files: readonly string[] } | { kind: "current" } | { kind: "unchecked" };
+
+function coveredChangesSince(
+  root: string,
+  srcRelDir: string,
+  revision: string | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
+): CoveredChanges {
   // The shape test is a COST guard, not a correctness one, and no row can
   // distinguish it: without it a `working-tree+<hash>` reaches
-  // `changedFilesSince`, `rev-parse` fails, and the answer is `null` either
-  // way. It is kept because this runs per ledger row, and a project on content
-  // addresses would spawn a git process for every one of them to reach a
-  // guaranteed null.
+  // `changedFilesSince`, `rev-parse` fails, and the answer is `unchecked`
+  // either way. It is kept because this runs per ledger row, and a project on
+  // content addresses would spawn a git process for every one of them to reach
+  // a guaranteed `unchecked`.
   if (revision === null || !/^[0-9a-f]{7,64}$/i.test(revision)) {
-    return null;
+    return { kind: "unchecked" };
   }
   if (testFile.length === 0 && srcRelDir.length === 0) {
-    return null;
+    return { kind: "unchecked" };
   }
 
   // ONE diff per distinct revision, over the whole tree, filtered per row in
@@ -5421,15 +5865,84 @@ export function staleEvidenceFiles(
     changed = changedFilesSince(root, revision, []);
     cache.set(revision, changed);
   }
-  if (changed.kind !== "changed") {
-    return null;
-  }
+  if (changed.kind === "unresolvable") return { kind: "unchecked" };
+  if (changed.kind === "unchanged") return { kind: "current" };
 
   const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
-  const covered = changed.files.filter(
-    (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
+  const covered = changed.files.filter((file) =>
+    reach !== null
+      ? reach.has(file)
+      : file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
-  return covered.length > 0 ? covered : null;
+  return covered.length > 0 ? { kind: "stale", files: covered } : { kind: "current" };
+}
+
+/** The completed entry a `done` row's anchor resolved to. */
+interface ResolvedCompletedEntry {
+  evidenceFile: string;
+  section: string;
+  expectation: CompletedEvidenceExpectation;
+}
+
+/**
+ * `staleEvidenceFiles`, read from the newest observation the row has.
+ *
+ * A later row that edits a shared test file re-verifies this one and records
+ * that as a `Shared-artifact re-verify` record in its own audited entry. The
+ * record's `Revision` is the tree the re-verify ran on, so the interval starts
+ * there rather than at the row's own, older observation. Whatever changed after
+ * that revision still makes the row stale.
+ *
+ * Any current record whose interval is clean clears the row. On a linear
+ * history the newest record is the one that can, so the order the records are
+ * found in does not change the answer. A record whose revision names no commit
+ * here clears nothing.
+ *
+ * The records are looked up only for a `done` row that is stale from its own
+ * revision, so a row that is current costs no walk of `.qfai/evidence/`.
+ */
+async function staleSinceNewestObservation(
+  context: CompletedEvidenceContext,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry | null,
+  testFile: string,
+  cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
+): Promise<readonly string[] | null> {
+  if (entry === null) return null;
+  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache, reach);
+  if (stale === null) return null;
+  const revisions = currentSharedArtifactReverifyRevisions(
+    context,
+    entry.evidenceFile,
+    entry.expectation,
+  );
+  for await (const revision of revisions) {
+    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache, reach);
+    if (since.kind === "current") return null;
+  }
+  return stale;
+}
+
+/**
+ * What a row at rest observed: its test file, the other test inputs its newest
+ * `RED test manifest` names, and what those reach under `srcDir`.
+ */
+async function atRestReach(
+  root: string,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry,
+  testFile: string,
+  cache: ObservationReachCache,
+): Promise<ObservationReach> {
+  const fields = entryOwnFields(entry.section);
+  const manifest =
+    [...evidenceRoundNumbers(fields)]
+      .reverse()
+      .map((round) => roundEvidenceFieldValue(fields, round, "RED test manifest"))
+      .find((value) => value !== null) ?? rowEvidenceFieldValue(fields, "RED test manifest");
+  const manifestPaths = manifest === null ? [] : redTestManifestPaths(manifest);
+  return observationReach(root, srcRelDir, testFile, manifestPaths, cache);
 }
 
 /**
@@ -5475,6 +5988,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // The columns themselves are Phase 2b's to write, so a ledger that predates
   // them is that phase's to migrate, and its gate is where the gap is heard.
   "QFAI-TDDLIST-020",
+  // `TC-Refs` is Phase 2b's cell, so a row it seeded with no test case there
+  // is seed damage, and the reader may not re-point the obligation.
+  TC_REFS_NAME_NO_TEST_CASE_CODE,
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -5593,10 +6109,12 @@ async function validateSpecTddList(
   specEntry: SpecEntry,
   specsRoot: string,
   gate: BlockedWorklogGate,
-  recordIds: ReadonlySet<string>,
+  decisions: DecisionsIndex,
   srcRelDir: string,
   contractsDir: string,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
 ): Promise<Issue[]> {
+  const { recordIds, changeRequests } = decisions;
   // The whole entry, not its directory: Check 8c derives the review-group key
   // from the spec's layer files, and `SpecEntry` is what already resolves those
   // paths per layout.
@@ -6054,6 +6572,19 @@ async function validateSpecTddList(
     );
   }
 
+  // A row that owes a test case and names none.
+  issues.push(...validateRowsNameATestCase(ledgerRows(), relPath, specNumber));
+
+  // A `done` row whose test case only an annotation carrier names.
+  issues.push(
+    ...(await validateCompletedRowsRunATest(ledgerRows(), readAnnotationHomes, {
+      root,
+      relPath,
+      specNumber,
+      knownTcIds,
+    })),
+  );
+
   // Check 5d: the sibling rows of a split obligation each name the boundary
   // they own.
   //
@@ -6252,9 +6783,11 @@ async function validateSpecTddList(
   // row be saved in a state no later session can resume from.
   const hasBlockedByColumn = anyTableHasColumn(coverageTables, BLOCKED_BY_COLUMN);
   const blockedRowLabels: string[] = [];
+  const blockedRows: LedgerRowRef[] = [];
   for (const ref of ledgerRows()) {
     if (cell(ref, "Status").toLowerCase() !== "blocked") continue;
     blockedRowLabels.push(ref.label);
+    blockedRows.push(ref);
     const blockedBy = cell(ref, BLOCKED_BY_COLUMN);
     const parsed = parseBlockedBy(blockedBy);
     if (parsed.ok) continue;
@@ -6321,6 +6854,11 @@ async function validateSpecTddList(
   // steering path, so the surface is tracked and the omission is visible to
   // ordinary CI.
   issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, gate));
+
+  // Phase 2 – Check 8b': a blocked row whose Change Request has been settled.
+  issues.push(
+    ...(await blockedByClosedChangeRequest(blockedRows, specNumber, relPath, changeRequests)),
+  );
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
   const isDrDeclared = await buildDrDeclarationResolver(specDir, specsRoot, recordIds);
@@ -6728,6 +7266,8 @@ async function validateSpecTddList(
   // it. Scoped to this run rather than to the module: a cache that outlived a
   // run would answer a later one from an earlier tree.
   const revisionDiffCache = new Map<string, ChangedSince>();
+  // Each file's imports are read once, however many rows' tests reach it.
+  const reachCache: ObservationReachCache = { imports: new Map() };
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -6867,7 +7407,7 @@ async function validateSpecTddList(
       );
     }
 
-    let lastResolvedSection = "";
+    let lastResolved: ResolvedCompletedEntry | null = null;
     for (const anchor of anchors) {
       relatedFile = anchor.file;
       if (anchor.file !== expectedFile) {
@@ -6910,10 +7450,6 @@ async function validateSpecTddList(
               ? "CON-API-Refs"
               : "TC-Refs";
         const section = evidenceIndex.sections.get(anchor.fragment) ?? "";
-        // Kept for the staleness check below, which needs the section this row
-        // actually resolved to rather than the last one the loop happened to
-        // look at.
-        lastResolvedSection = section;
         const expectation = {
           specNumber,
           tddId,
@@ -6925,6 +7461,10 @@ async function validateSpecTddList(
           preSplit: usesPreSplitEvidence(layer, evidence),
           reviewUnit: reviewUnitOf(ref, [...ledgerRows()]),
         } satisfies CompletedEvidenceExpectation;
+        // Kept for the staleness check below, which needs the entry this row
+        // actually resolved to rather than the last one the loop happened to
+        // look at.
+        lastResolved = { evidenceFile: anchor.file, section, expectation };
         // A backfilled row is exempt from the reviewer-pack fields, and the
         // exemption is reported rather than applied silently. The gate's whole
         // value is that a `done` row means a reviewed one, so a row that is
@@ -6964,24 +7504,37 @@ async function validateSpecTddList(
     }
 
     if (anchorFailure.length === 0) {
-      const staleFiles = staleEvidenceFiles(
-        root,
+      const testFile = cell(ref, "Test file");
+      const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+      const reach =
+        atRest && lastResolved !== null
+          ? await atRestReach(root, srcRelDir, lastResolved, testFile, reachCache)
+          : null;
+      const staleFiles = await staleSinceNewestObservation(
+        evidenceContext,
         srcRelDir,
-        lastResolvedSection,
-        cell(ref, "Test file"),
+        lastResolved,
+        testFile,
         revisionDiffCache,
+        reach?.kind === "reach" ? reach.files : null,
       );
       if (staleFiles !== null) {
-        const revision = observationRevision(lastResolvedSection) ?? "";
+        const revision = observationRevision(lastResolved?.section ?? "") ?? "";
         const shown = staleFiles.slice(0, 5);
         const more =
           staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";
-        const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+        const scope =
+          reach === null
+            ? `the test file and all of \`${srcRelDir}\``
+            : reach.kind === "reach"
+              ? `the test file, the test inputs its record names, and what they import under \`${srcRelDir}\``
+              : `the test file and all of \`${srcRelDir}\`, because ${reach.reason}`;
         issues.push(
           issue(
             EVIDENCE_REVISION_STALE_CODE,
             `spec-${specNumber} ${rowLabel}: the observation names Revision \`${revision}\`, and ` +
               `${staleFiles.length} file(s) it covered have changed since: ${shown.join(", ")}${more}. ` +
+              `Covered: ${scope}. ` +
               `Status=${status}${atRest ? " (at rest — this row is making a claim)" : ""}. ` +
               "A stale Revision looks exactly like a fresh one — every command in the record is " +
               "real and nothing contradicts anything else — which is why it is computed rather " +
@@ -6993,9 +7546,9 @@ async function validateSpecTddList(
             "canonical",
             "Re-take the observation and record the revision it was taken at. The interval is " +
               "from the revision the observation NAMES to now — " +
-              "`git diff --name-only <revision>..HEAD -- <test file> <srcDir>` — not from your " +
-              "last commit, which is a different and much weaker question " +
-              "(`references/evidence-revision.md#what-makes-evidence-stale`).",
+              "`git diff --name-only <revision>..HEAD -- <covered files>`, over the files named " +
+              "as covered above — not from your last commit, which is a different and much " +
+              "weaker question (`references/evidence-revision.md#what-makes-evidence-stale`).",
           ),
         );
       }
@@ -7388,4 +7941,176 @@ function validateObligationColumn(
     );
   }
   return issues;
+}
+
+/**
+ * Whether the row records its obligation in a column other than `TC-Refs`, as
+ * its `Layer` allows.
+ *
+ * `E2E` and `API` rows may not carry a `TC-*` at all; their own columns are
+ * checked by {@link validateObligationColumn}. An `Integration` row seeded from
+ * a `CON-DB-*` contract carries that contract instead of a test case. The token
+ * is accepted in `TC-Refs` as well, because the shipped ledger header has no
+ * `CON-DB-Refs` column and the reference tells a reader to take a non-`TC-*`
+ * token in `TC-Refs` as the obligation its `Layer` names.
+ */
+function recordsObligationElsewhere(ref: LedgerRowRef): boolean {
+  const layer = cell(ref, "Layer").toLowerCase();
+  if (TC_FORBIDDEN_LAYERS.has(layer)) return true;
+  if (layer !== "integration") return false;
+  return [cell(ref, "CON-DB-Refs"), cell(ref, "TC-Refs")].some((value) =>
+    splitTcRefs(value).some((token) => CON_DB_TOKEN.test(token.toUpperCase())),
+  );
+}
+
+/**
+ * Reports every row that owes a test case and whose `TC-Refs` names none.
+ *
+ * Every status is read. A `todo` row seeded without a test case is the same
+ * defect as a `done` one, and one found before the work starts is cheaper to
+ * repair. A retired spec's findings are demoted by the caller.
+ */
+function validateRowsNameATestCase(
+  rows: Iterable<LedgerRowRef>,
+  relPath: string,
+  specNumber: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const ref of rows) {
+    const tcRefs = cell(ref, "TC-Refs");
+    if (splitTcRefs(tcRefs).some(isWellFormedTcRef)) continue;
+    if (recordsObligationElsewhere(ref)) continue;
+    const id = cell(ref, "TDD-ID");
+    const held = tcRefs.length === 0 ? "an empty TC-Refs" : `TC-Refs "${tcRefs}"`;
+    issues.push(
+      issue(
+        TC_REFS_NAME_NO_TEST_CASE_CODE,
+        `${id} in tdd/test-list.md for spec-${specNumber} (${ref.label}) holds ${held}, which names no test case. The checks on TC-Refs read the TC-* ids the cell holds, so this row is traced by none of them`,
+        "error",
+        relPath,
+        "tddList.tcRefsNameTestCase",
+        [id],
+        "change",
+        `Through /qfai-sdd, which owns TC-Refs: name the ${TEST_CASES_FILE_NAME} test case this row discharges, or retire the row.`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** Where a finding from {@link validateCompletedRowsRunATest} is filed. */
+type CarrierOnlyContext = {
+  root: string;
+  relPath: string;
+  specNumber: string;
+  /** The cases `06_Test-Cases.md` declares, which a decomposed token resolves to. */
+  knownTcIds: ReadonlySet<string>;
+};
+
+/**
+ * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased
+ * and once each, with the ids an annotation for each may carry: the token, and
+ * for a decomposed `TC-NNNN-NNNN` the declared case it resolves to. Empty for
+ * any other row.
+ */
+function completedRowTestCases(
+  ref: LedgerRowRef,
+  knownTcIds: ReadonlySet<string>,
+): Map<string, string[]> {
+  const testCases = new Map<string, string[]>();
+  if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return testCases;
+  if (!isCoverageBearingRow(ref.scan, ref.row)) return testCases;
+  for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
+    const normalized = token.toUpperCase();
+    if (!isWellFormedTcRef(normalized)) continue;
+    const declared = resolveDeclaredTcId(normalized, knownTcIds);
+    testCases.set(normalized, [...new Set([normalized, declared ?? normalized])]);
+  }
+  return testCases;
+}
+
+/**
+ * Reports each test case of a `done` row that only an annotation carrier names.
+ *
+ * A row with a test for any of its cases is left alone. Its other cases are
+ * then the acceptance gate's to report, and the row's claim rests on a test.
+ * A case no file names at all is not reported here: no carrier then stands in
+ * for a test.
+ *
+ * A scan that could not read every test file is reported once per ledger
+ * rather than read as a pass.
+ *
+ * `done` alone: an `exception` row parks the obligation under a decision
+ * record and claims no test. A retired spec's findings are demoted by the
+ * caller.
+ */
+async function validateCompletedRowsRunATest(
+  rows: Iterable<LedgerRowRef>,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
+  context: CarrierOnlyContext,
+): Promise<Issue[]> {
+  const candidates = [...rows]
+    .map((ref) => ({ ref, testCases: completedRowTestCases(ref, context.knownTcIds) }))
+    .filter(({ testCases }) => testCases.size > 0);
+  if (candidates.length === 0) return [];
+  const homes = await readAnnotationHomes();
+  if (homes === null) {
+    return [
+      annotationScanIncompleteIssue(
+        candidates.map(({ ref }) => ref),
+        context,
+      ),
+    ];
+  }
+  const tests = homes.tests.get(context.specNumber);
+  const carriers = homes.carriers.get(context.specNumber);
+  const issues: Issue[] = [];
+  for (const { ref, testCases } of candidates) {
+    const aliases = [...testCases.values()].flat();
+    if (aliases.some((alias) => tests?.has(alias) === true)) continue;
+    for (const [testCase, ids] of testCases) {
+      const named = new Set(ids.flatMap((id) => [...(carriers?.get(id) ?? [])]));
+      if (named.size === 0) continue;
+      issues.push(carrierOnlyIssue(ref, testCase, named, context));
+    }
+  }
+  return issues;
+}
+
+function carrierOnlyIssue(
+  ref: LedgerRowRef,
+  testCase: string,
+  carriers: ReadonlySet<string>,
+  context: CarrierOnlyContext,
+): Issue {
+  const id = cell(ref, "TDD-ID");
+  const files = [...carriers].map((file) => toRelPath(context.root, file)).sort();
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${id} in tdd/test-list.md for spec-${context.specNumber} (${ref.label}) is done, but ${testCase} is named only by ${files.join(", ")}, which declares no test. No runner selects the case, so the row's completion rests on a list of obligations`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    [id, testCase, ...files],
+    "change",
+    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}. If no test discharges it, the row leaves done only through an upstream reset: approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement.`,
+  );
+}
+
+/** The ledger's `done` rows could not be checked, because the test scan has a gap. */
+function annotationScanIncompleteIssue(
+  rows: readonly LedgerRowRef[],
+  context: CarrierOnlyContext,
+): Issue {
+  const ids = rows.map((ref) => cell(ref, "TDD-ID"));
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${ids.length} done row(s) in tdd/test-list.md for spec-${context.specNumber} were not checked for a test: the test scan passed its file limit, or could not read a pattern or a file, so a test that annotates their cases may sit in the part it missed`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    ids,
+    "change",
+    "Narrow validation.traceability.testFileGlobs or add validation.traceability.testFileExcludeGlobs until the scan reads every test file, and make any unreadable file readable.",
+  );
 }
