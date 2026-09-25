@@ -1,13 +1,19 @@
 // QFAI:SPEC-0018:TC-0018-0012
 
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { routingFacts } from "../../../src/core/workflow/observe.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 it("TC-0018-0012 (TDD-0015): unknown-path", () => {
   const missingPath = "packages/qfai/src/core/workflow/missing-observed-reference.ts";
@@ -199,6 +205,34 @@ it("TC-0018-0012 (TDD-0016): unknown-id", () => {
       { reason: "unknown-id", subject: "CLI-MISSING" },
     ),
   );
+});
+
+it("TC-0018-0012: a contract-id the contract index declares is not refused unknown-id", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-contract-"));
+  try {
+    const api = path.join(root, ".qfai", "contracts", "api");
+    await mkdir(api, { recursive: true });
+    await writeFile(
+      path.join(api, "orders.yaml"),
+      "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.0.3\n",
+    );
+    const proposal = {
+      ...checkedProposal(),
+      expectedBehaviorRefs: [
+        { kind: "request", ref: "request" },
+        { kind: "contract-id", ref: "CON-API-0001" },
+        { kind: "contract-id", ref: "CON-API-0999" },
+      ],
+    } satisfies Proposal;
+
+    const { reasons } = acceptRouting(proposal, await routingFacts(root, proposal));
+
+    expect(reasons.filter((item) => item.reason === "unknown-id")).toEqual([
+      { reason: "unknown-id", subject: "CON-API-0999" },
+    ]);
+  } finally {
+    await removeTempTree(root);
+  }
 });
 
 it("TC-0018-0012 (TDD-0017): inactive-spec", () => {
