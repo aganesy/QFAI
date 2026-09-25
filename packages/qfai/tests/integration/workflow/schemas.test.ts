@@ -13,6 +13,7 @@ import {
   parseQuestionInput,
   parseRouteReferences,
 } from "../../../src/core/workflow/parse.js";
+import { workOrderDocument } from "../../../src/core/workflow/decide.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -62,6 +63,7 @@ const PROPOSAL = "urn:qfai:workflow:route-proposal";
 const QUESTION = `${PROPOSAL}#/$defs/question`;
 const RESULT = "urn:qfai:workflow:stage-result";
 const MEASUREMENT = `${RESULT}#/properties/measurement`;
+const WORK_ORDER = "urn:qfai:workflow:work-order";
 
 const measurement = {
   inputTokens: 1200,
@@ -164,4 +166,26 @@ it("TC-0018-0236 (TDD-0453): A planted payload with an unknown key", async () =>
     reference: [parseRouteReferences(reference).ok, validate(PROPOSAL, reference)],
     measurement: [parseMeasurement(extraMeasure).ok, validate(MEASUREMENT, extraMeasure)],
   }).toEqual({ reference: [false, false], measurement: [false, false] });
+});
+
+it("A work order carries a target unless it is the routing or a discussion work order", async () => {
+  const validate = await loadValidator();
+  const order = (stageKind: string, target?: { kind: "spec"; specId: string }) =>
+    workOrderDocument("run-20260925000000000", 3, {
+      workOrderId: `work-order-${stageKind}-1`,
+      stageInstanceId: stageKind,
+      attempt: 1,
+      stageKind,
+      executor: { skill: "qfai-run" },
+      operation: stageKind,
+      ...(target ? { target } : {}),
+    });
+  const spec = { kind: "spec" as const, specId: "spec-0001" };
+
+  expect({
+    route: validate(WORK_ORDER, order("route")),
+    discussion: validate(WORK_ORDER, order("discussion")),
+    implementWithTarget: validate(WORK_ORDER, order("implement", spec)),
+    implementWithout: validate(WORK_ORDER, order("implement")),
+  }).toEqual({ route: true, discussion: true, implementWithTarget: true, implementWithout: false });
 });

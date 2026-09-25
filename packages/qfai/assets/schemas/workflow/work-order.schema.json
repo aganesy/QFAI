@@ -13,7 +13,6 @@
     "stageKind",
     "operation",
     "executor",
-    "target",
     "scope",
     "recordAreas",
     "inputs",
@@ -24,6 +23,11 @@
     "priorStageReceiptRefs",
     "expectedSequence"
   ],
+  "if": {
+    "required": ["stageKind"],
+    "properties": { "stageKind": { "enum": ["route", "discussion"] } }
+  },
+  "else": { "required": ["target"], "properties": { "target": true } },
   "properties": {
     "runId": { "type": "string", "minLength": 1 },
     "workOrderId": { "type": "string", "minLength": 1 },
@@ -38,6 +42,7 @@
       "properties": { "skill": { "type": "string", "minLength": 1 } }
     },
     "target": {
+      "description": "Absent only on the routing and discussion work orders, which bind no spec.",
       "oneOf": [
         {
           "type": "object",
