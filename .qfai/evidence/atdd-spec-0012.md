@@ -2990,3 +2990,15 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 - RED result: already satisfied: exit 0 on the first run for this case
 - GREEN result: exit 0; 3 passed | 105 skipped (108)
 - Changed files: none
+
+### TDD-0584
+
+- Closed: `exception` under DR-0298 on 2026-09-26. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260925-0019` (option 1; TC-0012-0335).
+- Test file: `packages/qfai/tests/integration/prototypingHandoffOutput.test.ts`
+- Selector: `TC-0012-0335` (matches `TC-0012-0335: the written mirror holds exactly the DESIGN.md tokens in colors, typography, radius and shadow`)
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingHandoffOutput.test.ts --testNamePattern='TC-0012-0335' --reporter=verbose`
+- RED result: exit 1, with the writer emitting an empty mapping; `AssertionError: colors: expected undefined to strictly equal { primary: '#1F2937', …(11) }`
+- GREEN result: exit 0; 6 passed (the whole file)
+- Changed files: `packages/qfai/src/core/prototyping/designSystemMirror.ts`, `packages/qfai/tests/integration/prototypingHandoffOutput.test.ts`

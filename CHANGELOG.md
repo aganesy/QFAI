@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A deterministic writer for the prototyping handoff's
+  `design-system.yaml`** (#2306). It builds the file from the tokens of the
+  frozen root `DESIGN.md` and records the lock's `designMdSha256`. It refuses,
+  and writes nothing, when `DESIGN.md` does not parse or does not match its
+  lock. No command runs it: the `qfai-prototyping` handoff still writes the
+  file by following the skill. An integration test now reads the file the
+  writer produces and compares every color, typography, radius and shadow
+  token with `DESIGN.md`.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
