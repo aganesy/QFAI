@@ -87,6 +87,13 @@ No session opened: the eight rows, their test cases and their business rules
 are settled, the tests and the Markdown they read already exist, and nothing
 surfaced during the run that the spec leaves open.
 
+### /qfai-implement — run started 2026-09-25T13:42:05.888Z
+
+Preflight: confidence high
+
+No session opened. Each handover names the line its row depends on and the
+edit that breaks it, and each named line held that text at the reopened tree.
+
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0014/tdd/test-list.md` — **unchanged**. Two edits were
@@ -714,9 +721,9 @@ packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0014.md`.
-Totals: ✅ 14 / ⚠️ 66 / ❌ 64, with 3 not applicable, across 147 scored cells —
-126 matrix depth cells (14 rows × 9 columns) and 21 business rule cells
-(7 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+Totals: ✅ 46 / ⚠️ 87 / ❌ 76, with 43 not applicable, across 252 scored cells —
+207 matrix depth cells (23 rows × 9 columns) and 45 business rule cells
+(15 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
 
 ## Work Orders Summary
