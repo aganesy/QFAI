@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0017's traceability ledger binds the Windows parity job**
+  (#2310). BR-0017-0071..0074 and AC-0017-0037..0039 had no ledger row, so a
+  branch that changed them could not be checked against the files that
+  realize them. Each is now bound to `.github/workflows/ci.yml`, and the
+  suite-list rule also to `packages/qfai/package.json`, with the test module
+  under `tests/integration/windowsParity/` that proves it. The dogfood pin for
+  this ledger is struck.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
