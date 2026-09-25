@@ -84,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow accept` names every check a stage result fails**
+  (#2338). Four results were refused `invalid-input` with no `reasons[]`:
+
+  - a result for a work order that is not the plan's next stage, now
+    `work-order`;
+  - a bug diagnosis result without its diagnosis, now `schema` on `diagnosis`;
+  - an outcome its stage cannot return, now `schema` on `outcome`;
+  - a stage result carrying a route proposal, now `schema` on `proposal`.
+
+  These reasons are listed in the same refusal as every other failed check.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

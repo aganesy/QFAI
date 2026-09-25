@@ -477,6 +477,7 @@
     "tests/unit/workflow/eachOptionCarriesItsEffect.test.ts",
     "tests/unit/workflow/evalFixtures.test.ts",
     "tests/unit/workflow/evalScoring.test.ts",
+    "tests/unit/workflow/everyAcceptRefusalNamesItsCheck.test.ts",
     "tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts",
     "tests/unit/workflow/findingsAreReportedAgainstTheStartBaseline.test.ts",
     "tests/unit/workflow/finishFixture.ts",

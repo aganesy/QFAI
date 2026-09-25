@@ -1518,6 +1518,53 @@ function acceptPreamble(
   return undefined;
 }
 
+// The outstanding work order is the stage the plan issues next, as `next` issued it.
+function issuedNext(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+  plan: NonNullable<WorkflowSnapshot["plan"]>,
+  stage: PlanStages[number],
+): boolean {
+  const workOrder = snapshot.outstandingWorkOrder;
+  const boundToSpec =
+    plan.route === "direct" || plan.route === "bugfix" || plan.route === "bounded-change";
+  if (!boundToSpec && plan.route !== "feature" && plan.route !== "discovery") return false;
+  if (workOrder?.stageInstanceId !== stage.stageInstanceId) return false;
+  if (workOrder.stageKind !== stage.stageKind) return false;
+  return (
+    !boundToSpec ||
+    (workOrder.target?.kind === "spec" &&
+      workOrder.target.specId === snapshot.specBinding?.specId &&
+      workOrder.executor?.skill === executorSkill(stage, snapshot.diagnosis, facts) &&
+      workOrder.operation === stage.operation)
+  );
+}
+
+const DIAGNOSIS_VERDICTS = ["missing-test", "defective-test", "regression", "expectation-differs"];
+
+// The fields of a stage result whose presence depends on the stage it answers.
+function stageFieldRefusals(
+  result: NonNullable<WorkflowInput["result"]>,
+  route: string,
+  stageKind: string,
+): InputRefusal[] {
+  const refusals: InputRefusal[] = [];
+  const diagnosis = result.diagnosis;
+  const diagnosisIsValid =
+    diagnosis !== undefined &&
+    DIAGNOSIS_VERDICTS.includes(diagnosis.verdict) &&
+    Boolean(diagnosis.reproductionRef) &&
+    Array.isArray(diagnosis.matchedRowIds);
+  if (route === "bugfix" && stageKind === "diagnose" && !diagnosisIsValid) {
+    refusals.push({ reason: "schema", subject: "diagnosis" });
+  }
+  if (!outcomeIsAcceptable(result, stageKind)) {
+    refusals.push({ reason: "schema", subject: "outcome" });
+  }
+  if (result.proposal !== undefined) refusals.push({ reason: "schema", subject: "proposal" });
+  return refusals;
+}
+
 // A gate verdict a result submits is informative only; the core never decides a gate from it.
 function agentReported(claims: { gateId: string; verdict: string }[]): WorkflowGateReceipt[] {
   return claims.map(({ gateId, verdict }) => ({ gateId, verdict, trustLevel: "agent_reported" }));
@@ -2542,51 +2589,14 @@ export function decide(
       Array.isArray(plan?.stages) && Array.isArray(acceptedStages)
         ? selectedStages[acceptedStages.length]
         : undefined;
-    // SIMPLIFIED: this path accepts a canned stage result by identity and outcome.
-    // Lift when: the stage-result schema and receipt checks are implemented.
-    if (
-      (plan?.route !== "feature" &&
-        plan?.route !== "discovery" &&
-        plan?.route !== "direct" &&
-        plan?.route !== "bugfix" &&
-        plan?.route !== "bounded-change") ||
-      !Array.isArray(plan.stages) ||
-      !Array.isArray(acceptedStages) ||
-      !nextStage ||
-      workOrder?.stageInstanceId !== nextStage.stageInstanceId ||
-      workOrder.stageKind !== nextStage.stageKind ||
-      ((plan.route === "direct" || plan.route === "bugfix" || plan.route === "bounded-change") &&
-        (workOrder.target?.kind !== "spec" ||
-          workOrder.target.specId !== snapshot.specBinding?.specId ||
-          workOrder.executor?.skill !== executorSkill(nextStage, snapshot.diagnosis, facts) ||
-          workOrder.operation !== nextStage.operation)) ||
-      (plan.route === "bugfix" &&
-        nextStage.stageKind === "diagnose" &&
-        (!result?.diagnosis ||
-          !["missing-test", "defective-test", "regression", "expectation-differs"].includes(
-            result.diagnosis.verdict,
-          ) ||
-          !result.diagnosis.reproductionRef ||
-          !Array.isArray(result.diagnosis.matchedRowIds))) ||
-      result?.workOrderId !== workOrder.workOrderId ||
-      result.stageInstanceId !== workOrder.stageInstanceId ||
-      result.attempt !== workOrder.attempt ||
-      result.expectedSequence !== run.sequence ||
-      !RESULT_ID.test(result.resultId) ||
-      !outcomeIsAcceptable(result, nextStage.stageKind) ||
-      result.proposal !== undefined
-    ) {
-      return {
-        verdict: {
-          ok: false,
-          run,
-          error: { code: "invalid-input", message: "The stage result is not ready." },
-        },
-        events: [],
-      };
+    // `acceptPreamble` has checked the result's ID, sequence and work order identity.
+    if (!result) return refusedWith(run, [{ reason: "schema", subject: "result" }]);
+    if (!plan || !workOrder || !nextStage || !issuedNext(snapshot, facts, plan, nextStage)) {
+      return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
     }
 
     const inputRefusals = [
+      ...stageFieldRefusals(result, plan.route, nextStage.stageKind),
       ...resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []),
       ...ledgerRefusals(snapshot.issuedRowSet, workOrder.stageKind, facts),
     ];
