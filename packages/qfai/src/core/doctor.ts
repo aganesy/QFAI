@@ -503,7 +503,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       // alone identified the broken requirement in every mutation run against
       // this row so far.
       message:
-        `installed shipped workflow(s) differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
+        `installed shipped workflows differ from the packaged copy: ${workflowsDiff.modified.join(", ")}. ` +
         `Manual repair: replace each listed file with the copy of the same name in ${workflowsDiff.packagedDir}. ` +
         `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`,
       // BR-0006-0022's payload. `declined` is carried here and NOWHERE in
