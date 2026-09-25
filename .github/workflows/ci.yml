@@ -632,7 +632,6 @@ jobs:
     # Derived from the detection output, never hand-written. A leg stays
     # DECLARED and reports skipped, so its check name persists and branch
     # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
-    if: ${{ needs.detect.outputs.full == 'true' }}
     permissions:
       contents: read
     runs-on: windows-latest
