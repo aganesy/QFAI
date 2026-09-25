@@ -1,5 +1,15 @@
 version: 1
 waivers:
+  - id: WVR-20260925-01
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0001/tdd/test-list.md"]
+    match:
+      dl_ids: [TDD-0034, TDD-0035, TDD-0036, TDD-0038, TDD-0041]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
   - id: WVR-20260925-18
     rule: TDDLIST_EXCEPTION_PARKED
     scope:
