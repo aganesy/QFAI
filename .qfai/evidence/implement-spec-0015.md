@@ -55,6 +55,7 @@ exit=0
 | 9 | completion-reviewer | completion-reviewer#1 | /qfai-implement review: TDD-0039 Round 1 completion review | atdd-spec-0015.md#tdd-0039, review-20260925095540157 | PASS at working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113, audited evidence hash 6c510ae7f9261098d99f2444fb888e24c6e6584893a230ad4021711059cc93ee; advisories in #record-defects | PASS |
 | 10 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement review: TDD-0039 Round 1 code quality review | the test diff, review-20260925095540157 | PASS at the same revision and hash; no findings | PASS |
 | 11 | orchestrator | orchestrator | /qfai-implement checkpoint: off-boundary, reuse the Refactor verify run; `refactor -> done` | atdd-spec-0015.md#tdd-0039 | Checkpoint verification fields and seal | PASS |
+| 12 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement record re-attestation: TDD-0039 build-phase GREEN gate, `record:QFAI-TDDLIST-008` | atdd-spec-0015.md#tdd-0039 as repaired; coverage-depth-spec-0015.md, TC-0015-0007 slice | PASS at working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113, recomputed GREEN-subject hash 124c8a70180aa195c27afee19cea4b8a7820710b29a2b4f16675bd5fbdd52c05, superseding 2192a163bb87cef45af8757bacd2ee25aa9c536df27129e8891194c2a62d5ff5; advisory F1 in #record-defects | PASS |
 
 ## Commands executed
 
@@ -67,12 +68,13 @@ Entries from the first Round 1 review of `TDD-0039`. Its two packs, `review-2026
 - `record:unchecked`, `TDD-0039`, Round 1, completion-reviewer F1: the row-level `qa-gatekeeper` verdict was split across two labels. Repaired: one `qa-gatekeeper: PASS x2 (...)` line names both gates.
 - `record:unchecked`, `TDD-0039`, Round 1, completion-reviewer F3: `coverage-depth-spec-0015.md` said the row was `todo` in its TC-0015-0007 slice and BR-0015-0005 row, and the stage `Gaps / Open risks` said falsifiability was unproved. Repaired to what the evidence records.
 - `record:unchecked`, `atdd-spec-0015.md` `Gaps / Open risks`, Round 1, implementation-reviewer: said `init` runs four times; the test runs it five times. Repaired.
-- `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: `Round 1: GREEN result` said the other tests "were skipped" without a count, which the gate reads as a result that did not pass. Repaired to `1 passed, 16 skipped`. Open: the build-phase `qa-gatekeeper` hash `2192a163…` covered the old text, so the entry closes on that role's record re-attestation.
+- `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: `Round 1: GREEN result` said the other tests "were skipped" without a count, which the gate reads as a result that did not pass. Repaired to `1 passed, 16 skipped`. The build-phase `qa-gatekeeper` hash `2192a163…` covered the old text. Re-attested: `qa-gatekeeper#2` re-read the repaired entry and returned PASS at the same revision `working-tree+1cda4571992ac33ee7a03251103234a974ec4497334d81556381b96a2325a113`, over the recomputed GREEN-subject hash `124c8a70180aa195c27afee19cea4b8a7820710b29a2b4f16675bd5fbdd52c05` (Work Orders step 12). The superseded verdict sits in no review pack, so no sealed pack is superseded.
 - `record:unchecked`, `TDD-0039`, Round 1, completion-reviewer F2: `Satisfied-by` is recorded twice, bare at the handover and as `Round 1: Satisfied-by` at step 3c, with the same value. `red-provenance.md` lists the field unprefixed and `round-evidence.md` puts it in the round block, so the two skill references disagree. Open until they agree.
+- `record:unchecked`, `coverage-depth-spec-0015.md`, `TC-0015-0007` slice, Round 1, qa-gatekeeper#2 F1: the slice says three mutations were run against the selector and the rest were named but not run. The entry records four runs; the fourth, B1 (`force: true` in the `copyTemplatePaths` call), ran, passed and is marked as not discriminating, and the slice's named list omits it. Open: repairing the slice moves the completion reviewers' audited hash, so it closes with their record re-attestation.
 
 ## Advisories carried out of this run
 
-- TDD-0007's test also asserts the numeric-target fields of this row's boundary (test-design-analyst#2). For TDD-0007's own run, or `/qfai-sdd`.
+- TDD-0007's test also asserts the numeric-target fields of this row's boundary (test-design-analyst#2). For TDD-0007's own run, or `/qfai-sdd`. Narrowing that test edits a file in this row's `Round 1: RED test manifest`, so it also owes this row a `Shared-artifact re-verify`.
 - "Upgrade" in AC-0015-0009 and BR-0015-0005 is read as forced reinit; `--upgrade-assistant-tree` has no case (completion-reviewer F6, coverage-depth finding 5). For `/qfai-sdd`.
 - The `openRowAlreadyTested` allowlist test is not in this row's checkpoint command set (completion-reviewer F4). CI runs it.
 
