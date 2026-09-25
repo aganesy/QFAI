@@ -119,6 +119,14 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0109 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0110 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0111 | TC-0018-0085 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0112 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0113 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0114 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0115 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0116 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0117 | TC-0018-0086 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0118 | TC-0018-0087 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0119 | TC-0018-0087 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0120 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0121 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0122 | TC-0018-0088 | Closed `exception` under DR-0298; per-row review waived |
@@ -130,6 +138,14 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0128 | TC-0018-0090 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0129 | TC-0018-0091 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0130 | TC-0018-0092 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0131 | TC-0018-0093 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0132 | TC-0018-0095 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0133 | TC-0018-0096 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0134 | TC-0018-0097 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0135 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0136 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0137 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0138 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2728,6 +2744,86 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 - Note: an accepted plan keeps the routing result's `riskSignals`. A work order's `requiredReviewerRoles` come from a new `reviewerRoles` fact, the always-required reviewers of each skill's profile; in a run carrying `authorization-restored`, a `qfai-implement` or `qfai-atdd` work order takes `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer` instead. A skill the fact does not carry gets no roles, marked `SIMPLIFIED` in `decide.ts` until the command adapter supplies every plan skill's roles.
 
+### TDD-0112
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0112): push`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0112\): push' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0112): push`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0113
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0113): pull-request`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0113\): pull-request' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0113): pull-request`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0114
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0114): merge`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0114\): merge' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0114): merge`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0115
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0115): deploy`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0115\): deploy' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0115): deploy`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0116
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0116): production-migration`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0116\): production-migration' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0116): production-migration`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0117
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0086 (TDD-0117): extra-spending`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0086 \(TDD-0117\): extra-spending' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0086 (TDD-0117): extra-spending`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0118
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0087 (TDD-0118): project-policy-deploy`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0087 \(TDD-0118\): project-policy-deploy' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ 'deploy' ]` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:67`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0087 (TDD-0118): project-policy-deploy`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0119
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts`
+- Selector: `TC-0018-0087 (TDD-0119): request-scope-push`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts --testNamePattern='TC-0018-0087 \(TDD-0119\): request-scope-push' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` at `tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts:72`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts > TC-0018-0087 (TDD-0119): request-scope-push`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
 ### TDD-0120
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -2837,6 +2933,86 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts --testNamePattern='TC-0018-0092 \(TDD-0130\): A run in awaiting_input that nobody answers' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 1; `AssertionError: expected { ok: false, run: { …(3) }, …(1) } to deeply equal { ok: true, run: { …(3) }, …(2) }` at `tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts:31`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aNoQuestionModeApprovesNothing.test.ts > TC-0018-0092 (TDD-0130): A run in awaiting_input that nobody answers`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0131
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/oneMissingValueOneQuestion.test.ts`
+- Selector: `TC-0018-0093 (TDD-0131): A routing result blocked only by the expected HTTP status, opened as one question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneMissingValueOneQuestion.test.ts --testNamePattern='TC-0018-0093 \(TDD-0131\): A routing result blocked only by the expected HTTP status, opened as one question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'routing', …(4) } to deeply equal { state: 'awaiting_input', …(4) }` at `tests/unit/workflow/oneMissingValueOneQuestion.test.ts:104`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/oneMissingValueOneQuestion.test.ts > TC-0018-0093 (TDD-0131): A routing result blocked only by the expected HTTP status, opened as one question`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0132
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0095 (TDD-0132): A stage result carrying approved`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0095 \(TDD-0132\): A stage result carrying approved' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:108`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0095 (TDD-0132): A stage result carrying approved`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0133
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0096 (TDD-0133): A decision naming no open question, not a stop`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0096 \(TDD-0133\): A decision naming no open question, not a stop' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, …(4) } to deeply equal { ok: false, …(4) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:118` (the code was `invalid-input`)
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0096 (TDD-0133): A decision naming no open question, not a stop`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0134
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0097 (TDD-0134): A decision whose payload declares capture`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0097 \(TDD-0134\): A decision whose payload declares capture' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0003, which records every `human_decision` as `agent_captured`; the submitted `capture` is not read
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0097 (TDD-0134): A decision whose payload declares capture`
+- Production files: none; a seam field on the decision input type in `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0135
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0098 (TDD-0135): mode-at-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0098 \(TDD-0135\): mode-at-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:146`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0098 (TDD-0135): mode-at-accept`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0136
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0098 (TDD-0136): mode-at-decision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0098 \(TDD-0136\): mode-at-decision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:146`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0098 (TDD-0136): mode-at-decision`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0137
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0098 (TDD-0137): confidence-at-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0098 \(TDD-0137\): confidence-at-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:146`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0098 (TDD-0137): confidence-at-accept`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0138
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts`
+- Selector: `TC-0018-0098 (TDD-0138): confidence-at-decision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts --testNamePattern='TC-0018-0098 \(TDD-0138\): confidence-at-decision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:146`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0098 (TDD-0138): confidence-at-decision`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0212

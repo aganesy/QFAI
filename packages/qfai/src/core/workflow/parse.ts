@@ -96,7 +96,19 @@ export interface DecisionQuestionInput {
   recommendation?: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+// A fact is asked as a value: it offers no options and carries no recommendation.
+export interface FactQuestionInput {
+  kind: "fact";
+  text: string;
+  options: QuestionOption[];
+  effect: QuestionEffect;
+}
+
+function isEffect(value: unknown): value is QuestionEffect {
+  return value === "proceed" || value === "replan" || value === "stop";
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -107,13 +119,27 @@ function parseOption(value: unknown): QuestionOption | undefined {
     return undefined;
   }
   if (typeof description !== "string" || !description) return undefined;
-  if (effect !== "proceed" && effect !== "replan" && effect !== "stop") return undefined;
+  if (!isEffect(effect)) return undefined;
   return { optionId, label, description, effect };
 }
 
-// SIMPLIFIED: reads a decision question with options; a fact question is not read.
-// Lift when: a routing or stage result opens a fact question.
-export function parseDecisionQuestion(value: unknown): DecisionQuestionInput | undefined {
+// SIMPLIFIED: a fact question is read as a value request; a fact offering candidates is not read.
+// Lift when: a routing or stage result asks for a fact whose candidates can be listed.
+function parseFactQuestion(value: Record<string, unknown>): FactQuestionInput | undefined {
+  const { text, effect } = value;
+  if (typeof text !== "string" || !text.trim() || !isEffect(effect)) return undefined;
+  if (value.options !== undefined || value.recommendation !== undefined) return undefined;
+  return { kind: "fact", text, options: [], effect };
+}
+
+export function parseQuestionInput(
+  value: unknown,
+): DecisionQuestionInput | FactQuestionInput | undefined {
+  if (isRecord(value) && value.kind === "fact") return parseFactQuestion(value);
+  return parseDecisionQuestion(value);
+}
+
+function parseDecisionQuestion(value: unknown): DecisionQuestionInput | undefined {
   if (!isRecord(value) || value.kind !== "decision") return undefined;
   const { text, options, selection, recommendation } = value;
   if (typeof text !== "string" || !text.trim() || !Array.isArray(options)) return undefined;

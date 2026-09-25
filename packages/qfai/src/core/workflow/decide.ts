@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
-import { parseDecisionQuestion } from "./parse.js";
+import { isRecord, parseQuestionInput } from "./parse.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
@@ -17,8 +17,10 @@ export interface WorkflowQuestion {
   kind: "create" | "decision" | "fact";
   text: string;
   options: { optionId: string; label: string; description: string; effect: QuestionEffect }[];
-  selection: { min: number; max: number };
+  selection?: { min: number; max: number };
   recommendation?: string;
+  // On a fact question, which offers no options: the effect of any value.
+  effect?: QuestionEffect;
   capability?: WorkflowCapability;
 }
 
@@ -99,7 +101,7 @@ interface WorkflowWorkOrder {
   operation?: string;
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
-  scope?: { writeAreas: string[] };
+  scope?: { writeAreas: string[]; allowedEffects?: string[] };
   recordAreas?: string[];
   inputs?: { path: string; digest: string }[];
   ledger?: { specId: string; rowIds: string[]; rowSetDigest: string };
@@ -123,7 +125,7 @@ interface WorkflowAuthorization {
   recordedAt: string;
   questionId: string;
   question: Pick<WorkflowQuestion, "text" | "options" | "selection">;
-  answer: { optionIds: string[] };
+  answer: { optionIds: string[] } | { valueDigest: string };
   effect: QuestionEffect;
   answeredBy: string;
   operation: "CREATE" | null;
@@ -151,7 +153,7 @@ export interface WorkflowDecision {
           message: string;
           reasons?: InputRefusal[];
         }
-      | { code: "stale-sequence"; message: string }
+      | { code: "stale-sequence" | "no-open-question"; message: string }
       | {
           code: "proposal-refused";
           message: string;
@@ -176,7 +178,8 @@ type InputRefusalReason =
   | "test-fix-receipt"
   | "test-fix-meaning"
   | "option"
-  | "reviewer-not-independent";
+  | "reviewer-not-independent"
+  | "authorization-kind";
 
 interface InputRefusal {
   reason: InputRefusalReason;
@@ -204,6 +207,7 @@ type PlanStages = {
   skill?: string;
   operation?: string;
   when?: string;
+  effects?: string[];
 }[];
 
 interface WorkflowPlan {
@@ -251,6 +255,15 @@ interface WorkflowSnapshot {
   receiptRefs?: string[];
   actorHistory?: WorkflowActor[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
+  authorizations?: { authorizationId: string; kind: string; policy?: WorkflowPolicy }[];
+  // The run's key for free-text answers, read from its private request file.
+  digestKey?: string;
+}
+
+interface WorkflowPolicy {
+  path: string;
+  digest: string;
+  effects: string[];
 }
 
 interface WorkflowAcceptedStage {
@@ -279,11 +292,16 @@ interface WorkflowSeamRequest {
 interface WorkflowInput {
   operation: string;
   questionId?: string;
-  answer?: { optionIds: string[] };
+  answer?: { optionIds?: string[]; value?: string };
   answeredBy?: string;
   expectedSequence?: number;
   payloadDigest?: string;
+  // Neither is an input the core reads: each is here to be refused or ignored.
+  capture?: unknown;
+  authorization?: unknown;
   result?: {
+    approved?: unknown;
+    authorization?: unknown;
     resultId: string;
     workOrderId: string;
     stageInstanceId: string;
@@ -489,6 +507,17 @@ function requiredReviewerRoles(
     return IMPLEMENTATION_HEAVY_ROLES;
   }
   return facts.reviewerRoles?.[skill];
+}
+
+// An external effect is allowed only where a project policy names it. A request that asks
+// for one authorizes nothing.
+function allowedEffects(stage: PlanStages[number], snapshot: WorkflowSnapshot): string[] {
+  const named = new Set(
+    (snapshot.authorizations ?? [])
+      .filter((authorization) => authorization.kind === "project_policy")
+      .flatMap((authorization) => authorization.policy?.effects ?? []),
+  );
+  return (stage.effects ?? []).filter((effect) => named.has(effect));
 }
 
 function notRunRefusalOf(
@@ -818,6 +847,22 @@ function ledgerOf(
   return { specId, rowIds, rowSetDigest };
 }
 
+const AUTHORIZATION_KINDS: unknown[] = ["request_scope", "human_decision", "project_policy"];
+
+// Only the core records an authorization. One a payload carries is refused, and one of a kind
+// the core never records, such as one derived from a mode or a confidence value, says so.
+function carriedAuthorization(payload: { approved?: unknown; authorization?: unknown }) {
+  const refusals: InputRefusal[] = [];
+  const { approved, authorization } = payload;
+  if (approved !== undefined) refusals.push({ reason: "schema", subject: "approved" });
+  if (authorization !== undefined) {
+    const kind = isRecord(authorization) ? authorization.kind : undefined;
+    const reason = AUTHORIZATION_KINDS.includes(kind) ? "schema" : "authorization-kind";
+    refusals.push({ reason, subject: "authorization" });
+  }
+  return refusals;
+}
+
 function refusedInput(run: WorkflowSnapshot["run"], message: string): WorkflowDecision {
   return { verdict: { ok: false, run, error: { code: "invalid-input", message } }, events: [] };
 }
@@ -991,6 +1036,8 @@ function acceptPreamble(
   if (!RESULT_ID.test(result.resultId)) {
     return refusedWith(run, [{ reason: "schema", subject: "resultId" }]);
   }
+  const carried = carriedAuthorization(result);
+  if (carried.length > 0) return refusedWith(run, carried);
   if (
     result.workOrderId !== workOrder?.workOrderId ||
     result.stageInstanceId !== workOrder.stageInstanceId ||
@@ -1242,6 +1289,7 @@ const EFFECT_STRENGTH: QuestionEffect[] = ["stop", "replan", "proceed"];
 
 function chosenOptions(question: WorkflowQuestion, optionIds: readonly string[]) {
   const chosen = question.options.filter((option) => optionIds.includes(option.optionId));
+  if (!question.selection) return undefined;
   const { min, max } = question.selection;
   const valid =
     new Set(optionIds).size === optionIds.length &&
@@ -1256,6 +1304,32 @@ function answerEvents(authorization: WorkflowAuthorization): WorkflowEvent[] {
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
   if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
   return events;
+}
+
+// A value is kept only as a digest under the run's key, so the tracked record cannot be
+// matched against a guess.
+function valueAnswer(question: WorkflowQuestion, value: string | undefined, key?: string) {
+  const normalized = value?.normalize("NFC").trim();
+  if (!normalized || !question.effect || !key || !/^[a-f0-9]{64}$/.test(key)) return undefined;
+  const valueDigest = createHmac("sha256", Buffer.from(key, "hex"))
+    .update(normalized)
+    .digest("hex");
+  return { answer: { valueDigest }, effect: question.effect };
+}
+
+function answerOf(
+  question: WorkflowQuestion,
+  input: WorkflowInput,
+  key: string | undefined,
+): Pick<WorkflowAuthorization, "answer" | "effect"> | "option" | undefined {
+  if (question.kind === "fact") return valueAnswer(question, input.answer?.value, key);
+  const chosen = chosenOptions(question, input.answer?.optionIds ?? []);
+  if (!chosen) return "option";
+  const effect = EFFECT_STRENGTH.find((candidate) =>
+    chosen.some((option) => option.effect === candidate),
+  );
+  if (!effect) return undefined;
+  return { answer: { optionIds: chosen.map((option) => option.optionId).sort() }, effect };
 }
 
 const STATE_AFTER_EFFECT: Record<QuestionEffect, string> = {
@@ -1274,9 +1348,19 @@ function decideAnswer(
     (openQuestion) => openQuestion.questionId === input.questionId,
   );
   const notReady = refusedInput(run, "The answer is not ready.");
-  if (!question || question.kind === "fact") return notReady;
-  const chosen = chosenOptions(question, input.answer?.optionIds ?? []);
-  if (!chosen) return refusedWith(run, [{ reason: "option", subject: "answer" }]);
+  const kind = carriedAuthorization({ authorization: input.authorization }).filter(
+    (refusal) => refusal.reason === "authorization-kind",
+  );
+  if (kind.length > 0) return refusedWith(run, kind);
+  if (!question) {
+    const message = "No question is waiting for this answer. Read the run's status first.";
+    return {
+      verdict: { ok: false, run, error: { code: "no-open-question", message } },
+      events: [],
+    };
+  }
+  const answered = answerOf(question, input, snapshot.digestKey);
+  if (answered === "option") return refusedWith(run, [{ reason: "option", subject: "answer" }]);
   const slotId = question.capability?.slotId;
   if (
     input.expectedSequence !== run.sequence ||
@@ -1286,14 +1370,12 @@ function decideAnswer(
     !facts.now ||
     !Number.isFinite(Date.parse(facts.now)) ||
     new Date(facts.now).toISOString() !== facts.now ||
-    (question.kind === "create" && !slotId)
+    (question.kind === "create" && !slotId) ||
+    !answered
   ) {
     return notReady;
   }
-  const effect = EFFECT_STRENGTH.find((candidate) =>
-    chosen.some((option) => option.effect === candidate),
-  );
-  if (!effect) return notReady;
+  const { answer, effect } = answered;
   const authorization: WorkflowAuthorization = {
     authorizationId: `authorization-${run.sequence + 1}`,
     runId: run.id,
@@ -1302,8 +1384,12 @@ function decideAnswer(
     scopeDigest,
     recordedAt: facts.now,
     questionId: question.questionId,
-    question: { text: question.text, options: question.options, selection: question.selection },
-    answer: { optionIds: chosen.map((option) => option.optionId).sort() },
+    question: {
+      text: question.text,
+      options: question.options,
+      ...(question.selection ? { selection: question.selection } : {}),
+    },
+    answer,
     effect,
     answeredBy: input.answeredBy,
     operation: question.capability && slotId ? "CREATE" : null,
@@ -1348,7 +1434,7 @@ export function decide(
 
   if (input.operation === "finish") return decideFinish(snapshot, facts);
 
-  if (input.operation === "decision" && run.state === "awaiting_input") {
+  if (input.operation === "decision") {
     return decideAnswer(snapshot, input, facts);
   }
 
@@ -1409,9 +1495,13 @@ export function decide(
       stageKind: stage.stageKind,
       ...(skill ? { executor: { skill } } : {}),
       ...(stage.operation ? { operation: stage.operation } : {}),
-      // SIMPLIFIED: the scope carries the plan's write areas and nothing else.
-      // Lift when: a work order's scope digest, protected targets, effects or non-goals are read.
-      ...(plan.writeScope ? { scope: { writeAreas: plan.writeScope } } : {}),
+      // SIMPLIFIED: the scope carries the plan's write areas and the allowed effects only.
+      // Lift when: a work order's scope digest, protected targets or non-goals are read.
+      ...(plan.writeScope
+        ? {
+            scope: { writeAreas: plan.writeScope, allowedEffects: allowedEffects(stage, snapshot) },
+          }
+        : {}),
     };
     const reviewerRoles = requiredReviewerRoles(skill, plan, facts);
     if (reviewerRoles) nextWorkOrder.requiredReviewerRoles = reviewerRoles;
@@ -1676,7 +1766,7 @@ export function decide(
   }
 
   const plan = checkedPlan(proposal, facts);
-  const questionInputs = (proposal.unresolvedQuestions ?? []).map(parseDecisionQuestion);
+  const questionInputs = (proposal.unresolvedQuestions ?? []).map(parseQuestionInput);
   const decisionInputs = questionInputs.flatMap((question) => question ?? []);
   if (decisionInputs.length !== questionInputs.length) {
     return refusedWith(run, [{ reason: "schema", subject: "unresolvedQuestions" }]);

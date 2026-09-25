@@ -59,7 +59,7 @@ it("TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding 
           capture: authorization.capture,
           operation: authorization.operation,
           effect: authorization.effect,
-          optionIds: authorization.answer.optionIds,
+          optionIds: "optionIds" in authorization.answer ? authorization.answer.optionIds : [],
           slotId: authorization.target?.slotId,
         }
       : null,

@@ -53,7 +53,7 @@ function outcomeOf(decision: ReturnType<typeof decide>) {
     state: decision.verdict.run?.state,
     events: decision.events.map((event) => event.type),
     effect: decision.events[0]?.authorization?.effect,
-    optionIds: decision.events[0]?.authorization?.answer.optionIds,
+    optionIds: answerOptionIds(decision.events[0]?.authorization?.answer),
     reasons: error && "reasons" in error ? error.reasons : [],
   };
 }
@@ -126,4 +126,8 @@ for (const [title, optionIds, expected] of counts) {
       });
     }
   });
+}
+
+function answerOptionIds(answer: { optionIds: string[] } | { valueDigest: string } | undefined) {
+  return answer && "optionIds" in answer ? answer.optionIds : undefined;
 }
