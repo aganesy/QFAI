@@ -83,12 +83,12 @@ stays the first markdown table in this file):
 | TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name        |
 | TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict       |
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding          |
-| TC-0003-0059 | integration | AC-0003-0015               | EX-0003-0016 | normal   | Fresh init: `git check-ignore` on the run and evidence paths          |
-| TC-0003-0060 | integration | AC-0003-0015               | EX-0003-0052 | boundary | Upgrade over the previous managed block, then a rerun                 |
+| TC-0003-0090 | integration | AC-0003-0015               | EX-0003-0016 | normal   | Fresh init: `git check-ignore` on the run and evidence paths          |
+| TC-0003-0060 | integration | AC-0003-0015               | EX-0003-0082 | boundary | Upgrade over the previous managed block, then a rerun                 |
 | TC-0003-0061 | integration | AC-0003-0015, AC-0003-0048 | EX-0003-0053 | boundary | The previous managed block in a CRLF `.gitignore`                     |
-| TC-0003-0062 | integration | AC-0003-0039               | EX-0003-0054 | normal   | Fresh init installs the entry skills, plans and references            |
-| TC-0003-0063 | integration | AC-0003-0039               | EX-0003-0055 | normal   | Four host skill dirs resolve both entry skills to one source          |
-| TC-0003-0064 | integration | AC-0003-0039               | EX-0003-0056 | normal   | Upgrade over an install without the workflow entry                    |
+| TC-0003-0062 | integration | AC-0003-0050               | EX-0003-0054 | normal   | Fresh init installs the entry skills, plans and references            |
+| TC-0003-0063 | integration | AC-0003-0050               | EX-0003-0055 | normal   | Four host skill dirs resolve both entry skills to one source          |
+| TC-0003-0064 | integration | AC-0003-0050               | EX-0003-0056 | normal   | Upgrade over an install without the workflow entry                    |
 | TC-0003-0065 | integration | AC-0003-0040               | EX-0003-0057 | normal   | No `agents/openai.yaml` after init and after `--force`                |
 | TC-0003-0066 | integration | AC-0003-0041               | EX-0003-0058 | normal   | Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot         |
 | TC-0003-0067 | integration | AC-0003-0041, AC-0003-0048 | EX-0003-0059 | edge     | Directive prepended to existing CRLF entry points, bytes kept         |
@@ -799,7 +799,7 @@ Verify:
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
 - an aggregate whose job shape cannot preserve failure — a second step, or `continue-on-error` set on the job — is rejected as well
 
-## TC-0003-0059: Fresh init: `git check-ignore` on the run and evidence paths
+## TC-0003-0090: Fresh init: `git check-ignore` on the run and evidence paths
 
 **Level:** integration
 **EX Refs:** EX-0003-0016
@@ -819,7 +819,7 @@ Notes: The oracle is git's own answer, not a line count: the block's SSOT is `pa
 ## TC-0003-0060: Upgrade over the previous managed block, then a rerun
 
 **Level:** integration
-**EX Refs:** EX-0003-0052
+**EX Refs:** EX-0003-0082
 **AC Refs:** AC-0003-0015
 **Type:** boundary
 
@@ -828,7 +828,7 @@ Action: run a plain `qfai init`, record `.gitignore`, then run it again.
 Verify:
 
 - the marker, `.qfai/runs/` and `!.qfai/evidence/workflow/` each occur exactly once
-- `git check-ignore` gives the two results of TC-0003-0059
+- `git check-ignore` gives the two results of TC-0003-0090
 - the second run leaves `.gitignore` byte-identical
 
 Notes: The previous block's lines must be read as known lines, or the block is duplicated. Test module: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, one module per BR.
@@ -845,7 +845,7 @@ Action: run a plain `qfai init`.
 Verify:
 
 - the marker occurs exactly once and no block line is duplicated
-- `git check-ignore` gives the two results of TC-0003-0059
+- `git check-ignore` gives the two results of TC-0003-0090
 
 Notes: Windows parity. CRLF comes from the fixture, never from `core.autocrlf`. Test module: `packages/qfai/tests/integration/init/windowsParity.test.ts`, one module per BR.
 
@@ -853,7 +853,7 @@ Notes: Windows parity. CRLF comes from the fixture, never from `core.autocrlf`. 
 
 **Level:** integration
 **EX Refs:** EX-0003-0054
-**AC Refs:** AC-0003-0039
+**AC Refs:** AC-0003-0050
 **Type:** normal
 
 Setup: an empty temp root.
@@ -871,7 +871,7 @@ Notes: Each `orchestrated-mode.md` belongs to its own stage skill's spec. Needs 
 
 **Level:** integration
 **EX Refs:** EX-0003-0055
-**AC Refs:** AC-0003-0039
+**AC Refs:** AC-0003-0050
 **Type:** normal
 
 Setup: an empty temp root.
@@ -887,7 +887,7 @@ Notes: One executable test discharges this row and the host-adapter matrix spec-
 
 **Level:** integration
 **EX Refs:** EX-0003-0056
-**AC Refs:** AC-0003-0039
+**AC Refs:** AC-0003-0050
 **Type:** normal
 
 Setup: a fresh install with overlay `absent-skills`.

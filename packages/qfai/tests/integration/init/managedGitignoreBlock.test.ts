@@ -4,7 +4,7 @@
  * `git check-ignore` is the oracle. The block's single source is `core/gitignore.ts`, so no case
  * counts its lines.
  */
-// QFAI:SPEC-0003:TC-0003-0059
+// QFAI:SPEC-0003:TC-0003-0090
 // QFAI:SPEC-0003:TC-0003-0060
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -24,7 +24,7 @@ const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
 describe("the managed gitignore block", () => {
-  it("TC-0003-0059: Fresh init ignores run state and keeps run evidence tracked", async () => {
+  it("TC-0003-0090: Fresh init ignores run state and keeps run evidence tracked", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       expect(isIgnored(root, RUN_PATH), RUN_PATH).toBe(true);

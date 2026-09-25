@@ -131,7 +131,7 @@ The requirements of this spec's rows in `## Triage (2026-09-24 intent-driven ent
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `discussion-20260923171450572#REQ-0024` | CLI-INIT `### Ignore entries`; BR-0003-0013                                                                                                                                      |
 | `discussion-20260923171450572#REQ-0059` | CLI-INIT `### Mode line`; BR-0003-0052                                                                                                                                           |
-| `discussion-20260923171450572#REQ-0064` | CLI-INIT `### What it installs`, `### Entry directive`; BR-0003-0049, BR-0003-0050, BR-0003-0051                                                                                 |
+| `discussion-20260923171450572#REQ-0064` | CLI-INIT `### What it installs`, `### Entry directive`; BR-0003-0061, BR-0003-0050, BR-0003-0051                                                                                 |
 | `discussion-20260923171450572#REQ-0065` | CLI-INIT `### Plan provenance and the upgrade record`, `### Upgrade conflicts`; BR-0003-0053, BR-0003-0054, BR-0003-0055, BR-0003-0056, BR-0003-0057, BR-0003-0059, BR-0003-0060 |
 | `discussion-20260923171450572#NFR-0011` | CLI-INIT `### Windows parity`; BR-0003-0058                                                                                                                                      |
 

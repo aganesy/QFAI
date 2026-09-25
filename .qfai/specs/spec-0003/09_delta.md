@@ -290,7 +290,7 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 - Modified: AC-0003-0015 and BR-0003-0013, rewritten in English with their IDs kept. The
   managed block gains `.qfai/runs/` and `!.qfai/evidence/workflow/`, and BR-0003-0013 no longer
   states a line count: `packages/qfai/src/core/gitignore.ts` defines the set.
-- Appended: US-0003-0029; AC-0003-0039..0049; BR-0003-0049..0060; DR-0003-0013,
+- Appended: US-0003-0029; AC-0003-0040..0050; BR-0003-0050..0061; DR-0003-0013,
   DR-0003-0014. US-0003-0014 is retired and not reused.
 - The user's answer on a plain upgrade (2026-09-24): a plain upgrade merges no manifest, names
   each absent routing entry with `qfai init --force`, and leaves `active` configured but not
@@ -389,3 +389,5 @@ Request applies.
 
 - `TDD-0093`..`TDD-0124` became `TDD-0094`..`TDD-0125`.
 - Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+- A later `origin/main` published five more of these IDs. `AC-0003-0039`, `BR-0003-0049`, `EX-0003-0052`, `TC-0003-0059` and `TDD-0094` became `AC-0003-0050`, `BR-0003-0061`, `EX-0003-0082`, `TC-0003-0090` and `TDD-0126`.
+- The row the first bullet moved to `TDD-0094` is therefore `TDD-0126`, and ranges that began at a moved ID now name it on its own.

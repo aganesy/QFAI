@@ -1041,13 +1041,13 @@ A second mutation, the one the earlier entry ran beyond the proof, exercises the
 - Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
 - Checkpoint verification seal: 645095fba21747e6dc9b7be0b1a48e5dd514dd440649e88e89a443576ba712a4
 
-### TDD-0094
+### TDD-0126
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`
-- Selector: `TC-0003-0059: Fresh init ignores run state and keeps run evidence tracked`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0059: Fresh init ignores run state and keeps run evidence tracked' --reporter=verbose`
+- Selector: `TC-0003-0090: Fresh init ignores run state and keeps run evidence tracked`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0090: Fresh init ignores run state and keeps run evidence tracked' --reporter=verbose`
 - RED result: exit 1; `AssertionError: .qfai/runs/x: expected false to be true // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`

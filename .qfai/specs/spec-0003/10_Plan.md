@@ -69,7 +69,7 @@ correspondence module in `core/workflow/plans.ts`) and U3 (spec-0015's
 `qfai-maintain` routing entry):
 
 - the install set through the existing asset copy and wrapper sync
-  (BR-0003-0049), with no `agents/openai.yaml` (BR-0003-0050);
+  (BR-0003-0061), with no `agents/openai.yaml` (BR-0003-0050);
 - `.qfai/runs/` and `!.qfai/evidence/workflow/` in the lists of
   `core/gitignore.ts` (BR-0003-0013);
 - the entry directive through `addReviewPointer` (BR-0003-0051);
@@ -105,7 +105,7 @@ Levels follow `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure
 
 | Layer       | What it proves                                                                                                                                                                                            | Where                                                      |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| integration | TC-0003-0059..0089: `qfai init` and a plain upgrade on temp repositories — the ignore entries, the install set and wrappers, the entry directive, the mode line, the provenance lock, the conflict report | `packages/qfai/tests/integration/init/`, one module per BR |
+| integration | TC-0003-0060..0090: `qfai init` and a plain upgrade on temp repositories — the ignore entries, the install set and wrappers, the entry directive, the mode line, the provenance lock, the conflict report | `packages/qfai/tests/integration/init/`, one module per BR |
 | E2E         | US-0003-0029, discharged by the spec-0018 journey whose first step runs `qfai init` from the built CLI and asserts the installed entry; the upgrade half stays in the rows above                          | `packages/qfai/tests/e2e/`, annotated with both story IDs  |
 
 No new test goes in `tests/cli/`. An integration annotation there answers no layer, and
@@ -115,8 +115,8 @@ the files there are named by `done` rows, which an edit would make stale.
 
 | Module under `tests/integration/init/` | BR           | Cases                                                  |
 | -------------------------------------- | ------------ | ------------------------------------------------------ |
-| `managedGitignoreBlock.test.ts`        | BR-0003-0013 | TC-0003-0059, TC-0003-0060                             |
-| `entryInstallSet.test.ts`              | BR-0003-0049 | TC-0003-0062, TC-0003-0063, TC-0003-0064               |
+| `managedGitignoreBlock.test.ts`        | BR-0003-0013 | TC-0003-0060, TC-0003-0090                             |
+| `entryInstallSet.test.ts`              | BR-0003-0061 | TC-0003-0062, TC-0003-0063, TC-0003-0064               |
 | `noOpenaiYaml.test.ts`                 | BR-0003-0050 | TC-0003-0065                                           |
 | `entryDirective.test.ts`               | BR-0003-0051 | TC-0003-0066 to TC-0003-0070                           |
 | `modeLine.test.ts`                     | BR-0003-0052 | TC-0003-0071, TC-0003-0072, TC-0003-0073               |
@@ -136,7 +136,7 @@ the files there are named by `done` rows, which an edit would make stale.
   fails the test. No earlier release is installed, and no snapshot tree is checked in.
 - **The exit-0 conflict matrix.** TC-0003-0083 asserts exit 0 over an edited plan, an absent
   routing entry, a dropped reviewer and an invalid mode, one install each (DR-0003-0013).
-- **`git check-ignore` is the oracle** for the ignore entries (TC-0003-0059..0061). No case
+- **`git check-ignore` is the oracle** for the ignore entries (TC-0003-0090, TC-0003-0060 and TC-0003-0061). No case
   counts the lines of the managed block, whose single source is `core/gitignore.ts`.
 - **Setups no other case can share:** the CRLF variants (TC-0003-0061, 0067, 0076), the
   symbolic-link refusal (0070), the rerun that writes nothing (0077) and the built CLI under a
@@ -188,7 +188,7 @@ collected test file.
 | Finding                                          | Why it is expected                                      | Until                            |
 | ------------------------------------------------ | ------------------------------------------------------- | -------------------------------- |
 | `QFAI-ATDD-111` for US-0003-0029                 | The journey that discharges it does not exist yet       | The tier-4 journey lands         |
-| `QFAI-ATDD-112` for TC-0003-0059..0089           | The integration tests do not exist yet                  | ATDD writes them                 |
+| `QFAI-ATDD-112` for TC-0003-0060..0090           | The integration tests do not exist yet                  | ATDD writes them                 |
 | The `tdd` pin of 73 errors on `tdd/test-list.md` | Pre-existing; this change appends rows and repairs none | A later change that repairs them |
 
 Each push to the batch's draft pull request lists these in the batch evidence, and its CI

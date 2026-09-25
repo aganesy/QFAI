@@ -195,7 +195,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0036 | declined name の copy 前除外                                            | REQ-0030                              | P1       |
 | AC-0003-0037 | Codex agent profile 生成                                                | REQ-0009                              | P1       |
 | AC-0003-0038 | Independent shipped checks and a complete aggregate verdict             | REQ-0026                              | P1       |
-| AC-0003-0039 | Init and upgrade install the entry skills, their wrappers and the plans | discussion-20260923171450572#REQ-0064 | P1       |
+| AC-0003-0050 | Init and upgrade install the entry skills, their wrappers and the plans | discussion-20260923171450572#REQ-0064 | P1       |
 | AC-0003-0040 | Init writes no agents/openai.yaml                                       | discussion-20260923171450572#REQ-0051 | P1       |
 | AC-0003-0041 | The entry directive is prepended to AGENTS.md and CLAUDE.md             | discussion-20260923171450572#REQ-0064 | P1       |
 | AC-0003-0042 | Init names the mode in force and writes no mode key                     | discussion-20260923171450572#REQ-0059 | P1       |
@@ -362,12 +362,12 @@ Scenario: レガシー管理ブロックからの自動移行
 - When the delivered document and validation workflows are evaluated statically for a pull request and for a push, and each aggregate job's body is evaluated against every result its dependency can conclude with
 - Then the independent checks of each file are declared as matrix legs of one job carrying `fail-fast: false`, so a failing leg cancels no other leg. Each checker command and each validation profile is unchanged and appears in exactly one leg, and the drift profile is selected on pull requests only. Each file's existing external check name belongs to a job that runs whatever its dependency concluded and succeeds only when that dependency's rolled-up result is `success`; a failed, cancelled, skipped or missing result fails it
 
-## AC-0003-0039: Init and upgrade install the entry skills, their wrappers and the plans
+## AC-0003-0050: Init and upgrade install the entry skills, their wrappers and the plans
 
 - US-Refs: US-0003-0029
 
 ```gherkin
-# AC-0003-0039
+# AC-0003-0050
 # Source: discussion-20260923171450572#DAC-009-01
 Scenario: Init and upgrade install the entry skills, their wrappers and the plans
   Given a fresh project, or a project installed by an earlier release
