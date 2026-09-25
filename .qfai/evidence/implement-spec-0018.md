@@ -307,6 +307,15 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0513 | TC-0018-0260 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0514 | TC-0018-0260 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0515 | TC-0018-0261 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0516 | TC-0018-0262 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0517 | TC-0018-0263 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0518 | TC-0018-0264 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0519 | TC-0018-0264 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0520 | TC-0018-0264 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0521 | TC-0018-0264 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0522 | TC-0018-0265 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0523 | TC-0018-0265 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0524 | TC-0018-0265 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -4794,6 +4803,98 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/upstreamDriftInsideARun.test.ts --testNamePattern='TC-0018-0261 \(TDD-0515\): delegation-unavailable comes before listed debts' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 0 on first run; already satisfied by TDD-0206: the delegation decision runs before anything the result lists, so an unavailable delegation after the first names `delegation-unavailable`.
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/upstreamDriftInsideARun.test.ts > TC-0018-0261 (TDD-0515): delegation-unavailable comes before listed debts`
+- Production files: none
+
+### TDD-0516
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0262 (TDD-0516): issued stage recordAreas pass later write and finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0262 \(TDD-0516\): issued stage recordAreas pass later write and finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { next: 'invariant-violation', …(1) } to deeply equal { next: undefined, outOfScope: [] }`, `tests/unit/workflow/runChangeBoundary.test.ts:37`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0262 (TDD-0516): issued stage recordAreas pass later write and finish`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice (settled between agents): the authorized set of CLI-WF `## Run change boundary` is the plan's write scope, which every issued work order carries as `scope.writeAreas`, with the record areas of every work order the run issued, the core's `.qfai/evidence/workflow/<runId>/` tree, and each start adjustment that still holds. The snapshot carries the issued record areas as `issuedRecordAreas`, beside the outstanding work order's own. Both the write-operation check and `finish` read the same set. The authorized-set `SIMPLIFIED` marker on `escapedPaths` is removed: its lifting condition, a snapshot recording every issued work order's record areas, now holds.
+
+### TDD-0517
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0263 (TDD-0517): core evidence passes later write and finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0263 \(TDD-0517\): core evidence passes later write and finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0044, which put `.qfai/evidence/workflow/<runId>/` in the authorized set, and TDD-0483, which refuses a stage result listing it `write-scope`.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0263 (TDD-0517): core evidence passes later write and finish`
+- Production files: none
+
+### TDD-0518
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0264 (TDD-0518): approved named external repair passes resume and finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0264 \(TDD-0518\): approved named external repair passes resume and finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { …(2) } to deeply equal { resumed: { …(3) }, checks: { …(2) } }`, `tests/unit/workflow/runChangeBoundary.test.ts:136`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0264 (TDD-0518): approved named external repair passes resume and finish`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice (settled between agents): `resume` of a run blocked on `scope-dependency` admits a change outside the boundary only when an approved Change Request authorizes a path the blocker's findings name. It then admits that Change Request's record and those named paths, each at its current digest, and nothing else. Observers supply each Change Request as `{ recordPath, approved, paths }` in the facts. The admitted paths travel on the `blocker-cleared-and-revalidated` event as `adjustments`, `{ path, digest, changeRequest }` each, and the snapshot keeps them as `startAdjustments`. The snapshot also keeps the blocked run's `halt`, whose `<findingCode>@<path>` subjects name the findings. An adjustment holds at every later write operation and at `finish` only while its Change Request is still approved and its path keeps the admitted digest. Otherwise the path is outside the boundary again: a write operation is refused `fail-closed` with cause `invariant-violation`, and `finish` lists it `diff-out-of-scope`. A `resume` that finds any change no approved repair admits is refused `fail-closed` with cause `invariant-violation`, and the run stays `blocked`.
+
+### TDD-0519
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0264 (TDD-0519): missing approval fails closed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0264 \(TDD-0519\): missing approval fails closed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(2) } to deeply equal { state: 'blocked', …(2) }`, `tests/unit/workflow/runChangeBoundary.test.ts:145`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0264 (TDD-0519): missing approval fails closed`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0520
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0264 (TDD-0520): unlisted external path fails closed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0264 \(TDD-0520\): unlisted external path fails closed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(2) } to deeply equal { state: 'blocked', …(2) }`, `tests/unit/workflow/runChangeBoundary.test.ts:153`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0264 (TDD-0520): unlisted external path fails closed`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0521
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/runChangeBoundary.test.ts`
+- Selector: `TC-0018-0264 (TDD-0521): digest drift fails closed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/runChangeBoundary.test.ts --testNamePattern='TC-0018-0264 \(TDD-0521\): digest drift fails closed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { next: 'invariant-violation', …(1) } to deeply equal { next: 'invariant-violation', …(1) }` (`outOfScope` also named the Change Request record), `tests/unit/workflow/runChangeBoundary.test.ts:161`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/runChangeBoundary.test.ts > TC-0018-0264 (TDD-0521): digest drift fails closed`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0522
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/commitBeforeCompletion.test.ts`
+- Selector: `TC-0018-0265 (TDD-0522): uncommitted tracked stage change`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/commitBeforeCompletion.test.ts --testNamePattern='TC-0018-0265 \(TDD-0522\): uncommitted tracked stage change' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0054: on a `qfai_done` run every uncommitted path the completion facts report is an `uncommitted` unmet condition, so `finish` keeps the run `ready` and records no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/commitBeforeCompletion.test.ts > TC-0018-0265 (TDD-0522): uncommitted tracked stage change`
+- Production files: none
+
+### TDD-0523
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/commitBeforeCompletion.test.ts`
+- Selector: `TC-0018-0265 (TDD-0523): uncommitted tracked summary`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/commitBeforeCompletion.test.ts --testNamePattern='TC-0018-0265 \(TDD-0523\): uncommitted tracked summary' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0054: on a `qfai_done` run every uncommitted path the completion facts report is an `uncommitted` unmet condition, so `finish` keeps the run `ready` and records no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/commitBeforeCompletion.test.ts > TC-0018-0265 (TDD-0523): uncommitted tracked summary`
+- Production files: none
+
+### TDD-0524
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/commitBeforeCompletion.test.ts`
+- Selector: `TC-0018-0265 (TDD-0524): uncommitted authorization file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/commitBeforeCompletion.test.ts --testNamePattern='TC-0018-0265 \(TDD-0524\): uncommitted authorization file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0054: on a `qfai_done` run every uncommitted path the completion facts report is an `uncommitted` unmet condition, so `finish` keeps the run `ready` and records no event.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/commitBeforeCompletion.test.ts > TC-0018-0265 (TDD-0524): uncommitted authorization file`
 - Production files: none
 
 ### TDD-0527

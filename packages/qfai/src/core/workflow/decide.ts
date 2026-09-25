@@ -53,6 +53,15 @@ export interface WorkflowEvent {
   measurement?: WorkflowMeasurement;
   // Runtime only: what the run has settled so far, which the tracked summary never copies.
   settled?: WorkflowSettled;
+  adjustments?: WorkflowStartAdjustment[];
+}
+
+// A path an approved Change Request changed outside the run, admitted into the run change
+// boundary at the digest it had when `resume` admitted it.
+interface WorkflowStartAdjustment {
+  path: string;
+  digest: string;
+  changeRequest: string;
 }
 
 // The checked proposal's routing result, and every answered question with the option labels
@@ -335,6 +344,12 @@ interface WorkflowSnapshot {
   digestKey?: string;
   routingReceiptRef?: string;
   settled?: WorkflowSettled;
+  // Why the run is blocked, while it is.
+  halt?: WorkflowHalt;
+  // The record areas of every work order the run issued.
+  issuedRecordAreas?: string[];
+  // The bounded adjustments `resume` made to the run's starting state.
+  startAdjustments?: WorkflowStartAdjustment[];
 }
 
 interface WorkflowPolicy {
@@ -462,6 +477,8 @@ interface WorkflowFacts {
   cause?: FailClosedCause;
   // The run's cumulative changed paths, observed at this write operation.
   observedChangedPaths?: string[];
+  // Each Change Request record, whether it is approved, and the paths it authorizes.
+  changeRequests?: { recordPath: string; approved: boolean; paths: string[] }[];
 }
 
 // What `finish` observes: validate run in process, the offered verify report, the tool and
@@ -1496,7 +1513,7 @@ function scopeUnmet(
     ledger && ledger.specId === snapshot.specBinding?.specId
       ? ledger.rows.filter((row) => row.status !== "done" && row.status !== "exception")
       : [];
-  const escaped = escapedPaths(snapshot, completion.changedPaths);
+  const escaped = escapedPaths(snapshot, completion.changedPaths, facts);
   const approval = snapshot.approval;
   const unanswered =
     (approval && !approval.authorizationId) || (snapshot.plan?.route === "feature" && !approval)
@@ -1643,14 +1660,73 @@ function planRevision(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
   return { verdict: { ok: true, run }, events: [{ type: "required-plan-revision" }] };
 }
 
-// SIMPLIFIED: the authorized set is the plan's write scope and the run's own evidence tree.
-// Lift when: the snapshot records the record areas of every work order the run issued.
-function escapedPaths(snapshot: WorkflowSnapshot, changedPaths: readonly string[]): string[] {
+function approvedChangeRequests(facts: WorkflowFacts) {
+  return (facts.changeRequests ?? []).filter((changeRequest) => changeRequest.approved);
+}
+
+// A start adjustment holds while its Change Request is still approved and its path still has
+// the digest it was admitted at.
+function heldAdjustments(snapshot: WorkflowSnapshot, facts: WorkflowFacts): string[] {
+  const approved = approvedChangeRequests(facts).map((changeRequest) => changeRequest.recordPath);
+  return (snapshot.startAdjustments ?? [])
+    .filter(
+      (adjustment) =>
+        approved.includes(adjustment.changeRequest) &&
+        facts.fileDigests?.[adjustment.path] === adjustment.digest,
+    )
+    .map((adjustment) => adjustment.path);
+}
+
+// The cumulative changes outside the run change boundary. Its authorized set is the plan's
+// write scope, the record areas of every work order the run issued, the core's own evidence
+// tree, and each start adjustment that still holds.
+function escapedPaths(
+  snapshot: WorkflowSnapshot,
+  changedPaths: readonly string[],
+  facts: WorkflowFacts,
+): string[] {
   const areas = [
     ...(snapshot.plan?.writeScope ?? []),
+    ...(snapshot.issuedRecordAreas ?? []),
+    ...(snapshot.outstandingWorkOrder?.recordAreas ?? []),
     `.qfai/evidence/workflow/${snapshot.run.id}`,
+    ...heldAdjustments(snapshot, facts),
   ];
   return changedPaths.filter((changed) => !areas.some((area) => areaCovers(area, changed)));
+}
+
+// The path a blocker names a finding by, from its `<findingCode>@<path>` subject.
+function findingPathOf(subject: string): string {
+  return subject.slice(subject.indexOf("@") + 1);
+}
+
+// A scope-dependency blocker repaired outside the run admits only an approved Change Request
+// that authorizes a path the blocker's findings name: its own record, and those named paths,
+// each at its current digest. Undefined when any escaped path is not admitted.
+function repairAdjustments(
+  snapshot: WorkflowSnapshot,
+  escaped: readonly string[],
+  facts: WorkflowFacts,
+): WorkflowStartAdjustment[] | undefined {
+  const halt = snapshot.halt;
+  const named = halt?.blocker === "scope-dependency" ? halt.subjects.map(findingPathOf) : [];
+  const admitted = approvedChangeRequests(facts)
+    .map(({ recordPath, paths }) => ({
+      recordPath,
+      paths: paths.filter((changed) => named.includes(changed)),
+    }))
+    .filter(({ paths }) => paths.length > 0)
+    .flatMap(({ recordPath, paths }) =>
+      [recordPath, ...paths].map((admittedPath) => ({ admittedPath, recordPath })),
+    );
+  const adjustments: WorkflowStartAdjustment[] = [];
+  for (const escapedPath of escaped) {
+    const entry = admitted.find(({ admittedPath }) => admittedPath === escapedPath);
+    const digest = facts.fileDigests?.[escapedPath];
+    if (!entry || digest === undefined) return undefined;
+    adjustments.push({ path: escapedPath, digest, changeRequest: entry.recordPath });
+  }
+  return adjustments;
 }
 
 // The fail-closed cause found for this operation: one an observer reported, or a cumulative
@@ -1660,7 +1736,7 @@ function foundCause(
   facts: WorkflowFacts,
 ): { cause: FailClosedCause; subjects: string[] } | undefined {
   if (facts.cause) return { cause: facts.cause, subjects: [] };
-  const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? []);
+  const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);
   return escaped.length > 0 ? { cause: "invariant-violation", subjects: escaped } : undefined;
 }
 
@@ -1684,14 +1760,23 @@ function resumeReady(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workflow
 
 // The core cannot observe a blocker a stage reported, so resume reissues that stage's work
 // order as a new attempt, and the new result decides whether the block still holds.
+// A change outside the run change boundary that no approved repair admits keeps it blocked.
 function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run } = snapshot;
   if (facts.cause) return refusedFailClosed(run, facts.cause);
-  const { outstandingWorkOrder: _blocked, ...rest } = snapshot;
+  const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);
+  const adjustments = repairAdjustments(snapshot, escaped, facts);
+  if (!adjustments) return refusedFailClosed(run, "invariant-violation");
+  const { outstandingWorkOrder: _blocked, halt: _cleared, ...rest } = snapshot;
+  const startAdjustments = [...(snapshot.startAdjustments ?? []), ...adjustments];
   const ready = { ...run, state: "ready", sequence: run.sequence + 1 };
-  const issued = decide({ ...rest, run: ready }, { operation: "next" }, facts);
+  const issued = decide({ ...rest, run: ready, startAdjustments }, { operation: "next" }, facts);
   if (!issued.verdict.ok) return issued;
-  return { ...issued, events: [{ type: "blocker-cleared-and-revalidated" }, ...issued.events] };
+  const cleared: WorkflowEvent = {
+    type: "blocker-cleared-and-revalidated",
+    ...(adjustments.length > 0 ? { adjustments } : {}),
+  };
+  return { ...issued, events: [cleared, ...issued.events] };
 }
 
 function resumeRunning(
