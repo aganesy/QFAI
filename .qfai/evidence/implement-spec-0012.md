@@ -798,6 +798,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 15 passed (15). Round 2 changed the test file only, so there was nothing to refactor, and the two capture unit test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: da2438ac0125a4cee3aaf1b110374f511452cf0b
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — falsifiability RED gate on the rebuilt mutated tree working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284 at HEAD f5b43cae0; GREEN + oracle proof at 0b7f820e7)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS on Round 1 (superseded by CR-20260925-0012, fenced above); qa-gatekeeper#2 PASS on Round 2 — rebuilt f5b43cae0 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+972b0fa5…; the six entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :160:23, :174:23 and :128:23; each -t selects one test; the edit stays inside status >= 400; the status > 400 run matches working-tree+cfcd3843… and fails only the 400 entry at :128:23; GREEN 1/1 per entry and both files 15/15 at 0b7f820e7. Gate taken after the revert, on the rebuilt tree
 
 Superseded: the qa-gatekeeper verdict below was given on Round 1, before
 `CR-20260925-0012` added status 400 to the case. It does not cover Round 2, and
@@ -931,6 +933,7 @@ Preflight: session opened
 | 4 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T04:31:18.389Z/agents): the Round 1 qa-gatekeeper lines go into a fence under a superseded note | #tdd-0517; `round-evidence.md` row-level qa-gatekeeper verdict | #tdd-0517; the verdict answers for the row, and left as a field it would claim a gate on a proof that no longer covers the case | PASS |
 | 5 | backend-engineer | stage4-agent (inline) | grilling(S2@2026-09-25T04:31:18.389Z/agents): the Round 2 proof is the inverted comparison over all six entries; the `status > 400` run is recorded beside it | `SKILL.md` Red 3c; `selector-granularity.md`; the two mutation runs | #tdd-0517 Round 2; one tree must fail every entry, and `status > 400` fails only the 400 entry. The boundary run stays in the entry because it is the run the new test exists to fail | PASS |
 | 6 | test-design-analyst | stage4-agent (inline) | Coverage Depth Matrix: score the status-400 boundary on TC-0012-0487 and BR-0012-0066 | atdd-spec-0012.md; #tdd-0517 Round 2 | atdd-spec-0012.md `TC-0012-0487`, `BR-0012-0066` rows | PASS |
+| 7 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0517 Round 2 RED phase gate on the rebuilt falsifiability tree, and the build-phase GREEN | #tdd-0517 Round 2 | qa-gatekeeper fields | PASS |
 
 ## Test results summary
 
