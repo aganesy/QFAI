@@ -12,6 +12,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The pull request template is in English and asks for what reviewers read**
+  (#2353). It carries `## Summary`, `## Test plan`, the list of what the change
+  made unnecessary, and the adoption bar for a new rule, skill or gate. The
+  change-type, tag and compatibility checklists, the `delta.md` fields and the
+  pointer to a classification file that does not exist are gone.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
