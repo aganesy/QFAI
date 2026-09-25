@@ -43,6 +43,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The release-gate tests no longer time out on a busy machine** (#2272).
+  They evaluate each release condition in a VM with a wall-clock limit, and a
+  loaded machine could exceed it. Only literals and fixed operators reach that
+  VM, so no condition can run away, and the limit is gone.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
