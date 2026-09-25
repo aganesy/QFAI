@@ -149,7 +149,7 @@ intentionally absent.
 
 ## Former migration memos
 
-QFAI 2.0.0 has no `.qfai/assistant/process/` directory, and `qfai init` writes
+QFAI 2.0.0 has no `.qfai/assistant/process/` directory, and `npx qfai init` writes
 no migration memo. Step 3 moves the memos a 1.x release wrote to
 `.qfai/assistant/process/migrations/` into
 `.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`.
