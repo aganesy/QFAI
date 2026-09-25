@@ -66,6 +66,31 @@ S1 had ended, so it is recorded as session S2 of this run rather than under S1.
 `TDD-0113`, `TDD-0114`) and `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts`
 (`TDD-0111`, `TDD-0115`). Every `it` of a file was written before the first RED of that file.
 
+### /qfai-atdd run 2026-09-25T02:23:00.972Z
+
+This run re-completes the six rows the merge renumbered, `TDD-0110` … `TDD-0115`, and
+nothing else in the spec. Each row's work is its `#### Round 2`; its `#### Round 1` is the
+history the renumber kept (DR-0013-0017, DL-0013).
+
+- **Preflight: confidence high, no session opened.** The approach is settled input:
+  decision D6 of grilling session `split-2026-09-25` S1, adopted as DR-0013-0017
+  (`.qfai/evidence/sdd-spec-0013.md`, Work Orders step 1). It re-completes the rows on the
+  branch `red-provenance.md` assigns, and rules out reverting production code to
+  manufacture a RED.
+- **Branch 2 is expected for every row.** The `qfai-sdd` skill text the six tests read is in
+  the tree, so each first run should pass. The classification run decides it: a failing
+  first run is a natural RED on the approved scope.
+- **No test is written or changed.** The tests are the two files as the re-derive in merge
+  `eeadf8142` renamed them. The volume estimate, coverage checklist and matrix of the
+  2026-09-23 run stand: the renumber changed IDs, not counts.
+- **Standing user decisions carry over** from the 2026-09-23 run: rows stop at `refactor`,
+  with checkpoints closed on the final head's CI; RED is observed locally for these tests
+  only; rows sharing a GREEN take their REDs first. No GREEN is built this round, so the
+  last one does not order anything here.
+- **Stage 0.** The four catalog files hold no placeholder or `TBD`, and this run found no
+  stale fact in them. **Delta Rejected Guard.** This run changes no spec, test or skill
+  text, so it reintroduces no rejected option.
+
 ## Grilling Session
 
 This file had no `## Grilling Session` section before this run; the earlier runs recorded
@@ -100,6 +125,94 @@ Escalated S2: D2-refinement — several rows are satisfied by one shared GREEN, 
 - S1 D1: state the two existing record homes in the existing skill output explanation. Reject a new independent section because it would duplicate that explanation.
 - S1 D2: edit the three existing approval stops directly, preserving the approval cell, Phase 0 gate, Operation and target report, `QFAI-TRIAGE-005` and the rerun instruction. Reject a new shared section because the three stop sites need the rule at point of use.
 - Source changes: shipped `qfai-sdd/SKILL.md`, `references/sdd-execution-playbook.md`, `references/sdd-triage.md`, and the existing `autoModeApprovalDegrade.test.ts` expectations. `sync:ssot` ran as its four scripts, all exit 0.
+
+### /qfai-atdd — run started 2026-09-25T02:23:00.972Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+### /qfai-implement — run started 2026-09-25T02:45:32.177Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+This invocation names `TDD-0110` … `TDD-0115` and works them one at a time, in the order
+of `## Ledger rows advanced`. Every row is `Layer = Integration`, so this file is the only
+home of its record, and the block is written once.
+
+- **Confidence high, no session opened.** The approach is settled input: decision D6 of
+  grilling session `split-2026-09-25` S1, adopted as DR-0013-0017. The six rows are
+  completed again on the branch `red-provenance.md` assigns, which the `/qfai-atdd` run
+  started 2026-09-25T02:23:00.972Z settled as branch 2 for all six, and production code is
+  not reverted to manufacture a RED. Each row's mutation is the one approved with its
+  `#### Round 2` scope, so this run decides no seam, no production approach and no refactor.
+- **Standing user decisions carry over:** rows stop at `refactor`, and checkpoints and seals
+  close on the final head's CI; RED and checkpoints run locally, for the related tests only.
+- **Stage 0.** `catalog/tech.md`, `catalog/structure.md` and `catalog/product.md` hold no
+  placeholder, and this run found no stale fact in them. `catalog/manifest.md` still holds the
+  shipped template's `<…>` placeholders. It is a copy of
+  `packages/qfai/assets/init/.qfai/assistant/catalog/manifest.md`, which `sync:ssot`
+  regenerates, and its content is product intent no repository file states, so this run does
+  not fill it. No command, path or entrypoint this run uses is read from it.
+- **Change Request preflight.** No `.qfai/decisions/CR-*.md` names spec-0013's `TDD-0110` …
+  `TDD-0115`, so none resets or blocks them. The one record that names a `TDD-0110`,
+  `CR-20260924-0004`, names `spec-0017/TDD-0110`. `git status --short .qfai/decisions`
+  printed nothing.
+- **Pre-split evidence marker pass.** The recorded ledger fingerprint no longer matched the
+  eighteen ledgers, so the pass ran. No `E2E` / `API` / `Integration` row past `todo` has an
+  `implement-` anchor without the marker, so it marked nothing, refused nothing, and recorded
+  the new fingerprint in `.qfai/state.json`.
+- **Plan phase.** A named-`TDD-ID` invocation is confirmed rather than re-planned
+  (`references/plan-phase.md`). The facts that confirmation reads hold: each row exists, none
+  is `blocked`, and each is `T2`, which forms no group.
+  - `delivery-planner` (instance `impl13-plan`) confirmed the handover: PASS, relayed by the
+    coordinator and recorded here at 2026-09-25T02:55:37.468Z (Work Orders step 4).
+  - Order: the confirmation was taken after the Skeleton re-run and after TDD-0110's step 3b
+    check and both step 3c mutation runs, and before any ledger write of this run. TDD-0110's
+    falsifiability gate (`qa-gatekeeper` `impl13-qa`) had already been dispatched when it
+    landed. No row had moved, so the order the confirmation fixes governed every ledger write.
+  - Constraint it adds: step 3c stays strictly serial across the six rows, and each row's
+    mutation is reverted to the committed blob before the next row's mutation is applied.
+  - `test-design-analyst` (instance `impl13-tda`): non-blocking pass over HEAD `1e09c3067`,
+    against the full `TC-*` / `US-*` / `CON-API-*` set of spec-0013. No REVISE.
+    - **Why here.** `plan-phase.md` names `implement-spec-0013.md`. Every other home rule of
+      the skill splits by `Layer`. The run-level record goes to "every evidence file this
+      invocation's rows own" (`SKILL.md`), and an `Integration` row's file is this one
+      (`record-contract.md`, `execution-ledger.md`). All six rows are `Integration` with no
+      `Pre-split-evidence` marker. The reviewers that plan-phase findings are meant for read
+      this file. A new `implement-spec-0013.md` would hold only these findings, and nothing
+      reads it for these rows.
+    - **TC-0013-0038 / TC-0013-0039: covered, layer correct.** TC-0013-0038's four boundaries
+      map one row each: `TDD-0110`, `TDD-0112`, `TDD-0113`, `TDD-0114`. TC-0013-0039's two
+      map to `TDD-0111` and `TDD-0115`. Both TCs declare `Level: integration`, which the
+      validator lowercases and reads as L3. Neither falls in the L1/L2 carve-out, so all six
+      rows are ATDD-owned `Integration` rows. Their tests are in `tests/integration/**`.
+      `US-Refs` and `CON-API-Refs` are `-`, so no row cites an obligation its layer does not
+      own. Each `Selector` equals one `it` title and names one boundary. `BR-Ref` follows the
+      chain: TC-0013-0038 → AC-0013-0030 → BR-0013-0023, and TC-0013-0039 → AC-0013-0029 →
+      BR-0013-0022.
+    - **Renumber: no obligation lost.** Main's 110 rows are unchanged in every column except
+      `Evidence`. HEAD adds exactly the six rows. Every row obligation has a row:
+      TC-0013-0001 … 0039 each have at least one, and every one of the 14 active stories
+      US-0013-0001 … 0014 has an `E2E` row. No story is `planned`. The `CON-API-*` set is empty:
+      there is no `contracts/api/`, and the pack cites none. The old IDs appear only in the
+      rename tables of `09_delta.md` and the context of `07_Decisions.md`.
+    - **Advisory, upstream (`/qfai-sdd`), not tied to a row.** AC-0013-0029 and AC-0013-0030
+      carry no `US-Refs`, so TC-0013-0038/0039 trace to no story. This neither creates nor
+      removes a row obligation. Most ACs in the pack have the same gap.
+    - **Advisory, upstream (skill text).** `plan-phase.md` names `implement-<spec-id>.md` for
+      every row, without the `Layer` split the other home rules state.
+- **Skeleton.** Re-run for this invocation before any mutation: `.qfai/evidence/skeleton.md`,
+  "Re-run — `/qfai-implement` spec-0013, run started 2026-09-25T02:45:32.177Z", exit 0.
+- **Delta Rejected Guard.** The only edits to the skill text are the approved mutations,
+  each restored byte for byte, so no rejected option is reintroduced.
+- **Concurrent processes.** A vitest run (PID 32948) started at 2026-09-25T02:43:23Z under
+  `.claude/worktrees/agent-a59afa4be8de399a4`, another worktree. It cannot write this tree,
+  and it is not this run's.
 
 ## Work performed (what changed, where)
 
@@ -195,12 +308,12 @@ are `todo` until they are completed again.
 | `TDD-0081` | `TC-0013-0036`  | integration | falsifiability | todo   |
 | `TDD-0082` | `TC-0013-0037`  | integration | falsifiability | todo   |
 | `TDD-0083` | `TC-0013-0037`  | integration | falsifiability | todo   |
-| `TDD-0110` | `TC-0013-0038` | Integration | observed-red | todo |
-| `TDD-0112` | `TC-0013-0038` | Integration | observed-red | todo |
-| `TDD-0113` | `TC-0013-0038` | Integration | observed-red | todo |
-| `TDD-0114` | `TC-0013-0038` | Integration | observed-red | todo |
-| `TDD-0111` | `TC-0013-0039` | Integration | observed-red | todo |
-| `TDD-0115` | `TC-0013-0039` | Integration | observed-red | todo |
+| `TDD-0110` | `TC-0013-0038` | Integration | falsifiability | red |
+| `TDD-0112` | `TC-0013-0038` | Integration | falsifiability | red |
+| `TDD-0113` | `TC-0013-0038` | Integration | falsifiability | red |
+| `TDD-0114` | `TC-0013-0038` | Integration | falsifiability | red |
+| `TDD-0111` | `TC-0013-0039` | Integration | falsifiability | red |
+| `TDD-0115` | `TC-0013-0039` | Integration | falsifiability | red |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -639,6 +752,7 @@ its revision is a separate stage-wide obligation.
 ### TDD-0110
 
 - Renumbered: `TDD-0044` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0110
 - Layer: Integration
@@ -649,6 +763,22 @@ its revision is a separate stage-wide obligation.
 - EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` `## Work-log entries` sends these records to a `.qfai/steering/<id>.md` entry, and no text of the skill sends an out-of-scope discovery anywhere. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+c1b7f0cf2933a38d7f85d7c1504d02c28c2f67090ad1c4e0fa1bcbab215df17f at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T02:53:32Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:07Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, before and after the gate's run. The test hash recomputed in the gate form to `c7e9ad69…bff2b1`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. The only production change in the tree is line 369 of `qfai-sdd/SKILL.md`, and it equals mutation 2's recorded diff. The pre-mutation copy hashes to the committed blob's `883bb9d8…1817d5`.
+  - Satisfied-by: a path plus the named paragraph of `## Mandatory Outputs`. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row carries no `Pre-split-evidence: implement`, and TC-0013-0038 declares `Level: integration`, so neither exception applies. The paragraph is a single predicate with a boundary, and it is not a commit id.
+  - Ownership: both mutations edit only that paragraph. It is in the row's `Owning module`, and it is what `Satisfied-by` names, so it counts as the owned code for this check. No manifest file is touched.
+  - Discrimination: each mutation removes one half of `record-homes-stated` and keeps the other half true. Mutation 1 removes the out-of-scope discovery, which gives `consultationOrDiscovery: false` and `decision: true`. Mutation 2 removes the `07_Decisions.md` home, which gives `decision: false` and `consultationOrDiscovery: true`. Neither is a load failure: the module loaded, the read-proof at line 63 passed, and the failure is the assertion at line 88 inside this row's selector, with the other three `it` entries skipped by the filter.
+  - Observation: the gatekeeper re-ran the recorded command on this tree. It exited 1 with the same failure recorded for mutation 2. Mutation 1 was not re-run. Its log (`f0110-m1.txt`) matches the recorded output, and the tree returned to the hand-off address before mutation 2 was applied.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) is the item-scope authority, and no REVISE is open on it.
+  - Next: revert mutation 2 byte for byte from the pre-mutation copy, confirm the tree returns to `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`. Both mutations then stand as the Oracle proof at the build gate.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `SKILL.md` is byte-equal to blob `c35700bf1`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T02:56:04.136Z) exits 0, and its output names this selector as passing, with `1 passed | 3 skipped (4)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:07Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the two step 3c mutations (step 3), one per half of `record-homes-stated`, which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Unit: `SKILL.md` and every file under `references/`, split into paragraphs and list items.
   Read-proof (S1 D5): the walk includes `SKILL.md` and at least one reference.
 - Oracle (S1 D11, presence), as the matrix row note plans it, one statement per record home:
@@ -933,9 +1063,227 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. The opening paragraph of `## Mandatory Outputs` in `SKILL.md` is one block that names a decision with `07_Decisions.md` and a Change Request, and a consultation and an out-of-scope discovery with `08_Open-questions.md` and a Change Request.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+- Test manifest: `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, `## Mandatory Outputs`, its opening paragraph: "Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request." No other block of `SKILL.md` or `references/**` names an out-of-scope discovery.
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): in that paragraph, delete ` or out-of-scope discovery`. The selector must then fail at line 88 with `consultationOrDiscovery: false` and `decision: true`. One line of `SKILL.md`, in the row's `Owning module`, and no manifest file.
+  - Second mutation, for the `decision` half, run after the first is reverted: replace ``the spec's `07_Decisions.md` `` with "the spec's decision record" in the same paragraph. The selector must then fail at line 88 with `decision: false` and `consultationOrDiscovery: true`. Both mutations are this row's step 3c proposal; each is applied alone, run, and reverted.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:34:17.303Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the selector executed and passed, because the opening paragraph of `## Mandatory Outputs` already ties both record kinds to their homes. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 15ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:34:19
+   Duration  359ms (transform 65ms, setup 62ms, import 35ms, tests 17ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:34:31.120Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 17ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:34:33
+   Duration  368ms (transform 65ms, setup 69ms, import 32ms, tests 19ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies each predicate to break above on its own, runs this row's selector, and reverts it before the next, recording both runs under `Round 2: Falsifiability command` and `Round 2: Falsifiability result`, with `Round 2: RED failure mode: falsifiability` and a `Round 2: Falsifiability revision` per mutated tree;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0110`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `record-homes-stated`. It equals the
+    ledger's `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches one
+    of the file's four `it` titles.
+  - The test hash recomputed in the gate form to the approved `c7e9ad69…bff2b1`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS,
+    together with `Test file` and `Selector`, which already equal this entry's.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+  (gate form, taken at 2026-09-25T02:48:47.733Z before either mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value after mutation 1's
+  restore and with mutation 2 applied, since neither mutation lands in a manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013RecordHomes.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
+- Round 2: Falsifiability result: exit 1 for each of the two approved mutations, each run alone on a tree holding only that mutation; 1 test failed on the assertion at line 88 inside this row's selector, with the file's other three `it` entries skipped by the filter. Both mutations edit line 369 of `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, the opening paragraph of `## Mandatory Outputs` that `Round 2: Satisfied-by` names, in the row's `Owning module`. Before each mutation the file was byte-equal to its committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5` (SHA-256 `883bb9d8…1817d5`). Mutation 1 was restored byte for byte from that copy before mutation 2 was applied, and the tree address returned to `working-tree+71d85ec5…d09bcfd3b`, taken twice. Mutation 2 is in the tree for the gate.
+
+1. Mutation 1, the predicate to break: delete ` or out-of-scope discovery`. Run at
+   2026-09-25T02:49:09.139Z. `consultationOrDiscovery` is `false` and `decision` stays `true`,
+   because no other block of `SKILL.md` or `references/**` names an out-of-scope discovery.
+
+```diff
+@@ -369 +369 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
+-Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
++Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation in `08_Open-questions.md` or a Change Request.
+```
+
+```text
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 19ms
+   → expected { decision: true, …(1) } to deeply equal { decision: true, …(1) }
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+AssertionError: expected { decision: true, …(1) } to deeply equal { decision: true, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "consultationOrDiscovery": true,
++   "consultationOrDiscovery": false,
+    "decision": true,
+  }
+
+ ❯ tests/integration/spec0013RecordHomes.test.ts:88:20
+     86|       ),
+     87|     };
+     88|     expect(stated).toEqual({ decision: true, consultationOrDiscovery: …
+       |                    ^
+     89|   });
+     90|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  11:49:20
+   Duration  833ms (transform 63ms, setup 64ms, import 39ms, tests 21ms, environment 0ms)
+
+exit=1
+```
+
+2. Mutation 2, the second mutation: replace ``the spec's `07_Decisions.md` `` with "the spec's
+   decision record". Run at 2026-09-25T02:49:51.328Z. `decision` is `false` and
+   `consultationOrDiscovery` stays `true`.
+
+```diff
+@@ -369 +369 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
+-Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
++Record a decision in the spec's decision record or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
+```
+
+```text
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 20ms
+   → expected { decision: false, …(1) } to deeply equal { decision: true, …(1) }
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+AssertionError: expected { decision: false, …(1) } to deeply equal { decision: true, …(1) }
+
+- Expected
++ Received
+
+  {
+    "consultationOrDiscovery": true,
+-   "decision": true,
++   "decision": false,
+  }
+
+ ❯ tests/integration/spec0013RecordHomes.test.ts:88:20
+     86|       ),
+     87|     };
+     88|     expect(stated).toEqual({ decision: true, consultationOrDiscovery: …
+       |                    ^
+     89|   });
+     90|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  11:49:53
+   Duration  336ms (transform 63ms, setup 62ms, import 30ms, tests 21ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+c1b7f0cf2933a38d7f85d7c1504d02c28c2f67090ad1c4e0fa1bcbab215df17f
+  (mutation 2's tree, in place for the gate; taken twice before and twice after its run,
+  all four equal. Mutation 1 ran on
+  `working-tree+d465d9e034336fd3d13af7811fff000a08f5185f4d8fea58f5f3751637551426`, taken
+  the same way before its restore. `git status --short .qfai/decisions` printed nothing
+  at every capture, and no vitest process other than these runs was running.)
+
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T02:55:53Z): `SKILL.md` restored
+  from its pre-mutation copy. It is byte-equal to that copy (SHA-256 `883bb9d8…1817d5`) and
+  to the committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5`. The tree address, taken
+  twice, returned to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test
+  hash still recomputes to `c7e9ad69…bff2b1`.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
+- Round 2: GREEN result: exit 0; 1 test passed, and the verbose output names this row's selector as passing, with the other three `it` entries left out by the filter (1 passed, 3 skipped). The restored run, taken at 2026-09-25T02:56:04.136Z on the tree named by `Round 2: Revision`, which was the same before and after the run. The step 3c mutations are this row's `Oracle proof`, so Phase Green step 2a is not repeated.
+
+```text
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 17ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:56:05
+   Duration  361ms (transform 66ms, setup 65ms, import 30ms, tests 18ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T02:56:15.914Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ### TDD-0112
 
 - Renumbered: `TDD-0046` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0112
 - Layer: Integration
@@ -946,6 +1294,23 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` has a `## Work-log entries` section. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+c8e93ce8ee44c4566f6d5dd24e0d1a7e2726509d6f9bf8456683ccbe730a7442 at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T02:59:47Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:10Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, and once more after the gate's run. The test hash recomputed in the gate form to `c7e9ad69…bff2b1`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. `SKILL.md` hashes to `c25d1e6c…2e360`. Its only difference from blob `c35700bf1` is the recorded two-line insertion. TDD-0110's mutation is no longer in the tree.
+  - Satisfied-by: a path plus the property it holds: no line contains `## Work-log entries`. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row's `Evidence` cell is `-`, so there is no `Pre-split-evidence: implement`, and TC-0013-0038 declares `Level: integration`. The absence names one predicate with a boundary.
+  - Ownership: the mutation adds one heading and one blank line to the file `Satisfied-by` names. That file is in the row's `Owning module`. No manifest file is touched.
+  - Discrimination: the inserted heading is the substring the absence oracle reads, so it breaks this row's predicate and nothing else it asserts. The failure is not a load failure. The module loaded, the read-proof at line 97 passed (the anchor heading was found once), and the failure is the assertion at line 99 inside this row's selector, receiving `["## Work-log entries"]`, with the other three `it` entries skipped.
+  - Overlap with TDD-0115: that predicate contains this one, so no mutation of this absence can avoid it. TDD-0115's selector is in `spec0013ApprovalStop.test.ts`, which this command does not run, so the failing output names only this row's selector. The Round 2 scope PASS judged the overlap structural, and it is not a discrimination defect.
+  - Observation: the gatekeeper re-ran the recorded command on this tree, and it exited 1 with the recorded failure.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) holds, and no REVISE is open on it.
+  - Next: remove the two inserted lines, confirm `SKILL.md` is byte-equal to blob `c35700bf1` and the tree is back at `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `SKILL.md` is byte-equal to blob `c35700bf1`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T03:00:58.753Z) exits 0, and its output names this selector as passing, with `1 passed | 3 skipped (4)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:10Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the step 3c heading insertion (step 7), which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Read-proof (S1 D5): the heading ``### `--auto` and approval-required rows``, which
   AC-0013-0029 names, is found exactly once in the file read.
 - Oracle (S1 D11, absence): no line of `SKILL.md` contains `## Work-log entries`
@@ -1186,9 +1551,178 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. `SKILL.md` carries the line ``### `--auto` and approval-required rows`` once and no line containing `## Work-log entries`.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+- Test manifest: `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`: no line contains `## Work-log entries`.
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): insert the line `## Work-log entries`, followed by a blank line, directly above `## Mandatory Outputs` in `SKILL.md`. The selector must then fail at line 99, receiving `["## Work-log entries"]`. The row's `Owning module`, and no manifest file. The inserted line also contains `work-log`, which `TDD-0115`'s whole-file check reads; every line holding `## Work-log entries` does, and only this row's selector runs.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:34:44.702Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the selector executed and passed, because no line of `SKILL.md` contains `## Work-log entries`. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 4ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:34:46
+   Duration  359ms (transform 63ms, setup 65ms, import 31ms, tests 6ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:34:53.019Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 5ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:34:55
+   Duration  397ms (transform 67ms, setup 65ms, import 35ms, tests 6ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies the predicate to break above, runs this row's selector, and records `Round 2: Falsifiability command`, `Round 2: Falsifiability result`, `Round 2: RED failure mode: falsifiability` and `Round 2: Falsifiability revision`;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0112`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `no-worklog-section`. It equals the ledger's
+    `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches one of the
+    file's four `it` titles.
+  - The test hash recomputed in the gate form to the approved `c7e9ad69…bff2b1`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, after
+    `TDD-0110`'s mutation had been reverted to the committed blob.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+  (gate form, taken at 2026-09-25T02:57:25.146Z before the mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value with the mutation
+  applied, since the mutation lands in no manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013RecordHomes.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`
+- Round 2: Falsifiability result: exit 1; 1 test failed on the assertion at line 99 inside this row's selector, receiving `["## Work-log entries"]`, with the file's other three `it` entries skipped by the filter. The read-proof at line 97 passed first: the heading ``### `--auto` and approval-required rows`` was found once. Run at 2026-09-25T02:57:46.036Z. The mutation is the predicate to break approved with the scope: the line `## Work-log entries` and a blank line inserted directly above `## Mandatory Outputs` in `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, the file `Round 2: Satisfied-by` names, in the row's `Owning module`. Before it, the file was byte-equal to its committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5` (SHA-256 `883bb9d8…1817d5`). The mutation is in the tree for the gate.
+
+```diff
+@@ -364,6 +364,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
+ 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
+ 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+
++## Work-log entries
++
+ ## Mandatory Outputs
+
+ Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
+```
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 11ms
+   → expected [ '## Work-log entries' ] to deeply equal []
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+AssertionError: expected [ '## Work-log entries' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "## Work-log entries",
++ ]
+
+ ❯ tests/integration/spec0013RecordHomes.test.ts:99:74
+     97|     ).toHaveLength(1);
+     98|
+     99|     expect(lines.filter((line) => line.includes("## Work-log entries")…
+       |                                                                          ^
+    100|   });
+    101|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  11:57:47
+   Duration  389ms (transform 72ms, setup 72ms, import 33ms, tests 12ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+c8e93ce8ee44c4566f6d5dd24e0d1a7e2726509d6f9bf8456683ccbe730a7442
+  (the mutated tree, taken twice before and twice after the run, all four equal.
+  `git status --short .qfai/decisions` printed nothing at every capture, and no other
+  vitest process was running.)
+
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T03:00:47Z): `SKILL.md` restored
+  from its pre-mutation copy, byte-equal to that copy and to the committed blob
+  `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5`. The tree address, taken twice, returned to the
+  hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test hash still recomputes to
+  `c7e9ad69…bff2b1`. A vitest process this run did not start (PID 36968) was seen once
+  while the mutation was live, at 2026-09-25T02:59:14Z, during the gate. It had exited
+  before it could be traced, and the address at that capture was still
+  `working-tree+c8e93ce8…a7442`, taken twice.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`
+- Round 2: GREEN result: exit 0; 1 test passed, and the verbose output names this row's selector as passing, with the other three `it` entries left out by the filter (1 passed, 3 skipped). The restored run, taken at 2026-09-25T03:00:58.753Z on the tree named by `Round 2: Revision`, which was the same before and after the run. The step 3c mutation is this row's `Oracle proof`, so Phase Green step 2a is not repeated.
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 4ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  12:01:00
+   Duration  325ms (transform 61ms, setup 61ms, import 28ms, tests 6ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T03:01:05.111Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ### TDD-0113
 
 - Renumbered: `TDD-0047` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0113
 - Layer: Integration
@@ -1199,6 +1733,23 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` cites a `W-PENDING-PROMOTION` decision as an example of carry-over. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+83151f462c14893bfe5183665e846a69524495b4740fc5875a4c642e240d7747 at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:04:02Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:13Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, and once more after the gate's run. The test hash recomputed in the gate form to `c7e9ad69…bff2b1`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. `SKILL.md` hashes to `b152dc21…507254`. Its only difference from blob `c35700bf1` is the recorded two-line insertion. TDD-0112's mutation is no longer in the tree.
+  - Satisfied-by: a path plus the property it holds: no line contains `W-PENDING-PROMOTION`. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row's `Evidence` cell is `-`, so there is no `Pre-split-evidence: implement`, and TC-0013-0038 declares `Level: integration`. The absence names one predicate with a boundary.
+  - Ownership: the mutation adds one paragraph and one blank line to the file `Satisfied-by` names. That file is in the row's `Owning module`. No manifest file is touched.
+  - Discrimination: the inserted paragraph cites `W-PENDING-PROMOTION` as an example, which is the property `no-pending-promotion-example` forbids and the substring its oracle reads. The failure is not a load failure. The module loaded, the read-proof at line 108 passed (the anchor heading was found once), and the failure is the assertion at line 110 inside this row's selector, receiving ``["For example, `W-PENDING-PROMOTION`."]``, with the other three `it` entries skipped.
+  - Observation: the gatekeeper re-ran the recorded command on this tree, and it exited 1 with the recorded failure.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) holds, and no REVISE is open on it.
+  - Next: remove the two inserted lines, confirm `SKILL.md` is byte-equal to blob `c35700bf1` and the tree is back at `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `SKILL.md` is byte-equal to blob `c35700bf1`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T03:05:35.055Z) exits 0, and its output names this selector as passing, with `1 passed | 3 skipped (4)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:13Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the step 3c paragraph insertion (step 9), which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - The flag on the recorded GREEN: untraced vitest processes were present near both recorded runs. The address was unchanged at every capture, which shows no tracked file moved. The gatekeeper's own run, taken with no other process running on the same address, passes the same way, so the GREEN does not rest on the flagged runs alone.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Read-proof (S1 D5): as `TDD-0112`.
 - Oracle (S1 D11, absence): no line of `SKILL.md` contains `W-PENDING-PROMOTION`
   (case-sensitive).
@@ -1428,9 +1979,175 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. `SKILL.md` carries the line ``### `--auto` and approval-required rows`` once and no line containing `W-PENDING-PROMOTION`.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+- Test manifest: `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`: no line contains `W-PENDING-PROMOTION`.
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): insert the paragraph ``For example, `W-PENDING-PROMOTION`.``, followed by a blank line, directly above `## Mandatory Outputs` in `SKILL.md`. The selector must then fail at line 110, receiving that one line. The row's `Owning module`, and no manifest file.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:35:07.085Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the selector executed and passed, because no line of `SKILL.md` contains `W-PENDING-PROMOTION`. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 5ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:35:09
+   Duration  392ms (transform 66ms, setup 68ms, import 30ms, tests 6ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:35:15.533Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 5ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:35:17
+   Duration  338ms (transform 64ms, setup 63ms, import 34ms, tests 6ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies the predicate to break above, runs this row's selector, and records `Round 2: Falsifiability command`, `Round 2: Falsifiability result`, `Round 2: RED failure mode: falsifiability` and `Round 2: Falsifiability revision`;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0113`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `no-pending-promotion-example`. It equals
+    the ledger's `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches
+    one of the file's four `it` titles.
+  - The test hash recomputed in the gate form to the approved `c7e9ad69…bff2b1`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, after
+    `TDD-0112`'s mutation had been reverted to the committed blob.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+  (gate form, taken at 2026-09-25T03:01:42.242Z before the mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value with the mutation
+  applied, since the mutation lands in no manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013RecordHomes.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
+- Round 2: Falsifiability result: exit 1; 1 test failed on the assertion at line 110 inside this row's selector, receiving the one inserted line, with the file's other three `it` entries skipped by the filter. The read-proof at line 108 passed first: the heading ``### `--auto` and approval-required rows`` was found once. Run at 2026-09-25T03:01:57.086Z. The mutation is the predicate to break approved with the scope: the paragraph ``For example, `W-PENDING-PROMOTION`.`` and a blank line inserted directly above `## Mandatory Outputs` in `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, the file `Round 2: Satisfied-by` names, in the row's `Owning module`. Before it, the file was byte-equal to its committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5` (SHA-256 `883bb9d8…1817d5`). The mutation is in the tree for the gate.
+
+```diff
+@@ -364,6 +364,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
+ 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
+ 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+
++For example, `W-PENDING-PROMOTION`.
++
+ ## Mandatory Outputs
+
+ Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
+```
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 11ms
+   → expected [ Array(1) ] to deeply equal []
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "For example, `W-PENDING-PROMOTION`.",
++ ]
+
+ ❯ tests/integration/spec0013RecordHomes.test.ts:110:74
+    108|     ).toHaveLength(1);
+    109|
+    110|     expect(lines.filter((line) => line.includes("W-PENDING-PROMOTION")…
+       |                                                                          ^
+    111|   });
+    112|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  12:01:59
+   Duration  502ms (transform 72ms, setup 71ms, import 33ms, tests 12ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+83151f462c14893bfe5183665e846a69524495b4740fc5875a4c642e240d7747
+  (the mutated tree, taken twice before and twice after the run, all four equal.
+  `git status --short .qfai/decisions` printed nothing at every capture, and no other
+  vitest process was running.)
+
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T03:04:58Z): `SKILL.md` restored
+  from its pre-mutation copy, byte-equal to that copy and to the committed blob
+  `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5`. The tree address, taken twice, returned to the
+  hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test hash still recomputes to
+  `c7e9ad69…bff2b1`.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
+- Round 2: GREEN result: exit 0 on both runs; 1 test passed each time, and the verbose output names this row's selector as passing, with the other three `it` entries left out by the filter (1 passed, 3 skipped). Both runs are reported. The first ran at 2026-09-25T03:05:03.462Z. At the capture just before it, a vitest process this run did not start (PID 14840) was present; it had exited before it could be traced. The run was repeated at 2026-09-25T03:05:35.055Z, and two more vitest processes this run did not start (PIDs 20340 and 38644) were present at the capture before it, one of them still at the capture after. They too exited before they could be traced. The tree address was `working-tree+71d85ec5…d09bcfd3b`, taken twice, at every capture before and after both runs. The step 3c mutation is this row's `Oracle proof`, so Phase Green step 2a is not repeated. The second run's output:
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 5ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  12:05:36
+   Duration  343ms (transform 69ms, setup 66ms, import 32ms, tests 6ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T03:06:08.709Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ### TDD-0114
 
 - Renumbered: `TDD-0048` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0114
 - Layer: Integration
@@ -1441,6 +2158,24 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: the shipped tree holds `catalog/worklog-entry.schema.md`, and the `/qfai-implement` and `/qfai-sdd` skills name `.qfai/steering/`. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+063d31c797bca678cf7752dc0e00e209b3d9624b3d1cb89ec41953f20de91d67 at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:10:20Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:16Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, and once more after the gate's run. The test hash recomputed in the gate form to `c7e9ad69…bff2b1`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. `SKILL.md` hashes to `bf6295f5…d16944`. Its only difference from blob `c35700bf1` is the recorded two-line insertion. TDD-0113's mutation is no longer in the tree.
+  - Satisfied-by: a path plus the property it holds, over `assistant/**`: no file contains `.qfai/steering/` or `worklog-entry.schema.md`. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row's `Evidence` cell is `-`, so there is no `Pre-split-evidence: implement`, and TC-0013-0038 declares `Level: integration`. The provenance recorded beside it names the rows that cleaned the rest of the tree and does not stand in for the property.
+  - Whole-tree predicate, own-part mutation: the scan's predicate covers every file under `assistant/`. The read-proof at lines 115 to 120 shows the walk reached both `skills/qfai-sdd/SKILL.md` and `skills/qfai-implement/SKILL.md`, and one loop reads every walked file for both tokens. The mutation stays inside `skills/qfai-sdd/**`, which is both part of what `Satisfied-by` names and the row's `Owning module`, so it is owned code for the Oracle Strength Check. A mutation elsewhere in the tree would have been out of bounds. A fixed-string search by the gatekeeper on this tree finds the tokens in `skills/qfai-sdd/SKILL.md` only, so the failure is caused by the mutation alone. No manifest file is touched.
+  - Discrimination: the inserted paragraph sends an entry to `.qfai/steering/`, the reference `no-surface-reference-in-tree` forbids. The failure is not a load failure. The module loaded, the read-proof passed, and the failure is the assertion at line 130 inside this row's selector, with `found` equal to `["skills/qfai-sdd/SKILL.md: .qfai/steering/"]`, and the other three `it` entries skipped.
+  - Observation: the gatekeeper re-ran the recorded command on this tree, and it exited 1 with the recorded failure.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) approved a single mutation, holds, and has no open REVISE.
+  - Advisory, non-blocking: the mutation exercises the `.qfai/steering/` token only. The `worklog-entry.schema.md` token runs through the same loop and comparison, so the discrimination shown carries to it, but it has not been demonstrated on its own. Inserting that token in the same place, run alone and reverted, would show it.
+  - Next: remove the two inserted lines, confirm `SKILL.md` is byte-equal to blob `c35700bf1` and the tree is back at `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `SKILL.md` is byte-equal to blob `c35700bf1`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T03:11:31.927Z) exits 0, and its output names this selector as passing, with `1 passed | 3 skipped (4)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:16Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the step 3c `.qfai/steering/` insertion (step 11), which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - The step 11 advisory stands: the `worklog-entry.schema.md` token is not exercised on its own. It does not block this GREEN.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Unit: every file under `packages/qfai/assets/init/.qfai/assistant/`, walked recursively.
   Read-proof (S1 D5): the walk includes `skills/qfai-sdd/SKILL.md` and
   `skills/qfai-implement/SKILL.md`.
@@ -1701,9 +2436,183 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. A fixed-string search of `packages/qfai/assets/init/.qfai/assistant/` finds neither `.qfai/steering/` nor `worklog-entry.schema.md`, and both `skills/qfai-sdd/SKILL.md` and `skills/qfai-implement/SKILL.md` exist. This row's Round 1 RED predates the asset round that retired the schema file, so only this round's run says what today's tree gives.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+- Test manifest: `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: `packages/qfai/assets/init/.qfai/assistant/**`: no file contains `.qfai/steering/` or `worklog-entry.schema.md`. This row's own part, and the part step 3c mutates, is `skills/qfai-sdd/**`, the `Owning module`.
+  - Provenance, alongside and not in its place: the rest of the tree lost its references under spec-0011 `TDD-0021`..`TDD-0023` (`qfai-implement` skill text) and spec-0004 `TDD-0068` (the retired schema asset), all `done`. The `qfai-sdd` part was written under `TDD-0044`..`TDD-0049`, IDs that now denote main's rows, so no `done` row owns it and the sibling form is not available.
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): insert the paragraph ``Record the entry under `.qfai/steering/`.``, followed by a blank line, directly above `## Mandatory Outputs` in `skills/qfai-sdd/SKILL.md`. The selector must then fail at line 130, with `found` equal to `["skills/qfai-sdd/SKILL.md: .qfai/steering/"]`. The row's `Owning module`, and no manifest file.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:35:29.470Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. No vitest process was running. Exit 0: the selector executed and passed, because no file of the shipped assistant tree contains either token. This is today's tree, after the asset round. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 166ms
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:35:32
+   Duration  713ms (transform 72ms, setup 70ms, import 38ms, tests 167ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:35:40.923Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `c7e9ad69…bff2b1`. Two vitest processes this run did not start were running (PIDs 6552 and 18964). They had exited before their command lines could be read. The tree address was the same before and after the run, taken twice each time, so they did not change the addressed tree. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 101ms
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  11:35:43
+   Duration  501ms (transform 80ms, setup 74ms, import 39ms, tests 103ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies the predicate to break above, runs this row's selector, and records `Round 2: Falsifiability command`, `Round 2: Falsifiability result`, `Round 2: RED failure mode: falsifiability` and `Round 2: Falsifiability revision`;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0114`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `no-surface-reference-in-tree`. It equals
+    the ledger's `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches
+    one of the file's four `it` titles.
+  - The test hash recomputed in the gate form to the approved `c7e9ad69…bff2b1`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, after
+    `TDD-0113`'s mutation had been reverted to the committed blob.
+  - Today's tree, re-checked before the mutation: a fixed-string search of
+    `packages/qfai/assets/init/.qfai/assistant/` for `.qfai/steering/` and
+    `worklog-entry.schema.md` found no file.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: c7e9ad69367a6bf627f1886455b8cb35bf9edd6e2b74f4f0873b39fcd2bff2b1
+  (gate form, taken at 2026-09-25T03:07:45.309Z before the mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value with the mutation
+  applied, since the mutation lands in no manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013RecordHomes.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
+- Round 2: Falsifiability result: exit 1; 1 test failed on the assertion at line 130 inside this row's selector, with `found` equal to `["skills/qfai-sdd/SKILL.md: .qfai/steering/"]`, and the file's other three `it` entries left out by the filter (1 failed, 3 skipped). The read-proof at lines 115 to 120 passed first: the walk found both `skills/qfai-sdd/SKILL.md` and `skills/qfai-implement/SKILL.md`. Run at 2026-09-25T03:08:03.341Z. The mutation is the predicate to break approved with the scope: the paragraph ``Record the entry under `.qfai/steering/`.`` and a blank line inserted directly above `## Mandatory Outputs` in `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, inside `skills/qfai-sdd/**`, the part of `Round 2: Satisfied-by` that is this row's `Owning module`. Before it, the file was byte-equal to its committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5` (SHA-256 `883bb9d8…1817d5`). The mutation is in the tree for the gate.
+
+```diff
+@@ -364,6 +364,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
+ 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
+ 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
+
++Record the entry under `.qfai/steering/`.
++
+ ## Mandatory Outputs
+
+ Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
+```
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 79ms
+   → expected [ Array(1) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "skills/qfai-sdd/SKILL.md: .qfai/steering/",
++ ]
+
+ ❯ tests/integration/spec0013RecordHomes.test.ts:130:19
+    128|       }
+    129|     }
+    130|     expect(found).toEqual([]);
+       |                   ^
+    131|   });
+    132| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  12:08:05
+   Duration  441ms (transform 62ms, setup 62ms, import 30ms, tests 80ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+063d31c797bca678cf7752dc0e00e209b3d9624b3d1cb89ec41953f20de91d67
+  (the mutated tree, taken twice before and twice after the run, all four equal.
+  `git status --short .qfai/decisions` printed nothing at every capture, and no other
+  vitest process was running at any of them.)
+
+- Advisory from the step 3c gate (`qa-gatekeeper` `impl13-qa`, Work Orders step 11), not
+  blocking: the mutation falsifies only the `.qfai/steering/` token. The
+  `worklog-entry.schema.md` token goes through the same loop, the same `text.includes`
+  check and the same `found` list, so no second mutation is added for it.
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T03:11:27Z): `SKILL.md` restored
+  from its pre-mutation copy, byte-equal to that copy and to the committed blob
+  `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5`. The tree address, taken twice, returned to the
+  hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test hash still recomputes to
+  `c7e9ad69…bff2b1`.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
+- Round 2: GREEN result: exit 0; 1 test passed, and the verbose output names this row's selector as passing, with the other three `it` entries left out by the filter (1 passed, 3 skipped). The restored run, taken at 2026-09-25T03:11:31.927Z on the tree named by `Round 2: Revision`, which was the same before and after the run, with no other vitest process present at either capture. The step 3c mutation is this row's `Oracle proof`, so Phase Green step 2a is not repeated.
+
+```text
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 86ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  12:11:37
+   Duration  731ms (transform 113ms, setup 148ms, import 33ms, tests 88ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T03:11:48.024Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ### TDD-0111
 
 - Renumbered: `TDD-0045` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0111
 - Layer: Integration
@@ -1715,6 +2624,24 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
   after it as history. The surface exists and states the predicate wrongly: the three files each tie the stop to a `consultation-needed` work-log entry, and the playbook and the triage step do not state all three steps. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+02c1adf21cbbffe4ed7f6a0f8bd7b078b481dc473e03f751ad3101b0b3df27f6 at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:14:24Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:18Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, and once more after the gate's run. The test hash of `spec0013ApprovalStop.test.ts` recomputed in the gate form to `b79a5271…3256cbf`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. `SKILL.md` hashes to `481582c2…2485f1`. Its only difference from blob `c35700bf1` is the recorded one-line edit of the stop bullet at line 96. TDD-0114's mutation is no longer in the tree. The vitest process under another worktree reads that worktree's assets, not this tree's.
+  - Satisfied-by: three named units in three paths under `skills/qfai-sdd/`, plus the property each holds: it states all three stop steps. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row's `Evidence` cell is `-`, so there is no `Pre-split-evidence: implement`, and TC-0013-0039 declares `Level: integration`. Each unit is a bounded predicate.
+  - Ownership: the mutation edits only the stop bullet of the `SKILL.md` unit `Satisfied-by` names, in the row's `Owning module`. No manifest file is touched.
+  - Discrimination: removing "Leave `Approved By` as `-`" removes exactly one of the three steps from one of the three units. The recorded and reproduced result is exactly the one missing cell, `SKILL.md: leave Approved By as -`: the other two steps of that unit and all three steps of both reference units still pass, and no other text of the section reads "Approved By as -" once backticks are stripped. The failure is not a load failure. The module loaded, the read-proof at line 102 passed (each stop unit found exactly once), and the failure is the assertion at line 111 inside this row's selector, with the file's other `it` skipped.
+  - Observation: the gatekeeper re-ran the recorded command on this tree, and it exited 1 with the recorded failure.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) approved a single mutation, holds, and has no open REVISE.
+  - Advisory, non-blocking: the boundary is nine cells, three steps in three units. The mutation exercises one of them. The other eight run through the same unit extraction, normalisation and pattern loop, so the discrimination shown carries to them, but they have not been demonstrated one by one.
+  - Next: restore the bullet, confirm `SKILL.md` is byte-equal to blob `c35700bf1` and the tree is back at `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `SKILL.md` is byte-equal to blob `c35700bf1`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T03:15:31.347Z) exits 0, and its output names this selector as passing, with `1 passed | 1 skipped (2)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:18Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the step 3c stop-bullet edit (step 13), which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - The step 13 advisory stands: one of nine cells is exercised on its own. It does not block this GREEN.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Units, each found exactly once (S1 D5): `SKILL.md` ``### `--auto` and approval-required
   rows``; the bullet "- Triage rows requiring approval but lacking `Approved By`" of
   `references/sdd-execution-playbook.md`, up to the next top-level bullet; and step
@@ -2090,9 +3017,176 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. Each of the three stop units is found once, and each states all three steps.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf
+- Test manifest: `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: three units under `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/`. Each states: leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target.
+
+  | File | Unit |
+  | ---- | ---- |
+  | `SKILL.md` | ``### `--auto` and approval-required rows``, its "Stop the stage and hand the run back." item |
+  | `references/sdd-execution-playbook.md` | the item "Triage rows requiring approval but lacking `Approved By`" |
+  | `references/sdd-triage.md` | step "7. **Stop.**" |
+
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): in `SKILL.md`, change "Leave `Approved By` as `-`, do not enter Phase 0, and report" to "Do not enter Phase 0, and report". The selector must then fail at line 111, with `missing` equal to `["SKILL.md: leave Approved By as -"]`. With backticks stripped, no other text of that section reads "Approved By as -". The row's `Owning module`, and no manifest file.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:36:06.806Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `b79a5271…256cbf`. Two vitest processes this run did not start were running (PIDs 28172 and 25704). They had exited before their command lines could be read. The tree address was the same before and after the run, taken twice each time, so they did not change the addressed tree. Exit 0: the selector executed and passed, because each of the three stop units states all three steps. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 7ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  11:36:09
+   Duration  439ms (transform 71ms, setup 72ms, import 33ms, tests 9ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:36:16.731Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `b79a5271…256cbf`. No vitest process was running. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 7ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  11:36:19
+   Duration  334ms (transform 60ms, setup 60ms, import 29ms, tests 8ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies the predicate to break above, runs this row's selector, and records `Round 2: Falsifiability command`, `Round 2: Falsifiability result`, `Round 2: RED failure mode: falsifiability` and `Round 2: Falsifiability revision`;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0111`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `stop-steps-stated`. It equals the ledger's
+    `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches one of the
+    file's two `it` titles.
+  - The test hash recomputed in the gate form to the approved `b79a5271…256cbf`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, after
+    `TDD-0114`'s mutation had been reverted to the committed blob.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf
+  (gate form, taken at 2026-09-25T03:12:29.075Z before the mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value with the mutation
+  applied, since the mutation lands in no manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+- Round 2: Falsifiability result: exit 1; 1 test failed on the assertion at line 111 inside this row's selector, with `missing` equal to `["SKILL.md: leave Approved By as -"]`, and the file's other `it` left out by the filter (1 failed, 1 skipped). The read-proof at line 102 passed first: each file's stop unit was found exactly once. Run at 2026-09-25T03:12:50.507Z. The mutation is the predicate to break approved with the scope: in `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, the stop bullet's "Leave `Approved By` as `-`, do not enter Phase 0, and report" became "Do not enter Phase 0, and report". That bullet sits in the `SKILL.md` unit `Round 2: Satisfied-by` names, in the row's `Owning module`. The other two steps of that unit, and all three steps of the two reference units, still held. Before the mutation, the file was byte-equal to its committed blob `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5` (SHA-256 `883bb9d8…1817d5`). The mutation is in the tree for the gate.
+
+```diff
+@@ -95,3 +95,3 @@ approval-required row.
+ - **Never synthesize an `Approved By` value.** `Approved By` is the only trace that a spec deletion or merge was authorized, so an invented approver is a false audit record — worse than a stopped run.
+-- **Stop the stage and hand the run back.** Leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target. Ask for a rerun without `--auto`. The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run, not a gate to route
++- **Stop the stage and hand the run back.** Do not enter Phase 0, and report every unapproved row with its Operation and target. Ask for a rerun without `--auto`. The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run, not a gate to route
+   around.
+```
+
+```text
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 10ms
+   → expected [ 'SKILL.md: leave Approved By as -' ] to deeply equal []
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+AssertionError: expected [ 'SKILL.md: leave Approved By as -' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "SKILL.md: leave Approved By as -",
++ ]
+
+ ❯ tests/integration/spec0013ApprovalStop.test.ts:111:21
+    109|       );
+    110|     });
+    111|     expect(missing).toEqual([]);
+       |                     ^
+    112|   });
+    113|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+   Start at  12:12:52
+   Duration  314ms (transform 58ms, setup 57ms, import 28ms, tests 12ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+02c1adf21cbbffe4ed7f6a0f8bd7b078b481dc473e03f751ad3101b0b3df27f6
+  (the mutated tree, taken twice before and twice after the run, all four equal.
+  `git status --short .qfai/decisions` printed nothing at every capture. At the capture
+  before the mutation, a vitest process this run did not start (PID 37916) was running
+  under another worktree, `.claude/worktrees/issue-pr-cycle-496f7a`. It cannot write this
+  tree, and none was present at the captures around the run.)
+
+- Advisory from the step 3c gate (`qa-gatekeeper` `impl13-qa`, Work Orders step 13), not
+  blocking: the mutation falsifies one of the nine step-by-unit cells (three steps in each of
+  three units). The other eight go through the same unit extraction and the same pattern loop,
+  so no further mutation is added for them.
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T03:15:27Z): `SKILL.md` restored
+  from its pre-mutation copy, byte-equal to that copy and to the committed blob
+  `c35700bf1d8a6625058dd15a0ec3ca0f2afd3de5`. The tree address, taken twice, returned to the
+  hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test hash still recomputes to
+  `b79a5271…256cbf`.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+- Round 2: GREEN result: exit 0; 1 test passed, and the verbose output names this row's selector as passing, with the file's other `it` left out by the filter (1 passed, 1 skipped). The restored run, taken at 2026-09-25T03:15:31.347Z on the tree named by `Round 2: Revision`, which was the same before and after the run, with no other vitest process present at either capture. The step 3c mutation is this row's `Oracle proof`, so Phase Green step 2a is not repeated.
+
+```text
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 7ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  12:15:33
+   Duration  322ms (transform 57ms, setup 59ms, import 27ms, tests 8ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T03:15:45.167Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ### TDD-0115
 
 - Renumbered: `TDD-0049` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Re-completion: `/qfai-atdd` run started 2026-09-25T02:23:00.972Z takes this row again in `#### Round 2`. The `Branch`, `Status`, `Scope approval`, `Handoff` and `qa-gatekeeper` lines above `#### Round 1` describe Round 1.
 
 - TDD-ID: TDD-0115
 - Layer: Integration
@@ -2104,6 +3198,25 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
   after it as history. The surface exists and states the predicate wrongly: all three files name a `consultation-needed` work-log entry. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- qa-gatekeeper: PASS x2 (instance `impl13-qa`, Round 2 — qa-gatekeeper#1, `/qfai-implement` step 3c falsifiability gate, routing phase `red`, on the mutated tree, reviewed revision working-tree+ca3b1337092a21175d388c52b61acc719369b6658c9bffe8a54503ddc3dc5ce1 at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:18:17Z; qa-gatekeeper#2, build-phase GREEN + Oracle proof, reviewed revision working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b at HEAD 1e09c3067fae3588c4763a9f6f9a17681948c5c0, 2026-09-25T03:22:21Z)
+  - Freshness: the tree address recomputed twice to `Round 2: Falsifiability revision`, and once more after the gate's run. The test hash of `spec0013ApprovalStop.test.ts` recomputed in the gate form to `b79a5271…3256cbf`, the value the Round 2 scope PASS covers, and the test file is unchanged against HEAD. `references/sdd-triage.md` hashes to `969e33eb…4f96b4`. Its only difference from blob `12763a3f2` (`9eeaa3a4…dbcf86`, recomputed from HEAD) is the recorded append to step 7. `SKILL.md` hashes to its committed `883bb9d8…1817d5`, so TDD-0111's mutation is no longer in the tree.
+  - Satisfied-by: three paths under `skills/qfai-sdd/`, plus the property each whole text holds: it contains neither `work-log`, in any case, nor `consultation-needed`. This form is open to an `Integration` row handed over by `/qfai-atdd`. The row's `Evidence` cell is `-`, so there is no `Pre-split-evidence: implement`, and TC-0013-0039 declares `Level: integration`.
+  - Ownership: the mutation appends one sentence to step 7 of `references/sdd-triage.md`, one of the three files `Satisfied-by` names, in the row's `Owning module`. No manifest file is touched. A fixed-string search by the gatekeeper finds `work-log` in that file only and `consultation-needed` in none, so the failure is caused by the mutation alone.
+  - Discrimination: the appended sentence names a work-log entry, which `no-worklog-entry-named` forbids. The failure is not a load failure. The module loaded, the read-proof at line 119 passed (each stop unit, the triage step-7 unit included, still found exactly once), and the failure is the assertion at line 126 inside this row's selector, with `found` equal to `["references/sdd-triage.md: work-log"]`, and the file's other `it` skipped.
+  - Overlap with TDD-0112: that predicate is contained in this one. Only this row's selector runs here, and this mutation does not touch the file TDD-0112 reads for its heading, so the failing output names only this row's selector.
+  - Observation: the gatekeeper re-ran the recorded command on this tree, and it exited 1 with the recorded failure.
+  - Command: `Round 2: Falsifiability command` is character for character the classification command, which the hand-off also names as the GREEN command.
+  - Scope: not adjudicated here. The Round 2 `delivery-planner` PASS (`atdd13-scope`) approved a single mutation, holds, and has no open REVISE.
+  - Advisory, non-blocking: the mutation exercises the `work-log` token in one of three files. The `consultation-needed` token and the other two files run through the same per-file loop, so the discrimination shown carries to them, but they have not been demonstrated on their own.
+  - Next: remove the appended sentence, confirm `references/sdd-triage.md` is byte-equal to blob `12763a3f2` and the tree is back at `working-tree+71d85ec5…d09bcfd3b`, and take the restored run as `Round 2: GREEN command` / `Round 2: GREEN result`.
+  - Build gate (qa-gatekeeper#2, `/qfai-implement` item 5, Phase Green steps 2 and 3): PASS.
+    - Tree: the address recomputed to `Round 2: Revision` before and after the gatekeeper's runs. `git status` shows no production change. `references/sdd-triage.md` is byte-equal to blob `12763a3f2`, so the restore after step 3c is complete. The test hash is unchanged.
+    - GREEN: `Round 2: GREEN command` equals `Round 2: Falsifiability command` character for character, and its `-t` filter is this row's `Selector`. The recorded run (2026-09-25T03:19:28.411Z) exits 0, and its output names this selector as passing, with `1 passed | 1 skipped (2)` and nothing failed. The gatekeeper re-ran it on this tree at 2026-09-25T03:22:21Z: exit 0, same selector passing, same counts.
+    - No production code: branch 2, so Phase Green writes nothing. The GREEN is the text `Round 2: Satisfied-by` names, restored to its committed blob. Item 4 is waived under `red-not-observable.md`.
+    - Oracle proof: the step 3c triage step-7 append (step 15), which passed the Oracle Strength Check at the falsifiability gate. Each mutation was in the owned code, failed on this row's assertion and not at load, and ran on the GREEN command. Step 2a is exempt on branch 2.
+    - Scope: the run executes this row's selector only, and the file's other entries are skipped by the filter. The GREEN asserts nothing beyond the row's one boundary, and the `delivery-planner` Round 2 PASS is unchanged. Item scope is not adjudicated here.
+    - The step 15 advisory stands: `consultation-needed` and the other two files are not exercised on their own. It does not block this GREEN.
+    - Ledger: the row is still `red`, so `red -> green` follows this gate, as ordered. The `Evidence` cell is still `-`. It must be filled in the grammar of `evidence-cell-grammar.md` when the row reaches `green`, where `TDDLIST_EVIDENCE_EMPTY` would fire on `-`.
 - Read-proof (S1 D5): each file's stop unit, as in `TDD-0111`, is found exactly once.
 - Oracle (S1 D11, absence), over each whole file: no match of "work-log"
   case-insensitively, and no `consultation-needed` (case-sensitive).
@@ -2447,6 +3560,169 @@ AssertionError: expected [ …(2) ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
+#### Round 2
+
+- Branch: falsifiability (branch 2), confirmed: the classification run and the P4b re-run below both passed. The text this row asserts on is in the tree, and DR-0013-0017 (grilling decision D6) rules out reverting it to manufacture a RED.
+- Expected classification result, from reading the tree and not from a run: pass. Each of the three stop units is found once, and no one of the three files contains `work-log` in any case, or `consultation-needed`.
+- Planned classification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"` (also the falsifiability and GREEN command)
+- Test hash at hand-off for scope approval (gate form): b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf
+- Test manifest: `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` alone. The file imports only `node:fs/promises`, `node:path` and `vitest`, and reads no test-owned fixture, snapshot or helper.
+- Tree at hand-off for scope approval: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b (HEAD `1e09c3067fae3588c4763a9f6f9a17681948c5c0`, working tree clean; taken twice with equal results, with no vitest process running)
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the selector matches no other `it` in the file.
+- Round 2: Satisfied-by: `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` under `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/`: the whole text of each contains neither `work-log`, in any case, nor `consultation-needed`.
+- Predicate to break (approved with the scope, for `/qfai-implement` Phase Red step 3c): in `references/sdd-triage.md` step 7, append " Write no work-log entry." after "so the approvals can be collected.". The selector must then fail at line 126, with `found` equal to `["references/sdd-triage.md: work-log"]`. The step-7 unit is still found once. The row's `Owning module`, and no manifest file.
+- Scope approval (`delivery-planner`), Round 2:
+  - Approver: `delivery-planner`, instance `atdd13-scope`
+  - Verdict: PASS
+  - Time: relayed by the coordinator; recorded here at 2026-09-25T02:33:19.854Z, before any run of this selector
+  - Covers: test hash `b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf`, at tree `working-tree+71d85ec5…d09bcfd3b`, which the planner recomputed, and the single selector entry above. If the test file, a manifest entry or the selector changes, this approval lapses.
+  - Reasons: the `Satisfied-by` above is a legal form on an `Integration` row handed over by `/qfai-atdd`, and the mutation is minimal. The planner found no oracle weakening against `e37b2fa82`, and accepted the overlap between the `TDD-0112` and `TDD-0115` predicates as structural.
+  - Advisories taken: the index cells of `## Ledger rows advanced` are updated after classification, and `TDD-0110`'s second mutation is part of its step 3c proposal.
+- Classification run (branch choice; not RED evidence): run at 2026-09-25T02:36:39.436Z, after the scope PASS recorded at 2026-09-25T02:33:19.854Z. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `b79a5271…256cbf`. No vitest process was running. Exit 0: the selector executed and passed, because none of the three files contains `work-log` or `consultation-needed`. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged. A first run that passes is what puts the row on branch 2.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 11ms
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  11:36:41
+   Duration  479ms (transform 86ms, setup 83ms, import 38ms, tests 13ms, environment 0ms)
+exit=0
+```
+
+- P4b re-run (`red-provenance.md` branch 2), immediately before handover: run at 2026-09-25T02:36:48.598Z. Same command, tree and test hash, with the same captures before and after it. Before the run, `git status --short .qfai/decisions` printed nothing; the tree address, taken twice, was `working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b` both times; and the test hash recomputed to the approved `b79a5271…256cbf`. No vitest process was running. Exit 0: the branch still holds. After the run, `.qfai/decisions` still printed nothing and the address, taken twice, was unchanged.
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 5ms
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  11:36:50
+   Duration  349ms (transform 63ms, setup 62ms, import 33ms, tests 6ms, environment 0ms)
+exit=0
+```
+
+- Handoff: ready for `/qfai-implement` Phase Red step 3c, reached through step 3b, naming this row. Branch `falsifiability`, with its trio not yet written, which is the ordinary case. Step 3c:
+  1. takes `Round 2: RED test hash` and its fenced `Round 2: RED test manifest` before the mutation; the mutation lands in no manifest file;
+  2. applies the predicate to break above, runs this row's selector, and records `Round 2: Falsifiability command`, `Round 2: Falsifiability result`, `Round 2: RED failure mode: falsifiability` and `Round 2: Falsifiability revision`;
+  3. routes `qa-gatekeeper` while the mutation is in the tree, then reverts and takes the restored run as the GREEN. The row moves `todo -> red -> green` on those two runs.
+  - Stage gate P1a first: `/qfai-implement` `Phase: Skeleton` is re-run for this invocation before any mutation run.
+  - Ledger cells from this entry: `Test file` and `Selector` from the row identity above, equal to the ledger's cells today; `Evidence` pointing at `.qfai/evidence/atdd-spec-0013.md#tdd-0115`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+  - No production file is changed by this stage.
+
+- Step 3b (`/qfai-implement`, run started 2026-09-25T02:45:32.177Z, backend-engineer
+  `impl13-author`): entry verified.
+  - Branch `falsifiability`, and Round 2 holds `Satisfied-by` with no trio and no
+    `qa-gatekeeper` verdict on one, so the row goes to step 3c.
+  - The selector is one entry over one boundary, `no-worklog-entry-named`. It equals the
+    ledger's `Selector`, `new RegExp(selector).test(selector)` is `true`, and it matches one
+    of the file's two `it` titles.
+  - The test hash recomputed in the gate form to the approved `b79a5271…256cbf`, and the tree
+    address, taken twice, to the hand-off tree `working-tree+71d85ec5…d09bcfd3b`, after
+    `TDD-0111`'s mutation had been reverted to the committed blob.
+  - No ledger cell is written yet. Step 3c writes `todo -> red` on the `qa-gatekeeper` PASS.
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: b79a52718873fa0e2c0e8f39bae34f2dd1b7c41c04390809ea8005b7a3256cbf
+  (gate form, taken at 2026-09-25T03:16:25.808Z before the mutation, on
+  `working-tree+71d85ec5…d09bcfd3b`; it recomputed to the same value with the mutation
+  applied, since the mutation lands in no manifest file)
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
+```
+
+- Round 2: Falsifiability command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
+- Round 2: Falsifiability result: exit 1; 1 test failed on the assertion at line 126 inside this row's selector, with `found` equal to `["references/sdd-triage.md: work-log"]`, and the file's other `it` left out by the filter (1 failed, 1 skipped). The read-proof at line 119 passed first: each file's stop unit, the triage step-7 unit included, was found exactly once. Run at 2026-09-25T03:16:41.484Z. The mutation is the predicate to break approved with the scope: " Write no work-log entry." appended after "so the approvals can be collected." at the end of step 7 in `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, one of the three files `Round 2: Satisfied-by` names, in the row's `Owning module`. Before it, the file was byte-equal to its committed blob `12763a3f2c8627b00be259da33b8a8bb11707c2e` (SHA-256 `9eeaa3a4…dbcf86`), and `SKILL.md` was back at its committed blob `c35700bf1`. The mutation is in the tree for the gate.
+
+```diff
+@@ -179,7 +179,7 @@ and that none were added or dropped — in the `Rationale` column of the
+    `Approved By` as `-`, do not enter Phase 0, report every unapproved row
+    with its Operation and target, and report the `QFAI-TRIAGE-005` errors as
+    the reason the run stopped. Under `--auto`, also ask for a rerun without
+-   `--auto` so the approvals can be collected.
++   `--auto` so the approvals can be collected. Write no work-log entry.
+
+ ## Impact cascade (1 REQ → N rows)
+
+```
+
+```text
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 11ms
+   → expected [ Array(1) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "references/sdd-triage.md: work-log",
++ ]
+
+ ❯ tests/integration/spec0013ApprovalStop.test.ts:126:19
+    124|       ...(text.includes("consultation-needed") ? [`${name}: consultati…
+    125|     ]);
+    126|     expect(found).toEqual([]);
+       |                   ^
+    127|   });
+    128| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+   Start at  12:16:43
+   Duration  320ms (transform 58ms, setup 57ms, import 28ms, tests 12ms, environment 0ms)
+
+exit=1
+```
+
+- Round 2: Falsifiability revision: working-tree+ca3b1337092a21175d388c52b61acc719369b6658c9bffe8a54503ddc3dc5ce1
+  (the mutated tree, taken twice before and twice after the run, all four equal.
+  `git status --short .qfai/decisions` printed nothing at every capture, and no other
+  vitest process was running at any of them.)
+
+- Advisory from the step 3c gate (`qa-gatekeeper` `impl13-qa`, Work Orders step 15), not
+  blocking: the mutation falsifies only the `work-log` token, in one of the three files. The
+  `consultation-needed` token and the other two files go through the same loop, so no
+  further mutation is added for them.
+- Revert (after the `qa-gatekeeper` verdict, at 2026-09-25T03:19:21Z): `sdd-triage.md`
+  restored from its pre-mutation copy, byte-equal to that copy and to the committed blob
+  `12763a3f2c8627b00be259da33b8a8bb11707c2e`. The tree address, taken twice, returned to the
+  hand-off tree `working-tree+71d85ec5…d09bcfd3b`, and the RED test hash still recomputes to
+  `b79a5271…256cbf`. At that capture a vitest process this run did not start (PID 36352)
+  was running under another worktree, `.claude/worktrees/agent-a720c7f75857614b8`. It
+  cannot write this tree, and none was present at the capture after the GREEN.
+- Round 2: Revision: working-tree+71d85ec583954570142d6d9a1d20d6c8b45ac6fa67fb4e51a895030d09bcfd3b
+- Round 2: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
+- Round 2: GREEN result: exit 0; 1 test passed, and the verbose output names this row's selector as passing, with the file's other `it` left out by the filter (1 passed, 1 skipped). The restored run, taken at 2026-09-25T03:19:28.411Z on the tree named by `Round 2: Revision`, which was the same before and after the run. The step 3c mutation is this row's `Oracle proof`, so Phase Green step 2a is not repeated.
+
+```text
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 6ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  12:19:30
+   Duration  373ms (transform 77ms, setup 73ms, import 36ms, tests 8ms, environment 0ms)
+
+exit=0
+```
+
+- Ledger write: todo -> red at 2026-09-25T03:19:40.963Z, after the step 3c `qa-gatekeeper`
+  PASS, with `Test file` and `Selector` written from the row identity above (unchanged
+  values). `Evidence` stays `-` at `red`. `red -> green` waits for the build-phase
+  `qa-gatekeeper` gate on this GREEN, which the coordinator runs over all six rows.
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -2524,6 +3800,40 @@ that update: ✅ 85 / ⚠️ 119 / ❌ 312, `n/a` 30, across 546 scored cells �
 | 1 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): place decisions and consultations in existing spec or Change Request homes | AC-0013-0030; TC-0013-0038; shipped `qfai-sdd/SKILL.md` | S1 D1: add one short paragraph in Mandatory Outputs; reject a separate section | PASS |
 | 2 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): retain the three approval stop sites and their existing gates | AC-0013-0029; TC-0013-0039; shipped skill and two references | S1 D2: edit each existing stop and update the old assertion test; reject a new shared section | PASS |
 | 3 | backend-engineer | spec0013-impl | TDD-0110..TDD-0115 GREEN and Oracle proof | six ATDD RED entries; shipped skill and references | The six row sections above; 16 restored GREEN tests, seven assertion-failing Oracle runs, byte-equal restoration | PASS |
+
+### /qfai-atdd run 2026-09-25T02:23:00.972Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | atdd13-author | Preflight, RED test hashes and scope submission, TDD-0110 … TDD-0115 | D6 (DR-0013-0017); `spec0013RecordHomes.test.ts`, `spec0013ApprovalStop.test.ts` | Run block and `#### Round 2` stubs; hashes `c7e9ad69…bff2b1` and `b79a5271…256cbf` at `working-tree+71d85ec5…d09bcfd3b` | PASS |
+| 2 | delivery-planner | atdd13-scope | Scope approval TDD-0110 … TDD-0115, Round 2 | the six `#### Round 2` stubs; both test hashes; tree `working-tree+71d85ec5…d09bcfd3b` | Scope PASS for all six: both hashes and the tree recomputed; each `Satisfied-by` legal, TDD-0114's path and property included; each mutation minimal; the TDD-0112 / TDD-0115 overlap structural; no oracle weakening against `e37b2fa82`. Advisories: update the index cells after classification; make TDD-0110's second mutation part of its proposal | PASS |
+| 3 | acceptance-test-engineer | atdd13-author | Classification runs and P4b re-runs, TDD-0110 … TDD-0115 | the scope PASS of step 2; both approved test hashes | Twelve runs, one at a time, all exit 0, each on the approved hash; tree `working-tree+71d85ec5…d09bcfd3b` at every capture; `.qfai/decisions` clean at every capture. All six rows on branch 2, each with its `Round 2: Satisfied-by` and a step 3c hand-off; index cells set to `falsifiability` | PASS |
+
+### /qfai-implement — run started 2026-09-25T02:45:32.177Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | backend-engineer | impl13-author | grilling(-@2026-09-25T02:45:32.177Z/none): none | D6 (DR-0013-0017); the six `#### Round 2` hand-offs | Preflight confidence high; no session opened | PASS |
+| 2 | backend-engineer | impl13-author | Preflight, Skeleton re-run, and step 3b / 3c for TDD-0110 | the `/qfai-atdd` run started 2026-09-25T02:23:00.972Z; `.qfai/evidence/skeleton.md` | Run block above; Skeleton exit 0; `### TDD-0110` `#### Round 2` step 3b and 3c fields, revert to the committed blob, restored GREEN exit 0 on `working-tree+71d85ec5…d09bcfd3b`; ledger `todo -> red` after the step 3 PASS | PASS |
+| 3 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0110 (step 3c, phase `red`) | `### TDD-0110` `#### Round 2` falsifiability trio, `Satisfied-by` and scope PASS; mutated tree `working-tree+c1b7f0cf…df17f`; `qfai-sdd/SKILL.md` line 369; test hash `c7e9ad69…bff2b1`; mutation 1 log `f0110-m1.txt` | PASS: both mutations edit only the `Satisfied-by` paragraph in the Owning module. Each breaks one half of `record-homes-stated` (mutation 1: `consultationOrDiscovery: false`; mutation 2: `decision: false`), on the assertion at line 88 after the read-proof passed. Mutation 2 reproduced by the gatekeeper's own run, exit 1. Test hash unchanged. Command equals the GREEN command | PASS |
+| 4 | delivery-planner | impl13-plan | Plan phase: confirm the named-`TDD-ID` handover, TDD-0110 … TDD-0115 | `tdd/test-list.md` rows TDD-0110 … TDD-0115; the six `#### Round 2` hand-offs; `qfai-implement/references/plan-phase.md` | PASS, taken after the Skeleton re-run and TDD-0110's step 3b / 3c runs and before any ledger write; TDD-0110's gate was already dispatched. Constraint: step 3c strictly serial across the six rows, each mutation reverted to the committed blob before the next row's is applied | PASS |
+| 5 | backend-engineer | impl13-author | Step 3b / 3c for TDD-0112 | `### TDD-0112` `#### Round 2` hand-off; TDD-0110's mutation reverted to blob `c35700bf1` | `### TDD-0112` `#### Round 2` step 3b and 3c fields; exit 1 at line 99 on the approved mutation at `working-tree+c8e93ce8…a7442`; after the step 7 PASS, revert to the committed blob, restored GREEN exit 0 on `working-tree+71d85ec5…d09bcfd3b`, ledger `todo -> red` | PASS |
+| 6 | test-design-analyst | impl13-tda | Plan phase: coverage and layer-ownership pass, TDD-0110 … TDD-0115 (mandatory, non-blocking) | `tdd/test-list.md` at HEAD `1e09c3067`; spec-0013's full `TC-*` / `US-*` / `CON-API-*` set | PASS: no coverage or layer-ownership defect. Findings are under the run block's `Plan phase` bullet in this file, since all six rows are `Integration` | PASS |
+| 7 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0112 (step 3c, phase `red`) | `### TDD-0112` `#### Round 2` falsifiability trio, `Satisfied-by` and scope PASS; mutated tree `working-tree+c8e93ce8…a7442`; `qfai-sdd/SKILL.md` (`c25d1e6c…2e360`, blob `c35700bf1` before); test hash `c7e9ad69…bff2b1` | PASS: the two-line insertion lands only in the file `Satisfied-by` names, in the Owning module, and breaks exactly the `no-worklog-section` absence. The read-proof at line 97 passed, then the assertion at line 99 failed receiving `["## Work-log entries"]`, reproduced by the gatekeeper's own run, exit 1. The TDD-0115 overlap is structural, and its selector is in another file and not run. Test hash unchanged. Command equals the GREEN command | PASS |
+| 8 | backend-engineer | impl13-author | Step 3b / 3c for TDD-0113 | `### TDD-0113` `#### Round 2` hand-off; TDD-0112's mutation reverted to blob `c35700bf1` | `### TDD-0113` `#### Round 2` step 3b and 3c fields; exit 1 at line 110 on the approved mutation at `working-tree+83151f46…d7747`; after the step 9 PASS, revert to the committed blob, restored GREEN exit 0 twice on `working-tree+71d85ec5…d09bcfd3b` (repeated because vitest processes this run did not start were present), ledger `todo -> red`. The `Round 2: GREEN result` wording of TDD-0110, TDD-0112 and TDD-0113 changed from a bare "skipped" to the counted form, which the gate's passing-result check requires | PASS |
+| 9 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0113 (step 3c, phase `red`) | `### TDD-0113` `#### Round 2` falsifiability trio, `Satisfied-by` and scope PASS; mutated tree `working-tree+83151f46…d7747`; `qfai-sdd/SKILL.md` (`b152dc21…507254`, blob `c35700bf1` before); test hash `c7e9ad69…bff2b1` | PASS: the two-line insertion lands only in the file `Satisfied-by` names, in the Owning module, and breaks exactly the `no-pending-promotion-example` absence. The read-proof at line 108 passed, then the assertion at line 110 failed receiving the inserted line, reproduced by the gatekeeper's own run, exit 1. Test hash unchanged. Command equals the GREEN command | PASS |
+| 10 | backend-engineer | impl13-author | Step 3b / 3c for TDD-0114 | `### TDD-0114` `#### Round 2` hand-off; TDD-0113's mutation reverted to blob `c35700bf1` | `### TDD-0114` `#### Round 2` step 3b and 3c fields; exit 1 at line 130 on the approved mutation at `working-tree+063d31c7…91d67`; after the step 11 PASS, revert to the committed blob, restored GREEN exit 0 on `working-tree+71d85ec5…d09bcfd3b`, ledger `todo -> red`; the step 11 advisory on the untested `worklog-entry.schema.md` token recorded, with no mutation added | PASS |
+| 11 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0114 (step 3c, phase `red`) | `### TDD-0114` `#### Round 2` falsifiability trio, `Satisfied-by` over `assistant/**` and scope PASS; mutated tree `working-tree+063d31c7…91d67`; `qfai-sdd/SKILL.md` (`bf6295f5…d16944`, blob `c35700bf1` before); test hash `c7e9ad69…bff2b1` | PASS: the scan covers the whole tree, and the read-proof shows the walk reached both skills. The mutation stays in `skills/qfai-sdd/**`, inside `Satisfied-by` and the Owning module, and is the only file the gatekeeper's own search finds. The assertion at line 130 failed with `found` `["skills/qfai-sdd/SKILL.md: .qfai/steering/"]`, reproduced by the gatekeeper's own run, exit 1. Test hash unchanged. Command equals the GREEN command. Advisory: the `worklog-entry.schema.md` token is not exercised on its own. The Round 2 GREEN result rewording on TDD-0110/0112/0113 postdates steps 3, 7 and 9 and changes none of the fields they judged | PASS |
+| 12 | backend-engineer | impl13-author | Step 3b / 3c for TDD-0111 | `### TDD-0111` `#### Round 2` hand-off; TDD-0114's mutation reverted to blob `c35700bf1` | `### TDD-0111` `#### Round 2` step 3b and 3c fields; exit 1 at line 111 on the approved mutation at `working-tree+02c1adf2…f27f6`; after the step 13 PASS, revert to the committed blob, restored GREEN exit 0 on `working-tree+71d85ec5…d09bcfd3b`, ledger `todo -> red`; the step 13 advisory on the eight cells not mutated recorded, with no mutation added | PASS |
+| 13 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0111 (step 3c, phase `red`) | `### TDD-0111` `#### Round 2` falsifiability trio, `Satisfied-by` (three units) and scope PASS; mutated tree `working-tree+02c1adf2…27f6`; `qfai-sdd/SKILL.md` (`481582c2…2485f1`, blob `c35700bf1` before); test hash `b79a5271…3256cbf` | PASS: the one-line edit of the `SKILL.md` stop bullet lands only in a unit `Satisfied-by` names, in the Owning module. It removes exactly one step, and `missing` is exactly `["SKILL.md: leave Approved By as -"]`, with the other eight cells still holding. The read-proof at line 102 passed and the assertion at line 111 failed, reproduced by the gatekeeper's own run, exit 1. Test hash unchanged. Command equals the GREEN command. Advisory: one of nine cells is exercised on its own | PASS |
+| 14 | backend-engineer | impl13-author | Step 3b / 3c for TDD-0115 | `### TDD-0115` `#### Round 2` hand-off; TDD-0111's mutation reverted to blob `c35700bf1` | `### TDD-0115` `#### Round 2` step 3b and 3c fields; exit 1 at line 126 on the approved mutation of `references/sdd-triage.md` at `working-tree+ca3b1337…dc5ce1`; after the step 15 PASS, revert to the committed blob `12763a3f2`, restored GREEN exit 0 on `working-tree+71d85ec5…d09bcfd3b`, ledger `todo -> red`; the step 15 advisory on the tokens and files not mutated recorded, with no mutation added | PASS |
+| 15 | qa-gatekeeper | impl13-qa | Falsifiability gate TDD-0115 (step 3c, phase `red`) | `### TDD-0115` `#### Round 2` falsifiability trio, `Satisfied-by` (three files) and scope PASS; mutated tree `working-tree+ca3b1337…c5ce1`; `qfai-sdd/references/sdd-triage.md` (`969e33eb…4f96b4`, blob `12763a3f2` before); `SKILL.md` at its committed blob; test hash `b79a5271…3256cbf` | PASS: the one-sentence append to triage step 7 lands only in a file `Satisfied-by` names, in the Owning module, and it is the only hit of the gatekeeper's own search. The read-proof at line 119 passed and the assertion at line 126 failed with `found` `["references/sdd-triage.md: work-log"]`, reproduced by the gatekeeper's own run, exit 1. The TDD-0112 overlap is structural. Test hash unchanged. Command equals the GREEN command. Advisory: `consultation-needed` and the other two files are not exercised on their own | PASS |
+| 16 | qa-gatekeeper | impl13-qa | Build gate TDD-0110 (phase build, item 5) | `### TDD-0110` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 3's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `SKILL.md` at blob `c35700bf1` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 3 skipped (4)), re-run by the gatekeeper at 03:22:07Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. `red -> green` follows, with the `Evidence` cell filled | PASS |
+| 17 | qa-gatekeeper | impl13-qa | Build gate TDD-0112 (phase build, item 5) | `### TDD-0112` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 7's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `SKILL.md` at blob `c35700bf1` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 3 skipped (4)), re-run by the gatekeeper at 03:22:10Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. `red -> green` follows, with the `Evidence` cell filled | PASS |
+| 18 | qa-gatekeeper | impl13-qa | Build gate TDD-0113 (phase build, item 5) | `### TDD-0113` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 9's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `SKILL.md` at blob `c35700bf1` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 3 skipped (4)), re-run by the gatekeeper at 03:22:13Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. The untraced-process flag is cleared by the gatekeeper's clean re-run on the same address. `red -> green` follows, with the `Evidence` cell filled | PASS |
+| 19 | qa-gatekeeper | impl13-qa | Build gate TDD-0114 (phase build, item 5) | `### TDD-0114` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 11's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `SKILL.md` at blob `c35700bf1` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 3 skipped (4)), re-run by the gatekeeper at 03:22:16Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. `red -> green` follows, with the `Evidence` cell filled | PASS |
+| 20 | qa-gatekeeper | impl13-qa | Build gate TDD-0111 (phase build, item 5) | `### TDD-0111` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 13's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `SKILL.md` at blob `c35700bf1` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 1 skipped (2)), re-run by the gatekeeper at 03:22:18Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. `red -> green` follows, with the `Evidence` cell filled | PASS |
+| 21 | qa-gatekeeper | impl13-qa | Build gate TDD-0115 (phase build, item 5) | `### TDD-0115` `#### Round 2` GREEN pair and `Revision`; Oracle proof = step 15's falsifiability PASS; tree `working-tree+71d85ec5…d09bcfd3b` at HEAD `1e09c3067`; `references/sdd-triage.md` at blob `12763a3f2` | PASS: tree equals `Round 2: Revision` with no production change; GREEN command equals the falsifiability command and filters to this row's selector; recorded GREEN names the selector passing (1 passed, 1 skipped (2)), re-run by the gatekeeper at 03:22:21Z, exit 0. No production code on branch 2 (item 4 waived). Oracle proof passed. Scope stays inside the row. `red -> green` follows, with the `Evidence` cell filled | PASS |
 
 ## Cross-spec obligations
 
