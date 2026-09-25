@@ -627,6 +627,10 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (specSplitByCapability.ts:552 capability check dropped) working-tree+18cbf677… at HEAD b05f9c0ae; AssertionError at sddSkillSpec0013.test.ts:271:84; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 2055a3f7fe50cab6c5c9eeb3ca53e37c67b9e039670fd5dfb71205f29ef2dc86
+
 ### TDD-0111
 
 - TDD-ID: TDD-0111
@@ -675,6 +679,10 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (qfai-sdd SKILL.md:267 bullet deleted) working-tree+398b1495… at HEAD b05f9c0ae; toContain AssertionError at sddSkillSpec0013.test.ts:287:21; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row goes to review-fix
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120001000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): fa6264c954fe558af39f9a39202df22e8ab23943a4b6877e2608a7080599717b
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -707,6 +715,8 @@ every total.
 | 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
 | 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 and TDD-0111 refactor verify on the committed tree | #tdd-0110, #tdd-0111 | Refactor verify fields | PASS |
 | 8 | qa-gatekeeper | qa-gatekeeper#1, qa-gatekeeper#2 | /qfai-implement: TDD-0110 and TDD-0111 RED phase gate on the rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0110, #tdd-0111 | qa-gatekeeper fields | PASS |
+| 9 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120000000, review-20260925120001000 <!-- qfai:not-a-citation --> | REVISE |
+| 10 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120000000, review-20260925120001000 <!-- qfai:not-a-citation --> | PASS |
 
 ## Cross-spec obligations
 
