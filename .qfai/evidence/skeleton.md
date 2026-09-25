@@ -43,3 +43,9 @@ entrypoints; this repository has one.
   and whether it writes it correctly, belongs to `US-0003-0001`'s own test
   cases; asserting it here would be the predicate the phase forbids.
 - Skeleton cycles: 1 of 3
+- Skeleton re-run: `node scripts/smoke-qfai-cli.mjs` at
+  `7937fad2121f5174c479fa1eefcc4cb9f3d494e3`, for the `/qfai-implement` run
+  started 2026-09-25T03:05:15.811Z. It printed
+  `smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)`
+  and exited 0. The script's SHA-256 is unchanged. No gatekeeper verdict was
+  taken on this re-run.

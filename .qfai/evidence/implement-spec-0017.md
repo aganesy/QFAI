@@ -3626,3 +3626,70 @@ completion is declared.
 - `record:unchecked`, `TDD-0016`, `TDD-0030`, `TDD-0032`, `TDD-0033`, `TDD-0034`, `TDD-0035`, `TDD-0069`, `TDD-0070`, `TDD-0083`, Round 1: the ledger reached `refactor` before the RED-gate verdict was written, and each mutation was reverted before the gate saw it. The gatekeeper rebuilt each mutated tree from its recorded address and edit. For `TDD-0070` the ledger shows no `refactor -> red` edge for the Round 1 REVISE window; only the `qa-gatekeeper attempts` line records that verdict.
 - `record:unchecked`, `TDD-0032`, `TDD-0033`, `TDD-0034`, `TDD-0035`, Round 1: `Resumed-from-blocked ... blocked at todo` was reconstructed, not copied from `Blocked-By`, which held `-` before the resumption.
 - `record:unchecked`, `TDD-0070`, Round 1: the review pack `review-20260923120009000` holding the qa-gatekeeper#1 `REVISE` was written after that gate's Round 2 `PASS`, so the round that Round 2 follows carries the verdict that opened it. Its response file is the gatekeeper's own, re-issued by the same reviewer, stating when the verdict was given and when it was written into the pack.
+
+Open entries from the completion review of the `/qfai-implement` run started
+2026-09-25T03:05:15.811Z, attempt 1, pack `review-20260925130000000` <!-- qfai:not-a-citation -->.
+Two are repaired in place and say so; the first cannot be.
+
+- `record:unchecked`, `TDD-0062`, Round 1: the ledger moved to `refactor` before the RED gate answered, and the mutation was reverted before the gate saw it. The gate passed later on the tree it rebuilt. Grilling decision S1 of that run records the position that disagreed. Not repairable: the order is history.
+- `record:unchecked`, `TDD-0062`, Stage 0: the skeleton re-run was written here, under the plan phase, and not in `skeleton.md`. Repaired: `skeleton.md` now records the re-run under `qfai`.
+- `record:unchecked`, `TDD-0062`: the entry opened with the identity block from before `CR-20260924-0002` (the old test file and selector), which disagreed with the handover below it. Repaired: the block is kept verbatim in a fence under a note, so no field outside the fence names the old identity.
+
+Entries from the completion review of attempt 2, pack `review-20260925130010000` <!-- qfai:not-a-citation -->.
+Both are repaired in place.
+
+- `record:unchecked`, `TDD-0062`, Round 1: the change-request cycle was numbered Round 2, over a Round 1 that held only the hash and manifest of the first handover. That block was no RED/GREEN cycle and no review closed it. Repaired: the block is in the fence with the first handover, and every live field of the change-request cycle, the attempt-1 and attempt-2 review lines included, is prefixed `Round 1:`. This reverses grilling decision S1 of the `/qfai-implement` runs started 2026-09-25T03:05:15.811Z and 2026-09-25T03:32:07.281Z, which wrote the cycle into Round 2.
+- `record:unchecked`, `TDD-0062`, Round 1: the test-only replacement added a second copy of the proof, hash, GREEN, refactor verify and gate fields. Repaired: the superseded copies are in a fence under the "stale — test replaced" note, and each field is live once. `Falsifiability revision` and `RED failure mode` stay live beside `Replacement proof revision`.
+
+## Plan phase — /qfai-implement run started 2026-09-25T03:05:15.811Z
+
+The run takes one row by name, `TDD-0062`, from the `/qfai-atdd` handover in
+`atdd-spec-0017.md#tdd-0062`. Both plan-phase roles were taken inline by the
+agent that ran the invocation. Nothing was dispatched.
+
+### Stage 0
+
+- Change Request preflight: `CR-20260924-0002` is approved and applied, and
+  had already returned `TDD-0062` to `todo` with its id in `DR-ID`. No
+  unresolved Change Request in scope for spec-0017 names the row, so nothing
+  was reset or released.
+- Pre-split evidence marker pass: not run. It marks legacy `E2E` and `API`
+  rows, and this run moves one `Integration` row, which that marker never
+  licenses.
+- Skeleton: `node scripts/smoke-qfai-cli.mjs` re-run at
+  `7937fad2121f5174c479fa1eefcc4cb9f3d494e3`, printing
+  `smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)`
+  and exiting 0. The script's SHA-256 is still
+  `82f30997dc88e617531e5f59f86fd8b7c1793a134564853019366e590a639c1d`, the
+  value `skeleton.md` records. The gatekeeper verdict on this re-run is not
+  taken here.
+
+### `delivery-planner` — PASS
+
+The invocation's scope is fixed by the handover, so the plan confirms it and
+does not re-order anything.
+
+| Check | Finding |
+| ----- | ------- |
+| The row exists | `TDD-0062`, `Integration`, `TC-0017-0062`, boundary `equal` |
+| It is not `blocked` | `todo`, `Blocked-By` is `-` |
+| Its tier needs no group | `Tier` is `-`, so no T1 group is owed |
+| Order | `TDD-0062` alone |
+| Parallel dispatch | none: one row |
+
+### `test-design-analyst` — PASS, one note
+
+Read against the spec's whole obligation set rather than the rows:
+
+- All 93 test cases in `06_Test-Cases.md` have at least one row. Their levels
+  are `integration` and `unit`, and every `integration` case has an
+  `Integration` row.
+- The 9 user stories have 9 `E2E` rows. The spec binds no API contract, and
+  the project has no `.qfai/contracts/api/` directory.
+- No row cites an obligation its `Layer` does not own.
+- `TDD-0062`'s selector holds one boundary: the test compares every slice
+  surface with the runner project set. The exact count of seven is
+  `TDD-0105`'s boundary, on its own `it`.
+
+Note, not a finding against this row: `TDD-0105` shares the test case and is
+still `todo`, with a handover from the run that applied `CR-20260924-0002`.

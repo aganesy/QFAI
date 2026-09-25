@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isRecord,
   jobSteps,
   matrixSlices,
   perSliceScriptEntries,
@@ -10,12 +11,21 @@ import {
   runnerProjects,
   SLICED_JOBS,
   sorted,
+  workflowJob,
 } from "../helpers/spec0017WorkflowSurfaces.js";
 
 describe("spec-0017 slice alignment acceptance", () => {
   it("TC-0017-0062 (TDD-0062): agrees across the runner, scripts, CI and release declarations", () => {
     const projects = sorted(runnerProjects());
     for (const { workflow, job } of SLICED_JOBS) {
+      // An `include` or `exclude` beside `slice` changes the legs that run
+      // without changing the list, so the matrix may hold no other key.
+      const strategy = workflowJob(workflow, job)["strategy"];
+      const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+      expect(
+        isRecord(matrix) ? Object.keys(matrix) : matrix,
+        `${workflow}#${job} matrix keys`,
+      ).toEqual(["slice"]);
       expect(sorted(matrixSlices(workflow, job)), `${workflow}#${job}`).toEqual(projects);
     }
     expect(sorted(releaseShapeSlices())).toEqual(projects);
