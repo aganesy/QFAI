@@ -573,9 +573,16 @@ function literalPrefix(area: string): string {
   return glob < 0 ? area : area.slice(0, glob);
 }
 
+// One spelling per path: forward slashes, no leading `./`, no doubled or trailing separator.
+function normalizeArea(area: string): string {
+  return path.posix.normalize(area.replaceAll("\\", "/")).replace(/\/+$/, "");
+}
+
 // SIMPLIFIED: two write areas overlap when one's literal prefix contains the other's.
 // Lift when: a glob pair that shares no path is refused and the refusal is observed.
-function areasOverlap(left: string, right: string): boolean {
+function areasOverlap(leftArea: string, rightArea: string): boolean {
+  const left = normalizeArea(leftArea);
+  const right = normalizeArea(rightArea);
   const leftPrefix = literalPrefix(left);
   const rightPrefix = literalPrefix(right);
   const leftIsGlob = leftPrefix !== left;
@@ -589,7 +596,11 @@ function areasOverlap(left: string, right: string): boolean {
   );
 }
 
-function touchesProtectedSurface(area: string, protectedTargets: readonly string[]): boolean {
+function touchesProtectedSurface(
+  writtenArea: string,
+  protectedTargets: readonly string[],
+): boolean {
+  const area = normalizeArea(writtenArea);
   const prefix = literalPrefix(area);
   return (
     PROTECTED_PREFIXES.some(

@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A route proposal can no longer reach a protected path by spelling its
+  write area differently** (#2458). The accept-time check compared each write
+  area as written. So `./src/notify/**` was not refused against the protected
+  target `src/notify/keys.ts`, and `./.qfai/runs/**` was not refused as a
+  run record. The write area, and each `protectedTargets` path, is now
+  normalized first: forward slashes, no leading `./`, and no doubled or
+  trailing separator. The existing protected-surface case, `TDD-0019`, now
+  covers those spellings.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

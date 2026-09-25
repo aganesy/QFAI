@@ -245,6 +245,47 @@ it("TC-0018-0012 (TDD-0019): protected-surface", () => {
       { reason: "protected-surface", subject: "src/notify/**" },
     ),
   );
+
+  const spelledDifferently = [
+    "./src/notify/**",
+    "src\\notify\\**",
+    "src//notify/keys.ts",
+    "src/notify/",
+  ];
+  expect(
+    acceptRouting({
+      ...checkedProposal(),
+      proposedWriteScope: ["src/notifier/**", ...spelledDifferently],
+      protectedTargets: ["src/notify/keys.ts"],
+    }),
+  ).toEqual(
+    refused(...spelledDifferently.map((subject) => ({ reason: "protected-surface", subject }))),
+  );
+  expect(
+    acceptRouting({
+      ...checkedProposal(),
+      proposedWriteScope: ["src/notify/**", "src/notifier/**"],
+      protectedTargets: ["./src\\notify//keys.ts/"],
+    }),
+  ).toEqual(refused({ reason: "protected-surface", subject: "src/notify/**" }));
+
+  const fixedPathSpelledDifferently = [
+    "./.qfai/runs/**",
+    ".qfai\\runs\\**",
+    ".qfai//runs/**",
+    "./.qfai/runs",
+    "./.git/config",
+  ];
+  expect(
+    acceptRouting({
+      ...checkedProposal(),
+      proposedWriteScope: ["./src/notify/**", ...fixedPathSpelledDifferently],
+    }),
+  ).toEqual(
+    refused(
+      ...fixedPathSpelledDifferently.map((subject) => ({ reason: "protected-surface", subject })),
+    ),
+  );
 });
 
 it("TC-0018-0012 (TDD-0020): scope-escape", () => {
