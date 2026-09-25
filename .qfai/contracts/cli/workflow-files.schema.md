@@ -139,7 +139,7 @@ Realizes: `discussion-20260923171450572#REQ-0024`,
 | `scopeDigest`     | all              | The scope digest when it was recorded, leaving out the IDs SDD binds                                                         |
 | `recordedAt`      | all              | ISO-8601 UTC                                                                                                                 |
 | `requestDigest`   | `request_scope`  | As in `summary.json`                                                                                                         |
-| `policy`          | `project_policy` | `{ path, digest }` of the adopted policy, and the `effects` it allows                                                        |
+| `policy`          | `project_policy` | `{ path, digest }` of the adopted policy, and the `effects` it allows, from the effect set in [Format](#format)              |
 | `questionId`      | `human_decision` | The question answered                                                                                                        |
 | `question`        | `human_decision` | `{ text, options, selection }` as the question put them                                                                      |
 | `answer`          | `human_decision` | `{ optionIds }`, or `{ valueDigest }` for a free-text value, keyed as the request is                                         |
@@ -199,16 +199,17 @@ stages:
     after: [edit]
 ```
 
-| Key                  | Content                                                                      |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `route`              | The route, equal to the file's base name                                     |
-| `stages`             | A non-empty list                                                             |
-| `stages[].id`        | Unique within the plan                                                       |
-| `stages[].kind`      | A stage kind from the table below                                            |
-| `stages[].skill`     | The kind's skill. A `test_fix` stage lists both of its skills                |
-| `stages[].operation` | The kind's operation                                                         |
-| `stages[].when`      | A predicate                                                                  |
-| `stages[].after`     | The IDs of the stages it depends on. Absent for a stage that depends on none |
+| Key                  | Content                                                                                                                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `route`              | The route, equal to the file's base name                                                                                                                                            |
+| `stages`             | A non-empty list                                                                                                                                                                    |
+| `stages[].id`        | Unique within the plan                                                                                                                                                              |
+| `stages[].kind`      | A stage kind from the table below                                                                                                                                                   |
+| `stages[].skill`     | The kind's skill. A `test_fix` stage lists both of its skills                                                                                                                       |
+| `stages[].operation` | The kind's operation                                                                                                                                                                |
+| `stages[].when`      | A predicate                                                                                                                                                                         |
+| `stages[].after`     | The IDs of the stages it depends on. Absent for a stage that depends on none                                                                                                        |
+| `stages[].effects`   | Optional. The external effects the stage needs, each one of `push`, `pull-request`, `merge`, `deploy`, `production-migration` and `extra-spending`. The built-in plans declare none |
 
 The file carries no `schema_version`, no `$id`, no version marker and no internal
 identifier.
@@ -282,6 +283,8 @@ The core refuses a plan, as trigger (b), when:
 - `route` differs from the base name;
 - a kind, skill, operation or predicate is outside the vocabulary, or a skill or
   operation does not belong to its kind;
+- a stage's `effects` is not a list, or names an effect outside the set in
+  [Format](#format);
 - an `after` names a stage the plan lacks, or the stages form a cycle;
 - a stage cannot be reached from a stage with no `after`;
 - a stage of `direct`, `bugfix`, `bounded-change` or `feature` has no path to a

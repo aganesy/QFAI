@@ -97,6 +97,19 @@
   IDs are unchanged. TDD-0100 and TDD-0111 stay at todo; this CR goes in their
   DR-ID.
 
+- Change ID: DELTA-0008
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0009 option 1. A plan stage declares the external
+  effects it needs in an optional `effects` list (CLI-WFFILE `### Format`),
+  and a work order's `allowedEffects` are the declared effects the run's
+  `project_policy` also names. A `request_scope` authorizes no effect.
+  BR-0018-0053 and AC-0018-0020 drop the request path. TC-0018-0086 and
+  EX-0018-0053 name the stage declaration. TC-0018-0087's second boundary is
+  a push only the request names, which is not carried. IDs are unchanged.
+  TDD-0112 to TDD-0119 stay at todo; this CR goes in their DR-ID.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -566,3 +579,4 @@ through `finish`, so its example ends that way.
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user        | 2026-09-24T19:00:08Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/05_Examples.md`, `06_Test-Cases.md`                                                       | re-derive | user        | 2026-09-25T02:36:35Z |
 | CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/03..06`                                                                                   | re-derive | user        | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`                                   | re-derive | user        | 2026-09-25T03:23:20Z |

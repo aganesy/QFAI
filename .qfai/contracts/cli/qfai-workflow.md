@@ -331,6 +331,13 @@ result carries `authorization-restored`, a work order whose executor is
 instead: `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer`.
 Every other work order keeps its skill's profile.
 
+`scope.allowedEffects` holds each external effect the stage declares in its
+plan (CLI-WFFILE `### Format`, `stages[].effects`) that the run's
+`project_policy` authorization also names. An effect the stage declares and no
+`project_policy` names is left out. The stage runs without it, the core performs
+no external effect itself, and the completion report lists the effect as not
+requested.
+
 An orchestrated `/qfai-sdd` work order always carries a target, so a missing
 target never means every capability. A valid binding satisfies
 `/qfai-implement`'s hard-required `primarySpecId`.
@@ -528,7 +535,8 @@ Realizes: `discussion-20260923171450572#REQ-0008`,
   `request_scope` or by the run's binding. An `auto-decide` item needs none.
   `--auto` satisfies nothing.
 - Push, pull request, merge, deploy, a production migration and extra spending
-  each need a `project_policy` or a `request_scope` naming the effect.
+  each need a `project_policy` naming the effect. A `request_scope` authorizes
+  none of them, even when the request names one.
 - A routing-time CREATE approval is a `human_decision` bound to a
   `new_capability` slot. It is stale when the scope digest it was given under
   changes, when the approved capability text changes, or when a replan widens the

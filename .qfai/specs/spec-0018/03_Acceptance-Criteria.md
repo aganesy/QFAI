@@ -194,8 +194,9 @@ Scenario: A material risk stops routing for the operator
 # Source: discussion-20260923171450572#DAC-004-02
 Scenario: No external effect is implied by the entry
   Given a plan that would push, open a pull request, merge, deploy, migrate production or spend
-  When no project policy or explicit request names that effect
+  When no project policy names that effect
   Then no work order carries the effect
+  And a request that names the effect does not change that
 
 # AC-0018-0021: The operator's answer decides what the run does next
 # Parent: US-0018-0004
