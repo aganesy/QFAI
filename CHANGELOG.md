@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A quoted test title no longer marks a recorded command as unrun**
+  (#2437). The completion gate rejects a recorded command that says it did
+  not run, such as `npm test was not run`. It read the phrase anywhere in the
+  command, including a quoted argument. A command that selected a test titled
+  "A gate that did not run is reported unrun" was therefore read as a command
+  that never ran, and its row could not close. Quoted arguments are now left
+  out of that check. A negation outside the quotes is still rejected.
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
