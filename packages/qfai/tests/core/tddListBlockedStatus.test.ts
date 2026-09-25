@@ -695,6 +695,30 @@ describe("QFAI-TDDLIST-021 — a blocked row whose Change Request is settled", (
         "an approved intent request with no approved option",
         { status: "approved", appliedAt: "2026-08-03T00:00:00Z", changeClass: "intent" },
       ],
+      [
+        "a rejected request whose Resolution is only a dash",
+        { status: "rejected", resolution: "-" },
+      ],
+      [
+        "a rejected request whose Resolution lists only placeholders",
+        { status: "rejected", resolution: "- TBD\n-" },
+      ],
+      [
+        "a superseded request whose successor is not a Change Request id",
+        { status: "superseded", supersededBy: "the newer request" },
+      ],
+      [
+        "a request whose header gives Status twice",
+        { status: "open", preamble: "- Status: `rejected`" },
+      ],
+      [
+        "a request whose header gives ID twice",
+        { status: "rejected", preamble: "- ID: `CR-20260801-0001`" },
+      ],
+      [
+        "a superseded request whose header gives Superseded by twice",
+        { status: "superseded", preamble: "- Superseded by: `CR-20260801-0009`" },
+      ],
     ];
     it.each(cases)("says nothing for %s", async (_label, fields) => {
       const issues = await run(

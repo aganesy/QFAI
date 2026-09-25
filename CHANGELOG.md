@@ -126,6 +126,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
   another blocker as well report nothing.
 
+- **A Change Request counts as settled only when its record is complete**
+  (#2251). `QFAI-TDDLIST-021` now reads three record shapes as unresolved, and
+  stays silent on a row that waits on one:
+  - a `## Resolution` that holds only a placeholder such as `-` or `TBD`;
+  - a superseded request whose `Superseded by` is not a `CR-YYYYMMDD-NNNN` id;
+  - a header that gives `ID`, `Status` or a settlement field more than once.
+
+  The warning's expected state and the `/qfai-implement` reference now list
+  the full settled shape, and say that a row reference or a contract path in
+  the `Evidence` cell keeps the warning silent.
+
 - **The rest of spec-0003 states what `qfai init` and the shipped workflows
   do now** (#2203). Sixteen more statements still described the product before
   a deliberate change. They said init creates the artifact directories and a

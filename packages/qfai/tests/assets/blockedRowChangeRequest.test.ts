@@ -3,8 +3,8 @@
  *
  * `blocked` says the row cannot proceed until something is decided, and the
  * thing is named in the row: a `CR-*` whose record lives in `.qfai/decisions/`.
- * Once that record reaches a terminal `Status`, the block is over — but nothing
- * moves the row, and nothing reports it either. Six rows of one pack sat that
+ * Once that record is settled, the block is over — but nothing moves the row,
+ * and nothing reports it either. Six rows of one pack sat that
  * way for a month while their tests existed, carried their annotation and ran
  * in CI, and the ledger answered "what is left" with nineteen where nine were
  * open.
@@ -17,6 +17,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import {
+  type ChangeRequestHeader,
+  isChangeRequestSettled,
+  parseChangeRequestHeader,
+} from "../../src/core/decisionRecords.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -37,20 +43,19 @@ const SPECS = path.join(repoRoot, ".qfai", "specs");
  */
 const KNOWN_BLOCKED_OVER_A_DECISION: readonly string[] = [];
 
-/** The one `Status` a change request carries while it still blocks anything. */
-const OPEN = "open";
-
 const CHANGE_REQUEST = /CR-\d{8}-\d{4}/g;
 
-/** Every change request's recorded status, by id. */
-async function requestStatuses(): Promise<Map<string, string>> {
-  const statuses = new Map<string, string>();
+/**
+ * Every change request's parsed header, by declared id. Settledness is the
+ * validator's own predicate: an `approved` request whose `Applied at` is still
+ * empty is unresolved, and a row it blocks is legitimately blocked.
+ */
+async function requestStatuses(): Promise<Map<string, ChangeRequestHeader>> {
+  const statuses = new Map<string, ChangeRequestHeader>();
   for (const name of await readdir(DECISIONS)) {
     if (!name.startsWith("CR-") || !name.endsWith(".md")) continue;
-    const text = await readFile(path.join(DECISIONS, name), "utf-8");
-    const id = /- ID: `([^`]+)`/.exec(text)?.[1];
-    const status = /- Status: `([^`]+)`/.exec(text)?.[1];
-    if (id !== undefined && status !== undefined) statuses.set(id, status);
+    const header = parseChangeRequestHeader(await readFile(path.join(DECISIONS, name), "utf-8"));
+    if (header.id !== null) statuses.set(header.id, header);
   }
   return statuses;
 }
@@ -101,9 +106,9 @@ describe("a blocked row names a decision that is still open", () => {
     const decided = rows
       .flatMap(({ pack, tdd, requests }) =>
         requests
-          .map((id) => ({ id, status: statuses.get(id) }))
-          .filter(({ status }) => status !== undefined && status !== OPEN)
-          .map(({ id, status }) => `${pack} ${tdd} ${id} ${status}`),
+          .map((id) => ({ id, header: statuses.get(id) }))
+          .filter(({ header }) => header !== undefined && isChangeRequestSettled(header))
+          .map(({ id, header }) => `${pack} ${tdd} ${id} ${header?.status ?? ""}`),
       )
       .sort();
 

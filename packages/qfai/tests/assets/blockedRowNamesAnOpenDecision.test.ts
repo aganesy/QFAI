@@ -1,9 +1,9 @@
 /**
  * A ledger row held at `blocked` names a Change Request still open.
  *
- * `blocked` says the row waits on a decision. A Change Request at a terminal
- * `Status` is a decision somebody took, so a row still naming it reports work
- * as waiting on nothing — and the ledger is what a reader consults to answer
+ * `blocked` says the row waits on a decision. A settled Change Request is a
+ * decision somebody took, so a row still naming it reports work as waiting on
+ * nothing — and the ledger is what a reader consults to answer
  * "what is left". Six rows of one pack read that way while their own test files
  * said in their headers that both Change Requests were approved.
  *
@@ -23,20 +23,16 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  type ChangeRequestHeader,
+  isChangeRequestSettled,
+  parseChangeRequestHeader,
+} from "../../src/core/decisionRecords.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const SPECS = path.join(repoRoot, ".qfai", "specs");
 const DECISIONS = path.join(repoRoot, ".qfai", "decisions");
-
-/**
- * Every `Status` that means the Change Request has been decided.
- *
- * `open` is the only value that blocks. The rest are enumerated rather than
- * derived from "not open", because a status nobody wrote down is one nobody
- * reviewed — and reading an unrecognised value as terminal would release rows
- * on a typo.
- */
-const DECIDED = new Set(["approved", "rejected", "superseded", "applied", "withdrawn"]);
 
 /**
  * The rows already naming a decided Change Request.
@@ -49,9 +45,15 @@ const KNOWN_BLOCKED_BY_A_DECIDED_REQUEST: readonly string[] = [];
 
 const REQUEST_ID = /CR-\d{8}-\d{4}/g;
 
-/** Each Change Request's `Status`, by its declared id. */
-async function requestStatuses(): Promise<Map<string, string>> {
-  const statuses = new Map<string, string>();
+/**
+ * Each Change Request's parsed header, by its declared id.
+ *
+ * Whether a request is decided is the validator's own predicate: a status
+ * outside the template's vocabulary is not read as settled, and neither is an
+ * `approved` request whose `Applied at` is still empty.
+ */
+async function requestStatuses(): Promise<Map<string, ChangeRequestHeader>> {
+  const statuses = new Map<string, ChangeRequestHeader>();
   let entries;
   try {
     entries = await readdir(DECISIONS);
@@ -60,14 +62,11 @@ async function requestStatuses(): Promise<Map<string, string>> {
   }
   for (const name of entries) {
     if (!name.startsWith("CR-") || !name.endsWith(".md")) continue;
-    const text = await readFile(path.join(DECISIONS, name), "utf-8");
+    const header = parseChangeRequestHeader(await readFile(path.join(DECISIONS, name), "utf-8"));
     // The declared id rather than the filename: the two agree today, and a
     // record renamed without its id moving would otherwise be read as a
     // different request than the one the rows name.
-    const id = /^-\s*ID:\s*`(CR-\d{8}-\d{4})`/m.exec(text)?.[1];
-    const status = /^-\s*Status:\s*`([^`]*)`/m.exec(text)?.[1];
-    if (id === undefined || status === undefined) continue;
-    statuses.set(id, status.trim().toLowerCase());
+    if (header.id !== null) statuses.set(header.id, header);
   }
   return statuses;
 }
@@ -140,9 +139,9 @@ describe("a blocked row waits on a decision nobody has taken", () => {
     const released = rows
       .flatMap(({ pack, tdd, requests }) =>
         requests
-          .map((id) => ({ id, status: statuses.get(id) }))
-          .filter(({ status }) => status !== undefined && DECIDED.has(status))
-          .map(({ id, status }) => `${pack} ${tdd} -> ${id} ${status ?? ""}`),
+          .map((id) => ({ id, header: statuses.get(id) }))
+          .filter(({ header }) => header !== undefined && isChangeRequestSettled(header))
+          .map(({ id, header }) => `${pack} ${tdd} -> ${id} ${header?.status ?? ""}`),
       )
       .sort();
 
