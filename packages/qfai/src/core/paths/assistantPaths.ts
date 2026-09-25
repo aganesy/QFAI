@@ -41,12 +41,15 @@ export function assistantLayerDir(layer: AssistantLayer): string {
   return `${ASSISTANT_DIR}/${layer}`;
 }
 
+/** A layer, or a directory inside one that is governed as a layer of its own. */
+export type AssistantLayerPath = AssistantLayer | `${AssistantLayer}/${string}`;
+
 export function joinAssistantLayer(
   destRoot: string,
-  layer: AssistantLayer,
+  layer: AssistantLayerPath,
   ...rest: string[]
 ): string {
-  return path.join(destRoot, ASSISTANT_DIR, layer, ...rest);
+  return path.join(destRoot, ASSISTANT_DIR, ...layer.split("/"), ...rest);
 }
 
 /**

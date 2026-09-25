@@ -1,13 +1,16 @@
-import { readdir, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { runInit } from "../../src/cli/commands/init.js";
 import { VISUAL_BROWSER_SURFACES } from "../../src/core/detection/surfaceType.js";
 import {
   CANONICAL_REQUIRED_SIDECAR_FILES,
   FORBIDDEN_LEGACY_PATTERNS,
 } from "../../src/core/validators/uix/threeLayer.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -131,6 +134,20 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
+
+    // No completion condition selects a screen exploration or finalizes a design system: the
+    // explorations stay unranked. The brand direction is the one visual decision recorded, and it
+    // is the user's.
+    const matrix = await readFile(completionMatrixPath, "utf-8");
+    const uiBearing = collectOrderedList(
+      matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
+    );
+    expect(uiBearing).toMatch(/carried\s+unranked/);
+    expect(uiBearing).toMatch(/no\s+single\s+screen\s+exploration\s+is\s+selected/);
+    expect(uiBearing).toMatch(/design\s+system\s+is\s+not\s+finalized/);
+    expect(uiBearing).toMatch(/01_Context\.md#Design Direction/);
+    expect(uiBearing).toMatch(/taken\s+without\s+the\s+user\s+carries\s+`chosen_by: assumption`/);
+    expect(content).toMatch(/published theme the product is built on is the user's decision/);
   });
 
   // SKILL.md is the only file the skill is guaranteed to load; references are
@@ -592,3 +609,87 @@ async function collectMarkdownFiles(dir: string): Promise<string[]> {
   }
   return out;
 }
+
+/** The numbered completion conditions of the matrix's `UI-bearing Packs` section. */
+async function uiBearingConditions(): Promise<string> {
+  const matrix = await readFile(completionMatrixPath, "utf-8");
+  return collectOrderedList(
+    matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
+  );
+}
+
+/** Every line of `text` that names a design direction. */
+function directionLines(text: string): string[] {
+  return text.split("\n").filter((line) => /direction/i.test(line));
+}
+
+const USER_BRAND_DIRECTION = /01_Context\.md#Design Direction/;
+
+describe("discussion carries no early winner", () => {
+  // QFAI:SPEC-0010:TC-0010-0006
+  it("TC-0010-0006: the screen-contract template ranks no exploration and names only the user's brand direction", async () => {
+    const template = await readFile(path.join(uiuxTemplateDir, "40_screen_contracts.md"), "utf-8");
+    expect(template).not.toMatch(/\b(selected|winner|finali[sz]ed?)\b/i);
+    const named = directionLines(template);
+    expect(named.length).toBeGreaterThan(0);
+    for (const line of named) {
+      expect(line, `a direction other than the user's brand direction: ${line}`).toMatch(
+        USER_BRAND_DIRECTION,
+      );
+    }
+  });
+
+  // QFAI:SPEC-0010:TC-0010-0006
+  it("TC-0010-0006: the completion conditions keep explorations unranked and finalize no design system", async () => {
+    const conditions = await uiBearingConditions();
+    expect(conditions).toMatch(/carried\s+unranked/);
+    expect(conditions).toMatch(/no\s+single\s+screen\s+exploration\s+is\s+selected/);
+    expect(conditions).toMatch(/design\s+system\s+is\s+not\s+finalized/);
+    // A condition wraps across lines, so each numbered condition is read whole.
+    const named = conditions
+      .split(/^(?=\d+\. )/m)
+      .filter((condition) => /direction/i.test(condition))
+      .filter((condition) => !/^\d+\. Exploration directions are carried unranked/.test(condition));
+    expect(named.length).toBeGreaterThan(0);
+    for (const condition of named) {
+      expect(condition, `a direction other than the user's brand direction`).toMatch(
+        USER_BRAND_DIRECTION,
+      );
+    }
+  });
+
+  // QFAI:SPEC-0010:TC-0010-0006
+  it("TC-0010-0006: the tree qfai init writes carries the same planner-first discussion guidance", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-planner-first-"));
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      const installed = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion");
+      for (const relative of [
+        "SKILL.md",
+        path.join("references", "discussion-completion-matrix.md"),
+        path.join("templates", "uiux", "40_screen_contracts.md"),
+      ]) {
+        const shipped = await readFile(path.join(templateBase, relative), "utf-8");
+        expect(await readFile(path.join(installed, relative), "utf-8"), relative).toBe(shipped);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0010:TC-0010-0007
+  it("TC-0010-0007: the brand direction is recorded in 01_Context.md and Phase 0 authors DESIGN.md", async () => {
+    const skill = await readFile(skillPath, "utf-8");
+    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
+    const direction = context.split(/^## /m).find((s) => s.startsWith("Design Direction")) ?? "";
+    expect(direction).toMatch(/`web`, `mobile`, `desktop` or `mixed`/);
+    expect(direction).toMatch(/^- adopted_theme:/m);
+    expect(direction).toMatch(/^- chosen_by: \[user\|assumption\]$/m);
+    expect(direction).toMatch(/`\/qfai-sdd` Phase 0 authors root `DESIGN\.md` from it/);
+    expect(await uiBearingConditions()).toMatch(USER_BRAND_DIRECTION);
+    expect(skill).toMatch(
+      /Root DESIGN\.md is not a discussion output: \/qfai-sdd Phase 0 authors it/,
+    );
+    expect(skill).toMatch(/Discussion authors no design artifact outside its own pack/);
+  });
+});

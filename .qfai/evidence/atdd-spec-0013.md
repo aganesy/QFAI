@@ -516,6 +516,30 @@ failed, 2 passed (7).
 - Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case dropped its citation clause.
 
+### TDD-0061
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
+- Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+- Selector: `TC-0013-0036: Missing optional side artifact leaves preflight ready`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sddPreflightOptionalArtifact.test.ts --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (2 passed). `qfai sdd preflight --format json` returns exit 0, `ready` and no blockers with and without the file; the preflight treats the file as optional already.
+- GREEN result: exit 0; 2 passed (2)
+- Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+
+### TDD-0062
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
+- Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+- Selector: `TC-0013-0037: Invalid or legacy optional side artifact leaves preflight ready`
+- RED command (cwd `packages/qfai`): as TDD-0061
+- RED result: already satisfied: exit 0 on the first run; a schema-invalid namespaced file and a legacy-only file each leave the verdict `ready` with no blockers
+- GREEN result: exit 0; 2 passed (2)
+- Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.

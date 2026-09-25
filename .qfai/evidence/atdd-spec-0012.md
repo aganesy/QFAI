@@ -179,3 +179,50 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+
+### TDD-0562
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+- Selector: `TC-0012-0489 (TDD-0562): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0489 \(TDD-0562\)' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the citation line and the reference landed with the plan skills' orchestrated-mode references
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+
+### TDD-0337
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: integration
+- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0323).
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `returns 2 when --target-url is missing at cycle 0`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/cli/commands/prototypingIterate.test.ts --testNamePattern='TC-0012-0326|returns 2 when --target-url is missing at cycle 0|returns 64 when the latest iter has nothing open and no anti-patterns' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run for this case
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: none
+
+### TDD-0338
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: integration
+- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0326). The case-ID selector named no case in its file, so the case was written with the id at the head of its title.
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `TC-0012-0326` (matches `TC-0012-0326: cycle 0 records the DESIGN.md digest that the lock carries`)
+- RED command (cwd `packages/qfai`): as TDD-0337
+- RED result: already satisfied: exit 0 on the first run; cycle 0 already writes `prototyping.json#designMd.sha256` equal to the SHA-256 of `DESIGN.md` and to the lock's `designMdSha256`
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+
+### TDD-0567
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260925-0005` (option 1; TC-0012-0324).
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `returns 64 when the latest iter has nothing open and no anti-patterns`
+- RED command (cwd `packages/qfai`): as TDD-0337
+- RED result: already satisfied: exit 0 on the first run for this case
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: none

@@ -182,6 +182,18 @@ Land the foundation of CHG-002 Wave 3 (core loop destructive changes) on `featur
 - **Test only**: `packages/qfai/tests/core/prototyping/iteration.test.ts` lines 167-171 — new `it("shouldStop boundary at index === 9 (TC-0012-0357, TDD-0372)")` block inside the existing `describe("shouldStop — convergence")` block. Uses the file's existing `baseIter({index})` fixture. Asserts `shouldStop([baseIter({index:9})])==="max-iterations"` AND `shouldStop([baseIter({index:8})])===null`.
 - **No production change**. `shouldStop` already reads `MAX_ITERATION_INDEX` symbolically (line 59 of iteration.ts), so the TDD-0371 constant flip deterministically satisfied this new assertion.
 
+### TDD-0336
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: unit
+- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0329).
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Selector: `returns null when designMdViolations is non-empty (other conditions met)`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/core/prototyping/iteration.test.ts --testNamePattern='returns null when designMdViolations is non-empty' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); the re-scoped row names one existing case that carries the TC annotation
+- GREEN result: exit 0; 1 passed | 32 skipped (33)
+- Changed files: none
+
 ## Commands executed + key outputs
 
 - TDD-0371 RED: `cd packages/qfai && pnpm vitest run tests/core/prototyping/iteration.test.ts -t "TC-0012-0359"` → exit 1, `AssertionError: expected 15 to be 10` at line 277.

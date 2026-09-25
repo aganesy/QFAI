@@ -13,6 +13,7 @@ import {
   classifyAssistantAsset,
   collectGovernedAssistantFiles,
   collectRegeneratedAssistantFiles,
+  governedLayerOf,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLockStatus,
@@ -613,7 +614,8 @@ async function validateAssistantAssetProvenance(
   // shipped file it used to hold.
   const recordedLayers = new Set<string>();
   for (const key of Object.keys(lock?.files ?? {})) {
-    recordedLayers.add(key.split("/")[0] ?? "");
+    const layer = governedLayerOf(key);
+    if (layer !== null) recordedLayers.add(layer);
   }
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     if (!presentLayers.has(layer) && recordedLayers.has(layer)) {
@@ -628,7 +630,7 @@ async function validateAssistantAssetProvenance(
       shipped[relative],
       lock?.files[relative],
     );
-    if (status === "missing" && !presentLayers.has(relative.split("/")[0] ?? "")) {
+    if (status === "missing" && !presentLayers.has(governedLayerOf(relative) ?? "")) {
       continue;
     }
     if (status === "missing" && (await coveredByExistenceProbe(assistantDir, relative))) {

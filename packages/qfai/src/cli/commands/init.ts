@@ -34,11 +34,13 @@ import {
   GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
+  governedLayerOf,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../core/assistantAssetProvenance.js";
+import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
@@ -72,6 +74,8 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  addEntryDirective,
+  addEntryPointDirectives,
   addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
@@ -523,6 +527,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  const differingSkills = options.force
+    ? 0
+    : await countDifferingSkills(qfaiAssets, destRoot, skillsResult.skipped);
   // The copy above is create-only and this release ships no README to copy, so
   // the one an earlier release left behind is removed here rather than
   // overwritten.
@@ -532,6 +539,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     rootAssets,
     plannedSafetyFloor,
+    packageVersion: toolVersion,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -709,8 +717,13 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.verbose ?? false,
   );
+  info(await workflowModeLine(destRoot));
 
-  for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
+  for (const note of [
+    ...upgradeResult.preservedNotes,
+    ...routingMergeNotes,
+    ...differingSkillsNote(differingSkills),
+  ]) {
     info(note);
   }
 
@@ -733,9 +746,67 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 }
 
+/**
+ * The summary line naming the workflow mode the project's config puts in force. Init writes no
+ * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
+ */
+async function workflowModeLine(destRoot: string): Promise<string> {
+  const { document } = await loadConfig(destRoot);
+  const mode = readWorkflowMode(document);
+  if (mode !== null) return `Workflow mode: ${mode}`;
+  const configured = JSON.stringify(configuredWorkflowMode(document));
+  return `Workflow mode: ${configured} is invalid; expected active, shadow or off`;
+}
+
+/** The value the config holds where the mode belongs: `workflow.mode`, or `workflow` itself. */
+function configuredWorkflowMode(document: unknown): unknown {
+  const workflow =
+    typeof document === "object" && document !== null && "workflow" in document
+      ? document.workflow
+      : undefined;
+  return typeof workflow === "object" && workflow !== null && "mode" in workflow
+    ? workflow.mode
+    : workflow;
+}
+
 // ---------------------------------------------------------------------------
 // Governed assistant assets: provenance record + upgrade path
 // ---------------------------------------------------------------------------
+
+/**
+ * How many shipped skills a plain run left alone because the project's copy
+ * differs from the template. Line endings are ignored, so a CRLF checkout of an
+ * unedited skill is not counted.
+ */
+async function countDifferingSkills(
+  qfaiAssets: string,
+  destRoot: string,
+  skipped: readonly string[],
+): Promise<number> {
+  const destQfai = path.join(destRoot, ".qfai");
+  const skillsDir = path.join(destRoot, ...ASSISTANT_DIR.split("/"), "skills");
+  const differing = new Set<string>();
+  for (const dest of skipped) {
+    const relative = path.relative(skillsDir, dest);
+    const skill = relative.split(path.sep)[0] ?? "";
+    if (relative.startsWith("..") || skill === "" || differing.has(skill)) continue;
+    const source = path.join(qfaiAssets, path.relative(destQfai, dest));
+    const shipped = await hashAssistantAssetFile(source, { allowSymlink: true });
+    if ((await hashAssistantAssetFile(dest)) !== shipped) differing.add(skill);
+  }
+  return differing.size;
+}
+
+function differingSkillsNote(count: number): string[] {
+  if (count === 0) return [];
+  return count === 1
+    ? [
+        "  1 shipped skill differs from this release and was left as it is. `qfai init --force` updates it: it replaces it with the shipped version, overwriting local edits.",
+      ]
+    : [
+        `  ${String(count)} shipped skills differ from this release and were left as they are. \`qfai init --force\` updates them: it replaces them with the shipped versions, overwriting local edits.`,
+      ];
+}
 
 function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
   return paths.filter((candidate) => !excluded.has(candidate));
@@ -930,7 +1001,13 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
+  options: {
+    force: boolean;
+    dryRun: boolean;
+    rootAssets: string;
+    plannedSafetyFloor: boolean;
+    packageVersion: string;
+  },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -953,7 +1030,7 @@ async function syncGovernedAssistantAssets(
     // sync is abandoned whole: nothing refreshed, nothing removed, and the
     // existing record left exactly as it was.
     manualMergeNotes.push(
-      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
+      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**, assistant/process/workflows/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
     );
     return { copied, skipped, removed, manualMergeNotes };
   }
@@ -1022,9 +1099,17 @@ async function syncGovernedAssistantAssets(
     // the same comparison then says "refreshable" about content that only
     // exists here. Declined rather than merged: this command does not overwrite
     // what it did not write.
+    //
+    // A plan is refreshed on a plain run too. The workflow engine refuses a
+    // plan that differs from the release, so an unmodified plan left behind
+    // would stop the next run for an edit nobody made.
     const adopterOwned = ADOPTER_OWNED_ASSETS.has(relative);
+    const refreshOnUpgrade = options.force || governedLayerOf(relative) === "process/workflows";
     const refreshable =
-      options.force && !adopterOwned && previousHash !== undefined && currentHash === previousHash;
+      refreshOnUpgrade &&
+      !adopterOwned &&
+      previousHash !== undefined &&
+      currentHash === previousHash;
     if (refreshable) {
       // `currentHash` was read above; the refresh is only legitimate while the
       // file still holds it. Passing it down makes the replacement decline a
@@ -1072,7 +1157,10 @@ async function syncGovernedAssistantAssets(
   // it — with it.
   if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
     await mkdir(destAssistant, { recursive: true });
-    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+    await writeAssistantAssetsLock(destAssistant, {
+      packageVersion: options.packageVersion,
+      files: recorded,
+    });
   }
 
   return { copied, skipped, removed, manualMergeNotes };
@@ -3477,6 +3565,9 @@ async function ensureAgentEntryPointRules(
     );
   }
 
+  // The review directive points at a policy file init never creates, so it is
+  // owed only where the project keeps one.
+  const hasReviewPolicy = await pathExists(path.join(destRoot, "REVIEW.md"));
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
     const toCite = await owed(name);
@@ -3530,7 +3621,8 @@ async function ensureAgentEntryPointRules(
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
       const cited = addRuleCitations(refreshed.text, section, toCite);
-      const merged = addReviewPointer(cited, template);
+      const reviewed = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
+      const merged = addEntryDirective(reviewed, template);
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
@@ -3543,7 +3635,11 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        ...describeRuleListUpdate(
+          cited !== refreshed.text,
+          { review: reviewed !== cited, entry: merged !== reviewed },
+          refreshed.refreshed,
+        ),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -3566,7 +3662,7 @@ async function ensureAgentEntryPointRules(
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
       const rulesAdded = addRuleCitationsToList(existing, section, uncited);
-      const merged = addReviewPointer(rulesAdded, template);
+      const merged = addEntryPointDirectives(rulesAdded, template, hasReviewPolicy);
       if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
         // numbered list, an indented bullet. Name the missing masters instead
@@ -3630,7 +3726,7 @@ async function ensureAgentEntryPointRules(
           : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      addReviewPointer(`${existing}${separator}${section}${end}`, template),
+      addEntryPointDirectives(`${existing}${separator}${section}${end}`, template, hasReviewPolicy),
       destRoot,
       existing,
     );
@@ -3751,7 +3847,11 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    ...describeRuleListUpdate(
+      merged !== refreshed.text,
+      { review: false, entry: false },
+      refreshed.refreshed,
+    ),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -3828,7 +3928,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  pointed: boolean,
+  directives: { review: boolean; entry: boolean },
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -3839,10 +3939,14 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  if (pointed) {
-    planned.push("add the review directive");
-    done.push("added the review directive");
-    byHand.push("add the review directive");
+  for (const [added, name] of [
+    [directives.entry, "entry"],
+    [directives.review, "review"],
+  ] as const) {
+    if (!added) continue;
+    planned.push(`add the ${name} directive`);
+    done.push(`added the ${name} directive`);
+    byHand.push(`add the ${name} directive`);
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
