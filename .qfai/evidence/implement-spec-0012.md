@@ -687,15 +687,13 @@ The edit, the `catch` answering `ok: true`:
 - TDD-ID: TDD-0517
 - Layer: unit
 - Test file: packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
-- Selector: ["ACCEPTS a 200 OK response and writes PNG/HTML","REJECTS a 404 Not Found response with reason mentioning the status","REJECTS a 500 Internal Server Error response","ACCEPTS a 204 No Content response (still 2xx)","ACCEPTS a 399 response, the last status below the 400 rejection boundary"]
+- Selector: ["ACCEPTS a 200 OK response and writes PNG/HTML","REJECTS a 404 Not Found response with reason mentioning the status","REJECTS a 500 Internal Server Error response","ACCEPTS a 204 No Content response (still 2xx)","ACCEPTS a 399 response, the last status below the 400 rejection boundary","REJECTS a 400 response, the first status of the rejection boundary"]
 - TC-ref: TC-0012-0487
 
-Boundary `status-400-or-above-rejected`, tier T2, reviewed alone. The five
-tests are unchanged apart from the case's annotation. They are the two sides of
-one predicate, `status >= 400`: 200, 204 and 399 are captured, and 404 and 500
-are refused with the status in the reason and no screenshot. Inverting the
-comparison fails all five. Removing the branch would fail only the two refused
-statuses.
+Boundary `status-400-or-above-rejected`, tier T2, reviewed alone. The six
+tests are the two sides of one predicate, `status >= 400`: 200, 204 and 399 are
+captured, and 400, 404 and 500 are refused with the status in the reason and no
+screenshot. Round 1 held the first five; Round 2 adds 400.
 
 #### Round 1
 
@@ -737,11 +735,78 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 
 - Round 1: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
 
+#### Round 2
+
+`CR-20260925-0012` added status 400 to `TC-0012-0487`'s refused statuses and
+returned the row from `refactor` to `todo`. The case's obligation moved, so this
+is a fresh round on the row's own boundary, not a test-only replacement. Round 1
+above is kept as the record of the five-status case. The new test is
+`REJECTS a 400 response, the first status of the rejection boundary`, and it
+passed on its first run.
+
+- Round 2: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `status >= 400` refusal
+- Round 2: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 404 Not Found response with reason mentioning the status"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 500 Internal Server Error response"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 204 No Content response \(still 2xx\)"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 399 response, the last status below the 400 rejection boundary"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 400 response, the first status of the rejection boundary"
+```
+
+- Round 2: Falsifiability result: One run per entry, all against the tree below, each Test Files 1 failed (1); Tests 1 failed | 6 skipped (7). Entry 1 (200) fails on `AssertionError: expected false to be true // Object.is equality` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:79:23`. Entry 2 (404) fails on `AssertionError: expected true to be false // Object.is equality` at `:96:23`. Entry 3 (500) fails on the same at `:112:23`. Entry 4 (204) fails on `AssertionError: expected false to be true // Object.is equality` at `:160:23`. Entry 5 (399) fails on the same at `:174:23`. Entry 6 (400) fails on `AssertionError: expected true to be false // Object.is equality` at `:128:23`
+
+The edit, the comparison inverted. It is the one mutation that fails every
+entry on one tree:
+
+```diff
+@@ -121,3 +121,3 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
+     const status = response.status();
+-    if (status >= 400) {
++    if (status < 400) {
+       return {
+```
+
+- Round 2: Falsifiability revision: working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284
+- Round 2: RED failure mode: falsifiability
+
+The boundary itself, run separately and not the proof: `status >= 400` changed
+to `status > 400` at the same line, the six commands above run against it, then
+reverted. Only entry 6 fails, on
+`AssertionError: expected true to be false // Object.is equality` at
+`tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:128:23`.
+Entries 1 to 5 each pass: Tests 1 passed | 6 skipped (7). The mutated tree was
+`working-tree+cfcd384371ef81cc52c1f2f0e6e180c32884a4397b6e7d77ad342696a80f9685`.
+Round 1 had no test that failed on this edit.
+
+- Round 2: Revision: f5b43cae0d6ef08b987b5ece3c681b9da0ddbfdb
+- Round 2: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 404 Not Found response with reason mentioning the status"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 500 Internal Server Error response"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 204 No Content response \(still 2xx\)"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 399 response, the last status below the 400 rejection boundary"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 400 response, the first status of the rejection boundary"
+```
+
+- Round 2: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 6 skipped (7). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
+
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
-- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- Refactor verify result: REFACTOR_RESULT
+- Refactor verify revision: REFACTOR_REV
+
+Superseded: the qa-gatekeeper verdict below was given on Round 1, before
+`CR-20260925-0012` added status 400 to the case. It does not cover Round 2, and
+the gate is taken again on the Round 2 proof.
+
+```text
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+f92f4da3797a42130188cd2664118d741cf0612d094965e4d7c1eb9f69ca442e at HEAD 22b107140; GREEN + oracle proof at 15667dd87)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 22b107140 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+f92f4da3…; the five entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :143:23 and :157:23; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside status >= 400; advisory: status 400 itself is untested; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
+```
 
 ### TDD-0582
 
@@ -810,3 +875,74 @@ checkpoint are still owed.
 
 - The `qa-gatekeeper` RED gate for each row runs after the revert, on a tree
   rebuilt from the row's Round 1 revision and the recorded edit.
+
+# /qfai-implement — run started 2026-09-25T04:31:18.389Z
+
+`TDD-0517` alone. `CR-20260925-0012` added status 400 to `TC-0012-0487`'s
+refused statuses, and this run takes the row through Round 2 in its entry above,
+`#tdd-0517`. The run stops the row at `refactor`; the `qa-gatekeeper` turn on
+the Round 2 proof and the reviews follow it.
+
+## Preflight
+
+- Change Request preflight: `CR-20260925-0012` is approved and applied, and
+  names `spec-0012/TDD-0517` for reset. The row was at `refactor` with no review
+  taken, so the reset is `refactor -> todo`, with the record added to `DR-ID`
+  beside `CR-20260923-0001` and `CR-20260925-0010` and the `Evidence` pointer
+  cleared. The reset was judged at `5db65cfd6`, before the test was written, and
+  its ledger write was committed as `2fcc3f9ef`, after the test commit
+  `f5b43cae0`. No other in-scope Change Request names the row.
+- Skeleton: unchanged since the run started 2026-09-25T03:38:07.172Z. No
+  production file has changed since, so `node scripts/smoke-qfai-cli.mjs` was
+  not re-run.
+- Cross-spec check: no other spec's ledger names
+  `defaultCaptureScreen.responseStatus.test.ts` or `defaultCaptureScreen.ts`.
+- Shared-artifact check: no `done` row's RED test manifest lists the test file.
+
+## Plan phase
+
+Taken at `5db65cfd6`, after the preflight and before the row moved.
+
+| Role                          | Instance                | Verdict | Summary |
+| ----------------------------- | ----------------------- | ------- | ------- |
+| `delivery-planner` (blocking) | `stage4-agent (inline)` | PASS    | One row, `TDD-0517`, T2 and reviewed alone. No dispatch and no order to choose. Its boundary is unchanged; the widened case adds a sixth entry to its selector |
+| `test-design-analyst`         | `stage4-agent (inline)` | PASS    | `TC-0012-0487` now names 400, 404 and 500 as refused, and every clause maps to `TDD-0517` or `TDD-0582`. The status-400 test closes the boundary-values gap the Coverage Depth Matrix recorded for the case |
+
+## Grilling Session
+
+### /qfai-implement — run started 2026-09-25T04:31:18.389Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T04:31:40Z | 5db65cfd6763659d698938cfc1ea00f3b4ee9720 | 2026-09-25T04:31:52Z | preflight: how the reset row records its new proof | empty | none in flight | 2 | 0 | 0 |
+| S2 | adopted | 2026-09-25T04:33:20Z | f5b43cae0d6ef08b987b5ece3c681b9da0ddbfdb | 2026-09-25T04:33:33Z | the boundary mutation fails only the new entry, so it cannot be the six-entry proof | empty | none in flight | 1 | 0 | 0 |
+
+## Work Orders Summary
+
+### Rows for the /qfai-implement run started 2026-09-25T04:31:18.389Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | delivery-planner | stage4-agent (inline) | /qfai-implement plan: confirm TDD-0517 after the CR-20260925-0012 reset | test-list.md; CR-20260925-0012 | #plan-phase-1 | PASS |
+| 2 | test-design-analyst | stage4-agent (inline) | /qfai-implement plan: coverage check of TC-0012-0487 after it names status 400 | test-list.md; 06_Test-Cases.md; atdd-spec-0012.md Coverage Depth Matrix | #plan-phase-1 | PASS |
+| 3 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T04:31:18.389Z/agents): the row takes Round 2, not a test-only replacement inside Round 1 | `round-evidence.md`; `execution-ledger.md` upstream reset; CR-20260925-0012 | #tdd-0517 Round 2; an approved reset moved the obligation and returned the row to `todo`, so the next cycle is the next round, and Round 1 stays as the record of the five-status case | PASS |
+| 4 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T04:31:18.389Z/agents): the Round 1 qa-gatekeeper lines go into a fence under a superseded note | #tdd-0517; `round-evidence.md` row-level qa-gatekeeper verdict | #tdd-0517; the verdict answers for the row, and left as a field it would claim a gate on a proof that no longer covers the case | PASS |
+| 5 | backend-engineer | stage4-agent (inline) | grilling(S2@2026-09-25T04:31:18.389Z/agents): the Round 2 proof is the inverted comparison over all six entries; the `status > 400` run is recorded beside it | `SKILL.md` Red 3c; `selector-granularity.md`; the two mutation runs | #tdd-0517 Round 2; one tree must fail every entry, and `status > 400` fails only the 400 entry. The boundary run stays in the entry because it is the run the new test exists to fail | PASS |
+| 6 | test-design-analyst | stage4-agent (inline) | Coverage Depth Matrix: score the status-400 boundary on TC-0012-0487 and BR-0012-0066 | atdd-spec-0012.md; #tdd-0517 Round 2 | atdd-spec-0012.md `TC-0012-0487`, `BR-0012-0066` rows | PASS |
+
+## Test results summary
+
+| Row        | Round | Revision    | Proof                               | Boundary run                      |
+| ---------- | ----- | ----------- | ----------------------------------- | --------------------------------- |
+| `TDD-0517` | 2     | `f5b43cae0` | `status < 400` fails all six entries | `status > 400` fails the 400 entry only |
+
+`TDD-0517` is at `refactor`. The `qa-gatekeeper` turn on Round 2, the reviews
+and the checkpoint are still owed.
+
+## Commands executed
+
+- The falsifiability, boundary, GREEN and refactor-verify commands in
+  `#tdd-0517` Round 2.
+- `node tmp/evidence-tools.mjs revision` and `revision --content-address`.
