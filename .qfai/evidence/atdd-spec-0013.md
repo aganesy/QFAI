@@ -621,6 +621,10 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/src/core/validators/specSplitByCapability.ts`, which restores the file as it is at that revision
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+
 ### TDD-0111
 
 - TDD-ID: TDD-0111
@@ -663,6 +667,10 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL\.md makes reordering the capability-to-spec mapping a Change Request"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, which restores the file as it is at that revision
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -693,6 +701,7 @@ every total.
 | 4 | - | n/a | grilling(-@2026-09-25T02:02:32.686Z/none): none | - | - | PASS |
 | 5 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 falsifiability run with the capability check dropped at line 552, then the revert and the restored GREEN | #tdd-0110, `specSplitByCapability.ts` | Round 1 | PASS |
 | 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
+| 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 and TDD-0111 refactor verify on the committed tree | #tdd-0110, #tdd-0111 | Refactor verify fields | PASS |
 
 ## Cross-spec obligations
 
@@ -760,6 +769,19 @@ RED test hash over the manifest                 -> 3fa41420770ad4ebc9dc6d77fa86f
 `tsconfig.tests.json` does not list the test file, so `tsc` ran on a scratch
 config that extends it and includes only that file, with exit 0. The scratch
 config is deleted.
+
+### Checks for the /qfai-implement run started 2026-09-25T02:02:32.686Z
+
+```text
+pnpm -C packages/qfai build                                              -> exit 0
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  no finding names TDD-0110, TDD-0111 or TC-0013-0010
+node scripts/check-dogfood-backlog.mjs --profile tdd                     -> 935 errors, all within the pinned backlog
+node scripts/check-dogfood-backlog.mjs --profile full                    -> 951 errors, all within the pinned backlog
+node scripts/pin-stage-evidence-counts.mjs                               -> already current; nothing to write
+```
+
+`.qfai/report` was restored after each run.
 
 ## Gaps / Open risks
 
