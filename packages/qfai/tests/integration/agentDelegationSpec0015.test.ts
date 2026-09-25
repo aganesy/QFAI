@@ -69,6 +69,19 @@ function getSection(content: string, heading: string): string {
   ).trim();
 }
 
+const MANIFEST_FILE_NAMES = new Set([
+  "agent-catalog.yml",
+  "agent-routing.yml",
+  "review-profiles.yml",
+  "review-gate.rules.yml",
+]);
+
+/** Every file below `dir`, at any depth, whose name is one of the former manifest files. */
+async function manifestFilesUnder(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { recursive: true });
+  return entries.filter((entry) => MANIFEST_FILE_NAMES.has(path.basename(entry)));
+}
+
 describe("agent cards are the only definitions", () => {
   it("ships nineteen complete cards without project manifest copies", async () => {
     const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));
@@ -90,20 +103,14 @@ describe("agent cards are the only definitions", () => {
       "mission must state the role's purpose separately from description",
     ).toEqual([]);
     const assistant = path.join(ASSETS, "init", ".qfai", "assistant");
-    const entries = await readdir(assistant, { recursive: true });
-    expect(entries).not.toContain("agent-catalog.yml");
-    expect(entries).not.toContain("agent-routing.yml");
-    expect(entries).not.toContain("review-profiles.yml");
+    expect(await manifestFilesUnder(assistant)).toEqual([]);
   });
 
   it("does not write routing or review-profile files during init", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-init-"));
     try {
       await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
-      const files = await readdir(path.join(root, ".qfai", "assistant"), { recursive: true });
-      expect(files).not.toContain("agent-catalog.yml");
-      expect(files).not.toContain("agent-routing.yml");
-      expect(files).not.toContain("review-profiles.yml");
+      expect(await manifestFilesUnder(path.join(root, ".qfai", "assistant"))).toEqual([]);
     } finally {
       await removeTempTree(root);
     }
