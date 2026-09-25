@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -46,7 +46,13 @@ export type PlanRefusalReason =
   | "cycle"
   | "unreachable"
   | "no-verify-path"
-  | "plan-differs";
+  | "plan-differs"
+  | "skill-missing"
+  | "operations-table-missing"
+  | "operations-first-column"
+  | "operations-cell-not-id"
+  | "operations-pair-omitted"
+  | "reviewer-missing";
 
 // Why a plan was refused, and the key, stage or route the refusal is about.
 export interface PlanRefusal {
@@ -58,9 +64,10 @@ export interface PlanRefusal {
 export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
-// The verdict over a project's installed plans: a refusal is the cause `contract-undeclared`.
+// The verdict over a project's installed plans, the skills they name and the reviewers the
+// routing manifest requires: a refusal is the cause `contract-undeclared` or `reviewer-missing`.
 export interface PlanCheck {
-  cause?: "contract-undeclared";
+  cause?: "contract-undeclared" | "reviewer-missing";
   refusals: PlanRefusal[];
 }
 
@@ -287,12 +294,152 @@ async function installedPlanRefusals(root: string, route: WorkflowRoute): Promis
   return [{ route, reason: "plan-differs", subject: route }];
 }
 
-// SIMPLIFIED: reads the installed plans only; neither the skills a plan names nor their
-// Operations tables are read, and no reviewer the routing manifest requires is checked.
-// Lift when: the start rows for a missing skill, an Operations table and a dropped reviewer land.
+const SKILLS_DIR = path.join(".qfai", "assistant", "skills");
+const ROUTING_MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
+
+// Every (skill, operation) pair the built-in plans use, with the first route using the skill.
+async function planPairs(): Promise<
+  Map<string, { route: WorkflowRoute; operations: Set<string> }>
+> {
+  const plans = await loadBuiltInPlans();
+  const pairs = new Map<string, { route: WorkflowRoute; operations: Set<string> }>();
+  for (const route of WORKFLOW_ROUTES) {
+    for (const stage of plans[route].stages) {
+      for (const skill of stage.skills) {
+        const entry = pairs.get(skill) ?? { route, operations: new Set<string>() };
+        pairs.set(skill, entry);
+        entry.operations.add(stage.operation);
+      }
+    }
+  }
+  return pairs;
+}
+
+type TableRead = { ok: true; operations: string[] } | { ok: false; reason: PlanRefusalReason };
+
+// The lines of the first table under `## Operations`, up to the next heading, outside fences.
+function operationsTableLines(text: string): string[] {
+  const lines = normalizeNewlines(text).split("\n");
+  const table: string[] = [];
+  let inside = false;
+  let fenced = false;
+  for (const line of lines) {
+    if (line.trimStart().startsWith("```")) fenced = !fenced;
+    if (fenced) continue;
+    if (/^#{1,6}\s/.test(line)) {
+      if (inside) break;
+      inside = line.trimEnd() === "## Operations";
+      continue;
+    }
+    if (!inside) continue;
+    if (line.trimStart().startsWith("|")) table.push(line.trim());
+    else if (table.length > 0) break;
+  }
+  return table;
+}
+
+function cellsOf(row: string): string[] {
+  return row
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+// The operations a skill's Operations table declares: a first column headed `Operation`, each
+// cell exactly one backticked operation ID of the vocabulary.
+function readOperationsTable(text: string): TableRead {
+  const [header, , ...rows] = operationsTableLines(text);
+  if (header === undefined) return { ok: false, reason: "operations-table-missing" };
+  if (cellsOf(header)[0] !== "Operation") return { ok: false, reason: "operations-first-column" };
+  const operations: string[] = [];
+  for (const row of rows) {
+    const id = /^`([a-z-]+)`$/.exec(cellsOf(row)[0] ?? "")?.[1];
+    if (id === undefined || !OPERATIONS.has(id))
+      return { ok: false, reason: "operations-cell-not-id" };
+    operations.push(id);
+  }
+  return { ok: true, operations };
+}
+
+// A skill a plan names must be installed, and its Operations table must declare every
+// operation the plans use it for.
+async function skillRefusals(
+  root: string,
+  skill: string,
+  use: { route: WorkflowRoute; operations: Set<string> },
+): Promise<PlanRefusal[]> {
+  const refusal = (reason: PlanRefusalReason, subject = skill) => [
+    { route: use.route, reason, subject },
+  ];
+  const skillDir = path.join(root, SKILLS_DIR, skill);
+  if (!(await stat(skillDir).catch(() => undefined))?.isDirectory()) {
+    return refusal("skill-missing");
+  }
+  const text = await readIfPresent(path.join(skillDir, "references", "orchestrated-mode.md"));
+  const table = readOperationsTable(text ?? "");
+  if (!table.ok) return refusal(table.reason);
+  return [...use.operations]
+    .filter((operation) => !table.operations.includes(operation))
+    .flatMap((operation) => refusal("operations-pair-omitted", `${skill}:${operation}`));
+}
+
+// Each routed skill's phases and the agents each phase blocks on, from a routing manifest.
+function blockingAgentsOf(text: string | undefined): Map<string, Map<string, string[]>> {
+  const bySkill = new Map<string, Map<string, string[]>>();
+  const document: unknown = text === undefined ? undefined : documentOf(text);
+  const routing = isRecord(document) && Array.isArray(document.routing) ? document.routing : [];
+  for (const entry of routing) {
+    if (!isRecord(entry) || typeof entry.skill !== "string" || !Array.isArray(entry.phases))
+      continue;
+    const phases = new Map<string, string[]>();
+    for (const phase of entry.phases) {
+      if (!isRecord(phase) || typeof phase.id !== "string") continue;
+      const agents = Array.isArray(phase.blocking_agents) ? phase.blocking_agents : [];
+      phases.set(
+        phase.id,
+        agents.filter((agent): agent is string => typeof agent === "string"),
+      );
+    }
+    bySkill.set(entry.skill, phases);
+  }
+  return bySkill;
+}
+
+// Every blocking agent the shipped routing manifest requires for a phase of a skill a plan
+// dispatches must still block that phase in the project's copy. Extra agents are the project's.
+// SIMPLIFIED: the refusal names the cause only, not the dropped reviewer or `qfai init --force`.
+// Lift when: the start refusal message carries what the operator does next.
+async function reviewerRefusals(root: string, skills: Map<string, { route: WorkflowRoute }>) {
+  const shipped = blockingAgentsOf(
+    await readFile(path.join(getInitAssetsDir(), ROUTING_MANIFEST), "utf8"),
+  );
+  const project = blockingAgentsOf(await readIfPresent(path.join(root, ROUTING_MANIFEST)));
+  const refusals: PlanRefusal[] = [];
+  for (const [skill, { route }] of skills) {
+    for (const [phase, agents] of shipped.get(skill) ?? []) {
+      const kept = project.get(skill)?.get(phase) ?? [];
+      for (const agent of agents.filter((each) => !kept.includes(each))) {
+        refusals.push({ route, reason: "reviewer-missing", subject: `${skill}:${phase}:${agent}` });
+      }
+    }
+  }
+  return refusals;
+}
+
+// Trigger (b) over the installed plans and the skills they name, then trigger (c) over the
+// reviewers the routing manifest requires. The first that holds is the cause.
 export async function checkInstalledPlans(projectRoot: string): Promise<PlanCheck> {
-  const refusals = (
-    await Promise.all(WORKFLOW_ROUTES.map((route) => installedPlanRefusals(projectRoot, route)))
+  const pairs = await planPairs();
+  const contract = (
+    await Promise.all([
+      ...WORKFLOW_ROUTES.map((route) => installedPlanRefusals(projectRoot, route)),
+      ...[...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)),
+    ])
   ).flat();
-  return refusals.length > 0 ? { cause: "contract-undeclared", refusals } : { refusals };
+  if (contract.length > 0) return { cause: "contract-undeclared", refusals: contract };
+  const reviewers = await reviewerRefusals(projectRoot, pairs);
+  return reviewers.length > 0
+    ? { cause: "reviewer-missing", refusals: reviewers }
+    : { refusals: [] };
 }

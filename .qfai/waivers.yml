@@ -497,6 +497,7 @@ waivers:
         - TDD-0300
         - TDD-0301
         - TDD-0302
+        - TDD-0303
         - TDD-0304
         - TDD-0305
         - TDD-0306
@@ -516,6 +517,8 @@ waivers:
         - TDD-0324
         - TDD-0325
         - TDD-0326
+        - TDD-0328
+        - TDD-0329
         - TDD-0336
         - TDD-0337
         - TDD-0338
@@ -537,6 +540,12 @@ waivers:
         - TDD-0354
         - TDD-0355
         - TDD-0356
+        - TDD-0359
+        - TDD-0360
+        - TDD-0361
+        - TDD-0362
+        - TDD-0363
+        - TDD-0364
         - TDD-0365
         - TDD-0366
         - TDD-0371
@@ -547,6 +556,14 @@ waivers:
         - TDD-0376
         - TDD-0377
         - TDD-0378
+        - TDD-0379
+        - TDD-0380
+        - TDD-0381
+        - TDD-0382
+        - TDD-0383
+        - TDD-0384
+        - TDD-0385
+        - TDD-0386
         - TDD-0389
         - TDD-0390
         - TDD-0391

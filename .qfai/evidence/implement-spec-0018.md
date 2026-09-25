@@ -310,6 +310,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0300 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0301 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0302 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0303 | TC-0018-0030 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0304 | TC-0018-0032 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0305 | TC-0018-0039 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0306 | TC-0018-0042 | Closed `exception` under DR-0298; per-row review waived |
@@ -329,6 +330,8 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0324 | TC-0018-0106 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0325 | TC-0018-0106 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0326 | TC-0018-0107 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0328 | TC-0018-0110 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0329 | TC-0018-0111 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0336 | TC-0018-0117 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0337 | TC-0018-0118 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0338 | TC-0018-0119 | Closed `exception` under DR-0298; per-row review waived |
@@ -350,6 +353,12 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0354 | TC-0018-0138 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0359 | TC-0018-0161 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0360 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0361 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0362 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0363 | TC-0018-0162 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0364 | TC-0018-0163 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0365 | TC-0018-0164 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0366 | TC-0018-0166 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0371 | TC-0018-0168 | Closed `exception` under DR-0298; per-row review waived |
@@ -360,6 +369,14 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0376 | TC-0018-0173 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0377 | TC-0018-0174 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0378 | TC-0018-0175 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0379 | TC-0018-0176 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0380 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0381 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0382 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0383 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0384 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0385 | TC-0018-0177 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0386 | TC-0018-0178 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0389 | TC-0018-0183 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0390 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0391 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
@@ -4980,6 +4997,18 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
 - RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
 
+### TDD-0303
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/finishObservesValidateItself.test.ts`
+- Selector: `TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/finishObservesValidateItself.test.ts --testNamePattern='TC-0018-0030 \(TDD-0303\): Temp repo whose validate reports an error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `finish`, which runs validate in process and records the submitted gate as `agent_reported`; every child process it starts is a read-only `git` argv read
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/finishObservesValidateItself.test.ts > TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error`
+- Production files: none
+
+- Change Request: CR-20260925-0012 (approved) limits the spawn check to validate: no child process runs validate, and a read-only `git` argv read is allowed.
+
 ### TDD-0304
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -5170,6 +5199,26 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `expected { state: 'failed', …(1) } to deeply equal { state: 'legacy', …(1) }` at `tests/integration/workflow/journal.test.ts:236:6`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse as a record`
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`
+
+### TDD-0328
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/continueRestoresTheSameRun.test.ts`
+- Selector: `TC-0018-0110 (TDD-0328): Built CLI status with no --run in a worktree holding one non-terminal run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/continueRestoresTheSameRun.test.ts --testNamePattern='TC-0018-0110 \(TDD-0328\): Built CLI status with no --run in a worktree holding one non-terminal run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `status`, which with no `--run` reports the worktree's one non-terminal run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/continueRestoresTheSameRun.test.ts > TC-0018-0110 (TDD-0328): Built CLI status with no --run in a worktree holding one non-terminal run`
+- Production files: none
+
+### TDD-0329
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneResumableRunPerWorktree.test.ts`
+- Selector: `TC-0018-0111 (TDD-0329): second start refused run-active, continue resumes the one run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneResumableRunPerWorktree.test.ts --testNamePattern='TC-0018-0111 \(TDD-0329\): second start refused run-active, continue resumes the one run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0336, whose `run-active` refusal carries the active run, and by `resume`, which returns the outstanding work order
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneResumableRunPerWorktree.test.ts > TC-0018-0111 (TDD-0329): second start refused run-active, continue resumes the one run`
+- Production files: none beyond TDD-0336
 
 ### TDD-0336
 
@@ -5381,6 +5430,66 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0157 (TDD-0356): Read the request-kind guidance of the shipped qfai-run`
 - Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/SKILL.md`
 
+### TDD-0359
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0161 (TDD-0359): Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0161 \(TDD-0359\): Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `start`, which copies the request into `request.private.json` as JSON and runs no shell
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0161 (TDD-0359): Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job`
+- Production files: none
+
+### TDD-0360
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0162 (TDD-0360): outside-runs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0162 \(TDD-0360\): outside-runs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the `--in` check of `start`, which resolves the real path and refuses one that is not a regular file under `.qfai/runs/inbox/`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0162 (TDD-0360): outside-runs`
+- Production files: none
+
+### TDD-0361
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0162 (TDD-0361): dotdot-escape`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0162 \(TDD-0361\): dotdot-escape' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the `--in` check of `start`, which resolves the real path and refuses one that is not a regular file under `.qfai/runs/inbox/`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0162 (TDD-0361): dotdot-escape`
+- Production files: none
+
+### TDD-0362
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0162 (TDD-0362): link-escape`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0162 \(TDD-0362\): link-escape' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the `--in` check of `start`, which resolves the real path and refuses one that is not a regular file under `.qfai/runs/inbox/`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0162 (TDD-0362): link-escape`
+- Production files: none
+
+### TDD-0363
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0162 (TDD-0363): directory`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0162 \(TDD-0363\): directory' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the `--in` check of `start`, which resolves the real path and refuses one that is not a regular file under `.qfai/runs/inbox/`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0162 (TDD-0363): directory`
+- Production files: none
+
+### TDD-0364
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/requestTextNeverReachesAShell.test.ts`
+- Selector: `TC-0018-0163 (TDD-0364): Scan the sources under core/workflow/ and the workflow command`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/requestTextNeverReachesAShell.test.ts --testNamePattern='TC-0018-0163 \(TDD-0364\): Scan the sources under core/workflow/ and the workflow command' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the workflow sources, which spawn no process with a shell
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/requestTextNeverReachesAShell.test.ts > TC-0018-0163 (TDD-0364): Scan the sources under core/workflow/ and the workflow command`
+- Production files: none
+
 ### TDD-0365
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -5484,6 +5593,86 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/anInvalidModeIsRefused.test.ts > TC-0018-0175 (TDD-0378): Built CLI start with workflow`
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
 - RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0379
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0176 (TDD-0379): A project agent-routing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0176 \(TDD-0379\): A project agent-routing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0176 (TDD-0379): A project agent-routing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0380
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0380): plan-differs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0380\): plan-differs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the installed plan check, which compares each installed plan with the package's after CRLF normalization
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0380): plan-differs`
+- Production files: none
+
+### TDD-0381
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0381): skill-missing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0381\): skill-missing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0381): skill-missing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0382
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0382): operations-table-missing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0382\): operations-table-missing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0382): operations-table-missing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0383
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0383): operations-first-column`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0383\): operations-first-column' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0383): operations-first-column`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0384
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0384): operations-cell-not-id`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0384\): operations-cell-not-id' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0384): operations-cell-not-id`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0385
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0177 (TDD-0385): operations-pair-omitted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0177 \(TDD-0385\): operations-pair-omitted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, …(2) } to deeply equal { code: 'fail-closed', …(2) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0177 (TDD-0385): operations-pair-omitted`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0386
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts`
+- Selector: `TC-0018-0178 (TDD-0386): A temp project after a qfai init upgrade over a hand-edited manifest that drops a required`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts --testNamePattern='TC-0018-0178 \(TDD-0386\): A temp project after a qfai init upgrade over a hand-edited manifest that drops a required' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { upgraded: +0, code: undefined, …(2) } to deeply equal { upgraded: +0, …(3) }` in `tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts` (start created the run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aCauseAtStartLeavesNoRun.test.ts > TC-0018-0178 (TDD-0386): A temp project after a qfai init upgrade over a hand-edited manifest that drops a required`
+- Production files: none beyond TDD-0379
 
 ### TDD-0389
 

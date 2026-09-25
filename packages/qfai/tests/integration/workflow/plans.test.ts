@@ -7,7 +7,8 @@
 // QFAI:SPEC-0018:TC-0018-0185
 // QFAI:SPEC-0018:TC-0018-0186
 
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -59,8 +60,8 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-// A minimal project: the installed plans and the routing manifest, as `qfai init` would leave
-// them, and no other part of an initialized tree.
+// A minimal project: the installed plans, each skill's Operations table and the routing manifest,
+// as `qfai init` would leave them, and no other part of an initialized tree.
 async function project(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-plans-"));
   roots.push(root);
@@ -70,6 +71,12 @@ async function project(): Promise<string> {
   });
   await mkdir(path.dirname(path.join(root, ROUTING)), { recursive: true });
   await cp(path.join(assets, "manifest", "agent-routing.yml"), path.join(root, ROUTING));
+  for (const skill of await readdir(path.join(assets, "skills"))) {
+    const table = path.join("skills", skill, "references", "orchestrated-mode.md");
+    if (!existsSync(path.join(assets, table))) continue;
+    await mkdir(path.dirname(path.join(root, ".qfai", "assistant", table)), { recursive: true });
+    await cp(path.join(assets, table), path.join(root, ".qfai", "assistant", table));
+  }
   return root;
 }
 
