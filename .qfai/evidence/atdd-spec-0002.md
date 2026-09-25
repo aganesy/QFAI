@@ -301,5 +301,21 @@ cell under `## Every ❌ cell, named` and every finding under `## Findings`.
 
 ## Final status
 
-PASS for the row recorded here. The pack is not clean; the rows above are
-listed rather than claimed.
+Run started 2026-09-25T19:23:36.331Z: FAIL for the spec-wide ATDD Definition
+of Done. The coverage records this run regenerated are confirmed.
+
+- Not done: six stories have no acceptance test, so the rest of
+  `CR-20260912-0003` action 9 stays open.
+- Not a cross-spec pass: the scoped gate exits 1 on `QFAI-TEST-003`, which is
+  outside the codes that admit `PASS with cross-spec obligations`. The nine
+  findings are recorded against spec-0004 and spec-0006 above.
+- Confirmed by `completion-reviewer` and `qa-gatekeeper` in
+  `review-20260925200351792`. Round 1 returned REVISE from both. Round 2
+  returned PASS from both, on reviewed revision
+  `73eee8ab19b466c382b6b1f103630b80f3553e2a` with audited evidence hash
+  `467abc2d6b0334c6d4ebf3e131eab6df4821e716522141b651f67ae2082eead9`.
+
+Review pack: `.qfai/review/review-20260925200351792/` <!-- qfai:not-a-citation .qfai/review/review-20260925200351792/ -->
+Review pack seal: 6bf87c730c427a96af10dcf3676014eea17b045b9aa15a0f9acb04773bf5bab1
+
+First run: PASS for the row recorded here.
