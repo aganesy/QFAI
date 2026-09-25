@@ -34,7 +34,7 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/\_policies/08_Decisions.md (Decision Records, DR-\*; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
 
-## Deliverables (MANDATORY)
+## Deliverables
 
 - Decision Records referenced (DR-IDs) + rejected check (or RE-OPEN request)
 - Work Orders for each subagent (scope, inputs, outputs, gates)

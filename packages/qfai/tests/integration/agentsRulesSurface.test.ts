@@ -401,7 +401,12 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toMatch(/documentation-clarity|Documentation Clarity/i);
       // One token per clause that no other clause in the file carries, so a
       // clause cannot be dropped and still leave the master looking complete.
-      for (const clause of [/#123|GH-123/, /git (history|log)/, /PostToolUse/]) {
+      for (const clause of [
+        /#123|GH-123/,
+        /git (history|log)/,
+        /PostToolUse/,
+        /a dial worth turning/,
+      ]) {
         expect(text).toMatch(clause);
       }
     });

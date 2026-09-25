@@ -43,7 +43,7 @@ describe("a US outside the current slice has a documented deferral", () => {
 
     it(`${tree}: /qfai-atdd states the deferral where it states the obligation`, async () => {
       const skill = flat(await read(tree, ATDD_SKILL));
-      // Both places the US obligation is stated — CRITICAL CONSTRAINTS and
+      // Both places the US obligation is stated — Hard Constraints and
       // Success Criteria — since a reader who finds only the unconditional one
       // is back where this started.
       expect(skill).toContain("`tests/e2e/**` must cover all required `US-*`. A story outside the");

@@ -160,7 +160,7 @@ routing:
       # per declared entrypoint that has no recorded pass.
       - id: skeleton
         iteration: per-invocation
-        # `qa-gatekeeper` is MANDATORY, not conditional. The exit criterion is
+        # `qa-gatekeeper` is required, not conditional. The exit criterion is
         # an execution result, and the gatekeeper is its only judge. Listed
         # conditional it could simply not be selected, and `blocking_agents`
         # would not save it: blocking stops the REVISE of an agent the

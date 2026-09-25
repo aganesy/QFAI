@@ -68,7 +68,7 @@ When unsure, read inputs in this order:
 - P4: the obligations that row names (`06_Test-Cases.md` through its `TC-Refs`, then `03_Acceptance-Criteria.md`, `05_Examples.md`, `01_Spec.md`, `.qfai/contracts/**`)
 - P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`)
 
-## Grilling (MANDATORY)
+## Grilling
 
 Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
 this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
@@ -252,7 +252,7 @@ the Work Orders Summary sits outside the run's block, so a row keyed by `Session
   reopens a session under the same description. `Session` is `S1`, `S2`, … in
   the order the sessions opened, and it is unique by construction.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
@@ -298,7 +298,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ## Required Process
 
-### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first
+### Phase: Stage 0 + Preflight + Plan — runs first
 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory` and `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. Run this stage in full even when invoked from another skill: Stage 0 is not inherited from a parent skill, and this is the stage that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
@@ -415,7 +415,7 @@ test until it fails in order to manufacture a RED. See `references/red-not-obser
    any `exception` row lacks such a waiver.
 4. If a multi-spec queue was confirmed, announce the next queued spec and restart at Phase: Red with its ledger; exit only after the last entry (`references/volume-policy.md#advancing-the-queue`). The Skeleton phase runs once per **declared entrypoint**, so a queued spec that shares one already proven does not repeat it, while a queued spec that reaches a new entrypoint runs it for that one before its first row.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
@@ -653,7 +653,7 @@ Completion MUST NOT be declared when any of the following are true:
 - A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a step 1 command exited 0 without its recorded output naming the `Selector` entries that run had to observe — file-scoped, every entry of the row being checkpointed, because a run over a `Test file` several rows share can execute only the siblings' tests; narrowed, the entry that run selected — with, on a runner with no option that prints names, a positive selected/run count recorded in its place accepted for a **narrowed** run only (file-scoped the siblings supply that count, so it proves nothing about this row and the row is narrowed per entry instead; a run that selected zero tests exits 0 too, so the exit code alone never settles it; the count is the same alternative `references/checkpoint-verification.md` allows under **The option that makes the run visible**, so a supported nameless runner is not blocked here). Which rows are boundaries is defined only in `references/relevant-test-suite.md#checkpoint-boundaries` — never derive one here, and never read it as the physical last row of the file, which is often already `done` and skipped. Every spec still runs the full suite at least once: the spec-level boundary runs it unconditionally on a terminal ledger
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID. **Or the run reports a `QFAI-TEST-002` no waiver marked `suppressed=true`**, which says the scan produced no evidence, so zero `QFAI-TEST-001` proves nothing: it is `info` and never fails `--fail-on error`, and its commonest cause is the empty `validation.traceability.testFileGlobs` that `npx qfai init` ships, under which no file is scanned at all. Configure the globs (`/qfai-configure`) and re-run; an extension qfai has no stub dialect for needs a `.qfai/waivers.yml` entry with a DR-ID, whose `suppressed=true` mark is what lifts the block — the finding itself stays in the output. (`references/ui-affecting.md`)
 
-## Evidence (MANDATORY)
+## Evidence
 
 Create/update the evidence file the row's `Layer` owns: `.qfai/evidence/implement-<spec-id>.md` for the rows this skill runs end to end, and `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, whose RED provenance was produced by the stage that authored its test — all three, so the GREEN, the refactor-verify pair and the review verdicts land in the same file as the provenance and item 10 reads one complete entry rather than half of one from each. This is the file gate item 10 resolves the `Evidence` anchor against, so the whole per-item record — RED, GREEN, Refactor, `Oracle proof` and every routed reviewer's verdict — belongs in the **one** file, appended to the `## Ledger rows advanced` entry `/qfai-atdd` opened. Splitting a row across both leaves the file the gate reads incomplete.
 
@@ -665,7 +665,7 @@ Required sections:
   per invocation, one row per session inside it, and the open questions listed
   under the table. The block heading carries the start this run's work order
   states, which is what says the rows are this invocation's; `Revision` says
-  which tree each session ended against (`## Grilling (MANDATORY)`). A run
+  which tree each session ended against (`## Grilling`). A run
   whose rows own `atdd-<spec-id>.md` writes the same block into that file's
   section too, beside the blocks `/qfai-atdd` wrote, by the same rule gate
   item 10 uses. A mutation-only invocation writes no block and reports its

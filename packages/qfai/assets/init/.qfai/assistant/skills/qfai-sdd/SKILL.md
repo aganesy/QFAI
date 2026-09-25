@@ -130,7 +130,7 @@ Those per-row approvals are decisions, not clarifications: they are exempt from 
 5. P4: existing `.qfai/specs/<spec-id>/**` for the targeted specs
 6. P5: `.qfai/discussion/**`, `.qfai/contracts/**`
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 

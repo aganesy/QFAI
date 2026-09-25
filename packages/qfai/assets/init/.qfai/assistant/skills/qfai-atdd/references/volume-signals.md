@@ -52,7 +52,7 @@ its own validator reads it, or the count and the obligation disagree:
   `tdd/test-list.md` either: `/qfai-sdd` Phase 2b seeds no `Layer = API` row
   (`references/red-provenance.md`), so a first run would read `#CON` 0 for a
   spec whose contracts this stage is about to implement. `.qfai/contracts/**`
-  has no spec owner in the model (see `SKILL.md`, CRITICAL CONSTRAINTS), so the
+  has no spec owner in the model (see `SKILL.md`, Hard Constraints), so the
   repository-wide declared set is **not** this number either. A declared
   contract no spec references is a repo-level obligation for the end-of-stage
   run — name it in `Notes`, do not count it here.

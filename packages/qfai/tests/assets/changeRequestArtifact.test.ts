@@ -202,7 +202,7 @@ describe("a Change Request is a defined artifact", () => {
       // same first phase, so the heading names all three. The
       // preflight is still first and still mandatory, which is what this case
       // is about.
-      const preflightHeading = "### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first";
+      const preflightHeading = "### Phase: Stage 0 + Preflight + Plan — runs first";
       expect(skill).toContain(preflightHeading);
       // The all-terminal exit bullet also carries the spec-level checkpoint
       // obligation, so assert the preflight clause rather than

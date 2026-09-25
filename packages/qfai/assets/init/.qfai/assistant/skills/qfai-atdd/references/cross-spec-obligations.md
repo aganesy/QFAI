@@ -12,8 +12,8 @@ against paths no spec owns, and those still exit 1.
 
 So on a repository with two specs, each declaring one `CON-API-*`, the first
 run covers its own contract and `QFAI-ATDD-113` still reports the sibling's.
-CRITICAL CONSTRAINTS forbids all four ways out of that — claiming the gate
-passed, weakening the profile, lowering `--fail-on`, waiving — and the remedy
+The Hard Constraints section forbids all four ways out of that — claiming
+the gate passed, weakening the profile, lowering `--fail-on`, waiving — and the remedy
 it names, the owning spec's next run, hits the identical block from the other
 side. Without a terminal state for the compliant path, every spec waits for
 every other one, the stage closes only in one final repo-wide pass, and the
@@ -64,7 +64,7 @@ uncovered contract holds the command at exit 1 however complete this spec is.
 
 Requiring exit 0 outright therefore left the compliant run not-done with no
 other state to be in — and a run in no state the skill names is one an agent
-resolves by inventing one, out of the four moves CRITICAL CONSTRAINTS forbids.
+resolves by inventing one, out of the four moves the Hard Constraints section forbids.
 
 Both parts met is the terminal state below. A residual finding attributable to
 no named sibling spec is not residue at all: it is this spec's own, and it

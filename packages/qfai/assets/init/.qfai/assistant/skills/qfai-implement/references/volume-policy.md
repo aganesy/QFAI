@@ -279,7 +279,7 @@ once, then after each ledger:
    `delivery-planner` REVISE already takes (`plan-phase.md`), and the check
    above is the only thing that reaches it.
 
-3. "Report and exit" in CRITICAL CONSTRAINTS applies per ledger, not per run: a
+3. "Report and exit" in Hard Constraints applies per ledger, not per run: a
    ledger whose rows are all `done` yields "nothing to do" **for that spec** and
    the queue advances past it rather than ending the run.
 4. Exit only after the last queued spec, with a summary naming every processed

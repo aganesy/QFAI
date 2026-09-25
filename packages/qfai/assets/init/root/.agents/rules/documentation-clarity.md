@@ -55,6 +55,10 @@ The test: if deleting a sentence leaves the reader no worse off, delete it.
 ## 4. Plain language
 
 - Use ordinary vocabulary. Avoid coined terms and in-group phrasing.
+- State the point directly, not through a metaphor or a flourish. Write "a
+  parameter worth varying", not "a dial worth turning". A metaphor carries
+  associations the writer did not choose, and the reader has to translate it
+  back.
 - One claim per sentence. Keep sentences short.
 - Break lines so no line is hard to scan.
 
