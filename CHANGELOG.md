@@ -21,6 +21,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a pool block, and `vite` is declared as the peer the runner requires
   instead of being resolved for it. The supported Node range is unchanged.
 
+- **Three spec-0008 ledger rows closed without per-row review now carry it**
+  (#2289). `TDD-0033`, `TDD-0034` and `TDD-0035`, the rows for the ATDD skill's
+  `test-fix` rule, each went through a falsifiability proof, the RED and GREEN
+  gates and both reviews before closing at `done`. They leave the waiver that
+  covered them, which now names the six rows still to review.
+
 - **The type checker moves to TypeScript 6.** The seventh major ships the
   compiler as a native binary and no longer exposes the classic compiler API
   from its main entry, which the test tree and the declaration build both read;
