@@ -971,5 +971,6 @@ policy layer stated both globally.
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                              | re-derive | user                                                    | 2026-09-24T19:00:08Z |
 | CR-20260912-0003 | `_policies/05_Contracts.md`; `_policies/06_Glossary.md`; `_policies/07_Constraints.md`; `_policies/08_Decisions.md` | re-derive | user                                                    | 2026-09-25T00:21:41Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-25T02:36:35Z |
 
 - DR-0012-002 cites this CR in Related. Source profile/catalog changes and their operating mirrors are physically applied. Scoped SDD validation has zero errors; full scoped and global SDD validation retain 61 and 96 baseline errors. Current attestations remain pending, Applied at remains unset and no baseline finding is waived.

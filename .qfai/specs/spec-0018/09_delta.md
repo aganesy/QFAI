@@ -60,6 +60,24 @@
   independently observable obligations changed. TDD-0001 and TDD-0004 remain
   done pending shared-file re-verification.
 
+- Change ID: DELTA-0006
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0006 parts B, C and D.
+  - B: TC-0018-0031's input is a result whose `gateResults` claims a PASS for
+    a gate, because a `gateResults` entry has no trust-level key. The claim is
+    still recorded `agent_reported` and decides no gate.
+  - C: CLI-WF `## Completion` fixes the owner of every `unmet[]` condition.
+    No BR or AC of this spec contradicted it, so none changed.
+  - D: TC-0018-0043 and EX-0018-0026 name `qfai-sdd` as the debt's
+    `resolvingOwner`. `finish` lists `debt-open` with that owner and the other
+    spec in `subject`, and the run does not complete until that spec repairs
+    it.
+
+  IDs are unchanged. TDD-0035 and TDD-0055 stay at todo; this CR goes in
+  their DR-ID.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -527,3 +545,4 @@ through `finish`, so its example ends that way.
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                   | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0003 | `spec-0018/tdd/test-list.md`                                                                                                                 | re-derive | user        | 2026-09-24T18:36:12Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/05_Examples.md`, `06_Test-Cases.md`                                                       | re-derive | user        | 2026-09-25T02:36:35Z |

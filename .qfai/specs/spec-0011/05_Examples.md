@@ -139,7 +139,7 @@
 - Given a diagnosis with verdict `missing-test` on behaviour an existing AC states
 - When `/qfai-implement` handles that scope gap
 - Then it files no Change Request and adds no ledger row, and `/qfai-sdd` appends the row
-- And the scope-gap line of `references/change-request-reset.md` and the one in `SKILL.md` each state that carve-out and cite DR-0297
+- And the scope-gap line of `references/change-request-reset.md` and the one in `SKILL.md` each state that carve-out and name `/qfai-sdd` as the skill that appends the row
 - And a scope gap found another way, such as a new obligation found during a RED round, still goes through a Change Request
 
 ## EX-0011-0019: A Regression Is Fixed in Production Code Only

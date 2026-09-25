@@ -157,7 +157,7 @@
 - AC-Refs: AC-0011-0020
 - Type: normal
 - Level: L3
-- Verify that the scope-gap line of `qfai-implement/references/change-request-reset.md` and the scope-gap line of `qfai-implement/SKILL.md` each state that a diagnosed missing test on behaviour the spec already states raises no Change Request and adds no ledger row from this skill, and each cite DR-0297. Verify also that each keeps the Change Request for every other scope gap.
+- Verify that the scope-gap line of `qfai-implement/references/change-request-reset.md` and the scope-gap line of `qfai-implement/SKILL.md` each state that a diagnosed missing test on behaviour the spec already states raises no Change Request and adds no ledger row from this skill, and each name `/qfai-sdd` as the skill that appends the row. Verify also that each keeps the Change Request for every other scope gap.
 - Notes: test module `packages/qfai/tests/integration/implement/orchestrated/missingTestCarveOut.test.ts`.
 
 ## TC-0011-0022: A Regression Fix Leaves the `done` Row `done`

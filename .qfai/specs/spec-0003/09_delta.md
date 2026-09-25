@@ -243,6 +243,7 @@ observable:
 | CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-24T19:00:08Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T02:36:35Z |
 
 ## Triage (2026-09-15)
 

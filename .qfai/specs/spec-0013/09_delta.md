@@ -237,6 +237,26 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
   The stale duplicate-ID pin and pending-application text in 10_Plan.md are
   removed. The earlier migration and triage counts remain historical records.
 
+- Change ID: DELTA-0005
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0006 part A. Five test cases no longer require shipped
+  skill text to cite a contract or DR-0297, neither of which ships:
+  - TC-0013-0038 states the approval check: the record exists, matches the
+    row's operation and capability, and is not stale.
+  - TC-0013-0039 states the three staleness conditions, and that the clock
+    alone never makes an approval stale.
+  - TC-0013-0042 and EX-0013-0026 state the value form
+    `run-<17 digits>/<authorizationId>`.
+  - TC-0013-0043 states that the seeded row is for behaviour the spec already
+    states.
+  - TC-0013-0047 drops its citation clause.
+
+  The ACs and BRs cite the contracts as their own source and are unchanged.
+  IDs are unchanged. TDD-0044, TDD-0045, TDD-0048, TDD-0049 and TDD-0053 stay
+  at todo; this CR goes in their DR-ID.
+
 ## Change Requests
 
 | CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
@@ -244,3 +264,4 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
 | CR-20260913-0012 | `spec-0013/01..06`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`                    | re-derive | user        | 2026-09-24T19:55:40Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0013/05_Examples.md`, `06_Test-Cases.md` | re-derive | user        | 2026-09-25T02:36:35Z |

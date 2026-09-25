@@ -846,6 +846,20 @@ Otherwise it stays `debt-open`, with its `resolvingOwner` as the owner. A debt
 only another spec can resolve therefore keeps the run from completing until that
 spec repairs it.
 
+Every condition has a fixed `owner`. This extends the rule that a blocked run
+names `operator` or the skill that owns the work ([State machine](#state-machine)).
+
+| `condition`                        | `owner`                                                                                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                              |
+| `stage-unaccepted`                 | The skill of the stage with no accepted result, as CLI-WFFILE `### Vocabulary` maps its stage kind; for `test_fix`, the skill the defective row's layer selects |
+| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill of the verify stage                                                                                                                    |
+| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                     |
+| Every other condition              | `operator`                                                                                                                                                      |
+
+A run with no accepted verify stage is reported as `verify-missing` only, never
+also as `stage-unaccepted`.
+
 The two targets:
 
 | Target         | Met when                                | Reported as                                                                          |

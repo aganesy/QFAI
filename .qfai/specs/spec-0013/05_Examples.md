@@ -188,7 +188,7 @@
 - BR-Ref: BR-0013-0026
 - Given `references/sdd-triage.md`
 - When a reader looks up the triage table format
-- Then `Authorization-Ref` is an optional column found by its header name and filled on a `CREATE` row only, its value form is cited from CLI-VAL, a row that cites a record copies `answeredBy@YYYY-MM-DD` into `Approved By`, a `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` or `UPDATE:REMOVE` row carries no reference, and a row without the column is still valid
+- Then `Authorization-Ref` is an optional column found by its header name and filled on a `CREATE` row only, its value form is `run-<17 digits>/<authorizationId>`, naming the run and the cited record, a row that cites a record copies `answeredBy@YYYY-MM-DD` into `Approved By`, a `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` or `UPDATE:REMOVE` row carries no reference, and a row without the column is still valid
 
 ## EX-0013-0027: A missing-test diagnosis becomes one test case and one row
 

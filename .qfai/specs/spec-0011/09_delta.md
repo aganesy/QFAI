@@ -111,6 +111,16 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 
 - Phase 2c.1 (obligation reconciliation): AC-0011-0018 and BR-0011-0015 now say a diagnosis changes no file git tracks, and name the files git ignores as artifacts. AC-0011-0019 and BR-0011-0016 name `matchedRowIds` and put the reproduction, cause candidates and impact in the reproduction record. BR-0011-0019 names the `regressionFix` receipt and gains a Contract Realization row. The IDs are unchanged. The sources are CLI-WF `### Stage result` (`changedFiles`, `artifactRefs`, `diagnosis`, `regressionFix`).
 
+- Change ID: DELTA-0002
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0006 part A. AC-0011-0020, BR-0011-0017, EX-0011-0018
+  and TC-0011-0021 no longer require the two scope-gap lines to cite DR-0297,
+  which the distributed-surface guards refuse in a shipped file. Each line names
+  `/qfai-sdd` as the skill that appends the row instead. IDs are unchanged.
+  TDD-0029 stays at todo; this CR goes in its DR-ID.
+
 ## Update History
 
 | Date       | DL      | Summary                                                                                          |
@@ -199,3 +209,4 @@ notes: Decision D18; BR-0011-0002 and its forward-only lifecycle stand unchanged
 | ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0011/03..06`                             | re-derive | user        | 2026-09-25T02:36:35Z |
