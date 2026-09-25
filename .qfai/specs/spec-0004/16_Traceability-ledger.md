@@ -11,12 +11,22 @@ on the branch needs current test proof in its `Proof` column, otherwise
 
 ## Ledger Table (required when this file exists)
 
-| BR/AC        | Implementation File                                        | Test File                                                               | Notes                                                                   | Proof |
-| ------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----- |
-| AC-0004-0018 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts          | An empty `R-REJECTED-READOPT` justification is an error.                | -     |
-| BR-0004-0001 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/core/specScopeValidate.test.ts                      | The machine gate runs the SDD validators and aggregates their findings. | -     |
-| BR-0004-0017 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts          | `R-REJECTED-READOPT` requires a non-empty justification.                | -     |
-| BR-0004-0028 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/integration/spec0004ProfileSuffixedValidate.test.ts | The three-part rule for `R-PROMPT-SCANNER-DRIFT` is enforced here.      | -     |
+| BR/AC        | Implementation File                                        | Test File                                                                 | Notes                                                                         | Proof |
+| ------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----- |
+| AC-0004-0018 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts            | An empty `R-REJECTED-READOPT` justification is an error.                      | -     |
+| AC-0004-0042 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageLegacyApproval.test.ts   | A triage row with no authorization reference keeps the legacy approval check. | -     |
+| AC-0004-0043 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageNoApprovalRow.test.ts    | A reference on a row that needs no approval raises nothing.                   | -     |
+| AC-0004-0044 | packages/qfai/src/core/validators/assistantAssets.ts       | packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts | The installed workflow plans are validated as a governed layer.               | -     |
+| AC-0004-0045 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageApprovalSet.test.ts      | One approval set decides which triage rows need approval.                     | -     |
+| AC-0004-0046 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts | A cited authorization is checked against its record.                          | -     |
+| BR-0004-0001 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/core/specScopeValidate.test.ts                        | The machine gate runs the SDD validators and aggregates their findings.       | -     |
+| BR-0004-0017 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts            | `R-REJECTED-READOPT` requires a non-empty justification.                      | -     |
+| BR-0004-0028 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/integration/spec0004ProfileSuffixedValidate.test.ts   | The three-part rule for `R-PROMPT-SCANNER-DRIFT` is enforced here.            | -     |
+| BR-0004-0036 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageLegacyApproval.test.ts   | A row without a reference keeps the legacy check.                             | -     |
+| BR-0004-0037 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageNoApprovalRow.test.ts    | No authorization check runs where no approval is needed.                      | -     |
+| BR-0004-0038 | packages/qfai/src/core/validators/assistantAssets.ts       | packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts | The installed plans are a governed layer.                                     | -     |
+| BR-0004-0039 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageApprovalSet.test.ts      | One approval set.                                                             | -     |
+| BR-0004-0040 | packages/qfai/src/core/validators/specPack.ts              | packages/qfai/tests/integration/validators/triageAuthorizationRef.test.ts | A cited authorization must pass every check.                                  | -     |
 
 ### Planned bindings
 

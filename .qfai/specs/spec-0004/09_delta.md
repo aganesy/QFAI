@@ -1490,3 +1490,81 @@ notes: RE-OPEN of DL-0026 (DR-0004-0047, re-opening DR-0004-0040). The user appr
 | Source   | Subject                                                                        | Existing Spec | Operation | Sub-op | Approved By      | Rationale                                                                                                                     |
 | -------- | ------------------------------------------------------------------------------ | ------------- | --------- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | REQ-0029 | The `layoutAntiPatternsDetected` whitelist is the registry, not a numeric band | spec-0004     | UPDATE    | MODIFY | CR-20260912-0001 | The acceptance criterion was already registry-anchored; the requirement, the rule and the example still stated `lap-001..008` |
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source             | Subject                                                                                                       | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Depends-On         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| REQ-0043           | The triage approval check resolves a cited workflow authorization and uses the one approval set               | spec-0004     | UPDATE    | APPEND | -           | A row citing a workflow authorization must resolve to a recorded `human_decision` under `.qfai/evidence/workflow/<runId>/` for the same operation and capability. A legacy row keeps the `Approved By` check. The validator's own copy of the approval set gives way to `requiresApproval()`. Size signal: AC 39 is over 30 and TC 50 sits at the threshold, over it after this append. spec-0004 owns only CAP-0004, so there is no split                                                                                                                                                                                                                                            | REQ-0041, OQ-0006  |
+| REQ-0065, REQ-0057 | `qfai validate` applies the governed-layer provenance checks to the installed plans under `process/workflows` | spec-0004     | UPDATE    | APPEND | -           | CLI-INIT makes `process/workflows` a governed layer, so validate vouches for it as for the others: an edited installed plan is `QFAI-ASSETS-005` (a fork) or `QFAI-ASSETS-004` (stale), at `error`, the fixed severity of the provenance checks, and a recorded layer deleted whole is reported once, against the layer. `process/migrations/` is not governed. The finding codes exist and no contract changes. The lock-key read and the helper that maps a path to its governed layer are spec-0003's (BR-0003-0053); the two layer reads in `validators/assistantAssets.ts` are this spec's. Size signal: AC 43 → 44, over 30. spec-0004 owns only CAP-0004, so there is no split | REQ-0033, REQ-0049 |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Change ID: DELTA-0004
+- Date: 2026-09-24
+- Primary: the triage authorization reference (`discussion-20260923171450572#REQ-0043`)
+- Tags: @docs, @test
+- Summary: the validator checks a triage row that cites a workflow authorization
+  against the record it names, and decides which rows need approval from
+  `requiresApproval()` alone. The rules cite CLI-VAL
+  `## Triage authorization reference` and copy none of its checks.
+- Items appended: US-0004-0040; AC-0004-0042..AC-0004-0043, AC-0004-0045..AC-0004-0046;
+  BR-0004-0036..BR-0004-0037, BR-0004-0039..BR-0004-0040, each contract-backed. The examples and test cases
+  follow from EX-0004-0056 and TC-0004-0084. No existing item changes.
+- Resolved pack question: `discussion-20260923171450572#OQ-0006`, recorded in
+  `08_Open-questions.md` `## Resolved (2026-09-24 intent-driven entry)`.
+- Policy: `_policies/08_Decisions.md` DR-0299, cited in `01_Spec.md`
+  `## Applicable Policy`. No spec decision record is added.
+- Size: AC 39 → 43, over 30; TC 50, over 50 once the test cases are appended.
+  No split: spec-0004 owns only CAP-0004.
+
+- Change ID: DELTA-0005
+- Date: 2026-09-24
+- Primary: Phase 2c obligation reconciliation, against CLI-VAL
+  `## Triage authorization reference` as revised: `Authorization-Ref` on a
+  `CREATE` row only, and a `Binding` check with the capability branch alone
+- Tags: @docs, @test
+- Summary: AC-0004-0046 gains one outcome, that a reference on an
+  approval-required row other than a `CREATE` fails `Operation`. BR-0004-0040
+  keeps its text, since it cites the check set rather than listing it. The
+  OQ-0006 resolution in `08_Open-questions.md` names the `CREATE`-only rule. The
+  reference-check matrix no longer has a case for a non-`CREATE` row's binding.
+
+- Change ID: DELTA-0006
+- Date: 2026-09-24
+- Primary: the installed plans as a governed layer
+  (`discussion-20260923171450572#REQ-0065`, `#REQ-0057`)
+- Tags: @docs, @test
+- Summary: one approval-free `UPDATE` / `APPEND` row in
+  `## Triage (2026-09-24 intent-driven entry)`. `qfai validate` applies the
+  existing governed-layer provenance checks to `process/workflows`, which CLI-INIT
+  makes a governed layer, and reports nothing under `process/migrations/`.
+- Items appended: AC-0004-0044 under US-0004-0028, which already holds the
+  assistant-tree checks, so no new story and no new journey; BR-0004-0038, a
+  spec rule, since no contract states the `QFAI-ASSETS` family. Its examples and test cases
+  start at EX-0004-0052 and TC-0004-0080.
+- Size: AC 43 → 44, over 30. No split: spec-0004 owns only CAP-0004.
+- Correction to BR-0004-0038 and AC-0004-0044, IDs kept: an edited installed
+  plan is `QFAI-ASSETS-005` (a fork) and a stale one `QFAI-ASSETS-004`, both at
+  `error`, which is fixed rather than configured. The deleted-layer finding stays
+  `QFAI-ASSETS-007`.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- `AC-0004-0040`, `AC-0004-0041`, `BR-0004-0034`, `BR-0004-0035`, `EX-0004-0042`..`EX-0004-0044`
+  and `TC-0004-0074`..`TC-0004-0077` became `AC-0004-0045`, `AC-0004-0046`, `BR-0004-0039`,
+  `BR-0004-0040`, `EX-0004-0056`..`EX-0004-0058` and `TC-0004-0084`..`TC-0004-0087`.
+- `TDD-0067`..`TDD-0072` became `TDD-0087`..`TDD-0092`.
+- The intent-driven entry's `DELTA-0001`..`DELTA-0003` became `DELTA-0004`..`DELTA-0006`.
+- `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010` became `CR-20260924-0007`,
+  `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
+  `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
+  Every reference here follows them.
+- A range that included a moved ID now names the moved IDs separately.

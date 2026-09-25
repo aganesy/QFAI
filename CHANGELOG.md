@@ -45,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial now start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states when
+  a host is declared supported for quality-gated automation, and declares none
+  in this release, since no routing eval has been recorded.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
@@ -206,6 +214,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a `## AC-0001` section still counts as part of that criterion, not as
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack. spec-0002 and spec-0010
+  now state the product's rules for the discussion stage: it records the brand
+  direction the user chooses and ranks none of the screen explorations, and
+  `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
 
 ## [1.12.3] - 2026-09-24
 

@@ -139,6 +139,71 @@ Rules:
 - If something cannot be verified, record an Open Question and ask the user.
 - Update steering when new facts are discovered during the stage.
 
+### Inside a workflow run
+
+Inside an active workflow run, a stage reuses the Stage 0 output an earlier
+stage wrote only when the key recorded with it, recomputed, is equal. On a
+different key, refresh only what changed.
+
+The key covers:
+
+- the tool, policy and skill hashes;
+- the input file hashes;
+- glob membership;
+- capability state.
+
+Compute it with the digest function `npx qfai workflow` uses.
+
+No stage-specific check is served from that output. ATDD still makes its own
+layer decision, and implement still runs its own ledger check.
+
+Outside a run, Stage 0 is unchanged.
+
+## Workflow Run Entry Check (Mandatory)
+
+A skill that a built-in workflow plan names runs this check first, before
+Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
+`active`.
+
+A QFAI work order is the one `npx qfai workflow` issues to a stage. It is not a
+delegation work order.
+
+| State     | Mode              | When                                                 | What the skill does                                                                                                                          |
+| --------- | ----------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pass-on` | `active`          | Neither invoked by name nor handed a QFAI work order | Edit nothing. Pass the request to `qfai-run` in the same turn. Show the operator at most one line, and no explanation of modes or stages     |
+| `by-name` | `active`          | Invoked by name                                      | Run standalone and end at this stage. Start no other stage. A request to take the work to the end becomes a whole run: pass it to `qfai-run` |
+| `worker`  | `active`          | Handed a QFAI work order that matches an issued one  | Check the run, stage and work-order IDs, then do only that work. Say nothing to the operator                                                 |
+| `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the harness                                                                                          |
+| `off`     | `off` or `shadow` | Always                                               | No entry check. Behave as when invoked by name                                                                                               |
+
+### What authorizes a run's work
+
+- The operator's first explicit request authorizes the run's work, within the
+  scope the checked route allows.
+- A decision a skill's `Default Autopilot Policy` lists under `ask-user` still
+  needs the operator's answer.
+- A QFAI work order binds the stage to its target: one spec, or one
+  new-capability slot. The stage works on that target and no other.
+- These statements add to the constitution. They except no article.
+
+## Default Autopilot Policy inside a run
+
+Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
+satisfied by one kind of authorization the run records:
+
+- An `ask-user` item is satisfied only by a `human_decision` that answers it.
+- A `hard-required` input is satisfied by `request_scope` or by the run's
+  binding.
+- An `auto-decide` item needs no authorization.
+- `--auto` satisfies nothing. It answers no `ask-user` item and supplies no
+  `hard-required` input.
+
+A `primarySpecId` that a run's valid binding supplies counts as supplied: the
+work order's target names the spec, so the skill does not ask for it. With no
+binding, `primarySpecId` stays `hard-required`, and
+[User Questions](#user-questions-askuserquestion-protocol) says how it is asked
+for and when its absence stops the run.
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do not reintroduce options marked as rejected in `09_delta.md`.

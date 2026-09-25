@@ -926,6 +926,215 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Checkpoint verification revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
 - Checkpoint verification seal: 3130415110be88e4f514d4b5528b21ee49f7d002fe1ad7902e4b6a8277d1acd5
 
+### TDD-0133
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
+- Selector: `TC-0013-0040: The other approval-required operations keep the question`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --testNamePattern='TC-0013-0040: The other approval-required operations keep the question' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Inside a workflow run section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
+
+### TDD-0134
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
+- Selector: `TC-0013-0041: `--auto` inside a run approves nothing`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --testNamePattern='TC-0013-0041: `--auto` inside a run approves nothing' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## `--auto` inside a run section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
+
+### TDD-0118
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
+- Selector: `TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingExistingRows.test.ts --testNamePattern='TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
+
+### TDD-0119
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
+- Selector: `TC-0013-0045: The seeded row's layer comes from the oracle`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingLayer.test.ts --testNamePattern='TC-0013-0045: The seeded row's layer comes from the oracle' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
+
+### TDD-0120
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
+- Selector: `TC-0013-0046: The append is recorded as an approval-free delta row`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingDelta.test.ts --testNamePattern='TC-0013-0046: The append is recorded as an approval-free delta row' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
+
+### TDD-0122
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
+- Selector: `TC-0013-0048: A direct `/qfai-sdd` ends at SDD`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/standaloneEnd.test.ts --testNamePattern='TC-0013-0048: A direct `/qfai-sdd` ends at SDD' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Invoked by name section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
+
+### TDD-0123
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
+- Selector: `TC-0013-0049: The entry check follows the handover`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/entryCheck.test.ts --testNamePattern='TC-0013-0049: The entry check follows the handover' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Entry check section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
+
+### TDD-0124
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
+- Selector: `TC-0013-0050: The Operations table lists the vocabulary's operations`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/operationsTable.test.ts --testNamePattern='TC-0013-0050: The Operations table lists the vocabulary's operations' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests  1 passed (1)); the asset text landed before this test was written
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
+- Note: The Operations table this test reads was written for spec-0001 TDD-0039, before this test existed, so no RED was observed.
+
+### TDD-0125
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
+- Selector: `TC-0013-0051: Stage 0 reuse keeps SDD's own check live`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage0Reuse.test.ts --testNamePattern='TC-0013-0051: Stage 0 reuse keeps SDD's own check live' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Stage 0 section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
+
+### TDD-0131
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
+- Selector: `TC-0013-0052: Stage 1 checks a matching routing-time approval`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern='TC-0013-0052: Stage 1 checks a matching routing-time approval' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /the check passes only when the recor…/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
+- Reopened by: CR-20260925-0020 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
+
+### TDD-0132
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
+- Selector: `TC-0013-0053: A failed approval check persists nothing`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --testNamePattern='TC-0013-0053: A failed approval check persists nothing' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /an approval is stale when the scope …/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
+- Reopened by: CR-20260925-0020 part A; the case asserts the three staleness conditions and that the clock alone never makes an approval stale.
+
+### TDD-0116
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
+- Selector: `TC-0013-0042: The triage format carries Authorization-Ref`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --testNamePattern='TC-0013-0042: The triage format carries Authorization-Ref' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Triage table format ```markdown ##…' to match /`Authorization-Ref` is optional and …/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
+- Reopened by: CR-20260925-0020 part A; the case asserts the value form `run-<17 digits>/<authorizationId>` instead of a contract citation.
+
+### TDD-0117
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`
+- Selector: `TC-0013-0043: Defect row seeding appends one case and one row`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeeding.test.ts --testNamePattern='TC-0013-0043: Defect row seeding appends one case and one row' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the `### Defect row seeding` text landed with the rows this batch closed before
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`
+- Reopened by: CR-20260925-0020 part A; the case asserts that the row is for behaviour the spec already states and files no Change Request, with no decision ID.
+- The shipped text names the work order by its operation, `defect-row-seeding`; `sdd_append` is the stage kind the core issues it under and does not ship.
+
+### TDD-0121
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
+- Selector: `TC-0013-0047: A work order without a target is refused`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/workOrderTarget.test.ts --testNamePattern='TC-0013-0047: A work order without a target is refused' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the `## Operations` text landed with the rows this batch closed before
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
+- Reopened by: CR-20260925-0020 part A; the case dropped its citation clause.
+
+### TDD-0126
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey: the routing-time `create` answer is the only one asked, and the SDD work order targets the approved `new_capability` slot with no second question; the test carries `QFAI:SPEC-0013:US-0013-0015`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455): one create question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\): one create question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+### TDD-0128
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey: the `qfai-sdd` work order names exactly its operation and target, and every later work order targets the spec SDD bound; the test carries `QFAI:SPEC-0013:US-0013-0017`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455): one create question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\): one create question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+### TDD-0129
+
+- Retired: row deleted 2026-09-25 in the merge reconciliation. It duplicated origin/main's application of the same approved option of CR-20260913-0012, and TDD-0081 now owns its case. Its test file was deleted; the checks it made that TDD-0081's test lacked moved there. The record below is kept as it was written.
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
+- Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+- Selector: `TC-0013-0036: Missing optional side artifact leaves preflight ready`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sddPreflightOptionalArtifact.test.ts --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (2 passed). `qfai sdd preflight --format json` returns exit 0, `ready` and no blockers with and without the file; the preflight treats the file as optional already.
+- GREEN result: exit 0; 2 passed (2)
+- Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+
+### TDD-0130
+
+- Retired: row deleted 2026-09-25 in the merge reconciliation. It duplicated origin/main's application of the same approved option of CR-20260913-0012, and TDD-0082 and TDD-0083 now own its case. Its test file was deleted; the checks it made that TDD-0082 and TDD-0083's test lacked moved there. The record below is kept as it was written.
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260913-0012` (option 1, applied); the request is resolved.
+- Test file: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+- Selector: `TC-0013-0037: Invalid or legacy optional side artifact leaves preflight ready`
+- RED command (cwd `packages/qfai`): as TDD-0129
+- RED result: already satisfied: exit 0 on the first run; a schema-invalid namespaced file and a legacy-only file each leave the verdict `ready` with no blockers
+- GREEN result: exit 0; 2 passed (2)
+- Changed files: `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`
+
 ### Withdrawn TDD-0110 (never merged)
 
 - Renumbered: `TDD-0044` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.

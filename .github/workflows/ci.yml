@@ -349,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          d901a795678d52f9a40d3011807a944ce580c7635360b11c9ab96d2442ae1c3f  .github/pinned-bytes.txt
+          6853469d4542ead493aab232dc3ccf4ddf1544dcf59cef395fa2e78e947d36af  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -618,6 +618,47 @@ jobs:
         # there is no invocation on that side for a worker cap to bound.
         run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
+  # ── 4a. Windows parity ───────────────────────────────────────────
+  # The workflow control core, init and upgrade must behave on Windows as on
+  # Linux: CRLF checkouts, paths with spaces, the lock and the journal. This job
+  # runs the package's `test:windows-parity` list on a Windows runner, the list
+  # a developer runs locally. It builds the package itself, because the
+  # integration suites spawn the built CLI and `dist/` has to be made here.
+  #
+  # SHIPPED-CI: not-applicable
+  # Because: the shipped test lanes run the adopter's own scripts on the runner the adopter names, so the shipped set has no QFAI suite or fixed platform to add.
+  windows-parity:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    permissions:
+      contents: read
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The suites read their temp root through `os.tmpdir()`, so pointing TEMP
+      # and TMP at a directory whose name has a space reaches every case without
+      # editing one. A workflow command file cannot carry the value to a later
+      # step inside the verdict's closure, so the test step sets it itself.
+      - name: Create a temp root whose name has a space
+        shell: pwsh
+        env:
+          QFAI_TEMP_ROOT: ${{ runner.temp }}\qfai tmp
+        run: New-Item -ItemType Directory -Force -Path $env:QFAI_TEMP_ROOT | Out-Null
+      - uses: ./.github/actions/setup
+      - name: Build qfai on the Windows runner
+        run: pnpm -C packages/qfai build
+      - name: Run the Windows parity suites
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: pnpm -C packages/qfai test:windows-parity
+
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`
   # (the DESIGN.md compliance scanner) retains >= 90% statement coverage.
@@ -865,6 +906,7 @@ jobs:
         check-types-future,
         node-floor,
         test,
+        windows-parity,
         scanner-coverage,
         build,
       ]

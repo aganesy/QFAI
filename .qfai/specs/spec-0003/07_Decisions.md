@@ -2,7 +2,7 @@
 
 ## Decisions
 
-32 items.
+34 items.
 
 ### DR-0003-0001: symlink ベースの統合方式
 
@@ -280,3 +280,54 @@
 - Re-opens: DR-0003-0018
 - Approved by: user (Claude Code structured question)
 - Approved at: 2026-09-25T04:52:16Z
+
+### DR-0003-0033: `qfai init` keeps exit 0 on a conflicted upgrade
+
+- Status: accepted
+- Date: 2026-09-24
+- Context: after the copy, an upgrade runs the correspondence check that
+  `npx qfai workflow start` enforces, and reports each conflicting file (CLI-INIT
+  `### Upgrade conflicts`). `discussion-20260923171450572` left the exit code of a
+  conflicted upgrade open as its `OQ-0003`, and the register's recommendation was
+  a non-zero exit. The pack is not tracked, so this entry is the tracked record.
+- Decision: a conflicted upgrade exits 0, as every successful run does in the
+  released exit-code table of CLI-INIT. The conflict is reported in the summary and
+  enforced where it matters: `start` refuses on it.
+- Rejected: exit 1 on a conflicted upgrade
+  - DO NOT: make `qfai init` fail because the project's files differ from the
+    shipped ones. Temptation: a non-zero exit is harder to miss, but the released
+    table gives 0, 2 and 64 with 65 reserved, and a script that runs `qfai init`
+    in CI would break on every project that edited an asset, which is the case the
+    upgrade is meant to preserve.
+- Consequences: an operator learns of a conflict from the summary line and from
+  `start`'s refusal, not from the exit code. BR-0003-0055 states it.
+- Related: CLI-INIT `### Upgrade conflicts` and the exit-code table; CLI-WF
+  `## Fail-closed`.
+
+### DR-0003-0034: the entry directive goes through the review-pointer mechanism
+
+- Status: accepted
+- Date: 2026-09-24
+- Context: `qfai init` must add a short instruction that sends a first free-text
+  change request to `qfai-run` (`discussion-20260923171450572#REQ-0064`). The pack
+  left how it reaches each host open as its `OQ-0017`, and the register's
+  recommendation was a line in the managed rules section of the entry points.
+- Decision: the mechanism that prepends the review directive to `AGENTS.md` and
+  `CLAUDE.md` is generalized to a list of shipped directives, and the entry
+  directive is the second. It is prepended when no operative copy exists, does not
+  depend on `REVIEW.md`, and is not written into `.github/copilot-instructions.md`.
+  The refusals and the byte-preserving write of that mechanism apply to it
+  (CLI-INIT `### Entry directive`).
+- Rejected: a line in the managed rules section
+  - DO NOT: rely on the managed rules section to reach an upgraded adopter.
+    Temptation: it is where the other rule citations live, but an existing entry
+    point that already has its section is not rewritten on upgrade, so the line
+    would reach fresh installs only.
+- Rejected: a new rule master under `.agents/rules/`
+  - DO NOT: add a rule document to carry one sentence. Temptation: a rule master is
+    cited from every entry point, but it adds a file each adopter must keep and
+    still needs a citation to reach the agent.
+- Consequences: one mechanism carries both directives, with one set of refusals and
+  one test of them. A rerun adds nothing. BR-0003-0051 states it.
+- Related: CLI-INIT `### Entry directive`, `### Rule citations in an existing entry
+point`.

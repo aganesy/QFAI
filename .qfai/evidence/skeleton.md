@@ -108,3 +108,20 @@ recorded command, and this run's exit status decides.
 - Skeleton cycles: 0 of 3. The skeleton was not changed, and this run is the
   re-run the evidence rule requires.
 - Outcome: proven for this invocation. `Phase: Red` may start for `qfai`.
+
+### Re-run for the current implementation invocation
+
+- Revision: `ccca63a7ad553c8eb4bbd4da38f52d2d74189cdd` (HEAD at the run).
+- Runtime: Node.js `v24.18.0`.
+- Skeleton command: `node scripts/smoke-qfai-cli.mjs`
+- Skeleton script: `scripts/smoke-qfai-cli.mjs@82f30997dc88e617531e5f59f86fd8b7c1793a134564853019366e590a639c1d`
+  (SHA-256 rechecked before the run; unchanged from the previous record).
+- Skeleton result:
+
+  ```text
+  $ node scripts/smoke-qfai-cli.mjs
+  smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)
+  exit=0
+  ```
+
+- Skeleton gatekeeper: PASS — an independent `qa-gatekeeper` re-ran the command with exit 0, matched the recorded script digest, and confirmed the stdio response identifies the initialization surface.

@@ -48,6 +48,8 @@ const KNOWN_OPEN_BUT_TESTED: readonly string[] = [
   "spec-0008 TDD-0016 todo TC-0008-0016",
   "spec-0008 TDD-0017 todo TC-0008-0017",
   "spec-0008 TDD-0018 todo TC-0008-0018",
+  // Reopened by an approved Change Request over tests that already exist; each
+  // leaves this list when its re-execution reaches `done`.
   "spec-0012 TDD-0436 todo TC-0012-0416",
   "spec-0013 TDD-0003 todo TC-0013-0003",
   "spec-0013 TDD-0011 todo TC-0013-0011",
@@ -108,7 +110,6 @@ const KNOWN_OPEN_BUT_TESTED: readonly string[] = [
   "spec-0015 TDD-0007 todo TC-0015-0007",
   "spec-0015 TDD-0036 todo TC-0015-0035",
   "spec-0015 TDD-0037 todo TC-0015-0036",
-  "spec-0015 TDD-0038 todo TC-0015-0034",
   "spec-0017 TDD-0007 todo TC-0017-0007",
   "spec-0017 TDD-0012 todo TC-0017-0012",
   "spec-0017 TDD-0043 todo TC-0017-0043",

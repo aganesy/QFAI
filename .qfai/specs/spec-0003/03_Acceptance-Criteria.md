@@ -138,6 +138,8 @@ Scenario: `qfai init` appends the QFAI managed block to the root `.gitignore`
   And it contains none of `!.qfai/report/README.md`, `!.qfai/evidence/README.md`, `!.qfai/review/README.md` and `!.qfai/discussion/README.md`
   And it does not contain `.qfai/discussion/discussion-*/`
   And it contains neither `!.qfai/review/review-*/` nor `!.qfai/review/review-*/**`
+  And `git check-ignore` reports `.qfai/runs/x` ignored
+  And `git check-ignore` reports `.qfai/evidence/workflow/x/summary.json` not ignored
   And the lines a user wrote outside the block are preserved
 ```
 
@@ -153,46 +155,57 @@ Scenario: レガシー管理ブロックからの自動移行
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                                       | Notes      | Priority |
-| ------------ | ----------------------------------------------------------- | ---------- | -------- |
-| AC-0003-0001 | 空ディレクトリ初期化                                        | Happy path | P1       |
-| AC-0003-0002 | 冪等な初期化                                                | NFR-0012   | P1       |
-| AC-0003-0003 | --force スキル上書き                                        | REQ-0003   | P1       |
-| AC-0003-0004 | --dry-run プレビュー                                        | REQ-0004   | P1       |
-| AC-0003-0005 | skill symlink 統合                                          | REQ-0008   | P1       |
-| AC-0003-0006 | agent symlink 統合                                          | REQ-0009   | P1       |
-| AC-0003-0007 | レガシーファイル削除                                        | REQ-0006   | P1       |
-| AC-0003-0008 | 旧ラッパー prune                                            | REQ-0007   | P1       |
-| AC-0003-0009 | git config 設定                                             | REQ-0010   | P1       |
-| AC-0003-0010 | Windows EPERM エラー                                        | REQ-0015   | P1       |
-| AC-0003-0011 | instructions 新規配置                                       | REQ-0012   | P1       |
-| AC-0003-0012 | instructions 既存保護                                       | REQ-0013   | P1       |
-| AC-0003-0013 | --force instructions 更新                                   | REQ-0013   | P1       |
-| AC-0003-0014 | instructions アクティベーション                             | REQ-0014   | P2       |
-| AC-0003-0015 | gitignore 管理ブロック追記                                  | REQ-0016   | P1       |
-| AC-0003-0016 | レガシーブロック自動移行                                    | REQ-0017   | P1       |
-| AC-0003-0017 | 4-layer asset-tree seed                                     | REQ-0018   | P1       |
-| AC-0003-0019 | --upgrade-assistant-tree flag                               | REQ-0020   | P1       |
-| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                  | REQ-0020   | P1       |
-| AC-0003-0021 | migration memo authoring                                    | REQ-0021   | P1       |
-| AC-0003-0022 | assistantPaths.ts SSOT 経由                                 | REQ-0022   | P1       |
-| AC-0003-0023 | legacy layout kept, reported as an error                    | REQ-0023   | P1       |
-| AC-0003-0024 | D-DEPRECATED-PATH names the sunset and the migration        | REQ-0023   | P1       |
-| AC-0003-0025 | 配布 workflow bounding + 権限                               | REQ-0024   | P1       |
-| AC-0003-0026 | 配布 install 経路の保持                                     | REQ-0024   | P1       |
-| AC-0003-0027 | 配布 action SHA pin + 可読 name                             | REQ-0025   | P1       |
-| AC-0003-0028 | leakage guard breadth 維持                                  | REQ-0025   | P1       |
-| AC-0003-0029 | 配布 set の命名と topology                                  | REQ-0026   | P1       |
-| AC-0003-0030 | 配布 set の inertness と無 secret                           | REQ-0026   | P1       |
-| AC-0003-0031 | 配布 detection と green-on-skip                             | REQ-0027   | P1       |
-| AC-0003-0032 | runner label 間接化 + header 表                             | REQ-0028   | P1       |
-| AC-0003-0033 | portability の degrade 方向                                 | REQ-0029   | P1       |
-| AC-0003-0034 | 配布 workflow 所有権コントラクト                            | REQ-0030   | P1       |
-| AC-0003-0035 | 配布 set structural contract gate                           | REQ-0031   | P1       |
-| AC-0003-0036 | declined name の copy 前除外                                | REQ-0030   | P1       |
-| AC-0003-0037 | Codex agent profile 生成                                    | REQ-0009   | P1       |
-| AC-0003-0038 | Independent shipped checks and a complete aggregate verdict | REQ-0026   | P1       |
-| AC-0003-0039 | Copilot instructions state the closed legacy window         | REQ-0023   | P1       |
+| AC-ID        | Title                                                                   | Notes                                 | Priority |
+| ------------ | ----------------------------------------------------------------------- | ------------------------------------- | -------- |
+| AC-0003-0001 | 空ディレクトリ初期化                                                    | Happy path                            | P1       |
+| AC-0003-0002 | 冪等な初期化                                                            | NFR-0012                              | P1       |
+| AC-0003-0003 | --force スキル上書き                                                    | REQ-0003                              | P1       |
+| AC-0003-0004 | --dry-run プレビュー                                                    | REQ-0004                              | P1       |
+| AC-0003-0005 | skill symlink 統合                                                      | REQ-0008                              | P1       |
+| AC-0003-0006 | agent symlink 統合                                                      | REQ-0009                              | P1       |
+| AC-0003-0007 | レガシーファイル削除                                                    | REQ-0006                              | P1       |
+| AC-0003-0008 | 旧ラッパー prune                                                        | REQ-0007                              | P1       |
+| AC-0003-0009 | git config 設定                                                         | REQ-0010                              | P1       |
+| AC-0003-0010 | Windows EPERM エラー                                                    | REQ-0015                              | P1       |
+| AC-0003-0011 | instructions 新規配置                                                   | REQ-0012                              | P1       |
+| AC-0003-0012 | instructions 既存保護                                                   | REQ-0013                              | P1       |
+| AC-0003-0013 | --force instructions 更新                                               | REQ-0013                              | P1       |
+| AC-0003-0014 | instructions アクティベーション                                         | REQ-0014                              | P2       |
+| AC-0003-0015 | gitignore 管理ブロック追記                                              | REQ-0016                              | P1       |
+| AC-0003-0016 | レガシーブロック自動移行                                                | REQ-0017                              | P1       |
+| AC-0003-0017 | 4-layer asset-tree seed                                                 | REQ-0018                              | P1       |
+| AC-0003-0019 | --upgrade-assistant-tree flag                                           | REQ-0020                              | P1       |
+| AC-0003-0020 | W-USER-EDIT-PRESERVED 出力                                              | REQ-0020                              | P1       |
+| AC-0003-0021 | migration memo authoring                                                | REQ-0021                              | P1       |
+| AC-0003-0022 | assistantPaths.ts SSOT 経由                                             | REQ-0022                              | P1       |
+| AC-0003-0023 | legacy layout kept, reported as an error                                | REQ-0023                              | P1       |
+| AC-0003-0024 | D-DEPRECATED-PATH names the sunset and the migration                    | REQ-0023                              | P1       |
+| AC-0003-0025 | 配布 workflow bounding + 権限                                           | REQ-0024                              | P1       |
+| AC-0003-0026 | 配布 install 経路の保持                                                 | REQ-0024                              | P1       |
+| AC-0003-0027 | 配布 action SHA pin + 可読 name                                         | REQ-0025                              | P1       |
+| AC-0003-0028 | leakage guard breadth 維持                                              | REQ-0025                              | P1       |
+| AC-0003-0029 | 配布 set の命名と topology                                              | REQ-0026                              | P1       |
+| AC-0003-0030 | 配布 set の inertness と無 secret                                       | REQ-0026                              | P1       |
+| AC-0003-0031 | 配布 detection と green-on-skip                                         | REQ-0027                              | P1       |
+| AC-0003-0032 | runner label 間接化 + header 表                                         | REQ-0028                              | P1       |
+| AC-0003-0033 | portability の degrade 方向                                             | REQ-0029                              | P1       |
+| AC-0003-0034 | 配布 workflow 所有権コントラクト                                        | REQ-0030                              | P1       |
+| AC-0003-0035 | 配布 set structural contract gate                                       | REQ-0031                              | P1       |
+| AC-0003-0036 | declined name の copy 前除外                                            | REQ-0030                              | P1       |
+| AC-0003-0037 | Codex agent profile 生成                                                | REQ-0009                              | P1       |
+| AC-0003-0038 | Independent shipped checks and a complete aggregate verdict             | REQ-0026                              | P1       |
+| AC-0003-0039 | Copilot instructions state the closed legacy window                     | REQ-0023                              | P1       |
+| AC-0003-0050 | Init and upgrade install the entry skills, their wrappers and the plans | discussion-20260923171450572#REQ-0064 | P1       |
+| AC-0003-0051 | Init writes no agents/openai.yaml                                       | discussion-20260923171450572#REQ-0051 | P1       |
+| AC-0003-0041 | The entry directive is prepended to AGENTS.md and CLAUDE.md             | discussion-20260923171450572#REQ-0064 | P1       |
+| AC-0003-0042 | Init names the mode in force and writes no mode key                     | discussion-20260923171450572#REQ-0059 | P1       |
+| AC-0003-0043 | The plans are refreshed when unmodified and kept when edited            | discussion-20260923171450572#REQ-0065 | P1       |
+| AC-0003-0044 | The lock records the release that wrote it and this run's conflicts     | discussion-20260923171450572#REQ-0065 | P1       |
+| AC-0003-0045 | A conflicted upgrade is reported file by file and exits 0               | discussion-20260923171450572#REQ-0065 | P1       |
+| AC-0003-0046 | A plain upgrade names qfai init --force for an absent routing entry     | discussion-20260923171450572#REQ-0065 | P1       |
+| AC-0003-0047 | qfai init --force adds the absent routing entries and nothing else      | discussion-20260923171450572#REQ-0065 | P1       |
+| AC-0003-0048 | Init and upgrade behave the same on Windows                             | discussion-20260923171450572#NFR-0011 | P1       |
+| AC-0003-0049 | A plain upgrade counts the skills it skipped                            | discussion-20260923171450572#REQ-0065 | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -349,3 +362,171 @@ Scenario: レガシー管理ブロックからの自動移行
 - When `qfai init` runs
 - Then the `.github/copilot-instructions.md` it writes says the legacy `.qfai/assistant/steering/` and `.qfai/assistant/instructions/` layout is past its compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error, and names `qfai init --upgrade-assistant-tree`
 - And it neither calls the legacy layout read-compatible nor calls the finding a warning
+
+## AC-0003-0050: Init and upgrade install the entry skills, their wrappers and the plans
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0050
+# Source: discussion-20260923171450572#DAC-009-01
+Scenario: Init and upgrade install the entry skills, their wrappers and the plans
+  Given a fresh project, or a project installed by an earlier release
+  When qfai init runs
+  Then qfai-run and qfai-maintain are under .qfai/assistant/skills/
+  And each host skills directory resolves them to that one source
+  And every stage skill a built-in plan names has its references/orchestrated-mode.md
+  And the five built-in plans are under .qfai/assistant/process/workflows/
+  And no workflow schema file is written into the project
+```
+
+## AC-0003-0051: Init writes no agents/openai.yaml
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0051
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: Init writes no agents/openai.yaml
+  Given a fresh project
+  When qfai init runs, and again with --force
+  Then no skill directory reached through a host skills directory contains agents/openai.yaml
+```
+
+## AC-0003-0041: The entry directive is prepended to AGENTS.md and CLAUDE.md
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0041
+# Source: discussion-20260923171450572#REQ-0064
+Scenario: The entry directive is prepended to AGENTS.md and CLAUDE.md
+  Given a project whose AGENTS.md and CLAUDE.md carry no operative entry directive
+  When qfai init runs
+  Then each of the two files begins with one directive that sends a first free-text change request to qfai-run
+  And the project's existing text and line endings follow it unchanged
+  And .github/copilot-instructions.md carries no such directive
+  And the directive is added whether or not REVIEW.md exists
+  And a rerun adds nothing
+```
+
+## AC-0003-0042: Init names the mode in force and writes no mode key
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0042
+# Source: discussion-20260923171450572#DAC-009-02
+Scenario: Init names the mode in force and writes no mode key
+  Given a fresh install, or an upgrade over a config with no workflow.mode key
+  When qfai init runs
+  Then qfai.config.yaml gains no workflow key and no mode question is asked
+  And the summary names the mode in force, which is active when the key is absent
+  And a value other than active, shadow or off is named as invalid on that line
+```
+
+## AC-0003-0043: The plans are refreshed when unmodified and kept when edited
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0043
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: The plans are refreshed when unmodified and kept when edited
+  Given an upgrade over installed plans, some unmodified and some edited
+  When qfai init runs
+  Then each unmodified plan holds the package's version of it
+  And each edited plan is byte-identical
+  And no migration memo is refreshed
+  And a rerun writes nothing
+```
+
+## AC-0003-0044: The lock records the release that wrote it and this run's conflicts
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0044
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: The lock records the release that wrote it and this run's conflicts
+  Given a fresh install, or an upgrade
+  When qfai init runs
+  Then the provenance lock records the package version that wrote it
+  And it records the conflict list this run computed, replacing the previous run's list
+```
+
+## AC-0003-0045: A conflicted upgrade is reported file by file and exits 0
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0045
+# Source: discussion-20260923171450572#DAC-009-03
+Scenario: A conflicted upgrade is reported file by file and exits 0
+  Given mode active and an upgrade whose installed files trip the correspondence check
+  When qfai init runs
+  Then the summary names each conflicting file once, with its difference and the trigger it trips
+  And one line says active is configured and will not start until they are resolved
+  And that line replaces the plain mode line
+  And the exit code is 0
+```
+
+## AC-0003-0046: A plain upgrade names qfai init --force for an absent routing entry
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0046
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: A plain upgrade names qfai init --force for an absent routing entry
+  Given a project whose agent-routing.yml lacks a routing entry the shipped manifest carries
+  When a plain qfai init runs
+  Then agent-routing.yml is byte-identical
+  And the summary names each absent entry with qfai init --force as the command that adds it
+  And a reviewer the project dropped from a phase is named with its trigger and without qfai init --force
+```
+
+## AC-0003-0047: qfai init --force adds the absent routing entries and nothing else
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0047
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: qfai init --force adds the absent routing entries and nothing else
+  Given the project of the scenario above
+  When qfai init --force runs, and then a plain qfai init
+  Then the absent routing entries are added
+  And the project's own entries, their order and the dropped reviewer are unchanged
+  And the second run's summary names no absent entry
+```
+
+## AC-0003-0048: Init and upgrade behave the same on Windows
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0048
+# Source: discussion-20260923171450572#NFR-0011
+Scenario: Init and upgrade behave the same on Windows
+  Given a project checked out with CRLF line endings under a root whose name contains a space
+  When qfai init runs, then a plain upgrade
+  Then both runs exit 0 with the same summary and tree as on Linux
+  And an unmodified shipped file with CRLF endings counts as unmodified
+  And every key of the provenance lock is a slash-separated relative path
+```
+
+## AC-0003-0049: A plain upgrade counts the skills it skipped
+
+- US-Refs: US-0003-0029
+
+```gherkin
+# AC-0003-0049
+# Source: discussion-20260923171450572#REQ-0065
+Scenario: A plain upgrade counts the skills it skipped
+  Given a project whose copies of some shipped skills differ from the templates, ignoring line endings
+  When a plain qfai init runs
+  Then those skills are unchanged
+  And the summary counts them and names qfai init --force as the command that updates them
+  And it says that command replaces them with the shipped versions, overwriting local edits
+```

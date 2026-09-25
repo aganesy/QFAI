@@ -38,4 +38,9 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "constitution/shared-skill-operating-baseline.md",
   "constitution/thinking.md",
   "constitution/workflow.md",
+  "process/workflows/bounded-change.yml",
+  "process/workflows/bugfix.yml",
+  "process/workflows/direct.yml",
+  "process/workflows/discovery.yml",
+  "process/workflows/feature.yml",
 ];

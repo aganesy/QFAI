@@ -2,7 +2,8 @@
 
 - Contract scope: public CLI surface for spec / contract / assistant-tree validation
 - Owning spec: `spec-0004`
-- Used-by: `spec-0003` (post-init self-check), all skill specs (gate evidence)
+- Used-by: `spec-0003` (post-init self-check), all skill specs (gate evidence),
+  `spec-0018` (the triage authorization check reads the records its runs write)
 - SSOT modules:
   - `packages/qfai/src/cli/commands/validate.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
@@ -34,6 +35,63 @@ This contract documents only the **delta** from the assistant-layer recut. The r
 
 A code belongs in this table only once a validator emits it, and
 `packages/qfai/tests/integration/contractDeferralNotes.test.ts` enforces exactly that. It reads the **TypeScript AST** rather than searching the sources for the string, because a comment, a dead constant or a `code:` field on something that is not a finding all satisfy a text search. Each code must reach an emission in one of three shapes, in a module that is actually wired up: (1) it is the first argument of a discovered `Issue` factory — the shared `issue(…)` plus every local function taking the code as its first parameter — or the `code` of an object literal that also carries a `severity`, which is what makes it a finding rather than metadata; (2) it is a member of a gate the module _asks_ (`NAME.has(x)` / `NAME.includes(x)`) and that module hands a variable to a factory, which is how `reviewerJustification.ts` raises the codes it reads off a review report; (3) it is carried by a string a `cli/commands/*` module passes to a printer. The module must additionally be one `core/validate.ts` invokes or `cli/main.ts` imports.
+
+## Triage authorization reference
+
+A triage row may cite the `human_decision` a workflow run recorded for it. The
+record and where it lives are in `.qfai/contracts/cli/workflow-files.schema.md`
+(CLI-WFFILE) `## Authorization record`.
+
+- **One approval set.** The approval check reads `requiresApproval()` in
+  `packages/qfai/src/core/sddTriage.ts`. `APPROVAL_REQUIRED_OPS` and the separate
+  `UPDATE:REMOVE` branch leave `packages/qfai/src/core/validators/specPack.ts`.
+  Check `requiresApproval()` before reading `Authorization-Ref`. If it is false,
+  ignore the reference even when it is invalid and raise no triage finding.
+  Every existing triage-validator test passes unchanged.
+- **The column.** `Authorization-Ref` is optional and read by its header name,
+  as `Depends-On` is. When checked, its value is exactly two segments,
+  `run-<17 digits>/<authorizationId>`, the second in the CLI-WFFILE
+  `authorizationId` grammar. `Approved By` keeps its meaning: a row citing a
+  record copies `answeredBy@YYYY-MM-DD` from it.
+- **`CREATE` rows only.** A routing-time authorization approves a `CREATE`, so
+  only an approval-required `CREATE` row can use a reference. A `DELETE`,
+  `SPLIT`, `MERGE`, `SUPERSEDE` or `UPDATE:REMOVE` row approved inside a run
+  copies the answerer of the `decision` question into `Approved By` and carries
+  no reference. Its approval remains subject to `QFAI-TRIAGE-005`; a reference
+  on that row fails `Operation`.
+- **A row without a reference**, or with `-` in the column, keeps
+  `QFAI-TRIAGE-005` unchanged.
+
+For a row that needs approval, a reference failing any check below raises
+`QFAI-TRIAGE-011`, severity **error**, naming the row and the failed check:
+
+| Check     | Fails when                                                                                                                                                                                                                                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Resolves  | The value is not exactly `run-<17 digits>/<authorizationId>` in that grammar; the workflow directory's `realpath` lies outside the project's real root; the record's `realpath` lies outside the workflow directory's `realpath`; the expected path does not resolve to a regular file; or the file does not parse |
+| Kind      | The record is not a `human_decision`                                                                                                                                                                                                                                                                               |
+| Operation | The record's `operation` differs from the row's operation, which includes a reference on an approval-required row that is not a `CREATE`                                                                                                                                                                           |
+| Binding   | The run's `summary.json` `targetBindings` does not bind the record's slot to a `capabilityId` the row's Rationale cites, the CAP `QFAI-TRIAGE-006` already requires it to cite                                                                                                                                     |
+| Answerer  | The record's `answeredBy` differs from the name in the row's `Approved By`                                                                                                                                                                                                                                         |
+
+- Staleness is not checked here. It is judged while the run proceeds, by the
+  workflow core and by `/qfai-sdd` Stage 1. Re-judging a finished run's record
+  against today's scope would fail every row approved in the past.
+- `QFAI-TRIAGE-011` is listed here rather than in the delta table above, which
+  admits only codes a validator already emits.
+
+Realizes: `discussion-20260923171450572#REQ-0042`,
+`discussion-20260923171450572#REQ-0043`.
+
+## Workflow mode setting
+
+`workflow.mode` in `qfai.config.yaml` takes `active`, `shadow` or `off`, and an
+absent key means `active`. Any other value is a config issue raised by
+`loadConfig` in its existing way: `QFAI_CONFIG_INVALID`, severity **error**,
+with an English message naming the key and the three values. `npx qfai workflow
+start` refuses the same value (`.qfai/contracts/cli/qfai-workflow.md`,
+`## Modes`).
+
+Realizes: `discussion-20260923171450572#REQ-0059`.
 
 ## Reviewer-Gate input bundle
 

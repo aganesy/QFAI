@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
-description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
+description: "Use when invoked by name or handed a QFAI work order. Implements a spec's ledger rows test-first, one row at a time, with tdd/test-list.md as the execution ledger."
 argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:
@@ -31,6 +31,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-implement - Unified TDD Micro-cycle
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## Preconditions
 
@@ -70,13 +72,9 @@ When unsure, read inputs in this order:
 
 ## Grilling (MANDATORY)
 
-Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
-this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
-restated here.
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
-**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of
-session): a critical decision goes to the user at once, and after two rounds
-every other takes the griller's recommendation, recorded as an `agents` row.
+**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of session): a critical decision goes to the user at once, and after two rounds every other takes the griller's recommendation, recorded as an `agents` row.
 
 - **At the preflight.** A session over what the confidence check left uncertain,
   and nothing else. The bound is on the subject: the spec and the ledger are
@@ -294,7 +292,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`;
 the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` naming the blocker **and the status it was blocked at** and is never selected. `blocked` is entered from **any active status**, not only from `todo` — a blocker that surfaces at `red`, `green` or `refactor` is filed there, not at `exception`.
 
-The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger. **This skill allocates no `TDD-ID`**: rows are upstream (Non-goals) and `/qfai-sdd` Phase 2b is their producer, so a scope gap that needs a new row is handed there through a Change Request — never appended here. Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation` and belongs to that phase; read it to check an id you were handed, and never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
+The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger. **This skill allocates no `TDD-ID`**: rows are upstream (Non-goals) and `/qfai-sdd` Phase 2b is their producer, so a scope gap that needs a new row is handed there through a Change Request — never appended here. A diagnosed missing test on behaviour the spec already states is the one scope gap that raises no Change Request and adds no ledger row from this skill: `/qfai-sdd` appends the row. Every other scope gap still goes through a Change Request. Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation` and belongs to that phase; read it to check an id you were handed, and never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
 
 ## Required Process
 

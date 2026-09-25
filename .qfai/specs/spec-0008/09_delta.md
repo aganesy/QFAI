@@ -100,3 +100,109 @@ Rows owned by this spec. `Approved By` is `-` throughout: every row is append-fi
   - **Not dogfooded, and it says so.** QFAI's own suite has zero credentials, so the rules cannot be verified by execution here — only by inspection. That is why the upstream priority is `should`, and the guidance states the position rather than hiding it.
   - **RJ-0008-0001 respected.** The guidance obliges E2E / API / Integration only. No unit or component obligation is introduced; unit and component tests remain `/qfai-implement` territory.
 - Source: REQ-0024 (discussion-20260804173914356)
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+D4 named seven specs for Change Requests, and this spec is not one of them. The user added it on 2026-09-24 by answering `OQ-0020` with A, because this skill's contract changes.
+
+| Source                                 | Subject                                                                                        | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                          | Depends-On        |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
+| REQ-0038                               | The ATDD side of the seam-only round trip                                                      | spec-0008     | UPDATE    | APPEND | -           | The acceptance stage asks implement for a seam-only work order, returns to the same stage instance and takes RED at the assertion before it hands over the full work. It reuses the existing red-provenance branch | REQ-0033          |
+| REQ-0048                               | `test_fix` for a defective E2E, API or Integration test                                        | spec-0008     | UPDATE    | APPEND | -           | ATDD owns those rows under the ledger's layer ownership, and D14 names ATDD as the one who fixes acceptance tests                                                                                                  | REQ-0033, OQ-0009 |
+| REQ-0035                               | The ATDD stage result reports a failure at the intended assertion as `expected_red`            | spec-0008     | UPDATE    | APPEND | -           | An import, collection or start-up failure is `unrun` or `blocked`, never RED                                                                                                                                       | REQ-0033          |
+| REQ-0037, REQ-0051, REQ-0052, REQ-0056 | Orchestrated mode for `/qfai-atdd`, with the layer decision never served from the shared cache | spec-0008     | UPDATE    | APPEND | -           | `qfai-atdd` is a skill a built-in plan dispatches (OQ-0015 = A). The run's `accepted_with_debt` outcome maps onto ATDD's existing "PASS with cross-spec obligations" state                                         | REQ-0033          |
+| NFR-0003                               | `qfai-atdd/SKILL.md` grows by at most the one citation line                                    | spec-0008     | UPDATE    | APPEND | -           | The file is at 797 of its 800 lines                                                                                                                                                                                | -                 |
+
+## Change Summary
+
+- Change ID: DELTA-0001
+- Date: 2026-09-24
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: the five rows of `## Triage (2026-09-24 intent-driven entry)` applied.
+  `/qfai-atdd` gains its orchestrated mode, the ATDD side of the seam-only round
+  trip, the `expected_red` report and `test_fix` for acceptance-layer rows.
+- Appended: US-0008-0009, US-0008-0010; AC-0008-0015..0023; BR-0008-0013..0021;
+  DR-0008-0004. Modified: none. Existing IDs and sentences are unchanged.
+- Resolved pack question: `discussion-20260923171450572#OQ-0009`, recorded in
+  `08_Open-questions.md` under `## Resolved (2026-09-24 intent-driven entry)`.
+- Size: AC 14 → 23, under the threshold of 30.
+- Reserved IDs: none.
+
+- Phase 2c.1 (obligation reconciliation): no wording changes. BR-0008-0017 still holds when a seam-only result comes back `blocked` or `unrun`: CLI-WF `### Stage result` has the core keep the acceptance attempt open and reissue the seam-only work order after `resume`. BR-0008-0016 was re-read against the debt-resolution rule of CLI-WF `## Completion` and needs no change.
+
+## Update History
+
+| Date       | DL      | Summary                                                                               |
+| ---------- | ------- | ------------------------------------------------------------------------------------- |
+| 2026-09-24 | DL-0001 | DR-0008-0004: A defective acceptance-layer test is fixed with ledger status untouched |
+
+## Decision Log
+
+One entry per `07_Decisions.md` record added on 2026-09-24.
+
+### DL-0001
+
+DR-0008-0004: A defective acceptance-layer test is fixed with ledger status untouched.
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Improvement
+scope:
+  - .qfai/specs/spec-0008
+  - packages/qfai/assets/init/.qfai/assistant/skills/qfai-atdd/references/orchestrated-mode.md
+notes: The acceptance-layer half of decision D14; the unit-layer half is spec-0011's
+```
+
+#### Migration / Follow-ups
+
+- No migration required. A `test_fix` stage moves no ledger row, and existing rows
+  are unchanged.
+
+#### Rejected
+
+- option: allow any test edit without a status change
+  reason: an edit that makes a test pass can change what it verifies
+  do_not: accept a rewritten assertion without checking that it cites the same AC or BR
+  temptation: the test was wrong, so any passing edit looks like the fix
+- option: record the re-run in the run evidence only
+  reason: the changed test file leaves the row stale and the final validate fails
+  do_not: leave a changed test file with no re-verify record in the ledger's evidence
+  temptation: the run evidence already holds the re-run
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260924-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
+| CR-20260925-0018 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
+| CR-20260925-0020 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T02:36:35Z |
+| CR-20260925-0022 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-25T03:23:20Z |
+| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T06:04:36Z |
+| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T07:34:27Z |
+| CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-25T10:20:50Z |
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+
+A later `origin/main` took more of these IDs, and the intent-driven ones moved again to
+the next free ones:
+
+- `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010` became `CR-20260924-0007`,
+  `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
+  `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
+  Every reference here follows them.

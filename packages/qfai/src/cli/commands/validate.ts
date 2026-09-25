@@ -1650,6 +1650,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "`Existing Spec` names its target in one grammar: `spec-NNNN` (multiple joined by `+`), `_policies` for a policy-only row, or `-` on a CREATE row. Every named spec must exist on disk; ranges are not a form.",
   "QFAI-TRIAGE-010":
     "A requirement reaches the execution ledger through a spec: at least one of its triage rows targets a spec, not `_policies` alone.",
+  "QFAI-TRIAGE-011":
+    "A CREATE row's `Authorization-Ref` cites a `human_decision` a workflow run recorded under `.qfai/evidence/workflow/`, whose operation is CREATE, whose slot the run bound to a CAP the Rationale cites, and whose `answeredBy` is the name in `Approved By`.",
   "QFAI-SPLIT-106":
     "Every `CAP-NNNN` row in the CAP Catalog appears exactly once and its `Spec` cell names exactly one spec directory, and no two rows name the same one.",
   "QFAI-TEST-001":

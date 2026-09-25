@@ -77,7 +77,7 @@
   - **auto-decide** (named defaults, AI proceeds without prompting): output formatting, ID / sequence numbering, append-vs-create when a subject overlaps an existing artifact, and option-pick among demonstrably-equivalent alternatives.
   - **ask-user** (AI prompts via `AskUserQuestion` with the bucket's prompt template): approval-required governance operations, destructive operations, version-pin changes, scope expansions. The first entry is a **category**: each skill instantiates it with the operations its own run cannot authorize for itself — the triage ops (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE) in `/qfai-sdd`, and the `TDDLIST-001` accepted-risk waiver, the Drift-Protocol Change-Request escalation and consent to item-level parallelism in `/qfai-implement`. A skill's instantiation must cover every decision its own body already gates on a user: `/qfai-implement`'s Parallelization Policy requires explicit user approval on top of the `delivery-planner` technical gate, so omitting it left a user-gated decision in no bucket while the section claims to classify every decision.
     Per DR-0269 Amendment 4 the bucket carries a fifth category — **a decision a declared grilling session puts to the user** — available only to a skill whose own operation is the interview (`/qfai-grilling`, `/qfai-grill`), which is what makes their frontier decisions and closing confirmation a legal entry rather than a widening.
-  - **hard-required** (no default possible; must be supplied before proceeding): brand intent, `primarySpecId` when absent.
+  - **hard-required** (no default possible; must be supplied before proceeding): brand intent, `primarySpecId` when absent and no workflow run's binding supplies it. A valid binding counts as a supplied value (CLI-WF `### Work order`), and the shared operating baseline states the exception.
 - What the three buckets classify is the **operations the skill performs** — what it may do without asking, what it asks before doing, and what it may not do at all without a value. A **frontier decision** put inside a grilling session is not one of those: it settles a design, an approach, a scope boundary or a trade-off before anything is performed, and `.agents/rules/grilling.md` owns which of those are asked and in what order. Reading the buckets as a classification of every question an invocation can utter is what made the closed `ask-user` list contradict that rule. Two things are outside the carve-out and stay classified by their subject wherever they are asked: a mandatory approval, and a `hard-required` input the invocation consumes. Running inside a session changes neither — a `hard-required` input asked there still stops a run that cannot get it, rather than being guessed.
 - The skill body MUST reference this section as the source of truth. A skill MAY narrow any of the three buckets (drop an entry it cannot reach) and MAY instantiate a category entry with its own operations, but MUST NOT add an entry outside the prototype's categories.
 - Reviewer Gate emits `R-AUTOPILOT-POLICY-MISSING` (severity error, non-empty `justification:`) when the section is absent OR is present but missing one or more required buckets (heading-only / partial-bucket population — the "populated with three named buckets" requirement is not satisfied). The `justification:` MUST name the missing bucket(s) by name when the trigger is partial population.
@@ -137,3 +137,46 @@
 - Both codes are declared lint-failure codes in `CLI-WFSET`, i.e. error class. By the rule above they therefore **belong in** the catalog, following `R-PACK-LOCATION-DRIFT`. Registering them extends a closed set and MUST move in lockstep with the reviewer SSOTs, which is a different atomic slice than this ingestion cascade; the registration is therefore deferred with a named owner and trigger (OQ-0015-0001), not denied. Rationale and rejected options: DR-0015-0006.
 - Until that lockstep change lands, the gate MUST NOT reject either code for an empty / absent `justification:`. This is a recorded **temporary divergence** scoped to exactly these two codes, enumerated explicitly rather than derived from a property. It MUST NOT be generalized: every `JUSTIFICATION_CATALOG` member keeps its mandatory non-empty `justification:` obligation under BR-0015-0013, and adding a code to the divergence list is a governance change, not an implementation detail.
 - Code declarations are SSOT in `.qfai/contracts/cli/shipped-workflows.md` (`CLI-WFSET`). This spec cites them and, where it must state the ingestion obligation, mirrors the contract's discriminator rather than asserting an independent one. `CLI-WFSET` dropped its own emitter-identity rationale in round 4, so the contract and this rule now state the same discriminator. This spec does not own that contract file; the registration change owns keeping the two aligned.
+
+## BR-0015-0018: Routing entries for the two entry skills
+
+- AC-Refs: AC-0015-0023
+- The shipped `manifest/agent-routing.yml` carries a routing entry for `qfai-run` and one for `qfai-maintain`, each with its profile, roles and routing block.
+- `qfai-run` has the orchestrator role and no authoring or reviewing phase.
+- `qfai-maintain` has an authoring phase and an independent reviewer, on the existing `default` profile. `manifest/review-profiles.yml` gains no profile.
+- This rule states what the shipped manifests carry. How an upgraded project's manifest gains the entries is DR-0015-0010's.
+
+## BR-0015-0019: Authorization kinds and the Default Autopilot buckets
+
+- AC-Refs: AC-0015-0024
+- Inside a run, each Default Autopilot Policy bucket is satisfied by the authorization kind CLI-WF `## Authorizations` assigns it, and `--auto` satisfies nothing. The shared operating baseline's autopilot passage states the mapping, and the policy validator is unchanged.
+
+## BR-0015-0020: Actor history across a run
+
+- AC-Refs: AC-0015-0025
+- Every work order carries the run's history of authors, recommenders and reviewers (CLI-WF `### Work order`). An agent instance recorded there as the author or recommender of an artifact never counts as that artifact's independent reviewer.
+- No required reviewer is dropped to save tokens. BR-0015-0003 stands: an unavailable required delegation stops the run.
+- The shared delegation baseline states this rule.
+
+## BR-0015-0021: Grilling inside a run
+
+- AC-Refs: AC-0015-0026
+- Inside a run, a grilling session takes what the work order's `settled` field records (CLI-WF `### Work order`) as settled, and works only the remaining frontier. It keeps the split between user sessions and delegated sessions.
+- No run invokes `qfai-grill`: no built-in plan names it (CLI-WFFILE `### Vocabulary`).
+- The shared delegation baseline states this rule.
+
+## Contract Realization
+
+The BR IDs sit in the last column: a row whose first cell is a BR ID is read as
+that rule's definition.
+
+| Contract   | Section                              | Realized by  |
+| ---------- | ------------------------------------ | ------------ |
+| CLI-WF     | `### Work order`                     | BR-0015-0010 |
+| CLI-WF     | `### Stage result` (`delegation`)    | BR-0015-0003 |
+| CLI-WF     | `## Authorizations`                  | BR-0015-0019 |
+| CLI-WF     | `### Work order`, `### Stage result` | BR-0015-0020 |
+| CLI-WFFILE | `### Vocabulary`                     | BR-0015-0021 |
+| CLI-WF     | `### Work order` (`settled`)         | BR-0015-0021 |
+| CLI-WF     | `## Fail-closed` (trigger (c))       | BR-0015-0018 |
+| CLI-INIT   | `### Upgrade conflicts`              | BR-0015-0018 |

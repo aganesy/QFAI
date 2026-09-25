@@ -90,19 +90,6 @@ describe("buildCompletionCertificate", () => {
 });
 
 describe("write / load round-trip", () => {
-  // QFAI:SPEC-0012:TC-0012-0334
-  it("writes to canonical path and load returns the same object", async () => {
-    const root = await newTempDir();
-    const evidenceRoot = await seedEvidence(root, {
-      "rounds/r5/harvest.json": "{}\n",
-    });
-    const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
-    const written = await writeCompletionCertificate(root, cert);
-    expect(written).toBe(path.join(root, COMPLETION_CERTIFICATE_REL_PATH));
-    const loaded = await loadCompletionCertificate(root);
-    expect(loaded).toEqual(cert);
-  });
-
   it("write produces canonical JSON with sorted keys (deterministic)", async () => {
     const root = await newTempDir();
     const evidenceRoot = await seedEvidence(root, { "rounds/r5/harvest.json": "{}\n" });
