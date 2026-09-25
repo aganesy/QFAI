@@ -155,23 +155,23 @@
 
 - SDD preflight readiness MUST NOT depend on whether an optional discussion side artifact is present, absent, malformed, or in a legacy format.
 
-## BR-0013-0022: Stage 1 checks the routing-time approval instead of asking
+## BR-0013-0037: Stage 1 checks the routing-time approval instead of asking
 
 - AC-Refs: AC-0013-0043
 
 - Inside a run, Stage 1 does not ask the `CREATE` question: it checks the cited `human_decision` as CLI-WF `## Authorizations` states and, when the check passes, persists the row with `Authorization-Ref` and with `Approved By` copied from the record as CLI-WFFILE `## Authorization record` states.
 
-## BR-0013-0023: A failed approval check persists nothing
+## BR-0013-0038: A failed approval check persists nothing
 
-- AC-Refs: AC-0013-0029
+- AC-Refs: AC-0013-0044
 
 - When the cited authorization is missing, does not match the row, or is stale by CLI-WF `## Authorizations`, Stage 1 persists no triage row and returns `awaiting_input` naming the row and the reason.
 
 ## BR-0013-0024: Only a CREATE is approved at routing
 
-- AC-Refs: AC-0013-0030
+- AC-Refs: AC-0013-0045
 
-- `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` rows keep the Stage 1 approval question, inside a run and outside one, and a routing-time authorization never approves one of them (DR-0296).
+- `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` rows keep the Stage 1 approval question, inside a run and outside one, and a routing-time authorization never approves one of them (DR-0299).
 - A routing-time authorization records a `CREATE` answer only, so accepting it for another operation would approve a row nobody was asked about.
 - Inside a run, Stage 1 puts that question as a `decision` question its stage result opens, with outcome `awaiting_input`, and asks the operator nothing itself. The answer reaches the next attempt through the work order's `authorizationRefs`.
 - The row then copies the answerer into `Approved By` as `answeredBy@YYYY-MM-DD` and carries no `Authorization-Ref`, so `QFAI-TRIAGE-005` checks it as it checks any row, as CLI-VAL `## Triage authorization reference` states.
@@ -264,8 +264,8 @@ rule that also rests on a contract section appears in both.
 
 | Contract   | Section                             | Rules                                    |
 | ---------- | ----------------------------------- | ---------------------------------------- |
-| CLI-WF     | `## Authorizations`                 | BR-0013-0022, BR-0013-0023, BR-0013-0025 |
-| CLI-WFFILE | `## Authorization record`           | BR-0013-0022                             |
+| CLI-WF     | `## Authorizations`                 | BR-0013-0037, BR-0013-0038, BR-0013-0025 |
+| CLI-WFFILE | `## Authorization record`           | BR-0013-0037                             |
 | CLI-VAL    | `## Triage authorization reference` | BR-0013-0024, BR-0013-0026               |
 | CLI-WF     | `### Work order`                    | BR-0013-0024, BR-0013-0031               |
 | CLI-WF     | `### Stage result`                  | BR-0013-0024, BR-0013-0031               |
@@ -275,6 +275,6 @@ rule that also rests on a contract section appears in both.
 
 | Governing decision                    | Spec rules                                             |
 | ------------------------------------- | ------------------------------------------------------ |
-| `_policies/08_Decisions.md` DR-0296   | BR-0013-0024                                           |
+| `_policies/08_Decisions.md` DR-0299   | BR-0013-0024                                           |
 | `_policies/08_Decisions.md` DR-0297   | BR-0013-0027, BR-0013-0028, BR-0013-0029, BR-0013-0030 |
 | None: no contract or policy states it | BR-0013-0021, BR-0013-0035, BR-0013-0036               |

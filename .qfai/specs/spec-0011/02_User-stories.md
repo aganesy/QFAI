@@ -79,7 +79,7 @@ As an implementation worker, I want `design-system.yaml` consumed as a determini
   row stays `done` and nothing claims its obligation changed.
 - Non-goals: reopening the row; filing a Change Request; appending a new row.
 - Notes: the pack has no story for this branch, so the source is the pack
-  requirement (DR-0011-0004).
+  requirement (DR-0011-0016).
 
 ## US-0011-0012: Fix a defective unit-layer test with ledger status untouched
 
@@ -91,4 +91,4 @@ As an implementation worker, I want `design-system.yaml` consumed as a determini
   obligation is.
 - Non-goals: fixing an acceptance-layer test, which `/qfai-atdd` does; changing
   what the test expects.
-- Notes: the unit-layer half of the pack story (DR-0011-0003).
+- Notes: the unit-layer half of the pack story (DR-0011-0015).

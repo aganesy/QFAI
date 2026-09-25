@@ -6,6 +6,39 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
+  QFAI no longer creates, reads or checks the directory.
+
+  - `qfai init` no longer seeds `.qfai/steering/`, and the
+    `.github/copilot-instructions.md` it writes no longer names it. An
+    existing instructions file keeps the line until `qfai init --force`
+    rewrites it.
+  - `qfai validate` no longer checks the directory. These codes are no longer
+    reported: `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`,
+    `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`, `QFAI-TDDLIST-015` and
+    `QFAI-TDDLIST-016`. A reviewer finding coded `R-WORKLOG-DRIFT` no longer
+    needs a `justification`.
+  - The shipped `.qfai/assistant/catalog/worklog-entry.schema.md` is withdrawn.
+  - The skills no longer describe work-log entries.
+
+  Records go where the skills now send them:
+
+  - A decision goes to the spec's `07_Decisions.md` or a Change Request.
+  - A consultation or an out-of-scope discovery goes to `08_Open-questions.md`
+    or a Change Request.
+  - A stop during `/qfai-implement` goes in the ledger row's `Blocked-By`,
+    naming what the row waits on and the status it left.
+
+  What to do in an existing project:
+
+  - Files under `.qfai/steering/` are left untouched. Nothing reads them or
+    reacts to them, so they can be deleted.
+  - A remaining `worklog-entry.schema.md` is reported as `QFAI-ASSETS-006`
+    until it is removed, like any file the release no longer ships.
+    `qfai init --force` removes it when it still matches its
+    `.assets.lock.json` record. An edited copy is left in place and reported
+    as a manual merge; delete it by hand.
+
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
   dedicated test suites. CI and release checks now run seven test slices. An
   older tag with the retired slices uses the whole-suite release gate.
