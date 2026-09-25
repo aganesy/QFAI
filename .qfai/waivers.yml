@@ -83,6 +83,27 @@ waivers:
         - TDD-0032
         - TDD-0033
         - TDD-0034
+        - TDD-0035
+        - TDD-0036
+        - TDD-0037
+        - TDD-0038
+        - TDD-0039
+        - TDD-0040
+        - TDD-0041
+        - TDD-0042
+        - TDD-0043
+        - TDD-0044
+        - TDD-0045
+        - TDD-0046
+        - TDD-0047
+        - TDD-0048
+        - TDD-0049
+        - TDD-0050
+        - TDD-0051
+        - TDD-0052
+        - TDD-0053
+        - TDD-0054
+        - TDD-0055
         - TDD-0056
         - TDD-0057
         - TDD-0058
@@ -106,6 +127,8 @@ waivers:
         - TDD-0076
         - TDD-0077
         - TDD-0078
+        - TDD-0079
+        - TDD-0080
         - TDD-0081
         - TDD-0082
         - TDD-0083

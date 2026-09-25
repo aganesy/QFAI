@@ -36,7 +36,49 @@ export interface WorkflowEvent {
   notRun?: WorkflowNotRun;
   seamRequest?: { targetTestId: string };
   repairs?: WorkflowDebt[];
+  debts?: WorkflowDebt[];
+  gateResults?: WorkflowGateReceipt[];
+  validate?: { verdict: "PASS" | "FAIL"; findings: FindingIdentity[]; trustLevel: "cli_observed" };
 }
+
+interface WorkflowGateReceipt {
+  gateId: string;
+  verdict: string;
+  trustLevel: "cli_observed" | "agent_reported";
+}
+
+type Severity = "error" | "warning" | "info";
+
+interface FindingIdentity {
+  code: string;
+  file: string;
+  refs: string[];
+}
+
+type UnmetCondition =
+  | "work-order-outstanding"
+  | "run-waiting"
+  | "obligation-unprocessed"
+  | "stage-unaccepted"
+  | "review-missing"
+  | "verify-missing"
+  | "verify-foreign"
+  | "gate-failed"
+  | "diff-out-of-scope"
+  | "approval-unanswered"
+  | "debt-open"
+  | "tool-drift"
+  | "policy-drift"
+  | "uncommitted";
+
+interface WorkflowUnmet {
+  condition: UnmetCondition;
+  subject: string;
+  owner: string;
+  findings?: (FindingIdentity & { baseline: "pre-existing" | "new" })[];
+}
+
+type CompletionTarget = "qfai_done" | "working_tree";
 
 type WorkflowNotRun =
   { kind: "not_applicable"; reason?: string } | { kind: "reused"; receiptRef: string };
@@ -98,6 +140,10 @@ export interface WorkflowDecision {
     questions?: WorkflowQuestion[];
     workOrder?: WorkflowWorkOrder | null;
     plan?: WorkflowPlan;
+    target?: CompletionTarget;
+    unmet?: WorkflowUnmet[];
+    deliveryUnmet?: WorkflowUnmet[];
+    receipts?: WorkflowGateReceipt[];
     error?:
       | {
           code: "invalid-input";
@@ -187,13 +233,36 @@ interface WorkflowSnapshot {
       capability?: Omit<WorkflowCapability, "slotId">;
     };
   };
-  acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
+  acceptedStages?: WorkflowAcceptedStage[];
+  completionTarget?: CompletionTarget;
+  baseline?: {
+    findings: FindingIdentity[];
+    toolVersion: string;
+    cliEntryDigest: string;
+    policyDigests: Record<string, string>;
+  };
   seamRequest?: WorkflowSeamRequest;
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   attempts?: Record<string, number>;
   receiptRefs?: string[];
   actorHistory?: WorkflowActor[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
+}
+
+interface WorkflowAcceptedStage {
+  stageInstanceId: string;
+  stageKind: string;
+  outcome: string;
+  gateResults?: WorkflowGateReceipt[];
+  reviewResults?: WorkflowReview[];
+  debts?: WorkflowDebt[];
+}
+
+interface WorkflowReview {
+  role: string;
+  agentInstance: string;
+  verdict: string;
+  reportRef: string;
 }
 
 interface WorkflowSeamRequest {
@@ -227,7 +296,8 @@ interface WorkflowInput {
     changedFiles?: { path: string; digest: string }[];
     red?: { testId: string; failureKind: string };
     regressionFix?: { testId?: string; rerunRef?: string; reviewRef?: string };
-    reviewResults?: { role: string; agentInstance: string; verdict: string; reportRef: string }[];
+    reviewResults?: WorkflowReview[];
+    gateResults?: { gateId: string; verdict: string }[];
     testFix?: { citedBefore?: string; citedAfter?: string; reviewRef?: string; rerunRef?: string };
     proposal?: {
       requestKind: string;
@@ -276,6 +346,19 @@ interface WorkflowFacts {
     specId: string;
     rows: { rowId: string; status: string; digest: string; layer?: string; tcLevels?: string[] }[];
   };
+  completion?: WorkflowCompletionFacts;
+}
+
+// What `finish` observes: validate run in process, the offered verify report, the tool and
+// policy digests, and the run's cumulative changed and uncommitted paths.
+interface WorkflowCompletionFacts {
+  validate: { failOn: Severity; findings: (FindingIdentity & { severity: Severity })[] };
+  verifyReport?: { runId: string; stageInstanceId: string; status: string; scope: string };
+  toolVersion: string;
+  cliEntryDigest: string;
+  policyDigests: Record<string, string>;
+  changedPaths: string[];
+  uncommittedPaths: string[];
 }
 
 type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
@@ -404,11 +487,7 @@ function reviewerRefusals(
   actorHistory: readonly WorkflowActor[],
 ): InputRefusal[] {
   return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
-    actorHistory.some(
-      (actor) =>
-        actor.agentInstance === review.agentInstance &&
-        (actor.role === "author" || actor.role === "recommender"),
-    )
+    isAuthorOrRecommender(actorHistory, review.agentInstance)
       ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
       : [],
   );
@@ -893,6 +972,237 @@ function acceptPreamble(
   return undefined;
 }
 
+// A gate verdict a result submits is informative only; the core never decides a gate from it.
+function agentReported(claims: { gateId: string; verdict: string }[]): WorkflowGateReceipt[] {
+  return claims.map(({ gateId, verdict }) => ({ gateId, verdict, trustLevel: "agent_reported" }));
+}
+
+const SEVERITY_RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2 };
+
+function unmetOf(condition: UnmetCondition, subjects: readonly string[], owner = "operator") {
+  return subjects.map((subject): WorkflowUnmet => ({ condition, subject, owner }));
+}
+
+function findingKey(finding: FindingIdentity): string {
+  return JSON.stringify([finding.code, finding.file, [...finding.refs].sort()]);
+}
+
+function failingFindings(completion: WorkflowCompletionFacts): FindingIdentity[] {
+  const { failOn, findings } = completion.validate;
+  return findings
+    .filter((finding) => SEVERITY_RANK[finding.severity] >= SEVERITY_RANK[failOn])
+    .map(({ code, file, refs }) => ({ code, file, refs }));
+}
+
+function validateGate(snapshot: WorkflowSnapshot, failing: FindingIdentity[]): WorkflowUnmet[] {
+  if (failing.length === 0) return [];
+  const known = new Set((snapshot.baseline?.findings ?? []).map(findingKey));
+  const findings = failing.map((finding) => {
+    const baseline: "pre-existing" | "new" = known.has(findingKey(finding))
+      ? "pre-existing"
+      : "new";
+    return { ...finding, baseline };
+  });
+  return [{ condition: "gate-failed", subject: "validate", owner: "operator", findings }];
+}
+
+function runStateUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  const { run, outstandingWorkOrder } = snapshot;
+  if (run.state === "running") {
+    const owner = outstandingWorkOrder?.executor?.skill ?? "operator";
+    return unmetOf(
+      "work-order-outstanding",
+      [outstandingWorkOrder?.workOrderId ?? "work-order"],
+      owner,
+    );
+  }
+  if (run.state === "awaiting_input") {
+    const questionIds = (snapshot.openQuestions ?? []).map((question) => question.questionId);
+    return unmetOf("run-waiting", questionIds.length > 0 ? questionIds : ["question"]);
+  }
+  // SIMPLIFIED: a blocked run is named by its state, not by its cause or blocker.
+  // Lift when: the snapshot carries the cause or blocker that moved the run to `blocked`.
+  return run.state === "blocked" ? unmetOf("run-waiting", ["blocked"]) : [];
+}
+
+function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowUnmet[] {
+  const plan = snapshot.plan;
+  if (!plan) return [];
+  const accepted = snapshot.acceptedStages ?? [];
+  const isAccepted = (stageInstanceId: string) =>
+    accepted.some((stage) => stage.stageInstanceId === stageInstanceId);
+  return activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet)
+    .filter((stage) => stage.stageKind !== "verify" && !isAccepted(stage.stageInstanceId))
+    .flatMap((stage) =>
+      unmetOf(
+        "stage-unaccepted",
+        [stage.stageInstanceId],
+        executorSkill(stage, snapshot.diagnosis, facts) ?? "operator",
+      ),
+    );
+}
+
+function verifyUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  const verifyStages = (snapshot.acceptedStages ?? []).filter(
+    (stage) => stage.stageKind === "verify",
+  );
+  if (verifyStages.length === 0) {
+    const planned = snapshot.plan?.stages.find((stage) => stage.stageKind === "verify");
+    return unmetOf("verify-missing", [planned?.stageInstanceId ?? "verify"], "qfai-verify");
+  }
+  const report = completion.verifyReport;
+  const isThisRunsCopy =
+    report?.runId === snapshot.run.id &&
+    verifyStages.some((stage) => stage.stageInstanceId === report.stageInstanceId);
+  if (!isThisRunsCopy) return unmetOf("verify-foreign", ["verify.json"], "qfai-verify");
+  return report.status === "PASS" && report.scope === "full"
+    ? []
+    : unmetOf("gate-failed", ["verify"]);
+}
+
+function isAuthorOrRecommender(actorHistory: readonly WorkflowActor[], agentInstance: string) {
+  return actorHistory.some(
+    (actor) =>
+      actor.agentInstance === agentInstance &&
+      (actor.role === "author" || actor.role === "recommender"),
+  );
+}
+
+function reviewUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
+  const actorHistory = snapshot.actorHistory ?? [];
+  const independentPass = (snapshot.acceptedStages ?? [])
+    .flatMap((stage) => stage.reviewResults ?? [])
+    .some(
+      (review) =>
+        review.role === "qa-gatekeeper" &&
+        review.verdict === "PASS" &&
+        !isAuthorOrRecommender(actorHistory, review.agentInstance),
+    );
+  return independentPass ? [] : unmetOf("review-missing", ["qa-gatekeeper"]);
+}
+
+function scopeUnmet(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+  completion: WorkflowCompletionFacts,
+) {
+  const ledger = facts.ledger;
+  const unprocessed =
+    ledger && ledger.specId === snapshot.specBinding?.specId
+      ? ledger.rows.filter((row) => row.status !== "done" && row.status !== "exception")
+      : [];
+  // SIMPLIFIED: the authorized set is the plan's write scope and the run's own evidence tree.
+  // Lift when: the snapshot records the record areas of every work order the run issued.
+  const areas = [
+    ...(snapshot.plan?.writeScope ?? []),
+    `.qfai/evidence/workflow/${snapshot.run.id}`,
+  ];
+  const escaped = completion.changedPaths.filter(
+    (changed) => !areas.some((area) => areaCovers(area, changed)),
+  );
+  const approval = snapshot.approval;
+  const unanswered =
+    (approval && !approval.authorizationId) || (snapshot.plan?.route === "feature" && !approval)
+      ? [approval?.target?.slotId ?? "CREATE"]
+      : [];
+  return [
+    ...unmetOf(
+      "obligation-unprocessed",
+      unprocessed.map((row) => row.rowId),
+    ),
+    ...unmetOf("diff-out-of-scope", escaped),
+    ...unmetOf("approval-unanswered", unanswered),
+  ];
+}
+
+// A debt is resolved once the finish validate no longer reports its finding code at its path.
+// SIMPLIFIED: a later accepted result of the detecting stage kind does not resolve a debt.
+// Lift when: an accepted result's own findings are recorded beside its stage.
+function debtUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  const reported = (debt: WorkflowDebt) =>
+    completion.validate.findings.some(
+      (finding) => finding.code === debt.findingCode && finding.file === debt.path,
+    );
+  return (snapshot.acceptedStages ?? [])
+    .flatMap((stage) => stage.debts ?? [])
+    .filter(reported)
+    .flatMap((debt) => unmetOf("debt-open", [debt.owningSpec], debt.resolvingOwner ?? "operator"));
+}
+
+function driftUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  const start = snapshot.baseline;
+  if (!start) return [];
+  const tool = [
+    ...(start.toolVersion === completion.toolVersion ? [] : ["tool-version"]),
+    ...(start.cliEntryDigest === completion.cliEntryDigest ? [] : ["cli-entry-digest"]),
+  ];
+  const policyPaths = new Set([
+    ...Object.keys(start.policyDigests),
+    ...Object.keys(completion.policyDigests),
+  ]);
+  const policy = [...policyPaths].filter(
+    (policyPath) => start.policyDigests[policyPath] !== completion.policyDigests[policyPath],
+  );
+  return [...unmetOf("tool-drift", tool), ...unmetOf("policy-drift", policy)];
+}
+
+function completionUnmet(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+  completion: WorkflowCompletionFacts,
+): WorkflowUnmet[] {
+  const unmet = [
+    ...runStateUnmet(snapshot),
+    ...stageUnmet(snapshot, facts),
+    ...verifyUnmet(snapshot, completion),
+    ...reviewUnmet(snapshot),
+    ...validateGate(snapshot, failingFindings(completion)),
+    ...scopeUnmet(snapshot, facts, completion),
+    ...debtUnmet(snapshot, completion),
+    ...driftUnmet(snapshot, completion),
+    ...unmetOf("uncommitted", completion.uncommittedPaths),
+  ];
+  const seen = new Set<string>();
+  return unmet.filter((entry) => {
+    const key = JSON.stringify([entry.condition, entry.subject, entry.owner]);
+    const first = !seen.has(key);
+    seen.add(key);
+    return first;
+  });
+}
+
+function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
+  const { run, completionTarget } = snapshot;
+  const completion = facts.completion;
+  if (!completion || !completionTarget) {
+    return refusedInput(run, "The completion facts are not ready.");
+  }
+  const all = completionUnmet(snapshot, facts, completion);
+  const workingTree = completionTarget === "working_tree";
+  const unmet = workingTree ? all.filter((entry) => entry.condition !== "uncommitted") : all;
+  const delivery = workingTree
+    ? { deliveryUnmet: all.filter((entry) => entry.condition === "uncommitted") }
+    : {};
+  const failing = failingFindings(completion);
+  const verdict = failing.length === 0 ? "PASS" : "FAIL";
+  const receipts: WorkflowGateReceipt[] = [
+    { gateId: "validate", verdict, trustLevel: "cli_observed" },
+  ];
+  if (unmet.length > 0 || run.state !== "ready") {
+    return { verdict: { ok: true, run, unmet, ...delivery, receipts }, events: [] };
+  }
+  const completed = { ...run, state: "completed", sequence: run.sequence + 1 };
+  return {
+    verdict: { ok: true, run: completed, target: completionTarget, unmet, ...delivery, receipts },
+    events: [
+      {
+        type: "validated-final-result-and-target",
+        validate: { verdict, findings: failing, trustLevel: "cli_observed" },
+      },
+    ],
+  };
+}
+
 export function decide(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
@@ -908,6 +1218,8 @@ export function decide(
     const refused = acceptPreamble(snapshot, input, result);
     if (refused) return refused;
   }
+
+  if (input.operation === "finish") return decideFinish(snapshot, facts);
 
   if (input.operation === "decision" && run.state === "awaiting_input") {
     const question = snapshot.openQuestions?.find(
@@ -1208,6 +1520,8 @@ export function decide(
         ...(result.notRun ? { notRun: result.notRun } : {}),
         ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
         ...(result.outcome === "needs_repair" && result.debts ? { repairs: result.debts } : {}),
+        ...(result.outcome === "accepted_with_debt" && result.debts ? { debts: result.debts } : {}),
+        ...(result.gateResults?.length ? { gateResults: agentReported(result.gateResults) } : {}),
       },
       ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
         type: "binding-recorded",
