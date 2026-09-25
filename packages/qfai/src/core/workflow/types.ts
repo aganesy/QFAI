@@ -557,6 +557,7 @@ export interface WorkflowSeedingTargets {
 export interface WorkflowFacts {
   now?: string;
   specsDir?: string;
+  contractsDir?: string;
   pathExistence?: Record<string, boolean>;
   acceptanceObligationsUnmet?: boolean;
   plans?: Record<string, { route: string; stages: PlanStages }>;

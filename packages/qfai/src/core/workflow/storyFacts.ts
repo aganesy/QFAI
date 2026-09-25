@@ -24,6 +24,10 @@ export function specsDirOf(root: string, config: QfaiConfig): string {
   return projectRelative(root, path.resolve(root, config.paths.specsDir));
 }
 
+function contractsDirOf(root: string, config: QfaiConfig): string {
+  return projectRelative(root, path.resolve(root, config.paths.contractsDir));
+}
+
 async function readText(file: string): Promise<string> {
   return readFile(file, "utf8").catch(() => "");
 }
@@ -153,6 +157,7 @@ export async function storyFactsOf(
   return {
     flows,
     specsDir,
+    contractsDir: contractsDirOf(root, config),
     records,
     ...(obligations ? { obligations } : {}),
     ...(seeding ? { seeding } : {}),

@@ -522,6 +522,11 @@
     "tests/unit/workflow/theTestFixBranch.test.ts",
     "tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts",
     "tests/unit/workflow/upstreamDriftInsideARun.test.ts",
-    "tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts"
+    "tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts",
+    "tests/integration/workflow/storyAuthoringReadsItsRecords.test.ts",
+    "tests/integration/workflow/storyTreeFixture.ts",
+    "tests/integration/workflow/theObligationCheckReadsTheTree.test.ts",
+    "tests/unit/workflow/noStageUncoversAnExample.test.ts",
+    "tests/unit/workflow/storyAuthoringKeepsItsRecords.test.ts"
   ]
 }

@@ -10,6 +10,7 @@ import {
 } from "./common.js";
 import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
 import { isRecord, parseMeasurement, parseQuestionInput } from "./parse.js";
+import { storyTreeChecks } from "./records.js";
 import { activeStages } from "./stages.js";
 import type {
   InputRefusal,
@@ -497,9 +498,14 @@ export function acceptStageResult(
   if (!plan || !workOrder || !stage || stageResultIsBroken(snapshot, workOrder, stage, result)) {
     return notReady(run, "stage result");
   }
-  const refusals = resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []);
+  const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
+  const refusals = [
+    ...resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []),
+    ...storyTree.refusals,
+  ];
   if (refusals.length > 0) return refusedWith(run, refusals);
-  return settleResult(snapshot, workOrder, result, {}, accepted.length + 1 === selected.length);
+  const last = accepted.length + 1 === selected.length;
+  return settleResult(snapshot, workOrder, result, storyTree.extras, last);
 }
 
 // A seam-only result closes its seam request and returns the run to the acceptance stage it
