@@ -30,13 +30,14 @@ Scenario: Splitting release checks preserves the publication barrier
 # Parent: US-0002-0017
 Scenario: Release checks run independently without abandoning older tags
   Given verify reads the tagged manifests as data
-  When all four operation scripts and all suite slice scripts are declared
+  When all four operation scripts are declared and the tag's suite slice script set exactly equals the current workflow's slice set
   Then SSOT sync, lint, types and the build chain each need only verify
   And each job uses an isolated checkout of the verified tag and the shared setup
   And the build, pack verification and leakage scan remain ordered in one workspace
   And the local aggregate still invokes exactly the original checks in their original order
   And a tag missing any operation script uses its complete existing aggregate
   And a whole-suite tag never enters the operation path
+  And an older tag with additional slice scripts uses its complete whole-suite aggregate
   And an unknown checks shape or an unsuccessful required operation refuses upload
 
 # AC-0002-0017-04
