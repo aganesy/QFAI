@@ -1988,6 +1988,8 @@ describe("the real workflow trees", () => {
         // differential Node-20 signal. The entry is per OCCURRENCE, so deleting either lane's
         // build step fails this row.
         "build::ci.yml::pnpm -C packages/qfai build",
+        // A third time: the `windows-parity` job builds for the same reason, on the Windows runner.
+        "build::ci.yml::pnpm -C packages/qfai build",
         // This one is new, and it is a fact about the repository rather than about the predicate:
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.

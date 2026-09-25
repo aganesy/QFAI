@@ -76,6 +76,13 @@ export function errorsByFile(report) {
   return counts;
 }
 
+/** Name the findings behind a changed file count when annotations are capped. */
+export function errorsForFile(report, file) {
+  return (report.issues ?? [])
+    .filter((issue) => issue.severity === "error" && (issue.file ?? "(no file)") === file)
+    .map(({ code, message }) => ({ code, message }));
+}
+
 function fail(message) {
   console.error(`check-dogfood-backlog: ${message}`);
   process.exit(1);
@@ -143,11 +150,17 @@ function main() {
     console.error(
       `check-dogfood-backlog: ${file} is held at zero for ${profile} but reports ${String(n)} error(s).`,
     );
+    for (const { code, message } of errorsForFile(report, file)) {
+      console.error(`  ${String(code)}: ${String(message)}`);
+    }
   }
   for (const [file, n] of over) {
     console.error(
       `check-dogfood-backlog: ${file} reports ${String(n)} error(s) for ${profile}, past its pinned ${String(pinned[file])}.`,
     );
+    for (const { code, message } of errorsForFile(report, file)) {
+      console.error(`  ${String(code)}: ${String(message)}`);
+    }
   }
   if (unpinned.length > 0 || over.length > 0) {
     console.error(

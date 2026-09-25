@@ -18,8 +18,14 @@ links: ["spec-0018"]
 
 ## Why it waits
 
-The ledger assigns the JSON verdict's plan test to the `qfai-run` skill asset, but the verdict comes from the workflow core. `CR-20260925-0003` asks for the SDD-owned `Owning module` correction. The CR is open and depends on the earlier ledger change in `CR-20260924-0006` being applied first.
+The ledger assigns the JSON verdict's plan test to the `qfai-run` skill asset,
+but the verdict comes from the workflow core. `CR-20260925-0003` asks for the
+SDD-owned `Owning module` correction. The CR is open and depends on the earlier
+ledger change in `CR-20260924-0006` being applied first.
 
 ## What releases it
 
-After user approval, `/qfai-sdd spec-0018` Phase 2b corrects only this row's owner to `packages/qfai/src/core/workflow/decide.ts` and records the change in `09_delta.md`. Sweep the ledger without resetting the unchanged obligation. Resume `TDD-0014` after the CR records `Applied at`.
+After user approval, `/qfai-sdd spec-0018` Phase 2b corrects only this row's
+owner to `packages/qfai/src/core/workflow/decide.ts` and records the change in
+`09_delta.md`. Sweep the ledger without resetting the unchanged obligation.
+Resume `TDD-0014` after the CR records `Applied at`.

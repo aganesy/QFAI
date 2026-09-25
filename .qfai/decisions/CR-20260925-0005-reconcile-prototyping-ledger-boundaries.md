@@ -347,3 +347,8 @@ stage runs remain: `/qfai-atdd spec-0012` writes the `TDD-0583` and
 `TDD-0584` Integration tests, and `TDD-0584` needs the real handoff writer or
 a faithful workflow harness. `/qfai-implement spec-0012` re-executes the three
 reset rows.
+
+Implementation-surface gap: no post-handoff writer or faithful workflow harness
+exists, so TDD-0584 (TC-0012-0335) stays `todo`. The user chose on 2026-09-25
+to carry its `QFAI-ATDD-112` finding in the dogfood backlog until a writer
+exists.

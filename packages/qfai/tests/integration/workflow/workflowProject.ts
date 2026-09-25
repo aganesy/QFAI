@@ -108,8 +108,7 @@ const REPOSITORY_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 
 /**
  * A temp git repository after `qfai init`, whose validate reports no error: the steering
- * placeholders are filled, this repository's own discussion pack is copied in, and the base
- * branch validate diffs against points at the first commit.
+ * placeholders are filled and this repository's own discussion pack is copied in.
  */
 export async function initProject(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-"));
@@ -127,6 +126,8 @@ export async function initProject(): Promise<string> {
     { recursive: true },
   );
   commitAll(root);
+  // The base ref validate diffs against, as a clone of the default branch has it.
+  // Without it validate reports QFAI-TRACE-003 as an error.
   git(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
   return root;
 }

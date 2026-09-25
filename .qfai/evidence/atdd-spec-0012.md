@@ -2479,6 +2479,18 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 - Checkpoint verification revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
 - Checkpoint verification seal: 93b2f31b78b3abbd921babc281dfb84dd7c1d001f2e2a362309863edc4052abe
 
+### TDD-0582
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey, prototype variant: the `prototype` stage runs between SDD and acceptance as `qfai-prototyping` `existing-runtime-contract` for the bound spec, an operation the installed skill declares; the test carries `QFAI:SPEC-0012:US-0012-0144`. The feature route issues every stage, so the variant does not yet select the stage by `prototype_decision_needed` (`decide.ts` marks that SIMPLIFIED).
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, prototype variant (spec-0012 TDD-0582)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, prototype variant \(spec-0012 TDD-0582\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001, prototype variant (spec-0012 TDD-0582): the prototype stage runs between SDD and acceptance for the bound spec`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
