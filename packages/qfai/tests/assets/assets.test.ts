@@ -2648,7 +2648,10 @@ describe("assets guardrails", () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
-    expect(content).toMatch(/ui-bearing discussion pack/i);
+    expect(content).toMatch(
+      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
+    );
+    expect(content).toMatch(/cli-only packs omit it/i);
     expect(content).toMatch(/ui_bearing:\s*false[\s\S]*typically omit `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
