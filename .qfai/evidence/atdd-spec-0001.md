@@ -63,7 +63,7 @@ No test is added. The run re-uses the two cases in
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0035` | `TC-0001-0026` | Integration | falsifiability | blocked |
-| `TDD-0036` | `TC-0001-0027` | Integration | falsifiability | refactor |
+| `TDD-0036` | `TC-0001-0027` | Integration | falsifiability | done     |
 
 ### TDD-0035
 
@@ -131,6 +131,26 @@ packages/qfai/tests/integration/stageSkillEntryCheckSpec0001.test.ts
 - Refactor verify revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the mutated tree working-tree+aa99dee9b05c3cca23f2007b3211e63d782491c913d9540c0bdf61256bbb6052; qa-gatekeeper#2 — build-phase GREEN + oracle proof at 233cb417abb855bdc2e90138ee292bc7c2c0e82e, whose code tree is 22822f5a5efd828b06a40a30175d963a3bbe27d8)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate with the mutation in place (baseline line 176, refusal to the operator); AssertionError at stageSkillEntryCheckSpec0001.test.ts:45:22; the TC-0001-0026 case still passes; Falsifiability revision and RED test hash recompute; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof after the revert: selector 1 passed | 1 skipped, file 2/2, no diff under packages/ against 22822f5a5
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925195831172 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 8c6779fa69593c39e38aa9ab38ca7e8d00852ea1583d67ad5ca773e36b6ab772
+- Spec review: PASS
+- Spec reviewed revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- Spec audited evidence hash: d07bf0350804610383d5ca4956649ecf4a18d651dc92610f07ab4c5d81be65e0
+- Spec review pack: .qfai/review/review-20260925195831172 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 8c6779fa69593c39e38aa9ab38ca7e8d00852ea1583d67ad5ca773e36b6ab772
+- Code quality review: PASS
+- Code quality reviewed revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- Code quality audited evidence hash: d07bf0350804610383d5ca4956649ecf4a18d651dc92610f07ab4c5d81be65e0
+- Code quality review pack: .qfai/review/review-20260925195831172 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 8c6779fa69593c39e38aa9ab38ca7e8d00852ea1583d67ad5ca773e36b6ab772
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts (run from `packages/qfai`)
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- Checkpoint verification seal: fb33d151bb56025a773686ae069c2a40e43df90dbad918b1ceea285801791522
 
 ## Coverage Depth Matrix
 

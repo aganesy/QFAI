@@ -40,6 +40,40 @@ Advisory findings from `test-design-analyst#1`, none of which this run acts on:
 | ---- | ------------------- | --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ | ------------- | ---------------------------- |
 | 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: confirm the TDD-0035 and TDD-0036 handover              | test-list.md, atdd-spec-0001.md#tdd-0035, #tdd-0036    | #plan-phase   | PASS                         |
 | 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0001 ledger      | test-list.md, 02_User-stories.md, 06_Test-Cases.md     | #plan-phase   | REVISE                       |
+| 3 | - | n/a | grilling(-@2026-09-25T10:14:05.607Z/none): none | - | - | PASS |
+| 4 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0036 falsifiability run with the `error` row's refusal sent to the operator, left in place for the gate | atdd-spec-0001.md#tdd-0036, shared-skill-operating-baseline.md | Round 1 | PASS |
+| 5 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0036 RED phase gate on the mutated tree | atdd-spec-0001.md#tdd-0036 | qa-gatekeeper fields | PASS |
+| 6 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0036 revert, restored GREEN and refactor verify | atdd-spec-0001.md#tdd-0036 | Round 1, Refactor verify fields | PASS |
+| 7 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0036 build-phase GREEN and oracle proof on the restored tree | atdd-spec-0001.md#tdd-0036 | qa-gatekeeper fields | PASS |
+| 8 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0036 completion review, attempt 1 | atdd-spec-0001.md#tdd-0036, coverage-depth-spec-0001.md | review-20260925195831172 <!-- qfai:not-a-citation --> | PASS |
+| 9 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0036 code review, attempt 1 | atdd-spec-0001.md#tdd-0036 | review-20260925195831172 <!-- qfai:not-a-citation --> | PASS |
+| 10 | orchestrator | orchestrator | /qfai-implement: TDD-0036 checkpoint verification, off a checkpoint boundary | atdd-spec-0001.md#tdd-0036 | Checkpoint verification fields | PASS |
+
+`backend-engineer#1` is the only agent that edited the shipped baseline, and
+only to apply and revert the mutation. None of the gatekeepers or reviewers
+above authored or edited anything under review.
+
+### Grilling Session
+
+#### /qfai-implement — run started 2026-09-25T10:14:05.607Z
+
+Preflight: confidence high
+
+No session opened. `DR-0298` fixes what was waived and how a row reopens, and
+the `/qfai-atdd` handover names each predicate and mutation. The one open
+decision this run met, how to re-scope `TDD-0035`, is the user's and is raised
+as `CR-20260925-0285` rather than adopted.
+
+### Record defects
+
+Open entries from the `TDD-0036` completion review. Each is repaired before
+spec-0001 completion is declared.
+
+- `record:unchecked`: no validator reads a `/qfai-implement` grilling block, so
+  its absence would not have been reported. The block above was added after
+  the review.
+- `record:work-orders-summary`: the rows from step 4 on were written after the
+  review read this file.
 
 ## Ledger rows advanced
 
