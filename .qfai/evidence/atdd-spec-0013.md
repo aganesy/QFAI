@@ -355,6 +355,106 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
+### TDD-0046
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
+- Selector: `TC-0013-0040: The other approval-required operations keep the question`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --testNamePattern='TC-0013-0040: The other approval-required operations keep the question' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Inside a workflow run section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
+
+### TDD-0047
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
+- Selector: `TC-0013-0041: `--auto` inside a run approves nothing`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --testNamePattern='TC-0013-0041: `--auto` inside a run approves nothing' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## `--auto` inside a run section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
+
+### TDD-0050
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
+- Selector: `TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingExistingRows.test.ts --testNamePattern='TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`
+
+### TDD-0051
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
+- Selector: `TC-0013-0045: The seeded row's layer comes from the oracle`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingLayer.test.ts --testNamePattern='TC-0013-0045: The seeded row's layer comes from the oracle' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`
+
+### TDD-0052
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
+- Selector: `TC-0013-0046: The append is recorded as an approval-free delta row`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeedingDelta.test.ts --testNamePattern='TC-0013-0046: The append is recorded as an approval-free delta row' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ### Defect row seeding section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`
+
+### TDD-0054
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
+- Selector: `TC-0013-0048: A direct `/qfai-sdd` ends at SDD`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/standaloneEnd.test.ts --testNamePattern='TC-0013-0048: A direct `/qfai-sdd` ends at SDD' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Invoked by name section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`
+
+### TDD-0055
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
+- Selector: `TC-0013-0049: The entry check follows the handover`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/entryCheck.test.ts --testNamePattern='TC-0013-0049: The entry check follows the handover' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Entry check section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/entryCheck.test.ts`
+
+### TDD-0056
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
+- Selector: `TC-0013-0050: The Operations table lists the vocabulary's operations`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/operationsTable.test.ts --testNamePattern='TC-0013-0050: The Operations table lists the vocabulary's operations' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests  1 passed (1)); the asset text landed before this test was written
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/operationsTable.test.ts`
+- Note: The Operations table this test reads was written for spec-0001 TDD-0039, before this test existed, so no RED was observed.
+
+### TDD-0057
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
+- Selector: `TC-0013-0051: Stage 0 reuse keeps SDD's own check live`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage0Reuse.test.ts --testNamePattern='TC-0013-0051: Stage 0 reuse keeps SDD's own check live' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Stage 0 section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.

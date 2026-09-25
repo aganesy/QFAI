@@ -181,6 +181,23 @@ and that none were added or dropped — in the `Rationale` column of the
    `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
    also ask for a rerun without `--auto` so the approvals can be collected.
 
+## Inside a workflow run
+
+Under a QFAI work order, the approval pass (step 5) changes by operation.
+
+- **`CREATE`.** Stage 1 checks the `human_decision` the work order cites
+  instead of asking. A passing row is persisted with `Authorization-Ref` and
+  with `Approved By` copied as `answeredBy@YYYY-MM-DD`. A missing, mismatched or
+  stale approval persists no triage row and asks the operator nothing: the stage
+  returns `awaiting_input` naming the row and the reason.
+- **`DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run. A routing-time authorization approves none of them.
+
+Inside a run, Stage 1 asks the operator nothing itself. Its stage result opens
+the question as a `decision` question with outcome `awaiting_input`. The answer
+arrives through the work order's `authorizationRefs`. The row copies the
+answerer into `Approved By` as `answeredBy@YYYY-MM-DD` and carries no
+`Authorization-Ref`.
+
 ## Impact cascade (1 REQ → N rows)
 
 A single requirement frequently affects multiple specs. The agent MUST:
