@@ -37,6 +37,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The generated Copilot instructions describe the legacy layout as the
+  tool treats it** (#2214). The `.github/copilot-instructions.md` that
+  `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
+  read-compatible and `D-DEPRECATED-PATH` a warning. The compatibility window
+  has closed, and `qfai init` reports the layout on stderr as an error. The
+  line now says so, names `.qfai/assistant/instructions/` as well, and still
+  names `qfai init --upgrade-assistant-tree`. A file that already exists is
+  rewritten only by `qfai init --force`. A new case, `TC-0003-0059`, and a
+  ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
+  the tool does not write.
+
 - **spec-0012 states what `--auto-serve` does when its teardown fails**
   (#2208). A case once required a failed teardown to be reported, and that
   clause was lost when the case was rewritten, so the report could be removed
