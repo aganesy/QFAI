@@ -233,6 +233,20 @@ home of its record, and the block is written once.
   `.claude/worktrees/agent-a59afa4be8de399a4`, another worktree. It cannot write this tree,
   and it is not this run's.
 
+### /qfai-implement — run started 2026-09-25T13:58:54.737Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+No session opened. The run reopened `TDD-0131` to `TDD-0134` and `TDD-0116`,
+which DR-0298 closed at `exception` without per-row review, and changed no
+production or test file. Each row's test already passes, so the falsifiability
+branch is the first that applies. Each mutation breaks the one sentence its
+row's test case names. Nothing surfaced that the spec, the ledger or the
+decision record leave open.
+
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0013/tdd/test-list.md` — seven `Selector` cells rewritten to
@@ -244,6 +258,12 @@ home of its record, and the block is written once.
   `primary_tasks`, and a structured item missing `label`. `TDD-0029` taken again
   with them, because it shares the second file. The three rows now carry the
   revision of that run in their `Evidence` cells.
+- `.qfai/specs/spec-0013/tdd/test-list.md` — `TDD-0131` to `TDD-0134` and
+  `TDD-0116` moved from `exception` to `done`, keeping DR-0298 in `DR-ID`. Their
+  `Evidence` cells point at their entries.
+- `.qfai/waivers.yml` — the five rows removed from `WVR-20260925-13`.
+- `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts` — the first
+  content assertion requires the `CREATE` bullet label.
 
 ## Commands executed + key outputs
 
@@ -345,6 +365,19 @@ The withdrawn `TDD-0110` and `TDD-0111` never merged under those IDs: main assig
 the rows `CR-20260925-0008` seeds, so the IDs are main's. Their sections below are headed
 `Withdrawn TDD-0110 (never merged)` and `Withdrawn TDD-0111 (never merged)`, and stay as
 history with the other four.
+
+The `/qfai-implement` run started 2026-09-25T13:58:54.737Z reopens five rows that
+DR-0298 closed at `exception` without per-row review, and closes each one at
+`done` after the `qa-gatekeeper` turns and both reviews. `TDD-0131` took a
+second round: its test now ties the no-ask check to the `CREATE` bullet.
+
+| TDD-ID     | Obligation     | Layer       | RED provenance | Status |
+| ---------- | -------------- | ----------- | -------------- | ------ |
+| `TDD-0131` | `TC-0013-0052` | Integration | falsifiability | done   |
+| `TDD-0132` | `TC-0013-0053` | Integration | falsifiability | done   |
+| `TDD-0133` | `TC-0013-0040` | Integration | falsifiability | done   |
+| `TDD-0134` | `TC-0013-0041` | Integration | falsifiability | done   |
+| `TDD-0116` | `TC-0013-0042` | Integration | falsifiability | done   |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -928,25 +961,137 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 
 ### TDD-0133
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0133
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
-- Selector: `TC-0013-0040: The other approval-required operations keep the question`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --testNamePattern='TC-0013-0040: The other approval-required operations keep the question' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## Inside a workflow run section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`
+- Test file: packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts
+- Selector: TC-0013-0040: The other approval-required operations keep the question
+- TC-ref: TC-0013-0040
+- Reopened: `exception` -> `todo`. DR-0298 parked the row with an observed RED that no `qa-gatekeeper` judged and no reviewer read. That RED was taken on a tree that no longer exists, so this cycle takes the falsifiability branch against the current text.
+- Earlier cycle: on 2026-09-25 the test failed on the missing `## Inside a workflow run` section, and passed once `sdd-triage.md` carried it. It is kept here as prose rather than as a round. The completion gate reads every round before the last as closed by a reviewer `REVISE` that opens the next one, and that cycle closed at `exception` with no reviewer verdict. Its fields are in the history of this file at revision b5d357c14ae396a0d436491692af17be018b278c.
+- Branch: falsifiability — the rule the test reads is already in the shipped skill, so no natural RED can be observed
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, the bullet listing the operations that keep the approval question
+- Mutation: drop `MERGE` from that list, applied to base revision b5d357c14ae396a0d436491692af17be018b278c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, "**`DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run."
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --testNamePattern="TC-0013-0040: The other approval-required operations keep the question" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [ Array(4) ] to deeply equal [ 'DELETE', 'MERGE', 'SPLIT', …(2) ]` at `tests/integration/sdd/stage1OtherApprovals.test.ts:33:17`
+
+The edit:
+
+```diff
+-- **`DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run. A routing-time authorization approves none of them.
++- **`DELETE`, `SPLIT`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run. A routing-time authorization approves none of them.
+```
+
+- Round 1: Falsifiability revision: working-tree+db2ca6a1cd0f811a46c205a3a03ec043868e88c00509a62563fecdaf5fd2bcaf
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 4415149b8a2952819bdfa749d5a418a53be0cfc21555fe238ff7eaa51d574093
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts
+```
+
+- Round 1: Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --testNamePattern="TC-0013-0040: The other approval-required operations keep the question" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the tree outside the ledger and the evidence tree equals the base revision.
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The output names the row's selector. No production or test file changed in this phase, so there was nothing to refactor. The whole test file is the relevant suite: it holds this one case, and the shipped reference it reads is imported by no module.
+- Refactor verify revision: b5d357c14ae396a0d436491692af17be018b278c
+
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#3 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+db2ca6a1cd0f811a46c205a3a03ec043868e88c00509a62563fecdaf5fd2bcaf at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c)
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925144443002 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 219af1ac3c03368543215a6674522b9317c166a71f5a124fc5978012380eefce
+- Spec review: PASS
+- Spec reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Spec audited evidence hash: d7acc782d18ef45188ffa01262069087e0e1bdcbed8bf0c017b0b1e1d780c836
+- Spec review pack: .qfai/review/review-20260925144443002 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 219af1ac3c03368543215a6674522b9317c166a71f5a124fc5978012380eefce
+- Code quality review: PASS
+- Code quality reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Code quality audited evidence hash: d7acc782d18ef45188ffa01262069087e0e1bdcbed8bf0c017b0b1e1d780c836
+- Code quality review pack: .qfai/review/review-20260925144443002 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 219af1ac3c03368543215a6674522b9317c166a71f5a124fc5978012380eefce
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1OtherApprovals.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Checkpoint verification result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since spec-0013 still has rows at `todo`, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification seal: 8333fdeded4d6b0ec55cccb84b77c0c134ffba68870ecffa8c746b6eea476866
 
 ### TDD-0134
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0134
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
-- Selector: `TC-0013-0041: `--auto` inside a run approves nothing`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --testNamePattern='TC-0013-0041: `--auto` inside a run approves nothing' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## `--auto` inside a run section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`
+- Test file: packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts
+- Selector: TC-0013-0041: `--auto` inside a run approves nothing
+- TC-ref: TC-0013-0041
+- Reopened: `exception` -> `todo`. DR-0298 parked the row with an observed RED that no `qa-gatekeeper` judged and no reviewer read. That RED was taken on a tree that no longer exists, so this cycle takes the falsifiability branch against the current text.
+- Earlier cycle: on 2026-09-25 the test failed on the missing ``## `--auto` inside a run`` section, and passed once `orchestrated-mode.md` carried it. It is kept here as prose rather than as a round. The completion gate reads every round before the last as closed by a reviewer `REVISE` that opens the next one, and that cycle closed at `exception` with no reviewer verdict. Its fields are in the history of this file at revision b5d357c14ae396a0d436491692af17be018b278c.
+- Branch: falsifiability — the rule the test reads is already in the shipped skill, so no natural RED can be observed
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md, section ``## `--auto` inside a run``, the sentence keeping `Approved By` at `-`
+- Mutation: `` `Approved By` stays `-`: `--auto` approves nothing. `` to `` `Approved By` is filled as `auto`: `--auto` approves the row. ``, applied to base revision b5d357c14ae396a0d436491692af17be018b278c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md, section ``## `--auto` inside a run``, "`Approved By` stays `-`: `--auto` approves nothing."
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --testNamePattern='TC-0013-0041: `--auto` inside a run approves nothing' --reporter=verbose (cwd `packages/qfai`)
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## `--auto` inside a run Under `--aut…' to match /`Approved By` stays `-`/i`` at `tests/integration/sdd/stage1AutoMode.test.ts:24:18`
+
+The edit:
+
+```diff
+-stays `-`: `--auto` approves nothing.
++is filled as `auto`: `--auto` approves the row.
+```
+
+- Round 1: Falsifiability revision: working-tree+8e57c10c5ee1a09b97e8ad60ce66ee87962dad575cefd378cfc25b56b578a7c4
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: e21c079475106fe660528feec942e768c4d03e819d7d807f31a4ce6b63e929c1
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts
+```
+
+- Round 1: Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --testNamePattern='TC-0013-0041: `--auto` inside a run approves nothing' --reporter=verbose (cwd `packages/qfai`)
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the tree outside the ledger and the evidence tree equals the base revision.
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The output names the row's selector. No production or test file changed in this phase, so there was nothing to refactor. The whole test file is the relevant suite: it holds this one case, and the shipped reference it reads is imported by no module.
+- Refactor verify revision: b5d357c14ae396a0d436491692af17be018b278c
+
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#4 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+8e57c10c5ee1a09b97e8ad60ce66ee87962dad575cefd378cfc25b56b578a7c4 at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c)
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925144443003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: c7bc57766ca1a08d22539c3a65cba4ef778c89bf695aff20c2ee7c72e506f70d
+- Spec review: PASS
+- Spec reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Spec audited evidence hash: 13374c7df93f16c58ffba0a3ef926bc339b988daef5deb5e2bb8f94c59581427
+- Spec review pack: .qfai/review/review-20260925144443003 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c7bc57766ca1a08d22539c3a65cba4ef778c89bf695aff20c2ee7c72e506f70d
+- Code quality review: PASS
+- Code quality reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Code quality audited evidence hash: 13374c7df93f16c58ffba0a3ef926bc339b988daef5deb5e2bb8f94c59581427
+- Code quality review pack: .qfai/review/review-20260925144443003 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c7bc57766ca1a08d22539c3a65cba4ef778c89bf695aff20c2ee7c72e506f70d
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1AutoMode.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Checkpoint verification result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since spec-0013 still has rows at `todo`, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification seal: 669706c7bdb90aa669ff1f6525bbec449c172c738092fa94b7fc5c59404c40a7
 
 ### TDD-0118
 
@@ -1028,39 +1173,257 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 
 ### TDD-0131
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0131
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
-- Selector: `TC-0013-0052: Stage 1 checks a matching routing-time approval`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern='TC-0013-0052: Stage 1 checks a matching routing-time approval' --reporter=verbose`
-- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /the check passes only when the recor…/i`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
-- Reopened by: CR-20260925-0020 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
+- Test file: packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts
+- Selector: TC-0013-0052: Stage 1 checks a matching routing-time approval
+- TC-ref: TC-0013-0052
+- Reopened: `exception` -> `todo`. DR-0298 parked the row with an observed RED that no `qa-gatekeeper` judged and no reviewer read. That RED was taken on a tree that no longer exists, so this cycle takes the falsifiability branch against the current text.
+- Earlier cycle: on 2026-09-25 the test failed on the missing sentence that says what the check matches, and passed once `sdd-triage.md` stated it. It is kept here as prose rather than as a round. The completion gate reads every round before the last as closed by a reviewer `REVISE` that opens the next one, and that cycle closed at `exception` with no reviewer verdict. Its fields are in the history of this file at revision b5d357c14ae396a0d436491692af17be018b278c.
+- Reset by: CR-20260925-0020 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
+- Branch: falsifiability — the rule the test reads is already in the shipped skill, so no natural RED can be observed
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, the `CREATE` bullet's sentence saying the check passes only when the record matches the row's operation and capability
+- Mutation: drop `and capability` from that sentence, so the check matches the operation alone, applied to base revision b5d357c14ae396a0d436491692af17be018b278c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, "The check passes only when the record exists, matches the row's operation and capability, and is not stale."
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern="TC-0013-0052: Stage 1 checks a matching routing-time approval" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /the check passes only when the recor…/i` at `tests/integration/sdd/stage1ApprovalCheck.test.ts:33:18`
+
+The edit:
+
+```diff
+-  row's operation and capability, and is not stale. A passing row is persisted with `Authorization-Ref` and
++  row's operation, and is not stale. A passing row is persisted with `Authorization-Ref` and
+```
+
+- Round 1: Falsifiability revision: working-tree+832ea2106d5f69716fdbe180a487662b007fcaa057c5cb17a3049c66cbe71233
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 40b9982e2a49bce71766bb4804c58d3383eec5e646e20d0b0ab559ea9b4bad7d
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts
+```
+
+- Round 1: Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern="TC-0013-0052: Stage 1 checks a matching routing-time approval" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the tree outside the ledger and the evidence tree equals the base revision.
+
+- Before the rework, the same refactor verify run, the whole of `stage1ApprovalCheck.test.ts`, exited 0 with 1 test passed at b5d357c14ae396a0d436491692af17be018b278c. The row-level refactor verify fields below record the run on the reworked test.
+
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+832ea2106d5f69716fdbe180a487662b007fcaa057c5cb17a3049c66cbe71233 at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c)
+
+- Round 1: reviewer verdict: REVISE — implementation-reviewer: no assertion ties the no-ask check to `CREATE`. Rework path: the test was corrected, and the corrected assertion reads a predicate Round 1 does not name, so Round 2 takes its own falsifiability proof. Relabelling the `CREATE` bullet of `## Inside a workflow run` to another operation leaves every assertion of the case matching, so the test does not pin the operation the rule is about. completion-reviewer returned PASS in the same pack
+- Round 1: Review pack: .qfai/review/review-20260925144443000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 1b1ba5e576ad79d19799fd44f6744d2c39942750aab1111b3f2a059850ae7fdd
+
+#### Round 2
+
+- Round 2: Rework: the first content assertion of `stage1ApprovalCheck.test.ts` now requires the `CREATE` bullet label, so the no-ask check is pinned to the operation the rule is about. Round 1's mutation cannot tell a check moved to another operation from the rule as written.
+
+The test edit:
+
+```diff
+-      /Stage 1 checks the `human_decision` the work order cites instead of asking/i,
++      /- \*\*`CREATE`\.\*\* Stage 1 checks the `human_decision` the work order cites instead of asking/i,
+```
+
+- Round 2: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, the bullet label "**`CREATE`.** Stage 1 checks the `human_decision` the work order cites instead of asking."
+- Round 2: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern="TC-0013-0052: Stage 1 checks a matching routing-time approval" --reporter=verbose (cwd `packages/qfai`)
+- Round 2: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /- \*\*`CREATE`\.\*\* Stage 1 checks …/i`` at `tests/integration/sdd/stage1ApprovalCheck.test.ts:30:18`
+
+The edit:
+
+```diff
+-- **`CREATE`.** Stage 1 checks the `human_decision` the work order cites
++- **`UPDATE`.** Stage 1 checks the `human_decision` the work order cites
+```
+
+- Round 2: Falsifiability revision: working-tree+f2a06d606bfebfc2d42e347d0160c152a91efc1bcac90beb88c48ff66bd807dc
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: d2bde26c8d3fa81e1372c922a7bb88ec769db45419b0946a0846e1a4e7fcc96b
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts
+```
+
+- Round 2: Revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+- Round 2: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern="TC-0013-0052: Stage 1 checks a matching routing-time approval" --reporter=verbose (cwd `packages/qfai`)
+- Round 2: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the reworked test is committed at this revision.
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The output names the row's selector. Nothing changed after GREEN, so there was nothing to refactor. The whole test file is the relevant suite: it holds this one case, and the shipped references it reads are imported by no module.
+- Refactor verify revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+
+- qa-gatekeeper: PASS x4 (qa-gatekeeper#1 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+832ea2106d5f69716fdbe180a487662b007fcaa057c5cb17a3049c66cbe71233 at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#7 — Round 2, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+f2a06d606bfebfc2d42e347d0160c152a91efc1bcac90beb88c48ff66bd807dc at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#8 — Round 2, build-phase GREEN + oracle proof, reviewed revision 730f2dee26ce6174643e5e3391265663e7b943b4)
+
+- Round 2: reviewer verdict: PASS
+- Round 2: Review pack: .qfai/review/review-20260925150316000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal: e5236539cc00afff5615c275afd54a9077cb29abab5c9dee7ff7cb88ff2df29e
+- Spec review: PASS
+- Spec reviewed revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+- Spec audited evidence hash: b9335c7664ca14740af4bcb2bb9b5b2d7da1f4b6c7a7d68ce8cafab4922ccc2c
+- Spec review pack: .qfai/review/review-20260925150316000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: e5236539cc00afff5615c275afd54a9077cb29abab5c9dee7ff7cb88ff2df29e
+- Spec record re-attestation: 8b2278f7034081ad3b07c58c4891004abfb7c0caccee94235c6be0d3a9e80800
+- Spec record re-attestation pack: .qfai/review/review-20260925151937000 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: aa42d911a63ed934aba1b6be483b46814892e65eab025fea95f34a563a0db640
+- Code quality review: PASS
+- Code quality reviewed revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+- Code quality audited evidence hash: b9335c7664ca14740af4bcb2bb9b5b2d7da1f4b6c7a7d68ce8cafab4922ccc2c
+- Code quality review pack: .qfai/review/review-20260925150316000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: e5236539cc00afff5615c275afd54a9077cb29abab5c9dee7ff7cb88ff2df29e
+- Code quality record re-attestation: 8b2278f7034081ad3b07c58c4891004abfb7c0caccee94235c6be0d3a9e80800
+- Code quality record re-attestation pack: .qfai/review/review-20260925151937000 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: aa42d911a63ed934aba1b6be483b46814892e65eab025fea95f34a563a0db640
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Checkpoint verification result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since spec-0013 still has rows at `todo`, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 730f2dee26ce6174643e5e3391265663e7b943b4
+- Checkpoint verification seal: ac862b807680c074500455db405fc53f685e27149f06b1897fcab0648466dd1d
 
 ### TDD-0132
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0132
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
-- Selector: `TC-0013-0053: A failed approval check persists nothing`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --testNamePattern='TC-0013-0053: A failed approval check persists nothing' --reporter=verbose`
-- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /an approval is stale when the scope …/i`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
-- Reopened by: CR-20260925-0020 part A; the case asserts the three staleness conditions and that the clock alone never makes an approval stale.
+- Test file: packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts
+- Selector: TC-0013-0053: A failed approval check persists nothing
+- TC-ref: TC-0013-0053
+- Reopened: `exception` -> `todo`. DR-0298 parked the row with an observed RED that no `qa-gatekeeper` judged and no reviewer read. That RED was taken on a tree that no longer exists, so this cycle takes the falsifiability branch against the current text.
+- Earlier cycle: on 2026-09-25 the test failed on the missing staleness sentence, and passed once `sdd-triage.md` stated the three staleness conditions. It is kept here as prose rather than as a round. The completion gate reads every round before the last as closed by a reviewer `REVISE` that opens the next one, and that cycle closed at `exception` with no reviewer verdict. Its fields are in the history of this file at revision b5d357c14ae396a0d436491692af17be018b278c.
+- Branch: falsifiability — the rule the test reads is already in the shipped skill, so no natural RED can be observed
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, the `CREATE` bullet's sentence saying the clock alone never makes an approval stale
+- Mutation: `The clock alone never makes an approval stale.` to `The clock alone also makes an approval stale.`, applied to base revision b5d357c14ae396a0d436491692af17be018b278c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Inside a workflow run`, "The clock alone never makes an approval stale."
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --testNamePattern="TC-0013-0053: A failed approval check persists nothing" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /the clock alone never makes an appro…/i` at `tests/integration/sdd/stage1ApprovalStop.test.ts:28:18`
+
+The edit:
+
+```diff
+-  text changes, or when a replan widens the scope. The clock alone never makes an
++  text changes, or when a replan widens the scope. The clock alone also makes an
+```
+
+- Round 1: Falsifiability revision: working-tree+ddc77b6b9c1d3c04e115db32319383236e7f068f96199139a9ebb71ec8ad3323
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 44263314af6c70039a536a2b4c52e6fe664847abceb8d00cc418c1e65cd49fc8
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts
+```
+
+- Round 1: Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --testNamePattern="TC-0013-0053: A failed approval check persists nothing" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the tree outside the ledger and the evidence tree equals the base revision.
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The output names the row's selector. No production or test file changed in this phase, so there was nothing to refactor. The whole test file is the relevant suite: it holds this one case, and the shipped reference it reads is imported by no module.
+- Refactor verify revision: b5d357c14ae396a0d436491692af17be018b278c
+
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+ddc77b6b9c1d3c04e115db32319383236e7f068f96199139a9ebb71ec8ad3323 at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c)
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925144443001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: ec6b28508312df188d2f72bcec5f661aea705c7eb29a2df0ea3b78d6476b575b
+- Spec review: PASS
+- Spec reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Spec audited evidence hash: ed690fb53543e892d14734a59931f2158b2de47919f2036c8507814e61acaa12
+- Spec review pack: .qfai/review/review-20260925144443001 <!-- qfai:not-a-citation -->
+- Spec review pack seal: ec6b28508312df188d2f72bcec5f661aea705c7eb29a2df0ea3b78d6476b575b
+- Code quality review: PASS
+- Code quality reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Code quality audited evidence hash: ed690fb53543e892d14734a59931f2158b2de47919f2036c8507814e61acaa12
+- Code quality review pack: .qfai/review/review-20260925144443001 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: ec6b28508312df188d2f72bcec5f661aea705c7eb29a2df0ea3b78d6476b575b
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Checkpoint verification result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since spec-0013 still has rows at `todo`, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification seal: 7b3a625507716aad0700a797ba595a1fefc4ebed4f29cee9ec5759650fafef2c
 
 ### TDD-0116
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0116
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
-- Selector: `TC-0013-0042: The triage format carries Authorization-Ref`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --testNamePattern='TC-0013-0042: The triage format carries Authorization-Ref' --reporter=verbose`
-- RED result: exit 1; `AssertionError: expected '## Triage table format ```markdown ##…' to match /`Authorization-Ref` is optional and …/i`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
-- Reopened by: CR-20260925-0020 part A; the case asserts the value form `run-<17 digits>/<authorizationId>` instead of a contract citation.
+- Test file: packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts
+- Selector: TC-0013-0042: The triage format carries Authorization-Ref
+- TC-ref: TC-0013-0042
+- Reopened: `exception` -> `todo`. DR-0298 parked the row with an observed RED that no `qa-gatekeeper` judged and no reviewer read. That RED was taken on a tree that no longer exists, so this cycle takes the falsifiability branch against the current text.
+- Earlier cycle: on 2026-09-25 the test failed on the missing `Authorization-Ref` paragraph, and passed once `sdd-triage.md` described the column. It is kept here as prose rather than as a round. The completion gate reads every round before the last as closed by a reviewer `REVISE` that opens the next one, and that cycle closed at `exception` with no reviewer verdict. Its fields are in the history of this file at revision b5d357c14ae396a0d436491692af17be018b278c.
+- Branch: falsifiability — the rule the test reads is already in the shipped skill, so no natural RED can be observed
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Triage table format`, the sentence limiting `Authorization-Ref` to an approval-required `CREATE` row
+- Mutation: replace that sentence with `It is filled on any approval-required row, whatever its operation.`, applied to base revision b5d357c14ae396a0d436491692af17be018b278c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md, section `## Triage table format`, "It is filled on an approval-required `CREATE` row only, and a row of any other operation carries no reference."
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --testNamePattern="TC-0013-0042: The triage format carries Authorization-Ref" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: Falsifiability result: exit 1; Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on ``AssertionError: expected '## Triage table format ```markdown ##…' to match /filled on an approval-required `CREA…/i`` at `tests/integration/sdd/triageAuthorizationRefColumn.test.ts:22:18`
+
+The edit:
+
+```diff
+-is. It is filled on an approval-required `CREATE` row only, and a row of any
+-other operation carries no reference. Its value is
++is. It is filled on any approval-required row, whatever its operation. Its value is
+```
+
+- Round 1: Falsifiability revision: working-tree+12cc5dfbb735caf84c6647cc52bdd42c102eed9d45489fed90f1d01879a5150d
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 5307a3009a82fb52d9a2496d1220eb9bc39b6b1c5c0958a23a2c754ed0dbc3a2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts
+```
+
+- Round 1: Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --testNamePattern="TC-0013-0042: The triage format carries Authorization-Ref" --reporter=verbose (cwd `packages/qfai`)
+- Round 1: GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The mutation was reverted from a copy of the base bytes before this run, and the tree outside the ledger and the evidence tree equals the base revision.
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Refactor verify result: exit 0; Test Files 1 passed (1); Tests 1 passed (1). The output names the row's selector. No production or test file changed in this phase, so there was nothing to refactor. The whole test file is the relevant suite: it holds this one case, and the shipped reference it reads is imported by no module.
+- Refactor verify revision: b5d357c14ae396a0d436491692af17be018b278c
+
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#5 — Round 1, RED phase gate on the falsifiability mutation run, reviewed revision working-tree+12cc5dfbb735caf84c6647cc52bdd42c102eed9d45489fed90f1d01879a5150d at HEAD b5d357c14ae396a0d436491692af17be018b278c; qa-gatekeeper#6 — Round 1, build-phase GREEN + oracle proof, reviewed revision b5d357c14ae396a0d436491692af17be018b278c)
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925144443004 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 8e7bfe4536545a481480164ca15345ad2f8a4d696484bff9252995545ba316ed
+- Spec review: PASS
+- Spec reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Spec audited evidence hash: 8233888c5ab92d7208ffd1b8301887e3dfdd56d22a4aebbf8c339cd9a278fd9e
+- Spec review pack: .qfai/review/review-20260925144443004 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 8e7bfe4536545a481480164ca15345ad2f8a4d696484bff9252995545ba316ed
+- Code quality review: PASS
+- Code quality reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Code quality audited evidence hash: 8233888c5ab92d7208ffd1b8301887e3dfdd56d22a4aebbf8c339cd9a278fd9e
+- Code quality review pack: .qfai/review/review-20260925144443004 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 8e7bfe4536545a481480164ca15345ad2f8a4d696484bff9252995545ba316ed
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --reporter=verbose (cwd `packages/qfai`)
+- Checkpoint verification result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since spec-0013 still has rows at `todo`, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: b5d357c14ae396a0d436491692af17be018b278c
+- Checkpoint verification seal: 1228c0f7a51d064dc9047a40fbe1274d8daa62ea00232615da482dcd9aaff9f8
 
 ### TDD-0117
 
@@ -4242,6 +4605,41 @@ add nothing to these totals.
 | 12 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 2 | #tdd-0110, #tdd-0111 | review-20260925120200000 <!-- qfai:not-a-citation --> | PASS |
 | 13 | orchestrator | orchestrator | /qfai-implement: TDD-0110 and TDD-0111 group checkpoint verification, off a checkpoint boundary | #tdd-0110, #tdd-0111 | Checkpoint verification fields | PASS |
 
+### Rows for the /qfai-implement run started 2026-09-25T13:58:54.737Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 14 | - | n/a | grilling(-@2026-09-25T13:58:54.737Z/none): none | - | - | PASS |
+| 15 | delivery-planner | delivery-planner#1 | /qfai-implement plan: confirm the reopening of TDD-0131 to TDD-0134 and TDD-0116 | test-list.md, DR-0298, WVR-20260925-13 | implement-spec-0013.md, plan phase of this run | PASS |
+| 16 | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the five rows | test-list.md, 06_Test-Cases.md, 03_Acceptance-Criteria.md, 04_Business-Rules.md, 05_Examples.md | implement-spec-0013.md, plan phase of this run | PASS |
+| 17 | orchestrator | orchestrator | /qfai-implement: reopen the five rows from `exception`, keeping DR-0298 in `DR-ID` | DR-0298, WVR-20260925-13, test-list.md | each row's Reopened and Earlier cycle lines. Falsifiability is the first branch of `red-provenance.md` that applies, because each sentence already ships | PASS |
+| 18 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0131` falsifiability mutation and run | #tdd-0131, `sdd-triage.md` | #tdd-0131 Round 1 | PASS |
+| 19 | qa-gatekeeper | qa-gatekeeper#1 | RED phase gate, `TDD-0131` Round 1, on the mutated tree | #tdd-0131 Round 1 | #tdd-0131 `qa-gatekeeper` | PASS |
+| 20 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0131` revert and GREEN; `TDD-0132` falsifiability mutation and run | #tdd-0131, #tdd-0132, `sdd-triage.md` | #tdd-0131 and #tdd-0132 Round 1 | PASS |
+| 21 | qa-gatekeeper | qa-gatekeeper#2 | RED phase gate, `TDD-0132` Round 1, on the mutated tree | #tdd-0132 Round 1 | #tdd-0132 `qa-gatekeeper` | PASS |
+| 22 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0132` revert and GREEN; `TDD-0133` falsifiability mutation and run | #tdd-0132, #tdd-0133, `sdd-triage.md` | #tdd-0132 and #tdd-0133 Round 1 | PASS |
+| 23 | qa-gatekeeper | qa-gatekeeper#3 | RED phase gate, `TDD-0133` Round 1, on the mutated tree | #tdd-0133 Round 1 | #tdd-0133 `qa-gatekeeper` | PASS |
+| 24 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0133` revert and GREEN; `TDD-0134` falsifiability mutation and run | #tdd-0133, #tdd-0134, `sdd-triage.md`, `orchestrated-mode.md` | #tdd-0133 and #tdd-0134 Round 1 | PASS |
+| 25 | qa-gatekeeper | qa-gatekeeper#4 | RED phase gate, `TDD-0134` Round 1, on the mutated tree | #tdd-0134 Round 1 | #tdd-0134 `qa-gatekeeper` | PASS |
+| 26 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0134` revert and GREEN; `TDD-0116` falsifiability mutation and run | #tdd-0134, #tdd-0116, `orchestrated-mode.md`, `sdd-triage.md` | #tdd-0134 and #tdd-0116 Round 1 | PASS |
+| 27 | qa-gatekeeper | qa-gatekeeper#5 | RED phase gate, `TDD-0116` Round 1, on the mutated tree | #tdd-0116 Round 1 | #tdd-0116 `qa-gatekeeper` | PASS |
+| 28 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0116` revert and GREEN, then refactor verify for the five rows | each row's entry | #tdd-0116 Round 1, each row's Refactor verify fields | PASS |
+| 29 | qa-gatekeeper | qa-gatekeeper#6 | Build-phase GREEN and oracle proof for the five rows, Round 1 | each row's Round 1 | each row's `qa-gatekeeper` | PASS |
+| 30 | completion-reviewer | completion-reviewer#1 | Spec review, Round 1, one pack per row | #tdd-0131 to #tdd-0134, #tdd-0116 | review-20260925144443000 to review-20260925144443004 <!-- qfai:not-a-citation --> | PASS |
+| 31 | implementation-reviewer | implementation-reviewer#1 | Code quality review, Round 1, one pack per row | #tdd-0131 to #tdd-0134, #tdd-0116 | review-20260925144443000 to review-20260925144443004 <!-- qfai:not-a-citation -->. REVISE on `TDD-0131` only: no assertion tied the no-ask check to `CREATE` | REVISE |
+| 32 | orchestrator | orchestrator | /qfai-implement: close `TDD-0132` to `TDD-0134` and `TDD-0116` at `done`; move `TDD-0131` to `review-fix` | the Round 1 packs | test-list.md | PASS |
+| 33 | acceptance-test-engineer | acceptance-test-engineer#1 | /qfai-implement: `TDD-0131` Round 2 rework, the first content assertion bound to the `CREATE` bullet label | review-20260925144443000 <!-- qfai:not-a-citation -->, `stage1ApprovalCheck.test.ts` | `stage1ApprovalCheck.test.ts`, #tdd-0131 Round 2 | PASS |
+| 34 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0131` Round 2 falsifiability mutation (`CREATE` relabelled `UPDATE`) and run | #tdd-0131, `sdd-triage.md` | #tdd-0131 Round 2 | PASS |
+| 35 | qa-gatekeeper | qa-gatekeeper#7 | RED phase gate, `TDD-0131` Round 2, on the mutated tree | #tdd-0131 Round 2 | #tdd-0131 `qa-gatekeeper` | PASS |
+| 36 | backend-engineer | backend-engineer#1 | /qfai-implement: `TDD-0131` Round 2 revert, GREEN and refactor verify on the committed rework | #tdd-0131 | #tdd-0131 Round 2 | PASS |
+| 37 | qa-gatekeeper | qa-gatekeeper#8 | Build-phase GREEN and oracle proof, `TDD-0131` Round 2 | #tdd-0131 Round 2 | #tdd-0131 `qa-gatekeeper` | PASS |
+| 38 | completion-reviewer | completion-reviewer#2 | Spec review, `TDD-0131` Round 2 | #tdd-0131 Round 1 and Round 2, review-20260925144443000 <!-- qfai:not-a-citation --> | review-20260925150316000 <!-- qfai:not-a-citation --> | PASS |
+| 39 | implementation-reviewer | implementation-reviewer#2 | Code quality review, `TDD-0131` Round 2 | #tdd-0131 Round 2, commit 730f2dee26ce6174643e5e3391265663e7b943b4 | review-20260925150316000 <!-- qfai:not-a-citation --> | PASS |
+| 40 | orchestrator | orchestrator | /qfai-implement: close `TDD-0131` at `done`, write the checkpoint fields of all five rows off a checkpoint boundary, and remove the five rows from `WVR-20260925-13` | each row's review pack | test-list.md, `.qfai/waivers.yml` | PASS |
+| 41 | orchestrator | orchestrator | /qfai-implement: repair the `TDD-0131` record the completion gate refused (two sets of refactor verify fields), under `record:QFAI-TDDLIST-008` | validate --profile tdd --spec 0013 | #tdd-0131, `## Record defects` | PASS |
+| 42 | completion-reviewer | completion-reviewer#3 | Record re-attestation of the repaired `TDD-0131` entry | #tdd-0131, review-20260925150316000 <!-- qfai:not-a-citation --> | review-20260925151937000 <!-- qfai:not-a-citation --> | PASS |
+| 43 | implementation-reviewer | implementation-reviewer#3 | Record re-attestation of the repaired `TDD-0131` entry | #tdd-0131, review-20260925150316000 <!-- qfai:not-a-citation --> | review-20260925151937000 <!-- qfai:not-a-citation --> | PASS |
+
 ## Cross-spec obligations
 
 Code-ownership entries from `/qfai-implement` (`references/cross-spec-ownership.md`).
@@ -4519,3 +4917,9 @@ mutation runs, `qa-gatekeeper` verdicts, GREEN, review packs and checkpoint are
 - `record:QFAI-TDDLIST-008`, `TDD-0113`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `0f30fe0de447a293cf11ef5063f33b36dbc561f0eaf4c777753cf6cd19b7e798`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0114`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `c97d9e677261538ab77d73f9f1b85bb834133998729832525d532445b6f2824b`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0115`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `eca62e968eb38e1b5101f36772ca9c8bad37fa0aca62c5b042b2d581e34db5ad`; the original sealed review remains historical.
+- `record:evidence-cell-per-phase`, `TDD-0131` to `TDD-0134` and `TDD-0116`, run started 2026-09-25T13:58:54.737Z: each row's ledger `Evidence` cell kept the parked cycle's `RED:fail GREEN:pass TIER:T2` form until the row closed, instead of being rewritten after each phase. The `done` write replaced it with the falsifiability form for the four closed rows, and the `review-fix` write did the same for `TDD-0131`.
+- `record:reset-citation-dropped`, `TDD-0131`, `TDD-0132` and `TDD-0116`, run started 2026-09-25T13:58:54.737Z: the reopened entries no longer say that `CR-20260925-0020` part A reset the case. The `DR-ID` cell still names it, and the earlier wording is in this file's history at `b5d357c14ae396a0d436491692af17be018b278c`. Restoring the line edits a hashed entry, so it needs a record re-attestation pack. `TDD-0131`'s line is restored under the `QFAI-TDDLIST-008` entry below; `TDD-0132` and `TDD-0116` are left open.
+- `record:work-order-sequence`, run started 2026-09-25T13:58:54.737Z: the Work Orders rows first grouped every mutation run into one step ahead of the five RED gates. They now follow the order the run took, one mutation and its gate at a time. The rows are outside every audited subject.
+- `record:round-opened-for-test-only-rework`, `TDD-0131`, Round 2: the test-only rework opened a round, while `round-evidence.md` opens none for a REVISE that needs no new production behaviour. The replacement-proof path it names re-runs the earlier round's mutation, and the rework needed a proof of a predicate Round 1's `Satisfied-by` does not name, so the round holds that proof. Left open for a Change Request to the round rules.
+- `record:round-verdict-path`, `TDD-0131`, Round 1: the verdict line records the REVISE and its finding but not the rework path, which only the Round 2 `Rework` line states, and it carries an `(attempt 1)` qualifier on a round with one attempt. Repaired with the `QFAI-TDDLIST-008` entry below: the verdict line now names the rework path and drops the qualifier.
+- `record:QFAI-TDDLIST-008`, `TDD-0131`, Round 2: the entry carried the refactor verify fields twice, once for Round 1 and once for Round 2, and the gate takes exactly one. The Round 1 run is now a prose line and the fields hold the Round 2 run. The same repair restores the `CR-20260925-0020` line the reopened entry had dropped, and names the rework path on the Round 1 verdict line. Both reviewers re-attested the repaired entry in a pack of its own.
