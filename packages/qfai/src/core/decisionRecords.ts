@@ -332,9 +332,10 @@ export function collectReOpenEntries(text: string): DecisionRecordEntry[] {
 /**
  * What a Change Request record says about whether it is resolved.
  *
- * The header fields are `null` when absent, and otherwise hold the record's
- * value with the template's backticks and trailing comment removed; `id` is
- * upper-cased, and `status` and `changeClass` lower-cased.
+ * The header fields are `null` when absent or given more than once, and
+ * otherwise hold the record's value with the template's backticks and trailing
+ * comment removed; `id` is upper-cased, and `status` and `changeClass`
+ * lower-cased.
  */
 export type ChangeRequestHeader = {
   id: string | null;
@@ -345,7 +346,10 @@ export type ChangeRequestHeader = {
   approvedOption: string | null;
   appliedAt: string | null;
   supersededBy: string | null;
-  /** True when the `## Resolution` section holds text outside comments. */
+  /**
+   * True when the `## Resolution` section holds text outside comments that is
+   * more than a placeholder.
+   */
   hasResolution: boolean;
   /** The text of the `## Blocked downstream items` section, comments removed. */
   blockedItems: string;
@@ -356,6 +360,9 @@ export type ChangeRequestHeader = {
  * `open`: `open | approved | rejected | superseded`. A value outside that
  * vocabulary is not read as settled.
  */
+/** The Change Request id the template defines: `CR-YYYYMMDD-NNNN`. */
+const CHANGE_REQUEST_ID_FORMAT = /^CR-\d{8}-\d{4}$/i;
+
 const CHANGE_REQUEST_SETTLED_STATUSES: ReadonlySet<string> = new Set([
   "approved",
   "rejected",
@@ -388,6 +395,18 @@ function nextChangeRequestSection(
   return leaves.test(line) ? "body" : null;
 }
 
+/** A list marker at the start of a line: `-`, `*`, `+`, `1.` or `1)`. */
+const LIST_MARKER_RE = /^(?:[-*+]|\d+[.)])(?:\s+|$)/;
+
+/**
+ * True when a line says something: once its list marker is removed, what is
+ * left is not a placeholder. A `## Resolution` holding only `-` or `TBD`
+ * records nothing about what was done.
+ */
+function isVisibleContent(line: string): boolean {
+  return !isPlaceholderValue(line.trim().replace(LIST_MARKER_RE, ""));
+}
+
 /**
  * Parse a `.qfai/decisions/CR-*.md` record: its header bullet list, whether
  * its `## Resolution` section says anything, and what its
@@ -398,11 +417,13 @@ function nextChangeRequestSection(
  * prose about the record, not the record. Comments and fenced blocks are
  * masked as in {@link parseDecisionRecordEntries}: the template's own comment
  * lists the status vocabulary, and a quoted example is not the record — nor
- * does a heading inside one end the header. The first occurrence of a field
- * wins. Text inside a fence in `## Resolution` counts as content.
+ * does a heading inside one end the header. A field given more than once
+ * reads as `null`: two values for `Status` or an approval say nothing about
+ * which one holds. Text inside a fence in `## Resolution` counts as content.
  */
 export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
   const fields = new Map<string, string>();
+  const repeated = new Set<string>();
   const bodies: Record<ChangeRequestBodySection, string[]> = { resolution: [], blocked: [] };
   let section: ChangeRequestSection = "header";
   let openFence: RegExp | null = null;
@@ -431,18 +452,21 @@ export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
     const field = FIELD_RE.exec(line);
     if (!field?.[1]) continue;
     const key = normalizeKey(field[1]);
-    if (!fields.has(key)) fields.set(key, cleanValue(field[2] ?? ""));
+    if (fields.has(key)) repeated.add(key);
+    else fields.set(key, cleanValue(field[2] ?? ""));
   }
+  const get = (key: string): string | null =>
+    repeated.has(key) ? null : (fields.get(key) ?? null);
   return {
-    id: fields.get("id")?.toUpperCase() ?? null,
-    status: fields.get("status")?.toLowerCase() ?? null,
-    changeClass: fields.get("class")?.toLowerCase() ?? null,
-    approvedBy: fields.get("approved-by") ?? null,
-    approvedAt: fields.get("approved-at") ?? null,
-    approvedOption: fields.get("approved-option") ?? null,
-    appliedAt: fields.get("applied-at") ?? null,
-    supersededBy: fields.get("superseded-by") ?? null,
-    hasResolution: bodies.resolution.some((line) => line.trim().length > 0),
+    id: get("id")?.toUpperCase() ?? null,
+    status: get("status")?.toLowerCase() ?? null,
+    changeClass: get("class")?.toLowerCase() ?? null,
+    approvedBy: get("approved-by"),
+    approvedAt: get("approved-at"),
+    approvedOption: get("approved-option"),
+    appliedAt: get("applied-at"),
+    supersededBy: get("superseded-by"),
+    hasResolution: bodies.resolution.some(isVisibleContent),
     blockedItems: bodies.blocked.join("\n"),
   };
 }
@@ -453,7 +477,8 @@ export function parseChangeRequestHeader(text: string): ChangeRequestHeader {
  *
  * A half-filled record is unresolved. Every settled status needs `Approved by`,
  * `Approved at` and a `Resolution` that says something. On top of that,
- * `superseded` needs `Superseded by`, and `approved` needs `Applied at` — the
+ * `superseded` needs `Superseded by` naming a `CR-YYYYMMDD-NNNN`, and
+ * `approved` needs `Applied at` — the
  * approved actions have been carried out — and `Approved option` unless the
  * request is of class `defect`, which has no options to choose between.
  */
@@ -462,7 +487,9 @@ export function isChangeRequestSettled(header: ChangeRequestHeader): boolean {
   if (status === null || !CHANGE_REQUEST_SETTLED_STATUSES.has(status)) return false;
   if (isPlaceholderValue(header.approvedBy) || isPlaceholderValue(header.approvedAt)) return false;
   if (!header.hasResolution) return false;
-  if (status === "superseded") return !isPlaceholderValue(header.supersededBy);
+  if (status === "superseded") {
+    return header.supersededBy !== null && CHANGE_REQUEST_ID_FORMAT.test(header.supersededBy);
+  }
   if (status !== "approved") return true;
   if (isPlaceholderValue(header.appliedAt)) return false;
   return header.changeClass === "defect" || !isPlaceholderValue(header.approvedOption);

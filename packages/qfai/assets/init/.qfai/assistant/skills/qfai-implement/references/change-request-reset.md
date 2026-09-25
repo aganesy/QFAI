@@ -88,7 +88,10 @@ selection skips a `blocked` row unconditionally, so without this the row sits
 parked against a decision nobody will ever apply, and the spec's completion gate
 is clear. `npx qfai validate` reports such a row as `QFAI-TDDLIST-021`, a
 warning, once its `Blocked-By` cell names only Change Requests and each is
-resolved as the section below defines.
+resolved as the section below defines. A ledger with no usable `Blocked-By`
+value for the row is read from `Evidence` instead. There, a row reference
+(`TDD-NNNN`) or a `.qfai/contracts/` path beside the Change Request keeps the
+warning silent, because that other blocker may still hold the row.
 
 The release is the same recomputation the approved path makes:
 
@@ -165,8 +168,12 @@ completion:
 
 - `Status` is `approved`, `rejected` or `superseded` (never `open`);
 - `Approved by` / `Approved at` are populated, plus `Approved option` when
-  `Status` is `approved` and `Superseded by` when it is `superseded`;
-- `Resolution` records what was actually done; and
+  `Status` is `approved` and `Class` is not `defect`, and `Superseded by` naming
+  a `CR-YYYYMMDD-NNNN` when `Status` is `superseded`;
+- each of `ID`, `Status` and these fields appears once in the header, since a
+  repeated field does not say which value holds;
+- `Resolution` records what was actually done, and a placeholder such as `-`
+  or `TBD` records nothing; and
 - when `Status` is `approved`, `Applied at` is populated — approval alone does
   not release the gate. It is set only after the owner-skill rerun in "Approved
   actions" completed and upstream artifacts are updated, which is when

@@ -2008,7 +2008,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // Pairs the ledger with `.qfai/decisions/`, so the expected state names the
   // record a blocked row waits on as well as the row.
   "QFAI-TDDLIST-021":
-    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are `rejected`, `superseded`, or `approved` with `Applied at` filled has been released through `/qfai-implement`.",
+    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are settled has been released through `/qfai-implement`. A settled record states `Status` once as `approved`, `rejected` or `superseded`, fills `Approved by`, `Approved at` and a `## Resolution` that is more than a placeholder, names a `CR-YYYYMMDD-NNNN` in `Superseded by` when superseded, and fills `Applied at` — and `Approved option` unless its `Class` is `defect` — when approved. A row reference or a `.qfai/contracts/` path beside the `CR-*` in the `Evidence` cell keeps the row out of this check.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":
