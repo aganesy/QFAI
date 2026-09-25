@@ -24,7 +24,6 @@ const completionMatrixPath = path.join(
 );
 
 describe("discussion hardening E2E guidance", () => {
-  // QFAI:SPEC-0002:TC-0002-0009
   it("SKILL.md が UI-bearing artifact family (DESIGN.md + sidecars) を説明している", async () => {
     const content = await readFile(skillPath, "utf-8");
 
@@ -46,7 +45,6 @@ describe("discussion hardening E2E guidance", () => {
     expect(content).toMatch(/never pick a single visual winner/);
   });
 
-  // QFAI:SPEC-0010:TC-0010-0006
   it("TC-0010-0006: the skill's planner-first guidance ranks no exploration and keeps the brand direction the user's", async () => {
     const content = await readFile(skillPath, "utf-8");
     const guidance = content.split("\n").filter((line) => /planner-first/.test(line));
