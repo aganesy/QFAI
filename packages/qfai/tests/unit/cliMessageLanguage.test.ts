@@ -1,9 +1,9 @@
 /**
  * Meta-test: operator-facing CLI strings are written in one language.
  *
- * `cli-ux-guidelines.md` pins the *shape* of an error message
- * (`<CODE>: <message> [at <file>]`). Until its `## Message Language`
- * section existed, nothing pinned the language of `<message>`, and the
+ * The validate contract pins the *shape* of an error message. Until
+ * `.agents/rules/repository-language.md` gained its `## Operator-facing strings`
+ * section, nothing pinned the language of `<message>`, and the
  * implementation split arbitrarily inside a single command's output:
  * `qfai doctor` emitted 16 English findings and 2 Japanese ones, and
  * `usage()` — the only documentation for `--strict`, `--clean`,
@@ -67,14 +67,15 @@ const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const SRC_DIR = path.join(PACKAGE_ROOT, "src");
 const CLI_DIR = path.join(SRC_DIR, "cli");
 const DOCTOR_TS = path.join(SRC_DIR, "core", "doctor.ts");
-const GUIDELINES_MD = path.join(
-  PACKAGE_ROOT,
-  "assets",
-  "init",
+const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
+const LANGUAGE_RULE_MD = path.join(REPO_ROOT, ".agents", "rules", "repository-language.md");
+const VALIDATE_CONTRACT_MD = path.join(
+  REPO_ROOT,
   ".qfai",
-  "assistant",
-  "rule",
-  "cli-ux-guidelines.md",
+  "spec",
+  "03_contract",
+  "cli",
+  "qfai-validate.md",
 );
 
 function reportJapaneseLines(relPath: string, source: string): string[] {
@@ -164,7 +165,7 @@ describe("operator-facing CLI message language", () => {
       counted,
       counted > ALLOWLISTED_MESSAGE_COUNT
         ? "the allowlist grew. A new operator-facing message must be English " +
-            "(cli-ux-guidelines.md, Message Language), so translate the messages the added entries " +
+            "(.agents/rules/repository-language.md, Operator-facing strings), so translate the messages the added entries " +
             "name and delete them rather than raising this number. The one growth that is not that " +
             "is a merge taking entries the base added: re-pin with " +
             "`node scripts/pin-cli-message-allowlist-count.mjs --allow-increase`, which raises the " +
@@ -193,7 +194,7 @@ describe("operator-facing CLI message language", () => {
     expect(
       added,
       "Japanese message the allowlist does not name. A new operator-facing message must be " +
-        "English (cli-ux-guidelines.md, Message Language)",
+        "English (.agents/rules/repository-language.md, Operator-facing strings)",
     ).toEqual([]);
     expect(
       migrated,
@@ -201,15 +202,15 @@ describe("operator-facing CLI message language", () => {
     ).toEqual([]);
   });
 
-  it("keeps the launcher out of a runtime message, and in the guidelines", async () => {
+  it("keeps the launcher out of a runtime message, and in the validate contract", async () => {
     // A running qfai does not know which entry point started it — an `npx`
     // prefix, a package script, or a global bin — so a message naming one
     // launcher is wrong for the other two. Shipped docs take the opposite
     // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
-    const guidelines = await readFile(GUIDELINES_MD, "utf-8");
-    expect(guidelines).toContain("## Command Invocation");
-    expect(guidelines).toContain("`npx qfai <subcommand>`");
-    expect(guidelines).toContain("`qfai <subcommand>`");
+    const contract = await readFile(VALIDATE_CONTRACT_MD, "utf-8");
+    expect(contract).toContain("#### Command spelling in messages");
+    expect(contract).toContain("`npx qfai <subcommand>`");
+    expect(contract).toContain("`qfai <subcommand>`");
 
     // Comments explain the implementation and are not read by an operator,
     // so they are removed first — with the same TypeScript scanner the
@@ -324,10 +325,10 @@ describe("operator-facing CLI message language", () => {
     ]);
   });
 
-  it("states the rule in the shipped cli-ux-guidelines catalog entry", async () => {
-    const guidelines = await readFile(GUIDELINES_MD, "utf-8");
-    expect(guidelines).toContain("## Message Language");
-    expect(guidelines).toContain("usage()");
-    expect(guidelines).toContain("Issue.message");
+  it("states the rule in the repository-language rule", async () => {
+    const rule = await readFile(LANGUAGE_RULE_MD, "utf-8");
+    expect(rule).toContain("## Operator-facing strings");
+    expect(rule).toContain("usage()");
+    expect(rule).toContain("Issue.message");
   });
 });

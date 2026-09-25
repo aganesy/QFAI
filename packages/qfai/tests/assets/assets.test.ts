@@ -1410,7 +1410,6 @@ describe("assets guardrails", () => {
         "references",
         "test-case-depth-checklist.md",
       ),
-      path.resolve(templateQfaiDir, "assistant", "rule", "cli-ux-guidelines.md"),
       path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
     const matches: string[] = [];

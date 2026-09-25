@@ -1,11 +1,11 @@
 /**
- * `assistant/rule/cli-ux-guidelines.md` is shipped by `qfai init` and declares
- * the line grammar of `qfai validate --format text` (the default format). Nothing
- * else binds that document to the emitter, so this test rebuilds the expected
- * lines from the grammar the guideline actually ships and compares them against
- * real `emitText` output. Either side drifting fails here.
+ * The validate contract's `### Text output grammar` section declares the line
+ * grammar of `qfai validate --format text` (the default format). Nothing else
+ * binds that section to the emitter, so this test rebuilds the expected lines
+ * from the grammar the contract states and compares them against real
+ * `emitText` output. Either side drifting fails here.
  *
- * The guideline is used as a *complete* output contract, so the fixtures below
+ * The section is used as a *complete* output contract, so the fixtures below
  * mirror production faithfully: counts skip suppressed issues (as `countIssues`
  * does), an error issue carries a multi-line `suggested_action` (as
  * `QFAI-SKILLS-001` does), and the trailing `run-log:` line is exercised through
@@ -24,9 +24,9 @@ import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
-const GUIDELINE_PATH = path.resolve(
+const CONTRACT_PATH = path.resolve(
   __dirname,
-  "../../../assets/init/.qfai/assistant/rule/cli-ux-guidelines.md",
+  "../../../../../.qfai/spec/03_contract/cli/qfai-validate.md",
 );
 
 const OPTIONAL_SLOTS = {
@@ -46,9 +46,14 @@ it("directs agent routing repairs to package defaults or project config override
   }
 });
 
+/** The contract's `### Text output grammar` section, LF-normalised. */
 async function readGuideline(): Promise<string> {
-  const content = await readFile(GUIDELINE_PATH, "utf-8");
-  return content.replace(/\r\n/g, "\n");
+  const content = (await readFile(CONTRACT_PATH, "utf-8")).replace(/\r\n/g, "\n");
+  const section = /\n### Text output grammar\n([\s\S]*?)(?=\n## |\n### |$)/.exec(content)?.[1];
+  if (section === undefined) {
+    throw new Error("qfai-validate.md no longer has a Text output grammar section");
+  }
+  return section;
 }
 
 /** Every ```text fence in the guideline, in document order. */
@@ -59,17 +64,17 @@ function fences(guideline: string): string[] {
 function fenceWith(guideline: string, needle: string): string {
   const found = fences(guideline).find((fence) => fence.includes(needle));
   if (found === undefined) {
-    throw new Error(`cli-ux-guidelines.md no longer documents a block containing ${needle}`);
+    throw new Error(`the text output grammar no longer documents a block containing ${needle}`);
   }
   return found;
 }
 
-/** Extracts the single-line grammar fenced right under `## Error Message Format`. */
+/** Extracts the single-line grammar fenced right under `#### One issue`. */
 function extractGrammar(guideline: string): string {
-  const match = /## Error Message Format\n[\s\S]*?```text\n([^\n]+)\n```/.exec(guideline);
+  const match = /#### One issue\n[\s\S]*?```text\n([^\n]+)\n```/.exec(guideline);
   const grammar = match?.[1];
   if (grammar === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer documents an Error Message Format grammar");
+    throw new Error("the text output grammar no longer documents a one-issue line");
   }
   for (const slot of Object.values(OPTIONAL_SLOTS)) {
     if (!grammar.includes(slot)) {
@@ -97,7 +102,7 @@ function documentedContinuationIndent(guideline: string): number {
     (fence) => fence.startsWith("  fix: ") && !fence.includes("error_code:"),
   );
   if (example === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer shows a multi-line detail-field example");
+    throw new Error("the text output grammar no longer shows a multi-line detail-field example");
   }
   const continuation = example.split("\n")[1];
   if (continuation === undefined || continuation.trim().length === 0) {
@@ -149,12 +154,12 @@ type LineKind =
   | "message-continuation";
 
 /**
- * The precedence documented under `### 行の判定順序`, implemented literally:
+ * The precedence documented under `#### Classifying a line`, implemented literally:
  * structural lines are recognised before the "anything else continues the
  * previous message" fallback. A guideline whose rules only worked in this
  * order on paper would still leave `counts:` swallowed by a multi-line message.
  *
- * Rule 5 keys on the run's `--fail-on` threshold, not on `error` alone: the
+ * Rule 6 keys on the run's `--fail-on` threshold, not on `error` alone: the
  * emitter prints a detail block for every severity that can fail the run, so a
  * `--fail-on warning` run puts one under its warnings too and a classifier
  * pinned to `error` would read that block as more message text.
@@ -205,11 +210,13 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
   });
 }
 
-/** The ordered rules listed under `### 行の判定順序`, in document order. */
+/** The ordered rules listed under `#### Classifying a line`, in document order. */
 function extractPrecedenceRules(guideline: string): string[] {
-  const section = /### 行の判定順序\n([\s\S]*?)\n\n>/.exec(guideline)?.[1];
+  const section = /#### Classifying a line\n([\s\S]*?)\n\nA message continuation/.exec(
+    guideline,
+  )?.[1];
   if (section === undefined) {
-    throw new Error("cli-ux-guidelines.md no longer documents a line-classification precedence");
+    throw new Error("the text output grammar no longer documents a line-classification precedence");
   }
   return section
     .split("\n")
@@ -275,8 +282,8 @@ const SYNTHETIC_ISSUES: Issue[] = [
   },
 ];
 
-describe("validate --format text matches the shipped CLI UX guideline", () => {
-  it("emits every issue in the grammar documented by cli-ux-guidelines.md", async () => {
+describe("validate --format text matches the validate contract's text output grammar", () => {
+  it("emits every issue in the documented grammar", async () => {
     const grammar = extractGrammar(await readGuideline());
     const output = await captureStdout(() => {
       emitText(resultOf(SYNTHETIC_ISSUES), DEFAULT_FAIL_ON);
@@ -432,8 +439,8 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
   it("reports an incomplete story test scan as a counted error issue", async () => {
     const guideline = await readGuideline();
-    expect(guideline).toContain("`QFAI-SCAN-002` が `error` の issue");
-    expect(guideline).not.toContain("[warn] <command>: test-file scan stopped");
+    expect(guideline).toContain("`QFAI-SCAN-002` as an `error` issue");
+    expect(guideline).not.toContain("[warn]");
 
     const output = await captureStdout(() => {
       emitText(
@@ -456,7 +463,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
 
   it("ends the real `--format text` run with the documented run-log line", async () => {
     const guideline = await readGuideline();
-    expect(fenceWith(guideline, "run-log:").trim()).toBe("run-log: <path>");
+    expect(guideline).toContain("`run-log: <path>` — always, the last line.");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-format-"));
     try {
@@ -484,7 +491,7 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
   it("keeps a real multi-line issue message renderable from the documented grammar", async () => {
     const guideline = await readGuideline();
     const grammar = extractGrammar(guideline);
-    expect(guideline).toContain("`<message>` は改行を含むことがある");
+    expect(guideline).toContain("`<message>` may contain line breaks");
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
@@ -529,7 +536,14 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     const guideline = await readGuideline();
     const rules = extractPrecedenceRules(guideline);
     expect(rules).toHaveLength(7);
-    const anchors = ["[info] ", "counts: ", "fail-on: ", "timings: ", "run-log: ", "error_code:"];
+    const anchors = [
+      "`[info]`",
+      "`counts:`",
+      "`fail-on:`",
+      "`timings:`",
+      "`run-log:`",
+      "error_code:",
+    ];
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }

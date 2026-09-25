@@ -415,8 +415,12 @@ The command's surface is in `qfai-atdd-scaffold.md`.
 ### Text output grammar
 
 This section defines the `--format text` grammar. Message language follows
-`.agents/rules/repository-language.md#Enforcement`, with the test pin in
-`tests/unit/cliMessageLanguage.test.ts`.
+`.agents/rules/repository-language.md#operator-facing-strings`, with the test
+pin in `tests/unit/cliMessageLanguage.test.ts`. What may appear in this output
+at all is decided by `.agents/rules/interface-clarity.md`: a terminal is an
+interface, and a sentence explaining how to work a command is a defect report
+against the command. `tests/cli/commands/validateTextFormat.test.ts` renders
+the grammar below and compares it with real output.
 
 #### One issue
 
@@ -436,6 +440,11 @@ Each issue prints one line:
 - No timestamp or random value appears in a message, so two runs on the same
   tree print the same text.
 
+Examples:
+
+- `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/spec/03_contract/design/design-tokens.yaml) refs=semantic.color.primary`
+- `[error] QFAI-MOCK-002 External URL reference in HTML Mock: https://cdn.example.com/style.css (.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/03_Example.md)`
+
 Some issues are followed by an indented detail block. Whether it prints depends
 on the severity and `--fail-on`, not on whether the run fails:
 
@@ -452,16 +461,23 @@ on the severity and `--fail-on`, not on whether the run fails:
 ```
 
 Each line starts with two spaces and a label followed by a colon and one space.
-A value spanning several
-lines continues aligned with where the value started. A block does not always
-hold five lines.
+A value spanning several lines continues aligned with where the value started:
+2 spaces, plus the label's length, plus 2. A block does not always hold five
+lines.
+
+```text
+  fix: first line of the value
+       the next line aligns with the value's first character
+```
 
 #### Lines around the issues
 
 In this order, each only where stated:
 
-1. The issues. An incomplete scan is an error finding, so its missing coverage
-   cannot be mistaken for a passing result.
+1. The issues. A test-file scan that stops at its cap or fails prints
+   `QFAI-SCAN-002` as an `error` issue, in the grammar above and counted, so
+   its missing coverage cannot be mistaken for a passing result. No separate
+   warning line is printed.
 2. `counts: info=<n> warning=<n> error=<n>` — always. Suppressed issues are not
    counted.
 3. `fail-on: <threshold>` — always: the effective `--fail-on` threshold.
@@ -475,19 +491,18 @@ In this order, each only where stated:
 Test each line against these rules in order; the first match wins. Structural
 lines are tested first, so they are never read as a message continuation.
 
-1. Starts with `[warn]` and a space: the scan-cap warning.
-2. Starts with `[info]`, `[warning]` or `[error]` and a space: a new issue.
-3. Starts with `counts:` and a space: the end of the issues.
-4. Starts with `fail-on:` and a space: the threshold line.
-5. Starts with `timings:` and a space: the over-budget line.
-6. Starts with `run-log:` and a space: the last line.
-7. The previous issue's severity reaches the run's `--fail-on` threshold and no
+1. Starts with `[info]`, `[warning]` or `[error]` and a space: a new issue.
+2. Starts with `counts:` and a space: the end of the issues.
+3. Starts with `fail-on:` and a space: the threshold line.
+4. Starts with `timings:` and a space: the over-budget line.
+5. Starts with `run-log:` and a space: the last line.
+6. The previous issue's severity reaches the run's `--fail-on` threshold and no
    detail block has started: a two-space `error_code:` line starts one. Inside
    a block, a two-space `<label>:` line starts a field and any other line
    continues the previous field.
-8. Anything else continues the previous issue's message.
+7. Anything else continues the previous issue's message.
 
-A message continuation ends at rule 2, 3 or 7.
+A message continuation ends at rule 1, 2 or 6.
 
 This grammar cannot tell a structural line from a message or field value whose
 physical line begins the same way. A reader that needs exact parsing reads the
