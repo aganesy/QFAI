@@ -1,7 +1,7 @@
 ---
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
-description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."
+description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts. Use when a spec's user stories, API contracts or DB contracts need executable tests, or when a request asks for acceptance, end-to-end, API or integration tests for a spec. Writing the test cases themselves belongs to qfai-sdd."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent, Bash]
 roles:

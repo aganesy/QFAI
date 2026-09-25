@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
-description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
+description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow. Use when a request brings new or changed requirements, or asks to write or update a spec, user stories, acceptance criteria, test cases, or an API, DB or UI contract. Designing test cases belongs here; automating them belongs to qfai-atdd."
 argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:

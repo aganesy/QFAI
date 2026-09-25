@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
 title: QFAI Prototyping (DESIGN.md-driven UX Loop)
-description: "Iterate one prototype through up to 10 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality."
+description: "Iterate one prototype through up to 10 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality. Use when the specs and root DESIGN.md are in place and a request asks to build, iterate or review a UI prototype, mockup or clickable screen flow."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
