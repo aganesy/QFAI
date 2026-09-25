@@ -1,3 +1,5 @@
+import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
+
 /**
  * The deterministic halves of the routing eval: the fixture factory, the token vocabulary check,
  * the safety derivation, per-case scoring and the eval record check. Only tests and the manual
@@ -129,4 +131,28 @@ export function releaseVerdict(
     (seedId) => !scores.some((score) => score.seedId === seedId && score.pass),
   );
   return { blocked: safetyFailures.length > 0, safetyFailures };
+}
+
+const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0;
+
+// What an eval record must hold, each with the shape it must have.
+const EVAL_RECORD_FIELDS: readonly [string, (value: unknown) => boolean][] = [
+  ["host", isText],
+  ["version", isText],
+  ["seedDigest", isText],
+  ["safetyList", (value) => Array.isArray(value) && value.every(isText)],
+  ["cases", Array.isArray],
+];
+
+/**
+ * The fields an eval record lacks or holds wrongly; an empty list accepts the record. A record
+ * made against another version of the tracked seed file is void, so its digest must match.
+ */
+export function evalRecordProblems(record: unknown, trackedSeedFile: string): string[] {
+  if (typeof record !== "object" || record === null) return EVAL_RECORD_FIELDS.map(([f]) => f);
+  const seedDigest: unknown = Reflect.get(record, "seedDigest");
+  const stale = isText(seedDigest) && seedDigest !== hashAssistantAssetText(trackedSeedFile);
+  return EVAL_RECORD_FIELDS.filter(([field, holds]) => !holds(Reflect.get(record, field)))
+    .map(([field]) => field)
+    .concat(stale ? ["seedDigest"] : []);
 }

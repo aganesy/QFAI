@@ -1,5 +1,7 @@
 // QFAI:SPEC-0018:TC-0018-0043
 // QFAI:SPEC-0018:TC-0018-0044
+// QFAI:SPEC-0018:TC-0018-0239
+// QFAI:SPEC-0018:TC-0018-0240
 
 import { expect, it } from "vitest";
 
@@ -153,4 +155,64 @@ it("TC-0018-0043 (TDD-0055): Decide accept of an accepted_with_debt result whose
   const repaired = finishWhileReported(debts, false);
   expect(repaired.verdict.run?.state).toBe("completed");
   expect(repaired.verdict.unmet).toEqual([]);
+});
+
+const sameSpecDebt = {
+  findingCode: "QFAI-TRACE-002",
+  path: "src/notify/email.ts",
+  cause: "The function has no spec annotation.",
+  owningSpec: "spec-0007",
+  detectingCommand: "qfai validate",
+  resolvingOwner: "qfai-implement",
+  blockingExtent: "completion",
+};
+
+// Finishes a ready run whose implement stage recorded the same-spec debt. `laterResult` adds a
+// later accepted implement result that no longer reports it; `reported` has validate still report it.
+function finishSameSpecDebt(options: {
+  laterResult: boolean;
+  reported: boolean;
+  reportedAt?: string;
+}) {
+  const snapshot = readySnapshot();
+  const acceptedStages = (snapshot.acceptedStages ?? []).flatMap((stage) => {
+    if (stage.stageKind !== "implement") return [stage];
+    const recorded = { ...stage, outcome: "accepted_with_debt", debts: [sameSpecDebt] };
+    return options.laterResult ? [recorded, { ...stage, outcome: "accepted" }] : [recorded];
+  });
+  const facts = metFacts();
+  const completion = facts.completion;
+  if (!completion) throw new Error("the fixture carries completion facts");
+  const file = options.reportedAt ?? sameSpecDebt.path;
+  const finding = { code: sameSpecDebt.findingCode, file, refs: [] };
+  completion.validate.findings = options.reported ? [{ ...finding, severity: "warning" }] : [];
+  const finished = finish({ ...snapshot, acceptedStages }, facts);
+  return { state: finished.verdict.run?.state, unmet: finished.verdict.unmet };
+}
+
+it("TC-0018-0239 (TDD-0466): finish-validate", () => {
+  expect(finishSameSpecDebt({ laterResult: false, reported: false })).toEqual({
+    state: "completed",
+    unmet: [],
+  });
+});
+
+it("TC-0018-0239 (TDD-0467): later-result", () => {
+  expect(finishSameSpecDebt({ laterResult: true, reported: true })).toEqual({
+    state: "completed",
+    unmet: [],
+  });
+});
+
+it("TC-0018-0240 (TDD-0468): still-reported", () => {
+  expect(finishSameSpecDebt({ laterResult: false, reported: true })).toEqual({
+    state: "ready",
+    unmet: [{ condition: "debt-open", subject: "spec-0007", owner: "qfai-implement" }],
+  });
+});
+
+it("TC-0018-0240 (TDD-0469): other-path", () => {
+  const moved = { laterResult: false, reported: true, reportedAt: "src/notify/sms.ts" };
+
+  expect(finishSameSpecDebt(moved)).toEqual({ state: "completed", unmet: [] });
 });

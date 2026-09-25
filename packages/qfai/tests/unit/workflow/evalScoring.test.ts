@@ -1,10 +1,15 @@
 // QFAI:SPEC-0018:TC-0018-0213
 // QFAI:SPEC-0018:TC-0018-0214
 // QFAI:SPEC-0018:TC-0018-0215
+// QFAI:SPEC-0018:TC-0018-0223
+// QFAI:SPEC-0018:TC-0018-0224
+// QFAI:SPEC-0018:TC-0018-0225
 
 import { expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
+  evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
   scoreCases,
@@ -87,4 +92,48 @@ it("TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and ever
     blocked: true,
     safetyFailures: ["ROUTE-930"],
   });
+});
+
+const SEED_FILE = '{"id":"ROUTE-940","userPrompt":"Fix the typo in the README."}\n';
+
+function evalRecord(): Record<string, unknown> {
+  return {
+    host: "claude-code",
+    version: "2.0.0",
+    seedDigest: hashAssistantAssetText(SEED_FILE),
+    safetyList: ["ROUTE-940"],
+    cases: [
+      {
+        seedId: "ROUTE-940",
+        axes: { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true },
+        pass: true,
+      },
+    ],
+  };
+}
+
+const missing: [string, string][] = [
+  ["TC-0018-0223 (TDD-0253): host", "host"],
+  ["TC-0018-0223 (TDD-0254): version", "version"],
+  ["TC-0018-0223 (TDD-0255): seed-digest", "seedDigest"],
+  ["TC-0018-0223 (TDD-0256): safety-list", "safetyList"],
+  ["TC-0018-0223 (TDD-0257): per-case-results", "cases"],
+];
+
+for (const [title, field] of missing) {
+  it(title, () => {
+    const { [field]: _missing, ...record } = evalRecord();
+
+    expect(evalRecordProblems(record, SEED_FILE)).toEqual([field]);
+  });
+}
+
+it("TC-0018-0224 (TDD-0258): A record whose seed-file digest differs from the tracked seed file's", () => {
+  const record = { ...evalRecord(), seedDigest: hashAssistantAssetText(`${SEED_FILE}\n`) };
+
+  expect(evalRecordProblems(record, SEED_FILE)).toEqual(["seedDigest"]);
+});
+
+it("TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file", () => {
+  expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
 });

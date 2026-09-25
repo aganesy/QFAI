@@ -260,6 +260,38 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0250 | TC-0018-0215 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0251 | TC-0018-0216 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0252 | TC-0018-0217 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0253 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0254 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0255 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0256 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0257 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0258 | TC-0018-0224 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0259 | TC-0018-0225 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0466 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0468 | TC-0018-0240 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0469 | TC-0018-0240 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0479 | TC-0018-0246 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0480 | TC-0018-0247 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0481 | TC-0018-0248 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0482 | TC-0018-0249 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0483 | TC-0018-0249 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0484 | TC-0018-0249 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0485 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0486 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0487 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0488 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0489 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0490 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0491 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0492 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0493 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0494 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0495 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0496 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0497 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0498 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -4272,6 +4304,329 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/parse.test.ts > TC-0018-0217 (TDD-0252): A stage result whose measurement omits a field`
 - Production files: `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
 - `parseMeasurement` in `parse.ts` requires every field and no other; each missing, non-numeric or unknown field is a `schema` reason whose subject is `measurement.<field>`, and `accept` refuses the result `invalid-input` through the existing result refusals.
+
+### TDD-0253
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0223 (TDD-0253): host`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0223 \(TDD-0253\): host' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'host' ]` at `tests/unit/workflow/evalScoring.test.ts:126:51`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0223 (TDD-0253): host`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+- Design choice: an eval record holds `host`, `version`, `seedDigest`, `safetyList` and `cases`, the five things BR-0018-0112 names, and nothing else is required. `evalRecordProblems(record, trackedSeedFile)` returns the fields a record lacks or holds in the wrong shape, and an empty list accepts it. `seedDigest` is compared with `hashAssistantAssetText` of the tracked seed file, the digest 10_Plan names for every tracked input. The per-case results are the scorer's `CaseScore` entries.
+
+### TDD-0254
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0223 (TDD-0254): version`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0223 \(TDD-0254\): version' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'version' ]` at `tests/unit/workflow/evalScoring.test.ts:126:51`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0223 (TDD-0254): version`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0255
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0223 (TDD-0255): seed-digest`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0223 \(TDD-0255\): seed-digest' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'seedDigest' ]` at `tests/unit/workflow/evalScoring.test.ts:126:51`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0223 (TDD-0255): seed-digest`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0256
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0223 (TDD-0256): safety-list`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0223 \(TDD-0256\): safety-list' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'safetyList' ]` at `tests/unit/workflow/evalScoring.test.ts:126:51`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0223 (TDD-0256): safety-list`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0257
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0223 (TDD-0257): per-case-results`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0223 \(TDD-0257\): per-case-results' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'cases' ]` at `tests/unit/workflow/evalScoring.test.ts:126:51`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0223 (TDD-0257): per-case-results`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0258
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0224 (TDD-0258): A record whose seed-file digest differs from the tracked seed file's`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0224 \(TDD-0258\): A record whose seed-file digest differs from the tracked seed file's' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'seedDigest' ]` at `tests/unit/workflow/evalScoring.test.ts:133:49`, still failing once the presence checks of TDD-0253 to TDD-0257 were in
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0224 (TDD-0258): A record whose seed-file digest differs from the tracked seed file's`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0259
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/evalScoring.test.ts`
+- Selector: `TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/evalScoring.test.ts --testNamePattern='TC-0018-0225 \(TDD-0259\): A record holding every field, with a digest matching the tracked seed file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0253 to TDD-0258: a record holding every field in its shape, with the tracked file's digest, raises none of their problems.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file`
+- Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0465
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/startCreatesTheRunAndNothingElse.test.ts`
+- Selector: `TC-0018-0238 (TDD-0465): a start input carrying scope is refused schema`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/startCreatesTheRunAndNothingElse.test.ts --testNamePattern='TC-0018-0238 \(TDD-0465\): a start input carrying scope is refused schema' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { run: null, …(3) }` at `tests/unit/workflow/startCreatesTheRunAndNothingElse.test.ts:51:6`: `start` created the run and ignored `scope`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/startCreatesTheRunAndNothingElse.test.ts > TC-0018-0238 (TDD-0465): a start input carrying scope is refused schema`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0466
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/debtBlocksCompletion.test.ts`
+- Selector: `TC-0018-0239 (TDD-0466): finish-validate`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/debtBlocksCompletion.test.ts --testNamePattern='TC-0018-0239 \(TDD-0466\): finish-validate' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0055: `finish` counts a debt only while its validate reports the finding code at the debt's path, whichever spec owns it.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0239 (TDD-0466): finish-validate`
+- Production files: none
+
+### TDD-0467
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/debtBlocksCompletion.test.ts`
+- Selector: `TC-0018-0239 (TDD-0467): later-result`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/debtBlocksCompletion.test.ts --testNamePattern='TC-0018-0239 \(TDD-0467\): later-result' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', unmet: [ { …(3) } ] } to deeply equal { state: 'completed', unmet: [] }` at `tests/unit/workflow/debtBlocksCompletion.test.ts:195:69`: `finish` listed `debt-open` for the debt a later accepted implement result no longer reported
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0239 (TDD-0467): later-result`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0468
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/debtBlocksCompletion.test.ts`
+- Selector: `TC-0018-0240 (TDD-0468): still-reported`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/debtBlocksCompletion.test.ts --testNamePattern='TC-0018-0240 \(TDD-0468\): still-reported' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0055: a debt whose finding code the `finish` validate still reports at its path stays `debt-open` with its `resolvingOwner`.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0240 (TDD-0468): still-reported`
+- Production files: none
+
+### TDD-0469
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/debtBlocksCompletion.test.ts`
+- Selector: `TC-0018-0240 (TDD-0469): other-path`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/debtBlocksCompletion.test.ts --testNamePattern='TC-0018-0240 \(TDD-0469\): other-path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0055: the debt matches a finding by code and path together, so the same code at another path does not keep it open.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0240 (TDD-0469): other-path`
+- Production files: none
+
+### TDD-0479
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0246 (TDD-0479): own ledger and evidence accepted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0246 \(TDD-0479\): own ledger and evidence accepted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { recordAreas: undefined, …(2) } to deeply equal { recordAreas: [ …(2) ], …(2) }` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:80:70`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0246 (TDD-0479): own ledger and evidence accepted`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- SIMPLIFIED: `recordAreasOf` names the bound spec's records under the default specs directory, `.qfai/specs`. Lift when: the command adapter supplies the configured specs directory.
+
+### TDD-0480
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0247 (TDD-0480): another spec's evidence refused write-scope`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0247 \(TDD-0480\): another spec's evidence refused write-scope' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074 and TDD-0479: the write-scope check refuses a changed file outside `scope.writeAreas` and `recordAreas`, and the implement work order's `recordAreas` name only spec-0001's ledger and implement evidence.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0247 (TDD-0480): another spec's evidence refused write-scope`
+- Production files: none
+
+### TDD-0481
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0248 (TDD-0481): a change-request record refused write-scope`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0248 \(TDD-0481\): a change-request record refused write-scope' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074 and TDD-0479: the write-scope check refuses a changed file outside `scope.writeAreas` and `recordAreas`, and the implement work order's `recordAreas` name only spec-0001's ledger and implement evidence.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0248 (TDD-0481): a change-request record refused write-scope`
+- Production files: none
+
+### TDD-0482
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0249 (TDD-0482): decision-record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0249 \(TDD-0482\): decision-record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074 and TDD-0479: the write-scope check refuses a changed file outside `scope.writeAreas` and `recordAreas`, and the implement work order's `recordAreas` name only spec-0001's ledger and implement evidence.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0249 (TDD-0482): decision-record`
+- Production files: none
+
+### TDD-0483
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0249 (TDD-0483): workflow-evidence`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0249 \(TDD-0483\): workflow-evidence' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074 and TDD-0479: the write-scope check refuses a changed file outside `scope.writeAreas` and `recordAreas`, and the implement work order's `recordAreas` name only spec-0001's ledger and implement evidence.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0249 (TDD-0483): workflow-evidence`
+- Production files: none
+
+### TDD-0484
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0249 (TDD-0484): acceptance-criteria`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0249 \(TDD-0484\): acceptance-criteria' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0074: the `sdd_append` work order's areas do not hold the bound spec's `03_Acceptance-Criteria.md`, so the write-scope check refuses it.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0249 (TDD-0484): acceptance-criteria`
+- Production files: none
+
+### TDD-0485
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0485): implement`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0485\): implement' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479, which derives the implement records.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0485): implement`
+- Production files: none
+
+### TDD-0486
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0486): regression-fix`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0486\): regression-fix' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ …(2) ]` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:191:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0486): regression-fix`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0487
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0487): test-fix-implement`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0487\): test-fix-implement' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ …(2) ]` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:191:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0487): test-fix-implement`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0488
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0488): acceptance`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0488\): acceptance' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ …(3) ]` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:191:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0488): acceptance`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0489
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0489): test-fix-atdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0489\): test-fix-atdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ …(3) ]` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:191:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0489): test-fix-atdd`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0490
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0490): sdd-append`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0490\): sdd-append' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ …(4) ]` at `tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts:191:57`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0490): sdd-append`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0491
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0491): prototype-not-ui-bearing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0491\): prototype-not-ui-bearing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, and a prototype on a target that is not UI-bearing is not one of them.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0491): prototype-not-ui-bearing`
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (the marker only)
+- SIMPLIFIED: a prototype work order names no record, which is the contract's answer for a target that is not UI-bearing. Lift when: the facts say whether a prototype's target is UI-bearing, and the UI-bearing case gets `.qfai/evidence/prototyping/grilling.md`.
+
+### TDD-0492
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0492): sdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0492\): sdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so an `sdd` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0492): sdd`
+- Production files: none
+
+### TDD-0493
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0493): sdd-delta`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0493\): sdd-delta' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so an `sdd_delta` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0493): sdd-delta`
+- Production files: none
+
+### TDD-0494
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0494): discussion`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0494\): discussion' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `discussion` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0494): discussion`
+- Production files: none
+
+### TDD-0495
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0495): verify`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0495\): verify' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `verify` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0495): verify`
+- Production files: none
+
+### TDD-0496
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0496): diagnose`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0496\): diagnose' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `diagnose` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0496): diagnose`
+- Production files: none
+
+### TDD-0497
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0497): maintenance`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0497\): maintenance' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `maintenance` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0497): maintenance`
+- Production files: none
+
+### TDD-0498
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts`
+- Selector: `TC-0018-0250 (TDD-0498): route`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts --testNamePattern='TC-0018-0250 \(TDD-0498\): route' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0479: only the kinds the contract lists get record areas, so a `route` work order carries none.
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0250 (TDD-0498): route`
+- Production files: none
 
 ### TDD-0527
 

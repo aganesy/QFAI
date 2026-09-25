@@ -368,6 +368,7 @@ interface WorkflowInput {
   // Neither is an input the core reads: each is here to be refused or ignored.
   capture?: unknown;
   authorization?: unknown;
+  scope?: unknown;
   result?: {
     approved?: unknown;
     authorization?: unknown;
@@ -927,6 +928,44 @@ function diagnosisInputs(
 
 // SIMPLIFIED: a test fix whose defective row the ledger fact does not describe keeps the plan's skill.
 // Lift when: the command adapter always supplies the bound spec's ledger rows.
+// The records a stage is defined to write for the spec its work order binds, each named for
+// that spec. Every other kind writes only its checked scope or git-ignored output.
+// SIMPLIFIED: names the bound spec's records under the default specs directory.
+// Lift when: the command adapter supplies the configured specs directory.
+// SIMPLIFIED: a prototype work order names no record, as for a target that is not UI-bearing.
+// Lift when: the facts say whether a prototype's target is UI-bearing.
+function recordAreasOf(workOrder: WorkflowWorkOrder): string[] {
+  const target = workOrder.target;
+  if (target?.kind !== "spec") return [];
+  const specId = target.specId;
+  const pack = `.qfai/specs/${specId}`;
+  const ledger = `${pack}/tdd/test-list.md`;
+  const implementRecords = [ledger, `.qfai/evidence/implement-${specId}.md`];
+  const atddRecords = [
+    ledger,
+    `.qfai/evidence/atdd-${specId}.md`,
+    `.qfai/evidence/coverage-depth-${specId}.md`,
+  ];
+  switch (workOrder.stageKind) {
+    case "implement":
+    case "regression_fix":
+      return implementRecords;
+    case "test_fix":
+      return workOrder.executor?.skill === "qfai-atdd" ? atddRecords : implementRecords;
+    case "acceptance":
+      return atddRecords;
+    case "sdd_append":
+      return [
+        ledger,
+        `${pack}/06_Test-Cases.md`,
+        `${pack}/09_delta.md`,
+        `.qfai/evidence/sdd-${specId}.md`,
+      ];
+    default:
+      return [];
+  }
+}
+
 function executorSkill(
   stage: PlanStages[number],
   diagnosis: WorkflowSnapshot["diagnosis"],
@@ -1412,13 +1451,23 @@ function scopeUnmet(
 // A debt is resolved once the finish validate no longer reports its finding code at its path.
 // SIMPLIFIED: a later accepted result of the detecting stage kind does not resolve a debt.
 // Lift when: an accepted result's own findings are recorded beside its stage.
+// A debt is resolved once the finish validate, or a later accepted result of the stage kind
+// that detected it, no longer reports its finding code at its path.
 function debtUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
+  const accepted = snapshot.acceptedStages ?? [];
   const reported = (debt: WorkflowDebt) =>
     completion.validate.findings.some(
       (finding) => finding.code === debt.findingCode && finding.file === debt.path,
     );
-  return (snapshot.acceptedStages ?? [])
-    .flatMap((stage) => stage.debts ?? [])
+  const sameFinding = (debt: WorkflowDebt) => (other: WorkflowDebt) =>
+    other.findingCode === debt.findingCode && other.path === debt.path;
+  return accepted
+    .flatMap((stage, index) => {
+      const later = accepted.slice(index + 1).filter((next) => next.stageKind === stage.stageKind);
+      return (stage.debts ?? []).filter(
+        (debt) => !later.some((next) => !(next.debts ?? []).some(sameFinding(debt))),
+      );
+    })
     .filter(reported)
     .flatMap((debt) => unmetOf("debt-open", [debt.owningSpec], debt.resolvingOwner ?? "operator"));
 }
@@ -1710,7 +1759,23 @@ function unsupportedHarness(harness: WorkflowHarness): string | undefined {
   return `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
 }
 
+// A start input holds exactly these; the scope and everything else come from routing.
+const START_INPUT_KEYS: readonly string[] = ["operation", "request", "completionTarget", "harness"];
+
+function startInputRefusal(input: WorkflowInput): WorkflowDecision | undefined {
+  const extra = Object.keys(input).filter((key) => !START_INPUT_KEYS.includes(key));
+  if (extra.length === 0) return undefined;
+  const reasons = extra.map((subject): InputRefusal => ({ reason: "schema", subject }));
+  const message = "The start input holds a field it may not carry. Remove it and try again.";
+  return {
+    verdict: { ok: false, run: null, error: { code: "invalid-input", message, reasons } },
+    events: [],
+  };
+}
+
 function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecision {
+  const refused = startInputRefusal(input);
+  if (refused) return refused;
   const start = facts.start;
   const text = input.request?.text ?? "";
   const requestDigest = text.trim() ? keyedDigest(text, start?.digestKey) : undefined;
@@ -2071,6 +2136,8 @@ export function decide(
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
+    const recordAreas = recordAreasOf(nextWorkOrder);
+    if (recordAreas.length > 0) nextWorkOrder.recordAreas = recordAreas;
     const skipped = skippedBefore(
       plan,
       selectedStages,
