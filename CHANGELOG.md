@@ -84,6 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three of spec-0015's six waived rows are reviewed** (#2295). `TDD-0038`
+  and `TDD-0054` to `TDD-0058` had closed at `exception` with their reviews
+  waived. Each now carries a falsifiability record: one production mutation
+  that fails the row's own assertion, then the revert. qa-gatekeeper checked
+  each one. `TDD-0054`, `TDD-0056` and `TDD-0057` passed `completion-reviewer`
+  and `implementation-reviewer`, close at `done`, and leave the waiver.
+  `TDD-0038`, `TDD-0055` and `TDD-0058` are at `review-fix`, because a
+  reviewer showed that part of each test cannot fail. They stay under the
+  waiver until /qfai-atdd strengthens those tests.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

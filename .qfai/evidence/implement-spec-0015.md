@@ -70,11 +70,21 @@ Entries from the first Round 1 review of `TDD-0039`. Its two packs, `review-2026
 - `record:QFAI-TDDLIST-008`, `TDD-0039`, Round 1: `Round 1: GREEN result` said the other tests "were skipped" without a count, which the gate reads as a result that did not pass. Repaired to `1 passed, 16 skipped`. Open: the build-phase `qa-gatekeeper` hash `2192a163…` covered the old text, so the entry closes on that role's record re-attestation.
 - `record:unchecked`, `TDD-0039`, Round 1, completion-reviewer F2: `Satisfied-by` is recorded twice, bare at the handover and as `Round 1: Satisfied-by` at step 3c, with the same value. `red-provenance.md` lists the field unprefixed and `round-evidence.md` puts it in the round block, so the two skill references disagree. Open until they agree.
 
+Entries from the reviews of the run started 2026-09-25T13:56:41.487Z, for `TDD-0038` and `TDD-0054` to `TDD-0058` in `.qfai/evidence/atdd-spec-0015.md`. Each is repaired, with a record re-attestation, before spec-0015 completion is declared.
+
+- `record:unchecked`, `TDD-0054` to `TDD-0058` and `TDD-0038`, Round 1: the row-level verdict is a bare `qa-gatekeeper: PASS`, with the attempt and revisions on a separate `qa-gatekeeper attempts:` line. `round-evidence.md` asks for one `qa-gatekeeper: PASS x2 (...)` line naming the attempt, the round and both revisions.
+- `record:falsifiability-gate-order`, the same rows, Round 1: backend-engineer#1 reverted each mutation and took the GREEN before qa-gatekeeper#3 judged. The gatekeeper rebuilt each mutated tree and reproduced its recorded address and failure, so the observation stands, but Phase Red step 3c routes the gatekeeper while the mutation is still in the tree.
+
+- `record:unchecked`, `TDD-0054`, `TDD-0056` and `TDD-0057`, Round 1: in each first pack (`review-20260925142100002`, `review-20260925142100004`, `review-20260925142100005`) one response carried text after the role on its `Reviewer role:` line, which the completion gate reads as an exact field. The three packs were set aside unedited. The same reviewers re-issued their verdicts, unchanged in ruling and at the same revision and audited evidence hash, into `review-20260925143600001` to `review-20260925143600003`, and each row names its new pack and seal. Repaired.
+
 ## Advisories carried out of this run
 
 - TDD-0007's test also asserts the numeric-target fields of this row's boundary (test-design-analyst#2). For TDD-0007's own run, or `/qfai-sdd`.
 - "Upgrade" in AC-0015-0009 and BR-0015-0005 is read as forced reinit; `--upgrade-assistant-tree` has no case (completion-reviewer F6, coverage-depth finding 5). For `/qfai-sdd`.
 - The `openRowAlreadyTested` allowlist test is not in this row's checkpoint command set (completion-reviewer F4). CI runs it.
+
+- `BR-0015-0018` says each of the two entry skills carries "its profile", while the shipped `qfai-run` routing entry deliberately names none. The test and TC-0015-0038 accept both. For `/qfai-sdd` (implementation-reviewer, `TDD-0055`).
+- The cross-stage clause of `BR-0015-0020`, "whichever stage it was recorded in", is asserted by no test. Pinning it is a Change Request to TC-0015-0040 (implementation-reviewer, `TDD-0057`).
 
 ## Ledger rows advanced
 

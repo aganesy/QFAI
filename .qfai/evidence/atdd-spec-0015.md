@@ -352,6 +352,15 @@ packages/qfai/tests/integration/spec0015GovernanceAndHandoff.test.ts
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/spec0015GovernanceAndHandoff.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 23 passed (23). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925142100001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 143a2713805786ff101b364e2230b17d1fa13dd511801ff04665ff1ff05c529f
+- Ledger: the orchestrator wrote `refactor -> review-fix`. Completion-reviewer and implementation-reviewer each return a blocking finding: the three message assertions cannot fail, because the message names all three buckets in fixed text whatever is missing, and no fixture populates the section partially. The acceptance test is /qfai-atdd's, so the row goes back to that stage for Round 2; the Required fixes are in the pack.
+
 ### TDD-0054
 
 - TDD-ID: TDD-0054
@@ -401,6 +410,30 @@ packages/qfai/tests/integration/autopilotBindingExceptionSpec0015.test.ts
 - qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+1f7936f35682a5674009b21483b2a8aec495f5ca440e32bad6649ccc80c6a24c, reproduced with HEAD at 7815c13a5; the recorded assertion failed at autopilotBindingExceptionSpec0015.test.ts:20:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash ac8ad737239fecbeb65d2520dded05ab3ea1f69bf43999b2279580a412d174d0
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143600001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): ba33ff2ee00228739512a0aadc39655e322907c6b75038756b90f2366f9c52b3
+- Spec review: PASS
+- Spec reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Spec audited evidence hash: 184d7d4f3f1ec0f0b10c60baa7cd9a7d2a4378b0817845fbee8750079eadee5d
+- Spec review pack: .qfai/review/review-20260925143600001 <!-- qfai:not-a-citation -->
+- Spec review pack seal: ba33ff2ee00228739512a0aadc39655e322907c6b75038756b90f2366f9c52b3
+- Code quality review: PASS
+- Code quality reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Code quality audited evidence hash: 184d7d4f3f1ec0f0b10c60baa7cd9a7d2a4378b0817845fbee8750079eadee5d
+- Code quality review pack: .qfai/review/review-20260925143600001 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: ba33ff2ee00228739512a0aadc39655e322907c6b75038756b90f2366f9c52b3
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification seal: c38f03eb6864f54b40f5b3b25c12ceff5522f32bf7985dc99ecc62258a6a9126
 
 ### TDD-0055
 
@@ -452,6 +485,15 @@ packages/qfai/tests/integration/routingManifestEntrySkillsSpec0015.test.ts
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/routingManifestEntrySkillsSpec0015.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925142100003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 434ec45941c1de352c189c6bb27e903b392f5f0775c27fdac38f46300c12dba0
+- Ledger: the orchestrator wrote `refactor -> review-fix`. Completion-reviewer returns a blocking finding: the authoring-phase check counts any agent as an author, so `qfai-maintain` with a reviewer in its edit phase still passes; implementation-reviewer returns PASS. The acceptance test is /qfai-atdd's, so the row goes back to that stage for Round 2; the Required fixes are in the pack.
+
 ### TDD-0056
 
 - TDD-ID: TDD-0056
@@ -501,6 +543,30 @@ packages/qfai/tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts
 - qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+154ee43b7af01b76d92b330f12314e4cebe12bd665c1d213819de0ffc305454a, reproduced with HEAD at 7815c13a5; the recorded assertion failed at autopilotAuthorizationBucketsSpec0015.test.ts:20:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash 187eb3941faff1756cff5629fffd322a6430fb0dc1aac953d54a96fa1d57392b
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143600002 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 9f53e91c7b1f73b7f5803c490061dd102ec5c8964bb527c98f07939a565db38d
+- Spec review: PASS
+- Spec reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Spec audited evidence hash: a029f8baebb97cdd03ae255a8937395079519ce7991d4c7baf4e0e7d953066d6
+- Spec review pack: .qfai/review/review-20260925143600002 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 9f53e91c7b1f73b7f5803c490061dd102ec5c8964bb527c98f07939a565db38d
+- Code quality review: PASS
+- Code quality reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Code quality audited evidence hash: a029f8baebb97cdd03ae255a8937395079519ce7991d4c7baf4e0e7d953066d6
+- Code quality review pack: .qfai/review/review-20260925143600002 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 9f53e91c7b1f73b7f5803c490061dd102ec5c8964bb527c98f07939a565db38d
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification seal: f834bb67ba023591095f42bbb8bace432ef44ae4f5308c45aeb379c0e87364ed
 
 ### TDD-0057
 
@@ -552,6 +618,30 @@ packages/qfai/tests/integration/actorHistoryRunSpec0015.test.ts
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925143600003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 1c24448c25dadb8e1e4340b423b1dee1683a23b0e95877d15fc850a5844d3032
+- Spec review: PASS
+- Spec reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Spec audited evidence hash: 507495991c00351cccdee5dfa58f87abbe9ac60e3d05d42cee34ad93068bb3c3
+- Spec review pack: .qfai/review/review-20260925143600003 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 1c24448c25dadb8e1e4340b423b1dee1683a23b0e95877d15fc850a5844d3032
+- Code quality review: PASS
+- Code quality reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Code quality audited evidence hash: 507495991c00351cccdee5dfa58f87abbe9ac60e3d05d42cee34ad93068bb3c3
+- Code quality review pack: .qfai/review/review-20260925143600003 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 1c24448c25dadb8e1e4340b423b1dee1683a23b0e95877d15fc850a5844d3032
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+- Checkpoint verification seal: 0f04015d031d74c58e3eb16b6a67ec266b86095b238f5d6fe232a4359e449399
+
 ### TDD-0058
 
 - TDD-ID: TDD-0058
@@ -602,6 +692,15 @@ packages/qfai/tests/integration/grillingInRunSpec0015.test.ts
 
 - Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/grillingInRunSpec0015.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 4deb9d602d90b6daafe491952afb018ad2c3644e
+
+- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925142100006 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 92e06bef2b921b70a4fdb90c06b23a739a1566bd6e51787fd731a90f00d96161
+- Ledger: the orchestrator wrote `refactor -> review-fix`. Implementation-reviewer returns a blocking finding: the split assertion matches the mention of the split, not that the session keeps it, so `keeps` changed to `drops` still passes; completion-reviewer returns PASS. The acceptance test is /qfai-atdd's, so the row goes back to that stage for Round 2; the Required fixes are in the pack.
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / ⚠️ 24 / ❌ 5.
@@ -621,6 +720,26 @@ See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / �
 | 9 | - | n/a | grilling(-@2026-09-25T13:56:41.487Z/none): none | - | - | PASS |
 | 10 | backend-engineer | backend-engineer#1 | /qfai-implement red step 3c: falsifiability runs for TDD-0038 and TDD-0054 to TDD-0058, each reverted to its GREEN | #tdd-0038, #tdd-0054 to #tdd-0058 | Round 1 of each entry | PASS |
 | 11 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement: RED phase gate on each rebuilt mutated tree, and the build-phase GREEN, for TDD-0038 and TDD-0054 to TDD-0058 | #tdd-0038, #tdd-0054 to #tdd-0058 | qa-gatekeeper fields of each entry | PASS |
+| 12 | orchestrator | orchestrator | /qfai-implement refactor: file-scoped verify for TDD-0038 and TDD-0054 to TDD-0058, no source edit | the six test files at 4deb9d602 | Refactor verify fields of each entry | PASS |
+| 13 | completion-reviewer | completion-reviewer#4 | /qfai-implement: `TDD-0038` completion review | #tdd-0038 | review-20260925142100001 <!-- qfai:not-a-citation --> | REVISE |
+| 14 | implementation-reviewer | implementation-reviewer#3 | /qfai-implement: `TDD-0038` code review | #tdd-0038 | review-20260925142100001 <!-- qfai:not-a-citation --> | REVISE |
+| 15 | completion-reviewer | completion-reviewer#5 | /qfai-implement: `TDD-0054` completion review | #tdd-0054 | review-20260925142100002 <!-- qfai:not-a-citation --> | PASS |
+| 16 | implementation-reviewer | implementation-reviewer#4 | /qfai-implement: `TDD-0054` code review | #tdd-0054 | review-20260925142100002 <!-- qfai:not-a-citation --> | PASS |
+| 17 | completion-reviewer | completion-reviewer#6 | /qfai-implement: `TDD-0055` completion review | #tdd-0055 | review-20260925142100003 <!-- qfai:not-a-citation --> | REVISE |
+| 18 | implementation-reviewer | implementation-reviewer#5 | /qfai-implement: `TDD-0055` code review | #tdd-0055 | review-20260925142100003 <!-- qfai:not-a-citation --> | PASS |
+| 19 | completion-reviewer | completion-reviewer#7 | /qfai-implement: `TDD-0056` completion review | #tdd-0056 | review-20260925142100004 <!-- qfai:not-a-citation --> | PASS |
+| 20 | implementation-reviewer | implementation-reviewer#6 | /qfai-implement: `TDD-0056` code review | #tdd-0056 | review-20260925142100004 <!-- qfai:not-a-citation --> | PASS |
+| 21 | completion-reviewer | completion-reviewer#8 | /qfai-implement: `TDD-0057` completion review | #tdd-0057 | review-20260925142100005 <!-- qfai:not-a-citation --> | PASS |
+| 22 | implementation-reviewer | implementation-reviewer#7 | /qfai-implement: `TDD-0057` code review | #tdd-0057 | review-20260925142100005 <!-- qfai:not-a-citation --> | PASS |
+| 23 | completion-reviewer | completion-reviewer#9 | /qfai-implement: `TDD-0058` completion review | #tdd-0058 | review-20260925142100006 <!-- qfai:not-a-citation --> | PASS |
+| 24 | implementation-reviewer | implementation-reviewer#8 | /qfai-implement: `TDD-0058` code review | #tdd-0058 | review-20260925142100006 <!-- qfai:not-a-citation --> | REVISE |
+| 25 | orchestrator | orchestrator | /qfai-implement: checkpoint verification for `TDD-0054`, `TDD-0056` and `TDD-0057`, off a checkpoint boundary; `refactor -> done` for those three and `refactor -> review-fix` for `TDD-0038`, `TDD-0055` and `TDD-0058` at 2026-09-25T14:32:08.944Z | #tdd-0038, #tdd-0054 to #tdd-0058 | Checkpoint verification fields; ledger | PASS |
+| 26 | completion-reviewer | completion-reviewer#5 | /qfai-implement: `TDD-0054` completion review, re-issued into a readable pack | #tdd-0054 | review-20260925143600001 <!-- qfai:not-a-citation --> | PASS |
+| 27 | implementation-reviewer | implementation-reviewer#4 | /qfai-implement: `TDD-0054` code review, re-issued into a readable pack | #tdd-0054 | review-20260925143600001 <!-- qfai:not-a-citation --> | PASS |
+| 28 | completion-reviewer | completion-reviewer#7 | /qfai-implement: `TDD-0056` completion review, re-issued into a readable pack | #tdd-0056 | review-20260925143600002 <!-- qfai:not-a-citation --> | PASS |
+| 29 | implementation-reviewer | implementation-reviewer#6 | /qfai-implement: `TDD-0056` code review, re-issued into a readable pack | #tdd-0056 | review-20260925143600002 <!-- qfai:not-a-citation --> | PASS |
+| 30 | completion-reviewer | completion-reviewer#8 | /qfai-implement: `TDD-0057` completion review, re-issued into a readable pack | #tdd-0057 | review-20260925143600003 <!-- qfai:not-a-citation --> | PASS |
+| 31 | implementation-reviewer | implementation-reviewer#7 | /qfai-implement: `TDD-0057` code review, re-issued into a readable pack | #tdd-0057 | review-20260925143600003 <!-- qfai:not-a-citation --> | PASS |
 
 ## Cross-spec obligations
 
@@ -647,6 +766,8 @@ Both logs are scratch files and are not tracked. The recorded output above is th
 
 ## Gaps / Open risks
 
+- The /qfai-implement run started 2026-09-25T13:56:41.487Z reviewed `TDD-0038` and `TDD-0054` to `TDD-0058`. `TDD-0054`, `TDD-0056` and `TDD-0057` are `done`. `TDD-0038`, `TDD-0055` and `TDD-0058` are `review-fix`: a reviewer showed that part of each test cannot fail. Each needs a Round 2 from /qfai-atdd, a re-taken proof, the qa-gatekeeper gates and both reviews again. The Required fixes are in each row's review pack.
+- Every reviewer of those six rows noted that `.qfai/evidence/coverage-depth-spec-0015.md` stops at `BR-0015-0017` and `TC-0015-0036`. It has no row for `BR-0015-0018` to `BR-0015-0021` or for `TC-0015-0037` to `TC-0015-0041`. Refreshing it is the next /qfai-atdd coverage pass.
 - spec-0015's ATDD stage is not done. Fourteen story rows, TDD-0040 to TDD-0053, and several integration rows are still `todo`, and ten obligations are covered only by carriers (`QFAI-ATDD-119`). This run owned `TDD-0039` alone.
 - Repository quality gates are left to the pull request's CI: format, lint, typecheck and the full test suite, including the edited `openRowAlreadyTested.test.ts`. Locally only the row's own test file ran, and prettier checked the changed files.
 - The selected test runs real `init` five times. Its first run took 95.8 s on this machine, against the 120 s test timeout; later runs took 3.5 s to 37.7 s.
