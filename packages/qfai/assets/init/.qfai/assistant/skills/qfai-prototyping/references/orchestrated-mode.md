@@ -16,6 +16,6 @@ The skill serves exactly these operations. A work order naming any other is refu
   the one visual decision the plan needs within the existing `DESIGN.md` and
   contracts, and creates no contract.
 - When the target spec is not UI-bearing, the skill writes no `DESIGN.md`, no
-  UI contract and no surface declaration. It returns outcome `needs_repair`, listing
+  UI contract and no surface declaration. It returns outcome `blocked`, listing
   the cause in `debts` with `resolvingOwner` `operator`.
 - A standalone invocation still resolves every UI-bearing spec.
