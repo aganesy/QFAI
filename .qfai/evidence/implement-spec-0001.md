@@ -2,6 +2,45 @@
 
 Rows closed under DR-0298, one entry per row.
 
+## /qfai-implement run started 2026-09-25T10:14:05.606Z
+
+Rows `TDD-0035` and `TDD-0036`, named by this invocation to take the reviews
+`DR-0298` waived. Both are `Layer: Integration`, so their row-level evidence is
+in `.qfai/evidence/atdd-spec-0001.md#tdd-0035` and `#tdd-0036`. The entries
+below for those two rows record the waived run and are kept as its record.
+
+### Plan phase
+
+| Role                          | Instance                | Verdict | Summary                                                                                                                                                                                                                                                        |
+| ----------------------------- | ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | Both rows exist and are not `blocked`. Both are T2, so each is reviewed alone and no group forms. Order as named: `TDD-0035`, then `TDD-0036`. Parallel dispatch denied: both rows share a test file and an `Owning module`, and no worktree separation is set up |
+| `test-design-analyst`         | `test-design-analyst#1` | REVISE  | `TDD-0035`'s one test asserts three states, `pass-on`, `worker` and `off`, so it does not own one boundary. `TDD-0036` owns one: the `error` state. No row is missing for the four seeded groups                                                                |
+
+`TDD-0035` stops at Phase Red step 1 on `selector-granularity.md` and takes the
+residual path: `CR-20260925-0285` proposes one row per state, and the row moves
+`todo -> blocked`. `TDD-0036` continues.
+
+Advisory findings from `test-design-analyst#1`, none of which this run acts on:
+
+- `EX-0001-0026` also expects the worker to say nothing to the operator, and
+  `off` to behave as when invoked by name. Neither `TC-0001-0026` nor its test
+  checks them.
+- ``rowOf(section, "`off`")`` takes the first table line holding the token, not
+  the line whose State cell is `off`.
+- `TDD-0042` records no `Blocked-By`, while `US-0001-0010` says its E2E row waits
+  on spec-0018.
+- The tests behind `TDD-0015` … `TDD-0017` still check wording their rewritten
+  test cases no longer state.
+- `Layer` is written `integration` on `TDD-0001` … `TDD-0024` and `Integration`
+  from `TDD-0034`.
+
+### Work Orders Summary
+
+| Step | Role (sub-agent)    | Agent instance        | Task title                                                                    | Input (refs)                                           | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------- | --------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ | ------------- | ---------------------------- |
+| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: confirm the TDD-0035 and TDD-0036 handover              | test-list.md, atdd-spec-0001.md#tdd-0035, #tdd-0036    | #plan-phase   | PASS                         |
+| 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0001 ledger      | test-list.md, 02_User-stories.md, 06_Test-Cases.md     | #plan-phase   | REVISE                       |
+
 ## Ledger rows advanced
 
 ### TDD-0034

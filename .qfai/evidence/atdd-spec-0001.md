@@ -100,6 +100,36 @@ No test is added. The run re-uses the two cases in
 - Classification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts -t "TC-0001-0027: a work order that matches no issued one edits nothing and is refused" (run from `packages/qfai`)
 - Classification result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2), at b0c0cdcac2558808fcf69800e84c8f53cb8f36de
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md, `## Workflow Run Entry Check (Mandatory)` — the `error` row, which says a skill handed a QFAI work order that matches no issued one edits nothing and returns the refusal to the harness
+- Round 1: Falsifiability command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts -t "TC-0001-0027: a work order that matches no issued one edits nothing and is refused" (run from `packages/qfai`)
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on ``AssertionError: expected '| `error`   | `active`          | Han…' to match /return the refusal to the harness/i`` at `tests/integration/stageSkillEntryCheckSpec0001.test.ts:45:22`
+
+The edit, line 176, with one trailing space of the cell's padding removed:
+
+```diff
+-| `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the harness                                                                                          |
++| `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the operator                                                                                         |
+```
+
+- Round 1: Falsifiability revision: working-tree+aa99dee9b05c3cca23f2007b3211e63d782491c913d9540c0bdf61256bbb6052
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 9da494986674153a87a7553152653399734dfed602662b2bdeaf9e2418e03c1a
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/stageSkillEntryCheckSpec0001.test.ts
+```
+
+- Round 1: Revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts -t "TC-0001-0027: a work order that matches no issued one edits nothing and is refused" (run from `packages/qfai`)
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md`, which restores the file as it is at that revision
+
+- Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts (run from `packages/qfai`)
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+
 ## Coverage Depth Matrix
 
 ## Work Orders Summary
