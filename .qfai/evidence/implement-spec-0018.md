@@ -515,6 +515,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0530 | TC-0018-0270 | Closed `exception` under DR-0298; per-row review waived |
 
 ## Grilling Session
 
@@ -7317,6 +7318,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on first run; already satisfied by TDD-0528, whose parser checks both arrays with one entry check.
 - GREEN result: exit 0; `✓ ... TC-0018-0269 (TDD-0529): bare string in observedRefs`, 1 passed, 1 skipped.
 - Production files: `packages/qfai/src/core/workflow/parse.ts` (no change beyond TDD-0528).
+
+### TDD-0530
+
+- Closed: `exception` under DR-0298 on 2026-09-26. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0270 (TDD-0530): recomputed safety list equals the recorded list`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0270 \(TDD-0530\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(recorded).toEqual(await safetyList())` at `tests/integration/workflow/evalFixtures.test.ts:484:20`, with the recorded list empty (`[]`) against the 52 seeds the rule derives.
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0270 (TDD-0530): recomputed safety list equals the recorded list`
+- Production files: none (test-side): `packages/qfai/tests/fixtures/workflow/safety-list.json`, the recorded list.
+- Design choice: the list is recorded as a JSON array of seed IDs in seed-file order, beside the seed file and the vocabulary it is derived from. The runner still derives its list at run time; this case keeps that derivation equal to the recorded list on every pull request.
 
 ## Record defects
 
