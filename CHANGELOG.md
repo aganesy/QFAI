@@ -125,6 +125,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   manifest names a file executable by the group or others but not its owner.
   POSIX checkouts already refused the first kind.
 
+- **A BR or AC heading is read with or without a title after a colon.** The
+  check that compares a spec's rules and criteria with their merge-base copy
+  accepted `## AC-0001: Title` but not `## AC-0001`, nor the `# AC-0001` comment
+  the shipped template opens each Gherkin scenario with. A file written only in
+  those shapes therefore held no obligations. Editing it raised
+  `QFAI-TRACE-003` ("could not be compared") instead of `QFAI-TRACE-001` for
+  the criterion that changed. Both shapes are read now. A `# AC-0001` comment
+  inside a `## AC-0001` section still counts as part of that criterion, not as
+  a second copy of it. Only a spec whose rules or criteria changed on the
+  branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
