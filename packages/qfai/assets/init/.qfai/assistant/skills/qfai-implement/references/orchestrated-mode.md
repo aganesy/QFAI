@@ -51,7 +51,7 @@ The skill serves exactly these operations. A work order naming any other is refu
 ## `seam-only`
 
 - The work goes through Phase Red step 3a (Minimal seam) of `SKILL.md`.
-- Only the minimal connection the target test needs is landed. The test is left
+- The full implementation the target test needs is landed. The test is left
   failing at its assertion.
 - The result names the target test in `seam.targetTestId`.
 - The main implementation waits until the acceptance stage has taken RED.
