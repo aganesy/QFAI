@@ -1169,7 +1169,7 @@ They are owed before the reviews.
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
 - Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783). No production or test file changed in this phase. The suite is the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
-- Refactor verify revision: 9da1b2d08d6402de57776c59fd061a728f3e1e2b
+- Refactor verify revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
 
 ## Coverage Depth Matrix
 
