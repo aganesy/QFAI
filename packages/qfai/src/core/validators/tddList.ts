@@ -9,6 +9,11 @@ import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince, gitStdout } from "../gitChanges.js";
+import {
+  observationReach,
+  type ObservationReach,
+  type ObservationReachCache,
+} from "../observationReach.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
@@ -2038,12 +2043,17 @@ async function artifactRecord(
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
-export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
-  const paths = manifest
+/** The paths a `RED test manifest` value lists, one per line. */
+function redTestManifestPaths(manifest: string): string[] {
+  return manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
+}
+
+export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
+  const paths = redTestManifestPaths(manifest);
   if (
     paths.length === 0 ||
     new Set(paths).size !== paths.length ||
@@ -3697,11 +3707,7 @@ async function invalidCompletedEvidenceArtifacts(
       const manifest = roundEvidenceFieldValue(section, round, "RED test manifest");
       const recorded = roundEvidenceFieldValue(section, round, "RED test hash");
       if (manifest !== null && recorded !== null && SHA256_VALUE.test(recorded)) {
-        const manifestPaths = manifest
-          .replace(/\r\n/g, "\n")
-          .split("\n")
-          .map((line) => line.trim().replace(/^[-*]\s+/, ""))
-          .filter((line) => line.length > 0);
+        const manifestPaths = redTestManifestPaths(manifest);
         const computed = await redTestManifestHash(root, manifest);
         if (!manifestPaths.includes(expected.testFile) || computed === null) {
           invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
@@ -5765,6 +5771,12 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * is shallow — telling them apart needs a signal this check does not have — and
  * the rule still cannot run in a lane that blocks a merge until the checkout
  * there carries the history the revisions name.
+ *
+ * `reach` narrows what the observation covered. Without it the covered files
+ * are the test file and all of `srcDir`, which is the question to ask while a
+ * row is in flight: the code under test is still being written. A row at rest
+ * passes the files its test reached (`observationReach`), so a change its test
+ * never imports does not stale it.
  */
 export function staleEvidenceFiles(
   root: string,
@@ -5772,6 +5784,7 @@ export function staleEvidenceFiles(
   section: string,
   testFile: string,
   cache: Map<string, ChangedSince> = new Map(),
+  reach: ReadonlySet<string> | null = null,
 ): readonly string[] | null {
   const changes = coveredChangesSince(
     root,
@@ -5779,12 +5792,14 @@ export function staleEvidenceFiles(
     observationRevision(section),
     testFile,
     cache,
+    reach,
   );
   return changes.kind === "stale" ? changes.files : null;
 }
 
 /**
- * What moved under the test file and `srcDir` since `revision`.
+ * What moved under the covered files since `revision`: `reach` where given,
+ * otherwise the test file and `srcDir`.
  *
  * `unchecked` is kept apart from `current`: a revision that names no commit
  * this clone holds, or no commit at all, says nothing about the tree. A caller
@@ -5799,6 +5814,7 @@ function coveredChangesSince(
   revision: string | null,
   testFile: string,
   cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
 ): CoveredChanges {
   // The shape test is a COST guard, not a correctness one, and no row can
   // distinguish it: without it a `working-tree+<hash>` reaches
@@ -5828,8 +5844,10 @@ function coveredChangesSince(
   if (changed.kind === "unchanged") return { kind: "current" };
 
   const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
-  const covered = changed.files.filter(
-    (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
+  const covered = changed.files.filter((file) =>
+    reach !== null
+      ? reach.has(file)
+      : file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
   return covered.length > 0 ? { kind: "stale", files: covered } : { kind: "current" };
 }
@@ -5864,9 +5882,10 @@ async function staleSinceNewestObservation(
   entry: ResolvedCompletedEntry | null,
   testFile: string,
   cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
 ): Promise<readonly string[] | null> {
   if (entry === null) return null;
-  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache);
+  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache, reach);
   if (stale === null) return null;
   const revisions = currentSharedArtifactReverifyRevisions(
     context,
@@ -5874,10 +5893,31 @@ async function staleSinceNewestObservation(
     entry.expectation,
   );
   for await (const revision of revisions) {
-    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache);
+    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache, reach);
     if (since.kind === "current") return null;
   }
   return stale;
+}
+
+/**
+ * What a row at rest observed: its test file, the other test inputs its newest
+ * `RED test manifest` names, and what those reach under `srcDir`.
+ */
+async function atRestReach(
+  root: string,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry,
+  testFile: string,
+  cache: ObservationReachCache,
+): Promise<ObservationReach> {
+  const fields = entryOwnFields(entry.section);
+  const manifest =
+    [...evidenceRoundNumbers(fields)]
+      .reverse()
+      .map((round) => roundEvidenceFieldValue(fields, round, "RED test manifest"))
+      .find((value) => value !== null) ?? rowEvidenceFieldValue(fields, "RED test manifest");
+  const manifestPaths = manifest === null ? [] : redTestManifestPaths(manifest);
+  return observationReach(root, srcRelDir, testFile, manifestPaths, cache);
 }
 
 /**
@@ -7190,6 +7230,8 @@ async function validateSpecTddList(
   // it. Scoped to this run rather than to the module: a cache that outlived a
   // run would answer a later one from an earlier tree.
   const revisionDiffCache = new Map<string, ChangedSince>();
+  // Each file's imports are read once, however many rows' tests reach it.
+  const reachCache: ObservationReachCache = { imports: new Map() };
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -7426,24 +7468,37 @@ async function validateSpecTddList(
     }
 
     if (anchorFailure.length === 0) {
+      const testFile = cell(ref, "Test file");
+      const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+      const reach =
+        atRest && lastResolved !== null
+          ? await atRestReach(root, srcRelDir, lastResolved, testFile, reachCache)
+          : null;
       const staleFiles = await staleSinceNewestObservation(
         evidenceContext,
         srcRelDir,
         lastResolved,
-        cell(ref, "Test file"),
+        testFile,
         revisionDiffCache,
+        reach?.kind === "reach" ? reach.files : null,
       );
       if (staleFiles !== null) {
         const revision = observationRevision(lastResolved?.section ?? "") ?? "";
         const shown = staleFiles.slice(0, 5);
         const more =
           staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";
-        const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+        const scope =
+          reach === null
+            ? `the test file and all of \`${srcRelDir}\``
+            : reach.kind === "reach"
+              ? `the test file, the test inputs its record names, and what they import under \`${srcRelDir}\``
+              : `the test file and all of \`${srcRelDir}\`, because ${reach.reason}`;
         issues.push(
           issue(
             EVIDENCE_REVISION_STALE_CODE,
             `spec-${specNumber} ${rowLabel}: the observation names Revision \`${revision}\`, and ` +
               `${staleFiles.length} file(s) it covered have changed since: ${shown.join(", ")}${more}. ` +
+              `Covered: ${scope}. ` +
               `Status=${status}${atRest ? " (at rest — this row is making a claim)" : ""}. ` +
               "A stale Revision looks exactly like a fresh one — every command in the record is " +
               "real and nothing contradicts anything else — which is why it is computed rather " +
@@ -7455,9 +7510,9 @@ async function validateSpecTddList(
             "canonical",
             "Re-take the observation and record the revision it was taken at. The interval is " +
               "from the revision the observation NAMES to now — " +
-              "`git diff --name-only <revision>..HEAD -- <test file> <srcDir>` — not from your " +
-              "last commit, which is a different and much weaker question " +
-              "(`references/evidence-revision.md#what-makes-evidence-stale`).",
+              "`git diff --name-only <revision>..HEAD -- <covered files>`, over the files named " +
+              "as covered above — not from your last commit, which is a different and much " +
+              "weaker question (`references/evidence-revision.md#what-makes-evidence-stale`).",
           ),
         );
       }
