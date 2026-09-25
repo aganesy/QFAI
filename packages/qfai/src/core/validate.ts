@@ -158,7 +158,7 @@ export async function validateProject(
   const scopeIssues =
     flowScope?.invalidValues.map((value) =>
       issue(
-        "QFAI-FLOW-001",
+        "QFAI-FLOW-005",
         `Unusable --flow value: ${value}`,
         "error",
         specsRoot,
@@ -200,7 +200,7 @@ export async function validateProject(
 }
 
 function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
-  if (!scope || finding.code === "QFAI-FLOW-001") return true;
+  if (!scope || finding.code === "QFAI-FLOW-005") return true;
   if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
     return true;
   }

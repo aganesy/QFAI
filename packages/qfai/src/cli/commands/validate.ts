@@ -283,7 +283,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     if (
       scopedReportRel !== null &&
       !refuseConfiguredLegacyWrite &&
-      !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-001")
+      !normalized.issues.some((issue) => issue.code === "QFAI-FLOW-005")
     ) {
       await emitJson(normalized, root, scopedReportRel);
     }
@@ -320,7 +320,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
  * raw user input must never reach a filename (`--flow x/../../../outside`
  * escapes the report directory once `path.resolve` runs); and dropping the bad
  * value would make `--flow BF-0003 --flow nope` — a run that fails with
- * `QFAI-FLOW-001` — write the SAME file as a healthy `--flow BF-0003`, so
+ * `QFAI-FLOW-005` — write the SAME file as a healthy `--flow BF-0003`, so
  * whichever finished last decided whether that slice looked like a PASS. The
  * run's exit code, stdout and run-log still carry the failure.
  */
@@ -516,6 +516,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-UIE-*",
     "QFAI-DT-*",
     "QFAI-MOCK-*",
+    "QFAI-FLOW-001",
     "QFAI-FLOW-002",
     "QFAI-FLOW-004",
     "QFAI-BPAP-*",
@@ -1179,7 +1180,7 @@ export const GITHUB_ANNOTATION_LIMIT_PER_LEVEL = 10;
 export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-CFG-001":
     "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
-  "QFAI-FLOW-001": "Every `--flow` value names an existing BF-NNNN business flow.",
+  "QFAI-FLOW-005": "Every `--flow` value names an existing BF-NNNN business flow.",
   "QFAI-LAYOUT-001":
     "The configured spec directory uses the story-tree layout without old spec-pack entries.",
   "QFAI-STORY-001": "Every required story-tree policy and contract file exists.",
@@ -1450,7 +1451,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Correct the named contract index row or add its missing contract file, then rerun validate.",
   "QFAI-DRIFT-001":
     "Restore the protected file or record an in-force change request authorizing the named change.",
-  "QFAI-FLOW-001": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
+  "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
     "Invoke the `/qfai-migration-spec-to-story` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
   "QFAI-SCAN-002":
