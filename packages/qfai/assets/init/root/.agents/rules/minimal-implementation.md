@@ -126,7 +126,18 @@ should.
 Do not mark what the ladder simply answered. A helper you did not write because
 the standard library has one is not a simplification; it is rung 3.
 
-## 4. What this rule is not
+## 4. What a change leaves out
+
+- **Work the request did not ask for.** A pre-existing bug, a performance
+  concern, or behaviour the request does not mention is reported as a
+  follow-up, not fixed in this change. The exception is a fix the requested
+  behaviour cannot work without.
+- **Readings the request did not settle.** Where the work goes ahead on an
+  assumption about ambiguous wording, implement the reading the wording and the
+  surrounding code most directly support. State that assumption, and do not
+  build for the other readings as well.
+
+## 5. What this rule is not
 
 - Not a licence to skip a requirement. The spec is the authority.
 - Not a size limit. Shorter code that hides a failure path is worse than longer

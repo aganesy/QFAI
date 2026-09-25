@@ -233,3 +233,19 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
     ).toBe(false);
   });
 });
+
+describe("the layers catalog sizes a new test suite without removing coverage", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: sizing, process-per-case and scratch each carry a clause`, async () => {
+      const catalog = await read(tree, "assistant/catalog/test-layers.md");
+      const section = catalog.split("## Test-suite sizing")[1]?.split(/^## /m)[0] ?? "";
+      expectPhrase(section, "It never removes any.");
+      expectPhrase(section, "**Size a new test file like the ones next to it.**");
+      expectPhrase(section, "roughly one focused test per stated behaviour");
+      expectPhrase(section, "**Choose a process-per-case suite, never inherit one.**");
+      expectPhrase(section, "**A scratch check is not a deliverable.**");
+      expectPhrase(section, "Do not turn a scratch check into a permanent test file.");
+      expectPhrase(section, "No validator reads them.");
+    });
+  }
+});

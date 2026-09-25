@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped guidance now bounds what a change adds beyond its request**
+  (#2242). The layers catalog gains a sizing section: a new test file is sized
+  like its neighbours, a process-per-case suite is a choice rather than an
+  inherited shape, and a scratch check does not become a permanent test file.
+  The minimal-implementation rule gains a section on what a change leaves out:
+  unrequested fixes are reported as follow-ups, and ambiguous wording is built
+  for one reading, stated as an assumption. Test coverage for every source
+  change is still required.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
