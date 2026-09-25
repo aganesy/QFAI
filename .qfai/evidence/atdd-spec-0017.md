@@ -2128,6 +2128,98 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260923120008000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): fc0fdbf3019ec0992afde3178b4aa726ca7e620d1d2df4d9556d6364e7a7f9a4
 
+### TDD-0111
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`
+- Selector: `TC-0017-0094: The Windows job runs exactly the declared suite list`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/suiteList.test.ts --testNamePattern='TC-0017-0094: The Windows job runs exactly the declared suite list' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to be 'windows-latest' // Object.is equality`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0112
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts`
+- Selector: `TC-0017-0095: Every suite-list entry resolves to a collected test file`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/suitesLandFirst.test.ts --testNamePattern='TC-0017-0095: Every suite-list entry resolves to a collected test file' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected 0 to be greater than 0` (no suite list yet)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0113
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`
+- Selector: `TC-0017-0096: The job points TEMP and TMP at a directory with a space`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/suiteList.test.ts --testNamePattern='TC-0017-0096: The job points TEMP and TMP at a directory with a space' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected -1 to be greater than 0` (no test step). A workflow command file cannot carry the value inside the verdict's closure, which the hygiene lane refuses, so the test step sets TEMP and TMP in its own `env:` and the step before it creates the directory
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0114
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`
+- Selector: `TC-0017-0097: The job follows change detection and joins the verdict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/selectionAndVerdict.test.ts --testNamePattern='TC-0017-0097: The job follows change detection and joins the verdict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'detect' ]`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0115
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`
+- Selector: `TC-0017-0098: A failing Windows job fails the aggregate verdict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/selectionAndVerdict.test.ts --testNamePattern='TC-0017-0098: A failing Windows job fails the aggregate verdict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [ 'detect', 'lint', …(7) ] to include 'windows-parity'`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0116
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`
+- Selector: `TC-0017-0099: A package build precedes the job's first test step`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/inJobBuild.test.ts --testNamePattern='TC-0017-0099: A package build precedes the job'\''s first test step' --reporter=verbose`
+- RED result: exit 1; `AssertionError: a step builds packages/qfai: expected -1 to be greater than or equal to 0`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0117
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`
+- Selector: `TC-0017-0100: The job neither needs build nor downloads its artifact`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/windowsParity/inJobBuild.test.ts --testNamePattern='TC-0017-0100: The job neither needs build nor downloads its artifact' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the job declares its steps: expected 0 to be greater than 0`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+
+### TDD-0118
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E
+- Test file: `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts`
+- Selector: `US-0017-0016: a Windows regression fails the verdict on the pull request that causes it`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0017WindowsParityE2E.test.ts --testNamePattern='US-0017-0016: a Windows regression fails the verdict on the pull request that causes it' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to be 'windows-latest' // Object.is equality`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts` (new, one annotated describe)
+- Open: the job has not had its trial run on a Windows runner. Its `timeout-minutes` of 30 is an
+  unmeasured ceiling, and the per-suite counts, timings and the code-path pin's before and after
+  figures (22 instances, 290 minutes, 20 installs before; 23, 320 and 21 after) are still owed to
+  DR-0017-0024 once that run exists.
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0017.md`. For the historical nine-story
@@ -3052,7 +3144,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2452 (packages/qfai/tests/assets 2254, packages/qfai/tests/e2e 198)
+e2e callsites at this tree: 2453 (packages/qfai/tests/assets 2254, packages/qfai/tests/e2e 199)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
