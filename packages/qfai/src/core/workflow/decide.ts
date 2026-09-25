@@ -1294,6 +1294,23 @@ const REPLAN_BUDGET = 3;
 
 const REPAIR_BUDGET = 3;
 
+// A repair goes to the plan stage its first finding's owner serves. The stage that found it is
+// issued again once the repair is accepted, and its re-run reports any finding left over.
+function repairStageOf(
+  stages: PlanStages,
+  debts: WorkflowDebt[] | undefined,
+): PlanStages[number] | undefined {
+  const owner = debts?.[0]?.resolvingOwner;
+  return owner ? stages.find((stage) => stage.skill === owner) : undefined;
+}
+
+// A repair owned by a skill no plan stage serves needs a new plan. The operator is not a stage,
+// so a repair the operator owns never returns the run to routing.
+function repairIsOutsidePlan(stages: PlanStages, debts: WorkflowDebt[] | undefined): boolean {
+  const owner = debts?.[0]?.resolvingOwner;
+  return Boolean(owner) && owner !== "operator" && !repairStageOf(stages, debts);
+}
+
 // Each cause a repair request lists that has had every automatic repair its budget allows,
 // named `<findingCode>@<path>`.
 function exhaustedRepairCauses(
@@ -2417,12 +2434,9 @@ export function decide(
     }
 
     if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
-    // SIMPLIFIED: a repair goes to the plan stage the first finding's owner serves.
-    // Lift when: a repair owned by no plan stage returns the run to routing, and the
-    // detecting stage is reissued after the repair is accepted.
     const repairOwner = snapshot.repairRequest?.debts[0]?.resolvingOwner;
     const stage = repairOwner
-      ? plan.stages.find((candidate) => candidate.skill === repairOwner)
+      ? repairStageOf(plan.stages, snapshot.repairRequest?.debts)
       : selectedStages[acceptedStages.length];
     if (!stage && repairOwner) return refusedInput(run, "The repair work order is not ready.");
     if (!stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
@@ -2538,10 +2552,14 @@ export function decide(
     const selectedStages = plan
       ? activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet)
       : [];
+    const repairStage = Array.isArray(plan?.stages)
+      ? repairStageOf(plan.stages, snapshot.repairRequest?.debts)
+      : undefined;
     const nextStage =
-      Array.isArray(plan?.stages) && Array.isArray(acceptedStages)
+      repairStage ??
+      (Array.isArray(plan?.stages) && Array.isArray(acceptedStages)
         ? selectedStages[acceptedStages.length]
-        : undefined;
+        : undefined);
     // SIMPLIFIED: this path accepts a canned stage result by identity and outcome.
     // Lift when: the stage-result schema and receipt checks are implemented.
     if (
@@ -2612,10 +2630,13 @@ export function decide(
       );
     }
     const endsDiscovery =
-      plan.route === "discovery" && acceptedStages.length + 1 === selectedStages.length;
+      plan.route === "discovery" &&
+      !repairStage &&
+      acceptedStages.length + 1 === selectedStages.length;
     const needsReplan =
       endsDiscovery ||
-      (nextStage.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs");
+      (nextStage.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs") ||
+      (result.outcome === "needs_repair" && repairIsOutsidePlan(plan.stages, result.debts));
     if (needsReplan && (snapshot.replans ?? 0) >= REPLAN_BUDGET) {
       const halt = { blocker: "budget-exhausted" as const, owner: "operator" };
       return blockOnResult(run, result, undefined, { ...halt, subjects: ["replan"] });

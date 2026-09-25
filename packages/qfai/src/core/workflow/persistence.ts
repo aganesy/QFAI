@@ -417,8 +417,22 @@ function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
   };
-  const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
-  return { ...rest, acceptedStages: [...(snapshot.acceptedStages ?? []), stage] };
+  const { halt: _cleared, repairRequest, ...rest } = withoutWorkOrder(snapshot);
+  const accepted = snapshot.acceptedStages ?? [];
+  // A `needs_repair` result opens a repair request instead of completing its stage.
+  if (record.repairs) {
+    const opened = { stageInstanceId: stage.stageInstanceId, debts: record.repairs };
+    return { ...rest, repairRequest: opened };
+  }
+  // The accepted repair closes the request and replaces that stage's earlier receipt. The stage
+  // that found the repair is issued next, as the plan stage not yet accepted.
+  if (repairRequest && repairRequest.stageInstanceId !== stage.stageInstanceId) {
+    const acceptedStages = accepted.map((each) =>
+      each.stageInstanceId === stage.stageInstanceId ? stage : each,
+    );
+    return { ...rest, acceptedStages };
+  }
+  return { ...rest, acceptedStages: [...accepted, stage] };
 }
 
 function foldReplay(snapshot: Snapshot, replay: WorkflowReplay): Snapshot {
