@@ -587,7 +587,7 @@ its revision is a separate stage-wide obligation.
 - Branch: falsifiability — the validator already reports a moved spec id, so the case passed on its first run
 - Predicate to break: packages/qfai/src/core/validators/specSplitByCapability.ts:552, `capReferenceIssues` — `if (specText.trim().length === 0 || !specText.includes(capId)) {`, the check that a spec's `01_Spec.md` names the capability the catalog pairs it with
 - Mutation: `if (specText.trim().length === 0 || !specText.includes(capId)) {` to `if (specText.trim().length === 0) {`
-- Why it fails: every fixture spec has a non-empty `01_Spec.md`, so the mutated check reports nothing.
+- Why it fails: every fixture spec has a non-empty `01_Spec.md`, so the mutated check reports nothing. The row-order catalog reaches the same check through `expectedSpecIds`, so it also reports nothing under this mutation; that failure is not observed, because the case stops at line 271.
   The two catalogs that keep the assignment still return `[]`.
   The catalog with its `Spec` cells swapped also returns `[]` where the case expects two `QFAI-SPLIT-105` findings, so `toEqual` fails as an assertion at `tests/integration/sddSkillSpec0013.test.ts:271`
 - Type check: the mutated condition is still a boolean, and the line passes `tsc`
@@ -627,7 +627,7 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (specSplitByCapability.ts:552 capability check dropped) working-tree+18cbf677… at HEAD b05f9c0ae; AssertionError at sddSkillSpec0013.test.ts:271:84; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
-- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row goes to review-fix
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row stays at `refactor` as a member of its T1 group keyed `BR-0013-0007`, and the group is reviewed again once the plan phase is recorded in `implement-spec-0013.md`
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925120000000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 2055a3f7fe50cab6c5c9eeb3ca53e37c67b9e039670fd5dfb71205f29ef2dc86
 
@@ -679,7 +679,7 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (qfai-sdd SKILL.md:267 bullet deleted) working-tree+398b1495… at HEAD b05f9c0ae; toContain AssertionError at sddSkillSpec0013.test.ts:287:21; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
-- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row goes to review-fix
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row stays at `refactor` as a member of its T1 group keyed `BR-0013-0007`, and the group is reviewed again once the plan phase is recorded in `implement-spec-0013.md`
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925120001000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): fa6264c954fe558af39f9a39202df22e8ab23943a4b6877e2608a7080599717b
 
