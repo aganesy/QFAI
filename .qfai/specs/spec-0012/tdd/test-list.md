@@ -116,7 +116,6 @@
 | TDD-0564 | TC-0012-0491 | Integration | T2 | - | - | todo | - | - | - | - | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | - | BR-0012-0138 | - |
 | TDD-0565 | TC-0012-0492 | Integration | T2 | - | - | todo | - | - | - | - | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | - | BR-0012-0138 | - |
 | TDD-0566 | - | E2E | T2 | - | - | todo | - | - | US-0012-0144 | - | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | - | - | - |
-
 | TDD-0567 | TC-0012-0324 | Integration | T2 | packages/qfai/tests/cli/commands/prototypingIterate.test.ts | returns 64 when the latest iter has nothing open and no anti-patterns | todo | CR-20260925-0005 | - | - | - | packages/qfai/src/cli/commands/prototypingIterate.ts | - | BR-0012-0024 | - |
 | TDD-0568 | TC-0012-0335 | Integration | T2 | packages/qfai/tests/integration/prototypingHandoffOutput.test.ts | TC-0012-0335 | todo | CR-20260925-0005 | - | - | - | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md | - | BR-0012-0027 | - |
 

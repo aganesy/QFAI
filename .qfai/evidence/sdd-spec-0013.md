@@ -182,6 +182,6 @@ Apply the approved UPDATE rows of the 2026-09-24 intent-driven entry Triage to s
 - Approval and application: the user explicitly selected Option 1; `Applied at` is `2026-09-24T19:55:40Z`.
 - Re-derived chain: the first `AC-0013-0008/0009/0010` headings retain their IDs; the contradictory second `0008` and superseded second `0010` are removed; the live optional-artifact criterion is `AC-0013-0042 → BR-0013-0021 → EX-0013-0021 → TC-0013-0036/0037`.
 - Ledger: Phase 2b added `TDD-0061/0062` at `todo` with this CR in `DR-ID`. The preceding 60 rows retained their obligations, status and evidence.
-- Validation: scoped SDD PASS, error 0 (`.qfai/report/run-20260925045254975`); scoped drift PASS, error 0 (`.qfai/report/run-20260925045300751`). The independent SDD completion review returned PASS.
+- Validation: scoped SDD PASS, error 0 (run `20260925045254975`, report not committed); scoped drift PASS, error 0 (run `20260925045300751`, report not committed). The independent SDD completion review returned PASS.
 - Remaining work: `/qfai-implement spec-0013` preflight, `/qfai-atdd spec-0013` for the two new rows and other owed ATDD rows, then implement resume. Binding to `sddPreflight.test.ts` must preserve or re-record spec-0002 `TDD-0001`'s file-hash evidence.
 - Repository gate: the gate owner refreshed the `sdd` dogfood backlog pin with `node scripts/check-dogfood-backlog.mjs --profile sdd --pin` (exit 0). It now records 10 existing errors across 3 files; those global backlog errors remain outside this scoped PASS.
