@@ -6,6 +6,11 @@ Carry the proof for one of the five `Integration` rows of this spec's ledger
 whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018`,
 `TDD-0035` and `TDD-0036` are not backfilled; the reasons are under Gaps.
 
+Take `TDD-0042` to `TDD-0048` and `TDD-0050` through the reviewed cycle. They
+were closed at `exception` under `DR-0298`, which waived their per-row reviews,
+and are reopened at `todo`. They cover `BR-0014-0026` to `BR-0014-0033`: what
+`/qfai-verify` does inside a workflow run, and the `verify.json` shape it keeps.
+
 ## Inputs reviewed (files/paths)
 
 - `.qfai/specs/spec-0014/01_Spec.md`
@@ -22,6 +27,15 @@ whose `Evidence` cells predate the pointer grammar. `TDD-0009`, `TDD-0018`,
 - `packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts`
 - `packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts`
 - `packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts`
+- `.qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md`
+- `.qfai/assistant/skills/qfai-atdd/references/red-provenance.md`
+- `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md`
+- `packages/qfai/tests/integration/verify/orchestrated/*.test.ts` — the eight
+  test files the reopened rows name
+- `packages/qfai/tests/helpers/shippedAssistant.ts`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md`
+- `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/SKILL.md`
 
 ## Decisions made (with rationale)
 
@@ -45,6 +59,34 @@ title of the block that holds the obligation was drafted and withdrawn: the cell
 belongs to a `done` row, and re-pointing one here is outside the transition that
 allows it. Both cells are unchanged, and what the repair would be is under Gaps.
 
+For the eight reopened rows:
+
+- Every row takes the falsifiability branch. The test and the shipped Markdown
+  it reads both exist, and each case passed on its first run at this revision.
+- Six of the records kept from their closure hold a failure seen before the
+  Markdown was written; the records for `TDD-0045` and `TDD-0048` say the case
+  was already satisfied. None carries a revision or a test hash, so none can
+  stand as an observed RED. They are kept under `## Execution logs` and not
+  reused.
+- Each row names one single-line edit to the shipped Markdown, on a line only
+  its own assertion reads. So each mutation fails that row alone, and the
+  other seven still pass.
+- Each classification command escapes the `Selector` for the `-t` regex:
+  `\(`, `\)` and `\.`. Passed unescaped, the parentheses form a regex group,
+  the pattern matches no test, and vitest reports `Tests 1 skipped (1)` with
+  exit 0 (`checkpoint-verification.md`). The `Selector` field itself holds the
+  ledger cell unchanged.
+
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-25T11:57:55.100Z
+
+Preflight: confidence high
+
+No session opened: the eight rows, their test cases and their business rules
+are settled, the tests and the Markdown they read already exist, and nothing
+surfaced during the run that the spec leaves open.
+
 ## Work performed (what changed, where)
 
 - `.qfai/specs/spec-0014/tdd/test-list.md` — **unchanged**. Two edits were
@@ -57,6 +99,10 @@ allows it. Both cells are unchanged, and what the repair would be is under Gaps.
   `.qfai/evidence/implement-spec-0014.md`, which records neither and says why.
   No `Status` moved and no cell was written.
 - This file created.
+- For `TDD-0042` to `TDD-0048` and `TDD-0050`: no test and no shipped file
+  changed. Each row's section under `## Ledger rows advanced` now holds its
+  handover entry for `/qfai-implement` Phase Red step 3c. The runs recorded when
+  the rows were closed moved to `## Execution logs`, unchanged.
 
 ## Commands executed + key outputs
 
@@ -118,6 +164,25 @@ Unchanged by this run. The spec's obligations and their coverage are scored in
 the Coverage Depth Matrix below.
 
 ## Ledger rows advanced
+
+`TDD-0042` to `TDD-0048` and `TDD-0050` were reopened `exception` -> `todo`.
+Every case passed on its first run, so every row takes branch 2.
+`/qfai-implement` Phase Red step 3c applies each mutation and writes the
+falsifiability record into the row's entry.
+
+| TDD-ID     | Obligation     | Layer       | RED provenance | Status | Entry                 |
+| ---------- | -------------- | ----------- | -------------- | ------ | --------------------- |
+| `TDD-0042` | `TC-0014-0037` | Integration | falsifiability | todo   | [TDD-0042](#tdd-0042) |
+| `TDD-0043` | `TC-0014-0038` | Integration | falsifiability | todo   | [TDD-0043](#tdd-0043) |
+| `TDD-0044` | `TC-0014-0039` | Integration | falsifiability | todo   | [TDD-0044](#tdd-0044) |
+| `TDD-0045` | `TC-0014-0040` | Integration | falsifiability | todo   | [TDD-0045](#tdd-0045) |
+| `TDD-0046` | `TC-0014-0041` | Integration | falsifiability | todo   | [TDD-0046](#tdd-0046) |
+| `TDD-0047` | `TC-0014-0042` | Integration | falsifiability | todo   | [TDD-0047](#tdd-0047) |
+| `TDD-0048` | `TC-0014-0043` | Integration | falsifiability | todo   | [TDD-0048](#tdd-0048) |
+| `TDD-0050` | `TC-0014-0044` | Integration | falsifiability | todo   | [TDD-0050](#tdd-0050) |
+
+What follows, down to the end of the `### TDD-0019` section, is an earlier
+run's record of `TDD-0019`.
 
 No row changed status. Every row below was already `done`, and **no cell points
 here**: each keeps the prose it had, so this record is an unlinked artifact
@@ -296,91 +361,131 @@ first mutation passes it and fails the literal check below it instead.
 
 ### TDD-0042
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0042
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts`
-- Selector: `TC-0014-0037 (TDD-0042): The stage result names this run's verify.json and its independent review`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts --testNamePattern='TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts
+- Selector: TC-0014-0037 (TDD-0042): The stage result names this run's verify.json and its independent review
+- TC-ref: TC-0014-0037
+- Branch: falsifiability — `## The stage result` in the shipped reference already states that the stage writes this run's `verify.json` and names it, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:29, `## The stage result`, first bullet — "The stage writes this run's `.qfai/report/verify.json` and names it in `artifactRefs`." (lines 29 to 30; the mutated text is on 29)
+- Mutation: `` - The stage writes this run's `.qfai/report/verify.json` and names it in `` to `` - The stage writes a `.qfai/report/verify.json` and names it in ``
+- Why it fails: the `toMatch` at `stageResultReceipts.test.ts:21` needs "writes this run's `.qfai/report/verify.json` and names it in `artifactRefs`" in the flattened section. Without "this run's" the section no longer says the named report is this run's own, so the pattern stops matching
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. `TDD-0043` and `TDD-0044` read the same section, but other bullets
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts -t "TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0043
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0043
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts`
-- Selector: `TC-0014-0038 (TDD-0043): A report from elsewhere is never offered as this run's`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts --testNamePattern='TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts
+- Selector: TC-0014-0038 (TDD-0043): A report from elsewhere is never offered as this run's
+- TC-ref: TC-0014-0038
+- Branch: falsifiability — `## The stage result` in the shipped reference already rules out naming another run's `verify.json`, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:32, `## The stage result`, second bullet — "A `verify.json` written by another run, for another spec or kept in a shared location is never named as this stage's report." (lines 31 to 32; the mutated text is on 32)
+- Mutation: `location is never named as this stage's report.` to `location may be named as this stage's report.`
+- Why it fails: the `toMatch` at `foreignReport.test.ts:21` needs "a `verify.json` written by another run, for another spec or kept in a shared location is never named as this stage's report". The mutated bullet permits a foreign report, so the pattern stops matching
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. `TDD-0042` and `TDD-0044` read the same section, but other bullets
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts -t "TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0044
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0044
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts`
-- Selector: `TC-0014-0039 (TDD-0044): A gate that did not run is reported unrun`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts --testNamePattern='TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts
+- Selector: TC-0014-0039 (TDD-0044): A gate that did not run is reported unrun
+- TC-ref: TC-0014-0039
+- Branch: falsifiability — `## The stage result` in the shipped reference already reports a required gate that did not run as `unrun`, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:38, `## The stage result`, last bullet — "A required gate that did not run is reported `unrun`, never as a pass."
+- Mutation: `` - A required gate that did not run is reported `unrun`, never as a pass. `` to `` - A required gate that did not run is reported as a pass. ``
+- Why it fails: the second `toMatch` at `unrunGate.test.ts:22` needs "a required gate that did not run is reported `unrun`, never as a pass". The mutated bullet reports the gate as a pass, so the pattern stops matching. The first assertion, on `outcome` and `testObservation`, still matches
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0045`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. `TDD-0042` and `TDD-0043` read the same section, but other bullets
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts -t "TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0045
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0045
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts`
-- Selector: `TC-0014-0040 (TDD-0045): verify.json keeps its fields and values`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts --testNamePattern='TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values' --reporter=verbose`
-- RED result: already satisfied: the reference is held as it stands and this change does not edit it. The first two runs failed on the test's own reading, not on the reference: `AssertionError: expected [ 'PASS', 'FAIL', 'WARN' ] to deeply equal [ 'PASS', 'FAIL' ]` read the prose that rules `WARN` out, and `AssertionError: expected [ 'recordedAt', 'summary', 'gates' ] to deeply equal [ 'prototyping', 'atdd', 'full' ]` took the field row for the scope table. The test now reads the field table's `status` row and a header followed by its separator row, and passes
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
+- Selector: TC-0014-0040 (TDD-0045): verify.json keeps its fields and values
+- TC-ref: TC-0014-0040
+- Branch: falsifiability — the output contract already holds the field table and the closed `status` and `scope` sets, and this change does not edit it, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md:11, the `status` row of the field table, `Meaning` cell — "`"PASS"` when every gate in scope passed; `"FAIL"` otherwise."
+- Mutation: `` `"FAIL"` otherwise. `` to `` `"WARN"` when only warnings were found; `"FAIL"` otherwise. ``
+- Why it fails: the test collects every quoted upper-case value on the `status` row and expects exactly `PASS` and `FAIL` (`verifyJsonUnchanged.test.ts:40`). The mutated row adds `WARN`, so the set becomes `PASS`, `WARN`, `FAIL` and the `toEqual` fails
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0046`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. None of them reads this file
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0046
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0046
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts`
-- Selector: `TC-0014-0041 (TDD-0046): Verify sends each finding to its owner`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts --testNamePattern='TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## Findings verify did not cause section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
+- Selector: TC-0014-0041 (TDD-0046): Verify sends each finding to its owner
+- TC-ref: TC-0014-0041
+- Branch: falsifiability — `## Findings verify did not cause` in the shipped reference already maps each repair kind to its owner, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:53, the repair-kind table under `## Findings verify did not cause`, `acceptance-test defect` row — its `resolvingOwner` cell `qfai-atdd`
+- Mutation: `` | `acceptance-test defect` | `qfai-atdd`      | `` to `` | `acceptance-test defect` | `qfai-implement` | ``
+- Why it fails: the test builds a kind-to-owner map from the table and compares it with `OWNERS` (`repairRouting.test.ts:35`). The mutated row sends an acceptance-test defect to `qfai-implement`, so the `toEqual` fails
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0047`, `TDD-0048` and `TDD-0050` still pass. None of them reads this section
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0047
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0047
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts`
-- Selector: `TC-0014-0042 (TDD-0047): The verify stage follows the stage-skill handover`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts --testNamePattern='TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## Entry check section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts
+- Selector: TC-0014-0042 (TDD-0047): The verify stage follows the stage-skill handover
+- TC-ref: TC-0014-0042
+- Branch: falsifiability — `## Entry check` in the shipped reference already states the stage-skill handover, and `SKILL.md` already cites the reference on one line, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:13, `## Entry check`, first bullet — "In mode `active`, a request with no work order and no name is passed to `qfai-run` with nothing edited." (lines 12 to 13; the mutated text is on 13)
+- Mutation: `` `qfai-run` with nothing edited. `` to `` `qfai-run` with its edits applied. ``
+- Why it fails: the first `toMatch` at `stageSkillHandover.test.ts:21` needs "in mode `active`, a request with no work order and no name is passed to `qfai-run` with nothing edited". The mutated bullet lets the skill edit before it passes the request on, so the pattern stops matching
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0048` and `TDD-0050` still pass. None of them reads this section
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts -t "TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0048
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0048
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts`
-- Selector: `TC-0014-0043 (TDD-0048): The Operations table lists exactly verify-full`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts --testNamePattern='TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (Tests 1 passed (1)); the Operations table was written before this test existed
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts
+- Selector: TC-0014-0043 (TDD-0048): The Operations table lists exactly verify-full
+- TC-ref: TC-0014-0043
+- Branch: falsifiability — the `## Operations` table in the shipped reference already lists exactly `verify-full`, and did before the test existed, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:23, the table under `## Operations`, first cell of its only body row — `` `verify-full` ``
+- Mutation: `` | `verify-full` | `` to `` | `verify-spec` | ``
+- Why it fails: `operationsOf` returns the backticked IDs of the table's first column, and the test expects exactly `["verify-full"]` (`operationsTable.test.ts:18`). The mutated cell yields `["verify-spec"]`, so the `toEqual` fails
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047` and `TDD-0050` still pass. None of them reads this section
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts -t "TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ### TDD-0050
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0050
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts`
-- Selector: `TC-0014-0044 (TDD-0050): A missing environment blocks the stage`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts --testNamePattern='TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## A missing environment section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts`
+- Test file: packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
+- Selector: TC-0014-0044 (TDD-0050): A missing environment blocks the stage
+- TC-ref: TC-0014-0044
+- Branch: falsifiability — `## A missing environment` in the shipped reference already returns the stage `blocked`, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md:60, `## A missing environment`, first bullet — "A gate whose environment is missing returns the stage `blocked`, with the blocker `stage-blocked` and `operator` as the one who clears it." (lines 60 to 61; the mutated text is on 60)
+- Mutation: `` returns the stage `blocked`, with the `` to `` returns the stage `needs_repair`, with the ``
+- Why it fails: the first `toMatch` at `missingEnvironment.test.ts:21` needs "returns the stage `blocked`, with the blocker `stage-blocked` and `operator` as the one who clears it". The mutated bullet turns a missing environment into a repair, so the pattern stops matching
+- Type check: n/a — the mutated file is Markdown the test reads; no TypeScript changes
+- Other rows: `TDD-0042`, `TDD-0043`, `TDD-0044`, `TDD-0045`, `TDD-0046`, `TDD-0047` and `TDD-0048` still pass. `TDD-0046` also names `needs_repair`, but reads only `## Findings verify did not cause`
+- Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts -t "TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at 77d8cee5c9156a4aed42eeacaf33d9b748bf2d72
 
 ## Coverage Depth Matrix
 
@@ -467,6 +572,21 @@ None.
 
 Recorded per row above, and summarized in the table under
 "Commands executed + key outputs".
+
+Runs recorded when the eight reopened rows were closed at `exception` under
+`DR-0298` on 2026-09-25, with per-row review waived. Each command ran from
+`packages/qfai`.
+
+| TDD-ID | RED command | RED result | GREEN result | Changed files |
+| ------ | ----------- | ---------- | ------------ | ------------- |
+| TDD-0042 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts --testNamePattern='TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review' --reporter=verbose` | exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts` |
+| TDD-0043 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts --testNamePattern='TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's' --reporter=verbose` | exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts` |
+| TDD-0044 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts --testNamePattern='TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun' --reporter=verbose` | exit 1; `AssertionError: the ## The stage result section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts` |
+| TDD-0045 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts --testNamePattern='TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values' --reporter=verbose` | already satisfied: the reference is held as it stands and this change does not edit it. The first two runs failed on the test's own reading, not on the reference: `AssertionError: expected [ 'PASS', 'FAIL', 'WARN' ] to deeply equal [ 'PASS', 'FAIL' ]` read the prose that rules `WARN` out, and `AssertionError: expected [ 'recordedAt', 'summary', 'gates' ] to deeply equal [ 'prototyping', 'atdd', 'full' ]` took the field row for the scope table. The test now reads the field table's `status` row and a header followed by its separator row, and passes | exit 0; 1 passed (1) | `packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts` |
+| TDD-0046 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts --testNamePattern='TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner' --reporter=verbose` | exit 1; `AssertionError: the ## Findings verify did not cause section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts` |
+| TDD-0047 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts --testNamePattern='TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover' --reporter=verbose` | exit 1; `AssertionError: the ## Entry check section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts` |
+| TDD-0048 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts --testNamePattern='TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full' --reporter=verbose` | already satisfied: exit 0 on the first run (Tests 1 passed (1)); the Operations table was written before this test existed | exit 0; 1 passed (1) | `packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts` |
+| TDD-0050 | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts --testNamePattern='TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage' --reporter=verbose` | exit 1; `AssertionError: the ## A missing environment section exists: expected '' not to be '' // Object.is equality` | exit 0; 1 passed (1) | `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, `packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts` |
 
 ## Gaps / Open risks
 
