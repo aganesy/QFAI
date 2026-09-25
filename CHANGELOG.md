@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The shared skill baseline says how an unattended run may end its turn**
+  (#2233). Under `--auto`, a message with no tool call in it ends the turn and
+  stops the run, whether or not the work is done. While work is still owed, a
+  turn may not end on a summary that only announces the next step, an offer to
+  carry on, a list of decisions none of which blocks the work, or a stop because
+  the turn ran long. It may end only when nothing can move without the user, or
+  when the blocker is deliberately protected from the agent, and that ending is
+  a stop report.
+
 ### Removed
 
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
