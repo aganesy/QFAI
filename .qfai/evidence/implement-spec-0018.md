@@ -21,7 +21,17 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0011 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0012 | TC-0018-0007 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0013 | TC-0018-0008 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
+| TDD-0014 | TC-0018-0010 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0015 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0016 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0017 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0019 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0020 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0021 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0022 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0023 | TC-0018-0013 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0024 | TC-0018-0014 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0025 | TC-0018-0015 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0026 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0027 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0028 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
@@ -1128,6 +1138,16 @@ Restored suite: exit 0; Test Files 4 passed (4); Tests 5 passed (5).
 - Checkpoint verification revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
 - Checkpoint verification seal: `a248375e5b52de270e8bd8485aceb177c4c4b1dfee914b078f7845acc1d46ff5`
 
+### TDD-0014
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theAnnouncement.test.ts`
+- Selector: `TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal passes every check`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnnouncement.test.ts --testNamePattern='TC-0018-0010 \(TDD-0014\): Decide accept of a routing result whose proposal passes every check' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theAnnouncement.test.ts:99:18` — the routing accept only knew the feature route with a new capability, so a checked bounded-change proposal was refused `invalid-input` with no plan.
+- GREEN result: exit 0; `✓ ... TC-0018-0010 (TDD-0014): ...`, 1 passed. State `ready`; the verdict's plan holds the goal, the built-in plan's stages in order and the proposal's write scope; no question opens.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (a checked proposal with no new capability becomes the plan: the built-in plan for its route, passed in `facts.plans`, with the proposal's goal and write scope; one `plan-accepted` event).
+
 ### TDD-0015
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived; the Round 3 REVISE finding is fixed below under the approved reference shape.
@@ -1376,6 +1396,96 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 - GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0015): unknown-path`, 1 passed.
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (classifies a reference by its declared kind; a `path` or `evidence` reference without a `true` existence fact is `unknown-path`; spelling and observer-map keys no longer decide), `packages/qfai/src/core/workflow/parse.ts` (the reference kinds and entry type).
 - Shared fixtures migrated to typed references: `oneCreateQuestionAtRouting.test.ts` (TDD-0001) and `oneApprovalPerCapability.test.ts` (TDD-0004), with the symbolic `request` entry typed as `request`. All ten selectors in `tests/unit/workflow/` pass after the change, TDD-0001, TDD-0004 and TDD-0013 included.
+
+### TDD-0016
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0016): unknown-id`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0016\): unknown-id' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:196:18` — typed `spec-id` and `contract-id` references that resolve to nothing reached the CREATE question.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0016): unknown-id`, 1 passed, 1 skipped. `proposal-refused` with one `unknown-id` reason per reference; state `routing`, no events.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`proposalRefusals` collects every failed proposal check; a `spec-id` absent from `facts.specs` or a `contract-id` absent from `facts.contractIds` is `unknown-id`, judged by the declared kind).
+
+### TDD-0017
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0017): inactive-spec`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0017\): inactive-spec' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:211:18` — an affected spec whose lifecycle is `retired` was not refused.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0017): inactive-spec`, 1 passed, 2 skipped. `proposal-refused` / `inactive-spec` naming `spec-0008`; state `routing`, no events.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (an affected spec whose lifecycle fact is not `active` is `inactive-spec`).
+
+### TDD-0019
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0019): protected-surface`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0019\): protected-surface' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:225:18` — write areas under `.qfai/runs/`, a change-request record and one overlapping a protected target reached the CREATE question.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0019): protected-surface`, 1 passed, 3 skipped. One `protected-surface` reason per offending write area; state `routing`, no events.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (a write area whose literal prefix lies inside a protected path or record pattern, or overlaps a protected target, is `protected-surface`; the overlap rule is a marked simplification).
+
+### TDD-0020
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0020): scope-escape`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0020\): scope-escape' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:239:18` — write areas outside the project root were not refused.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0020): scope-escape`, 1 passed, 4 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (a write area that is absolute or normalizes to a path above the root is `scope-escape`, using `node:path`).
+
+### TDD-0021
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0021): unresolved-approval`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0021\): unresolved-approval' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:254:18` — a `data-loss` risk signal with no question reached the CREATE question.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0021): unresolved-approval`, 1 passed, 5 skipped. `authorization-restored` asks nothing; `data-loss` is named.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (a material risk signal, any but `authorization-restored`, in a proposal with no question is `unresolved-approval`; linking a question to its signal is a marked simplification).
+
+### TDD-0022
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0022): stage-set`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0022\): stage-set' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:272:18` — a stage set omitting `implement` and `verify` and naming `deploy` was refused `invalid-input` without reasons.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0022): stage-set`, 1 passed, 6 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (the stage-set check names each `always` stage of the built-in plan the proposal omits, a missing `verify` on a change route, and each stage the plan lacks; it replaces the earlier `invalid-input` check on `verify` and `sdd`).
+
+### TDD-0023
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0013 (TDD-0023): A proposal failing unknown-id and stage-set at once`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0013 \(TDD-0023\): A proposal failing unknown-id and stage-set at once' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0016 and TDD-0022: every check adds to one `reasons[]` list.
+- GREEN result: exit 0; `✓ ... TC-0018-0013 (TDD-0023): ...`, 1 passed, 8 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (no change beyond TDD-0022).
+
+### TDD-0024
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0014 (TDD-0024): A proposal failing unknown-id with confidence`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0014 \(TDD-0024\): A proposal failing unknown-id with confidence' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0016: no check reads `confidence`.
+- GREEN result: exit 0; `✓ ... TC-0018-0014 (TDD-0024): ...`, 1 passed, 8 skipped. The refusal with `confidence: 1` equals the refusal without it.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (the proposal type admits the advisory `confidence`; no behaviour reads it).
+
+### TDD-0025
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/normativeAndObservedReferencesStayApart.test.ts`
+- Selector: `TC-0018-0015 (TDD-0025): Decide accept of a routing result with normative references, observed references and a new`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/normativeAndObservedReferencesStayApart.test.ts --testNamePattern='TC-0018-0015 \(TDD-0025\): Decide accept of a routing result with normative references, observed references and a new' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` in `tests/unit/workflow/normativeAndObservedReferencesStayApart.test.ts` — the create question opened with no authorization, but the verdict carried no plan, so both reference arrays were `undefined`.
+- GREEN result: exit 0; `✓ ... TC-0018-0015 (TDD-0025): ...`, 1 passed. The plan holds the typed normative and observed arrays separately, one `create` question opens, and no authorization is recorded.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`checkedPlan` builds the plan from the built-in plan and the proposal, keeping both typed reference arrays; the capability path returns it beside the questions). The test title is the ledger selector as written.
 
 ### TDD-0026
 

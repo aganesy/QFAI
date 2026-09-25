@@ -15,7 +15,17 @@ waivers:
         - TDD-0010
         - TDD-0011
         - TDD-0012
+        - TDD-0014
         - TDD-0015
+        - TDD-0016
+        - TDD-0017
+        - TDD-0019
+        - TDD-0020
+        - TDD-0021
+        - TDD-0022
+        - TDD-0023
+        - TDD-0024
+        - TDD-0025
         - TDD-0026
         - TDD-0027
         - TDD-0028

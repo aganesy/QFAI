@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { NormativeReferenceKind, ObservedReferenceKind, RouteReference } from "./parse.js";
 
 export interface WorkflowQuestion {
@@ -20,6 +22,7 @@ export interface WorkflowEvent {
   stageInstanceId?: string;
   outcome?: string;
   binding?: WorkflowBinding;
+  plan?: WorkflowPlan;
 }
 
 interface WorkflowBinding {
@@ -65,15 +68,47 @@ export interface WorkflowDecision {
     run: { id: string; state: string; sequence: number } | null;
     questions?: WorkflowQuestion[];
     workOrder?: WorkflowWorkOrder | null;
+    plan?: WorkflowPlan;
     error?:
       | { code: "invalid-input"; message: string }
       | {
           code: "proposal-refused";
           message: string;
-          reasons: { reason: "unknown-path"; subject: string }[];
+          reasons: ProposalRefusal[];
         };
   };
   events: WorkflowEvent[];
+}
+
+type ProposalRefusalReason =
+  | "unknown-path"
+  | "unknown-id"
+  | "inactive-spec"
+  | "protected-surface"
+  | "scope-escape"
+  | "unresolved-approval"
+  | "stage-set";
+
+interface ProposalRefusal {
+  reason: ProposalRefusalReason;
+  subject: string;
+}
+
+type PlanStages = {
+  stageInstanceId: string;
+  stageKind: string;
+  skill?: string;
+  operation?: string;
+  when?: string;
+}[];
+
+interface WorkflowPlan {
+  route: string;
+  goal: string;
+  stages: PlanStages;
+  writeScope: string[];
+  expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
+  observedRefs: RouteReference<ObservedReferenceKind>[];
 }
 
 interface WorkflowSnapshot {
@@ -81,16 +116,7 @@ interface WorkflowSnapshot {
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
-  plan?: {
-    route: string;
-    stages: {
-      stageInstanceId: string;
-      stageKind: string;
-      skill?: string;
-      operation?: string;
-      when?: string;
-    }[];
-  };
+  plan?: { route: string; stages: PlanStages };
   specBinding?: { specId: string };
   diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] } | null;
   capabilities?: WorkflowQuestion["capability"][];
@@ -127,6 +153,13 @@ interface WorkflowInput {
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
+      goal?: string;
+      affectedSpecIds?: string[];
+      riskSignals?: string[];
+      unresolvedQuestions?: unknown[];
+      proposedWriteScope?: string[];
+      protectedTargets?: string[];
+      confidence?: number;
       expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
       observedRefs: RouteReference<ObservedReferenceKind>[];
       newCapabilities: {
@@ -138,6 +171,140 @@ interface WorkflowInput {
       requiredStages: string[];
     };
   };
+}
+
+interface WorkflowFacts {
+  now?: string;
+  pathExistence?: Record<string, boolean>;
+  acceptanceObligationsUnmet?: boolean;
+  plans?: Record<string, { route: string; stages: PlanStages }>;
+  specs?: Record<string, { lifecycle: string }>;
+  contractIds?: string[];
+}
+
+type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
+
+const PROTECTED_PREFIXES = [
+  ".git/",
+  ".qfai/runs/",
+  ".qfai/evidence/workflow/",
+  ".qfai/decisions/",
+  ".qfai/evidence/decisions/",
+  ".qfai/evidence/change-request-",
+  ".qfai/evidence/decision-",
+];
+
+function literalPrefix(area: string): string {
+  const glob = area.search(/[*?[{]/);
+  return glob < 0 ? area : area.slice(0, glob);
+}
+
+// SIMPLIFIED: two write areas overlap when one's literal prefix contains the other's.
+// Lift when: a glob pair that shares no path is refused and the refusal is observed.
+function areasOverlap(left: string, right: string): boolean {
+  const leftPrefix = literalPrefix(left);
+  const rightPrefix = literalPrefix(right);
+  const leftIsGlob = leftPrefix !== left;
+  const rightIsGlob = rightPrefix !== right;
+  return (
+    left === right ||
+    left.startsWith(`${right}/`) ||
+    right.startsWith(`${left}/`) ||
+    (leftIsGlob && right.startsWith(leftPrefix)) ||
+    (rightIsGlob && left.startsWith(rightPrefix))
+  );
+}
+
+function touchesProtectedSurface(area: string, protectedTargets: readonly string[]): boolean {
+  const prefix = literalPrefix(area);
+  return (
+    PROTECTED_PREFIXES.some(
+      (surface) =>
+        prefix.startsWith(surface) ||
+        `${area}/` === surface ||
+        (prefix !== area && surface.startsWith(prefix)),
+    ) || protectedTargets.some((target) => areasOverlap(area, target))
+  );
+}
+
+function escapesRoot(area: string): boolean {
+  const normalized = path.posix.normalize(area.replaceAll("\\", "/"));
+  return (
+    path.posix.isAbsolute(normalized) ||
+    path.win32.isAbsolute(area) ||
+    normalized === ".." ||
+    normalized.startsWith("../")
+  );
+}
+
+// SIMPLIFIED: any open question counts as asking every material risk signal.
+// Lift when: a question input names the risk signal it asks about.
+function unaskedRiskSignals(proposal: WorkflowProposal): string[] {
+  if ((proposal.unresolvedQuestions ?? []).length > 0) return [];
+  return (proposal.riskSignals ?? []).filter((signal) => signal !== "authorization-restored");
+}
+
+function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
+  const required = proposal.requiredStages;
+  const plan = proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
+  const planKinds = (plan?.stages ?? []).map((stage) => stage.stageKind);
+  const omittedAlways = (plan?.stages ?? [])
+    .filter((stage) => stage.when === "always" && !required.includes(stage.stageKind))
+    .map((stage) => stage.stageKind);
+  const omittedVerify =
+    proposal.candidateRoute !== "discovery" && !required.includes("verify") ? ["verify"] : [];
+  const unknown = plan ? required.filter((kind) => !planKinds.includes(kind)) : [];
+  return [...new Set([...omittedAlways, ...omittedVerify, ...unknown])];
+}
+
+function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): WorkflowPlan | undefined {
+  const builtIn = proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
+  if (!builtIn || !proposal.goal || !Array.isArray(proposal.proposedWriteScope)) return undefined;
+  return {
+    route: builtIn.route,
+    goal: proposal.goal,
+    stages: builtIn.stages,
+    writeScope: proposal.proposedWriteScope,
+    expectedBehaviorRefs: proposal.expectedBehaviorRefs,
+    observedRefs: proposal.observedRefs,
+  };
+}
+
+function refusalsOf(reason: ProposalRefusalReason, subjects: readonly string[]): ProposalRefusal[] {
+  return subjects.map((subject) => ({ reason, subject }));
+}
+
+function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): ProposalRefusal[] {
+  const references = [...proposal.expectedBehaviorRefs, ...proposal.observedRefs];
+  const pathReferences = references
+    .filter((reference) => reference.kind === "path" || reference.kind === "evidence")
+    .map((reference) => reference.ref);
+  const unknownPaths = [...new Set(pathReferences)].filter(
+    (ref) => facts.pathExistence?.[ref] !== true,
+  );
+  const unknownIds = references
+    .filter(
+      (reference) =>
+        (reference.kind === "spec-id" && !Object.hasOwn(facts.specs ?? {}, reference.ref)) ||
+        (reference.kind === "contract-id" && !(facts.contractIds ?? []).includes(reference.ref)),
+    )
+    .map((reference) => reference.ref);
+  const inactiveSpecs = (proposal.affectedSpecIds ?? []).filter((specId) => {
+    const lifecycle = facts.specs?.[specId]?.lifecycle;
+    return lifecycle !== undefined && lifecycle !== "active";
+  });
+  const protectedAreas = (proposal.proposedWriteScope ?? []).filter((area) =>
+    touchesProtectedSurface(area, proposal.protectedTargets ?? []),
+  );
+  return [
+    ...refusalsOf("unknown-path", unknownPaths),
+    ...refusalsOf("unknown-id", unknownIds),
+    ...refusalsOf("inactive-spec", inactiveSpecs),
+    ...refusalsOf("protected-surface", protectedAreas),
+    ...refusalsOf("scope-escape", (proposal.proposedWriteScope ?? []).filter(escapesRoot)),
+    ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
+    ...refusalsOf("stage-set", stageSetGaps(proposal, facts)),
+  ];
 }
 
 function createQuestion(
@@ -299,11 +466,7 @@ function routePlanIsInvalid(
 export function decide(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
-  facts: {
-    now?: string;
-    pathExistence?: Record<string, boolean>;
-    acceptanceObligationsUnmet?: boolean;
-  },
+  facts: WorkflowFacts,
 ): WorkflowDecision {
   const run = snapshot.run;
   const workOrder = snapshot.outstandingWorkOrder;
@@ -572,7 +735,7 @@ export function decide(
     };
   }
 
-  // SIMPLIFIED: this transition checks path references and feature capability shape.
+  // SIMPLIFIED: this transition checks path references, capability shape and the built-in plan.
   // Lift when: remaining proposal checks supply observer facts and plan rules.
   if (
     input.operation !== "accept" ||
@@ -584,13 +747,12 @@ export function decide(
     result.expectedSequence !== run.sequence ||
     result.outcome !== "accepted" ||
     proposal?.requestKind !== "change" ||
-    proposal.candidateRoute !== "feature" ||
+    !proposal.candidateRoute ||
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
-    !proposal.requiredStages.includes("sdd") ||
-    !proposal.requiredStages.includes("verify") ||
+    !Array.isArray(proposal.requiredStages) ||
     !Array.isArray(capabilities) ||
-    capabilities.length === 0 ||
+    (proposal.candidateRoute === "feature" && capabilities.length === 0) ||
     capabilities.some(
       (capability) =>
         !capability.goal ||
@@ -613,24 +775,40 @@ export function decide(
     };
   }
 
-  const pathReferences = [...proposal.expectedBehaviorRefs, ...proposal.observedRefs]
-    .filter((reference) => reference.kind === "path" || reference.kind === "evidence")
-    .map((reference) => reference.ref);
-  const unknownPaths = [...new Set(pathReferences)].filter(
-    (ref) => facts.pathExistence?.[ref] !== true,
-  );
-  if (unknownPaths.length > 0) {
+  const refusals = proposalRefusals(proposal, facts);
+  if (refusals.length > 0) {
     return {
       verdict: {
         ok: false,
         run,
         error: {
           code: "proposal-refused",
-          message: "A referenced path was not found. Check the route proposal and submit it again.",
-          reasons: unknownPaths.map((subject) => ({ reason: "unknown-path", subject })),
+          message: "The route proposal failed a check. Revise it and submit it again.",
+          reasons: refusals,
         },
       },
       events: [],
+    };
+  }
+
+  const plan = checkedPlan(proposal, facts);
+  if (capabilities.length === 0) {
+    if (!plan) {
+      return {
+        verdict: {
+          ok: false,
+          run,
+          error: {
+            code: "invalid-input",
+            message: "The routing result is not ready. Check it and submit again.",
+          },
+        },
+        events: [],
+      };
+    }
+    return {
+      verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + 1 }, plan },
+      events: [{ type: "plan-accepted", plan }],
     };
   }
 
@@ -648,6 +826,7 @@ export function decide(
       ok: true,
       run: { ...run, state: "awaiting_input", sequence: run.sequence + questions.length + 1 },
       questions,
+      ...(plan ? { plan } : {}),
     },
     events: [
       ...questions.map((question) => ({ type: "question-opened", question })),
