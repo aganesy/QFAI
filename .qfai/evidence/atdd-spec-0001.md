@@ -62,7 +62,7 @@ No test is added. The run re-uses the two cases in
 
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
-| `TDD-0035` | `TC-0001-0026` | Integration | falsifiability | todo   |
+| `TDD-0035` | `TC-0001-0026` | Integration | falsifiability | blocked |
 | `TDD-0036` | `TC-0001-0027` | Integration | falsifiability | todo   |
 
 ### TDD-0035
@@ -81,6 +81,7 @@ No test is added. The run re-uses the two cases in
 - Other rows: `TDD-0036` still passes, because its case reads only the `error` row on line 176. No other test matches `in the same turn`; `tests/integration/sdd/entryCheck.test.ts` reads `skills/qfai-sdd/references/orchestrated-mode.md`, not this file
 - Classification command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts -t "TC-0001-0026: the entry check hands over, works the order, or is off" (run from `packages/qfai`)
 - Classification result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2), at b0c0cdcac2558808fcf69800e84c8f53cb8f36de
+- Not consumed: the plan phase found that the selector carries three states, `pass-on`, `worker` and `off`, so the row is `blocked` on `CR-20260925-0285` before any mutation run. The entry above stays as the handover for the `pass-on` state once the row is re-scoped
 
 ### TDD-0036
 
