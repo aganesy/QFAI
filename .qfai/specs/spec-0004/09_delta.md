@@ -30,6 +30,24 @@
   AC-0004-0018 and its chain require a justification on `R-REJECTED-READOPT`
   and say nothing about the removed code. TDD-0072 stays `done`.
 
+- Change ID: DELTA-0004
+- Date: 2026-09-26
+- Primary: Traceability
+- Tags: @docs, @test
+- Summary: TC-0004-0088 covers the passing clause of AC-0004-0018, with
+  EX-0004-0059 and ledger row TDD-0093 at `todo`. Two requirement bindings
+  that named a missing test file name tracked tests.
+
+## Triage (2026-09-26)
+
+A non-empty justification on `R-REJECTED-READOPT` gets its own test case, and
+the requirement bindings stop naming a file that does not exist.
+
+| Source           | Subject                                                                                                             | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                   | Depends-On |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| User instruction | Add the passing case of AC-0004-0018: EX-0004-0059, TC-0004-0088 and ledger row TDD-0093                            | spec-0004     | UPDATE    | APPEND | -           | AC-0004-0018 says a non-empty justification passes, and no test case covered that clause. TC-0004-0018 keeps its one boundary, the rejection. No criterion or rule changes                                                                                                  | -          |
+| User instruction | Re-point the REQ-0013 and REQ-0015 rows of the requirement bindings in `16_Traceability-ledger.md` to tracked tests | spec-0004     | UPDATE    | MODIFY | -           | Both rows named `tests/core/validate.test.ts`, which does not exist. REQ-0013 takes `tests/core/specScopeValidate.test.ts`, the test BR-0004-0001 binds for `validate.ts`, and REQ-0015 takes `tests/validators/uiEvidenceArtifacts.test.ts`, the test of its own validator | -          |
+
 ## Triage (2026-09-25)
 
 The obligations whose only content is that the work-log surface is absent, or
