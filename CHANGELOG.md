@@ -48,6 +48,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
   the tool does not write.
 
+- **A review pack's request may list its `TDD-ID`s under a heading, and a
+  response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
+  round's ids only from one `TDD-ID:` line, so a `review_request.md` naming
+  them as a `## TDD IDs` bullet list was refused although the review-artifact
+  layout asks for a list. The heading must appear once, and every item under
+  it must be one `TDD-NNNN` id. The per-id `Audited evidence hash` in a
+  response was also compared as raw text, so `sha256:<hex>` failed against the
+  row's bare hex. It is now compared with the prefix and case removed, as the
+  gate's other hash checks already were.
 - **A ledger row that owes a test case and names none is reported**
   (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
   holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
