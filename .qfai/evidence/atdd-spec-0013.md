@@ -624,6 +624,8 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (specSplitByCapability.ts:552 capability check dropped) working-tree+18cbf677… at HEAD b05f9c0ae; AssertionError at sddSkillSpec0013.test.ts:271:84; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0111
 
@@ -670,6 +672,8 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (qfai-sdd SKILL.md:267 bullet deleted) working-tree+398b1495… at HEAD b05f9c0ae; toContain AssertionError at sddSkillSpec0013.test.ts:287:21; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
 ## Coverage Depth Matrix
 
@@ -702,6 +706,7 @@ every total.
 | 5 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 falsifiability run with the capability check dropped at line 552, then the revert and the restored GREEN | #tdd-0110, `specSplitByCapability.ts` | Round 1 | PASS |
 | 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
 | 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 and TDD-0111 refactor verify on the committed tree | #tdd-0110, #tdd-0111 | Refactor verify fields | PASS |
+| 8 | qa-gatekeeper | qa-gatekeeper#1, qa-gatekeeper#2 | /qfai-implement: TDD-0110 and TDD-0111 RED phase gate on the rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0110, #tdd-0111 | qa-gatekeeper fields | PASS |
 
 ## Cross-spec obligations
 
