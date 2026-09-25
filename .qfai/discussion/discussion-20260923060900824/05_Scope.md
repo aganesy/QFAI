@@ -20,8 +20,8 @@
   REQ-0016 authorises and the dogfood re-pin (REQ-0015).
 - Capability 8: the upstream conflicts are recorded as the Change Request
   `/qfai-sdd` raises (REQ-0016).
-- Capability 9: tests that pinned the surface go, and tests that pin its absence
-  come in (REQ-0017).
+- Capability 9: tests that pinned the surface go, and none is added in their
+  place (REQ-0017).
 
 ## Out of Scope
 

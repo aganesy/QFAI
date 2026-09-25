@@ -33,8 +33,15 @@
   the user's instruction (OC-2).
 - Code review requirements: `REVIEW.md`; every finding as an inline pull request
   comment.
-- Testing requirements: every source change has tests (REQ-0017). Removal is
-  pinned by tests of absence, not by deleting tests alone.
+- Testing requirements: `CLAUDE.md` `## Project Rules` asks that every source
+  change has test coverage. For a change that only deletes, that is met as
+  follows (REQ-0017):
+  - The tests that fixed the removed behaviour are deleted with it.
+  - The type check fails on any import of a deleted module.
+  - The behaviour that remains keeps its existing tests. The change adds no test
+    beyond `spec-0004/TDD-0072`, which tests the kept `R-REJECTED-READOPT` rule.
+  - No test asserts that the deleted surface is absent. Such a test covers no
+    behaviour the product has.
 
 ## Operational Policy
 

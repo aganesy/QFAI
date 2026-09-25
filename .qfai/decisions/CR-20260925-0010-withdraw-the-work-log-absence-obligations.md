@@ -83,7 +83,8 @@ For a change that only deletes, this CR records the reading:
 
 - The tests that fixed the removed behaviour are deleted with it.
 - The type check fails on any import of a deleted module.
-- The behaviour that remains keeps its existing tests. The change adds none.
+- The behaviour that remains keeps its existing tests. The change adds no test
+  beyond `spec-0004/TDD-0072`, which tests the kept `R-REJECTED-READOPT` rule.
 
 A test that asserts the deleted surface is absent covers no behaviour the
 product has. `10_Policy.md:36-37` is amended to this reading, so a reviewer
