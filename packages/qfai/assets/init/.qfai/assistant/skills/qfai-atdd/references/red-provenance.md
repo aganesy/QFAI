@@ -174,6 +174,11 @@ gate condition where it is defined below.
       Resolve and stage a merge conflict in a manifest file before recording
       the hash; the gate rejects an unmerged index entry.
 
+      **Take it with the command, not by hand.**
+      `npx qfai evidence hash red-test <path>...`, given the manifest's paths
+      in its order, prints the hash `npx qfai validate` recomputes. It refuses
+      a manifest the gate would refuse.
+
       `kind` and `mode` are in it for the reason they are in that one, and more
       so here: after Phase Green the original `RED revision` cannot be
       recomputed, so this hash

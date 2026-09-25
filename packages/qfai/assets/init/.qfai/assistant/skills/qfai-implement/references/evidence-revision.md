@@ -458,6 +458,9 @@ afterwards therefore moves the recomputation rather than the stored value,
 which is what a seal is for. Excluding the pack from the revision without this left an
 edited PASS reading as fresh.
 
+`npx qfai evidence hash review-pack <pack-dir>` prints the seal gate item 10
+recomputes. Pass the directory exactly as the entry records it.
+
 **Record it per round, and name the pack it seals**: `Round N: Review pack`
 (the `review-<timestamp>/` directory) and `Round N: Review pack seal`
 beside it. A spec has several packs and a blocking REVISE opens more, so a

@@ -27,9 +27,13 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import {
+  checkpointVerificationSeal,
+  completionAuditHash,
   EVIDENCE_CELL_MALFORMED_RULE_ID,
   EVIDENCE_CELL_OVERSIZE_RULE_ID,
   EVIDENCE_RED_PROVENANCE_RULE_ID,
+  redTestManifestHash,
+  reviewPackSealOf,
   ROW_EXTRA_CELLS_RULE_ID,
   validateTddList,
 } from "../../src/core/validators/tddList.js";
@@ -1220,6 +1224,34 @@ describe("QFAI-TDDLIST-008", () => {
       // and carries no command, which is the status-only rule's shape exactly.
       // It still must not fire here.
       expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+
+  it("computes, as `qfai evidence hash` prints them, the values the gate accepted", async () => {
+    // Each value is recorded by a producer and recomputed by the gate. The
+    // command is the producer's way to take it with the gate's own function,
+    // so over an entry the gate accepts it must print what the entry records.
+    await withProject(async (root) => {
+      const evidenceFile = ".qfai/evidence/implement-spec-0001.md";
+      const codes = await runOn(root, ledger([{ status: "done", evidence: GRAMMAR_POINTER }]), {
+        [evidenceFile]: completeEntry("Unit"),
+      });
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+
+      const recorded = await readFile(path.join(root, evidenceFile), "utf-8");
+      const field = (name: string): string =>
+        new RegExp(`^- ${name}: (?:sha256:)?([0-9a-f]{64})$`, "m").exec(recorded)?.[1] ?? "";
+      const specsRoot = path.join(root, ".qfai", "specs");
+      const audit = await completionAuditHash(root, specsRoot, evidenceFile, "TDD-0001", false);
+      const checkpoint = await checkpointVerificationSeal(root, evidenceFile, "TDD-0001");
+      const pack = await reviewPackSealOf(root, REVIEW_PACK_PATH);
+      const red = await redTestManifestHash(root, TEST_FILE);
+
+      expect(field("Spec audited evidence hash")).not.toBe("");
+      expect(audit).toEqual({ hash: field("Spec audited evidence hash") });
+      expect(checkpoint).toEqual({ hash: field("Checkpoint verification seal") });
+      expect(pack).toEqual({ hash: field("Spec review pack seal") });
+      expect(red).toBe(field("Round 1: RED test hash"));
     });
   });
 
@@ -4169,6 +4201,42 @@ ${packPair(1).join("\n")}
       await withProject(async (root) => {
         const issues = await unresolved(root, verdictEntry(), { surfaceArtifacts: CAPTURES });
         expect(issues).toEqual([]);
+      });
+    });
+
+    it("computes, as `qfai evidence hash parity` prints it, the parity hash the gate accepted", async () => {
+      await withProject(async (root) => {
+        const file = ".qfai/evidence/implement-spec-0001.md";
+        const issues = await unresolved(root, verdictEntry(), { surfaceArtifacts: CAPTURES });
+        expect(issues).toEqual([]);
+
+        const recorded = await readFile(path.join(root, file), "utf-8");
+        const field = /^- Prototype parity audited evidence hash: ([0-9a-f]{64})$/m;
+        const parity = field.exec(recorded)?.[1];
+        const specsRoot = path.join(root, ".qfai", "specs");
+        const withCaptures = await completionAuditHash(root, specsRoot, file, "TDD-0001", true);
+        const without = await completionAuditHash(root, specsRoot, file, "TDD-0001", false);
+
+        expect(parity).toBeDefined();
+        expect(withCaptures).toEqual({ hash: parity });
+        // The captures are what the parity subject adds; without them the
+        // command prints the other two reviewers' value, which differs.
+        expect(without).not.toEqual({ hash: parity });
+      });
+    });
+
+    it("refuses a parity hash while a capture the manifest names is absent", async () => {
+      await withProject(async (root) => {
+        const file = ".qfai/evidence/implement-spec-0001.md";
+        await unresolved(root, verdictEntry(), { surfaceArtifacts: CAPTURES });
+        await rm(path.join(root, SCREENSHOT));
+        const specsRoot = path.join(root, ".qfai", "specs");
+
+        const outcome = await completionAuditHash(root, specsRoot, file, "TDD-0001", true);
+
+        expect(outcome).toEqual({
+          refused: "a capture the Surface artifacts manifest names is not in this checkout",
+        });
       });
     });
 

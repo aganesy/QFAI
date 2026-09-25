@@ -3,6 +3,7 @@ import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
+import { runEvidenceHash } from "./commands/evidenceHash.js";
 import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
@@ -55,6 +56,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "audit",
   "sdd",
   "atdd",
+  "evidence",
   "handoff",
   "discussion",
   "prototyping",
@@ -299,6 +301,21 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
         });
       }
       return;
+    case "evidence":
+      {
+        // A missing action, kind or target is refused by parseArgs.
+        const kind = options.evidenceHashKind;
+        if (!kind) {
+          return;
+        }
+        // stdout carries the value alone, so the missing-config notice goes to stderr.
+        process.exitCode = await runEvidenceHash({
+          root: await resolveRoot(options, true),
+          kind,
+          targets: options.evidenceTargets,
+        });
+      }
+      return;
     case "handoff":
       {
         // Only `upgrade` is supported today; parseArgs already
@@ -485,6 +502,10 @@ Commands:
   handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml (CLI-HANDOFF)
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   atdd scaffold --spec <id>    Generate per-TC test skeletons from a spec's Test-Cases (idempotent + N-cycle escalation)
+  evidence hash <kind> <target>...      Print a value the completion gate recomputes, as the gate computes it
+                                        completion|parity|checkpoint <evidence-file>#<TDD-ID>
+                                        review-pack <pack-dir>
+                                        red-test <path>... (the RED test manifest, in its order)
   workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
   prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
   prototyping iterate          Commit one cycle of the single-thread evolution loop

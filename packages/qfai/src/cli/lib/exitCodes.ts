@@ -176,6 +176,14 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "evidence hash",
+    lines: [
+      `${EXIT_CODES.ok} = the value was printed, ${EXIT_CODES.findings} = a runtime error,`,
+      `${EXIT_CODES.inputError} = a usage error, or the target holds nothing to hash (a missing`,
+      "      entry, field, row, pack or file)",
+    ],
+  },
+  {
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
