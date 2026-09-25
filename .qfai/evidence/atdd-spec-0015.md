@@ -49,6 +49,15 @@ Preflight: confidence high
 
 No session opened: the six rows, their test cases and their business rules are settled, and their tests and the text or code that satisfies them already exist.
 
+### /qfai-implement — run started 2026-09-25T13:56:41.487Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+No session opened. Each handover names its predicate and mutation, and each named line held the named text at this revision.
+
 ## Work performed (what changed, where)
 
 - `packages/qfai/tests/integration/agentDelegationSpec0015.test.ts`: the existing test now checks the rest of the `legacy-profile-preservation` boundary after the forced refresh:
@@ -311,6 +320,38 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/spec0015GovernanceAndHandoff.test.ts -t "QFAI:SPEC-0015:TC-0015-0034"
 - Classification result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/validators/autopilotPolicy.ts, `validateAutopilotPolicy` line 597, the present-but-incomplete branch `if (missingBuckets.length > 0) {` — when the `## Default Autopilot Policy` heading is present and any of the three bucket headers is missing, it pushes `R-AUTOPILOT-POLICY-MISSING` at `error` naming every missing bucket
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/spec0015GovernanceAndHandoff.test.ts -t "QFAI:SPEC-0015:TC-0015-0034"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The mutated tree type-checks: `pnpm -C packages/qfai exec tsc --noEmit -p tsconfig.json` exited 0. The row's case fails on `AssertionError: expected undefined to be 'error' // Object.is equality` at `packages/qfai/tests/integration/spec0015GovernanceAndHandoff.test.ts:107:25`
+
+The edit, at line 597:
+
+```diff
+-    if (missingBuckets.length > 0) {
++    if (missingBuckets.length > 3) {
+```
+
+- Round 1: Falsifiability revision: working-tree+57fc028e9570ae82e223ed9a9a0c3ae2ce707f47bea4127806ea1c4dbdb5cb66
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: f313a30cb93c30a919cb7315e748c7d43017eda389a24cbb768962cee5192cdc
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0015GovernanceAndHandoff.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/spec0015GovernanceAndHandoff.test.ts -t "QFAI:SPEC-0015:TC-0015-0034"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23). Run after `git checkout -- packages/qfai/src/core/validators/autopilotPolicy.ts`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+57fc028e9570ae82e223ed9a9a0c3ae2ce707f47bea4127806ea1c4dbdb5cb66, reproduced with HEAD at 7815c13a5; the recorded assertion failed at spec0015GovernanceAndHandoff.test.ts:107:25; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed | 22 skipped; audited evidence hash 87bbb9d18fa0b31c3380ad89143ae076f8a0c3b8ca0e0321ee5642137514f3f3
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
 ### TDD-0054
 
 - TDD-ID: TDD-0054
@@ -327,6 +368,39 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Other rows: TDD-0056 reads the same section but asserts only the four bucket sentences on lines 194-199, so it still passes. TDD-0038, TDD-0055, TDD-0057 and TDD-0058 read other files and still pass.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts -t "TC-0015-0037: a run's valid binding supplies primarySpecId, and with no binding it stays hard-required"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md, line 201 in `## Default Autopilot Policy inside a run` — the binding paragraph states that a `primarySpecId` a run's valid binding supplies counts as supplied, so a valid binding stands in for that hard-required input
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts -t "TC-0015-0037: a run's valid binding supplies primarySpecId, and with no binding it stays hard-required"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The presence assertion on line 19 passed. The row's case fails on ``AssertionError: expected '## Default Autopilot Policy inside a …' to match /a `primarySpecId` that a run's valid…/i`` at `packages/qfai/tests/integration/autopilotBindingExceptionSpec0015.test.ts:20:21`
+
+The edit, at line 201:
+
+```diff
+-A `primarySpecId` that a run's valid binding supplies counts as supplied: the
++A `primarySpecId` that a run's valid binding supplies does not count as supplied: the
+```
+
+- Round 1: Falsifiability revision: working-tree+1f7936f35682a5674009b21483b2a8aec495f5ca440e32bad6649ccc80c6a24c
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: c65b36d0caee72f204fab9a0cb99efb65b4b6331b8e16b86c915a4e9d142b615
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/autopilotBindingExceptionSpec0015.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotBindingExceptionSpec0015.test.ts -t "TC-0015-0037: a run's valid binding supplies primarySpecId, and with no binding it stays hard-required"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+1f7936f35682a5674009b21483b2a8aec495f5ca440e32bad6649ccc80c6a24c, reproduced with HEAD at 7815c13a5; the recorded assertion failed at autopilotBindingExceptionSpec0015.test.ts:20:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash ac8ad737239fecbeb65d2520dded05ab3ea1f69bf43999b2279580a412d174d0
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
 ### TDD-0055
 
@@ -345,6 +419,39 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/routingManifestEntrySkillsSpec0015.test.ts -t "TC-0015-0038: qfai-run routes the orchestrator only, qfai-maintain an author and an independent reviewer on default"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml, line 419 in the `qfai-run` entry's `route` phase — `mandatory_agents: [orchestrator]` routes the orchestrator and no author or reviewer
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/routingManifestEntrySkillsSpec0015.test.ts -t "TC-0015-0038: qfai-run routes the orchestrator only, qfai-maintain an author and an independent reviewer on default"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [ 'orchestrator', 'doc-steward' ] to deeply equal [ 'orchestrator' ]` at `packages/qfai/tests/integration/routingManifestEntrySkillsSpec0015.test.ts:64:58`
+
+The edit, at line 419:
+
+```diff
+-        mandatory_agents: [orchestrator]
++        mandatory_agents: [orchestrator, doc-steward]
+```
+
+- Round 1: Falsifiability revision: working-tree+c04d8b730175a86b56d5a6dc69b1988d996b4de5e28a54c8b737afdc5a9b595b
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 287bff44a42711981ba4d82d863611f8c85ce9913bf5a86140b5061b49c1a1e8
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/routingManifestEntrySkillsSpec0015.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/routingManifestEntrySkillsSpec0015.test.ts -t "TC-0015-0038: qfai-run routes the orchestrator only, qfai-maintain an author and an independent reviewer on default"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+c04d8b730175a86b56d5a6dc69b1988d996b4de5e28a54c8b737afdc5a9b595b, reproduced with HEAD at 7815c13a5; the recorded assertion failed at routingManifestEntrySkillsSpec0015.test.ts:64:58; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash 5f73eaf3071c32a4ed7ca15096af770a6399c102939d81177bafc89e6a1d530f
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
 ### TDD-0056
 
 - TDD-ID: TDD-0056
@@ -361,6 +468,39 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Other rows: TDD-0054 reads the same section but asserts only the binding paragraph on lines 201-203, so it still passes. TDD-0038, TDD-0055, TDD-0057 and TDD-0058 read other files and still pass.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts -t "TC-0015-0039: ask-user by a human_decision, hard-required by request_scope or the binding, auto-decide by none, --auto by nothing"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md, line 194 in `## Default Autopilot Policy inside a run` — the `ask-user` bullet states that an `ask-user` item is satisfied only by a `human_decision` that answers it, making that the one authorization for the bucket
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts -t "TC-0015-0039: ask-user by a human_decision, hard-required by request_scope or the binding, auto-decide by none, --auto by nothing"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The presence assertion on line 19 passed. The row's case fails on ``AssertionError: expected '## Default Autopilot Policy inside a …' to match /an `ask-user` item is satisfied only…/i`` at `packages/qfai/tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts:20:21`
+
+The edit, at line 194:
+
+```diff
+-- An `ask-user` item is satisfied only by a `human_decision` that answers it.
++- An `ask-user` item is satisfied by a `human_decision` that answers it.
+```
+
+- Round 1: Falsifiability revision: working-tree+154ee43b7af01b76d92b330f12314e4cebe12bd665c1d213819de0ffc305454a
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 73cd1378d95a8760c96a811828ac17f3ee4272c5fbd292bf8364066c1432c752
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/autopilotAuthorizationBucketsSpec0015.test.ts -t "TC-0015-0039: ask-user by a human_decision, hard-required by request_scope or the binding, auto-decide by none, --auto by nothing"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+154ee43b7af01b76d92b330f12314e4cebe12bd665c1d213819de0ffc305454a, reproduced with HEAD at 7815c13a5; the recorded assertion failed at autopilotAuthorizationBucketsSpec0015.test.ts:20:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash 187eb3941faff1756cff5629fffd322a6430fb0dc1aac953d54a96fa1d57392b
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
 
 ### TDD-0057
 
@@ -379,6 +519,39 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts -t "TC-0015-0040: the history travels with every work order, and an author or recommender is never its own independent reviewer"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md, line 270 in `### Actor history in a run` — the independence bullet states that an agent instance recorded as the author or recommender of an artifact never counts as that artifact's independent reviewer
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts -t "TC-0015-0040: the history travels with every work order, and an author or recommender is never its own independent reviewer"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The presence assertion and the first content assertion passed. The row's case fails on `AssertionError: expected '### Actor history in a run - The run\…' to match /recorded there as the author or reco…/i` at `packages/qfai/tests/integration/actorHistoryRunSpec0015.test.ts:23:21`
+
+The edit, at line 270:
+
+```diff
+-  never counts as that artifact's independent reviewer, whichever stage it
++  may count as that artifact's independent reviewer, whichever stage it
+```
+
+- Round 1: Falsifiability revision: working-tree+9885a6f3f09437f13f25d2c4aa1c5a975aaaa3a6e0e9dedd7e97a945818e217a
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 9fcad70c9efd3256a2d92e6bf3b42199ac0dd0e5545df1428141a47bc899e3a2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/actorHistoryRunSpec0015.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/actorHistoryRunSpec0015.test.ts -t "TC-0015-0040: the history travels with every work order, and an author or recommender is never its own independent reviewer"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+9885a6f3f09437f13f25d2c4aa1c5a975aaaa3a6e0e9dedd7e97a945818e217a, reproduced with HEAD at 7815c13a5; the recorded assertion failed at actorHistoryRunSpec0015.test.ts:23:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash f3f3e00a7a5a2bc49151ba137fb0c6548453524299e6279167db57bfca7cd1ae
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
 ### TDD-0058
 
 - TDD-ID: TDD-0058
@@ -396,6 +569,39 @@ From `qa-strategist#1`. Signals are planning hints, not gates.
 - Classification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/grillingInRunSpec0015.test.ts -t "TC-0015-0041: settled is taken as settled, only the remaining frontier is worked, and the session split stands"
 - Classification result: Test Files 1 passed (1); Tests 1 passed (1), at f89e2bbd5852947d19cb6d5ad00aaad7c2f6096c
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md, line 280 in `### Grilling in a run` — the frontier bullet limits a grilling session inside a run to the frontier the work order leaves open
+- Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/grillingInRunSpec0015.test.ts -t "TC-0015-0041: settled is taken as settled, only the remaining frontier is worked, and the session split stands"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The presence assertion on line 18 and the `settled` assertion on line 19 passed. The row's case fails on `AssertionError: expected '### Grilling in a run - A grilling se…' to match /works only the remaining frontier/i` at `packages/qfai/tests/integration/grillingInRunSpec0015.test.ts:20:21`
+
+The edit, at line 280:
+
+```diff
+-- It works only the remaining frontier.
++- It works the whole frontier again.
+```
+
+- Round 1: Falsifiability revision: working-tree+46dd2a5f329e6307a708bb7488a21cdefad8f21112af3317f4868d14d9c84d63
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 979d0449dc55dc2a15f150fb68f6bf10fce4976b9a8a99606bde90c3e1eb7563
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/grillingInRunSpec0015.test.ts
+```
+
+- Round 1: Revision: 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac
+- Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/grillingInRunSpec0015.test.ts -t "TC-0015-0041: settled is taken as settled, only the remaining frontier is worked, and the session split stands"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-delegation-baseline.md`, which restores the file as it is at that revision
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#3 PASS — RED phase gate on the rebuilt mutated tree working-tree+46dd2a5f329e6307a708bb7488a21cdefad8f21112af3317f4868d14d9c84d63, reproduced with HEAD at 7815c13a5; the recorded assertion failed at grillingInRunSpec0015.test.ts:20:21; the RED test hash recomputes and the manifest is complete; qa-gatekeeper#3 PASS — build-phase GREEN and oracle proof at 7815c13a5ef2de919f39b6c1f2d5e30bca7b24ac: selector 1 passed (1); audited evidence hash aea4ee5c9f8546929adc81595f3ebf3257aa3044d3e8a6c5adac65164f2c1de8
+
+- Ledger: the orchestrator wrote `todo -> red`, `red -> green` and `green -> refactor` at 2026-09-25T14:19:24.085Z, after both qa-gatekeeper gates passed. `Test file` and `Selector` were already in the ledger and equal this entry.
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / ⚠️ 24 / ❌ 5.
@@ -412,6 +618,9 @@ See `.qfai/evidence/coverage-depth-spec-0015.md` (committed). Totals: ✅ 24 / �
 | 6 | - | n/a | grilling(-@2026-09-25T09:01:01.993Z/none): none | - | - | PASS |
 | 7 | acceptance-test-engineer | acceptance-test-engineer#2 | /qfai-atdd: hand over TDD-0038 and TDD-0054 to TDD-0058 on the falsifiability branch | the six test files and their predicates | #tdd-0038, #tdd-0054 to #tdd-0058 | PASS |
 | 8 | - | n/a | grilling(-@2026-09-25T12:04:27.243Z/none): none | - | - | PASS |
+| 9 | - | n/a | grilling(-@2026-09-25T13:56:41.487Z/none): none | - | - | PASS |
+| 10 | backend-engineer | backend-engineer#1 | /qfai-implement red step 3c: falsifiability runs for TDD-0038 and TDD-0054 to TDD-0058, each reverted to its GREEN | #tdd-0038, #tdd-0054 to #tdd-0058 | Round 1 of each entry | PASS |
+| 11 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement: RED phase gate on each rebuilt mutated tree, and the build-phase GREEN, for TDD-0038 and TDD-0054 to TDD-0058 | #tdd-0038, #tdd-0054 to #tdd-0058 | qa-gatekeeper fields of each entry | PASS |
 
 ## Cross-spec obligations
 
