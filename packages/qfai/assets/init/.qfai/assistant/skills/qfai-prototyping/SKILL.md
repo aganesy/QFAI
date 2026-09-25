@@ -332,90 +332,16 @@ covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 
 ### Scope reduction: `prototyping rescope`
 
-The drift rule above is symmetric, and scope **reduction** is not. When a
-product decision retires a screen while the loop is open, the frozen union
-still names it — and editing that union by hand is the exit-2 drift the rule
-exists to catch. `rescope` is the operation that applies such a decision
-without discarding the loop:
-
-```bash
-npx qfai prototyping rescope --remove 0011 --reason DELTA-022
-```
-
-It drops the surface from `frozenSurfaceUnion`, prunes it from any captured
-`iterate-plan.json#screens`, records `{surface, reason, cycle, at}` in
-`prototyping.json#rescopeLog`, and **leaves the loop at its current cycle**.
-`--remove` is repeatable; `--reason` is required and should cite the recorded
-delta or decision that retired the surface. `--dry-run` reports without
-writing.
-
-**Order matters.** Retire the surface upstream first — the spec, its UI
-contract and its route — then run `rescope`. It refuses a surface that still
-resolves as UI-bearing, because dropping one that still exists is exactly the
-drift the frozen union detects. It also refuses a sealed loop (`stopReason`
-set): a completed loop's scope is history.
-
-**It never rewrites a critique.** What a reviewer saw at cycle N is a
-historical fact, so affected `iter-NN/review.json` files get a
-`retiredSurfaces` annotation and their `proseCritique` is left exactly as
-written. A reader can then tell a stale claim from a wrong one.
-
-`npx qfai validate --profile prototyping` reports `QFAI-PROT-011` as soon as
-`frozenSurfaceUnion` names a spec that no longer resolves, so the state is
-visible before the next `iterate` rather than at it. Three ways out:
-
-- **rescope** — the decision was real; apply it and keep every recorded
-  iteration;
-- **restore** the retired spec's UI-bearing marker — the decision was not meant
-  to remove this surface; or
-- **reset** deliberately from cycle 0
-  (`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`), which
-  moves `iter-00` to `iter-00.backup-<ISO>` and discards every cycle of review
-  already paid for. Still available, still destructive.
-
-`iterate` itself only hard-stops when **every** UI-bearing spec has
-disappeared. A partial reduction passes that check, which is why the finding
-exists.
+When a product decision retires a screen while the loop is open, apply it with
+`npx qfai prototyping rescope --remove <spec> --reason <decision>` rather than
+editing `frozenSurfaceUnion` by hand. Procedure, preconditions and the
+`QFAI-PROT-011` finding: `references/iteration-loop.md#scope-reduction-prototyping-rescope`.
 
 ### License-verify hard-stop (exit 66)
 
-`npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
-`prototyping.json` violates the **effective** license catalog: the
-immutable `frozenLicenseCatalog` baseline unioned with every
-`licensePatchAudit[]` row. The verifier rejects five distinct error
-codes:
-
-- `license-not-allowlisted` — `source` not in `allowedSources`
-- `license-tier-unknown` — `license` not in `licenseTiers[source]`
-- `license-non-https-url` — `url` is not HTTPS
-- `license-host-mismatch` — URL host not in `sourceHosts[source]`
-- `license-missing-attribution` — `attribution` empty / whitespace
-
-Recovery path (no in-loop retry — the verifier is fail-closed):
-
-1. Inspect `prototyping.json#frozenLicenseCatalog` **and**
-   `prototyping.json#licensePatchAudit[]`: the effective
-   `allowedSources` / `licenseTiers` is the baseline plus every audit
-   row, so the frozen field alone omits every permission a
-   `--license-patch` already added. `sourceHosts` is the exception —
-   an audit row persists no hosts, so the effective `sourceHosts` stays
-   exactly the baseline and a patch-added source carries **no** host
-   binding. The verifier skips the host check for a source with no
-   `sourceHosts` entry, so any HTTPS host passes under that source
-   name; host pinning for an added source is not available today.
-2. Edit the offending `imageSources[]` entry to use an allowlisted
-   source / known tier / HTTPS URL / matching host / non-empty
-   attribution. **Do not** edit `frozenLicenseCatalog` mid-loop
-   (separate exit-2 lock-drift class).
-3. To broaden the allowlist, apply an add-only `--license-patch` at the
-   current cycle — no cycle-0 restart. Deletions / modifications inside
-   a patch file are rejected outright. Revoking an already-applied
-   permission is a manual step: `--cycle 0 --force` re-seeds the loop
-   but does **not** clear `licensePatchAudit[]`, so every prior row is
-   unioned back in from cycle 1. Delete (or archive elsewhere) the
-   offending rows from `prototyping.json#licensePatchAudit[]` yourself
-   as part of the re-seed — that array is not covered by the lock-drift
-   gate, unlike `frozenLicenseCatalog`.
+`npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry violates
+the effective license catalog. The five error codes and the recovery path:
+`references/iteration-loop.md#license-verify-hard-stop-exit-66`.
 
 ### Cycle 9 budget exhaustion
 

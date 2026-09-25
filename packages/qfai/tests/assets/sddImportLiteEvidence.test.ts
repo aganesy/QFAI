@@ -31,6 +31,8 @@ import { validateImportLiteEvidencePresence } from "../../src/core/validators/im
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL_REL = "assistant/skills/qfai-sdd/SKILL.md";
+// The skill body names the producer and points here for the rest of the route.
+const PLAYBOOK_REL = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
 const TEMPLATE_REL = "assistant/skills/qfai-sdd/templates/evidence/import-lite.md";
 const TRIAGE_REL = "assistant/skills/qfai-sdd/references/sdd-triage.md";
 const TRACE_REL = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
@@ -142,6 +144,9 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       expect(skill).toContain("`templates/evidence/import-lite.md`");
       expect(skill).toContain("Stage 0");
       expect(skill).toContain("QFAI-IMPLITE-001");
+      expect(skill).toContain(
+        "references/sdd-execution-playbook.md#import-lite-evidence-naming-lifetime-and-intake",
+      );
     });
 
     it(`${tree}: SKILL.md lists import-lite evidence among the Mandatory Outputs`, async () => {
@@ -187,7 +192,7 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       // "List the directory, take a free name" is not a reservation: two runs
       // inside the same second both see the same name free and the later write
       // erases the earlier run's trail. The claim has to be the create itself.
-      for (const rel of [TEMPLATE_REL, SKILL_REL]) {
+      for (const rel of [TEMPLATE_REL, PLAYBOOK_REL]) {
         const doc = flat(await read(tree, rel));
         expect(doc, `${rel} does not require an exclusive create`).toContain("exclusive create");
         expect(doc, `${rel} does not say to retry the counter`).toMatch(/retry|until the name/i);
@@ -211,7 +216,7 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       // purpose. A document that sent a relocated project to the `evidence/`
       // sibling of its `paths.discussionDir` would put the file where nothing
       // looks, leaving QFAI-IMPLITE-001 unclearable by following the docs.
-      for (const rel of [TEMPLATE_REL, SKILL_REL, TRIAGE_REL]) {
+      for (const rel of [TEMPLATE_REL, SKILL_REL, PLAYBOOK_REL, TRIAGE_REL]) {
         const doc = flat(await read(tree, rel));
         expect(doc, `${rel} sends the evidence to a discussionDir-relative directory`).not.toMatch(
           /`evidence\/` sibling/i,
@@ -223,9 +228,9 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       // Stage 0 persists before Stage 1 can stop, so without this rule an
       // input-less `import-lite-*` file survives and silences the very code
       // that should have reported the missing input source.
-      const skill = flat(await read(tree, SKILL_REL));
-      expect(skill).toContain("User provided excerpt");
-      expect(skill).toMatch(/delete it if the run then stops/i);
+      const playbook = flat(await read(tree, PLAYBOOK_REL));
+      expect(playbook).toContain("User provided excerpt");
+      expect(playbook).toMatch(/delete it if the run then stops/i);
       const triage = flat(await read(tree, TRIAGE_REL));
       expect(triage).toMatch(/delete the evidence file/i);
     });
@@ -234,7 +239,7 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       // `runSddPreflight` resolves the entrypoint itself and stamps
       // `source: import-lite`, so the summary has somewhere truthful to record
       // an import-lite input and nobody should hand-write a second copy.
-      const skill = flat(await read(tree, SKILL_REL));
+      const skill = flat(await read(tree, PLAYBOOK_REL));
       expect(skill).toContain("runSddPreflight");
       expect(skill, "the skill still tells the agent to hand-write the summary").not.toMatch(
         /write the preflight summary by hand/i,
@@ -282,10 +287,14 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       // Stage 0 holds a pack to be non-normative: an incomplete one does not
       // stop the stage, and repairing it to pass a gate is forbidden. A rule
       // here saying "complete the pack" contradicts both.
+      const playbook = flat(await read(tree, PLAYBOOK_REL));
+      expect(playbook).toContain("the pack is present, so this route never opens for it");
+      expect(playbook).toContain(
+        "Neither repair the pack nor write import-lite evidence beside it",
+      );
       const skill = flat(await read(tree, SKILL_REL));
-      expect(skill).toContain("the pack is present, so this route never opens for it");
-      expect(skill).toContain("Neither repair the pack nor write import-lite evidence beside it");
       expect(skill).not.toContain("complete the pack, never import-lite past it");
+      expect(playbook).not.toContain("complete the pack, never import-lite past it");
       // The Stage 0 rule this has to agree with.
       expect(skill).toContain(
         "an incomplete pack, a contradictory one, or a blocking discussion OQ does not by itself stop this stage",

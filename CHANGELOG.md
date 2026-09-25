@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Three skill bodies move detail into the files they point at** (#2246). A
+  skill body loads whole when the skill triggers. `qfai-configure`, `qfai-sdd`
+  and `qfai-prototyping` now each stay under 500 lines. The configure evidence
+  template, the batch Plan gate, the import-lite evidence rules, the
+  `DESIGN.md` freeze steps, the `rescope` procedure and the license-verify
+  recovery path are moved, not rewritten. Each body keeps a pointer to the
+  moved section. The references that grew past 100 lines now open with a
+  contents list.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

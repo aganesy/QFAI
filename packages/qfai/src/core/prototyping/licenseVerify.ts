@@ -105,7 +105,7 @@ function urlHost(url: string): string | null {
  * callers see the full failure surface).
  *
  * Per the shipped prototyping skill
- * (`.qfai/assistant/skills/qfai-prototyping/SKILL.md`
+ * (`.qfai/assistant/skills/qfai-prototyping/references/iteration-loop.md`
  * §License-verify hard-stop (exit 66)), three failure modes raise exit 66:
  *   - non-allowlisted source host
  *   - unknown license tier for an allowlisted source

@@ -131,4 +131,15 @@ describe("TC-0009-0009: Coverage Placeholder for EX-0009-0005", () => {
     expect(content).toMatch(/evidence.*configure-<run-id>\.md/i);
     expect(content).toContain("Evidence (MANDATORY)");
   });
+
+  it("SKILL.md points at the evidence template it no longer inlines", async () => {
+    const content = await readFile(SKILL_PATH, "utf-8");
+    expect(content).toContain("`templates/configure-evidence.md`");
+    const template = await readFile(
+      path.join(path.dirname(SKILL_PATH), "templates", "configure-evidence.md"),
+      "utf-8",
+    );
+    expect(template).toContain("# Configure Evidence: <run-id>");
+    expect(template).toContain("## Minimum runnable path");
+  });
 });
