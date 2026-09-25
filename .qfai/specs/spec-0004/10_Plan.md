@@ -49,7 +49,7 @@ What the validators of this spec lose:
 The order inside the change. Only its head has to be green:
 
 1. Write the failing tests first: TC-0003-0059..0061, TC-0004-0074..0076, both
-   boundaries of TC-0004-0018, TC-0011-0013, TC-0013-0036 and TC-0013-0037.
+   boundaries of TC-0004-0018, TC-0011-0013, TC-0013-0038 and TC-0013-0039.
    Each fails against the current code, except two rows that assert behaviour
    the code already has: TDD-0072 (`rejected-readopt-empty`) and TDD-0070
    (`blocked-by-empty`). Those two record RED under

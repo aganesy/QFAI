@@ -1,5 +1,33 @@
 # 09 Delta (Migration Record)
 
+## Renumbering after the merge (2026-09-25)
+
+The main branch gave the first six IDs below to the optional side artifact
+rules before this pack gave them to the work-log removal chain (DELTA-0001).
+Main keeps them, and the chain moves to the next free IDs (DR-0013-0017).
+Commit messages written before the merge still carry the old IDs.
+
+| Old ID       | New ID       | Subject                                       |
+| ------------ | ------------ | --------------------------------------------- |
+| AC-0013-0028 | AC-0013-0030 | Records Go To The Spec Pack                   |
+| BR-0013-0021 | BR-0013-0023 | Decisions And Discoveries Go To The Spec Pack |
+| EX-0013-0021 | EX-0013-0023 | Record Homes In The Shipped qfai-sdd Text     |
+| TC-0013-0036 | TC-0013-0038 | Records Go To The Spec Pack                   |
+| TC-0013-0037 | TC-0013-0039 | Approval Stop Writes No Entry                 |
+| TDD-0044     | TDD-0110     | `record-homes-stated`                         |
+| TDD-0045     | TDD-0111     | `stop-steps-stated`                           |
+| TDD-0046     | TDD-0112     | `no-worklog-section`                          |
+| TDD-0047     | TDD-0113     | `no-pending-promotion-example`                |
+| TDD-0048     | TDD-0114     | `no-surface-reference-in-tree`                |
+| TDD-0049     | TDD-0115     | `no-worklog-entry-named`                      |
+
+- `AC-0013-0029`, `BR-0013-0022` and `EX-0013-0022` did not collide and keep
+  their IDs.
+- The six rows are seeded at `todo` under their new IDs and are completed
+  again. Their tests changed title and annotation with the IDs, so the recorded
+  runs no longer describe the test bytes. Those runs stay in
+  `.qfai/evidence/atdd-spec-0013.md` as earlier rounds under the new headings.
+
 ## Change Summary
 
 - Change ID: DELTA-0001
@@ -8,8 +36,8 @@
 - Tags: @docs, @test
 - Summary: The qfai-sdd skill names the spec-pack home of each record, and its
   approval stop writes nothing beyond the Triage table and the stop report.
-  AC-0013-0028 and AC-0013-0029, each with one BR, EX and TC, are added, seeded
-  as TDD-0044..TDD-0049, one row per boundary.
+  AC-0013-0030 and AC-0013-0029, each with one BR, EX and TC, are added, seeded
+  as TDD-0110..TDD-0115, one row per boundary.
 
 ## Triage (2026-09-23)
 
@@ -18,16 +46,16 @@ writes nothing beyond the Triage table and the stop report.
 
 | Source                                | Subject                                                                                                                                                                                                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                         | Depends-On |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| discussion-20260923060900824#REQ-0007 | Append AC-0013-0028, BR-0013-0021, EX-0013-0021, TC-0013-0036: `SKILL.md` names the same homes, and carries no work-log section and no `W-PENDING-PROMOTION` example                                                                                                                                               | spec-0013     | UPDATE    | APPEND | -           | No item covers this text, and the acceptance signal needs a test. Phase 2b seeds a ledger row for TC-0013-0036                                    | -          |
-| discussion-20260923060900824#REQ-0008 | Append AC-0013-0029, BR-0013-0022, EX-0013-0022, TC-0013-0037: `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` state the same stop (leave `Approved By` as `-`, do not enter Phase 0, report each unapproved row with its Operation and target), and none names a work-log entry | spec-0013     | UPDATE    | APPEND | -           | The record of a stop is the `Approved By: -` cell, the `QFAI-TRIAGE-005` errors and the stop report. Phase 2b seeds a ledger row for TC-0013-0037 | -          |
+| discussion-20260923060900824#REQ-0007 | Append AC-0013-0030, BR-0013-0023, EX-0013-0023, TC-0013-0038: `SKILL.md` names the same homes, and carries no work-log section and no `W-PENDING-PROMOTION` example                                                                                                                                               | spec-0013     | UPDATE    | APPEND | -           | No item covers this text, and the acceptance signal needs a test. Phase 2b seeds a ledger row for TC-0013-0038                                    | -          |
+| discussion-20260923060900824#REQ-0008 | Append AC-0013-0029, BR-0013-0022, EX-0013-0022, TC-0013-0039: `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` state the same stop (leave `Approved By` as `-`, do not enter Phase 0, report each unapproved row with its Operation and target), and none names a work-log entry | spec-0013     | UPDATE    | APPEND | -           | The record of a stop is the `Approved By: -` cell, the `QFAI-TRIAGE-005` errors and the stop report. Phase 2b seeds a ledger row for TC-0013-0039 | -          |
 
 - Ledger: Phase 2b appends one row per boundary at `todo` (DL-0012):
-  TDD-0044, TDD-0046, TDD-0047 and TDD-0048 for TC-0013-0036, `BR-Ref`
-  BR-0013-0021; TDD-0045 and TDD-0049 for TC-0013-0037, `BR-Ref` BR-0013-0022.
+  TDD-0110, TDD-0112, TDD-0113 and TDD-0114 for TC-0013-0038, `BR-Ref`
+  BR-0013-0023; TDD-0111 and TDD-0115 for TC-0013-0039, `BR-Ref` BR-0013-0022.
   All are `Integration`, `T2`, owning module
   `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`. No row is reset
   or retired.
-- Ledger: `Tier` is seeded on TDD-0044..TDD-0049 only. No Change Request
+- Ledger: `Tier` is seeded on TDD-0110..TDD-0115 only. No Change Request
   drives this run, and re-deriving the other rows could raise a tier, which
   returns a `done` row to `todo` although this change does not touch it
   (DL-0009).
@@ -39,17 +67,17 @@ writes nothing beyond the Triage table and the stop report.
 | Date       | DL      | Summary                                                              |
 | ---------- | ------- | -------------------------------------------------------------------- |
 | 2026-09-23 | DL-0001 | The skill names the spec-pack homes, not `Blocked-By`                |
-| 2026-09-23 | DL-0002 | Texts of AC-0013-0028, BR-0013-0021, EX-0013-0021 and TC-0013-0036   |
-| 2026-09-23 | DL-0003 | Texts of AC-0013-0029, BR-0013-0022, EX-0013-0022 and TC-0013-0037   |
-| 2026-09-23 | DL-0004 | TC-0013-0036 checks the whole assistant tree                         |
+| 2026-09-23 | DL-0002 | Texts of AC-0013-0030, BR-0013-0023, EX-0013-0023 and TC-0013-0038   |
+| 2026-09-23 | DL-0003 | Texts of AC-0013-0029, BR-0013-0022, EX-0013-0022 and TC-0013-0039   |
+| 2026-09-23 | DL-0004 | TC-0013-0038 checks the whole assistant tree                         |
 | 2026-09-23 | DL-0005 | Source lines on the new ACs and qualified requirement lines          |
 | 2026-09-23 | DL-0006 | One BR, EX and TC per new AC                                         |
-| 2026-09-23 | DL-0007 | TDD-0044 and TDD-0045 are T2                                         |
+| 2026-09-23 | DL-0007 | TDD-0110 and TDD-0111 are T2                                         |
 | 2026-09-23 | DL-0008 | Their owning module is the skill directory                           |
 | 2026-09-23 | DL-0009 | Tier seeded on the new rows only                                     |
-| 2026-09-23 | DL-0010 | BR-0013-0021 and BR-0013-0022 are realized by the shipped skill text |
+| 2026-09-23 | DL-0010 | BR-0013-0023 and BR-0013-0022 are realized by the shipped skill text |
 | 2026-09-23 | DL-0011 | The plan names the edit path and cites spec-0004 for the order       |
-| 2026-09-23 | DL-0012 | One row per boundary: TDD-0044..TDD-0049                             |
+| 2026-09-23 | DL-0012 | One row per boundary: TDD-0110..TDD-0115                             |
 
 ## Decision Log
 
@@ -88,7 +116,7 @@ notes: The qfai-sdd skill names 07_Decisions.md, 08_Open-questions.md and a Chan
 - id: VFY-001
   level: integration
   target: Record homes in the shipped qfai-sdd text
-  method: TC-0013-0036 reads SKILL.md and references/**
+  method: TC-0013-0038 reads SKILL.md and references/**
   owner: dev
   expected: A decision goes to 07_Decisions.md or a Change Request, and a consultation or discovery to 08_Open-questions.md or a Change Request.
   links:
@@ -110,7 +138,7 @@ scope:
   - spec-0013/04_Business-Rules.md
   - spec-0013/05_Examples.md
   - spec-0013/06_Test-Cases.md
-notes: AC-0013-0028, BR-0013-0021, EX-0013-0021 and TC-0013-0036 name the homes with no Decision Log mention and no settled or unsettled split (DR-0013-0006).
+notes: AC-0013-0030, BR-0013-0023, EX-0013-0023 and TC-0013-0038 name the homes with no Decision Log mention and no settled or unsettled split (DR-0013-0006).
 ```
 
 #### Migration / Follow-ups
@@ -132,7 +160,7 @@ notes: AC-0013-0028, BR-0013-0021, EX-0013-0021 and TC-0013-0036 name the homes 
 - id: VFY-001
   level: integration
   target: SKILL.md sections and examples
-  method: TC-0013-0036 reads SKILL.md
+  method: TC-0013-0038 reads SKILL.md
   owner: dev
   expected: No Work-log entries section and no W-PENDING-PROMOTION example.
   links:
@@ -168,7 +196,7 @@ notes: The missing-approval stop leaves Approved By as -, does not enter Phase 0
 - id: VFY-001
   level: integration
   target: The missing-approval stop in three files
-  method: TC-0013-0037 reads SKILL.md, references/sdd-execution-playbook.md and references/sdd-triage.md
+  method: TC-0013-0039 reads SKILL.md, references/sdd-execution-playbook.md and references/sdd-triage.md
   owner: dev
   expected: Each states the three steps and none contains work-log or consultation-needed.
   links:
@@ -187,7 +215,7 @@ tags: ["@test"]
 compat: Improvement
 scope:
   - spec-0013/06_Test-Cases.md
-notes: AC-0013-0028, BR-0013-0021 and EX-0013-0021 state the tree-wide absence clause and TC-0013-0036 checks it (DR-0013-0008).
+notes: AC-0013-0030, BR-0013-0023 and EX-0013-0023 state the tree-wide absence clause and TC-0013-0038 checks it (DR-0013-0008).
 ```
 
 #### Migration / Follow-ups
@@ -218,7 +246,7 @@ compat: Improvement
 scope:
   - spec-0013/01_Spec.md
   - spec-0013/03_Acceptance-Criteria.md
-notes: AC-0013-0028 and AC-0013-0029 carry Source lines; 01_Spec.md names both requirements with the pack id and no local id (DR-0013-0009).
+notes: AC-0013-0030 and AC-0013-0029 carry Source lines; 01_Spec.md names both requirements with the pack id and no local id (DR-0013-0009).
 ```
 
 #### Migration / Follow-ups
@@ -270,7 +298,7 @@ tags: ["@test"]
 compat: Improvement
 scope:
   - spec-0013/tdd/test-list.md
-notes: TDD-0044 and TDD-0045 are T2 because their tests read shipped files (DR-0013-0011).
+notes: TDD-0110 and TDD-0111 are T2 because their tests read shipped files (DR-0013-0011).
 ```
 
 #### Migration / Follow-ups
@@ -296,7 +324,7 @@ tags: ["@test"]
 compat: Improvement
 scope:
   - spec-0013/tdd/test-list.md
-notes: The owning module of TDD-0044 and TDD-0045 is packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd (DR-0013-0012).
+notes: The owning module of TDD-0110 and TDD-0111 is packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd (DR-0013-0012).
 ```
 
 #### Migration / Follow-ups
@@ -315,7 +343,7 @@ tags: ["@test"]
 compat: Improvement
 scope:
   - spec-0013/tdd/test-list.md
-notes: Tier is seeded on TDD-0044 and TDD-0045 only; the other rows are not re-derived because no Change Request drives this run (DR-0013-0013).
+notes: Tier is seeded on TDD-0110 and TDD-0111 only; the other rows are not re-derived because no Change Request drives this run (DR-0013-0013).
 ```
 
 #### Migration / Follow-ups
@@ -340,8 +368,8 @@ primary: Ops
 tags: ["@docs"]
 compat: Improvement
 scope:
-  - spec-0013/04_Business-Rules.md (BR-0013-0021, BR-0013-0022)
-notes: BR-0013-0021 and BR-0013-0022 are realized by the shipped qfai-sdd skill text; their named homes resolve to templates, schemas, specPack.ts and .qfai/decisions/, with no contract (DR-0013-0014).
+  - spec-0013/04_Business-Rules.md (BR-0013-0023, BR-0013-0022)
+notes: BR-0013-0023 and BR-0013-0022 are realized by the shipped qfai-sdd skill text; their named homes resolve to templates, schemas, specPack.ts and .qfai/decisions/, with no contract (DR-0013-0014).
 ```
 
 #### Migration / Follow-ups
@@ -392,15 +420,15 @@ primary: Ops
 tags: ["@test"]
 compat: Improvement
 scope:
-  - spec-0013/06_Test-Cases.md (TC-0013-0036, TC-0013-0037)
-  - spec-0013/tdd/test-list.md (TDD-0044..TDD-0049)
-notes: TC-0013-0036 names four boundaries and TC-0013-0037 two, one ledger row each (DR-0013-0016).
+  - spec-0013/06_Test-Cases.md (TC-0013-0038, TC-0013-0039)
+  - spec-0013/tdd/test-list.md (TDD-0110..TDD-0115)
+notes: TC-0013-0038 names four boundaries and TC-0013-0039 two, one ledger row each (DR-0013-0016).
 ```
 
 #### Migration / Follow-ups
 
 - `/qfai-atdd` writes one test per boundary and records each RED on its own.
-- TDD-0048 turns green only once the spec-0011 and spec-0003/spec-0004 rows
+- TDD-0114 turns green only once the spec-0011 and spec-0003/spec-0004 rows
   have removed the other references, in the same change.
 
 #### Rejected
@@ -409,7 +437,7 @@ notes: TC-0013-0036 names four boundaries and TC-0013-0037 two, one ledger row e
   reason: Each check is fixed by a different edit and can pass while another fails, so one row observes only the first failure.
   do_not: Put independently failing checks behind one row.
   temptation: Every check fails today, so one row turns red either way.
-- option: One TC-0013-0037 row per file
+- option: One TC-0013-0039 row per file
   reason: The three files state one rule; a set-valued assertion over them observes every file that fails.
   do_not: Split one boundary by the file it is read from.
   temptation: Each file is edited separately.
@@ -565,6 +593,16 @@ Rows owned by this spec.
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                 | Mode         | Approved by                                                    | Applied at           |
-| ---------------- | --------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md` | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR ID            | Upstream artifact                                                                                                                                                         | Mode         | Approved by                                                    | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+
+### CR-20260913-0009: Ledger boundary repair
+
+The existing 15-column ledger already had E2E placeholders for thirteen stories. Re-derivation adds the missing Integration cases and separates independently observable outcomes. Prior completed or exception evidence remains as history; the affected rows return to `todo` because their test identity changed. `US-0013-0003` now agrees with its usable-source acceptance criterion.
+
+### CR-20260913-0012: Acceptance criterion ID repair
+
+The original `AC-0013-0008` to `AC-0013-0010` headings retain their IDs. The contradicted markdown readiness and design normalization duplicates are removed. Optional side-artifact neutrality moves to `AC-0013-0028` with `BR-0013-0021`, `EX-0013-0021`, and `TC-0013-0036` to `TC-0013-0037`. The historical references above remain a record of past source text and do not reintroduce those obligations.

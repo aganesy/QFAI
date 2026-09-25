@@ -2,8 +2,9 @@
 
 ## Objective
 
-Carry the proof for four of this spec's twelve `done` ledger rows. The other
-eight are not backfilled and the reasons are under Gaps.
+The original backfill proves four of the twelve rows that were `done` at that
+run. The other eight are listed under Gaps. This update adds falsifiability
+evidence for three newly seeded optional-side-artifact rows.
 
 ## Inputs reviewed (files/paths)
 
@@ -61,9 +62,9 @@ S1 had ended, so it is recorded as session S2 of this run rather than under S1.
   stop-at-`refactor` decision rules out until the final head.
 
 **The six rows are in two files,** as S1 D3 set out:
-`packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (`TDD-0044`, `TDD-0046`,
-`TDD-0047`, `TDD-0048`) and `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts`
-(`TDD-0045`, `TDD-0049`). Every `it` of a file was written before the first RED of that file.
+`packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (`TDD-0110`, `TDD-0112`,
+`TDD-0113`, `TDD-0114`) and `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts`
+(`TDD-0111`, `TDD-0115`). Every `it` of a file was written before the first RED of that file.
 
 ## Grilling Session
 
@@ -173,13 +174,17 @@ the Coverage Depth Matrix below.
 
 ### /qfai-atdd run 2026-09-23T19:33:24.738Z
 
-- `TC-0013-0036` and `TC-0013-0037`: exercised by `TDD-0044` … `TDD-0049`, all done after the first full CI checkpoint, under
+- `TC-0013-0038` and `TC-0013-0039`: exercised by `TDD-0110` … `TDD-0115`, all done after the first full CI checkpoint, under
   `packages/qfai/tests/integration/**`.
 - `US-*` (14), `CON-API-*` (none), `CON-DB-*` (none): unchanged by this change.
 
 ## Ledger rows advanced
 
-The four earlier rows were already done. TDD-0044 through TDD-0049 became done after the first full CI checkpoint.
+The original four rows were already `done`. The three new rows remain `todo`
+until the orchestrator writes their ledger cells after implementation gates.
+TDD-0110 through TDD-0115 became done after the first full CI checkpoint as
+TDD-0044 through TDD-0049. The merge renumbered them (DR-0013-0017), and they
+are `todo` until they are completed again.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
@@ -187,12 +192,15 @@ The four earlier rows were already done. TDD-0044 through TDD-0049 became done a
 | `TDD-0024` | `TC-0013-0029`  | integration | falsifiability | done   |
 | `TDD-0029` | `TC-0013-0034`  | integration | falsifiability | done   |
 | `TDD-0030` | `TC-0013-0035`  | integration | falsifiability | done   |
-| `TDD-0044` | `TC-0013-0036` | Integration | observed-red | done |
-| `TDD-0046` | `TC-0013-0036` | Integration | observed-red | done |
-| `TDD-0047` | `TC-0013-0036` | Integration | observed-red | done |
-| `TDD-0048` | `TC-0013-0036` | Integration | observed-red | done |
-| `TDD-0045` | `TC-0013-0037` | Integration | observed-red | done |
-| `TDD-0049` | `TC-0013-0037` | Integration | observed-red | done |
+| `TDD-0081` | `TC-0013-0036`  | integration | falsifiability | todo   |
+| `TDD-0082` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0083` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0110` | `TC-0013-0038` | Integration | observed-red | todo |
+| `TDD-0112` | `TC-0013-0038` | Integration | observed-red | todo |
+| `TDD-0113` | `TC-0013-0038` | Integration | observed-red | todo |
+| `TDD-0114` | `TC-0013-0038` | Integration | observed-red | todo |
+| `TDD-0111` | `TC-0013-0039` | Integration | observed-red | todo |
+| `TDD-0115` | `TC-0013-0039` | Integration | observed-red | todo |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -439,15 +447,206 @@ failed, 2 passed (7).
 - Checkpoint verification result: PASS — exit 0; Test Files 547 passed (555); Tests 9468 passed (9550)
 - Checkpoint verification revision: working-tree+6fb16efd07f3f84741a144ed4cfb6924947303775e708bd0070c947e3aa0b78d
 
-### TDD-0044
+### Optional side artifact handoff (TDD-0081 to TDD-0083)
 
-- TDD-ID: TDD-0044
+The three tests use a usable markdown discussion pack and exercise SDD
+preflight through `runSddPreflight`. `TC-0013-0036` covers absence;
+`TC-0013-0037` has separate invalid and legacy selectors. The `01_Context.md`
+fixture does not claim a UI classification, so the missing-artifact test title
+was narrowed to the input it actually supplies before the final proof.
+
+Live falsifiability observations ran in an isolated worktree at HEAD
+`c0fba3fb3c9786a497fbdcc7fc36e0aab3c260b0`. The scratch tree held an
+identical copy of the test and production source. Each mutation was retained
+while an independent `qa-gatekeeper` inspected the source, test, command,
+assertion failure, SHA-256 values and content-addressed revision. After each
+PASS verdict, the source was restored byte-for-byte and the same selector
+passed. The restored source SHA-256 was
+`9214217580cf6aa0c20ab374749ca81899ed6ff864a88a01d40c59b2ba2dff53`.
+The restored scratch revision was
+`working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f`.
+The test file SHA-256 in scratch and the PR worktree was
+`da430c65829cd4921f596bcba29a942c113896dd600ccc4ae357347da01a3e1e`.
+The direct PR-worktree run of all three cases passed (one file, three tests).
+
+Commands below ran from the isolated `packages/qfai` directory via the
+`tmp/hold-spec0013-optional-mutant.mjs` wrapper. That wrapper inserted the
+stated condition after `resolvePreflightBlockers(readiness)`, ran the exact
+Vitest command, and left the mutated source for live inspection. Its `restore`
+action restored the production source before the same command ran again.
+The ignored `tmp/` logs were inspection aids, not committed evidence.
+
+### TDD-0081
+
+- TDD-ID: TDD-0081
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when a usable discussion pack is missing prototyping.yaml
+- TC-ref: TC-0013-0036
+- RED provenance: falsifiability, branch 2; the production path already made
+  this assertion pass before the test was moved.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; absence of an optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 37, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when a usable discussion pack is missing prototyping.yaml
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:37:29
+```
+
+- Round 1: Falsifiability revision: working-tree+4402324589c0660a78330be7b125a7767b1b0bee89e3bcf538b3ed6f30db0141
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when a usable discussion pack is missing prototyping.yaml"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when its content is
+empty. The mutant source SHA-256 was
+`f35493eac5773cb4456ac16531960bfecc5ee761f437ba2577e5614c782e1647`.
+
+### TDD-0082
+
+- TDD-ID: TDD-0082
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml exists but namespaced schema is invalid
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; an invalid optional
+  `prototyping.yaml` does not enter the blocker list.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 57, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml exists but namespaced schema is invalid
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:57:29
+```
+
+- Round 1: Falsifiability revision: working-tree+601b350bffcaa514b48cf4e0a259157bd856d5b89adba669703745e60b3c0274
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml exists but namespaced schema is invalid"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it has a
+`prototyping:` namespace without the expected `full-harness` recommendation.
+The mutant source SHA-256 was
+`bb45b400a7c82a7ce1c82d46fe215efabc748c64ad3d49312309c800c5ed47f0`.
+
+### TDD-0083
+
+- TDD-ID: TDD-0083
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Selector: does not block when prototyping.yaml uses legacy-only schema
+- TC-ref: TC-0013-0037
+- RED provenance: falsifiability, branch 2.
+
+#### Round 1
+
+- Round 1: Revision: working-tree+75d032c3913c0b9533e2fdb4629da26e89cd727adcfc5e3a45dc4c9173466c0f
+- Round 1: Satisfied-by: packages/qfai/src/core/preflight/sddPreflight.ts,
+  `runSddPreflight` and `resolvePreflightBlockers`; a legacy optional
+  `prototyping.yaml` is not a blocker.
+- Round 1: Falsifiability command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: Falsifiability result: exit 1; one assertion failed, two tests
+  skipped. At test line 83, `result.status` was `blocked` instead of `ready`.
+Observed failure output (excerpt):
+
+```text
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+ FAIL  |integration| tests/integration/sddOptionalArtifactPreflight.test.ts > SDD preflight optional discussion side artifact > does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)
+AssertionError: expected 'blocked' to be 'ready' // Object.is equality
+Expected: "ready"
+Received: "blocked"
+ ❯ tests/integration/sddOptionalArtifactPreflight.test.ts:83:29
+```
+
+- Round 1: Falsifiability revision: working-tree+7bf3bef2b6fd19caa142e497b55b3c294a3aa3555570f400c086a6d29dac16ac
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: eee65283a88b54eb2b8f7be0fc46cd6087ac802cca46eea6b39b5746670ef329
+- Round 1: RED test manifest: packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts
+- Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/integration/sddOptionalArtifactPreflight.test.ts -t "does not block when prototyping.yaml uses legacy-only schema"`
+- Round 1: GREEN result: exit 0; one passed, two skipped after restoration.
+Observed GREEN output (excerpt):
+
+```text
+ Test Files  1 passed (1)
+      Tests  1 passed | 2 skipped (3)
+```
+
+- P1d qa-gatekeeper verdict: PASS after live inspection of the mutated tree,
+  failed assertion, revision and both file hashes; restoration was then
+  verified by the GREEN run.
+
+Mutation: read the optional side artifact and add a blocker when it exists
+without a `prototyping:` namespace. The mutant source SHA-256 was
+`7fe08b235fd2a0053fc7bfe5995689cef3e572cd521e8c94f9402e60d5c36667`.
+
+These three rows still require an integrated-tree checkpoint, review-pack seal,
+and completion-reviewer verdict before the ledger can reach `done`. The old
+Coverage Depth Matrix below predates `BR-0013-0021` and these two new TCs;
+its revision is a separate stage-wide obligation.
+
+### TDD-0110
+
+- Renumbered: `TDD-0044` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0110
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
-- Selector: TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
-- TC-ref: TC-0013-0036
+- Selector: TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+- TC-ref: TC-0013-0038
 - Boundary: `record-homes-stated`
-- EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
+- EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` `## Work-log entries` sends these records to a `.qfai/steering/<id>.md` entry, and no text of the skill sends an out-of-scope discovery anywhere. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
 - Unit: `SKILL.md` and every file under `references/`, split into paragraphs and list items.
@@ -467,10 +666,10 @@ failed, 2 passed (7).
   - Verdict: PASS
   - Time: 2026-09-24T00:48:34Z
   - Covers: this row's `it` body and the helpers it calls, as read at file hash
-    `32f2b472…09ba66`, with the single selector entry above. `TDD-0046`'s
+    `32f2b472…09ba66`, with the single selector entry above. `TDD-0112`'s
     fix changes the file hash. The resubmission must show this `it` unchanged,
     and I re-confirm it on the new hash before the RED runs.
-  - Sufficiency: both routes of TC-0013-0036's first bullet, across
+  - Sufficiency: both routes of TC-0013-0038's first bullet, across
     `SKILL.md` and every file under `references/`. A decision must appear with
     `07_Decisions.md` and "Change Request". A consultation and an out-of-scope
     discovery must appear with `08_Open-questions.md` and "Change Request".
@@ -481,7 +680,7 @@ failed, 2 passed (7).
     note's planned assertion, as the author says, so it is accepted as
     settled. The mutation that deletes the discovery clause fails it.
   - One boundary: `record-homes-stated`. The section, the example and the
-    tree tokens belong to `TDD-0046` … `TDD-0048`.
+    tree tokens belong to `TDD-0112` … `TDD-0114`.
   - The read-proof (`SKILL.md` and at least one reference read) is
     legitimate.
 - Scope approval (`delivery-planner`), on file hash `b45c049e…4e2e2a`:
@@ -493,14 +692,14 @@ failed, 2 passed (7).
     No RED on this hash had been run. If the test file, a manifest entry or the
     selector changes, this approval lapses.
   - Re-confirmed: the `it` body reads as it did at `32f2b472…09ba66`. The only
-    change in the file is `TDD-0046`'s one line, which this row does not use.
+    change in the file is `TDD-0112`'s one line, which this row does not use.
     The earlier PASS reasons hold.
 
 - Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes `todo -> red` from
   this entry; no second RED is taken. The GREEN is the `/qfai-sdd` skill-text round.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0044`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0110`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -518,7 +717,7 @@ failed, 2 passed (7).
 packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:00:45.861Z after the scope
@@ -534,15 +733,15 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
   Vitest's report follows verbatim.
 
 ```text
- × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 47ms
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 47ms
    → expected { decision: false, …(1) } to deeply equal { decision: true, …(1) }
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
 AssertionError: expected { decision: false, …(1) } to deeply equal { decision: true, …(1) }
 
 - Expected
@@ -581,7 +780,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
   revision.
 
 ```diff
-@@ -60,13 +60,11 @@ describe("TC-0013-0036: records go to the spec pack", () => {
+@@ -60,13 +60,11 @@ describe("TC-0013-0038: records go to the spec pack", () => {
        ({ name }) => name === "SKILL.md" || name.startsWith("references/"),
      );
 
@@ -597,7 +796,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 
      const all: string[] = [];
      for (const { file } of files) all.push(...blocks(await linesOf(file)));
-@@ -85,7 +83,7 @@ describe("TC-0013-0036: records go to the spec pack", () => {
+@@ -85,7 +83,7 @@ describe("TC-0013-0038: records go to the spec pack", () => {
            block.includes("Change Request"),
        ),
      };
@@ -605,15 +804,15 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 +    void [stated, { decision: true, consultationOrDiscovery: true }, expect];
    });
 
-   it("TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
+   it("TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 51ms
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 51ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
@@ -625,7 +824,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
   1. Delete the out-of-scope discovery clause from the statement the GREEN writes. The
      selector must fail on `consultationOrDiscovery`.
 
@@ -635,25 +834,25 @@ exit=0
   - Freshness: the RED test hash recomputes to `b45c049e…4e2e2a`, over a one-file manifest; the test imports no helper. The shipped assistant tree under `packages/qfai/assets/init/.qfai/assistant` is identical to HEAD. The current tree address is `working-tree+30bb6582…196af`. The gatekeeper rebuilt the RED tree from it, without the later `spec0004BlockedRowEmptyBlockedBy.test.ts` (a TDD-0070 file written after these REDs) and without its `tsconfig.tests.json` include line, and that tree addresses to the recorded `working-tree+d388a371…afca` exactly.
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The walk read-proof passed. The failure is the assertion at line 88 inside the selector: no block of `SKILL.md` or `references/` ties a decision to `07_Decisions.md` and a Change Request, and none ties a consultation and an out-of-scope discovery to `08_Open-questions.md` and a Change Request. That is the predicate.
-  - Scope against TC-0013-0036 (`record-homes-stated`) / EX-0013-0021 / AC-0013-0028 / BR-0013-0021: both routes, presence per S1 D11, with the one-statement shape the scope approval accepted. Nothing else is asserted.
+  - Scope against TC-0013-0038 (`record-homes-stated`) / EX-0013-0023 / AC-0013-0030 / BR-0013-0023: both routes, presence per S1 D11, with the one-statement shape the scope approval accepted. Nothing else is asserted.
   - Oracle proof plan: delete the out-of-scope discovery clause from the statement the GREEN writes. It names the GREEN command. Acceptable. Advisory: it exercises only the `consultationOrDiscovery` half. A second mutation removing `07_Decisions.md` from the decision statement would show the `decision` half discriminates.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 32ms
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md 32ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Removed `out-of-scope discovery` from the `08_Open-questions.md` sentence; the result reported `consultationOrDiscovery: false` at `spec0013RecordHomes.test.ts:88:20`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Removed `out-of-scope discovery` from the `08_Open-questions.md` sentence; the result reported `consultationOrDiscovery: false` at `spec0013RecordHomes.test.ts:88:20`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
 AssertionError: expected { decision: true, …(1) } to deeply equal { decision: true, …(1) }
 
 - Expected
@@ -676,10 +875,10 @@ AssertionError: expected { decision: true, …(1) } to deeply equal { decision: 
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
 ```
 
-2. Removed `07_Decisions.md` from the decision sentence; the result reported `decision: false` at `spec0013RecordHomes.test.ts:88:20`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+2. Removed `07_Decisions.md` from the decision sentence; the result reported `decision: false` at `spec0013RecordHomes.test.ts:88:20`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
 AssertionError: expected { decision: false, …(1) } to deeply equal { decision: true, …(1) }
 
 - Expected
@@ -734,15 +933,17 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
-### TDD-0046
+### TDD-0112
 
-- TDD-ID: TDD-0046
+- Renumbered: `TDD-0046` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0112
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
-- Selector: TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
-- TC-ref: TC-0013-0036
+- Selector: TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+- TC-ref: TC-0013-0038
 - Boundary: `no-worklog-section`
-- EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
+- EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` has a `## Work-log entries` section. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
 - Read-proof (S1 D5): the heading ``### `--auto` and approval-required rows``, which
@@ -771,7 +972,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
        line.includes("## Work-log entries"))`.
     2. Record the new file hash and resubmit it for scope approval before any
        RED is run. The hash covers the whole file, so the resubmission covers
-       `TDD-0044`, `TDD-0047` and `TDD-0048` too.
+       `TDD-0110`, `TDD-0113` and `TDD-0114` too.
 - Scope approval (`delivery-planner`), on file hash `b45c049e…4e2e2a`:
   - Approver: `delivery-planner`, instance `atdd-scope`
   - Verdict: PASS
@@ -789,7 +990,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
   this entry; no second RED is taken. The GREEN is the `/qfai-sdd` skill-text round.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0046`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0112`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -807,7 +1008,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:00:52.703Z after the scope
@@ -823,15 +1024,15 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
   Vitest's report follows verbatim.
 
 ```text
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section 42ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 42ms
    → expected [ …(2) ] to deeply equal []
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
 AssertionError: expected [ …(2) ] to deeply equal []
 
 - Expected
@@ -869,8 +1070,8 @@ AssertionError: expected [ …(2) ] to deeply equal []
   revision.
 
 ```diff
-@@ -91,12 +91,10 @@ describe("TC-0013-0036: records go to the spec pack", () => {
-   it("TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
+@@ -91,12 +91,10 @@ describe("TC-0013-0038: records go to the spec pack", () => {
+   it("TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
      const lines = await linesOf(SKILL);
 
 -    expect(
@@ -884,15 +1085,15 @@ AssertionError: expected [ …(2) ] to deeply equal []
 +    void [lines.filter((line) => line.includes("## Work-log entries")), [], expect];
    });
 
-   it("TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
+   it("TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section 16ms
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 16ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
@@ -904,7 +1105,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`
   1. Re-insert the `## Work-log entries` heading. The selector must fail.
 
 - `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
@@ -913,25 +1114,25 @@ exit=0
   - Freshness: the RED test hash recomputes to `b45c049e…4e2e2a`, over a one-file manifest; the test imports no helper. The shipped assistant tree under `packages/qfai/assets/init/.qfai/assistant` is identical to HEAD. The current tree address is `working-tree+30bb6582…196af`. The gatekeeper rebuilt the RED tree from it, without the later `spec0004BlockedRowEmptyBlockedBy.test.ts` (a TDD-0070 file written after these REDs) and without its `tsconfig.tests.json` include line, and that tree addresses to the recorded `working-tree+d388a371…afca` exactly.
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The anchor read-proof passed. The failure is the assertion at line 99 inside the selector: the heading `## Work-log entries` and the cross-reference to it in the approval-stop bullet. The substring match the REVISE required catches both. That is the predicate.
-  - Scope against TC-0013-0036 (`no-worklog-section`): one absence over `SKILL.md`, case-sensitive per S1 D11. Nothing else is asserted.
+  - Scope against TC-0013-0038 (`no-worklog-section`): one absence over `SKILL.md`, case-sensitive per S1 D11. Nothing else is asserted.
   - Oracle proof plan: re-insert the heading. It names the GREEN command. Acceptable.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section 21ms
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section 21ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`; Result: exit 1, assertion failed inside selector `TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Reinserted the `## Work-log entries` heading into `SKILL.md`; the result found the heading at `spec0013RecordHomes.test.ts:99:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Reinserted the `## Work-log entries` heading into `SKILL.md`; the result found the heading at `spec0013RecordHomes.test.ts:99:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
 AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 
 - Expected
@@ -985,18 +1186,20 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
-### TDD-0047
+### TDD-0113
 
-- TDD-ID: TDD-0047
+- Renumbered: `TDD-0047` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0113
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
-- Selector: TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
-- TC-ref: TC-0013-0036
+- Selector: TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+- TC-ref: TC-0013-0038
 - Boundary: `no-pending-promotion-example`
-- EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
+- EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: `SKILL.md` cites a `W-PENDING-PROMOTION` decision as an example of carry-over. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
-- Read-proof (S1 D5): as `TDD-0046`.
+- Read-proof (S1 D5): as `TDD-0112`.
 - Oracle (S1 D11, absence): no line of `SKILL.md` contains `W-PENDING-PROMOTION`
   (case-sensitive).
 - Expected RED, from reading the code before the run (the RED below matches it): the carry-over line.
@@ -1008,7 +1211,7 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
   - Verdict: PASS
   - Time: 2026-09-24T00:48:34Z
   - Covers: this row's `it` body and the helpers it calls, as read at file hash
-    `32f2b472…09ba66`, with the single selector entry above. `TDD-0046`'s
+    `32f2b472…09ba66`, with the single selector entry above. `TDD-0112`'s
     fix changes the file hash. The resubmission must show this `it` unchanged,
     and I re-confirm it on the new hash before the RED runs.
   - Sufficiency: no line of `SKILL.md` contains `W-PENDING-PROMOTION`. That
@@ -1025,14 +1228,14 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
     No RED on this hash had been run. If the test file, a manifest entry or the
     selector changes, this approval lapses.
   - Re-confirmed: the `it` body reads as it did at `32f2b472…09ba66`. The only
-    change in the file is `TDD-0046`'s one line, which this row does not use.
+    change in the file is `TDD-0112`'s one line, which this row does not use.
     The earlier PASS reasons hold.
 
 - Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes `todo -> red` from
   this entry; no second RED is taken. The GREEN is the `/qfai-sdd` skill-text round.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0047`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0113`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -1050,7 +1253,7 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:01:01.175Z after the scope
@@ -1064,15 +1267,15 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
   Vitest's report follows verbatim.
 
 ```text
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 37ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 37ms
    → expected [ Array(1) ] to deeply equal []
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
 AssertionError: expected [ Array(1) ] to deeply equal []
 
 - Expected
@@ -1109,8 +1312,8 @@ AssertionError: expected [ Array(1) ] to deeply equal []
   revision.
 
 ```diff
-@@ -102,12 +102,10 @@ describe("TC-0013-0036: records go to the spec pack", () => {
-   it("TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
+@@ -102,12 +102,10 @@ describe("TC-0013-0038: records go to the spec pack", () => {
+   it("TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
      const lines = await linesOf(SKILL);
 
 -    expect(
@@ -1124,15 +1327,15 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 +    void [lines.filter((line) => line.includes("W-PENDING-PROMOTION")), [], expect];
    });
 
-   it("TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
+   it("TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 15ms
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 15ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
@@ -1144,7 +1347,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
   1. Re-insert the `W-PENDING-PROMOTION` example. The selector must fail.
 
 - `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
@@ -1153,25 +1356,25 @@ exit=0
   - Freshness: the RED test hash recomputes to `b45c049e…4e2e2a`, over a one-file manifest; the test imports no helper. The shipped assistant tree under `packages/qfai/assets/init/.qfai/assistant` is identical to HEAD. The current tree address is `working-tree+30bb6582…196af`. The gatekeeper rebuilt the RED tree from it, without the later `spec0004BlockedRowEmptyBlockedBy.test.ts` (a TDD-0070 file written after these REDs) and without its `tsconfig.tests.json` include line, and that tree addresses to the recorded `working-tree+d388a371…afca` exactly.
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The anchor read-proof passed. The failure is the assertion at line 110 inside the selector: the carry-over line citing a `W-PENDING-PROMOTION` decision. That is the predicate.
-  - Scope against TC-0013-0036 (`no-pending-promotion-example`): one case-sensitive code-token absence. Nothing else is asserted.
+  - Scope against TC-0013-0038 (`no-pending-promotion-example`): one case-sensitive code-token absence. Nothing else is asserted.
   - Oracle proof plan: re-insert the example. It names the GREEN command. Acceptable.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 29ms
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example 29ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`; Result: exit 1, assertion failed inside selector `TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Reinserted the `W-PENDING-PROMOTION` example in the preflight sentence; the result found that line at `spec0013RecordHomes.test.ts:110:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Reinserted the `W-PENDING-PROMOTION` example in the preflight sentence; the result found that line at `spec0013RecordHomes.test.ts:110:74`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
 AssertionError: expected [ Array(1) ] to deeply equal []
 
 - Expected
@@ -1225,15 +1428,17 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
-### TDD-0048
+### TDD-0114
 
-- TDD-ID: TDD-0048
+- Renumbered: `TDD-0048` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0114
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013RecordHomes.test.ts
-- Selector: TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
-- TC-ref: TC-0013-0036
+- Selector: TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+- TC-ref: TC-0013-0038
 - Boundary: `no-surface-reference-in-tree`
-- EX-ref: EX-0013-0021; AC-ref: AC-0013-0028; BR-ref: BR-0013-0021
+- EX-ref: EX-0013-0023; AC-ref: AC-0013-0030; BR-ref: BR-0013-0023
 - Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and states the predicate wrongly: the shipped tree holds `catalog/worklog-entry.schema.md`, and the `/qfai-implement` and `/qfai-sdd` skills name `.qfai/steering/`. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
 - Unit: every file under `packages/qfai/assets/init/.qfai/assistant/`, walked recursively.
@@ -1255,10 +1460,10 @@ AssertionError: expected [ Array(1) ] to deeply equal []
   - Verdict: PASS
   - Time: 2026-09-24T00:48:34Z
   - Covers: this row's `it` body and the helpers it calls, as read at file hash
-    `32f2b472…09ba66`, with the single selector entry above. `TDD-0046`'s
+    `32f2b472…09ba66`, with the single selector entry above. `TDD-0112`'s
     fix changes the file hash. The resubmission must show this `it` unchanged,
     and I re-confirm it on the new hash before the RED runs.
-  - Sufficiency: the whole of TC-0013-0036's fourth bullet. Every file under
+  - Sufficiency: the whole of TC-0013-0038's fourth bullet. Every file under
     `packages/qfai/assets/init/.qfai/assistant/` is checked for
     `.qfai/steering/` and `worklog-entry.schema.md`. The read-proof names two
     files the walk must reach, which is stronger than the matrix note's
@@ -1278,7 +1483,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
     No RED on this hash had been run. If the test file, a manifest entry or the
     selector changes, this approval lapses.
   - Re-confirmed: the `it` body reads as it did at `32f2b472…09ba66`. The only
-    change in the file is `TDD-0046`'s one line, which this row does not use.
+    change in the file is `TDD-0112`'s one line, which this row does not use.
     The earlier PASS reasons hold.
 
 - Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes `todo -> red` from
@@ -1286,7 +1491,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
   and, for this row, the tree after the spec-0011 skill-text GREEN and the schema withdrawal.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0048`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0114`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -1304,7 +1509,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 packages/qfai/tests/integration/spec0013RecordHomes.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T01:01:07.350Z after the scope
@@ -1320,15 +1525,15 @@ packages/qfai/tests/integration/spec0013RecordHomes.test.ts
   Vitest's report follows verbatim.
 
 ```text
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 218ms
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ × |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 218ms
    → expected [ …(7) ] to deeply equal []
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 AssertionError: expected [ …(7) ] to deeply equal []
 
 - Expected
@@ -1371,8 +1576,8 @@ AssertionError: expected [ …(7) ] to deeply equal []
   revision.
 
 ```diff
-@@ -113,12 +113,10 @@ describe("TC-0013-0036: records go to the spec pack", () => {
-   it("TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
+@@ -113,12 +113,10 @@ describe("TC-0013-0038: records go to the spec pack", () => {
+   it("TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
      const files = await walk(ASSISTANT_DIR);
 
 -    expect(
@@ -1386,7 +1591,7 @@ AssertionError: expected [ …(7) ] to deeply equal []
 
      const found: string[] = [];
      for (const { file, name } of files) {
-@@ -127,6 +125,6 @@ describe("TC-0013-0036: records go to the spec pack", () => {
+@@ -127,6 +125,6 @@ describe("TC-0013-0038: records go to the spec pack", () => {
          if (text.includes(token)) found.push(`${name}: ${token}`);
        }
      }
@@ -1397,11 +1602,11 @@ AssertionError: expected [ …(7) ] to deeply equal []
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section
- ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 635ms
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section
+ ↓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 635ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
@@ -1413,7 +1618,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
   1. Re-insert a `.qfai/steering/<id>.md` sentence into one file of the `/qfai-sdd` skill.
      The selector must fail on `found`.
 
@@ -1423,26 +1628,26 @@ exit=0
   - Freshness: the RED test hash recomputes to `b45c049e…4e2e2a`, over a one-file manifest; the test imports no helper. The shipped assistant tree under `packages/qfai/assets/init/.qfai/assistant` is identical to HEAD. The current tree address is `working-tree+30bb6582…196af`. The gatekeeper rebuilt the RED tree from it, without the later `spec0004BlockedRowEmptyBlockedBy.test.ts` (a TDD-0070 file written after these REDs) and without its `tsconfig.tests.json` include line, and that tree addresses to the recorded `working-tree+d388a371…afca` exactly.
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The walk read-proof passed (both skill files reached). The failure is the assertion at line 130 inside the selector: seven hits in `skills/qfai-sdd/SKILL.md`, `skills/qfai-implement/SKILL.md`, `skills/qfai-implement/references/execution-ledger.md` and `catalog/worklog-entry.schema.md`. That is the predicate.
-  - Scope against TC-0013-0036 (`no-surface-reference-in-tree`): both tokens over every file of the shipped assistant tree. Nothing else is asserted.
+  - Scope against TC-0013-0038 (`no-surface-reference-in-tree`): both tokens over every file of the shipped assistant tree. Nothing else is asserted.
   - Ordering: the GREEN for this row is the tree after the spec-0011 skill-text GREEN, the spec-0013 skill-text GREEN and the schema withdrawal, as recorded. That follows the S2 user decision. At the build gate, the GREEN run must be on the tree where all three have landed, and must name them.
   - Oracle proof plan: re-insert a `.qfai/steering/<id>.md` sentence into the `/qfai-sdd` skill, the `Owning module`. It names the GREEN command. Acceptable.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 616ms
+ ✓ |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md 616ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 3 skipped (4)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`; Result: exit 1, assertion failed inside selector `TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Reinserted `.qfai/steering/<id>.md` into the `SKILL.md` record sentence; the result named `skills/qfai-sdd/SKILL.md: .qfai/steering/` at `spec0013RecordHomes.test.ts:130:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Reinserted `.qfai/steering/<id>.md` into the `SKILL.md` record sentence; the result named `skills/qfai-sdd/SKILL.md: .qfai/steering/` at `spec0013RecordHomes.test.ts:130:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013RecordHomes.test.ts --reporter=verbose -t "TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0036: records go to the spec pack > TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
+ FAIL  |integration| tests/integration/spec0013RecordHomes.test.ts > TC-0013-0038: records go to the spec pack > TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md
 AssertionError: expected [ Array(1) ] to deeply equal []
 
 - Expected
@@ -1496,13 +1701,15 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
-### TDD-0045
+### TDD-0111
 
-- TDD-ID: TDD-0045
+- Renumbered: `TDD-0045` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0111
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
-- Selector: TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
-- TC-ref: TC-0013-0037
+- Selector: TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+- TC-ref: TC-0013-0039
 - Boundary: `stop-steps-stated`
 - EX-ref: EX-0013-0022; AC-ref: AC-0013-0029; BR-ref: BR-0013-0022
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
@@ -1532,20 +1739,20 @@ AssertionError: expected [ Array(1) ] to deeply equal []
   - Covers: file hash `ab739c98a873d2a48ecfc9398d8c2bf22d742b42a343678ee3521b3004962dfd`, at tree `working-tree+2d31f83a…c37d55`, and the single selector entry
     above. No RED had been run. If the test file, a manifest entry or the
     selector changes, this approval lapses.
-  - Sufficiency: the whole of TC-0013-0037's first bullet, asserted over all
+  - Sufficiency: the whole of TC-0013-0039's first bullet, asserted over all
     three files at once as the TC requires. Each file's unit is the one
     AC-0013-0029 names: the `SKILL.md` section, the playbook's
     missing-approval bullet, and triage step 7. Each unit must state all
     three steps, and every miss is collected into one `toEqual`.
   - One boundary: `stop-steps-stated`. The work-log absence belongs to
-    `TDD-0049`.
+    `TDD-0115`.
   - Finding each unit exactly once is a legitimate read-proof.
 
 - Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
   `todo -> red` from this entry; no second RED is taken. The GREEN is the `/qfai-sdd` skill-text round.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0045`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0111`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -1585,7 +1792,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the fresh approved RED, run at 2026-09-24T01:01:15.709Z after the scope
@@ -1602,13 +1809,13 @@ packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
   Vitest's report follows verbatim.
 
 ```text
- × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps 26ms
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 26ms
    → expected [ …(4) ] to deeply equal []
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
 AssertionError: expected [ …(4) ] to deeply equal []
 
 - Expected
@@ -1648,8 +1855,8 @@ AssertionError: expected [ …(4) ] to deeply equal []
   revision.
 
 ```diff
-@@ -97,10 +97,8 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
-   it("TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
+@@ -97,10 +97,8 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
+   it("TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
      const units = await readStopUnits();
 
 -    expect(
@@ -1661,7 +1868,7 @@ AssertionError: expected [ …(4) ] to deeply equal []
 
      const missing = units.flatMap(({ name, unit }) => {
        const plain = unit.text.replace(/[`*]/g, "").replace(/\s+/g, " ");
-@@ -108,7 +106,7 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
+@@ -108,7 +106,7 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
          ([step]) => `${name}: ${step}`,
        );
      });
@@ -1669,13 +1876,13 @@ AssertionError: expected [ …(4) ] to deeply equal []
 +    void [missing, [], expect];
    });
 
-   it("TC-0013-0037: none of the three files names a work-log entry or consultation-needed", async () => {
+   it("TC-0013-0039: none of the three files names a work-log entry or consultation-needed", async () => {
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps 24ms
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 24ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
@@ -1689,7 +1896,7 @@ exit=0
 - Test content hash: ab739c98a873d2a48ecfc9398d8c2bf22d742b42a343678ee3521b3004962dfd
 - Test manifest:
   - packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
-- Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+- Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it
   changes no test.)
 - Result: the approved RED, run at 2026-09-24T00:51:19.581Z after the scope
@@ -1705,13 +1912,13 @@ exit=0
   Vitest's report follows verbatim.
 
 ```text
- × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps 11ms
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 11ms
    → expected [ …(5) ] to deeply equal []
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
 AssertionError: expected [ …(5) ] to deeply equal []
 
 - Expected
@@ -1761,8 +1968,8 @@ AssertionError: expected [ …(5) ] to deeply equal []
   the RED revision.
 
 ```diff
-@@ -94,10 +94,8 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
-   it("TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
+@@ -94,10 +94,8 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
+   it("TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
      const units = await readStopUnits();
 
 -    expect(
@@ -1774,7 +1981,7 @@ AssertionError: expected [ …(5) ] to deeply equal []
 
      const missing = units.flatMap(({ name, unit }) => {
        const plain = unit.text.replace(/[`*]/g, "");
-@@ -105,7 +103,7 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
+@@ -105,7 +103,7 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
          ([step]) => `${name}: ${step}`,
        );
      });
@@ -1782,13 +1989,13 @@ AssertionError: expected [ …(5) ] to deeply equal []
 +    void [missing, [], expect];
    });
 
-   it("TC-0013-0037: none of the three files names a work-log entry or consultation-needed", async () => {
+   it("TC-0013-0039: none of the three files names a work-log entry or consultation-needed", async () => {
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps 10ms
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 10ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
@@ -1800,7 +2007,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
   1. Remove "do not enter Phase 0" from one of the three units. The selector must fail on
      `missing`.
 
@@ -1811,25 +2018,25 @@ exit=0
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The read-proof passed (each stop unit found once). The failure is the assertion at line 111 inside the selector: the report step in all three files and the phrase do not enter Phase 0 in the playbook. That is the predicate. The wrapped `Approved By as -` step is now read as stated, so the false negative the superseded RED recorded is gone.
   - Superseded RED: kept under a plain label with non-round keys, which is the right placement. It was taken on the earlier hash, which the earlier PASS covered, and it does not stand for this hash. The oracle change between the two runs only removes a false negative, so it does not reshape the oracle to force a failure.
-  - Scope against TC-0013-0037 (`stop-steps-stated`) / EX-0013-0022 / AC-0013-0029 / BR-0013-0022: three steps over three units at once. Nothing else is asserted.
+  - Scope against TC-0013-0039 (`stop-steps-stated`) / EX-0013-0022 / AC-0013-0029 / BR-0013-0022: three steps over three units at once. Nothing else is asserted.
   - Oracle proof plan: remove the phrase do not enter Phase 0 from one unit. It names the GREEN command. Acceptable. The plan sits after the superseded block and is the live plan for this round.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps 24ms
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps 24ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`; Result: exit 1, assertion failed inside selector `TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`; Result: exit 1, assertion failed inside selector `TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `780b7b04bdaf7fa9f2495ff7714ccad21b3bf06c08ae5f552096c07c882a7c10`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Removed `do not enter Phase 0` from the `SKILL.md` stop; the result named `SKILL.md: do not enter Phase 0` at `spec0013ApprovalStop.test.ts:111:21`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Removed `do not enter Phase 0` from the `SKILL.md` stop; the result named `SKILL.md: do not enter Phase 0` at `spec0013ApprovalStop.test.ts:111:21`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
 AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 
 - Expected
@@ -1883,19 +2090,21 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 - Checkpoint verification seal: 1b65113db2900fd93f740f767b04410fed297d1f2831def1e8b1c04bcf820fb0
 - Relevant suite resolution: User-directed local set — this row's exact selector, the two spec-0013 integration files, the direct asset consumer test, root and package type checks, and emitted rule-code drift. The retired skill text is an asset with no static import graph; the final-head CI suite covers the package-wide fallback.
 
-### TDD-0049
+### TDD-0115
 
-- TDD-ID: TDD-0049
+- Renumbered: `TDD-0049` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+
+- TDD-ID: TDD-0115
 - Layer: Integration
 - Test file: packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
-- Selector: TC-0013-0037: none of the three files names a work-log entry or consultation-needed
-- TC-ref: TC-0013-0037
+- Selector: TC-0013-0039: none of the three files names a work-log entry or consultation-needed
+- TC-ref: TC-0013-0039
 - Boundary: `no-worklog-entry-named`
 - EX-ref: EX-0013-0022; AC-ref: AC-0013-0029; BR-ref: BR-0013-0022
 - Branch: observed-red (branch 1), confirmed by the fresh RED below. The superseded RED is kept
   after it as history. The surface exists and states the predicate wrongly: all three files name a `consultation-needed` work-log entry. No seam is needed: the test reads shipped files and imports nothing from `src`.
 - qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+d388a371d899f1d74bc61f840876164441db2de9a14460ca43e4225af0e7afca at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
-- Read-proof (S1 D5): each file's stop unit, as in `TDD-0045`, is found exactly once.
+- Read-proof (S1 D5): each file's stop unit, as in `TDD-0111`, is found exactly once.
 - Oracle (S1 D11, absence), over each whole file: no match of "work-log"
   case-insensitively, and no `consultation-needed` (case-sensitive).
 - Expected RED, from reading the code before the run (the RED below matches it): all three files, both tokens.
@@ -1916,16 +2125,16 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
   - One boundary: `no-worklog-entry-named`. The unit-once read-proof shows
     each file was read.
   - Advisory, not scope: `SKILL.md` is one of the three files, so any
-    `## Work-log entries` heading also fails this row. `TDD-0046` has no
-    failure this row does not share. That overlap is in how TC-0013-0036 and
-    TC-0013-0037 are written. Removing it would take a Change Request to
+    `## Work-log entries` heading also fails this row. `TDD-0112` has no
+    failure this row does not share. That overlap is in how TC-0013-0038 and
+    TC-0013-0039 are written. Removing it would take a Change Request to
     `/qfai-sdd`, not a re-scope here.
 
 - Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
   `todo -> red` from this entry; no second RED is taken. The GREEN is the `/qfai-sdd` skill-text round.
   - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the row
     identity above, both `-` in the seeded row; `Evidence` pointing at
-    `.qfai/evidence/atdd-spec-0013.md#tdd-0049`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
+    `.qfai/evidence/atdd-spec-0013.md#tdd-0115`. `DR-ID` stays `-`, and `Blocked-By` stays `-`.
   - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
     `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
     `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
@@ -1940,7 +2149,7 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
     No RED on this hash had been run. If the test file, a manifest entry or the
     selector changes, this approval lapses.
   - Re-confirmed: the `it` body reads as it did at `ab739c98…962dfd`. It scans
-    whole files and never reads the normalised unit text, so `TDD-0045`'s
+    whole files and never reads the normalised unit text, so `TDD-0111`'s
     change does not reach it. The earlier PASS reasons hold, and a fresh RED on
     this hash is owed.
 
@@ -1955,7 +2164,7 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
 ```
 
-- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it changes
   no test.)
 - Round 1: RED result: exit 1; the fresh approved RED, run at 2026-09-24T01:01:22.195Z after the scope
@@ -1970,13 +2179,13 @@ packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
   Vitest's report follows verbatim.
 
 ```text
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
- × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed 29ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 29ms
    → expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 
 - Expected
@@ -2018,8 +2227,8 @@ AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
   revision.
 
 ```diff
-@@ -114,15 +114,13 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
-   it("TC-0013-0037: none of the three files names a work-log entry or consultation-needed", async () => {
+@@ -114,15 +114,13 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
+   it("TC-0013-0039: none of the three files names a work-log entry or consultation-needed", async () => {
      const units = await readStopUnits();
 
 -    expect(
@@ -2040,9 +2249,9 @@ AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed 24ms
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 24ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
@@ -2051,12 +2260,12 @@ $ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013Approv
 exit=0
 ```
 
-**Superseded RED (the oracle changed after it: the file it shares with `TDD-0045` was revised, so its hash moved; this `it` is unchanged. A fresh RED and stripped run on the revised file follow the new scope approval.)**
+**Superseded RED (the oracle changed after it: the file it shares with `TDD-0111` was revised, so its hash moved; this `it` is unchanged. A fresh RED and stripped run on the revised file follow the new scope approval.)**
 - Tree: working-tree+2d31f83a01de922411629aeea5788fc3beee710b71763d4d8200234911c37d55
 - Test content hash: ab739c98a873d2a48ecfc9398d8c2bf22d742b42a343678ee3521b3004962dfd
 - Test manifest:
   - packages/qfai/tests/integration/spec0013ApprovalStop.test.ts
-- Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`
+- Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
   (`--reporter=verbose` makes the runner name the selected test on a pass too; it
   changes no test.)
 - Result: the approved RED, run at 2026-09-24T00:51:22.150Z after the scope
@@ -2071,13 +2280,13 @@ exit=0
   Vitest's report follows verbatim.
 
 ```text
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
- × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed 12ms
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ × |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 12ms
    → expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 
 - Expected
@@ -2119,8 +2328,8 @@ AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
   the RED revision.
 
 ```diff
-@@ -111,15 +111,13 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
-   it("TC-0013-0037: none of the three files names a work-log entry or consultation-needed", async () => {
+@@ -111,15 +111,13 @@ describe("TC-0013-0039: approval stop writes no entry", () => {
+   it("TC-0013-0039: none of the three files names a work-log entry or consultation-needed", async () => {
      const units = await readStopUnits();
 
 -    expect(
@@ -2141,9 +2350,9 @@ AssertionError: expected [ 'SKILL.md: work-log', …(5) ] to deeply equal []
 ```
 
 ```text
-$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"
- ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed 6ms
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"
+ ↓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 6ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
@@ -2155,7 +2364,7 @@ exit=0
 - Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
   `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd`, and is reverted after its run.
   - GREEN command, the same as the RED command:
-    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
   1. Re-insert `consultation-needed` in one of the three files. The selector must fail.
 
 - `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
@@ -2165,25 +2374,25 @@ exit=0
   - Strip: the diff reaches only this row `it`. The operands and the unit extraction are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries skipped.
   - Observation: the gatekeeper re-ran the RED command. The read-proof passed. The failure is the assertion at line 126 inside the selector: `work-log` and `consultation-needed` in each of the three files. That is the predicate.
   - Superseded RED: kept as history. It does not stand for the current hash, and the fresh RED on the current hash is the one judged here.
-  - Scope against TC-0013-0037 (`no-worklog-entry-named`): whole-file absence per S1 D11. Nothing else is asserted. The overlap with TDD-0046 is how the TCs are written, as the scope approval notes.
+  - Scope against TC-0013-0039 (`no-worklog-entry-named`): whole-file absence per S1 D11. Nothing else is asserted. The overlap with TDD-0112 is how the TCs are written, as the scope approval notes.
   - Oracle proof plan: as recorded in this section. Acceptable.
 
 - Round 1: Revision: working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c
-- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`
 - Round 1: GREEN result: exit 0; Vitest selected this row's exact selector and reported one passing test. The recorded runner output is:
 
 ```text
- ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed 12ms
+ ✓ |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed 12ms
 
  Test Files  1 passed (1)
       Tests  1 passed | 1 skipped (2)
 ```
-- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`; Result: exit 1, assertion failed inside selector `TC-0013-0037: none of the three files names a work-log entry or consultation-needed`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `82170e4164cfef2820ed107fca00608ccc0b9aa33e52835c69325a7a1d1954cf`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
+- Round 1: Oracle proof: Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`; Result: exit 1, assertion failed inside selector `TC-0013-0039: none of the three files names a work-log entry or consultation-needed`. The following mutation runs each failed inside this row's exact selector. The mutated source was restored byte for byte after each run; the restored SHA-256 was `82170e4164cfef2820ed107fca00608ccc0b9aa33e52835c69325a7a1d1954cf`. The source tree address before and after the six mutations was working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c.
 
-1. Reinserted a `consultation-needed` work-log entry into the playbook stop; the result named both `work-log` and `consultation-needed` in `references/sdd-execution-playbook.md` at `spec0013ApprovalStop.test.ts:126:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0037: none of the three files names a work-log entry or consultation-needed"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
+1. Reinserted a `consultation-needed` work-log entry into the playbook stop; the result named both `work-log` and `consultation-needed` in `references/sdd-execution-playbook.md` at `spec0013ApprovalStop.test.ts:126:19`. Command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0013ApprovalStop.test.ts --reporter=verbose -t "TC-0013-0039: none of the three files names a work-log entry or consultation-needed"`. Result: exit 1, one failed selector with its assertion at the stated line; siblings skipped. The captured runner output follows.
 
 ```text
- FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0037: approval stop writes no entry > TC-0013-0037: none of the three files names a work-log entry or consultation-needed
+ FAIL  |integration| tests/integration/spec0013ApprovalStop.test.ts > TC-0013-0039: approval stop writes no entry > TC-0013-0039: none of the three files names a work-log entry or consultation-needed
 AssertionError: expected [ …(2) ] to deeply equal []
 
 - Expected
@@ -2277,42 +2486,42 @@ that update: ✅ 73 / ⚠️ 118 / ❌ 312, `n/a` 22, across 525 scored cells.
 | 14 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/user): Checkpoints (related suites, full suite at row 10 and the last row) run locally for this task | `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md` | Checkpoints need more than the new tests the local-run permission covered, so the user was asked. Superseded by the user's later AskUserQuestion answer (2026-09-23): the full suite runs on CI at the boundaries; the local per-row set is the row's test, the direct-import test files, both type checks and the rule-code drift check | PASS |
 | 15 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): TDD-0022 extracts the `blocked -> todo` bullet under `### Allowed transitions` in `execution-ledger.md`, up to the next top-level bullet, and asserts exactly one match | `spec-0011/06_Test-Cases.md` | A bounded extract with one match reads only the transition the row owns | PASS |
 | 16 | orchestrator | - | grilling(S2@2026-09-23T19:33:24.738Z/user): rows one GREEN satisfies take their REDs before that GREEN; GREENs and reviews stay per row | S1 D2; the stop-at-`refactor` decision | A shared GREEN would make a later row pass on its first run, and the sibling-satisfied branch needs the sibling `done`, which stop-at-`refactor` rules out. Refines S1 D2 (one row at a time) | PASS |
-| 17 | acceptance-test-engineer | atdd-ate | TDD-0044 … TDD-0049 tests written | `spec-0013/03`…`06`; S1 D3-D5, D11 | `spec0013RecordHomes.test.ts`, `spec0013ApprovalStop.test.ts` (hashes in the row sections) | PASS |
-| 18 | delivery-planner | atdd-scope | Scope approval TDD-0044 | `### TDD-0044`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0036 first bullet, AC-0013-0028; matrix row note | Scope PASS. Both routes with both alternatives. The two-statement co-location follows the matrix note. To be re-confirmed on the file's new hash | PASS |
-| 19 | delivery-planner | atdd-scope | Scope approval TDD-0046 | `### TDD-0046`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0036 second bullet; S1 D11 | Scope REVISE. The exact-line match misses a `## Work-log entries …` heading with added text. S1 D11 settles a substring. Resubmit with `includes` | REVISE |
-| 20 | delivery-planner | atdd-scope | Scope approval TDD-0047 | `### TDD-0047`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0036 third bullet; S1 D11 | Scope PASS. No `W-PENDING-PROMOTION` anywhere in `SKILL.md`, one boundary. To be re-confirmed on the file's new hash | PASS |
-| 21 | delivery-planner | atdd-scope | Scope approval TDD-0048 | `### TDD-0048`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0036 fourth bullet, AC-0013-0028 whole-tree clause | Scope PASS. The whole shipped assistant tree, with a two-file read-proof, one boundary. To be re-confirmed on the file's new hash | PASS |
-| 22 | delivery-planner | atdd-scope | Scope approval TDD-0045 | `### TDD-0045`; `spec0013ApprovalStop.test.ts` (hash `ab739c98…962dfd`); TC-0013-0037 first bullet, AC-0013-0029 | Scope PASS. Three steps in each of the three named units, over all files at once, one boundary | PASS |
-| 23 | delivery-planner | atdd-scope | Scope approval TDD-0049 | `### TDD-0049`; `spec0013ApprovalStop.test.ts` (hash `ab739c98…962dfd`); TC-0013-0037 second bullet; S1 D11 | Scope PASS. Whole-file scan of the three files, as the TC says. Advisory: it subsumes `TDD-0046`, which is how the TCs are written | PASS |
-| 24 | acceptance-test-engineer | atdd-ate | TDD-0045 RED | `### TDD-0045`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `ab739c98…962dfd`) | approved RED and its stripped run at `working-tree+2d31f83a…c37d55` in `### TDD-0045` Round 1 | PASS |
-| 25 | acceptance-test-engineer | atdd-ate | TDD-0049 RED | `### TDD-0049`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `ab739c98…962dfd`) | approved RED and its stripped run at `working-tree+2d31f83a…c37d55` in `### TDD-0049` Round 1 | PASS |
-| 26 | delivery-planner | atdd-scope | Scope approval TDD-0044 (resubmission) | `### TDD-0044`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged; the only change in the file is `TDD-0046`'s line | PASS |
-| 27 | delivery-planner | atdd-scope | Scope approval TDD-0046 (resubmission) | `### TDD-0046`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS. The heading check is `includes("## Work-log entries")`, the S1 D11 substring | PASS |
-| 28 | delivery-planner | atdd-scope | Scope approval TDD-0047 (resubmission) | `### TDD-0047`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged | PASS |
-| 29 | delivery-planner | atdd-scope | Scope approval TDD-0048 (resubmission) | `### TDD-0048`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged | PASS |
-| 30 | delivery-planner | atdd-scope | Scope approval TDD-0045 (resubmission) | `### TDD-0045`; `spec0013ApprovalStop.test.ts` (hash `c7517a90…1249df`); tree `working-tree+d388a371…afca` | Scope PASS. Collapsing whitespace before the unchanged step patterns fixes a false negative on a wrapped step. The obligation is unchanged. The earlier RED is superseded, and a fresh RED is owed | PASS |
-| 31 | delivery-planner | atdd-scope | Scope approval TDD-0049 (resubmission) | `### TDD-0049`; `spec0013ApprovalStop.test.ts` (hash `c7517a90…1249df`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged, and the whole-file scan is not touched by the normalisation. A fresh RED is owed | PASS |
-| 32 | acceptance-test-engineer | atdd-ate | TDD-0044 RED | `### TDD-0044`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0044` Round 1 | PASS |
-| 33 | acceptance-test-engineer | atdd-ate | TDD-0046 RED | `### TDD-0046`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0046` Round 1 | PASS |
-| 34 | acceptance-test-engineer | atdd-ate | TDD-0047 RED | `### TDD-0047`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0047` Round 1 | PASS |
-| 35 | acceptance-test-engineer | atdd-ate | TDD-0048 RED | `### TDD-0048`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0048` Round 1 | PASS |
-| 36 | acceptance-test-engineer | atdd-ate | TDD-0045 fresh RED | `### TDD-0045`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `c7517a90…1249df`) | fresh approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0045` Round 1 | PASS |
-| 37 | acceptance-test-engineer | atdd-ate | TDD-0049 fresh RED | `### TDD-0049`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `c7517a90…1249df`) | fresh approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0049` Round 1 | PASS |
-| 38 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0044 | `### TDD-0044` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 88: neither statement present (`decision` and `consultationOrDiscovery` false), after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
-| 39 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0046 | `### TDD-0046` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 99: the `## Work-log entries` heading and its cross-reference, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
-| 40 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0047 | `### TDD-0047` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 110: the carry-over line citing a `W-PENDING-PROMOTION` decision, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
-| 41 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0048 | `### TDD-0048` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 130: seven hits in four files including the schema asset, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
-| 42 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0045 | `### TDD-0045` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013ApprovalStop.test.ts` | PASS: RED reproduced at line 111: four stop steps missing across the three files, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
-| 43 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0049 | `### TDD-0049` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013ApprovalStop.test.ts` | PASS: RED reproduced at line 126: `work-log` and `consultation-needed` in all three files, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 17 | acceptance-test-engineer | atdd-ate | TDD-0110 … TDD-0115 tests written | `spec-0013/03`…`06`; S1 D3-D5, D11 | `spec0013RecordHomes.test.ts`, `spec0013ApprovalStop.test.ts` (hashes in the row sections) | PASS |
+| 18 | delivery-planner | atdd-scope | Scope approval TDD-0110 | `### TDD-0110`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0038 first bullet, AC-0013-0030; matrix row note | Scope PASS. Both routes with both alternatives. The two-statement co-location follows the matrix note. To be re-confirmed on the file's new hash | PASS |
+| 19 | delivery-planner | atdd-scope | Scope approval TDD-0112 | `### TDD-0112`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0038 second bullet; S1 D11 | Scope REVISE. The exact-line match misses a `## Work-log entries …` heading with added text. S1 D11 settles a substring. Resubmit with `includes` | REVISE |
+| 20 | delivery-planner | atdd-scope | Scope approval TDD-0113 | `### TDD-0113`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0038 third bullet; S1 D11 | Scope PASS. No `W-PENDING-PROMOTION` anywhere in `SKILL.md`, one boundary. To be re-confirmed on the file's new hash | PASS |
+| 21 | delivery-planner | atdd-scope | Scope approval TDD-0114 | `### TDD-0114`; `spec0013RecordHomes.test.ts` (hash `32f2b472…09ba66`); TC-0013-0038 fourth bullet, AC-0013-0030 whole-tree clause | Scope PASS. The whole shipped assistant tree, with a two-file read-proof, one boundary. To be re-confirmed on the file's new hash | PASS |
+| 22 | delivery-planner | atdd-scope | Scope approval TDD-0111 | `### TDD-0111`; `spec0013ApprovalStop.test.ts` (hash `ab739c98…962dfd`); TC-0013-0039 first bullet, AC-0013-0029 | Scope PASS. Three steps in each of the three named units, over all files at once, one boundary | PASS |
+| 23 | delivery-planner | atdd-scope | Scope approval TDD-0115 | `### TDD-0115`; `spec0013ApprovalStop.test.ts` (hash `ab739c98…962dfd`); TC-0013-0039 second bullet; S1 D11 | Scope PASS. Whole-file scan of the three files, as the TC says. Advisory: it subsumes `TDD-0112`, which is how the TCs are written | PASS |
+| 24 | acceptance-test-engineer | atdd-ate | TDD-0111 RED | `### TDD-0111`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `ab739c98…962dfd`) | approved RED and its stripped run at `working-tree+2d31f83a…c37d55` in `### TDD-0111` Round 1 | PASS |
+| 25 | acceptance-test-engineer | atdd-ate | TDD-0115 RED | `### TDD-0115`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `ab739c98…962dfd`) | approved RED and its stripped run at `working-tree+2d31f83a…c37d55` in `### TDD-0115` Round 1 | PASS |
+| 26 | delivery-planner | atdd-scope | Scope approval TDD-0110 (resubmission) | `### TDD-0110`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged; the only change in the file is `TDD-0112`'s line | PASS |
+| 27 | delivery-planner | atdd-scope | Scope approval TDD-0112 (resubmission) | `### TDD-0112`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS. The heading check is `includes("## Work-log entries")`, the S1 D11 substring | PASS |
+| 28 | delivery-planner | atdd-scope | Scope approval TDD-0113 (resubmission) | `### TDD-0113`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged | PASS |
+| 29 | delivery-planner | atdd-scope | Scope approval TDD-0114 (resubmission) | `### TDD-0114`; `spec0013RecordHomes.test.ts` (hash `b45c049e…64e2e2a`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged | PASS |
+| 30 | delivery-planner | atdd-scope | Scope approval TDD-0111 (resubmission) | `### TDD-0111`; `spec0013ApprovalStop.test.ts` (hash `c7517a90…1249df`); tree `working-tree+d388a371…afca` | Scope PASS. Collapsing whitespace before the unchanged step patterns fixes a false negative on a wrapped step. The obligation is unchanged. The earlier RED is superseded, and a fresh RED is owed | PASS |
+| 31 | delivery-planner | atdd-scope | Scope approval TDD-0115 (resubmission) | `### TDD-0115`; `spec0013ApprovalStop.test.ts` (hash `c7517a90…1249df`); tree `working-tree+d388a371…afca` | Scope PASS re-confirmed. The `it` is unchanged, and the whole-file scan is not touched by the normalisation. A fresh RED is owed | PASS |
+| 32 | acceptance-test-engineer | atdd-ate | TDD-0110 RED | `### TDD-0110`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0110` Round 1 | PASS |
+| 33 | acceptance-test-engineer | atdd-ate | TDD-0112 RED | `### TDD-0112`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0112` Round 1 | PASS |
+| 34 | acceptance-test-engineer | atdd-ate | TDD-0113 RED | `### TDD-0113`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0113` Round 1 | PASS |
+| 35 | acceptance-test-engineer | atdd-ate | TDD-0114 RED | `### TDD-0114`; `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (RED test hash `b45c049e…4e2e2a`) | approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0114` Round 1 | PASS |
+| 36 | acceptance-test-engineer | atdd-ate | TDD-0111 fresh RED | `### TDD-0111`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `c7517a90…1249df`) | fresh approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0111` Round 1 | PASS |
+| 37 | acceptance-test-engineer | atdd-ate | TDD-0115 fresh RED | `### TDD-0115`; `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (RED test hash `c7517a90…1249df`) | fresh approved RED and its stripped run at `working-tree+d388a371…0e7afca` in `### TDD-0115` Round 1 | PASS |
+| 38 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0110 | `### TDD-0110` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 88: neither statement present (`decision` and `consultationOrDiscovery` false), after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 39 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0112 | `### TDD-0112` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 99: the `## Work-log entries` heading and its cross-reference, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 40 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0113 | `### TDD-0113` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 110: the carry-over line citing a `W-PENDING-PROMOTION` decision, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 41 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0114 | `### TDD-0114` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013RecordHomes.test.ts` | PASS: RED reproduced at line 130: seven hits in four files including the schema asset, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 42 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0111 | `### TDD-0111` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013ApprovalStop.test.ts` | PASS: RED reproduced at line 111: four stop steps missing across the three files, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
+| 43 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0115 | `### TDD-0115` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:59:11Z; `spec0013ApprovalStop.test.ts` | PASS: RED reproduced at line 126: `work-log` and `consultation-needed` in all three files, after its read-proof; RED test hash equal, and the RED revision rebuilt exactly from the current tree; strip valid | PASS |
 
 
 ### /qfai-implement — run started 2026-09-24T12:34:21.949Z
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
-| 1 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): place decisions and consultations in existing spec or Change Request homes | AC-0013-0028; TC-0013-0036; shipped `qfai-sdd/SKILL.md` | S1 D1: add one short paragraph in Mandatory Outputs; reject a separate section | PASS |
-| 2 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): retain the three approval stop sites and their existing gates | AC-0013-0029; TC-0013-0037; shipped skill and two references | S1 D2: edit each existing stop and update the old assertion test; reject a new shared section | PASS |
-| 3 | backend-engineer | spec0013-impl | TDD-0044..TDD-0049 GREEN and Oracle proof | six ATDD RED entries; shipped skill and references | The six row sections above; 16 restored GREEN tests, seven assertion-failing Oracle runs, byte-equal restoration | PASS |
+| 1 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): place decisions and consultations in existing spec or Change Request homes | AC-0013-0030; TC-0013-0038; shipped `qfai-sdd/SKILL.md` | S1 D1: add one short paragraph in Mandatory Outputs; reject a separate section | PASS |
+| 2 | backend-engineer | spec0013-griller | grilling(S1@2026-09-24T12:34:21.949Z/agents): retain the three approval stop sites and their existing gates | AC-0013-0029; TC-0013-0039; shipped skill and two references | S1 D2: edit each existing stop and update the old assertion test; reject a new shared section | PASS |
+| 3 | backend-engineer | spec0013-impl | TDD-0110..TDD-0115 GREEN and Oracle proof | six ATDD RED entries; shipped skill and references | The six row sections above; 16 restored GREEN tests, seven assertion-failing Oracle runs, byte-equal restoration | PASS |
 
 ## Cross-spec obligations
 
@@ -2447,30 +2656,41 @@ pair, so a change to one can silently diverge from the other.
 
 ### /qfai-atdd run 2026-09-23T19:33:24.738Z
 
-- `TDD-0044` … `TDD-0049`: REDs passed by `qa-gatekeeper` (RED phase) on file hashes
-  `b45c049e…64e2e2a` and `c7517a90…1249df`; handoffs ready. The GREEN of `TDD-0044`, `TDD-0045`,
-  `TDD-0046`, `TDD-0047` and `TDD-0049` is the `/qfai-sdd` skill-text round. The earlier REDs of
-  `TDD-0045` and `TDD-0049` are kept as superseded history.
-- `TDD-0048` reads the whole shipped assistant tree, so its GREEN is the tree after the
+- `TDD-0110` … `TDD-0115`: REDs passed by `qa-gatekeeper` (RED phase) on file hashes
+  `b45c049e…64e2e2a` and `c7517a90…1249df`; handoffs ready. The GREEN of `TDD-0110`, `TDD-0111`,
+  `TDD-0112`, `TDD-0113` and `TDD-0115` is the `/qfai-sdd` skill-text round. The earlier REDs of
+  `TDD-0111` and `TDD-0115` are kept as superseded history.
+- `TDD-0114` reads the whole shipped assistant tree, so its GREEN is the tree after the
   spec-0011 skill-text GREEN and the schema withdrawal as well as its own.
 - Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs per
   row. All rows' full-suite checkpoints close together on the final head's CI.
 
 ## Final status
 
-PASS for TDD-0020, TDD-0024, TDD-0029, TDD-0030 and TDD-0044 through TDD-0049, each for the part of its obligation named under "Ledger rows advanced". This is a per-row verdict, not a stage verdict. The pack retains the eight unrelated coverage gaps named above.
+Historical PASS for the original four rows, each for the part of its obligation named
+under "Ledger rows advanced". This is a per-row verdict, not a stage verdict:
+the pack is not clean, and eight of its twelve `done` rows are listed under Gaps
+rather than claimed.
+
+The three new rows have live P1d falsifiability PASS and focused GREEN. Their
+full checkpoint, review pack and completion verdict remain pending.
+
+TDD-0110 through TDD-0115 held a per-row PASS as TDD-0044 through TDD-0049. The
+renumbering returned them to `todo` (DR-0013-0017), so that verdict is history
+until they are completed again.
+
 ## First full CI checkpoint
 
 - Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
 - Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
 - Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
-- Rows closed: TDD-0044, TDD-0045, TDD-0046, TDD-0047, TDD-0048, TDD-0049.
+- Rows closed: TDD-0110, TDD-0111, TDD-0112, TDD-0113, TDD-0114, TDD-0115.
 
 ## Record defects
 
-- `record:QFAI-TDDLIST-008`, `TDD-0044`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `92c2348be2179f2c21afc4d73db02c3b4c8847a8573c33f601a2331766fd042c`; the original sealed review remains historical.
-- `record:QFAI-TDDLIST-008`, `TDD-0045`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `1a4021d1381e34a8c9e5d54664c6b8676b723c8fc3d2c3f92072d347ec4c7a9c`; the original sealed review remains historical.
-- `record:QFAI-TDDLIST-008`, `TDD-0046`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `05aa4663d3a9053787d4fbcf5dcd24ad3a7b3a05b897fbaabfd04f55839079bd`; the original sealed review remains historical.
-- `record:QFAI-TDDLIST-008`, `TDD-0047`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `0f30fe0de447a293cf11ef5063f33b36dbc561f0eaf4c777753cf6cd19b7e798`; the original sealed review remains historical.
-- `record:QFAI-TDDLIST-008`, `TDD-0048`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `c97d9e677261538ab77d73f9f1b85bb834133998729832525d532445b6f2824b`; the original sealed review remains historical.
-- `record:QFAI-TDDLIST-008`, `TDD-0049`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `eca62e968eb38e1b5101f36772ca9c8bad37fa0aca62c5b042b2d581e34db5ad`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0110`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `92c2348be2179f2c21afc4d73db02c3b4c8847a8573c33f601a2331766fd042c`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0111`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `1a4021d1381e34a8c9e5d54664c6b8676b723c8fc3d2c3f92072d347ec4c7a9c`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0112`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `05aa4663d3a9053787d4fbcf5dcd24ad3a7b3a05b897fbaabfd04f55839079bd`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0113`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `0f30fe0de447a293cf11ef5063f33b36dbc561f0eaf4c777753cf6cd19b7e798`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0114`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `c97d9e677261538ab77d73f9f1b85bb834133998729832525d532445b6f2824b`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0115`, Round 1: the TC reference, RED result, Oracle proof and parity value did not expose the observed run in the validator's fields. The ATDD entry now states the observed failure, command, selector and exact parity value. The completion and implementation reviewers re-attested PASS at `working-tree+8fc4a997096e64a1f08fafb4d4b8440e3311305d30a83168c7780278e3320c3c` over audited hash `eca62e968eb38e1b5101f36772ca9c8bad37fa0aca62c5b042b2d581e34db5ad`; the original sealed review remains historical.

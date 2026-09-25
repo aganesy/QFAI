@@ -145,14 +145,18 @@
 - When `auditProfile.ts` evaluates them during the deprecation window
 - Then the string-only and the complete structured item are accepted; the item missing `acceptance` is rejected (all-required, closed schema)
 
-## EX-0013-0021: Record Homes In The Shipped qfai-sdd Text
+## EX-0013-0021: Optional Side Artifact States
 
 - BR-Ref: BR-0013-0021
-- Given the shipped `/qfai-sdd` `SKILL.md` and `references/**`, and the rest of `packages/qfai/assets/init/.qfai/assistant/**`
-- When the text that says where a decision, a consultation or an out-of-scope discovery is recorded is read
-- Then a decision goes to the spec's `07_Decisions.md` or a Change Request, and a consultation or an out-of-scope discovery to `08_Open-questions.md` or a Change Request
-- And `SKILL.md` has no `## Work-log entries` section and no `W-PENDING-PROMOTION` example
-- And no file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`
+- Given a discussion pack with usable markdown and no `prototyping.yaml`
+- When SDD preflight runs
+- Then it reports ready without treating the absent side artifact as a blocker
+- Given the same pack with a `prototyping.yaml` whose namespaced schema is invalid
+- When SDD preflight runs
+- Then it reports ready without treating the malformed optional artifact as a blocker
+- Given the same pack with a legacy-only `prototyping.yaml` that has no `prototyping` namespace
+- When SDD preflight runs
+- Then it reports ready without treating the legacy optional artifact as a blocker
 
 ## EX-0013-0022: The Approval Stop In Three Files
 
@@ -161,3 +165,12 @@
 - When the missing-approval stop is read in each
 - Then each carries the three steps: leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target
 - And none contains "work-log" or `consultation-needed`
+
+## EX-0013-0023: Record Homes In The Shipped qfai-sdd Text
+
+- BR-Ref: BR-0013-0023
+- Given the shipped `/qfai-sdd` `SKILL.md` and `references/**`, and the rest of `packages/qfai/assets/init/.qfai/assistant/**`
+- When the text that says where a decision, a consultation or an out-of-scope discovery is recorded is read
+- Then a decision goes to the spec's `07_Decisions.md` or a Change Request, and a consultation or an out-of-scope discovery to `08_Open-questions.md` or a Change Request
+- And `SKILL.md` has no `## Work-log entries` section and no `W-PENDING-PROMOTION` example
+- And no file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`

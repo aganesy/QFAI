@@ -13,6 +13,28 @@ export function normalizeRepoPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
+/** The common ancestor used by the three-dot branch diff. */
+export function mergeBaseRevision(root: string, baseBranch: string): string | null {
+  const revision = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
+  return revision || null;
+}
+
+/** Read one path at the branch's merge base, distinguishing absence from failure. */
+export function fileAtRevision(
+  root: string,
+  revision: string,
+  file: string,
+):
+  | { readonly kind: "present"; readonly content: string }
+  | { readonly kind: "absent" }
+  | { readonly kind: "unavailable" } {
+  const listed = gitStdout(root, ["ls-tree", "-z", revision, "--", file]);
+  if (listed === null) return { kind: "unavailable" };
+  if (listed.length === 0) return { kind: "absent" };
+  const content = gitStdout(root, ["show", `${revision}:${file}`]);
+  return content === null ? { kind: "unavailable" } : { kind: "present", content };
+}
+
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
 export function gitStdout(root: string, args: readonly string[]): string | null {
   try {

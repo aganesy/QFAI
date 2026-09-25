@@ -6,7 +6,7 @@
  * that carries the stop exactly once in every file, so an absence cannot pass on a file that was
  * not read.
  */
-// QFAI:SPEC-0013:TC-0013-0037
+// QFAI:SPEC-0013:TC-0013-0039
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -93,8 +93,8 @@ const STOP_STEPS: ReadonlyArray<readonly [string, RegExp]> = [
   ],
 ];
 
-describe("TC-0013-0037: approval stop writes no entry", () => {
-  it("TC-0013-0037: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
+describe("TC-0013-0039: approval stop writes no entry", () => {
+  it("TC-0013-0039: SKILL.md, the execution playbook and the triage reference each state the three stop steps", async () => {
     const units = await readStopUnits();
 
     expect(
@@ -111,7 +111,7 @@ describe("TC-0013-0037: approval stop writes no entry", () => {
     expect(missing).toEqual([]);
   });
 
-  it("TC-0013-0037: none of the three files names a work-log entry or consultation-needed", async () => {
+  it("TC-0013-0039: none of the three files names a work-log entry or consultation-needed", async () => {
     const units = await readStopUnits();
 
     expect(

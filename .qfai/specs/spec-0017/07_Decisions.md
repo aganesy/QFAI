@@ -936,3 +936,12 @@ file, so an entry here is what makes that citation checkable.
   than silently interpreted as the observed detection condition.
 - Related: AC-0017-0003, AC-0017-0006, AC-0017-0018, BR-0017-0006,
   BR-0017-0013, TC-0017-0007, TC-0017-0043
+
+## Approved change requests
+
+- CR-20260924-0001: retire the `pr-fix` and `pr-merge` skills and suites.
+  The current slice set has seven names across the runner, scripts, two CI
+  matrices, two release matrices and release verify's `SUITE_SLICES`.
+  Change selection skips retained legs; an approved suite retirement removes
+  its leg. Release tags with the older nine-slice set use the complete
+  whole-suite aggregate path.

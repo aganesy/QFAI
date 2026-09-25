@@ -689,6 +689,29 @@ describe("issue report metadata", () => {
     expect(missing).toEqual([]);
   });
 
+  it("explains optional-ledger findings without making adoption mandatory", () => {
+    const finding = {
+      code: "QFAI-TRACE-002",
+      severity: "warning",
+      category: "canonical",
+      message: "Traceability ledger not found for spec-0001.",
+    } as const;
+    expect(resolveIssueExpected(finding)).toContain("may omit its optional traceability ledger");
+    expect(resolveIssueFix(finding)).toContain("needs no action");
+  });
+
+  it("gives history-unavailable traceability findings an actionable repair", () => {
+    const finding = {
+      code: "QFAI-TRACE-003",
+      severity: "error",
+      category: "canonical",
+      message: "Could not diff against main.",
+    } as const;
+    expect(resolveIssueExpected(finding)).toContain("configured base and merge-base resolve");
+    expect(resolveIssueFix(finding)).toContain("Fetch the configured base ref");
+    expect(resolveIssueFix(finding)).toContain("paths.specsDir");
+  });
+
   it("keeps no stale entries on either pending list", async () => {
     const usage = await collectErrorCapableUsage();
     const staleExpected = [...PENDING_EXPECTED_CATALOG_CODES]

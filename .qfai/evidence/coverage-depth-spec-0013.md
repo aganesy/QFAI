@@ -3,11 +3,17 @@
 ## Scope
 
 This matrix scores every active obligation this pack declares: the **14 user stories** of
-`02_User-stories.md` (`US-0013-0001` … `US-0013-0014`) and the **35 test cases** of
-`06_Test-Cases.md` (`TC-0013-0001` … `TC-0013-0035`, one `## TC-0013-NNNN:` heading each). Both sets
+`02_User-stories.md` (`US-0013-0001` … `US-0013-0014`) and the **37 test cases** of
+`06_Test-Cases.md` (`TC-0013-0001` … `TC-0013-0037`, one `## TC-0013-NNNN:` heading each). Both sets
 are read from the pack in full, not from the rows of `.qfai/specs/spec-0013/tdd/test-list.md`. The
-business rule table below carries all **20** `BR-0013-*` headings of `04_Business-Rules.md`. None
-carries a status retiring it, so all twenty are active and all twenty own a row.
+business rule table below carries all **21** `BR-0013-*` headings of `04_Business-Rules.md`. None
+carries a status retiring it, so all twenty-one are active and own a row.
+
+The original 49-row assessment and its finding narrative remain a historical baseline. The two
+optional-artifact rows and their business rule were added after the approved criterion-ID repair;
+the earlier rows have not been re-scored in this update. Their execution inventory below records
+the earlier revision, while the new cases were run against the current tree. Older findings about
+missing tests and the 30-row ledger require a full refresh before they describe this tree.
 
 `Status` is a row verdict, not a mark, and is excluded from every total below. The scored cells are
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
@@ -34,15 +40,16 @@ existing somewhere in the repository is not coverage here. Ownership is read in 
 The two steps do not overlap: the first turns on an annotation pointing elsewhere, the second on
 there being no annotation to point anywhere. Neither admits a case that another spec owns.
 
-**Twenty-three of the forty-nine obligations are discharged by nothing, or by a test about something
-else.** Ten have no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`, `-0006`, `-0007`,
+**In the original 49-row assessment, twenty-three obligations were discharged by nothing, or by a
+test about something else.** Ten had no test at all: `US-0013-0001`, `-0002`, `-0004`, `-0005`,
+`-0006`, `-0007`,
 `-0009`, `-0010`, and `TC-0013-0023`, `-0024`. Five more are discharged by substring
 assertions over the shipped `qfai-sdd/SKILL.md` that carry none of the obligation they are annotated
 to. Two are self-referential coverage placeholders whose annotated `describe` tests the diff
 detector. Those seventeen rows carry 153 of the matrix's 286 `❌` cells between them. Six further
 wording rows carry another 45.
 
-The remaining twenty-six rows are scored on their merits and range widely. `US-0013-0014`,
+The remaining twenty-six baseline rows are scored on their merits and range widely. `US-0013-0014`,
 `TC-0013-0035`, `TC-0013-0033` and `TC-0013-0026` are the strongest work in the pack: a closed-schema
 rejection suite naming the offending field and item in every message, a ceiling exercised on both
 sides with the SUT's own constant imported into the assertion, and a lane refusal required to name the
@@ -57,14 +64,14 @@ contradicting its own acceptance criterion. See Findings 1, 2, 3 and 8.
 
 Section "Every `❌` cell, named" accounts for all 312 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 116 partial scores, which the PASS criterion also
+"Every `⚠️` cell, named" does the same for all 117 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
 
-Every score below rests on a test run, not on a reading of a ledger. The seventeen files that carry
-spec-0013 coverage were located by reading the tests and the source, then executed. All seventeen
-pass, each by its own file-scoped command from `packages/qfai`, at revision
+The original scores rest on test runs, not on a reading of a ledger. The seventeen files in that
+baseline inventory were located by reading the tests and the source, then executed. All seventeen
+passed, each by its own file-scoped command from `packages/qfai`, at revision
 `e0f367b48e905c3b36fb7b1689706982dbea5162`:
 
 ```bash
@@ -103,8 +110,16 @@ no run behind it, which is the defect this whole document is written against.
 | `tests/core/validators/designContractReadiness.test.ts`       | 63 passed  |
 |                                                               | **363**    |
 
-Two sets are counted here and they are not the same set. Thirteen files carry a `QFAI:SPEC-0013`
-annotation, and every one of them is in the table. Four carry none and are scored under step 2 of
+The three new optional-artifact cases in
+`tests/integration/sddOptionalArtifactPreflight.test.ts` were run on the current tree with
+`node_modules/.bin/vitest.cmd run tests/integration/sddOptionalArtifactPreflight.test.ts --reporter=dot`
+from `packages/qfai`: **3 passed**. They exercise missing, malformed namespaced and legacy-format
+`prototyping.yaml` against `runSddPreflight`, and assert `ready` with no blockers. The historical
+363-test total above is not a claim that all those files were re-run after this change.
+
+Two sets were counted in the baseline and they are not the same set. Thirteen files carried a
+`QFAI:SPEC-0013` annotation, and every one of them is in the historical table. Four carried none
+and were scored under step 2 of
 "What credits a cell": `US-0013-0003` and `US-0013-0008` have no annotated case anywhere and three
 of these files are where their outcome is produced;
 `tests/core/validators/designContractReadiness.test.ts` is the fourth, and it is where
@@ -401,43 +416,46 @@ in this pack's *report* scope because the validator scans the whole test tree; t
 | TC-0013-0033 | ✅                     | ✅          | ✅         | ⚠️         | ⚠️              | ⚠️             | ❌                | ⚠️            | ✅              | ❌     |
 | TC-0013-0034 | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ | ⚠️ | ⚠️ |
 | TC-0013-0035 | ✅ | ⚠️ | ⚠️ | ✅ | ⚠️ | ⚠️ | ❌ | ⚠️ | ✅ | ⚠️ |
+| TC-0013-0036 | ✅ | ✅ | n/a | ✅ | n/a | ✅ | n/a | n/a | ✅ | ✅ |
+| TC-0013-0037 | ✅ | n/a | ✅ | ✅ | n/a | ✅ | n/a | n/a | ✅ | ✅ |
 
-Totals across the nine scored depth columns, 441 cells (49 rows × 9): **✅ 53 / ⚠️ 102 / ❌ 286**.
+Totals across the nine scored depth columns, 459 cells (51 rows × 9):
+**✅ 64 / ⚠️ 101 / ❌ 286 / n/a 8**.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 49 rows, for reading only, is ✅ 0 / ⚠️ 18 /
-❌ 31. No row reaches `Status = ✅`; every row is capped by the carrier-only condition described
-above.
+grand total at the end. Its distribution across the 51 rows, for reading only, is ✅ 2 / ⚠️ 18 /
+❌ 31. The two new rows have direct, annotated integration cases; the earlier 49 row verdicts were
+not re-scored in this update.
 
-Per scored depth column, 49 cells each:
+Per scored depth column, 51 cells each:
 
-| Column                 | ✅  | ⚠️  | ❌  |
-| ---------------------- | --- | --- | --- |
-| Equivalence partitions | 13  | 14  | 22  |
-| Normal path | 19 | 11 | 19 |
-| Error path | 9 | 6 | 34 |
-| Edge cases             | 2   | 14  | 33  |
-| Boundary values        | 1   | 11  | 37  |
-| Special values         | 1   | 8   | 40  |
-| State transitions      | 1   | 0   | 48  |
-| Combinatorial          | 0   | 18  | 31  |
-| Oracle strength        | 8   | 19  | 22  |
+| Column                 | ✅  | ⚠️  | ❌  | n/a |
+| ---------------------- | --- | --- | --- | --- |
+| Equivalence partitions | 15  | 14  | 22  | 0   |
+| Normal path            | 20  | 11  | 19  | 1   |
+| Error path             | 10  | 6   | 34  | 1   |
+| Edge cases             | 4   | 14  | 33  | 0   |
+| Boundary values        | 1   | 11  | 37  | 2   |
+| Special values         | 3   | 8   | 40  | 0   |
+| State transitions      | 1   | 0   | 48  | 2   |
+| Combinatorial          | 0   | 18  | 31  | 2   |
+| Oracle strength        | 10  | 19  | 22  | 0   |
 
-The shape of that table is the pack's central fact: nineteen rows have a passing normal path, one
+The shape of that table is the pack's central fact: twenty rows have a passing normal path, one
 row in the whole pack observes a state transition, one row exercises a boundary in both directions,
 and no row reaches `✅` on combinatorial coverage. Coverage here is wide at the happy path and thin
 everywhere the checklist asks for depth.
 
 ### Business rule coverage
 
-One row per active `BR-0013-*`. All twenty headings in `04_Business-Rules.md` are active, so none is
+One row per active `BR-0013-*`. All twenty-one headings in `04_Business-Rules.md` are active, so none is
 omitted.
 
 `Covering TC` is derived from the `BR-Ref` of the example each test case cites — that is, from
 `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`. That route is stated by the pack itself
-and is exactly one-to-one: each of the twenty `BR-0013-*` owns one `EX-0013-*`, and every `EX-0013-*`
+and is exactly one-to-one: each of the twenty-one `BR-0013-*` owns one `EX-0013-*`, and every `EX-0013-*`
 is cited by at least one `TC-0013-*`. The other derivation route, each rule's own `AC-Refs`, is
-**broken for five of the twenty rules** and is not used here; see Findings 7.
+**broken for five of the original twenty rules** and is not used here; see Findings 7.
 
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                                     | Status |
 | ------------ | ------------- | ------------- | -------------------- | ----------------------------------------------- | ------ |
@@ -461,18 +479,41 @@ is cited by at least one `TC-0013-*`. The other derivation route, each rule's ow
 | BR-0013-0018 | ⚠️            | ✅            | ❌                   | TC-0013-0030, TC-0013-0031                      | ❌     |
 | BR-0013-0019 | ⚠️            | ⚠️            | ❌                   | TC-0013-0032, TC-0013-0033                      | ❌     |
 | BR-0013-0020 | ✅            | ✅            | ⚠️                   | TC-0013-0034, TC-0013-0035                      | ⚠️     |
+| BR-0013-0021 | ✅            | ✅            | ⚠️                   | TC-0013-0036, TC-0013-0037                      | ⚠️     |
 
-Totals across the three scored columns, 60 cells: **✅ 12 / ⚠️ 15 / n/a 7 / ❌ 26**.
+Totals across the three scored columns, 63 cells: **✅ 14 / ⚠️ 16 / n/a 7 / ❌ 26**.
 
-`Status` here is likewise a row verdict and is not counted. Its distribution across the 20 rows is
-✅ 0 / ⚠️ 5 / ❌ 15.
+`Status` here is likewise a row verdict and is not counted. Its distribution across the 21 rows is
+✅ 0 / ⚠️ 6 / ❌ 15.
 
 `n/a` is used seven times in the `Conditional branches` column, for `BR-0013-0001`, `-0004`, `-0006`,
 `-0007`, `-0008`, `-0009` and `-0011`. Each states its rule unconditionally — "MUST follow",
 "MUST happen after", "MUST include", "is SSOT", "MUST include a `Type` column", "MUST agree", "MUST be
 exported … AND MUST be imported" — so there is no branch to cover. It is not used anywhere an
-obligation exists and is unmet. The remaining thirteen rules each state at least one condition and
-are scored.
+obligation exists and is unmet. The remaining fourteen rules each state at least one condition and
+are scored. The new rule covers missing, malformed namespaced and legacy-format side artifacts;
+its valid-present branch remains partial because the three new annotated cases do not exercise it.
+
+### Optional side artifact scoring
+
+`TC-0013-0036` owns the absent-artifact valid partition. Its annotated test runs preflight over
+usable markdown with no `prototyping.yaml` and requires `ready` and zero blockers. Absence is both
+the valid special value and the edge case. The row has no kept failure of its own, no ordered or sized
+boundary, and no multi-step state or interacting input dimensions. Those cells are `n/a`.
+
+`TC-0013-0037` declares `Type: error`, so its `Normal path` cell is `n/a`; the sibling `TC-0013-0036`
+carries the ordinary path. Its two annotated cases run preflight with a malformed namespaced artifact
+and with a legacy artifact lacking the namespace. Both require `ready` and zero blockers. These are
+distinct invalid-format partitions and special values, but neither adds an ordered boundary or a
+state transition. The artifact shape is the only varied input, so `Combinatorial` is `n/a` for both
+rows. A production mutation that turns an absent or malformed optional artifact into a blocker
+would fail the respective assertions; their oracle cells are `✅`.
+
+`BR-0013-0021` has a positive absent case and negative malformed and legacy cases, all with runtime
+assertions. Its `Conditional branches` cell is `⚠️`: the rule also names a present, valid artifact,
+and no newly annotated case runs that branch. `AC-0013-0028` also reaches `US-0013-0008`. Its older
+story-row score is preserved as a baseline here; a subsequent full ATDD review must assess whether
+the new criterion changes that story's own coverage.
 
 `BR-0013-0019` was in that list and is not unconditional. "The recommended band is 3..7" names two
 boundaries and the rule has a direction on each side, which is why the `⚠️` census for this row
@@ -972,8 +1013,8 @@ obligation, and a mark is the second claim.
 
 ## Every ⚠️ cell, named
 
-101 scored depth cells in the matrix and 15 scored cells in the business rule table are `⚠️` —
-**116 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
+101 scored depth cells in the matrix and 16 scored cells in the business rule table are `⚠️` —
+**117 in all**. The PASS criterion requires a documented rationale for each, so each is named here,
 grouped by column with a per-coordinate reason.
 
 ### Matrix depth cells (101)
@@ -1333,9 +1374,9 @@ rested on is over the run-summary artifact, and this column is scored per obliga
   return no findings for every input keeps all three cases green, and the discriminating evidence
   lives in `TC-0013-0035`. The mixed-list case widens the input and inherits the same limit.
 
-**Depth `⚠️` count check.** 14 + 11 + 7 + 14 + 11 + 8 + 0 + 18 + 19 = **102**.
+**Depth `⚠️` count check.** 14 + 11 + 6 + 14 + 11 + 8 + 0 + 18 + 19 = **101**.
 
-### Business rule table (15)
+### Business rule table (16)
 
 **`Positive case`, 6 cells** — `BR-0013-0001`, `-0002`, `-0003`, `-0012`, `-0018`, `-0019`.
 
@@ -1377,7 +1418,8 @@ rested on is over the run-summary artifact, and this column is scored per obliga
 - `BR-0013-0019` — the over-ceiling direction fires and is pinned. The under-floor direction the rule
   states is exercised with the opposite verdict: counts 1 and 2 are required to stay silent.
 
-**`Conditional branches`, 6 cells** — `BR-0013-0002`, `-0003`, `-0010`, `-0012`, `-0017`, `-0020`.
+**`Conditional branches`, 7 cells** — `BR-0013-0002`, `-0003`, `-0010`, `-0012`, `-0017`,
+`-0020`, `-0021`.
 
 - `BR-0013-0012` — the stage branch is covered: the same tree is required to yield different
   findings under the SDD and prototyping stages. The branch inside the rule's own second bullet —
@@ -1398,6 +1440,9 @@ rested on is over the run-summary artifact, and this column is scored per obliga
   exercised thoroughly on all three accepted shapes: string-only, structured, and the two mixed in one
   list. The window's other side has no case, and nothing in the product or the tests states what
   closes it.
+- `BR-0013-0021` — the newly annotated integration cases cover missing, malformed namespaced and
+  legacy-format side artifacts. A present artifact with a valid namespaced schema has no case in
+  this new boundary group, so that branch remains partial.
 
 ## Findings
 
@@ -1538,8 +1583,8 @@ rather than by the spec.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 66 / ⚠️ 116 / ❌ 312**, with `n/a 7`, across all 501 scored cells — 441 matrix depth cells and
-60 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
+**✅ 78 / ⚠️ 117 / ❌ 312**, with `n/a 15`, across all 522 scored cells — 459 matrix depth cells and
+63 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
 Seven obligations in this pack cannot be moved by testing alone. `US-0013-0009` names artifacts and
@@ -1588,13 +1633,13 @@ and it is left as it stood.
 
 This change appends to the pack and removes nothing (`09_delta.md` `## Triage (2026-09-23)`):
 
-- `TC-0013-0036` and `TC-0013-0037`, each declaring `Level` `integration`;
-- `BR-0013-0021` and `BR-0013-0022`, neither carrying a retiring `Status:`;
+- `TC-0013-0038` and `TC-0013-0039`, each declaring `Level` `integration`;
+- `BR-0013-0023` and `BR-0013-0022`, neither carrying a retiring `Status:`;
 - no user story.
 
 The pack now declares 14 user stories, 37 test cases and 22 business rules. The two new test cases
-are carried by six ledger rows, one per boundary: `TDD-0044`, `TDD-0046`, `TDD-0047` and `TDD-0048`
-for `TC-0013-0036`, and `TDD-0045` and `TDD-0049` for `TC-0013-0037`.
+are carried by six ledger rows, one per boundary: `TDD-0110`, `TDD-0112`, `TDD-0113` and `TDD-0114`
+for `TC-0013-0038`, and `TDD-0111` and `TDD-0115` for `TC-0013-0039`.
 
 ### How the new cells are scored
 
@@ -1619,38 +1664,38 @@ No existing cell moves:
 
 | US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
 | ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
-| TC-0013-0036 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | n/a           | ⚠️              | planned |
-| TC-0013-0037 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | ✅            | ⚠️              | planned |
+| TC-0013-0038 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | n/a           | ⚠️              | planned |
+| TC-0013-0039 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | ✅            | ⚠️              | planned |
 
 Totals across the nine scored columns, 18 cells: **✅ 5 / ⚠️ 2 / ❌ 0**, `n/a` 11.
 
-**TC-0013-0036.** The subject is the shipped text under
+**TC-0013-0038.** The subject is the shipped text under
 `packages/qfai/assets/init/.qfai/assistant/`.
 
 - Equivalence partitions: the two record kinds the rule routes, a decision, and a consultation or
   out-of-scope discovery.
-- Error path `n/a`: `BR-0013-0021` names no failure.
+- Error path `n/a`: `BR-0013-0023` names no failure.
 - Boundaries, one row each:
-  - `TDD-0044` (`record-homes-stated`): within `SKILL.md` and `references/**`, one statement sends a
+  - `TDD-0110` (`record-homes-stated`): within `SKILL.md` and `references/**`, one statement sends a
     decision to `07_Decisions.md` or a Change Request. Another sends a consultation or an
     out-of-scope discovery to `08_Open-questions.md` or a Change Request. Both are asserted inside
     the extracted statement, not as whole-file substrings.
-  - `TDD-0046` (`no-worklog-section`): no `## Work-log entries` heading in `SKILL.md`.
-  - `TDD-0047` (`no-pending-promotion-example`): no `W-PENDING-PROMOTION` in `SKILL.md`.
-  - `TDD-0048` (`no-surface-reference-in-tree`): every file under the assistant tree is read, and
+  - `TDD-0112` (`no-worklog-section`): no `## Work-log entries` heading in `SKILL.md`.
+  - `TDD-0113` (`no-pending-promotion-example`): no `W-PENDING-PROMOTION` in `SKILL.md`.
+  - `TDD-0114` (`no-surface-reference-in-tree`): every file under the assistant tree is read, and
     the test asserts the file count is above zero. No file may contain `.qfai/steering/` or
     `worklog-entry.schema.md`. This boundary reads files other specs change as well: the
     `/qfai-implement` skill (spec-0011) and `catalog/worklog-entry.schema.md` (spec-0004).
 - Oracle mutations, each applied to the shipped text:
-  - `TDD-0044`: delete the out-of-scope discovery clause.
-  - `TDD-0046`: re-insert the heading.
-  - `TDD-0047`: re-insert the example.
-  - `TDD-0048`: re-insert a `.qfai/steering/<id>.md` sentence in any one file.
+  - `TDD-0110`: delete the out-of-scope discovery clause.
+  - `TDD-0112`: re-insert the heading.
+  - `TDD-0113`: re-insert the example.
+  - `TDD-0114`: re-insert a `.qfai/steering/<id>.md` sentence in any one file.
 
-**TC-0013-0037.** Error path `n/a`: `BR-0013-0022` names no failure.
+**TC-0013-0039.** Error path `n/a`: `BR-0013-0022` names no failure.
 
 - Boundaries, one row each:
-  - `TDD-0045` (`stop-steps-stated`): the stop is extracted from each of three places, and each
+  - `TDD-0111` (`stop-steps-stated`): the stop is extracted from each of three places, and each
     extraction is asserted to be found and non-empty:
     - `SKILL.md` `### --auto and approval-required rows`;
     - the missing-approval stop condition of `references/sdd-execution-playbook.md`;
@@ -1658,19 +1703,19 @@ Totals across the nine scored columns, 18 cells: **✅ 5 / ⚠️ 2 / ❌ 0**, `
 
     Each must state three steps: leave `Approved By` as `-`, do not enter Phase 0, report every
     unapproved row with its Operation and target.
-  - `TDD-0049` (`no-worklog-entry-named`): none of the three files contains "work-log" or
+  - `TDD-0115` (`no-worklog-entry-named`): none of the three files contains "work-log" or
     `consultation-needed`.
 - Combinatorial: three files × three steps are asserted together, as the test case requires.
 - Oracle mutations:
-  - `TDD-0045`: remove "do not enter Phase 0" from one of the three files.
-  - `TDD-0049`: re-insert `consultation-needed` in one of them.
+  - `TDD-0111`: remove "do not enter Phase 0" from one of the three files.
+  - `TDD-0115`: re-insert `consultation-needed` in one of them.
 
 ### Business rule rows added
 
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                                                  | Status  |
 | ------------ | ------------- | ------------- | -------------------- | ------------------------------------------------------------ | ------- |
-| BR-0013-0021 | ✅            | n/a           | n/a                  | TC-0013-0036 (TDD-0044, TDD-0046, TDD-0047, TDD-0048)        | planned |
-| BR-0013-0022 | ✅            | n/a           | n/a                  | TC-0013-0037 (TDD-0045, TDD-0049)                            | planned |
+| BR-0013-0023 | ✅            | n/a           | n/a                  | TC-0013-0038 (TDD-0110, TDD-0112, TDD-0113, TDD-0114)        | planned |
+| BR-0013-0022 | ✅            | n/a           | n/a                  | TC-0013-0039 (TDD-0111, TDD-0115)                            | planned |
 
 Totals across the three scored columns, 6 cells: **✅ 2 / ⚠️ 0 / ❌ 0**, `n/a` 4.
 

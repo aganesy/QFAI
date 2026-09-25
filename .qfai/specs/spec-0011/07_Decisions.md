@@ -31,7 +31,7 @@
 
 - Status: accepted
 - Context: `discussion-20260923060900824#REQ-0007` also requires that no file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`.
-- Decision: spec-0013's TC-0013-0036 carries the tree-wide absence check. TC-0011-0013 keeps its own-directory clause.
+- Decision: spec-0013's TC-0013-0038 carries the tree-wide absence check. TC-0011-0013 keeps its own-directory clause.
 - Consequences: Every acceptance signal has a test and no new id is minted. A separate test case for the tree-wide half would change the approved Triage id list.
 - Related: TC-0011-0013
 

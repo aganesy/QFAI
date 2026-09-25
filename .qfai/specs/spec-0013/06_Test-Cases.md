@@ -258,10 +258,26 @@ Tracked for separate implementation as OQ-0016
 - Level: integration
 - Verify a structured item missing any of `id` / `label` / `acceptance`, or carrying extra keys (closed schema violation), is rejected by `auditProfile.ts` (DR-0268).
 
-## TC-0013-0036: Records Go To The Spec Pack
+## TC-0013-0036: Missing Optional Side Artifact Leaves Preflight Ready
 
 - EX-Ref: EX-0013-0021
 - AC-Refs: AC-0013-0028
+- Type: normal
+- Level: integration
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` is absent.
+
+## TC-0013-0037: Invalid or Legacy Optional Side Artifact Leaves Preflight Ready
+
+- EX-Ref: EX-0013-0021
+- AC-Refs: AC-0013-0028
+- Type: error
+- Level: integration
+- Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` has an invalid schema or a legacy format without a `prototyping` namespace.
+
+## TC-0013-0038: Records Go To The Spec Pack
+
+- EX-Ref: EX-0013-0023
+- AC-Refs: AC-0013-0030
 - Type: normal
 - Level: integration
 - Verify, one boundary per check:
@@ -270,7 +286,7 @@ Tracked for separate implementation as OQ-0016
   - `SKILL.md` has no `W-PENDING-PROMOTION` example (boundary `no-pending-promotion-example`)
   - no file under `packages/qfai/assets/init/.qfai/assistant/**` contains `.qfai/steering/` or `worklog-entry.schema.md` (boundary `no-surface-reference-in-tree`)
 
-## TC-0013-0037: Approval Stop Writes No Entry
+## TC-0013-0039: Approval Stop Writes No Entry
 
 - EX-Ref: EX-0013-0022
 - AC-Refs: AC-0013-0029

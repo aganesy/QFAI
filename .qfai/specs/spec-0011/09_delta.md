@@ -143,7 +143,7 @@ tags: ["@test"]
 compat: Improvement
 scope:
   - spec-0011/06_Test-Cases.md
-notes: TC-0011-0013 checks the qfai-implement skill directory; spec-0013 TC-0013-0036 carries the tree-wide absence check (DR-0011-0005).
+notes: TC-0011-0013 checks the qfai-implement skill directory; spec-0013 TC-0013-0038 carries the tree-wide absence check (DR-0011-0005).
 ```
 
 #### Migration / Follow-ups
@@ -153,7 +153,7 @@ notes: TC-0011-0013 checks the qfai-implement skill directory; spec-0013 TC-0013
 #### Rejected
 
 - option: TC-0011-0013 widens its absence check to the whole assistant tree
-  reason: TC-0013-0036 owns the tree-wide half, and two cases would hold one obligation twice.
+  reason: TC-0013-0038 owns the tree-wide half, and two cases would hold one obligation twice.
   do_not: Check the whole tree from two test cases.
   temptation: Both skills are edited in the same change.
 - option: A separate test case for the tree-wide half

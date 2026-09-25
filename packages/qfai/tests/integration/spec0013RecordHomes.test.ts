@@ -5,7 +5,7 @@
  * The cases read the package's own assets, not the `.qfai/assistant` mirror. Each text oracle
  * reads a unit it first finds, so an absence cannot pass on files that were not read.
  */
-// QFAI:SPEC-0013:TC-0013-0036
+// QFAI:SPEC-0013:TC-0013-0038
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -54,8 +54,8 @@ const DECISION = /\bdecisions?\b/i;
 const CONSULTATION = /\bconsultations?\b(?!-)/i;
 const DISCOVERY = /\bout-of-scope discover(?:y|ies)\b/i;
 
-describe("TC-0013-0036: records go to the spec pack", () => {
-  it("TC-0013-0036: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md", async () => {
+describe("TC-0013-0038: records go to the spec pack", () => {
+  it("TC-0013-0038: the qfai-sdd skill sends a decision to 07_Decisions.md and a consultation or discovery to 08_Open-questions.md", async () => {
     const files = (await walk(SKILL_DIR)).filter(
       ({ name }) => name === "SKILL.md" || name.startsWith("references/"),
     );
@@ -88,7 +88,7 @@ describe("TC-0013-0036: records go to the spec pack", () => {
     expect(stated).toEqual({ decision: true, consultationOrDiscovery: true });
   });
 
-  it("TC-0013-0036: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
+  it("TC-0013-0038: the qfai-sdd SKILL.md has no Work-log entries section", async () => {
     const lines = await linesOf(SKILL);
 
     expect(
@@ -99,7 +99,7 @@ describe("TC-0013-0036: records go to the spec pack", () => {
     expect(lines.filter((line) => line.includes("## Work-log entries"))).toEqual([]);
   });
 
-  it("TC-0013-0036: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
+  it("TC-0013-0038: the qfai-sdd SKILL.md cites no W-PENDING-PROMOTION example", async () => {
     const lines = await linesOf(SKILL);
 
     expect(
@@ -110,7 +110,7 @@ describe("TC-0013-0036: records go to the spec pack", () => {
     expect(lines.filter((line) => line.includes("W-PENDING-PROMOTION"))).toEqual([]);
   });
 
-  it("TC-0013-0036: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
+  it("TC-0013-0038: no file of the shipped assistant tree names .qfai/steering/ or worklog-entry.schema.md", async () => {
     const files = await walk(ASSISTANT_DIR);
 
     expect(

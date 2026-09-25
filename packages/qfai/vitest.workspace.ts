@@ -79,23 +79,4 @@ export default [
       include: ["tests/scripts/**/*.test.ts"],
     },
   }),
-  // A project each, and a directory each, for the two suites that spawn a process per case.
-  // Sharing one runner they ask for every core it has, so neither goes faster and both take
-  // longer; a project of its own is what puts each on a runner of its own.
-  defineProject({
-    test: {
-      ...projectKnobs,
-      setupFiles: SETUP_FILES,
-      name: "pr-fix",
-      include: ["tests/pr-fix/**/*.test.ts"],
-    },
-  }),
-  defineProject({
-    test: {
-      ...projectKnobs,
-      setupFiles: SETUP_FILES,
-      name: "pr-merge",
-      include: ["tests/pr-merge/**/*.test.ts"],
-    },
-  }),
 ];

@@ -1,12 +1,30 @@
+import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { hasRunnableTcCarrier } from "../atddTraceability.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../gitChanges.js";
+import {
+  fileAtRevision,
+  getChangedFilesAgainstBase,
+  mergeBaseRevision,
+  withoutPathsGoneAtHead,
+} from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
+import {
+  parseAllMarkdownTables,
+  parseFirstMarkdownTable,
+  type MarkdownTable,
+} from "../specPackParsers.js";
 import type { Issue } from "../types.js";
+import {
+  isExecutedEvidenceCommand,
+  isFailingEvidenceResult,
+  isPassingEvidenceResult,
+  redTestManifestHash,
+  selectorResolves,
+} from "./tddList.js";
 import { issue } from "./utils.js";
 
 const BR_AC_FILES = new Set(["04_Business-Rules.md", "03_Acceptance-Criteria.md"]);
@@ -16,7 +34,11 @@ const LEDGER_FILE = "16_Traceability-ledger.md";
 type LedgerEntry = {
   brAc: string;
   implFile: string;
+  testFile: string;
+  proof: string;
 };
+
+type PlannedEntry = { readonly implFile: string; readonly state: string; readonly ids: string[] };
 
 function normalizePath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
@@ -38,18 +60,23 @@ function readLedgerTable(content: string): MarkdownTable | null {
 }
 
 /**
- * Checks whether the ledger table header matches the expected shape: at least
- * three columns, one of them named `Implementation File`. The canonical layout
- * is `BR/AC | Implementation File | Test File`, but extra columns are allowed —
- * a ledger that carries a Notes or Owner column is still a ledger, and the
- * validator only ever reads the ID cell and the implementation-file cell.
+ * The active table begins with its three binding columns in order. A `Proof`
+ * column, when present, is fifth so the test and proof cells cannot be mistaken
+ * for another column. Other trailing columns do not affect the check.
  */
 function isExpectedLedgerFormat(table: MarkdownTable | null): boolean {
   if (!table) {
     return false;
   }
-  const headers = table.headers.filter((cell) => cell.length > 0);
-  return headers.length >= 3 && headers.some((cell) => /Implementation File/i.test(cell));
+  const headers = table.headers;
+  const proofIndex = headers.indexOf("Proof");
+  return (
+    headers.length >= 3 &&
+    headers[0] === "BR/AC" &&
+    headers[1] === "Implementation File" &&
+    headers[2] === "Test File" &&
+    (proofIndex === -1 || proofIndex === 4)
+  );
 }
 
 function parseLedger(table: MarkdownTable | null): LedgerEntry[] {
@@ -60,15 +87,82 @@ function parseLedger(table: MarkdownTable | null): LedgerEntry[] {
   for (const cells of table.rows) {
     const brAcCell = cells[0];
     const implCell = cells[1];
-    if (!brAcCell || !implCell) {
+    if (!brAcCell) {
       continue;
     }
     if (!/^(?:BR|AC)-\d{4}/.test(brAcCell)) {
       continue;
     }
-    entries.push({ brAc: brAcCell, implFile: implCell });
+    const proofIndex = table.headers.findIndex((header) => header.toLowerCase() === "proof");
+    entries.push({
+      brAc: brAcCell,
+      implFile: implCell ?? "",
+      testFile: cells[2] ?? "",
+      proof: proofIndex === -1 ? "-" : (cells[proofIndex] ?? "-"),
+    });
   }
   return entries;
+}
+
+function plannedEntries(content: string): PlannedEntry[] {
+  const table = parseAllMarkdownTables(content).find(
+    ({ headers }) =>
+      headers[0] === "Implementation File" &&
+      headers[1] === "State today" &&
+      headers[2] === "BR / AC it will realize",
+  );
+  if (!table) return [];
+  return table.rows.map((cells) => ({
+    implFile: (cells[0] ?? "").replace(/^`|`$/g, ""),
+    state: cells[1] ?? "",
+    ids: [...(cells[2] ?? "").matchAll(/\b(?:BR|AC)-\d{4}(?:-\d{4})?\b/g)].map(([id]) => id),
+  }));
+}
+
+function concretePath(value: string): boolean {
+  return (
+    value.length > 0 &&
+    !value.startsWith("./") &&
+    !path.posix.isAbsolute(value) &&
+    !path.win32.isAbsolute(value) &&
+    !/[\\*?{},;`]/.test(value) &&
+    !value.split("/").some((part) => part === "" || part === "." || part === "..")
+  );
+}
+
+/** Each ID is compared by its own content, independent of its table position. */
+function obligationContent(text: string, kind: "BR" | "AC"): Map<string, string> | null {
+  const values = new Map<string, string[]>();
+  const column = `${kind}-ID`;
+  for (const table of parseAllMarkdownTables(text)) {
+    const idIndex = table.headers.indexOf(column);
+    if (idIndex === -1) continue;
+    for (const cells of table.rows) {
+      const id = cells[idIndex] ?? "";
+      if (!new RegExp(`^${kind}-\\d{4}(?:-\\d{4})?$`).test(id)) continue;
+      const normalized = cells.map((cell) => cell.trim()).join("\u001f");
+      const previous = values.get(id) ?? [];
+      if (previous.some((part) => part.startsWith("table:"))) return null;
+      values.set(id, [...previous, `table:${normalized}`]);
+    }
+  }
+  const normalized = text.replace(/\r\n/g, "\n");
+  const markers = [
+    ...normalized.matchAll(/^([#]{1,6})\s+((?:BR|AC)-\d{4}(?:-\d{4})?):[^\n]*$/gm),
+  ].filter((marker) => marker[2]?.startsWith(`${kind}-`));
+  for (const [index, marker] of markers.entries()) {
+    const id = marker[2];
+    if (!id) continue;
+    const start = marker.index;
+    const next = markers[index + 1]?.index ?? normalized.length;
+    const section = normalized.slice(start, next);
+    const block = (marker[1] === "#" ? section.split(/^```/m)[0] : section)?.trim() ?? "";
+    const previous = values.get(id) ?? [];
+    if (previous.some((part) => part.startsWith("section:"))) return null;
+    values.set(id, [...previous, `section:${block}`]);
+  }
+  if (values.size === 0) return null;
+  return new Map([...values].map(([id, parts]) => [id, parts.sort().join("\n")]));
 }
 
 function findChangedSpecDirs(changedFiles: Set<string>, specsRelDir: string): Set<string> {
@@ -176,16 +270,19 @@ function reportUninspectableSpecIds(
 }
 
 type LedgerRead =
-  | { readonly ok: true; readonly entries: LedgerEntry[] }
+  | { readonly ok: true; readonly entries: LedgerEntry[]; readonly planned: PlannedEntry[] }
   | { readonly ok: false; readonly issue: Issue };
 
 /**
- * Reads one spec's ledger. Every failure mode — absent, not a regular file,
- * unreadable, wrong shape — is a `QFAI-TRACE-002` warning: the artifact is
- * optional, and not getting it only means the `QFAI-TRACE-001` check cannot run
- * for that spec.
+ * Reads one spec's ledger. Absence is an optional-artifact warning. An adopted
+ * ledger that is unreadable or malformed is an error when this branch changes
+ * that spec's BR/AC; older untouched ledgers retain their warning.
  */
-async function readSpecLedger(specId: string, ledgerPath: string): Promise<LedgerRead> {
+async function readSpecLedger(
+  specId: string,
+  ledgerPath: string,
+  changed: boolean,
+): Promise<LedgerRead> {
   // `stat` before `readFile`, never the other way round. This scan now visits
   // every layered spec instead of only the ones named in the branch diff, and
   // opening a FIFO blocks until a writer appears — one such path anywhere under
@@ -214,7 +311,7 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
       issue: issue(
         "QFAI-TRACE-002",
         `Traceability ledger for ${specId} is not a regular file (FIFO, socket, device or directory). It is not read, and the BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec. Replace it with a Markdown file shaped like .qfai/assistant/skills/qfai-sdd/templates/specs/spec/${LEDGER_FILE}.`,
-        "warning",
+        changed ? "error" : "warning",
         ledgerPath,
         "traceability.integrity.ledgerNotAFile",
       ),
@@ -230,7 +327,7 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
       issue: issue(
         "QFAI-TRACE-002",
         `Traceability ledger for ${specId} could not be read. The BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec.`,
-        "warning",
+        changed ? "error" : "warning",
         ledgerPath,
         "traceability.integrity.ledgerUnreadable",
       ),
@@ -246,15 +343,207 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
       ok: false,
       issue: issue(
         "QFAI-TRACE-002",
-        `Traceability ledger for ${specId} uses unexpected format. The first Markdown table must have at least 3 columns, one of them named "Implementation File". Skipping integrity check. See .qfai/assistant/skills/qfai-sdd/templates/specs/spec/${LEDGER_FILE} for the expected schema.`,
-        "warning",
+        `Traceability ledger for ${specId} uses unexpected format. The first Markdown table must begin BR/AC | Implementation File | Test File, with Proof in the fifth column when present. See .qfai/assistant/skills/qfai-sdd/templates/specs/spec/${LEDGER_FILE} for the expected schema.`,
+        changed ? "error" : "warning",
         ledgerPath,
         "traceability.integrity.ledgerFormatMismatch",
       ),
     };
   }
 
-  return { ok: true, entries: parseLedger(ledgerTable) };
+  return { ok: true, entries: parseLedger(ledgerTable), planned: plannedEntries(ledgerContent) };
+}
+
+async function regularFile(root: string, relative: string): Promise<boolean> {
+  if (!concretePath(relative)) return false;
+  try {
+    return (await stat(path.join(root, relative))).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function testCaseReferences(text: string): { id: string; ac: string[]; br: string[] }[] {
+  return parseAllMarkdownTables(text)
+    .filter((table) => table.headers.includes("TC-ID"))
+    .flatMap((table) =>
+      table.rows.map((row) => ({
+        id: row[table.headers.indexOf("TC-ID")] ?? "",
+        ac: (row[table.headers.indexOf("AC-Refs")] ?? "").match(/AC-\d{4}(?:-\d{4})?/g) ?? [],
+        br: (row[table.headers.indexOf("BR-Refs")] ?? "").match(/BR-\d{4}(?:-\d{4})?/g) ?? [],
+      })),
+    );
+}
+
+function roundField(section: string, round: number, field: string): string | null {
+  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `^- (?:Round ${round}: )?${escaped}(?: \\([^)]*\\))?:[ \\t]*(.+)$`,
+    "im",
+  );
+  return pattern.exec(section)?.[1] ?? null;
+}
+
+/** The recorded run must select this result, rather than merely the whole file. */
+function commandTargetsProof(command: string, selector: string, proofId: string): boolean {
+  const run = command.trim().replace(/^`|`$/g, "");
+  if (
+    selector.includes("::") &&
+    run
+      .split(/\s+/)
+      .map((arg) => arg.replace(/^["'`]|["'`]$/g, ""))
+      .includes(selector)
+  ) {
+    return true;
+  }
+  const filters = run.matchAll(
+    /(?:^|\s)(?:--testNamePattern|--test-name-pattern|--grep|-t|-k|-run)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|`([^`]+)`|([^\s`]+))/gi,
+  );
+  return [...filters].some((match) => {
+    const value = match[1] ?? match[2] ?? match[3] ?? match[4] ?? "";
+    return (
+      value.includes(selector) ||
+      new RegExp(`(?:^|[^A-Za-z0-9])${proofId}(?:$|[^A-Za-z0-9])`).test(value)
+    );
+  });
+}
+
+/** Resolve one independent ATDD result to the implementation it actually tested. */
+async function hasCurrentProof(
+  root: string,
+  specsDir: string,
+  specId: string,
+  entry: LedgerEntry,
+): Promise<boolean> {
+  if (!/^TDD-\d{4}$/.test(entry.proof) || !concretePath(entry.testFile)) return false;
+  const specDir = path.join(specsDir, specId);
+  const tddPath = path.join(specDir, "tdd", "test-list.md");
+  const tcPath = path.join(specDir, "06_Test-Cases.md");
+  const evidencePath = path.join(root, ".qfai", "evidence", `atdd-${specId}.md`);
+  let tddText: string;
+  let tcText: string;
+  let evidenceText: string;
+  let testText: string;
+  let sourceBytes: Buffer;
+  try {
+    [tddText, tcText, evidenceText, testText, sourceBytes] = await Promise.all([
+      readFile(tddPath, "utf-8"),
+      readFile(tcPath, "utf-8"),
+      readFile(evidencePath, "utf-8"),
+      readFile(path.join(root, entry.testFile), "utf-8"),
+      readFile(path.join(root, entry.implFile)),
+    ]);
+  } catch {
+    return false;
+  }
+  const tddTable = parseAllMarkdownTables(tddText).find((table) =>
+    table.headers.includes("TDD-ID"),
+  );
+  if (!tddTable) return false;
+  const col = (name: string): number => tddTable.headers.indexOf(name);
+  if (["TDD-ID", "TC-Refs", "Test file", "Selector", "Evidence"].some((name) => col(name) < 0)) {
+    return false;
+  }
+  const matching = tddTable.rows.filter((row) => row[col("TDD-ID")] === entry.proof);
+  if (matching.length !== 1) return false;
+  const row = matching[0] ?? [];
+  const selector = row[col("Selector")] ?? "";
+  if (
+    row[col("Test file")] !== entry.testFile ||
+    !selectorResolves(selector, testText) ||
+    !(row[col("Evidence")] ?? "").includes(`atdd-${specId}.md#${entry.proof.toLowerCase()}`)
+  ) {
+    return false;
+  }
+  const tcIds = new Set((row[col("TC-Refs")] ?? "").match(/TC-\d{4}(?:-\d{4})?/g) ?? []);
+  const tcRows = testCaseReferences(tcText);
+  const relevantTc = tcRows.filter(({ id }) => tcIds.has(id));
+  if (tcIds.size === 0 || relevantTc.length !== tcIds.size) return false;
+  const proofTc = relevantTc.find((tc) => {
+    const obligationLinked = entry.brAc.startsWith("AC-")
+      ? tc.ac.includes(entry.brAc)
+      : tc.br.includes(entry.brAc) || (row[col("BR-Ref")] ?? "") === entry.brAc;
+    return (
+      obligationLinked && hasRunnableTcCarrier(entry.testFile, testText, specId.slice(5), tc.id)
+    );
+  });
+  if (!proofTc) return false;
+
+  const normalized = evidenceText.replace(/\r\n/g, "\n");
+  const heading = new RegExp(`^### ${entry.proof}\\s*$`, "m").exec(normalized);
+  if (!heading) return false;
+  const tail = normalized.slice(heading.index + heading[0].length);
+  const next = /^### TDD-\d{4}\s*$/m.exec(tail);
+  const section = next ? tail.slice(0, next.index) : tail;
+  if (
+    !section.includes(`- TDD-ID: ${entry.proof}`) ||
+    !section.includes(`- Test file: \`${entry.testFile}\``) ||
+    !section.includes(`- Selector: \`${selector}\``) ||
+    !section.includes(`- TC-ref: ${proofTc.id}`)
+  ) {
+    return false;
+  }
+  const roundMarkers = [...section.matchAll(/^- Round (\d+): /gm)];
+  const roundNumbers = roundMarkers.map((marker) => Number(marker[1]));
+  if (
+    roundNumbers.length === 0 ||
+    roundNumbers.some((round, index) => index > 0 && round < (roundNumbers[index - 1] ?? 0))
+  ) {
+    return false;
+  }
+  const currentRound = roundNumbers.at(-1);
+  const firstCurrent = roundMarkers.find((marker) => Number(marker[1]) === currentRound);
+  if (currentRound === undefined || firstCurrent?.index === undefined) return false;
+  const current = section.slice(firstCurrent.index);
+  const satisfiedBy = /^- Satisfied-by: `([^`]+)`/m.exec(current)?.[1];
+  const restoredHash = /Restored SHA-256: `?([a-f0-9]{64})`?/i.exec(current)?.[1];
+  const redHash = new RegExp(
+    `^- Round ${currentRound}: RED test hash: ([a-f0-9]{64})\\s*$`,
+    "im",
+  ).exec(current)?.[1];
+  const manifest = new RegExp(
+    `^- Round ${currentRound}: RED test manifest:\\s*\\n\\s*\`\`\`[^\\n]*\\n([\\s\\S]*?)\\n\\s*\`\`\``,
+    "m",
+  ).exec(current)?.[1];
+  const greenCommand = roundField(current, currentRound, "GREEN command");
+  const greenResult = roundField(current, currentRound, "GREEN result");
+  const falsifiabilityCommand = roundField(current, currentRound, "Falsifiability command");
+  const falsifiabilityResult = roundField(current, currentRound, "Falsifiability result");
+  const redCommand = roundField(current, currentRound, "RED command");
+  const redResult = roundField(current, currentRound, "RED result");
+  const redObserved =
+    redCommand !== null &&
+    redResult !== null &&
+    isExecutedEvidenceCommand(redCommand) &&
+    commandTargetsProof(redCommand, selector, entry.proof) &&
+    isFailingEvidenceResult(redResult);
+  const redFalsified =
+    falsifiabilityCommand !== null &&
+    falsifiabilityResult !== null &&
+    isExecutedEvidenceCommand(falsifiabilityCommand) &&
+    commandTargetsProof(falsifiabilityCommand, selector, entry.proof) &&
+    isFailingEvidenceResult(falsifiabilityResult);
+  const qa =
+    roundField(current, currentRound, "qa-gatekeeper") ??
+    roundField(current, currentRound, "qa-gatekeeper live mutation review");
+  if (
+    !satisfiedBy?.startsWith(`${entry.implFile}::`) ||
+    restoredHash !== createHash("sha256").update(sourceBytes).digest("hex") ||
+    !redHash ||
+    !manifest ||
+    greenCommand === null ||
+    !isExecutedEvidenceCommand(greenCommand) ||
+    !commandTargetsProof(greenCommand, selector, entry.proof) ||
+    greenResult === null ||
+    !isPassingEvidenceResult(greenResult) ||
+    (!redObserved && !redFalsified) ||
+    qa === null ||
+    !/^`?PASS\b/.test(qa) ||
+    !manifest.split(/\r?\n/).some((line) => line.trim() === entry.testFile)
+  ) {
+    return false;
+  }
+  return (await redTestManifestHash(root, manifest)) === redHash;
 }
 
 export type TraceabilityIntegrityOptions = {
@@ -314,9 +603,10 @@ export async function validateTraceabilityIntegrity(
   // exists to report a spec whose ledger can no longer be read — never fired
   // for the deletion that most needs it.
   let changedImplFiles: Set<string> | null = null;
+  let changedFiles: Set<string> | null = null;
   let changedSpecIds = new Set<string>();
   if (includeImplementationDiff) {
-    const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
+    changedFiles = getChangedFilesAgainstBase(root, baseBranch);
     if (changedFiles) {
       changedSpecIds = findChangedSpecDirs(changedFiles, config.paths.specsDir);
       changedImplFiles = withoutPathsGoneAtHead(root, baseBranch, changedFiles);
@@ -325,7 +615,7 @@ export async function validateTraceabilityIntegrity(
         issue(
           "QFAI-TRACE-003",
           `Could not diff against "${baseBranch}", so the BR/AC to implementation integrity check (QFAI-TRACE-001) was skipped for every spec. Fetch the base ref (a shallow CI clone does not carry it) or set the top-level baseBranch key in qfai.config.yaml (it is read from the document root, not from under validation). Ledger presence is still checked.`,
-          "info",
+          "error",
           undefined,
           "traceability.integrity.diffUnavailable",
         ),
@@ -369,28 +659,142 @@ export async function validateTraceabilityIntegrity(
     );
   }
 
+  const mergeBase =
+    changedFiles !== null && changedSpecIds.size > 0 ? mergeBaseRevision(root, baseBranch) : null;
+  if (changedFiles !== null && changedSpecIds.size > 0 && mergeBase === null) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-003",
+        `Could not resolve the merge base of "${baseBranch}" and HEAD. BR/AC obligations cannot be compared.`,
+        "error",
+        undefined,
+        "traceability.integrity.mergeBaseUnavailable",
+      ),
+    );
+  }
+
   for (const { specId, ledgerPath } of layeredSpecs) {
-    const ledger = await readSpecLedger(specId, ledgerPath);
+    const ledger = await readSpecLedger(specId, ledgerPath, changedSpecIds.has(specId));
     if (!ledger.ok) {
       issues.push(ledger.issue);
       continue;
     }
-    if (!changedImplFiles || !changedSpecIds.has(specId)) {
+    if (!changedImplFiles || !changedFiles || !changedSpecIds.has(specId) || !mergeBase) {
       continue;
     }
 
-    for (const entry of ledger.entries) {
-      if (!changedImplFiles.has(normalizePath(entry.implFile))) {
+    const changedIds = new Set<string>();
+    let sourceUnavailable = false;
+    for (const file of BR_AC_FILES) {
+      const relative = `${normalizePath(config.paths.specsDir)}/${specId}/${file}`;
+      if (!changedFiles.has(relative)) continue;
+      const previous = fileAtRevision(root, mergeBase, relative);
+      if (previous.kind === "unavailable") {
+        sourceUnavailable = true;
+        break;
+      }
+      let currentText: string;
+      try {
+        currentText = await readFile(path.join(root, relative), "utf-8");
+      } catch {
+        sourceUnavailable = true;
+        break;
+      }
+      const kind = file.startsWith("04_") ? "BR" : "AC";
+      const before =
+        previous.kind === "absent"
+          ? new Map<string, string>()
+          : obligationContent(previous.content, kind);
+      const after = obligationContent(currentText, kind);
+      if (!before || !after) {
+        sourceUnavailable = true;
+        break;
+      }
+      for (const [id, content] of after) {
+        if (before.get(id) !== content) changedIds.add(id);
+      }
+    }
+    if (sourceUnavailable) {
+      issues.push(
+        issue(
+          "QFAI-TRACE-003",
+          `Spec ${specId} BR/AC content could not be compared with its merge-base copy.`,
+          "error",
+          specDirFinding(config.paths.specsDir, specId),
+          "traceability.integrity.obligationUnavailable",
+        ),
+      );
+      continue;
+    }
+
+    for (const id of changedIds) {
+      const active = ledger.entries.filter((entry) => entry.brAc === id);
+      const planned = ledger.planned.filter((entry) => entry.ids.includes(id));
+      if (active.length === 0 && planned.length === 0) {
         issues.push(
           issue(
             "QFAI-TRACE-001",
-            `Spec ${specId} BR/AC changed but linked implementation file "${entry.implFile}" was not modified.`,
+            `Spec ${specId} changed ${id} but its ledger has no active or explicit planned binding.`,
             "error",
-            entry.implFile,
-            "traceability.integrity.implNotChanged",
-            [entry.brAc],
+            ledgerPath,
+            "traceability.integrity.bindingMissing",
+            [id],
           ),
         );
+      }
+      const seen = new Set<string>();
+      for (const entry of active) {
+        const valid = concretePath(entry.implFile) && (await regularFile(root, entry.implFile));
+        if (!valid || seen.has(entry.implFile)) {
+          issues.push(
+            issue(
+              "QFAI-TRACE-001",
+              `Spec ${specId} ${id} has a missing, invalid or duplicate active implementation binding "${entry.implFile}".`,
+              "error",
+              entry.implFile || ledgerPath,
+              "traceability.integrity.bindingAmbiguous",
+              [id],
+            ),
+          );
+          continue;
+        }
+        seen.add(entry.implFile);
+        if (
+          !changedImplFiles.has(entry.implFile) &&
+          !(await hasCurrentProof(root, specsDir, specId, entry))
+        ) {
+          issues.push(
+            issue(
+              "QFAI-TRACE-001",
+              `Spec ${specId} ${id} has unchanged implementation "${entry.implFile}" without current independent TDD proof.`,
+              "error",
+              entry.implFile,
+              "traceability.integrity.implNotChanged",
+              [id],
+            ),
+          );
+        }
+      }
+      for (const entry of planned) {
+        const exists = await regularFile(root, entry.implFile);
+        if (
+          !concretePath(entry.implFile) ||
+          !["present", "absent"].includes(entry.state) ||
+          (entry.state === "present") !== exists ||
+          seen.has(entry.implFile)
+        ) {
+          issues.push(
+            issue(
+              "QFAI-TRACE-001",
+              `Spec ${specId} ${id} has an invalid, stale or duplicate planned implementation binding "${entry.implFile}".`,
+              "error",
+              entry.implFile || ledgerPath,
+              "traceability.integrity.bindingAmbiguous",
+              [id],
+            ),
+          );
+        }
+        seen.add(entry.implFile);
       }
     }
   }
