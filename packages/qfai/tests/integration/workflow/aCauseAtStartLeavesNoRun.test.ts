@@ -27,19 +27,27 @@ const MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml"
 const VERIFY_SKILL = path.join(".qfai", "assistant", "skills", "qfai-verify");
 const VERIFY_TABLE = path.join(VERIFY_SKILL, "references", "orchestrated-mode.md");
 
-// `start` in `root`, and the run directories it left behind.
-async function startIn(root: string) {
+// `start` in `root`, the refusal message it printed, and the run directories it left behind.
+async function startWithMessage(root: string) {
   const started = workflow(root, ["start", "--in", await inbox(root, null, "start", START_INPUT)]);
   const runs = await readdir(path.join(root, ".qfai", "runs")).catch(() => []);
   return {
     code: field(started.json, "error.code"),
     cause: field(started.json, "error.cause"),
+    message: String(field(started.json, "error.message")),
     runs: runs.filter((name) => name.startsWith("run-")),
   };
 }
 
-// Drops the first blocking agent of the first phase routed to `skill`.
-async function dropBlockingAgent(root: string, skill: string): Promise<void> {
+// `start` in `root`, and the run directories it left behind.
+async function startIn(root: string) {
+  const { message: _message, ...started } = await startWithMessage(root);
+  return started;
+}
+
+// Deletes the node at `at` inside the routing entry for `skill`, or the whole entry when `at` is
+// empty.
+async function editRoutingEntry(root: string, skill: string, at: (string | number)[]) {
   const file = path.join(root, MANIFEST);
   const document = parseDocument(await readFile(file, "utf8"));
   const routing: unknown = document.toJS();
@@ -47,17 +55,39 @@ async function dropBlockingAgent(root: string, skill: string): Promise<void> {
   const index = Array.isArray(entries)
     ? entries.findIndex((entry) => field(entry, "skill") === skill)
     : -1;
-  document.deleteIn(["routing", index, "phases", 0, "blocking_agents", 0]);
+  document.deleteIn(["routing", index, ...at]);
   await writeFile(file, document.toString());
 }
 
-it("TC-0018-0176 (TDD-0379): A project agent-routing", async () => {
-  const root = await minimalProject();
-  await dropBlockingAgent(root, "qfai-implement");
+// Drops the first blocking agent of the first phase routed to `skill`.
+async function dropBlockingAgent(root: string, skill: string): Promise<void> {
+  await editRoutingEntry(root, skill, ["phases", 0, "blocking_agents", 0]);
+}
 
-  expect(await startIn(root)).toEqual({
+it("TC-0018-0176 (TDD-0379): A project agent-routing", async () => {
+  const dropped = await minimalProject();
+  await dropBlockingAgent(dropped, "qfai-implement");
+  const absent = await minimalProject();
+  await editRoutingEntry(absent, "qfai-implement", []);
+
+  const refusedForDropped = await startWithMessage(dropped);
+  const refusedForAbsent = await startWithMessage(absent);
+
+  expect(refusedForDropped).toEqual({
     code: "fail-closed",
     cause: "reviewer-missing",
+    message: expect.stringContaining(
+      "Restore delivery-planner to qfai-implement phase plan in .qfai/assistant/manifest/agent-routing.yml.",
+    ),
+    runs: [],
+  });
+  expect(refusedForDropped.message).not.toContain("--force");
+  expect(refusedForAbsent).toEqual({
+    code: "fail-closed",
+    cause: "reviewer-missing",
+    message: expect.stringContaining(
+      "Run qfai init --force to add the routing entry for qfai-implement.",
+    ),
     runs: [],
   });
 });

@@ -520,6 +520,8 @@ export interface WorkflowFacts {
   reviewerRoles?: Record<string, string[]>;
   // A fail-closed cause an observer found for this operation.
   cause?: FailClosedCause;
+  // What the operator does next to clear that cause, where the observer can say.
+  causeGuidance?: string;
   // Each submitted changed path's real path relative to the project's real root, or `null` when
   // it resolves outside the root. A path the observer could not resolve is absent.
   changedRealPaths?: Record<string, string | null>;
@@ -2107,7 +2109,13 @@ function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecisi
     };
   }
   const unsupported = facts.cause
-    ? `No run was created: the fail-closed cause ${facts.cause} holds. Invoke a stage skill by name instead.`
+    ? [
+        `No run was created: the fail-closed cause ${facts.cause} holds.`,
+        facts.causeGuidance,
+        "Invoke a stage skill by name instead.",
+      ]
+        .filter(Boolean)
+        .join(" ")
     : unsupportedHarness(input.harness);
   if (unsupported) {
     const cause = facts.cause ?? "unsupported-capability";

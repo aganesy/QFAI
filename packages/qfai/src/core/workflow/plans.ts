@@ -69,6 +69,8 @@ export type PlanLoad =
 export interface PlanCheck {
   cause?: "contract-undeclared" | "reviewer-missing";
   refusals: PlanRefusal[];
+  // What the operator does next about a `reviewer-missing` cause.
+  guidance?: string;
 }
 
 // Where the plans sit, relative to the package's `assets/init` and to a project root.
@@ -296,6 +298,7 @@ async function installedPlanRefusals(root: string, route: WorkflowRoute): Promis
 
 const SKILLS_DIR = path.join(".qfai", "assistant", "skills");
 const ROUTING_MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
+const ROUTING_MANIFEST_SHOWN = ".qfai/assistant/manifest/agent-routing.yml";
 
 // Every (skill, operation) pair the built-in plans use, with the first route using the skill.
 async function planPairs(): Promise<
@@ -408,23 +411,33 @@ function blockingAgentsOf(text: string | undefined): Map<string, Map<string, str
 
 // Every blocking agent the shipped routing manifest requires for a phase of a skill a plan
 // dispatches must still block that phase in the project's copy. Extra agents are the project's.
-// SIMPLIFIED: the refusal names the cause only, not the dropped reviewer or `qfai init --force`.
-// Lift when: the start refusal message carries what the operator does next.
+// `qfai init --force` adds a routing entry the project's copy lacks and does not restore a
+// reviewer dropped from an entry it declares, so the guidance names that reviewer and its file.
 async function reviewerRefusals(root: string, skills: Map<string, { route: WorkflowRoute }>) {
   const shipped = blockingAgentsOf(
     await readFile(path.join(getInitAssetsDir(), ROUTING_MANIFEST), "utf8"),
   );
   const project = blockingAgentsOf(await readIfPresent(path.join(root, ROUTING_MANIFEST)));
   const refusals: PlanRefusal[] = [];
+  const absent = new Set<string>();
+  const dropped: string[] = [];
   for (const [skill, { route }] of skills) {
     for (const [phase, agents] of shipped.get(skill) ?? []) {
       const kept = project.get(skill)?.get(phase) ?? [];
       for (const agent of agents.filter((each) => !kept.includes(each))) {
         refusals.push({ route, reason: "reviewer-missing", subject: `${skill}:${phase}:${agent}` });
+        if (project.has(skill)) dropped.push(`${agent} to ${skill} phase ${phase}`);
+        else absent.add(skill);
       }
     }
   }
-  return refusals;
+  const guidance = [
+    absent.size > 0
+      ? `Run qfai init --force to add the routing entry for ${[...absent].join(", ")}.`
+      : "",
+    dropped.length > 0 ? `Restore ${dropped.join(", ")} in ${ROUTING_MANIFEST_SHOWN}.` : "",
+  ];
+  return { refusals, guidance: guidance.filter(Boolean).join(" ") };
 }
 
 // Trigger (b) over the installed plans and the skills they name, then trigger (c) over the
@@ -438,8 +451,6 @@ export async function checkInstalledPlans(projectRoot: string): Promise<PlanChec
     ])
   ).flat();
   if (contract.length > 0) return { cause: "contract-undeclared", refusals: contract };
-  const reviewers = await reviewerRefusals(projectRoot, pairs);
-  return reviewers.length > 0
-    ? { cause: "reviewer-missing", refusals: reviewers }
-    : { refusals: [] };
+  const { refusals, guidance } = await reviewerRefusals(projectRoot, pairs);
+  return refusals.length > 0 ? { cause: "reviewer-missing", refusals, guidance } : { refusals: [] };
 }
