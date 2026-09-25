@@ -3075,6 +3075,27 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(layout).not.toContain("the group's RED confirmation is sealed in its own");
   });
 
+  it("describes the request's id list the way the gate reads it", async () => {
+    // The layout asked for the round's ids as a list and, further down, for
+    // one `TDD-ID` appearing exactly once. A T1 group's request names several
+    // ids, and the gate reads them from one `## TDD IDs` list — or one visible
+    // `TDD-ID` line in its place — so the two statements named different forms.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "as a **list** under one `## TDD IDs` heading, one `- TDD-NNNN` bullet per id",
+    );
+    expect(layout).toContain(
+      "`review_request.md` is read the same way: its `## TDD IDs` heading appears once, and the list under it names each id of the round exactly once.",
+    );
+    expect(layout).toContain(
+      "The gate also reads a single visible `TDD-ID:` line in place of the list",
+    );
+    expect(layout).toContain("its `Audited evidence hash` appears once per listed id");
+    expect(layout).not.toContain("and the `TDD-ID` in `review_request.md`");
+  });
+
   it("gives the implementation reviewer the subject it hashes", async () => {
     // It records its own `Audited evidence hash` over the row s phase-authored
     // fields, and those live in an evidence file the diff does not carry.

@@ -118,10 +118,13 @@ their layer's `TC-*`, `US-*` or `CON-API-*` (Preconditions), so a finding that n
 to `/qfai-sdd` or `/qfai-atdd`, while the rows that _are_ well-formed proceed. A blocking verdict
 here would stop those rows for a defect they do not have.
 
-Record the findings in `.qfai/evidence/implement-<spec-id>.md`, written by the orchestrator, and
-carry each one into the row it names so the reviewers see it at that row's `review` phase. Do
-**not** produce, re-derive or supersede the Coverage Depth Matrix here, and do **not** return REVISE
-because it is absent or incomplete: `.qfai/evidence/coverage-depth-<spec-id>.md` is owned from the
+The orchestrator records each finding in the evidence file that owns the row it names, by that
+row's `Layer`: `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
+for an `E2E` / `API` / `Integration` row, by the split `record-contract.md` states. A finding that
+names no row — a missing one — goes in **every evidence file this invocation's rows own**, the
+rule `../SKILL.md` gives the grilling-session record. Carry each finding into the row it names so
+the reviewers see it at that row's `review` phase. Do **not** produce, re-derive or supersede the
+Coverage Depth Matrix here, and do **not** return REVISE because it is absent or incomplete: `.qfai/evidence/coverage-depth-<spec-id>.md` is owned from the
 ATDD stage onward, and this phase is the **named exception** to that obligation in the role's own
 card (`agents/test-design-analyst.md`, "Test Case Quality Depth") and in the
 `manifest/agent-catalog.yml` copy of it, which carry the same sentence. The input here is an
@@ -145,8 +148,8 @@ and the analyst's PASS stands over a ledger that no longer exists — the stale 
 exists to prevent. So **read this phase's `rerun_policy` out of the project's own
 `assistant/manifest/agent-routing.yml`** when the phase starts, and when it reads
 `failed-agents-only`: re-run `test-design-analyst` by hand after every scope repair, and record in
-`.qfai/evidence/implement-<spec-id>.md` that the routing predates this contract, so its verdict is
-read as the hand-routed one it is. Routing it by hand is the stopgap, not the fix — bringing
+every evidence file this invocation's rows own that the routing predates this contract, so its
+verdict is read as the hand-routed one it is. Routing it by hand is the stopgap, not the fix — bringing
 `agent-routing.yml` and `agent-catalog.yml` forward is the same merge
 `../../qfai-atdd/references/stale-manifest.md` sets out (diff the project's copies against
 `node_modules/qfai/assets/init/.qfai/assistant/manifest/**` and merge the shipped contracts in,

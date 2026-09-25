@@ -22,9 +22,10 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   REVISE asks every routed reviewer again, since each verdict has to name the final tree.
 - The scope of the pack is recorded **inside** the artifacts, not in the directory name. In
   `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the round's
-  `TDD-ID`s in `review_request.md` as a **list** — one id for a T2 or T3 row, the group's whole
-  membership for a T1 coherent group, written as the single block `volume-policy.md#batched-review`
-  already requires of the evidence file. The verdict then carries one `Audited evidence hash` per
+  `TDD-ID`s in `review_request.md` as a **list** under one `## TDD IDs` heading, one `- TDD-NNNN`
+  bullet per id — one id for a T2 or T3 row, the group's whole membership for a T1 coherent group,
+  written as the single block `volume-policy.md#batched-review` already requires of the evidence
+  file. The verdict then carries one `Audited evidence hash` per
   listed id (`.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`).
 - A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
   reviewer this pack carries (`completion-reviewer`, `implementation-reviewer`, and
@@ -88,12 +89,14 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
   editing that pack to restamp a hash would break the seal, and editing only the evidence file's
   copy would leave the sealed response disagreeing with it. Both packs are sealed and both seals
   are recomputed at the gate.
-- A response's `Result`, `Reviewed revision` and `Audited evidence hash`, and the `TDD-ID` in
-  `review_request.md`, are read from the **visible** Markdown and must each appear exactly once.
-  A line inside a fenced sample or an HTML comment is not a verdict — it is invisible to the
-  person reading the response — and two `Result` lines are not a verdict either, they are a
-  document a reader can take either answer from. A blocking `REVISE` beside a hidden or duplicated
-  `PASS` is rejected.
+- A response's `Result` and `Reviewed revision` are read from the **visible** Markdown and must
+  each appear exactly once; its `Audited evidence hash` appears once per listed id.
+  `review_request.md` is read the same way: its `## TDD IDs` heading appears once, and the list
+  under it names each id of the round exactly once. The gate also reads a single visible `TDD-ID:`
+  line in place of the list; a second such line makes the request unreadable. A line inside a
+  fenced sample or an HTML comment is not a verdict — it is invisible to the person reading the
+  response — and two `Result` lines are not a verdict either, they are a document a reader can take
+  either answer from. A blocking `REVISE` beside a hidden or duplicated `PASS` is rejected.
 - Review packs are local-only by default and therefore are absent in an ordinary fresh clone.
   The producer still creates and validates the pack before closing the row. At a later validation,
   gate item 10 recomputes the pack seal and its request/summary/response bindings whenever the
