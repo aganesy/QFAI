@@ -4,6 +4,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **The operating baseline says what a context summary must keep** (#2243). A
+  long stage continues from a summary once its context window fills, and
+  whatever the summary drops is gone without a trace. The new section lists six
+  general items and the stage state the code cannot give back: the execution
+  ledger, the open questions, the clarification budget spent, the labelled
+  assumptions, and the reviewer verdicts with their rounds. The user's words are
+  kept close to verbatim; the agent's own reasoning may be condensed to its
+  conclusions.
+
 ### Removed
 
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
