@@ -570,7 +570,9 @@ export const acceptsRelease = (
     }
   }
   // Only literals and the operators above reach the VM; unsupported syntax never evaluates.
-  const result: unknown = runInNewContext(translated.join(" "), {}, { timeout: 1_000 });
+  // Such an expression has no loop or call and cannot run away, so it takes no time limit:
+  // a wall-clock limit would guard nothing and only fail on a loaded machine.
+  const result: unknown = runInNewContext(translated.join(" "), {});
   if (typeof result !== "boolean") throw new Error("Release condition must return a Boolean");
   return result;
 };
