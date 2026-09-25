@@ -155,7 +155,9 @@ describe("BF-0002 own-CI verdict and code-path release cost", () => {
       expect(repin.status, `${repin.stdout ?? ""}${repin.stderr ?? ""}`).toBe(0);
       const after = firstContext(root).codePathCostPin;
       expect(after).toBeDefined();
-      expect(after?.timeoutMinutesSum).toBe((before?.timeoutMinutesSum ?? 0) + 9);
+      // The raised minute counts once per leg the test job's matrix expands to.
+      const legs = testJobLegs(path.join(root, ".github/workflows/ci.yml"));
+      expect(after?.timeoutMinutesSum).toBe((before?.timeoutMinutesSum ?? 0) + legs);
       expect(after?.instances).toBe(before?.instances);
       expect(after?.installInstances).toBe(before?.installInstances);
       expect(after?.buildJobs).toEqual(before?.buildJobs);
@@ -166,3 +168,22 @@ describe("BF-0002 own-CI verdict and code-path release cost", () => {
     }
   });
 });
+
+/** The number of legs the `test` job's single `slice` matrix dimension expands to. */
+function testJobLegs(workflow: string): number {
+  const document: unknown = parseYaml(readFileSync(workflow, "utf8"));
+  if (!isRecord(document) || !isRecord(document["jobs"])) {
+    throw new Error("ci.yml has no jobs map");
+  }
+  const job = document["jobs"]["test"];
+  const strategy = isRecord(job) ? job["strategy"] : undefined;
+  const matrix = isRecord(strategy) ? strategy["matrix"] : undefined;
+  if (!isRecord(matrix) || Object.keys(matrix).join() !== "slice") {
+    throw new Error("the test job's matrix must have exactly one dimension, slice");
+  }
+  const slices = matrix["slice"];
+  if (!Array.isArray(slices) || slices.length === 0) {
+    throw new Error("the test job's slice matrix is empty");
+  }
+  return slices.length;
+}
