@@ -2477,26 +2477,12 @@ export function decide(
     } else if (stage.stageKind === "sdd") {
       const slotId = approval?.target?.slotId;
       if (!slotId) {
-        return {
-          verdict: {
-            ok: false,
-            run,
-            error: { code: "invalid-input", message: "The feature work order is not ready." },
-          },
-          events: [],
-        };
+        return refusedInput(run, "The feature work order is not ready.");
       }
       if (!approval.authorizationId || approvalIsStale(snapshot)) {
         const capability = approval.target?.capability;
         if (!capability) {
-          return {
-            verdict: {
-              ok: false,
-              run,
-              error: { code: "invalid-input", message: "The feature work order is not ready." },
-            },
-            events: [],
-          };
+          return refusedInput(run, "The feature work order is not ready.");
         }
         return reaskCreate(run, currentCapability(snapshot) ?? { ...capability, slotId });
       }

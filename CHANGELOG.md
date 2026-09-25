@@ -84,6 +84,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **One spec-0018 row closed without its reviews is taken back through them**
+  (#2297). `TDD-0003`, the row that binds a `proceed` answer to the SDD work
+  order, had been closed at `exception` with its gatekeeper turns and reviews
+  waived. It was reopened, its predicate withdrawn from `decide.ts` to show its
+  test fails, and the code put back byte for byte. `qa-gatekeeper` passed the
+  failing and the passing run. Both reviewers then returned REVISE: the
+  package test run failed on this host for reasons outside the row, and two
+  refusals in `next` repeated the `refusedInput` helper. Those two refusals now
+  call the helper. The row stays at `review-fix` until a package run passes and
+  both reviewers re-review it, and it leaves the spec-0018 review waiver. The
+  waiver's other Unit and Component rows are still open.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

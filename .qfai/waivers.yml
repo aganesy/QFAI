@@ -261,7 +261,6 @@ waivers:
       paths: [".qfai/specs/spec-0018/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0003
         - TDD-0005
         - TDD-0006
         - TDD-0007
