@@ -414,6 +414,53 @@ describe("repairIntegrationWrappers", () => {
     });
   });
 
+  it("removes a hold left beside a link that is already right on a doctor pass", async () => {
+    // The gate does not name a link that is right, so the writer never visits
+    // it. The hold beside it is removed all the same.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      const hold = `${wrapperPath(root)}.qfai-repair-4242`;
+      await mkdir(hold);
+      await symlink(PLURAL_TARGET, path.join(hold, SHIPPED_SKILL), "dir");
+      injectedFindings = [];
+      const holdRelative = `${WRAPPER}.qfai-repair-4242`;
+
+      const preview = (await repair(root, true)).join("\n");
+      expect(preview).toContain(`would relink ${holdRelative}`);
+      expect(await readlink(path.join(hold, SHIPPED_SKILL))).toBe(PLURAL_TARGET);
+
+      await repair(root);
+      await expect(lstat(hold)).rejects.toThrow();
+      expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+    });
+  });
+
+  it("rewrites a link the gate names that reaches the singular directory by another spelling", async () => {
+    // Reaching the right directory is not the gate's rule, so a migration
+    // does not read such a link as already right and leave it reported.
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      const absolute = path.join(root, ".qfai", "assistant", "skill", SHIPPED_SKILL);
+      await symlink(absolute, wrapperPath(root), "dir");
+      injectedFindings = [linkFinding(WRAPPER)];
+
+      const preview = (await repair(root, true, { includeMissing: true })).join("\n");
+      expect(preview).toContain(`would relink ${WRAPPER}`);
+      expect(preview).not.toContain(`left alone ${WRAPPER}`);
+      expect(await readlink(wrapperPath(root))).toBe(absolute);
+
+      const lines = await repair(root, false, {
+        includeMissing: true,
+        onlyRelative: new Set([WRAPPER]),
+      });
+      expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+      expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+    });
+  });
+
   it("reports a link the gate names that points at neither directory, without replacing it", async () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;

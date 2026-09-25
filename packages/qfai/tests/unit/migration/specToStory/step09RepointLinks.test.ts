@@ -236,6 +236,35 @@ describe("migration integration-link repointing", () => {
     }
   });
 
+  it("reports a wrapper for a person after every other trace of the old layout is gone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-step09-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      );
+      const leftAlone = "left alone .claude/skills/qfai-sdd: the link names another path";
+      repairStub.use((_root, _dryRun, report) => {
+        report(`  ${leftAlone}`);
+      });
+      let output = "";
+      const io = {
+        cwd: root,
+        stdout: { write: (value: string) => (output += value) },
+        stderr: {
+          write: (value: string) => {
+            throw new Error(value);
+          },
+        },
+      };
+      expect(await runStep(9, ["--dry-run"], io)).toBe(3);
+      expect(output).toContain("## Operations\nnone");
+      expect(output).toContain(`## For a person\n- ${leftAlone}`);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not claim a completed repair when the writer reports a real-run failure", async () => {
     repairStub.use((_root, dryRun, report) => {
       report(

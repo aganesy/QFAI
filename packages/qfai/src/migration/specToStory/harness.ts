@@ -1085,7 +1085,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
         // Step 1 moved the directories the host links pointed at, so an old
         // link outlives every other trace of the old layout.
         const plan = await selected.plan(context);
-        if (plan.operations.length > 0) {
+        if (plan.operations.length > 0 || (plan.forAPerson?.length ?? 0) > 0) {
           const linkStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
           return await executePlannedStep(linkStep, context, argv.length === 1, io);
         }

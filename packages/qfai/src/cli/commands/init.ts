@@ -43,7 +43,10 @@ import {
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
-import { validateIntegrationSurface } from "../../core/validators/integrationSurface.js";
+import {
+  linkNamesTarget,
+  validateIntegrationSurface,
+} from "../../core/validators/integrationSurface.js";
 import { applyWaivers } from "../../core/waivers.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
@@ -4703,11 +4706,18 @@ async function describeUnrewritable(linkPath: string): Promise<string> {
   return "a special file occupies the path";
 }
 
-/** What a roster path holds, as far as a migration's link repair is concerned. */
+/**
+ * What a roster path holds, as far as a migration's link repair is concerned.
+ *
+ * `current` is the gate's rule ({@link linkNamesTarget}), so a link the gate
+ * reports is never read as already right. `respelled` reaches the singular
+ * directory by a spelling the gate rejects, and `init` rewrites it.
+ */
 type RosterLink =
   | { kind: "absent" }
   | { kind: "old" }
   | { kind: "current" }
+  | { kind: "respelled" }
   | { kind: "foreign"; target: string }
   | { kind: "occupied" };
 
@@ -4723,11 +4733,29 @@ async function rosterLink(wrapper: PlannedWrapper): Promise<RosterLink> {
   const base = path.dirname(wrapper.linkPath);
   const target = await readlink(wrapper.linkPath);
   if (sameLinkTarget(base, target, wrapper.legacyTarget)) return { kind: "old" };
-  if (sameLinkTarget(base, target, wrapper.target)) return { kind: "current" };
+  if (linkNamesTarget(target, wrapper.target)) return { kind: "current" };
+  if (sameLinkTarget(base, target, wrapper.target)) return { kind: "respelled" };
   return { kind: "foreign", target };
 }
 
-/** Whether two link targets, read relative to `base`, name the same path. */
+/** Whether `linkPath` is a symlink the gate reads as naming `target`. */
+async function isCurrentLink(
+  linkPath: string,
+  target: string,
+  platform?: NodeJS.Platform,
+): Promise<boolean> {
+  if ((await safeLstat(linkPath))?.isSymbolicLink() !== true) return false;
+  const actual = await readlink(linkPath).catch(() => null);
+  return actual !== null && linkNamesTarget(actual, target, platform);
+}
+
+/**
+ * Whether two link targets, read relative to `base`, name the same path.
+ *
+ * Broader than {@link linkNamesTarget}, and used only to recognise a link
+ * `init` wrote in an earlier layout: the plural directory, and the holds of an
+ * interrupted repoint. Whether a link is right is the gate's rule.
+ */
 function sameLinkTarget(
   base: string,
   left: string,
@@ -4872,7 +4900,8 @@ async function isOwnShippedAgentLink(root: string, linkedParent: string): Promis
  * | nothing, beside a hold of an interrupted run | restored, and the hold removed                       |
  * | nothing else                                 | left absent, even when the gate reports it missing   |
  * | a link to the plural directory               | repointed, and any hold beside it removed            |
- * | a link to the singular directory, and a hold | the hold removed; the link is already right          |
+ * | the link `init` writes, and a hold           | the hold removed; the link is already right          |
+ * | the singular directory, spelled otherwise    | rewritten as `init` writes it, and any hold removed  |
  * | a link to anywhere else                      | left as it is, and reported when the gate names it   |
  * | a file, directory or other entry             | preserved and reported as occupied                   |
  *
@@ -4903,9 +4932,7 @@ async function planMigrationRoster(
       }
       continue;
     }
-    const own = (
-      await repointHolds(wrapper.linkPath, [wrapper.legacyTarget, wrapper.target])
-    ).filter((hold) => selected(toRelativePath(root, hold)));
+    const own = await selectedHolds(root, wrapper, selected);
     if (found.kind === "absent" && own.length === 0) {
       named.delete(relative);
       continue;
@@ -4919,6 +4946,42 @@ async function planMigrationRoster(
     if (own.length > 0) holds.set(relative, own);
   }
   return { holds, declined };
+}
+
+/** The holds of an interrupted repoint beside `wrapper` that this pass may remove. */
+async function selectedHolds(
+  root: string,
+  wrapper: PlannedWrapper,
+  selected: (relative: string) => boolean,
+): Promise<string[]> {
+  const holds = await repointHolds(wrapper.linkPath, [wrapper.legacyTarget, wrapper.target]);
+  return holds.filter((hold) => selected(toRelativePath(root, hold)));
+}
+
+/**
+ * The holds beside roster links that are already right, for a pass that is
+ * not a migration.
+ *
+ * The gate does not name such a link, so the writer never visits it and never
+ * removes its holds. Left there, a hold says the path was emptied and not
+ * refilled, and a later migration would restore the link over a removal the
+ * project made. A path the gate does name is skipped: the writer removes its
+ * holds.
+ */
+async function holdsBesideCurrentLinks(
+  root: string,
+  planned: ReadonlyMap<string, PlannedWrapper>,
+  named: ReadonlySet<string>,
+  selected: (relative: string) => boolean,
+): Promise<Map<string, string[]>> {
+  const holds = new Map<string, string[]>();
+  for (const [relative, wrapper] of planned) {
+    if (named.has(relative)) continue;
+    if (!(await isCurrentLink(wrapper.linkPath, wrapper.target))) continue;
+    const own = await selectedHolds(root, wrapper, selected);
+    if (own.length > 0) holds.set(relative, own);
+  }
+  return holds;
 }
 
 /**
@@ -4961,7 +5024,8 @@ async function whyNotRelinkable(
  * Relinks the integration wrappers the gate is reporting. A migration also
  * repoints roster links still naming the plural directories, and restores a
  * path only where an interrupted repoint of its own emptied it
- * ({@link planMigrationRoster}).
+ * ({@link planMigrationRoster}). Every pass removes the holds beside a link
+ * that is already right ({@link holdsBesideCurrentLinks}).
  *
  * `qfai init --force` clears the same finding, but it also regenerates
  * `.qfai/assistant/skill/**`, `assistant/agent/**` and the shipped plain
@@ -5002,7 +5066,7 @@ export async function repairIntegrationWrappers(
   const planned = await plannedWrappers(root);
   const migration = options.includeMissing
     ? await planMigrationRoster(root, planned, named, selected)
-    : { holds: new Map<string, string[]>(), declined: [] };
+    : { holds: await holdsBesideCurrentLinks(root, planned, named, selected), declined: [] };
   const paths = new Set([...named, ...migration.holds.keys()]);
   if (paths.size === 0 && migration.declined.length === 0) {
     report(`${WRAPPER_REPAIR_LABEL} — nothing to repair`);
@@ -5774,7 +5838,9 @@ async function claimHoldDir(linkPath: string): Promise<string> {
  * repair left beside it ({@link discardRepointHolds}).
  *
  * Every caller writes through here, so a hold outlives its empty path only
- * where a caller opts out and removes the holds itself.
+ * where a caller opts out and removes the holds itself. A link that was
+ * already right has its holds removed too: a repair that stopped after
+ * writing it and before removing the hold leaves exactly that pair.
  */
 async function ensureSymlink(
   linkPath: string,
@@ -5783,7 +5849,8 @@ async function ensureSymlink(
   options: WrapperSyncOptions,
 ): Promise<"created" | "skipped"> {
   const result = await writeManagedLink(linkPath, target, type, options);
-  if (result === "created" && options.discardRepointHolds !== false) {
+  if (options.discardRepointHolds === false) return result;
+  if (result === "created" || (await isCurrentLink(linkPath, target, options.platform))) {
     const targets = options.legacyTarget === undefined ? [target] : [target, options.legacyTarget];
     await discardRepointHolds(linkPath, targets, options);
   }
@@ -5803,12 +5870,9 @@ async function writeManagedLink(
   if (linkStat !== undefined) {
     if (linkStat.isSymbolicLink()) {
       const currentTarget = await readlink(linkPath);
-      const isValid = sameLinkTarget(
-        path.dirname(linkPath),
-        currentTarget,
-        target,
-        options.platform,
-      );
+      // The gate's rule, so a link the gate reports is rewritten here rather
+      // than skipped as right.
+      const isValid = linkNamesTarget(currentTarget, target, options.platform);
 
       if (isValid && !options.force) {
         // The target string being right is not the same as the link working.

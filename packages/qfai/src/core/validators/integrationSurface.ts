@@ -291,7 +291,7 @@ async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined):
       if (isMissing(error)) return null;
       throw error;
     });
-    return actual !== null && path.normalize(actual) === path.normalize(wrapper.target);
+    return actual !== null && linkNamesTarget(actual, wrapper.target);
   }
   // The flattened form is a small text file, and the ceiling has to bind the
   // entry that is read rather than the one `lstat` saw — the same reason the
@@ -305,6 +305,25 @@ async function isInitEvidence(wrapper: Wrapper, link: Stats | null | undefined):
   // The only difference tolerated is the separator, and only where
   // `path.relative` produces the other one.
   return body !== null && comparableTarget(body) === comparableTarget(wrapper.target);
+}
+
+/**
+ * Whether a symlink's target is the one `qfai init` writes for the wrapper.
+ *
+ * The one rule for a wrapper link: this gate reports a link it rejects, and
+ * `qfai init` rewrites exactly the links this rejects, so a finding is always
+ * one the printed remedy clears. The strings are compared after the
+ * platform's own normalisation and nothing more. A target that reaches the
+ * same place by another spelling — absolute, or in another letter case on a
+ * case-insensitive disk — is not the link init writes, and init replaces it.
+ */
+export function linkNamesTarget(
+  actual: string,
+  expected: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const flavour = platform === "win32" ? path.win32 : path.posix;
+  return flavour.normalize(actual) === flavour.normalize(expected);
 }
 
 /** Separator-insensitive on Windows, byte-exact everywhere else. */
@@ -1339,7 +1358,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
       if (isMissing(error)) return null;
       throw error;
     });
-    if (actual === null || path.normalize(actual) !== path.normalize(wrapper.target)) {
+    if (actual === null || !linkNamesTarget(actual, wrapper.target)) {
       // A link that resolves to the wrong canonical document is worse than a
       // dangling one: the assistant loads real instructions, just not these.
       broken.push({

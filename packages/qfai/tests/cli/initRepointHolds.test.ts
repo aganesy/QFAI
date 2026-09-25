@@ -16,6 +16,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
+import { validateIntegrationSurface } from "../../src/core/validators/integrationSurface.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
@@ -37,7 +38,16 @@ async function withInitializedProject(task: (root: string) => Promise<void>): Pr
   }
 }
 
+const WRAPPER = `.claude/skills/${SKILL}`;
 const wrapperOf = (root: string): string => path.join(root, ".claude", "skills", SKILL);
+
+/** The wrapper paths the gate reports as broken links. */
+async function gateNames(root: string): Promise<string[]> {
+  const findings = await validateIntegrationSurface(root);
+  return findings
+    .filter((finding) => finding.code === "QFAI-LINK-001")
+    .flatMap((finding) => finding.refs ?? []);
+}
 
 async function holdsBeside(wrapper: string): Promise<string[]> {
   return (await readdir(path.dirname(wrapper))).filter((name) =>
@@ -78,9 +88,9 @@ describe("qfai init and the holds of an interrupted repair", () => {
           { dir: root, force: false, dryRun: false, yes: true },
           {
             platform: "win32",
-            createSymlink: async () => {
+            createSymlink: () => {
               attempts += 1;
-              throw eperm();
+              return Promise.reject(eperm());
             },
           },
         ),
@@ -96,29 +106,58 @@ describe("qfai init and the holds of an interrupted repair", () => {
     });
   });
 
-  it("reads a singular target in another letter case as right on Windows", async () => {
+  it("rewrites a singular target in another letter case on Windows, as the gate reports it", async () => {
     await withInitializedProject(async (root) => {
       const wrapper = wrapperOf(root);
       await rm(wrapper);
-      const current = SINGULAR_TARGET.toUpperCase();
-      await symlink(current, wrapper, "dir");
-      let attempts = 0;
+      await symlink(SINGULAR_TARGET.toUpperCase(), wrapper, "dir");
+      expect(await gateNames(root)).toContain(WRAPPER);
 
       await captureStdout(() =>
-        runInit(
-          { dir: root, force: false, dryRun: false, yes: true },
-          {
-            platform: "win32",
-            createSymlink: async () => {
-              attempts += 1;
-              throw eperm();
-            },
-          },
-        ),
+        runInit({ dir: root, force: false, dryRun: false, yes: true }, { platform: "win32" }),
       );
 
-      expect(attempts).toBe(0);
-      expect(await readlink(wrapper)).toBe(current);
+      expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
+      expect(await gateNames(root)).not.toContain(WRAPPER);
+    });
+  });
+
+  it("rewrites a link the gate reports though it reaches the right directory", async () => {
+    await withInitializedProject(async (root) => {
+      const wrapper = wrapperOf(root);
+      await rm(wrapper);
+      await symlink(path.join(root, ".qfai", "assistant", "skill", SKILL), wrapper, "dir");
+      expect(await gateNames(root)).toContain(WRAPPER);
+
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+      expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
+      expect(await gateNames(root)).not.toContain(WRAPPER);
+    });
+  });
+
+  it("removes a hold beside a wrapper that is already right, and lists it in the dry run", async () => {
+    // A repair that stopped after writing the new link and before removing
+    // its hold. Kept, the hold would later read as a path emptied and never
+    // refilled.
+    await withInitializedProject(async (root) => {
+      const wrapper = wrapperOf(root);
+      const hold = `${wrapper}.qfai-repair-4242`;
+      await mkdir(hold);
+      await symlink(PLURAL_TARGET, path.join(hold, SKILL), "dir");
+
+      const preview = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: true, yes: true }),
+      );
+      expect(preview).toContain(`would remove the hold of an interrupted repair: ${hold}`);
+      expect(await readlink(path.join(hold, SKILL))).toBe(PLURAL_TARGET);
+
+      const output = await captureStdout(() =>
+        runInit({ dir: root, force: false, dryRun: false, yes: true }),
+      );
+      expect(output).toContain(`removed the hold of an interrupted repair: ${hold}`);
+      expect(await holdsBeside(wrapper)).toEqual([]);
+      expect(path.normalize(await readlink(wrapper))).toBe(SINGULAR_TARGET);
     });
   });
 });
