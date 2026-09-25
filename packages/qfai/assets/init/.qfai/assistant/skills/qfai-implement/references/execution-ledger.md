@@ -383,6 +383,26 @@ selector entry on a row observes, the row needs splitting — **and that is a re
 `/qfai-implement` raises the Change Request and parks the row, and Phase 2b performs the split
 (`qfai-implement/SKILL.md`, Phase Red step 1). Rules and examples: `selector-granularity.md`.
 
+## How a Unit or Component row reaches its test
+
+On a `Unit` or `Component` row, the `Test file` and `Selector` cells are the
+link from the row to its test. The test needs no annotation naming its `TC-*`,
+and the acceptance gate asks for none on a Unit or Component case. One
+exception: where an annotation carrier names the case, `QFAI-TDDLIST-023`
+reports a `done` row until a test names it too.
+
+`npx qfai validate` holds the two cells to a test that is there:
+
+| Finding                       | Fires when                                                                                                      | Severity |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------- | -------- |
+| `TDDLIST_TEST_FILE_MISSING`   | at `green`, `refactor`, `review-fix` or `done`, `Test file` is empty, leaves the project root, or is not a file | error    |
+| `TDDLIST_SELECTOR_UNRESOLVED` | at the same statuses, an entry in `Selector` is not found in that file                                          | error    |
+| `QFAI-TDDLIST-008`            | at `done`, the evidence entry's `Test file` or `Selector` is missing or differs from the row's                  | error    |
+
+The third catches an empty `Selector`, which the second skips. Finding a
+selector is a text search, not a run: the evidence entry's commands are what
+show the test ran.
+
 ## Status Lifecycle
 
 Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`.
