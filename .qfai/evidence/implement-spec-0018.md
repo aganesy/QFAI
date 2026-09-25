@@ -1257,6 +1257,8 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 
 ### TDD-0026
 
+- Closed: `exception` under DR-0298 on 2026-09-25. The user waived the remaining per-row reviews; the T1 group review of BR-0018-0010 is not taken.
+
 - TDD-ID: TDD-0026
 - Layer: Unit
 - Test file: `packages/qfai/tests/unit/workflow/qfaiRunDrivesTheStages.test.ts`
@@ -1357,6 +1359,8 @@ Test Files 1 passed (1); Tests 1 passed (1); exit 0
 ```
 
 ### TDD-0027
+
+- Closed: `exception` under DR-0298 on 2026-09-25. The user waived the remaining per-row reviews; the T1 group review of BR-0018-0010 is not taken.
 
 - TDD-ID: TDD-0027
 - Layer: Unit
@@ -1461,18 +1465,19 @@ Test Files 1 failed (1); Tests 1 failed, 1 skipped (2); exit 1
 
 ### TDD-0028
 
+- Closed: `exception` under DR-0298 on 2026-09-25. The user waived the remaining per-row reviews; the T1 group review of BR-0018-0010 is not taken.
+
 - TDD-ID: TDD-0028
 - Layer: Unit
 - Test file: `packages/qfai/tests/unit/workflow/qfaiRunDrivesTheStages.test.ts`
 - Selector: `TC-0018-0016 (TDD-0028): bounded-change`
 - TC-ref: TC-0018-0016
 - Owning module: `packages/qfai/src/core/workflow/decide.ts`
-- qa-gatekeeper: Round 1 RED PASS. Independent review reproduced assertion failure at `:326:18`, comparison-only strip PASS, restored RED and siblings 2/2. Source/test hashes and 2,507-record revision matched. GREEN and group reviews remain pending.
+- qa-gatekeeper: Round 1 RED PASS. Independent review reproduced assertion failure at `:326:18`, comparison-only strip PASS, restored RED and siblings 2/2. Source/test hashes and 2,507-record revision matched. Round 1 GREEN PASS on re-submission: the first GREEN submission was REVISE because its revision was taken while another writer was active; the re-taken GREEN and Oracle proof at `working-tree+dbfcb0e40e33b4026bb18ec253a6187909be459f333a64eaa56ab4ee21145ef8` (HEAD `0ee5c1781`) were reproduced independently, audited evidence hash `3cd044616305c6bd71c61772ef5c417193de23230556f1e73be678f633836529`. Group reviews remain pending.
 - Group status: BR-0018-0010 remains open; group reviews and done gate wait for TDD-0029 and TDD-0030.
 
 #### Round 1
 
-- Round 1: Revision: `working-tree+64323366ff1e44571a24c3819ce0c836a78657ddbe84f8f1d5a3275427680fa6` (two calculations agreed; 2,507 path records).
 - Round 1: RED revision: `working-tree+64323366ff1e44571a24c3819ce0c836a78657ddbe84f8f1d5a3275427680fa6` (two calculations agreed; 2,507 path records).
 - Round 1: RED test hash: `efbfba64528939ae5faba7a18b44174d4bd76361b524c1a137edc9c377e7d872`.
 - Round 1: Source seam SHA-256: `d99294bc89dc828c2d1e4cde13fbeb00e4a1ab99ea0993846bb3766595b9a6f7` (unchanged).
@@ -1500,9 +1505,36 @@ Test Files 1 failed (1); Tests 1 failed, 2 skipped (3); exit 1
 Test Files 1 passed (1); Tests 1 passed, 2 skipped (3); exit 0
 ```
 
+- Round 1: Revision: `working-tree+dbfcb0e40e33b4026bb18ec253a6187909be459f333a64eaa56ab4ee21145ef8` at HEAD `0ee5c1781f6b808ec1ed0cc4a78e90809f5ef196` (two calculations agreed; 2,507 path records). It is the tree the restored GREEN ran on, taken straight after that run.
+- Round 1: GREEN command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/qfaiRunDrivesTheStages.test.ts --testNamePattern='TC-0018-0016 \(TDD-0028\): bounded-change' --reporter=verbose` (cwd: `packages/qfai`).
+- Round 1: GREEN result: exit 0; one selected test passed and two siblings skipped. The bounded-change plan issues four ordered work orders with the plan's skill and operation and the checked spec target. `bounded-acceptance` is issued because `acceptanceObligationsUnmet` is true. Each result is accepted and replayed, and a fifth `next` returns a null work order. Direct Prettier and ESLint on both files passed. `tsc -p packages/qfai/tsconfig.json --noEmit` exits 1 with TS2322 at `decide.ts(197,7)`: the CREATE decision branch assigns `snapshot.scopeDigest`, typed `string | undefined`, to a `string`. That line is outside this row's change. Source SHA-256: `a49294c3ca11f8dde947869eba0ee42f9da2223556e81d2e33b1011e038c367e`; test SHA-256: `efbfba64528939ae5faba7a18b44174d4bd76361b524c1a137edc9c377e7d872`.
+- Round 1: Relevant suite command: not run in this observation; Refactor step 2 runs it.
+- Round 1: Oracle command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/qfaiRunDrivesTheStages.test.ts --testNamePattern='TC-0018-0016 \(TDD-0028\): bounded-change' --reporter=verbose` (cwd: `packages/qfai`; the same selector command as GREEN).
+- Round 1: Oracle proof: One line in `activeStages` was changed temporarily, in `case "acceptance_obligations_unmet"`. It went from `return acceptanceObligationsUnmet === true;` to `return plan.route !== "bounded-change" && acceptanceObligationsUnmet === true;`. The predicate then evaluates false for the bounded-change plan and is unchanged for bugfix. The selector exited 1 at `:326:18`: `bounded-acceptance` was missing from both `issued` and `acceptedStages`, leaving three work orders instead of four. The source was restored at once from a byte copy. The same selector then passed 1/1, and the source SHA-256 returned to the value above.
+
+```diff
+       case "acceptance_obligations_unmet":
+-        return acceptanceObligationsUnmet === true;
++        return plan.route !== "bounded-change" && acceptanceObligationsUnmet === true;
+```
+
+```text
+✓ |unit| tests/unit/workflow/qfaiRunDrivesTheStages.test.ts > TC-0018-0016 (TDD-0028): bounded-change
+Test Files 1 passed (1); Tests 1 passed | 2 skipped (3); exit 0
+```
+
+```text
+× |unit| tests/unit/workflow/qfaiRunDrivesTheStages.test.ts > TC-0018-0016 (TDD-0028): bounded-change
+  → expected { issued: [ { …(5) }, …(2) ], …(6) } to deeply equal { issued: [ { …(5) }, …(3) ], …(6) }
+AssertionError: expected { issued: [ { …(5) }, …(2) ], …(6) } to deeply equal { issued: [ { …(5) }, …(3) ], …(6) }
+❯ tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:326:18
+Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
+```
+
 ## Record defects
 
 - Repaired — `record:ROUND-EVIDENCE`, TDD-0003: Round 1 phase evidence records its RED, GREEN, oracle and review fields without `Round 1:` or a `#### Round 1` block, although that was the single cycle observed. The Round 1 implementation review reported this advisory. Existing values were moved into Round 1 before opening Round 2; the sealed Round 1 review pack is preserved.
+- Repaired — `record:ROUND-EVIDENCE`, TDD-0028: `Round 1: Revision` sat with the RED record, above the RED fields, and held the RED tree's address. `Revision` names the GREEN tree and is outside the RED subject. The line now sits below the RED record and holds the GREEN address. `Round 1: RED revision` still holds the RED address, unchanged.
 
 ## Test results summary
 

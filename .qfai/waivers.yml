@@ -1,5 +1,15 @@
 version: 1
-waivers: []
+waivers:
+  - id: WVR-20260925-18
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0018/tdd/test-list.md"]
+    match:
+      dl_ids: [TDD-0026, TDD-0027, TDD-0028]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
 # Write `rule:` exactly as the finding's `code` appears in
 # `.qfai/report/validate.json` and in the CLI output — `QFAI-ATDD-112`,
 # `TDDLIST_UNKNOWN_LEVEL`, `E_TC_ORPHAN`. Do not strip the `QFAI-` prefix; the

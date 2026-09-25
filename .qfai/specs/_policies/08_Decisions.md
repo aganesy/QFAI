@@ -2047,3 +2047,38 @@ here. The mechanism is the contracts' and is cited, not restated: CLI-WF
   refuses a row added by any stage but `sdd_append` and a row moved off `done`
   (CLI-WF `## Ledger row-set check`).
 - Related: `spec-0001` (drift protocol), `spec-0011`, `spec-0013`, `spec-0018`.
+
+#### DR-0298: The intent-driven batch closes its open rows without per-row review
+
+- Status: accepted
+- Date: 2026-09-25
+- Context: the intent-driven batch left about 980 ledger rows open across its
+  twelve specs, nearly all at tier `T2`. Each `T2` row owes a `qa-gatekeeper`
+  RED and GREEN turn and a `completion-reviewer` and `implementation-reviewer`
+  pass. Measured on the first rows, one row costs several independent agent
+  runs, so the whole ledger is out of reach within the release.
+- Evidence: the user's decision of 2026-09-25, recorded in
+  `.qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md`.
+- Decision:
+  - For every row that the batch seeded or reset and that was not terminal on
+    2026-09-25, the per-row `qa-gatekeeper`, `completion-reviewer` and
+    `implementation-reviewer` turns are waived. Group reviews for `T1` rows are
+    waived too.
+  - The implementer still writes the test first, sees it fail on an assertion,
+    writes the code, and sees it pass. Both runs are recorded in the row's
+    evidence entry.
+  - The row then closes at `exception` with this record in `DR-ID`, in its
+    accepted-risk form. A `TDDLIST-001` waiver in `.qfai/waivers.yml` names the
+    row in `match.dl_ids`.
+  - Repository gates are not waived. The pull request merges only when every
+    CI lane is green.
+  - Rows already at `done` keep `done`. Review fields they lack are carried as
+    backlog in `scripts/dogfood-backlog.json`.
+- Rejected: closing the rows at `done` without the review fields
+  - DO NOT: write `done` on a row whose review fields are missing. Temptation:
+    `done` is the status the work reached. `QFAI-TDDLIST-008` then fails every
+    such row, and raising the backlog pins would hide it.
+- Consequences: each row closed this way raises `TDDLIST_EXCEPTION_PARKED`,
+  which the waiver clears row by row. The waiver expires on 2026-12-31. A later
+  review pass reopens a row through `exception` → `todo`.
+- Related: `spec-0018`, and every spec of the intent-driven batch.
