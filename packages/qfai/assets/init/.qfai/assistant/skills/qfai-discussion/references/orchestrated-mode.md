@@ -9,3 +9,10 @@ Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-base
 | `resolve-unsettled-product-scope` | Settle the product scope the routing left open, and only that |
 
 The skill serves exactly these operations. A work order naming any other is refused.
+
+## What is already settled
+
+- What the work order's `settled` field records, the checked proposal's routing
+  result and every answered question with its chosen answer, is taken as
+  settled and not asked again.
+- The discussion covers only the scope `settled` leaves unresolved.
