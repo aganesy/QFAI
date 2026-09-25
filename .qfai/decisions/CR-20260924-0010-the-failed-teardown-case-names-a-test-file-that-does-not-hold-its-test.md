@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0002`
+- ID: `CR-20260924-0010`
 - Title: `The failed-teardown case names a test file that does not hold its test`
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-24T02:18:01Z`
@@ -12,9 +12,15 @@
 - Applied at: `2026-09-24T02:19:00Z` — see Resolution
 - Superseded by: `-`
 
+## Identifier
+
+This record was merged as `CR-20260924-0002`. The main branch already gave that
+ID to the record splitting the CI acceptance boundaries, so this one is
+`CR-20260924-0010`. Commit messages written before the change keep the old ID.
+
 ## Context
 
-`CR-20260924-0001` added `TC-0012-0490` to
+`CR-20260924-0009` added `TC-0012-0490` to
 `.qfai/specs/spec-0012/06_Test-Cases.md`. Its `Test file:` line names
 `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`.
 
@@ -61,7 +67,7 @@ and `Verify` line stay as written.
 - Not blocked by this CR: `spec-0012/TDD-0469`, `TDD-0562`, `TDD-0563` and
   `TDD-0564`. They read the other file, and option 1 leaves it and their rows
   untouched.
-- Overlapping open CRs: `none`. `CR-20260924-0001` names `06_Test-Cases.md` too
+- Overlapping open CRs: `none`. `CR-20260924-0009` names `06_Test-Cases.md` too
   and is applied; this request assumes it has landed.
 
 ## Impact scope
@@ -84,7 +90,7 @@ that holds its test?
 1. `/qfai-sdd spec-0012`, mode `re-derive`, rewrites the `Test file:` line of
    `TC-0012-0490` and records this request in `09_delta.md`.
 2. Downstream ledger sweep: none. The case's obligation is unchanged, so no row
-   is reset or retired. `TDD-0577` stays at `todo` with `CR-20260924-0001` in
+   is reset or retired. `TDD-0577` stays at `todo` with `CR-20260924-0009` in
    `DR-ID`, and `/qfai-implement` fills its `Test file` and `Selector` from the
    `/qfai-atdd` handover.
 

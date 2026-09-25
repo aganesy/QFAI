@@ -11,8 +11,8 @@
 | CR-20260923-0001 | `spec-0012/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `16_Traceability-ledger.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:25:00Z |
 | CR-20260923-0012 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:25:00Z |
 | CR-20260923-0014 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T20:55:46Z |
-| CR-20260924-0001 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
-| CR-20260924-0002 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
+| CR-20260924-0009 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
+| CR-20260924-0010 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
 | CR-20260924-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-24T18:26:35Z |
 | CR-20260925-0018 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-24T19:00:08Z |
 | CR-20260925-0019 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md`                                                                                                | re-derive | user                                                           | 2026-09-24T23:35:15Z |
@@ -542,3 +542,16 @@ the next free ones:
   `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
   `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
   Every reference here follows them.
+
+## Change Request renumbering (2026-09-26)
+
+Two Change Request IDs each named two records on `main`. The two records this spec
+cites were the later of each pair, so they moved to free IDs. Meaning is unchanged,
+and no Change Request applies.
+
+- `CR-20260924-0001`, the failed auto-serve teardown, became `CR-20260924-0009`.
+- `CR-20260924-0002`, the failed-teardown case's test file, became `CR-20260924-0010`.
+
+The Change Requests table and the `TDD-0577` row follow them. The notes under
+`## Merge reconciliation (2026-09-25)` name earlier holders of the old IDs and stay
+as written.

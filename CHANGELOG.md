@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Each `CR-20260924-*` Change Request ID names one record** (#2505).
+  `CR-20260924-0001` and `CR-20260924-0002` each named two records, so a
+  delta row or ledger row citing either could not say which it meant. The
+  later record of each pair, both about the failed auto-serve teardown in
+  spec-0012, is now `CR-20260924-0009` and `CR-20260924-0010`. Each notes its
+  old ID, and the spec-0012 delta, ledger and ATDD evidence cite the new ones.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

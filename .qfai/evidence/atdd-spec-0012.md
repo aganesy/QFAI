@@ -214,7 +214,7 @@ Preflight: session opened
 
 Preflight: confidence high
 
-No session opened. `CR-20260924-0001` fixes the row, its case, its boundary
+No session opened. `CR-20260924-0009` fixes the row, its case, its boundary
 and the example value the case uses. The work order put the test in a new file
 rather than in the file the case's `Test file` line names; that line is
 recorded under Gaps / Open risks.
@@ -223,9 +223,9 @@ recorded under Gaps / Open risks.
 
 Preflight: confidence high
 
-No session opened. `CR-20260924-0001` fixes the row, its case and its
+No session opened. `CR-20260924-0009` fixes the row, its case and its
 boundary, the `/qfai-atdd` handover names the predicate and the mutation, and
-`CR-20260924-0002` points the case at the file that holds its test. The named
+`CR-20260924-0010` points the case at the file that holds its test. The named
 line holds the named call at this revision, and nothing surfaced during the run
 that the spec, the change requests or the handover leave open.
 
@@ -239,7 +239,7 @@ every row takes branch 2. The mutations are production code, and
 The run started 2026-09-23T08:46:59.499Z adds the three rows `CR-20260923-0008` splits
 `TC-0012-0462` into, on the same branch.
 
-The run started 2026-09-24T01:49:59.342Z adds `TDD-0577`, which `CR-20260924-0001`
+The run started 2026-09-24T01:49:59.342Z adds `TDD-0577`, which `CR-20260924-0009`
 seeds on `TC-0012-0490`, on the same branch.
 
 | TDD-ID | Obligation | Layer | RED provenance | Entry |
@@ -2649,7 +2649,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
 | ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
-| 38 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0012-0490` test for `TDD-0577` | CR-20260924-0001, 06_Test-Cases.md `TC-0012-0490`, 05_Examples.md `EX-0012-0190` | `prototypingIterate.autoServeTeardownFailure.test.ts`; `tsconfig.tests.json` | PASS |
+| 38 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0012-0490` test for `TDD-0577` | CR-20260924-0009, 06_Test-Cases.md `TC-0012-0490`, 05_Examples.md `EX-0012-0190` | `prototypingIterate.autoServeTeardownFailure.test.ts`; `tsconfig.tests.json` | PASS |
 | 39 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0577` on the falsifiability branch | the test file, `prototypingIterate.ts` | #tdd-0577 | PASS |
 | 40 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0490` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
 | 41 | - | n/a | grilling(-@2026-09-24T01:49:59.342Z/none): none | - | - | PASS |
@@ -2894,7 +2894,7 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
 - `TC-0012-0276` の ordering assertion は string index ベースで、実装の大幅な整形変更には比較的弱い。
 - source-inspection 型 ATDD はこの repo の既存パターンに整合するが、runtime behavior を直接実行するテストではないため rationale を残す。
-- Resolved by `CR-20260924-0002`: `TC-0012-0490` named `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line while its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The change request points the line at `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`, which keeps the `RED test hash` of the four `done` rows whose manifest names the other file.
+- Resolved by `CR-20260924-0010`: `TC-0012-0490` named `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line while its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The change request points the line at `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`, which keeps the `RED test hash` of the four `done` rows whose manifest names the other file.
 
 ## Final status (PASS/FAIL) + who confirmed
 

@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0001`
+- ID: `CR-20260924-0009`
 - Title: `A failed auto-serve teardown is reported by no case`
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-24T01:44:21Z`
@@ -11,6 +11,12 @@
 - Approved option: `1`
 - Applied at: `2026-09-24T01:45:17Z` — see Resolution
 - Superseded by: `-`
+
+## Identifier
+
+This record was merged as `CR-20260924-0001`. The main branch already gave that
+ID to the record retiring two repository skills, so this one is
+`CR-20260924-0009`. Commit messages written before the change keep the old ID.
 
 ## Context
 
