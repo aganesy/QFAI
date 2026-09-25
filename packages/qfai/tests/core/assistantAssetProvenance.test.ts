@@ -30,6 +30,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import {
   ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
+  GOVERNED_ASSISTANT_LAYERS,
   buildShippedAssistantHashes,
   hashAssistantAssetFile,
   hashAssistantAssetText,
@@ -76,7 +77,7 @@ async function makeProject(): Promise<string> {
   tempRoots.push(root);
   const assistantDir = path.join(root, ".qfai", "assistant");
   await mkdir(assistantDir, { recursive: true });
-  for (const layer of ["constitution", "catalog"]) {
+  for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     await cp(path.join(shippedAssistantDir, layer), path.join(assistantDir, layer), {
       recursive: true,
     });

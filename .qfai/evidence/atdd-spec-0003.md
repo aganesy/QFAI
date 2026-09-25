@@ -660,6 +660,85 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
 
+### TDD-0108
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0074: Fresh init records every plan in the lock, and no memo`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0074: Fresh init records every plan in the lock, and no memo' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ …(5) ]` (the lock held no `process/workflows/` key)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`process/workflows` in `GOVERNED_ASSISTANT_LAYERS`, the `governedLayerOf` helper, the lock-key parse through it, the layer-root boundary for a two-segment layer), `packages/qfai/src/core/governedAssistantManifest.ts` and `packages/qfai/scripts/generate-governed-assistant-manifest.mjs` (the build-time list of shipped governed files), `packages/qfai/src/core/paths/assistantPaths.ts` (`joinAssistantLayer` takes a two-segment layer), `packages/qfai/src/cli/commands/init.ts` (the copy exclusion now routes the plans to the governed writer), `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/core/assistantAssetProvenance.test.ts` (its fixture copies every governed layer)
+
+### TDD-0109
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected Buffer[ 35, 32, 65, 110, 32, 101, …(-50) ] to deeply equal Buffer[ 114, 111, 117, 116, 101, …(193) ]` (the older plan kept its earlier body)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0108, plus `packages/qfai/src/cli/commands/init.ts` (an unmodified plan is refreshed on a plain run, not only under `--force`) and `packages/qfai/tests/integration/init/upgradeStates.ts` (overlays `older-plan`, `edited-plan`, `edited-memo`)
+- Design choice: the plain-run refresh applies to the plans layer only. `constitution/` and `catalog/` keep refreshing under `--force` alone, which is the behaviour BR-0003-0053 leaves untouched.
+
+### TDD-0111
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0077: A rerun writes nothing and leaves the tree byte-identical`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0077: A rerun writes nothing and leaves the tree byte-identical' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); a rerun over a current install already wrote nothing
+- GREEN result: exit 0; 1 passed (1), with the plans governed and the lock carrying the package version
+- Changed files: `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` now captures the report written to stdout, and the case asserts the summary was captured)
+
+### TDD-0112
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+- Selector: `TC-0003-0078: The lock records the running package version`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/upgradeRecord.test.ts --testNamePattern='TC-0003-0078: The lock records the running package version' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to be '1.12.2' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`packageVersion` in the lock), `packages/qfai/src/cli/commands/init.ts` (the governed sync writes the running version), `packages/qfai/tests/integration/init/upgradeRecord.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `older-lock`)
+- The conflict list BR-0003-0054 also records is TDD-0113, which waits for the correspondence check.
+
+### TDD-0114
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0080: Every provenance lock key is a slash-separated path`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0080: Every provenance lock key is a slash-separated path' --reporter=verbose`
+- RED result: already satisfied: exit 0 against the sources before this chunk (Tests 1 passed); the lock keys were already POSIX paths
+- GREEN result: exit 0; 1 passed (1), with the two-segment `process/workflows/…` keys
+- Changed files: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
+### TDD-0119
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`
+- Selector: `TC-0003-0085: Plain upgrade leaves a customized agent-routing.yml untouched`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/plainRunManifest.test.ts --testNamePattern='TC-0003-0085: Plain upgrade leaves a customized agent-routing.yml untouched' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the routing merge runs under `--force` only
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `absent-route`)
+
+### TDD-0123
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`
+- Selector: `TC-0003-0089: Plain upgrade counts skipped skills; a CRLF-only copy is not one`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/skippedSkillCount.test.ts --testNamePattern='TC-0003-0089: Plain upgrade counts skipped skills; a CRLF-only copy is not one' --reporter=verbose`
+- RED result: exit 1; `AssertionError: one line counts the skipped skills: expected [] to have a length of 1 but got +0`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/cli/commands/init.ts` (`countDifferingSkills` and the summary line), `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stdout)
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.

@@ -34,6 +34,7 @@ import {
   GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
+  governedLayerOf,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLock,
@@ -523,6 +524,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  const differingSkills = options.force
+    ? 0
+    : await countDifferingSkills(qfaiAssets, destRoot, skillsResult.skipped);
   // The copy above is create-only and this release ships no README to copy, so
   // the one an earlier release left behind is removed here rather than
   // overwritten.
@@ -532,6 +536,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     rootAssets,
     plannedSafetyFloor,
+    packageVersion: toolVersion,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -710,7 +715,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     options.verbose ?? false,
   );
 
-  for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
+  for (const note of [
+    ...upgradeResult.preservedNotes,
+    ...routingMergeNotes,
+    ...differingSkillsNote(differingSkills),
+  ]) {
     info(note);
   }
 
@@ -736,6 +745,41 @@ export async function runInit(options: InitOptions): Promise<void> {
 // ---------------------------------------------------------------------------
 // Governed assistant assets: provenance record + upgrade path
 // ---------------------------------------------------------------------------
+
+/**
+ * How many shipped skills a plain run left alone because the project's copy
+ * differs from the template. Line endings are ignored, so a CRLF checkout of an
+ * unedited skill is not counted.
+ */
+async function countDifferingSkills(
+  qfaiAssets: string,
+  destRoot: string,
+  skipped: readonly string[],
+): Promise<number> {
+  const destQfai = path.join(destRoot, ".qfai");
+  const skillsDir = path.join(destRoot, ...ASSISTANT_DIR.split("/"), "skills");
+  const differing = new Set<string>();
+  for (const dest of skipped) {
+    const relative = path.relative(skillsDir, dest);
+    const skill = relative.split(path.sep)[0] ?? "";
+    if (relative.startsWith("..") || skill === "" || differing.has(skill)) continue;
+    const source = path.join(qfaiAssets, path.relative(destQfai, dest));
+    const shipped = await hashAssistantAssetFile(source, { allowSymlink: true });
+    if ((await hashAssistantAssetFile(dest)) !== shipped) differing.add(skill);
+  }
+  return differing.size;
+}
+
+function differingSkillsNote(count: number): string[] {
+  if (count === 0) return [];
+  return count === 1
+    ? [
+        "  1 shipped skill differs from this release and was left as it is. `qfai init --force` updates it: it replaces it with the shipped version, overwriting local edits.",
+      ]
+    : [
+        `  ${String(count)} shipped skills differ from this release and were left as they are. \`qfai init --force\` updates them: it replaces them with the shipped versions, overwriting local edits.`,
+      ];
+}
 
 function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
   return paths.filter((candidate) => !excluded.has(candidate));
@@ -930,7 +974,13 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
+  options: {
+    force: boolean;
+    dryRun: boolean;
+    rootAssets: string;
+    plannedSafetyFloor: boolean;
+    packageVersion: string;
+  },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -953,7 +1003,7 @@ async function syncGovernedAssistantAssets(
     // sync is abandoned whole: nothing refreshed, nothing removed, and the
     // existing record left exactly as it was.
     manualMergeNotes.push(
-      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
+      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**, assistant/process/workflows/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
     );
     return { copied, skipped, removed, manualMergeNotes };
   }
@@ -1022,9 +1072,17 @@ async function syncGovernedAssistantAssets(
     // the same comparison then says "refreshable" about content that only
     // exists here. Declined rather than merged: this command does not overwrite
     // what it did not write.
+    //
+    // A plan is refreshed on a plain run too. The workflow engine refuses a
+    // plan that differs from the release, so an unmodified plan left behind
+    // would stop the next run for an edit nobody made.
     const adopterOwned = ADOPTER_OWNED_ASSETS.has(relative);
+    const refreshOnUpgrade = options.force || governedLayerOf(relative) === "process/workflows";
     const refreshable =
-      options.force && !adopterOwned && previousHash !== undefined && currentHash === previousHash;
+      refreshOnUpgrade &&
+      !adopterOwned &&
+      previousHash !== undefined &&
+      currentHash === previousHash;
     if (refreshable) {
       // `currentHash` was read above; the refresh is only legitimate while the
       // file still holds it. Passing it down makes the replacement decline a
@@ -1072,7 +1130,10 @@ async function syncGovernedAssistantAssets(
   // it — with it.
   if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
     await mkdir(destAssistant, { recursive: true });
-    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+    await writeAssistantAssetsLock(destAssistant, {
+      packageVersion: options.packageVersion,
+      files: recorded,
+    });
   }
 
   return { copied, skipped, removed, manualMergeNotes };
