@@ -2,6 +2,31 @@
 
 Rows closed under DR-0298, one entry per row.
 
+## /qfai-implement run started 2026-09-25T10:21:29.000Z
+
+Rows `TDD-0083`, `TDD-0084`, `TDD-0085` and `TDD-0086`, reopened
+`exception` -> `todo` to take the reviews their closure waived. They are
+`Integration` rows, so their row-level evidence is in
+`.qfai/evidence/atdd-spec-0004.md`, under each row's own heading. The entries
+below keep the record of the waived closure.
+
+### Plan phase
+
+| Role                          | Instance                | Verdict | Summary                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | The four rows exist at `todo` with no blocker. All four are T2: they carry the `QFAI-ASSETS-004/005/007` codes of `qfai validate` at their fixed `error` severity. T2 rows are reviewed alone, so there is no group. Parallel dispatch is denied: every row mutates the same module. Order: `TDD-0083`, `TDD-0084`, `TDD-0085`, `TDD-0086` |
+| `test-design-analyst`         | `test-design-analyst#2` | PASS    | Each row's `Layer` owns its `L3` test case, and each `Selector` resolves to exactly one case and names one boundary. Every test case and user story of spec-0004 has a row, and no API obligation exists                                                                                  |
+
+Findings the plan phase hands on, none of which blocks these rows:
+
+- `AC-0004-0044` and `BR-0004-0038` also require a plan that still holds an
+  earlier release's content to be reported as stale (`QFAI-ASSETS-004`). No
+  test case covers that clause. Adding one is a `/qfai-sdd` change.
+- `TDD-0048` has `Layer = unit` while its test case declares `Level`
+  `validators`. Twenty-six rows use `validators` and one uses `ssot-guard` as a
+  `Layer`. Declaring a recognised `Level` in `06_Test-Cases.md` is a `/qfai-sdd`
+  change.
+
 ## Ledger rows advanced
 
 ### TDD-0067
