@@ -1534,6 +1534,15 @@
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`
 - Verify REQ-0012-0062 failed teardown: with an injected runner whose teardown rejects, iterate prints a line on stdout naming the `--auto-serve` teardown and the rejection's reason, and exits with the code a cycle whose teardown resolves exits with.
 
+## TC-0012-0495
+
+- EX-Ref: EX-0012-0187
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Level: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.captureUrlRefused.test.ts`
+- Verify REQ-0012-0075 refused capture URL: a cycle-1 run with `--capture`, a route-relative screen URL and no `--target-url`, and a run whose screen URL and `--target-url` do not compose into a URL, each exit 2 with a reason on stderr naming the screen and `--target-url`, and capture nothing.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.

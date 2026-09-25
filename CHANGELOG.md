@@ -43,6 +43,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A spec-0012 case requires a refused capture URL to name its screen and
+  exit 2** (#2280). When `qfai prototyping iterate --capture` cannot compose a
+  screen's URL, the rule says the reason names the screen and `--target-url`,
+  and iterate exits 2. No case carried that outcome, and no test checked the
+  screen in the reason or ran a URL pair that does not compose. A new
+  integration case covers both URLs, with one ledger row and one test each.
+  Each test asserts the screen and `--target-url` in the reason, exit 2, and
+  that nothing was captured.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
