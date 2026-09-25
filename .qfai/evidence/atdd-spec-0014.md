@@ -413,6 +413,8 @@ packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+3c507dc339ba6c83c25e05f359450b198f16c399ad56667170b0661fa3846bec, reproduced the orchestrated-mode.md:29 mutation ("this run's" to "a"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's toMatch at stageResultReceipts.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 6dd6c7b4…f647 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
 ### TDD-0043
 
@@ -461,6 +463,8 @@ packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+82eaac8506872657a86db89a70501c55cc3c7405900436af6806ce3e65f8caf2, reproduced the orchestrated-mode.md:32 mutation ("is never named" to "may be named"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's toMatch at foreignReport.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash e9652270…c7ad recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
 ### TDD-0044
 
@@ -509,6 +513,8 @@ packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+bade17e6d7045038bec3ea35fecafe3164d3cd1bf79659b49c8d48604ef03013, reproduced the orchestrated-mode.md:38 mutation (dropping "`unrun`, never"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's second toMatch at unrunGate.test.ts:22:18 with the first still matching (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash fd33efac…fa2a recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
 ### TDD-0045
 
@@ -557,6 +563,8 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+459954f5c2b4cc737f2ff5d29b281e9905c00bcd00486d2fea70df040e900f62, reproduced the verify-output-contract.md:11 mutation (adding the WARN value to the status row), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on expected [ 'PASS', 'WARN', 'FAIL' ] to deeply equal [ 'PASS', 'FAIL' ] at verifyJsonUnchanged.test.ts:40:84 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 9f4c080d…124f recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by status cell is the oracle proof, run with the GREEN command
 
 ### TDD-0046
 
@@ -605,6 +613,8 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+438496aca219c24cbd15cc4cd21380868b4935e82c0a438a5b0ce92061702cbf, reproduced the orchestrated-mode.md:53 mutation (the acceptance-test defect owner changed to qfai-implement), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the owner-map toEqual at repairRouting.test.ts:35:76 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash be82ec30…2c79 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by table row is the oracle proof, run with the GREEN command
 
 ### TDD-0047
 
@@ -653,6 +663,8 @@ packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+f2b194d194ab52f00ed8e6474b034655f55daa6b6f28dd1043464803c94b3b51, reproduced the orchestrated-mode.md:13 mutation ("with nothing edited" to "with its edits applied"), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's first toMatch at stageSkillHandover.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 12814a49…b811 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
 ### TDD-0048
 
@@ -701,6 +713,8 @@ packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+1c5ff5f27430c3ba78ae1c4a0ec3fb2dc42cb0ef34fdb718de3f17c24795576e, reproduced the orchestrated-mode.md:23 mutation (verify-full to verify-spec), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on expected [ 'verify-spec' ] to deeply equal [ 'verify-full' ] at operationsTable.test.ts:18:17 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash f59a21f6…4f2c recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by table cell is the oracle proof, run with the GREEN command
 
 ### TDD-0050
 
@@ -749,6 +763,8 @@ packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on working-tree+02849ee485dcbbebde47c9c2cfe3d288bb0e5a3e86ac5fcc3a309505bfbff6e1, reproduced the orchestrated-mode.md:60 mutation (`blocked` to `needs_repair`), the address recomputed at base 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1, the run failing on the row's first toMatch at missingEnvironment.test.ts:21:18 (Test Files 1 failed (1); Tests 1 failed (1)), and RED test hash 8cd27bd4…6095 recomputed; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 25e2e1b07b275f66476de1ab779a1f6c71b2472e: Test Files 1 passed (1); Tests 1 passed (1), and the mutation of the Satisfied-by bullet is the oracle proof, run with the GREEN command
 
 ## Coverage Depth Matrix
 
