@@ -311,6 +311,32 @@ The other moves each lose something:
 A behaviour no spec owns is a missing capability, not a file problem. Raise it
 as its own requirement, which is the capability decision `CREATE` exists for.
 
+## Resolving a merge conflict in a delta ledger
+
+Every run appends to `<spec>/09_delta.md` and `_policies/10_delta.md` at the
+same places. Two branches that touch the same ledger therefore conflict there
+on merge, even when their entries are unrelated.
+
+Neither of the obvious resolutions is safe:
+
+- **Keeping both sides in an editor** interleaves the two entries' headings,
+  tables and `## Impact` blocks, and `QFAI-TRIAGE-002` rejects the result.
+- **A line-based `union` merge driver** matches the lines both entries share —
+  a table header, `## Impact`, a list item — and keeps one copy. The merge
+  succeeds and one entry has silently lost part of its body.
+
+Resolve it mechanically instead:
+
+1. Take the ledger whole from the branch you are merging into.
+2. Re-append every entry your branch added, each at the place it went before
+   and with its content unchanged: the `## Change Summary` entry, the Triage
+   sub-section or `## Triage (<round>)` section, the `## Update History` row,
+   the `### DL-NNNN` entry and any `## Change Requests` row.
+3. Where the other branch already took a number your entry used (`DELTA-NNNN`,
+   `DL-NNNN`), give your entry the next free one and update every reference to
+   it on your branch.
+4. Run `npx qfai validate`.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no

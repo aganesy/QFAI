@@ -41,6 +41,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **The `qfai-sdd` skill states how to resolve a merge conflict in a delta
+  ledger** (#2265). Every run appends to `09_delta.md` and
+  `_policies/10_delta.md` at the same places, so two open branches conflict
+  there on merge. Keeping both sides interleaves the two entries, and a
+  line-based `union` merge silently drops the lines they share. The triage
+  reference now gives the mechanical resolution: take the ledger from the
+  branch being merged into, re-append this branch's entries unchanged, and
+  renumber only an ID the other branch already took.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
