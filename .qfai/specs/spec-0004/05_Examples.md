@@ -95,6 +95,13 @@
 - When `qfai validate` ingests it
 - Then validate exits with error severity (advisory-failing)
 
+## EX-0004-0059
+
+- BR-Ref: BR-0004-0017
+- Given a reviewer report JSON containing `{"code": "R-REJECTED-READOPT", "justification": "Re-adopted under DR-0001: the constraint that rejected it was lifted"}`
+- When `qfai validate` ingests it
+- Then no justification finding is raised for it
+
 ## EX-0004-0020
 
 - BR-Ref: BR-0004-0021

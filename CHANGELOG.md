@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A non-empty justification on `R-REJECTED-READOPT` has its own test**
+  (#2418). spec-0004's criterion for the reviewer justification rule says such
+  a finding passes, but only the rejection of an empty one was tested. A new
+  case, `TC-0004-0088`, with example `EX-0004-0059` and ledger row `TDD-0093`,
+  covers the passing clause. Two requirement bindings in spec-0004's
+  traceability ledger named `tests/core/validate.test.ts`, which does not
+  exist, and now name the tests of `validate.ts` and of the UI evidence
+  validator.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
