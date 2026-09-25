@@ -42,7 +42,16 @@ export interface WorkflowEvent {
   gateResults?: WorkflowGateReceipt[];
   validate?: { verdict: "PASS" | "FAIL"; findings: FindingIdentity[]; trustLevel: "cli_observed" };
   executionContext?: WorkflowExecutionContext;
+  cause?: FailClosedCause;
 }
+
+type FailClosedCause =
+  | "policy-drift"
+  | "contract-undeclared"
+  | "reviewer-missing"
+  | "unsupported-capability"
+  | "invariant-violation"
+  | "invalid-mode";
 
 // The host's capability report, each capability reported true or false.
 interface WorkflowHarness {
@@ -177,6 +186,7 @@ export interface WorkflowDecision {
           code: "stale-sequence" | "no-open-question" | "answer-conflict" | "run-terminal";
           message: string;
         }
+      | { code: "fail-closed"; message: string; cause: FailClosedCause }
       | {
           code: "proposal-refused";
           message: string;
@@ -287,6 +297,7 @@ interface WorkflowSnapshot {
   stopVerdict?: WorkflowDecision["verdict"];
   // The run's key for free-text answers, read from its private request file.
   digestKey?: string;
+  routingReceiptRef?: string;
 }
 
 interface WorkflowPolicy {
@@ -354,6 +365,7 @@ interface WorkflowInput {
     reviewResults?: WorkflowReview[];
     gateResults?: { gateId: string; verdict: string }[];
     testFix?: { citedBefore?: string; citedAfter?: string; reviewRef?: string; rerunRef?: string };
+    questions?: unknown[];
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -406,6 +418,8 @@ interface WorkflowFacts {
   start?: Omit<WorkflowExecutionContext, "harness" | "requestDigest"> & { digestKey: string };
   // The always-required reviewers of the review profile each skill is routed to.
   reviewerRoles?: Record<string, string[]>;
+  // A fail-closed cause an observer found for this operation.
+  cause?: FailClosedCause;
 }
 
 // What `finish` observes: validate run in process, the offered verify report, the tool and
@@ -925,7 +939,10 @@ function outcomeIsAcceptable(
     case "accepted":
     case "accepted_with_debt":
     case "unrun":
+    case "blocked":
       return true;
+    case "awaiting_input":
+      return (result.questions ?? []).length > 0;
     case "needs_repair":
       return (
         (stageKind === "acceptance" && result.seamRequest !== undefined) ||
@@ -936,23 +953,52 @@ function outcomeIsAcceptable(
   }
 }
 
-// SIMPLIFIED: an unrun result blocks the run without naming a blocker or who can clear it.
+// SIMPLIFIED: an unrun or blocked result blocks the run without naming a blocker or who can
+// clear it.
 // Lift when: a blocked result's blocker and owner are derived from its delegation and debts.
-function blockOnUnrun(
+function blockOnResult(
   run: WorkflowSnapshot["run"],
   result: NonNullable<WorkflowInput["result"]>,
+  type = "unrun-or-unresolved-dependency",
 ): WorkflowDecision {
   return {
     verdict: { ok: true, run: { ...run, state: "blocked", sequence: run.sequence + 1 } },
     events: [
       {
-        type: "unrun-or-unresolved-dependency",
+        type,
         resultRef: `results/${result.resultId}.json`,
         stageInstanceId: result.stageInstanceId,
         outcome: result.outcome,
       },
     ],
   };
+}
+
+// A stage that needs an answer before it can go on opens its questions and waits.
+function openStageQuestions(
+  run: WorkflowSnapshot["run"],
+  result: NonNullable<WorkflowInput["result"]>,
+): WorkflowDecision {
+  const inputs = (result.questions ?? []).map(parseQuestionInput);
+  const parsed = inputs.flatMap((question) => question ?? []);
+  if (parsed.length !== inputs.length) {
+    return refusedWith(run, [{ reason: "schema", subject: "questions" }]);
+  }
+  const questions: WorkflowQuestion[] = parsed.map((question, index) => ({
+    ...question,
+    questionId: `question-${run.sequence + 1}-${index + 1}`,
+  }));
+  const events: WorkflowEvent[] = [
+    ...questions.map((question) => ({ type: "question-opened", question })),
+    {
+      type: "material-decision",
+      resultRef: `results/${result.resultId}.json`,
+      stageInstanceId: result.stageInstanceId,
+      outcome: result.outcome,
+    },
+  ];
+  const waiting = { ...run, state: "awaiting_input", sequence: run.sequence + events.length };
+  return { verdict: { ok: true, run: waiting, questions }, events };
 }
 
 function issueWorkOrder(
@@ -1296,6 +1342,15 @@ function classedReceipts(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
   );
 }
 
+function checkpointOf(
+  accepted: readonly WorkflowAcceptedStage[],
+  receipts: readonly WorkflowReceiptClass[],
+): number {
+  return accepted.findIndex((stage) =>
+    receipts.some(({ ref, validity }) => ref === stage.receiptRef && validity !== "valid"),
+  );
+}
+
 // A receipt that is not valid, including one whose dependency cannot be read, reopens its
 // stage: the run restarts at the first accepted stage whose receipt does not hold.
 // SIMPLIFIED: resume revalidates receipts only, not the worktree identity, the journal or digests.
@@ -1306,9 +1361,7 @@ function resumeFromCheckpoint(
 ): WorkflowDecision | undefined {
   const receipts = classedReceipts(snapshot, facts);
   const accepted = snapshot.acceptedStages ?? [];
-  const checkpoint = accepted.findIndex((stage) =>
-    receipts.some(({ ref, validity }) => ref === stage.receiptRef && validity !== "valid"),
-  );
+  const checkpoint = checkpointOf(accepted, receipts);
   if (checkpoint < 0) return undefined;
   const events: WorkflowEvent[] = [
     { type: "observed-session-interruption" },
@@ -1323,6 +1376,87 @@ function resumeFromCheckpoint(
     verdict: { ...issued.verdict, classedReceipts: receipts },
     events: [...events, ...issued.events],
   };
+}
+
+// A crash can leave a run in `created` before its request was captured.
+function resumeCreated(run: WorkflowSnapshot["run"]): WorkflowDecision {
+  return {
+    verdict: { ok: true, run: { ...run, state: "routing", sequence: run.sequence + 1 } },
+    events: [{ type: "capture-request" }],
+  };
+}
+
+// A routing receipt that no longer holds sends the run back to routing before any work.
+function planRevision(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
+  const ref = snapshot.routingReceiptRef;
+  if (ref === undefined || facts.receiptValidity?.[ref] === "valid") return undefined;
+  const run = { ...snapshot.run, state: "routing", sequence: snapshot.run.sequence + 1 };
+  return { verdict: { ok: true, run }, events: [{ type: "required-plan-revision" }] };
+}
+
+function refusedFailClosed(run: WorkflowSnapshot["run"], cause: FailClosedCause) {
+  const message = "The run cannot go on until the cause it names is cleared.";
+  return {
+    verdict: { ok: false, run, error: { code: "fail-closed" as const, message, cause } },
+    events: [],
+  };
+}
+
+function resumeReady(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
+  const receipts = classedReceipts(snapshot, facts);
+  const accepted = snapshot.acceptedStages ?? [];
+  const checkpoint = checkpointOf(accepted, receipts);
+  const acceptedStages = checkpoint < 0 ? accepted : accepted.slice(0, checkpoint);
+  const issued = decide({ ...snapshot, acceptedStages }, { operation: "next" }, facts);
+  if (!issued.verdict.ok || receipts.length === 0) return issued;
+  return { ...issued, verdict: { ...issued.verdict, classedReceipts: receipts } };
+}
+
+// The core cannot observe a blocker a stage reported, so resume reissues that stage's work
+// order as a new attempt, and the new result decides whether the block still holds.
+function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
+  const { run } = snapshot;
+  if (facts.cause) return refusedFailClosed(run, facts.cause);
+  const { outstandingWorkOrder: _blocked, ...rest } = snapshot;
+  const ready = { ...run, state: "ready", sequence: run.sequence + 1 };
+  const issued = decide({ ...rest, run: ready }, { operation: "next" }, facts);
+  if (!issued.verdict.ok) return issued;
+  return { ...issued, events: [{ type: "blocker-cleared-and-revalidated" }, ...issued.events] };
+}
+
+function resumeRunning(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  facts: WorkflowFacts,
+): WorkflowDecision {
+  if (facts.cause) {
+    const events: WorkflowEvent[] = [
+      { type: "observed-session-interruption" },
+      { type: "reconciled-with-blocker", cause: facts.cause },
+    ];
+    const run = { ...snapshot.run, state: "blocked", sequence: snapshot.run.sequence + 2 };
+    return { verdict: { ok: true, run }, events };
+  }
+  const checkpoint = resumeFromCheckpoint(snapshot, facts);
+  if (checkpoint) return checkpoint;
+  const events: WorkflowEvent[] = [
+    { type: "observed-session-interruption" },
+    { type: "reconciled-resume" },
+    { type: "dispatch-work-order" },
+  ];
+  const run = { ...snapshot.run, sequence: snapshot.run.sequence + events.length };
+  return { verdict: { ok: true, run, workOrder }, events };
+}
+
+function decideResume(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
+  const { run, outstandingWorkOrder } = snapshot;
+  if (run.state === "created") return resumeCreated(run);
+  if (run.state === "ready") return resumeReady(snapshot, facts);
+  if (run.state === "blocked") return resumeBlocked(snapshot, facts);
+  if (run.state === "running" && outstandingWorkOrder) {
+    return resumeRunning(snapshot, outstandingWorkOrder, facts);
+  }
+  return refusedInput(run, "The run cannot resume from here. Read the run's status.");
 }
 
 function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
@@ -1374,6 +1508,7 @@ function chosenOptions(question: WorkflowQuestion, optionIds: readonly string[])
 
 function answerEvents(authorization: WorkflowAuthorization): WorkflowEvent[] {
   const events: WorkflowEvent[] = [{ type: "authorization-recorded", authorization }];
+  if (authorization.effect === "proceed") events.push({ type: "valid-answer-no-replan" });
   if (authorization.effect === "replan") events.push({ type: "answer-changes-scope" });
   if (authorization.effect === "stop") events.push({ type: "authorized-stop" });
   return events;
@@ -1603,12 +1738,15 @@ export function decide(
   }
 
   if (input.operation === "finish") return decideFinish(snapshot, facts);
+  if (input.operation === "resume") return decideResume(snapshot, facts);
 
   if (input.operation === "decision") {
     return decideAnswer(snapshot, input, facts);
   }
 
   if (input.operation === "next" && run.state === "ready") {
+    const revision = planRevision(snapshot, facts);
+    if (revision) return revision;
     const plan = snapshot.plan;
     const acceptedStages = snapshot.acceptedStages ?? [];
     const approval = snapshot.approval;
@@ -1751,20 +1889,6 @@ export function decide(
     return { verdict: { ok: true, run, workOrder: null, questions }, events: [] };
   }
 
-  if (input.operation === "resume" && run.state === "running" && workOrder) {
-    const checkpoint = resumeFromCheckpoint(snapshot, facts);
-    if (checkpoint) return checkpoint;
-    const events: WorkflowEvent[] = [
-      { type: "observed-session-interruption" },
-      { type: "reconciled-resume" },
-      { type: "dispatch-work-order" },
-    ];
-    return {
-      verdict: { ok: true, run: { ...run, sequence: run.sequence + events.length }, workOrder },
-      events,
-    };
-  }
-
   if (
     input.operation === "accept" &&
     run.state === "running" &&
@@ -1829,7 +1953,10 @@ export function decide(
 
     const inputRefusals = resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []);
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
-    if (result.outcome === "unrun") return blockOnUnrun(run, result);
+    if (result.outcome === "unrun" || result.outcome === "blocked") {
+      return blockOnResult(run, result);
+    }
+    if (result.outcome === "awaiting_input") return openStageQuestions(run, result);
     const approvedCapability = snapshot.approval?.target?.capability;
     if (
       plan.route === "feature" &&
@@ -1876,6 +2003,15 @@ export function decide(
       },
       events,
     };
+  }
+
+  if (
+    input.operation === "accept" &&
+    run.state === "routing" &&
+    workOrder?.stageKind === "routing" &&
+    result?.outcome === "blocked"
+  ) {
+    return blockOnResult(run, result, "missing-capability");
   }
 
   // SIMPLIFIED: this transition checks path references, capability shape and the built-in plan.

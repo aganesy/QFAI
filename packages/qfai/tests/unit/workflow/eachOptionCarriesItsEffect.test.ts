@@ -59,7 +59,12 @@ function outcomeOf(decision: ReturnType<typeof decide>) {
 }
 
 const effects: [string, string, string, string[]][] = [
-  ["TC-0018-0088 (TDD-0120): proceed", "keep", "ready", ["authorization-recorded"]],
+  [
+    "TC-0018-0088 (TDD-0120): proceed",
+    "keep",
+    "ready",
+    ["authorization-recorded", "valid-answer-no-replan"],
+  ],
   [
     "TC-0018-0088 (TDD-0121): replan",
     "narrow",

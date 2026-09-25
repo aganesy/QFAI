@@ -170,6 +170,44 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0160 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0161 | TC-0018-0137 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0162 | TC-0018-0140 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0163 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0164 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0165 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0166 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0167 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0168 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0169 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0170 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0171 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0172 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0173 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0174 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0175 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0176 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0177 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0178 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0179 | TC-0018-0141 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0180 | TC-0018-0142 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0181 | TC-0018-0142 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0182 | TC-0018-0142 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0183 | TC-0018-0142 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0184 | TC-0018-0143 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0185 | TC-0018-0143 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0186 | TC-0018-0143 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0187 | TC-0018-0144 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0188 | TC-0018-0144 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0189 | TC-0018-0145 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0190 | TC-0018-0145 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0191 | TC-0018-0146 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0192 | TC-0018-0146 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0193 | TC-0018-0146 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0194 | TC-0018-0147 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0195 | TC-0018-0147 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0196 | TC-0018-0147 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0197 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0198 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0199 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0200 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -429,10 +467,10 @@ Tests       1 failed (1)
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0001`. No source or test file changed in this review fix.
 - Refactor verify revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` (two consecutive calculations agreed; 2,495 path records).
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260924182257625/`.
+- Round 1: Review pack (attempt 1): `review-20260924182257625` (not committed).
 - Round 1: Review pack seal (attempt 1): `c8fe3a3493e4ba295c17cb6ea37da07e8a40043400305134232521bd44dcbd2b` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0001`; the next review stays in Round 1.
-- Round 1: Review pack (attempt 2): `.qfai/review/review-20260924205303198/`.
+- Round 1: Review pack (attempt 2): `review-20260924205303198` (not committed).
 - Round 1: Review pack seal (attempt 2): `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286` (four files, Markdown normalized and JSON raw).
 - Round 1: reviewer verdict (attempt 2): PASS. Both completion and implementation reviewers independently matched `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` and audited evidence hash `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`. The Plan now records the narrow pure-decision-function exception and its requiring obligation.
 
@@ -445,12 +483,12 @@ Tests       1 passed (1)
 - Spec review: PASS.
 - Spec reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
 - Spec audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`.
-- Spec review pack: `.qfai/review/review-20260924205303198/`.
+- Spec review pack: `review-20260924205303198` (not committed).
 - Spec review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`.
 - Code quality review: PASS.
 - Code quality reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
 - Code quality audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`.
-- Code quality review pack: `.qfai/review/review-20260924205303198/`.
+- Code quality review pack: `review-20260924205303198` (not committed).
 - Code quality review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`.
 - Prototype parity: n/a (not UI-affecting).
 - Prototype parity reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
@@ -599,7 +637,7 @@ Test Files  1 failed (1)
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; both TDD-0001 and TDD-0002 selectors passed, with no source or test edit after the GREEN observations.
 - Refactor verify revision: `working-tree+57fbb854370cb0f18a6da8a1a9a2099c07b899e9f55d1421416beeb550890b25` (two consecutive calculations agreed; 2,495 path records).
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260924220400000/`.
+- Round 1: Review pack (attempt 1): `review-20260924220400000` (not committed).
 - Round 1: Review pack seal (attempt 1): `3cfbbe264b6a8975bfb21219e1fb5ffec4d85ac64f967513a2303fd55e6f1916` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE
 
@@ -775,18 +813,18 @@ Tests  1 failed | 1 skipped (2)
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; both selectors passed (2/2). No source or test edit followed the restored Round 2 GREEN observations. Source SHA-256: `78a84088d91dff0b946d33daec125669950ca618539ac72087461da7893e20ea`; test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`.
 - Refactor verify revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37` (two consecutive calculations agreed; 2,495 path records).
-- Round 2: Review pack (attempt 1): `.qfai/review/review-20260924223559000/`.
+- Round 2: Review pack (attempt 1): `review-20260924223559000` (not committed).
 - Round 2: Review pack seal (attempt 1): `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 2: reviewer verdict (attempt 1): PASS
 - Spec review: PASS.
 - Spec reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
 - Spec audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`.
-- Spec review pack: `.qfai/review/review-20260924223559000/`.
+- Spec review pack: `review-20260924223559000` (not committed).
 - Spec review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`.
 - Code quality review: PASS.
 - Code quality reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
 - Code quality audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`.
-- Code quality review pack: `.qfai/review/review-20260924223559000/`.
+- Code quality review pack: `review-20260924223559000` (not committed).
 - Code quality review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`.
 - Prototype parity: n/a (not UI-affecting).
 - Prototype parity reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
@@ -945,7 +983,7 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
          { type: "dispatch-work-order" },
 ```
 
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260924232138000/`.
+- Round 1: Review pack (attempt 1): `review-20260924232138000` (not committed).
 - Round 1: Review pack seal (attempt 1): `c0ea171f89875ed76b17a5f514b2e1aa1995ed734239e2e954e62e4ffb8470c5` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE
 
@@ -1046,18 +1084,18 @@ TC-0018-0002 extra CREATE mutation: exit 1; line 233:6; laterCreateQuestions exp
 Restored suite: exit 0; Test Files 3 passed (3); Tests 4 passed (4).
 ```
 
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260925001224837/`.
+- Round 1: Review pack (attempt 1): `review-20260925001224837` (not committed).
 - Round 1: Review pack seal (attempt 1): `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): PASS.
 - Spec review: PASS.
 - Spec reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
 - Spec audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`.
-- Spec review pack: `.qfai/review/review-20260925001224837/`.
+- Spec review pack: `review-20260925001224837` (not committed).
 - Spec review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`.
 - Code quality review: PASS.
 - Code quality reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
 - Code quality audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`.
-- Code quality review pack: `.qfai/review/review-20260925001224837/`.
+- Code quality review pack: `review-20260925001224837` (not committed).
 - Code quality review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`.
 - Prototype parity: n/a (not UI-affecting).
 - Prototype parity reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
@@ -1256,18 +1294,18 @@ TC-0018-0004 duplicated slot mutation: exit 1; line 104:18; distinctSlots expect
 Restored suite: exit 0; Test Files 4 passed (4); Tests 5 passed (5).
 ```
 
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260925005231037/`.
+- Round 1: Review pack (attempt 1): `review-20260925005231037` (not committed).
 - Round 1: Review pack seal (attempt 1): `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): PASS.
 - Spec review: PASS.
 - Spec reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
 - Spec audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`.
-- Spec review pack: `.qfai/review/review-20260925005231037/`.
+- Spec review pack: `review-20260925005231037` (not committed).
 - Spec review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`.
 - Code quality review: PASS.
 - Code quality reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
 - Code quality audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`.
-- Code quality review pack: `.qfai/review/review-20260925005231037/`.
+- Code quality review pack: `review-20260925005231037` (not committed).
 - Code quality review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`.
 - Prototype parity: n/a (not UI-affecting).
 - Prototype parity reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
@@ -1363,7 +1401,7 @@ Restored relevant suite: exit 0; Test Files 5 passed (5); Tests 6 passed (6).
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; five files and six selectors passed. No source or test edit followed the restored GREEN run. The completed-row oracle re-verification above applies to the same source and test hashes.
 - Refactor verify revision: `working-tree+ad867399af45718211f7f2f98157044e07647f2cfb7cd1683e7b53d4bca52385` (two calculations agreed; 2,503 path records).
-- Round 1: Review pack (attempt 1): `.qfai/review/review-20260925012708000/`.
+- Round 1: Review pack (attempt 1): `review-20260925012708000` (not committed).
 - Round 1: Review pack seal (attempt 1): `95b8a7a4d5ba0147a9bc846e1d4680cb3398ecfdaa23e3f496f4bad0e7a9054d` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE. The implementation review found two bypasses: an extensionless root-file `observedRefs` path with an explicit false existence fact, and a nonexistent path in `expectedBehaviorRefs`. Both reach the CREATE question instead of `unknown-path` refusal. The completion review passed the tested boundary and recorded a nonblocking example-trace advisory.
 
@@ -1447,7 +1485,7 @@ Test Files  1 failed (1); Tests  1 failed (1); exit 1
 - Round 2: Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Round 2: Refactor verify result: exit 0; five files and six tests passed. No source or test edit followed the GREEN and oracle observations. The source and test SHA-256 values remain `d1040dc41c4979a81b3056fc570e4d33dd84c86fb5fc69f1f9e6aa2ca03d5e78` and `cde1e3f4ce00ffa8742eb5bab8ac328980f5270e8f1136dc618a8615390ab560`. The reverse import scan found five direct unit tests, no production importer and no other spec's completed row directly owning these paths.
 - Round 2: Refactor verify revision: `working-tree+5749c21d82fc0b3394d35ff3447609428f20b4e817384150f77542fec3a8f73e` (two consecutive calculations agreed; 2,503 path records).
-- Round 2: Review pack (attempt 1): `.qfai/review/review-20260925015119000/`.
+- Round 2: Review pack (attempt 1): `review-20260925015119000` (not committed).
 - Round 2: Review pack seal (attempt 1): `82bc38bc6365bb2c1c8a76ffb5dffeabe6122200a9508faf470f48f0cced17ac` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 2: reviewer verdict (attempt 1): REVISE. Completion review passed. Implementation review confirmed the two Round 1 fixes but reproduced a project-root dotfile reference `.missing-observed-file` with no existence fact passing to a CREATE question. The CLI-WF missing-path rule requires fail-closed refusal; Round 3 will extend the same selector and path classification. Both reviewers independently recorded revision `working-tree+5749c21d82fc0b3394d35ff3447609428f20b4e817384150f77542fec3a8f73e` and audited evidence hash `ef7f28929a16c25a1b951e011a110f0a6f9b18a3f7fcf767a1fac96066da9d1a`.
 
@@ -1521,7 +1559,7 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 - Round 3: Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Round 3: Refactor verify result: exit 0; five files and six tests passed. No source or test edit followed the restored GREEN observations. The reverse import scan found five direct unit tests and no production importer. Source and test SHA-256 values remain `7ae81e330477f88082308bd864fa27bb608cc43402c7199d6c73c75825f8de6e` and `3adc955c8b3681b7842c4f70a58ececfb88dcb67fbdd6150dbfbaac42adf0865`.
 - Round 3: Refactor verify revision: `working-tree+7191d665068aae9662f5e9ad35e036dd5ff747ba8608336d64d878c0e5e14cba` (two corrected calculations agreed; 2,503 path records). An earlier temporary helper erroneously included 49 evidence paths and produced `working-tree+12f88ce329cd165178c482347bfd2e42e4eb44a58a31b68a59add096b715b5e2`; that value is invalid and was not used for a gate or review. The helper was corrected, rerun twice and removed.
-- Round 3: Review pack (attempt 1): `.qfai/review/review-20260925023352000/`.
+- Round 3: Review pack (attempt 1): `review-20260925023352000` (not committed).
 - Round 3: Review pack seal (attempt 1): `2a922e435142d870d0d564fd76a3caa6153886d9455edff620b58ea9e01d2828` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 3: reviewer verdict (attempt 1): REVISE. Completion review passed. Implementation review confirmed all three prior fixes but reproduced an absent extensionless root path `Dockerfile` without any `facts.pathExistence` entry passing to a CREATE question. The untyped reference also admits symbolic values such as `request`, so the next step must settle path classification before another GREEN edit. Both reviewers independently recorded revision `working-tree+7191d665068aae9662f5e9ad35e036dd5ff747ba8608336d64d878c0e5e14cba` and audited evidence hash `03c9f1dd6a57b53b10fb43184beabf4458668467368439acf24008823174d733`.
 
@@ -3277,6 +3315,386 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anUnrecordedStopIsReconciled.test.ts --testNamePattern='TC-0018-0140 \(TDD-0162\): Decide resume on a run in running whose outstanding work order has no accepted result' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 0 on the first run: already satisfied by TDD-0031, which added the `resume` transition firing `observed-session-interruption` and `reconciled-resume` and returning the outstanding work order
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anUnrecordedStopIsReconciled.test.ts > TC-0018-0140 (TDD-0162): Decide resume on a run in running whose outstanding work order has no accepted result`
+- Production files: none
+
+### TDD-0163
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0163): capture-request`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0163\): capture-request' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `resume` on a run in `created` stayed `created` with no events where `routing` and `capture-request` were expected, `transitionsFollowTheEdgeTable.test.ts:163`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0163): capture-request`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0164
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0164): plan-accepted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0164\): plan-accepted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0014 (commit `cfdcd528d`), which added the checked routing accept that moves a run with no open question to `ready` with `plan-accepted`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0164): plan-accepted`
+- Production files: none
+
+### TDD-0165
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0165): unsettled-material-input`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0165\): unsettled-material-input' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0001, which opens a `create` question and moves the run to `awaiting_input` with `unsettled-material-input`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0165): unsettled-material-input`
+- Production files: none
+
+### TDD-0166
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0166): missing-capability`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0166\): missing-capability' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `accept` of a routing result with outcome `blocked` left the run in `routing` with no events where `blocked` and `missing-capability` were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:191`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0166): missing-capability`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0167
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0167): dispatch-work-order`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0167\): dispatch-work-order' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `resume` on a run in `ready` left it `ready` with no events where `running`, `work-order-issued` and `dispatch-work-order` were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:203`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0167): dispatch-work-order`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0168
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0168): required-plan-revision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0168\): required-plan-revision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `next` and `resume` on a run in `ready` whose routing receipt is `stale` did not return the run to `routing` with `required-plan-revision`, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:217`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0168): required-plan-revision`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0169
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0169): validated-final-result-and-target`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0169\): validated-final-result-and-target' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0050, which completes a run in `ready` with `validated-final-result-and-target` when every condition holds
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0169): validated-final-result-and-target`
+- Production files: none
+
+### TDD-0170
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0170): accept-nonfinal-result`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0170\): accept-nonfinal-result' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0002, whose feature-plan drive moves a run in `running` to `ready` with `accept-nonfinal-result` on an accepted result
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0170): accept-nonfinal-result`
+- Production files: none
+
+### TDD-0171
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0171): material-decision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0171\): material-decision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `accept` of a stage result with outcome `awaiting_input` left the run in `running` with no events where `awaiting_input`, `question-opened` and `material-decision` were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:262`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0171): material-decision`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0172
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0172): unrun-or-unresolved-dependency`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0172\): unrun-or-unresolved-dependency' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `accept` of a stage result with outcome `blocked` was refused where `blocked` and `unrun-or-unresolved-dependency` were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:268`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0172): unrun-or-unresolved-dependency`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0173
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0173): observed-session-interruption`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0173\): observed-session-interruption' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0162, which fires `observed-session-interruption` on `resume` of a run in `running`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0173): observed-session-interruption`
+- Production files: none
+
+### TDD-0174
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0174): scope-or-obligation-revision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0174\): scope-or-obligation-revision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0089, which returns the run to `routing` with `scope-or-obligation-revision` on a diagnose verdict `expectation-differs`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0174): scope-or-obligation-revision`
+- Production files: none
+
+### TDD-0175
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0175): valid-answer-no-replan`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0175\): valid-answer-no-replan' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; a `proceed` answer recorded only `authorization-recorded` where `valid-answer-no-replan` was also expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:323`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0175): valid-answer-no-replan`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/tests/unit/workflow/eachOptionCarriesItsEffect.test.ts` (TDD-0120's expected event list gains the edge event)
+
+### TDD-0176
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0176): answer-changes-scope`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0176\): answer-changes-scope' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0121, which returns the run to `routing` with `answer-changes-scope` on a `replan` answer
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0176): answer-changes-scope`
+- Production files: none
+
+### TDD-0177
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0177): blocker-cleared-and-revalidated`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0177\): blocker-cleared-and-revalidated' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `resume` on a run in `blocked` left it `blocked` with no events where `blocker-cleared-and-revalidated` and a second attempt of the blocked stage were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:344`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0177): blocker-cleared-and-revalidated`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0178
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0178): reconciled-resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0178\): reconciled-resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0162, which fires `reconciled-resume` in the same `resume` call as `observed-session-interruption`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0178): reconciled-resume`
+- Production files: none
+
+### TDD-0179
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0141 (TDD-0179): reconciled-with-blocker`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0141 \(TDD-0179\): reconciled-with-blocker' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `resume` of a run in `running` with a cause in the facts reconciled to `running` where `blocked` and `reconciled-with-blocker` were expected, `tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts:363`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0141 (TDD-0179): reconciled-with-blocker`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0180
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0142 (TDD-0180): next`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0142 \(TDD-0180\): next' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0001: an operation with no edge from the state reaches the closing check of `decide`, which refuses it `invalid-input` with no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0142 (TDD-0180): next`
+- Production files: none
+
+### TDD-0181
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0142 (TDD-0181): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0142 \(TDD-0181\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0073: with no outstanding work order the result is refused `invalid-input` with reason `work-order`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0142 (TDD-0181): accept`
+- Production files: none
+
+### TDD-0182
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0142 (TDD-0182): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0142 \(TDD-0182\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0142 (TDD-0182): decision-answer`
+- Production files: none
+
+### TDD-0183
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0142 (TDD-0183): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0142 \(TDD-0183\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0041: `finish` on a run with no accepted verify stage lists `verify-missing` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0142 (TDD-0183): finish`
+- Production files: none
+
+### TDD-0184
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0143 (TDD-0184): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0143 \(TDD-0184\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0143 (TDD-0184): decision-answer`
+- Production files: none
+
+### TDD-0185
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0143 (TDD-0185): resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0143 \(TDD-0185\): resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0163: `resume` from a state with no `resume` edge is refused `invalid-input`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0143 (TDD-0185): resume`
+- Production files: none
+
+### TDD-0186
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0143 (TDD-0186): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0143 \(TDD-0186\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0041: `finish` on a run with no accepted verify stage lists `verify-missing` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0143 (TDD-0186): finish`
+- Production files: none
+
+### TDD-0187
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0144 (TDD-0187): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0144 \(TDD-0187\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0073: with no outstanding work order the result is refused `invalid-input` with reason `work-order`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0144 (TDD-0187): accept`
+- Production files: none
+
+### TDD-0188
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0144 (TDD-0188): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0144 \(TDD-0188\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0144 (TDD-0188): decision-answer`
+- Production files: none
+
+### TDD-0189
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0145 (TDD-0189): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0145 \(TDD-0189\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0145 (TDD-0189): decision-answer`
+- Production files: none
+
+### TDD-0190
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0145 (TDD-0190): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0145 \(TDD-0190\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0035: `finish` on a run in `running` lists `work-order-outstanding` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0145 (TDD-0190): finish`
+- Production files: none
+
+### TDD-0191
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0146 (TDD-0191): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0146 \(TDD-0191\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0073: with no outstanding work order the result is refused `invalid-input` with reason `work-order`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0146 (TDD-0191): accept`
+- Production files: none
+
+### TDD-0192
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0146 (TDD-0192): resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0146 \(TDD-0192\): resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0163: `resume` from a state with no `resume` edge is refused `invalid-input`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0146 (TDD-0192): resume`
+- Production files: none
+
+### TDD-0193
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0146 (TDD-0193): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0146 \(TDD-0193\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0049: `finish` on a run in `awaiting_input` lists `run-waiting` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0146 (TDD-0193): finish`
+- Production files: none
+
+### TDD-0194
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0147 (TDD-0194): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0147 \(TDD-0194\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0073: with no outstanding work order the result is refused `invalid-input` with reason `work-order`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0147 (TDD-0194): accept`
+- Production files: none
+
+### TDD-0195
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0147 (TDD-0195): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0147 \(TDD-0195\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0147 (TDD-0195): decision-answer`
+- Production files: none
+
+### TDD-0196
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0147 (TDD-0196): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0147 \(TDD-0196\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0049: `finish` on a run in `blocked` lists `run-waiting` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0147 (TDD-0196): finish`
+- Production files: none
+
+### TDD-0197
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0148 (TDD-0197): next`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0148 \(TDD-0197\): next' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0001: an operation with no edge from the state reaches the closing check of `decide`, which refuses it `invalid-input` with no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0148 (TDD-0197): next`
+- Production files: none
+
+### TDD-0198
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0148 (TDD-0198): accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0148 \(TDD-0198\): accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0001: a result naming the outstanding work order of a run in `interrupted` passes the identity checks and reaches the closing check of `decide`, which refuses it `invalid-input` with no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0148 (TDD-0198): accept`
+- Production files: none
+
+### TDD-0199
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0148 (TDD-0199): decision-answer`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0148 \(TDD-0199\): decision-answer' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0133: a non-stop `decision` naming no open question is refused `no-open-question`, and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0148 (TDD-0199): decision-answer`
+- Production files: none
+
+### TDD-0200
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0148 (TDD-0200): finish`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0148 \(TDD-0200\): finish' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0039: `finish` on a run whose outstanding stage has no accepted result lists `stage-unaccepted` and leaves the state as it was
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0148 (TDD-0200): finish`
 - Production files: none
 
 ### TDD-0212
