@@ -66,7 +66,7 @@ Before any spec edit:
    cell with the next unused `spec-NNNN` (an empty cell reports `QFAI-SPLIT-106`; that code is an error, so `validate --fail-on error` stops on it), then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). Under `--auto` that catalog row is not written until the CREATE row is approved — see "User Questions" below. See `references/sdd-triage.md` for the precise APPEND-vs-CREATE
    algorithm.
 4. Obtain AskUserQuestion approval for every approval-required row. Under `--auto` no question is asked and the agent does not self-approve — see "User Questions" below.
-5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
+5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy). A merge conflict in either ledger is resolved as `references/sdd-triage.md` (`## Resolving a merge conflict in a delta ledger`) describes.
 
 Procedure: `references/sdd-triage.md`. Validators: `QFAI-TRIAGE-001..006`.
 
