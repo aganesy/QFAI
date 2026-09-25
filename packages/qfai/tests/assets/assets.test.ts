@@ -474,7 +474,7 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain(
-      'description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."',
+      'description: "Use when invoked by name or handed a QFAI work order. Run and document quality gates (repo + qfai validate/report), fix until PASS."',
     );
     expect(content).toContain("Fix until PASS.");
     expect(content).toContain("If failing, produce an actionable fix list");

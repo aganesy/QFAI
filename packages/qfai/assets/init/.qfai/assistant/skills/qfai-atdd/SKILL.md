@@ -1,7 +1,7 @@
 ---
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
-description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."
+description: "Use when invoked by name or handed a QFAI work order. Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."
 argument-hint: "<spec-id> [--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent, Bash]
 roles:
@@ -27,6 +27,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-atdd — Implement Automated Acceptance Tests (ATDD)
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 

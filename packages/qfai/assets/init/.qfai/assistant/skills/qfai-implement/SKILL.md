@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
-description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
+description: "Use when invoked by name or handed a QFAI work order. Implements a spec's ledger rows test-first, one row at a time, with tdd/test-list.md as the execution ledger."
 argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:
@@ -31,6 +31,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-implement - Unified TDD Micro-cycle
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## Preconditions
 
@@ -70,13 +72,9 @@ When unsure, read inputs in this order:
 
 ## Grilling (MANDATORY)
 
-Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
-this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
-restated here.
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
-**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of
-session): a critical decision goes to the user at once, and after two rounds
-every other takes the griller's recommendation, recorded as an `agents` row.
+**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of session): a critical decision goes to the user at once, and after two rounds every other takes the griller's recommendation, recorded as an `agents` row.
 
 - **At the preflight.** A session over what the confidence check left uncertain,
   and nothing else. The bound is on the subject: the spec and the ledger are

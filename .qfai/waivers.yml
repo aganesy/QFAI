@@ -1,5 +1,52 @@
 version: 1
 waivers:
+  - id: WVR-20260925-01
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0001/tdd/test-list.md"]
+    match:
+      dl_ids: [TDD-0034, TDD-0035, TDD-0036, TDD-0037, TDD-0038, TDD-0039, TDD-0040, TDD-0041]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
+  - id: WVR-20260925-11
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0011/tdd/test-list.md"]
+    match:
+      dl_ids:
+        [
+          TDD-0021,
+          TDD-0022,
+          TDD-0023,
+          TDD-0024,
+          TDD-0025,
+          TDD-0026,
+          TDD-0027,
+          TDD-0028,
+          TDD-0030,
+          TDD-0031,
+          TDD-0032,
+          TDD-0033,
+          TDD-0034,
+          TDD-0039,
+        ]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
+  - id: WVR-20260925-13
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0013/tdd/test-list.md"]
+    match:
+      dl_ids:
+        [TDD-0046, TDD-0047, TDD-0050, TDD-0051, TDD-0052, TDD-0054, TDD-0055, TDD-0056, TDD-0057]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
   - id: WVR-20260925-18
     rule: TDDLIST_EXCEPTION_PARKED
     scope:

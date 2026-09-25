@@ -1,7 +1,7 @@
 ---
 name: qfai-discussion
 title: QFAI Discussion (Exploration Planner)
-description: "Run structured discussion that defines exploration conditions, evaluation rubric, and anti-goals for downstream prototyping."
+description: "Use when invoked by name or handed a QFAI work order. Defines exploration conditions, an evaluation rubric and anti-goals for downstream prototyping."
 argument-hint: "<idea-or-problem> [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -24,6 +24,8 @@ mode: interactive-by-default
 ## /qfai-discussion - Exploration Planner
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 
