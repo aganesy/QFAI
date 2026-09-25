@@ -54,6 +54,11 @@ waivers:
         - TDD-0071
         - TDD-0072
         - TDD-0073
+        - TDD-0074
+        - TDD-0075
+        - TDD-0076
+        - TDD-0077
+        - TDD-0078
         - TDD-0212
         - TDD-0213
         - TDD-0214

@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { compileGlob } from "../atdd/scaffoldDialect.js";
 import type { NormativeReferenceKind, ObservedReferenceKind, RouteReference } from "./parse.js";
 
 export interface WorkflowQuestion {
@@ -46,6 +47,8 @@ interface WorkflowWorkOrder {
   operation?: string;
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
+  scope?: { writeAreas: string[] };
+  recordAreas?: string[];
 }
 
 interface WorkflowAuthorization {
@@ -99,7 +102,9 @@ type InputRefusalReason =
   | "red-not-assertion"
   | "schema"
   | "work-order"
-  | "result-id-reused";
+  | "result-id-reused"
+  | "write-scope"
+  | "unbound-capability";
 
 interface InputRefusal {
   reason: InputRefusalReason;
@@ -143,7 +148,7 @@ interface WorkflowSnapshot {
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
-  plan?: { route: string; stages: PlanStages };
+  plan?: { route: string; stages: PlanStages; writeScope?: string[] };
   specBinding?: { specId: string };
   diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] } | null;
   capabilities?: WorkflowQuestion["capability"][];
@@ -193,6 +198,7 @@ interface WorkflowInput {
     seamRequest?: { targetTestId: string };
     seam?: { targetTestId: string; observation: string };
     testObservation?: string;
+    changedFiles?: { path: string; digest: string }[];
     red?: { testId: string; failureKind: string };
     proposal?: {
       requestKind: string;
@@ -349,11 +355,32 @@ function notRunRefusalOf(
   return undefined;
 }
 
+function areaCovers(area: string, filePath: string): boolean {
+  return (
+    area === filePath ||
+    filePath.startsWith(`${area}/`) ||
+    new RegExp(`^${compileGlob(area)}$`).test(filePath)
+  );
+}
+
 function resultRefusals(
   result: NonNullable<WorkflowInput["result"]>,
+  workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
 ): InputRefusal[] {
   const refusals: InputRefusal[] = [];
+  const areas = [...(workOrder.scope?.writeAreas ?? []), ...(workOrder.recordAreas ?? [])];
+  const target = workOrder.target;
+  (result.bindings ?? []).forEach((binding, index) => {
+    if (target?.kind !== "new_capability" || binding.slotId !== target.slotId) {
+      refusals.push({ reason: "unbound-capability", subject: `bindings[${index}]` });
+    }
+  });
+  for (const changed of result.changedFiles ?? []) {
+    if (!areas.some((area) => areaCovers(area, changed.path))) {
+      refusals.push({ reason: "write-scope", subject: changed.path });
+    }
+  }
   const notRun = notRunRefusalOf(result.notRun, facts);
   if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
   if (result.testObservation === "expected_red" && result.red?.failureKind !== "assertion") {
@@ -850,6 +877,9 @@ export function decide(
       stageKind: stage.stageKind,
       ...(stage.skill ? { executor: { skill: stage.skill } } : {}),
       ...(stage.operation ? { operation: stage.operation } : {}),
+      // SIMPLIFIED: the scope carries the plan's write areas and nothing else.
+      // Lift when: a work order's scope digest, protected targets, effects or non-goals are read.
+      ...(plan.writeScope ? { scope: { writeAreas: plan.writeScope } } : {}),
     };
     if (isDirect || isBugfix || isBounded) {
       const specId = snapshot.specBinding?.specId;
@@ -978,7 +1008,7 @@ export function decide(
       };
     }
 
-    const inputRefusals = resultRefusals(result, facts);
+    const inputRefusals = resultRefusals(result, workOrder, facts);
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
     if (result.outcome === "unrun") return blockOnUnrun(run, result);
     const approvedCapability = snapshot.approval?.target?.capability;

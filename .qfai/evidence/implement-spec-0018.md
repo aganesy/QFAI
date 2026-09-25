@@ -60,6 +60,11 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0071 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0072 | TC-0018-0054 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0073 | TC-0018-0055 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0074 | TC-0018-0057 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0075 | TC-0018-0057 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0076 | TC-0018-0058 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0077 | TC-0018-0059 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0078 | TC-0018-0060 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2044,6 +2049,57 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/acceptIsCompareAndSet.test.ts:76:6`; the refusal carried no `work-order` reason
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/acceptIsCompareAndSet.test.ts > TC-0018-0055 (TDD-0073): A result naming a work order other than the outstanding one`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0074
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts`
+- Selector: `TC-0018-0057 (TDD-0074): outside-write-areas`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts --testNamePattern='TC-0018-0057 \(TDD-0074\): outside-write-areas' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts:109:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts > TC-0018-0057 (TDD-0074): outside-write-areas`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`; write areas are matched with the existing `compileGlob` of `packages/qfai/src/core/atdd/scaffoldDialect.ts`
+
+### TDD-0075
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts`
+- Selector: `TC-0018-0057 (TDD-0075): diagnose-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts --testNamePattern='TC-0018-0057 \(TDD-0075\): diagnose-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts:130:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/writesOutsideTheScopeAreRefused.test.ts > TC-0018-0057 (TDD-0075): diagnose-only`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0076
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theScopeNeverWidensByItself.test.ts`
+- Selector: `TC-0018-0058 (TDD-0076): An SDD result binding the spec it created to the goal's slot`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theScopeNeverWidensByItself.test.ts --testNamePattern='TC-0018-0058 \(TDD-0076\): An SDD result binding the spec it created to the goal's slot' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0005, whose SDD accept records one `binding-recorded` event per reported binding
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theScopeNeverWidensByItself.test.ts > TC-0018-0058 (TDD-0076): An SDD result binding the spec it created to the goal's slot`
+- Production files: none
+
+### TDD-0077
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theScopeNeverWidensByItself.test.ts`
+- Selector: `TC-0018-0059 (TDD-0077): An SDD result creating a capability no approved slot is bound to`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theScopeNeverWidensByItself.test.ts --testNamePattern='TC-0018-0059 \(TDD-0077\): An SDD result creating a capability no approved slot is bound to' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/theScopeNeverWidensByItself.test.ts:83:6`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theScopeNeverWidensByItself.test.ts > TC-0018-0059 (TDD-0077): An SDD result creating a capability no approved slot is bound to`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0078
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theScopeNeverWidensByItself.test.ts`
+- Selector: `TC-0018-0060 (TDD-0078): Issue a work order whose inputs include paths outside the plan's write scope`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theScopeNeverWidensByItself.test.ts --testNamePattern='TC-0018-0060 \(TDD-0078\): Issue a work order whose inputs include paths outside the plan's write scope' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ 'src/notify/**', 'tests/notify/**' ]` at `tests/unit/workflow/theScopeNeverWidensByItself.test.ts:103:55`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theScopeNeverWidensByItself.test.ts > TC-0018-0060 (TDD-0078): Issue a work order whose inputs include paths outside the plan's write scope`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: the fixture's plan names an observed path outside its write scope. Work orders carry no `inputs` yet, so the case holds that the issued `scope.writeAreas` is the plan's write scope and nothing the plan reads.
 
 ### TDD-0212
 
