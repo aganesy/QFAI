@@ -1536,6 +1536,105 @@ the selector has again been seen to fail.
 - GREEN result: exit 0; 3 passed (3); the invalid value prints `Workflow mode: "bogus" is invalid; expected active, shadow or off`
 - Changed files: as TDD-0106
 
+### TDD-0111
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` (the lock carried no conflict list)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/cli/commands/init.ts` (the lock is written after the correspondence check), `packages/qfai/src/core/assistantAssetProvenance.ts` (`conflicts` in the lock), `packages/qfai/tests/integration/init/windowsParity.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`lockConflicts`, `modeLines`)
+
+### TDD-0114
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+- Selector: `TC-0003-0079: The lock's conflict list is replaced on each run`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/upgradeRecord.test.ts --testNamePattern='TC-0003-0079: The lock'\''s conflict list is replaced on each run' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ ObjectContaining{…} ]`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/src/core/assistantAssetProvenance.ts`, `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+
+### TDD-0116
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0081: Active mode: an edited plan and a dropped reviewer reported`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0081: Active mode: an edited plan and a dropped reviewer reported' --reporter=verbose`
+- RED result: exit 1; `AssertionError: edited-plan: expected { entries: [] } to deeply equal { …(2) }`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new: the conflict list and the conflict block), `packages/qfai/src/cli/commands/init.ts` (`workflowModeLines`), `packages/qfai/tests/integration/init/conflictReport.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `dropped-reviewer`, `conflictBlock`, `setWorkflowMode`)
+
+### TDD-0117
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0082: Shadow and off modes print the plain mode line`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0082: Shadow and off modes print the plain mode line' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); no conflict block existed yet, and the case holds that shadow and off keep the plain line once it does
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+
+### TDD-0118
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0083: Exit 0 on every conflicted upgrade`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0083: Exit 0 on every conflicted upgrade' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); init already exits 0 over each of the four states
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+
+### TDD-0119
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0084: A benign manifest customization is not a conflict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0084: A benign manifest customization is not a conflict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` (no conflict list recorded)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/core/assistantAssetProvenance.ts`, `packages/qfai/tests/integration/init/conflictReport.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `benign-manifest`)
+
+### TDD-0121
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/forceGuidance.test.ts`
+- Selector: `TC-0003-0086: --force named for an absent entry, not a dropped reviewer`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/forceGuidance.test.ts --testNamePattern='TC-0003-0086: --force named for an absent entry, not a dropped reviewer' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ Array(1) ]` (no conflict line for the absent entry)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new: an absent entry names `qfai init --force`, a dropped reviewer does not), `packages/qfai/tests/integration/init/forceGuidance.test.ts`
+
+### TDD-0122
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/forceRoutingMerge.test.ts`
+- Selector: `TC-0003-0087: --force adds the absent entry and keeps the project's own`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/forceRoutingMerge.test.ts --testNamePattern='TC-0003-0087: --force adds the absent entry and keeps the project'\''s own' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ Array(1) ]` (the add-only merge already held; the second summary named no dropped reviewer)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/tests/integration/init/forceRoutingMerge.test.ts`
+
+### TDD-0123
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0088: Built CLI init and upgrade under a root with a space`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0088: Built CLI init and upgrade under a root with a space' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed) against the dist built before the change; after the change the dist was rebuilt with tsup and the case passed again
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / ⚠️ 130 / ❌ 176, with 372 not applicable, across 921 scored cells.

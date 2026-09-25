@@ -40,7 +40,9 @@ import {
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../core/assistantAssetProvenance.js";
+import type { AssistantAssetConflict } from "../../core/assistantAssetProvenance.js";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
+import { findWorkflowConflicts, workflowConflictLines } from "./initWorkflowConflicts.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
@@ -550,6 +552,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await mergeRequiredRoutingPhases(assistantAssets, destRoot, options.dryRun)
     : [];
 
+  // The correspondence check `start` enforces, over the tree this run left. A dry run changed
+  // nothing, so it has nothing of its own to check.
+  const workflowConflicts = options.dryRun ? [] : await findWorkflowConflicts(destRoot);
+  await governedResult.writeLock(workflowConflicts);
+
   // git config core.symlinks true（symlink 生成の前提条件）
   // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
   // （dry-run でもプレビュー行を出す）。report() まで保留すると、後続の
@@ -717,7 +724,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.verbose ?? false,
   );
-  info(await workflowModeLine(destRoot));
+  for (const line of await workflowModeLines(destRoot, workflowConflicts)) {
+    info(line);
+  }
 
   for (const note of [
     ...upgradeResult.preservedNotes,
@@ -749,13 +758,18 @@ export async function runInit(options: InitOptions): Promise<void> {
 /**
  * The summary line naming the workflow mode the project's config puts in force. Init writes no
  * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
+ * Under `active` with conflicts, the conflict block stands in for that line.
  */
-async function workflowModeLine(destRoot: string): Promise<string> {
+async function workflowModeLines(
+  destRoot: string,
+  conflicts: readonly AssistantAssetConflict[],
+): Promise<string[]> {
   const { document } = await loadConfig(destRoot);
   const mode = readWorkflowMode(document);
-  if (mode !== null) return `Workflow mode: ${mode}`;
+  if (mode === "active" && conflicts.length > 0) return workflowConflictLines(conflicts);
+  if (mode !== null) return [`Workflow mode: ${mode}`];
   const configured = JSON.stringify(configuredWorkflowMode(document));
-  return `Workflow mode: ${configured} is invalid; expected active, shadow or off`;
+  return [`Workflow mode: ${configured} is invalid; expected active, shadow or off`];
 }
 
 /** The value the config holds where the mode belongs: `workflow.mode`, or `workflow` itself. */
@@ -981,6 +995,8 @@ type GovernedAssetsResult = {
   skipped: string[];
   removed: string[];
   manualMergeNotes: string[];
+  // Writes the provenance lock with the run's conflicts; a no-op where the lock is not written.
+  writeLock: (conflicts: readonly AssistantAssetConflict[]) => Promise<void>;
 };
 
 /**
@@ -1032,7 +1048,7 @@ async function syncGovernedAssistantAssets(
     manualMergeNotes.push(
       "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**, assistant/process/workflows/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
     );
-    return { copied, skipped, removed, manualMergeNotes };
+    return { copied, skipped, removed, manualMergeNotes, writeLock: async () => {} };
   }
 
   const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
@@ -1154,16 +1170,20 @@ async function syncGovernedAssistantAssets(
 
   // The record itself is a governed write: an assistant root that is a symlink
   // out of the project would take the lock — and every later decision made from
-  // it — with it.
+  // it — with it. The caller writes it once the run's conflicts are known.
+  let writeLock: GovernedAssetsResult["writeLock"] = async () => {};
   if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
-    await mkdir(destAssistant, { recursive: true });
-    await writeAssistantAssetsLock(destAssistant, {
-      packageVersion: options.packageVersion,
-      files: recorded,
-    });
+    writeLock = async (conflicts) => {
+      await mkdir(destAssistant, { recursive: true });
+      await writeAssistantAssetsLock(destAssistant, {
+        packageVersion: options.packageVersion,
+        files: recorded,
+        conflicts,
+      });
+    };
   }
 
-  return { copied, skipped, removed, manualMergeNotes };
+  return { copied, skipped, removed, manualMergeNotes, writeLock };
 }
 
 /**

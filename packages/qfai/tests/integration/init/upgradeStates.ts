@@ -69,6 +69,16 @@ export const CRLF_PLAN = "process/workflows/feature.yml";
 export const EDITED_MEMO = "process/migrations/v1.4.27-atdd-alignment.md";
 export const OLDER_LOCK_VERSION = "0.0.1";
 export const ROUTING = "manifest/agent-routing.yml";
+/** The routing entry `absent-route` removes. */
+export const ABSENT_ROUTE = "qfai-maintain";
+/** The blocking reviewer `dropped-reviewer` removes, and the phase it is removed from. */
+export const DROPPED_REVIEWER = {
+  skill: "qfai-discussion",
+  phase: "review",
+  agent: "requirements-reviewer",
+} as const;
+const DROPPED_REVIEWER_LINE =
+  "        blocking_agents: [completion-reviewer, requirements-reviewer]";
 
 /** The installed file at a path relative to `.qfai/assistant/`. */
 export function assistantFile(root: string, relative: string): string {
@@ -86,6 +96,35 @@ export async function readLock(root: string): Promise<LockRecord> {
   const files = lock.files;
   if (typeof files !== "object" || files === null) throw new Error("lock files is not a map");
   return { lock: { ...lock }, files: { ...files } };
+}
+
+/** The conflict list the last run recorded in the lock, as the lock holds it. */
+export async function lockConflicts(root: string): Promise<unknown> {
+  return (await readLock(root)).lock.conflicts;
+}
+
+/**
+ * The upgrade report's conflict block: each line between its heading and the mode line, and the
+ * mode line closing it. An output with no block gives no entries and no closing line.
+ */
+export function conflictBlock(output: string): { entries: string[]; closing?: string } {
+  const lines = output.split(/\r?\n/);
+  const start = lines.indexOf("Workflow conflicts:");
+  if (start === -1) return { entries: [] };
+  const end = lines.findIndex((line, index) => index > start && !line.startsWith("  "));
+  const closing = lines[end];
+  const entries = lines.slice(start + 1, end === -1 ? lines.length : end);
+  return end === -1 || closing === undefined ? { entries } : { entries, closing };
+}
+
+/** Every `Workflow mode:` line of an init summary. */
+export function modeLines(output: string): string[] {
+  return output.match(/^Workflow mode: .*$/gm) ?? [];
+}
+
+/** Appends `workflow.mode: <mode>` to the project's config. */
+export async function setWorkflowMode(root: string, mode: string): Promise<void> {
+  await appendLine(path.join(root, "qfai.config.yaml"), `workflow:\n  mode: ${mode}`);
 }
 
 async function editLock(root: string, edit: (record: LockRecord) => void): Promise<void> {
@@ -112,6 +151,27 @@ function routingBlocks(text: string): { head: string[]; blocks: string[][]; tail
   const stop = end === -1 ? lines.length : end;
   const blocks = starts.map((start, i) => lines.slice(start, starts[i + 1] ?? stop));
   return { head: lines.slice(0, first), blocks, tail: lines.slice(stop) };
+}
+
+/**
+ * Rewrites the routing manifest with its first two entries swapped, one agent added to the first
+ * entry's `conditional_agents`, and every entry `keep` rejects removed.
+ */
+async function reorderRouting(root: string, keep: (block: string[]) => boolean): Promise<void> {
+  const file = assistantFile(root, ROUTING);
+  const { head, blocks, tail } = routingBlocks(await readFile(file, "utf-8"));
+  const [a, b, ...rest] = blocks.filter(keep);
+  if (a === undefined || b === undefined) throw new Error("fewer than two routing entries");
+  const added = a
+    .join("\n")
+    .replace(
+      /conditional_agents: \[([^\]]*)\]/,
+      (_match, list: string) =>
+        `conditional_agents: [${list === "" ? "" : `${list}, `}completion-reviewer]`,
+    );
+  if (added === a.join("\n")) throw new Error("no conditional_agents list to add an agent to");
+  const body = [...head, ...b, ...added.split("\n"), ...rest.flat(), ...tail];
+  await writeFile(file, body.join("\n"), "utf-8");
 }
 
 async function appendLine(file: string, line: string): Promise<void> {
@@ -143,22 +203,25 @@ const OVERLAYS: Record<string, (root: string) => Promise<void>> = {
     });
   },
   "absent-route": async (root) => {
+    const entry = `  - skill: ${ABSENT_ROUTE}`;
+    const text = await readFile(assistantFile(root, ROUTING), "utf-8");
+    if (!routingBlocks(text).blocks.some((block) => block[0] === entry)) {
+      throw new Error(`no ${ABSENT_ROUTE} routing entry`);
+    }
+    await reorderRouting(root, (block) => block[0] !== entry);
+  },
+  "dropped-reviewer": async (root) => {
     const file = assistantFile(root, ROUTING);
-    const { head, blocks, tail } = routingBlocks(await readFile(file, "utf-8"));
-    const kept = blocks.filter((block) => block[0] !== "  - skill: qfai-maintain");
-    if (kept.length !== blocks.length - 1) throw new Error("no qfai-maintain routing entry");
-    const [a, b, ...rest] = kept;
-    if (a === undefined || b === undefined) throw new Error("fewer than two routing entries");
-    const added = a
-      .join("\n")
-      .replace(
-        /conditional_agents: \[([^\]]*)\]/,
-        (_match, list: string) =>
-          `conditional_agents: [${list === "" ? "" : `${list}, `}completion-reviewer]`,
-      );
-    if (added === a.join("\n")) throw new Error("no conditional_agents list to add an agent to");
-    const body = [...head, ...b, ...added.split("\n"), ...rest.flat(), ...tail];
-    await writeFile(file, body.join("\n"), "utf-8");
+    const lines = (await readFile(file, "utf-8")).split("\n");
+    const at = lines.indexOf(DROPPED_REVIEWER_LINE);
+    if (at === -1 || lines.lastIndexOf(DROPPED_REVIEWER_LINE) !== at) {
+      throw new Error("the reviewer line to drop is not in the manifest exactly once");
+    }
+    lines[at] = "        blocking_agents: [completion-reviewer]";
+    await writeFile(file, lines.join("\n"), "utf-8");
+  },
+  "benign-manifest": async (root) => {
+    await reorderRouting(root, () => true);
   },
   "absent-skills": async (root) => {
     for (const skill of ["qfai-run", "qfai-maintain"]) {
