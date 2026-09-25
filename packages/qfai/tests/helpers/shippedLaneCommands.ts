@@ -1550,7 +1550,14 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // reader, the `reminders.json` path and one message key, no shell and no network. Derived by
   // running `qfai init` into a temp root and hashing what it wrote; dropping that one group
   // reproduces `a7547fbe…` byte for byte.
-  [".claude/settings.json", "65be5439b8425a2bec1e68e7084263c25abb82fb0b396dd6583116764bcca665"],
+  //
+  // Re-pinned when the `UserPromptSubmit` group started reading its input. Its program parses the
+  // prompt from stdin and stays silent when a line of it opens with a `<task-notification>` or
+  // `<wake>` wrapper, which marks a turn the host started rather than one the user typed. Any other
+  // input prints the reminder as before. Still one `node -e` reader, the `reminders.json` path and
+  // one message key, no shell and no network. Events, matchers and markers are unchanged; the
+  // previous group, `65be5439…` for the whole file, is listed as superseded so the merge refreshes it.
+  [".claude/settings.json", "272912f99ee1f09462d1def16a1edb1f1dcb7616e4ac439229cfcfa6b63ad8bd"],
   // Re-derived for the MERGED file, which carries both sides' edits: the three
   // retired `validation.traceability` knobs are gone (`brMustHaveSc`,
   // `scNoTestSeverity`, `orphanContractsPolicy`), the `forbidTestTodoStubs`

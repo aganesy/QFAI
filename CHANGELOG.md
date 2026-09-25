@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The question-form reminder stays silent on automated turns** (#2282). The
+  `UserPromptSubmit` hook `qfai init` installs now reads the prompt and prints
+  nothing when a line of it opens with a `<task-notification>` or `<wake>`
+  wrapper: a background task's notification, a scheduled wake-up or a
+  sub-agent's report. No question to the user forms on those turns, so the
+  reminder was noise there. A typed prompt, and input the hook cannot read,
+  still get it. An existing project's unedited group is refreshed on the next
+  `qfai init`.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

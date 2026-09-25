@@ -10,7 +10,7 @@
             "command": "node",
             "args": [
               "-e",
-              "try{const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}catch{}",
+              "try{let p;try{p=JSON.parse(require('fs').readFileSync(0,'utf8')).prompt}catch{}if(!(typeof p==='string'&&/^[ \\t]*<(task-notification|wake)[\\s>]/m.test(p))){const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))[process.argv[2]];if(m!==undefined)console.log(JSON.stringify(m))}}catch{}",
               "${CLAUDE_PROJECT_DIR}/.agents/rules/reminders.json",
               "structured-question"
             ]

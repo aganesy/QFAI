@@ -97,6 +97,50 @@ describe("the structured-question reminder", () => {
     expect(payload).toContain("through that rule's fallback where it is not");
   });
 
+  /** What the host writes to a `UserPromptSubmit` hook's stdin for one prompt. */
+  const promptInput = (prompt: string): string =>
+    JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt });
+
+  /** What the group prints for `input`, run against the project the settings file serves. */
+  async function printedFor(rel: string, input: string): Promise<string> {
+    const group = promptGroup(await readSettings(rel));
+    const outputs = await Promise.all(
+      group.hooks.map((hook) => runReminderHook(hook, projectDirOf(repoRoot, rel), input)),
+    );
+    return outputs.join("");
+  }
+
+  it.each(SETTINGS)("%s stays silent on an automated wake-up", async (rel) => {
+    // A notification, a scheduled check-in or a sub-agent's report is not typed
+    // by the user, and no question to the user forms on it. Printing there turns
+    // the reminder into background noise.
+    for (const prompt of [
+      "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>",
+      '<wake reason="external-event">CI finished</wake>',
+      "[SYSTEM NOTIFICATION]\n\n<task-notification>\n<task-id>b1</task-id>",
+    ]) {
+      await expect(printedFor(rel, promptInput(prompt)), prompt).resolves.toBe("");
+    }
+  });
+
+  it.each(SETTINGS)(
+    "%s still prints on a typed prompt, and on input it cannot read",
+    async (rel) => {
+      // Silence is kept for the wrappers it recognises. A prompt that only
+      // mentions one, and input with no prompt at all, get the reminder.
+      for (const input of [
+        promptInput("Fix the failing test"),
+        promptInput("What does <task-notification> mean here?"),
+        promptInput("<wakeup> is not a wrapper"),
+        "",
+        "{ not json",
+        "{}",
+      ]) {
+        await expect(printedFor(rel, input), input).resolves.toContain("user-questions.md");
+      }
+    },
+  );
+
   it.each([
     ".agents/rules/user-questions.md",
     "packages/qfai/assets/init/root/.agents/rules/user-questions.md",
@@ -111,6 +155,8 @@ describe("the structured-question reminder", () => {
     expect(master).toMatch(/reminds and never blocks/i);
     expect(master).toMatch(/no shell and\s+no\s+network/);
     expect(master).toContain("`.agents/rules/reminders.json`");
+    // Which turns it stays silent on, so a missing reminder there reads as intended.
+    expect(master).toContain("`<task-notification>`");
   });
 
   it("both settings files carry it", async () => {
