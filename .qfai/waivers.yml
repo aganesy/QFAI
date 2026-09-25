@@ -497,7 +497,9 @@ waivers:
         - TDD-0300
         - TDD-0301
         - TDD-0302
+        - TDD-0306
         - TDD-0308
+        - TDD-0309
         - TDD-0310
         - TDD-0315
         - TDD-0355

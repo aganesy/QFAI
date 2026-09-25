@@ -393,6 +393,8 @@
     "tests/integration/workflow/oneJsonDocumentPerCall.test.ts",
     "tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts",
     "tests/integration/workflow/aDeclineIsAStopWithNothingTracked.test.ts",
+    "tests/integration/workflow/notCommittingMeansWorkingTree.test.ts",
+    "tests/integration/workflow/aChangedGateDoesNotComplete.test.ts",
     "tests/integration/workflow/plans.test.ts",
     "tests/integration/workflow/schemas.test.ts",
     "tests/integration/workflow/shippedAssets.test.ts",

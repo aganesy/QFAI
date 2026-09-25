@@ -310,7 +310,9 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0300 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0301 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0302 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0306 | TC-0018-0042 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0308 | TC-0018-0056 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0309 | TC-0018-0061 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0310 | TC-0018-0065 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
@@ -4941,6 +4943,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
 - RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
 
+### TDD-0306
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/notCommittingMeansWorkingTree.test.ts`
+- Selector: `TC-0018-0042 (TDD-0306): Git temp repo with the run's changed paths uncommitted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/notCommittingMeansWorkingTree.test.ts --testNamePattern='TC-0018-0042 \(TDD-0306\): Git temp repo with the run's changed paths uncommitted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0286, whose change made `finish` observe the working tree's uncommitted paths and report them under `deliveryUnmet` on a `working_tree` run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/notCommittingMeansWorkingTree.test.ts > TC-0018-0042 (TDD-0306): Git temp repo with the run's changed paths uncommitted`
+- Production files: none beyond TDD-0286's
+
 ### TDD-0308
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4951,6 +4963,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0056 (TDD-0308): Built CLI`
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (`acceptPreamble` checks the sequence before the work order, as CLI-WF `### accept` orders them)
 - RED note: observed with the built CLI rebuilt from the sources of commit `83727b066`, which added the command without this behaviour; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0309
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aChangedGateDoesNotComplete.test.ts`
+- Selector: `TC-0018-0061 (TDD-0309): Built CLI`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aChangedGateDoesNotComplete.test.ts --testNamePattern='TC-0018-0061 \(TDD-0309\): Built CLI' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0286, whose change made `finish` compare the policy digests with those fixed at `start`, so an edit to `qfai.config.yaml` inside the write scope is `policy-drift`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aChangedGateDoesNotComplete.test.ts > TC-0018-0061 (TDD-0309): Built CLI`
+- Production files: none beyond TDD-0286's
 
 ### TDD-0310
 
