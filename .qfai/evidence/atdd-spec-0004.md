@@ -3295,12 +3295,13 @@ the tombstones in `.qfai/specs/spec-0004/tdd/test-list.md` keep unique.
 | TDD-0067, TDD-0068, TDD-0069 | spec-0014 | 1 row: TDD-0035 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | The selector passes, but TC-0014-0035 runs the command. The cases call `runPrototypingCertify` directly, bypassing `src/cli/main.ts`, which this change edited. See `### Re-run results: spec-0014` | CR-20260913-0005 |
 | TDD-0067, TDD-0068, TDD-0069 | spec-0014 | 1 row: TDD-0036 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | The selector passes, but the cases bypass the command line as for TDD-0035, and the row aggregates the refusal and promotion boundaries the CR splits. See `### Re-run results: spec-0014` | CR-20260913-0005 |
 | TDD-0067, TDD-0068, TDD-0069 | spec-0015 | 21 rows: TDD-0011..0012, TDD-0017..0035 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0015` | re-reviewed |
+| TDD-0067, TDD-0068, TDD-0069 | spec-0015 | 1 row: TDD-0039 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | Matched through the package fallback; its `Owning module` `init.ts` is also a file `TDD-0069` changed. At `dabc4147c`, with this change's `init.ts`, the selector passes, and the recorded mutation and controls A and B2 fail on their recorded assertions. `xspec-cr-d` confirmed it holds. See `### Re-run results: spec-0015` | re-reviewed |
 | TDD-0067, TDD-0068, TDD-0069 | spec-0016 | 28 rows: TDD-0001..0028 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0016` | re-reviewed |
 | TDD-0067, TDD-0068, TDD-0069 | spec-0017 | 6 rows: TDD-0016, TDD-0030, TDD-0033..0035, TDD-0070 | the paths listed for each under `### Files the source rows changed` | Remove the work-log validator from validate's sdd composition; Withdraw `catalog/worklog-entry.schema.md` from the shipped governed set; Remove the check that a stopped ledger owes a work-log record, with its two finding codes and the `worklogEntries.ts` module it read | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0016, TDD-0030, TDD-0033..0035, TDD-0070 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0017` | re-reviewed |
 
-- `spec-0015/TDD-0039` left the blocked set. `3a8462986` reverted its closure, and the
-  row is `todo` at `03762f3cf`. A row that is not `done` certifies nothing, so no
-  re-run or review is owed for it.
+- `spec-0015/TDD-0039` is `done` on main since #2393, which closed it without this
+  change's `init.ts` edits. It was re-run and re-reviewed on this change's tree at
+  `dabc4147c`.
 - `TDD-0094` in the spec-0003 `re-reviewed` line is main's row, whose test is
   `initCopilotLegacyWindow.test.ts`. `Withdrawn TDD-0094 (never merged)` is this
   change's row, which main's row replaced under that id.
@@ -3398,10 +3399,16 @@ the tombstones in `.qfai/specs/spec-0004/tdd/test-list.md` keep unique.
 
 ### Re-run results: spec-0015
 
-- Blocked rows: 21. `re-reviewed` 21.
+- Blocked rows: 22. `re-reviewed` 22.
 - Selector runs: 21 rows, run read-only with `--reporter=verbose` on the clean clone `tmp/cross-spec-mutations-qa/repo` at `03762f3cf`. 21 rows select and pass their tests (80 of 80 selected tests passed, 0 failed).
 - Saved results: `tmp/xspec/selector-results2.json`, the batch logs `tmp/xspec/logs2/selector-05.log`, `tmp/xspec/logs2/selector-06.log`, `tmp/xspec/logs2/selector-07.log`, `tmp/xspec/logs2/selector-12.log`, `tmp/xspec/logs2/selector-14.log`, `tmp/xspec/logs2/selector-20.log`, `tmp/xspec/logs2/selector-23.log`, `tmp/xspec/logs2/selector-25.log`, `tmp/xspec/logs2/selector-28.log`, `tmp/xspec/logs2/selector-29.log`.
 - Completion review: `completion-reviewer` `xspec-cr-c` (`tmp/xspec/review-R7-R9.json`), reviewed revision `03762f3cf`.
+- TDD-0039, run read-only on a clean clone at `dabc4147c` with this change's `init.ts` (SHA-256 `6465aa79…4658`). The three test-manifest files are byte-identical to main's. Results in `tmp/xspec/tdd0039/`: `summary.txt`, `00-context.txt`, logs `01` to `06` and the four `.diff` files.
+  - Selector: 1 of 1 selected test passed.
+  - The recorded mutation and controls were rebuilt on the same statements, each moved up by this change's removals: primary `force: false` in the `syncGovernedAssistantAssets` call, line 527 (recorded 530); control A drops `&& currentHash === previousHash` from `refreshable`, line 1016 (recorded 1026); control B1 `force: true` in the `STANDARD_ASSET_PATHS` copy, line 518 (recorded 521); control B2 `force: options.force` in the `.qfai` tree copy, line 507 (recorded 510). Each diff changes that one line.
+  - The primary mutation failed at test line 356 (`pattern-doubler` missing), control A at line 379 (`mismatching receipt: catalog refreshed`), and control B2 at line 347 (`force=true: adopter profiles changed`). These are the recorded assertions, all inside the selected test. Control B1 passed, and its record says it does not discriminate.
+  - `init.ts` was restored byte-identically after each run, and GREEN passed on the restored tree.
+  - Completion review: `completion-reviewer` `xspec-cr-d`, reviewed revision `dabc4147c`.
 
 ### Re-run results: spec-0016
 
