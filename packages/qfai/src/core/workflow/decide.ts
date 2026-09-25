@@ -653,8 +653,6 @@ const IMPLEMENTATION_HEAVY_ROLES = [
 
 // A run that restores an authorization check reviews its implementation work harder, and
 // asks nobody first.
-// SIMPLIFIED: a skill whose review profile the facts do not carry gets no reviewer roles.
-// Lift when: the command adapter supplies the reviewer roles of every skill a plan names.
 function requiredReviewerRoles(
   skill: string | undefined,
   plan: NonNullable<WorkflowSnapshot["plan"]>,

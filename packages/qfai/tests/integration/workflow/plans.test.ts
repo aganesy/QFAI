@@ -20,6 +20,7 @@ import { decide } from "../../../src/core/workflow/decide.js";
 import {
   checkInstalledPlans,
   loadBuiltInPlans,
+  reviewerRolesOf,
   type WorkflowPlanFile,
 } from "../../../src/core/workflow/plans.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
@@ -349,5 +350,24 @@ it("TC-0018-0186 (TDD-0407): discovery-ends-routing", async () => {
       ],
     ],
     refusals: [],
+  });
+});
+
+it("Every skill a plan names is supplied the always-required reviewers of its review profile", async () => {
+  const plans = await loadBuiltInPlans();
+  const named = new Set(
+    Object.values(plans).flatMap((plan) => plan.stages.flatMap((stage) => stage.skills)),
+  );
+  const roles = await reviewerRolesOf(getInitAssetsDir());
+  const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
+
+  expect(Object.fromEntries([...named].sort().map((skill) => [skill, roles[skill]]))).toEqual({
+    "qfai-atdd": runtimeHeavy,
+    "qfai-discussion": ["completion-reviewer", "requirements-reviewer"],
+    "qfai-implement": ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"],
+    "qfai-maintain": ["completion-reviewer"],
+    "qfai-prototyping": ["completion-reviewer", "product-surface-reviewer"],
+    "qfai-sdd": ["completion-reviewer"],
+    "qfai-verify": runtimeHeavy,
   });
 });

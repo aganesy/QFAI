@@ -350,6 +350,20 @@ it("TC-0018-0124 (TDD-0342): Built CLI under a temp root whose name has a space"
   });
 });
 
+it("A work order names the always-required reviewers of its skill's review profile", async () => {
+  const root = await minimalProject();
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+
+  expect({
+    skill: field(issued.json, "workOrder.executor.skill"),
+    reviewers: field(issued.json, "workOrder.requiredReviewerRoles"),
+  }).toEqual({
+    skill: "qfai-discussion",
+    reviewers: ["completion-reviewer", "requirements-reviewer"],
+  });
+});
+
 it("TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root", async () => {
   const root = await minimalProject();
   const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));

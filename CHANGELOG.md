@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow next` names each work order's reviewers** (#2321). A work
+  order's `requiredReviewerRoles` was empty unless the run restored an
+  authorization check. It now holds the `always_required` reviewers of the
+  review profile `agent-routing.yml` gives the executor skill, as the
+  project's `review-profiles.yml` defines it. A skill with no profile, such as
+  `qfai-run`, still has none.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
