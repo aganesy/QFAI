@@ -15,4 +15,4 @@ The skill serves exactly these operations. A work order naming any other is refu
 - What the work order's `settled` field records, the checked proposal's routing
   result and every answered question with its chosen answer, is taken as
   settled and not asked again.
-- The discussion covers the scope `settled` leaves unresolved.
+- The discussion covers only the scope `settled` leaves unresolved.
