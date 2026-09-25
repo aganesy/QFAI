@@ -21,6 +21,7 @@ import {
   findPackageJsonUpward,
   locateToolAgainstProject,
   resolveToolPackageDir,
+  resolvesThroughOwnNodeModules,
 } from "../../src/core/version.js";
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
@@ -288,6 +289,64 @@ describe("findDeclaringDir", () => {
       );
 
       expect(await findDeclaringDir(pkg)).toBe(root);
+    });
+  });
+});
+
+describe("resolvesThroughOwnNodeModules", () => {
+  it("counts a copy behind a worktree's linked node_modules as the project's own", async () => {
+    // A worktree that links its `node_modules` to the main checkout's. Node
+    // reports the package at its real path, under the main checkout, but the
+    // worktree's own entry is what resolved it.
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("counts pnpm's virtual store behind the link as the project's own", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      const packageDir = path.join(mainModules, ".pnpm", "qfai@1.12.3", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(true);
+    });
+  });
+
+  it("does not count the enclosing checkout's copy when the worktree has no node_modules", async () => {
+    // The hazard the check exists for: `npx` walked parents and found another
+    // checkout's install. Nothing in the worktree pointed there.
+    await withTempDir(async (dir) => {
+      const packageDir = path.join(dir, "main", "node_modules", "qfai");
+      await mkdir(packageDir, { recursive: true });
+      const worktree = path.join(dir, "main", ".claude", "worktrees", "agent-1");
+      await mkdir(worktree, { recursive: true });
+
+      expect(await resolvesThroughOwnNodeModules(worktree, packageDir)).toBe(false);
+    });
+  });
+
+  it("does not count a copy outside where the link points", async () => {
+    await withTempDir(async (dir) => {
+      const mainModules = path.join(dir, "main", "node_modules");
+      await mkdir(mainModules, { recursive: true });
+      const elsewhere = path.join(dir, "global", "lib", "node_modules", "qfai");
+      await mkdir(elsewhere, { recursive: true });
+      const worktree = path.join(dir, "worktree");
+      await mkdir(worktree, { recursive: true });
+      await symlink(mainModules, path.join(worktree, "node_modules"), "junction");
+
+      expect(await resolvesThroughOwnNodeModules(worktree, elsewhere)).toBe(false);
     });
   });
 });
