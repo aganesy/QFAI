@@ -2182,6 +2182,10 @@ The refreshed refactor verify:
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2 — replacement falsifiability proof: rebuilt mutated tree working-tree+a0f0b17ac1e677baf8c610fc5c46ed45c6d67779253b59a67c708a7874420e82 on 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363; GREEN + oracle proof: reviewed revision 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363, re-run at HEAD 9fe34e52e57f856ded345d3e4139a2c591538201)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate and build-phase GREEN on the test before the review-fix edit (kept above; stale since the test was replaced); qa-gatekeeper#2 PASS — replacement proof: rebuilt working-tree+a0f0b17a… matches with HEAD taken as 5f1f49b1a; mutant release.yml SHA-256 9f98e888…6a69; assertion at spec0017SliceAlignment.test.ts:28:9 (release.yml#gate-tests matrix keys), row case only, 1 failed | 3 skipped (4); the earlier `, scripts` removal still fails at :29:73; replacement RED test hash b7e91184… recomputes. GREEN at 9fe34e52e: selector 1 passed | 3 skipped (4), whole file 4/4
 
+- Round 1: reviewer verdict (attempt 2): REVISE — completion-reviewer: the change-request cycle must be numbered Round 1, and the test-only replacement left duplicate Round 2 fields; the record goes back for repair
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925130010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 04221f3b54377813055641b16ba8cfc8e03bf061df5917c2fa4acf3731b03d13
+
 ### TDD-0069
 
 - TDD-ID: TDD-0069
@@ -2528,8 +2532,8 @@ the re-review were not run here.
 | 42 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` re-take the proof with an `exclude` on `gate-tests`, revert and GREEN | #tdd-0062, the corrected test | Round 2 re-taken proof | PASS |
 | 43 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` refresh the refactor verify on the committed tree, and `review-fix -> refactor` | #tdd-0062 | Refactor verify fields; tdd/test-list.md | PASS |
 | 44 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: `TDD-0062` gate on the re-taken proof and its GREEN | #tdd-0062 | qa-gatekeeper fields | PASS |
-| 45 | completion-reviewer | not routed | /qfai-implement: `TDD-0062` completion review, attempt 2 | #tdd-0062 | - | PENDING |
-| 46 | implementation-reviewer | not routed | /qfai-implement: `TDD-0062` code review, attempt 2 | #tdd-0062 | - | PENDING |
+| 45 | completion-reviewer | completion-reviewer | /qfai-implement: `TDD-0062` completion review, attempt 2 | #tdd-0062 | review-20260925130010000 <!-- qfai:not-a-citation --> | REVISE |
+| 46 | implementation-reviewer | implementation-reviewer | /qfai-implement: `TDD-0062` code review, attempt 2 | #tdd-0062 | review-20260925130010000 <!-- qfai:not-a-citation --> | PASS |
 
 ## Execution logs
 
