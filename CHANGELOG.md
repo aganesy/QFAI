@@ -223,6 +223,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **spec-0010's coverage record is re-derived against the reset ledger**
+  (#2314). The discussion-stage rules above reset seven spec-0010 rows, and
+  each has since been closed with a test. The Coverage Depth Matrix was
+  derived again from the pack and the ledger as they now stand, and no cell
+  changed: 13 stories, 13 cases and 12 business rules, with ✅ 7, ⚠️ 44, ❌ 23
+  and 196 not applicable. The ATDD stage evidence records the run and its
+  reviewers. It also records the nine skipped tests in spec-0004 and spec-0006
+  files that keep the scoped gate at exit 1.
 
 ## [1.12.3] - 2026-09-24
 
