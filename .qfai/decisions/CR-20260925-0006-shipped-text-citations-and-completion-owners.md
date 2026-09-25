@@ -79,15 +79,17 @@ owner". CLI-WF makes the owner the debt's `resolvingOwner`, which is a skill or
 ## Options (at least 3) and recommendation
 
 Each part carried its own option set, and the user selected option 1 in each.
-The alternatives below are restated for the record.
+Part A was put to the user with three options. Parts B, C and D were put with
+options 1 and 2 only; their option 3 is recorded here to meet the template
+minimum and was not presented.
 
 **Part A**
 
-| #   | Option                                                            | Cost                                           | Risk                                                                   | Recommended |
-| --- | ----------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------- | ----------- |
-| 1   | Assert the stated behaviour, with no internal citation            | Six cases and four AC, BR or EX lines reworded | The shipped text restates a rule the contract also states              | ✅          |
-| 2   | Keep the citations and exempt these files from the leakage guards | Guard exceptions in three places               | Adopters receive dangling pointers; the guard's promise weakens        |             |
-| 3   | Ship the cited decision and contract sections with the package    | A new shipped surface and its upkeep           | Internal records become a published contract nobody agreed to maintain |             |
+| #   | Option                                                             | Cost                                           | Risk                                                               | Recommended |
+| --- | ------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------ | ----------- |
+| 1   | Assert the stated behaviour, with no internal citation             | Six cases and four AC, BR or EX lines reworded | The shipped text restates a rule the contract also states          | ✅          |
+| 2   | Drop only the two `DR-0297` citations; keep `CLI-WF` and `CLI-VAL` | Two cases reworded                             | Shipped skills name contract files an adopter does not have        |             |
+| 3   | Leave the six cases as they are                                    | None now                                       | The six rows stay open and `QFAI-ATDD-112` keeps the merge blocked |             |
 
 **Part B**
 
