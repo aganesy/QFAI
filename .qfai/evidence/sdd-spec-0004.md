@@ -6,14 +6,14 @@ first; earlier runs follow under `## Prior run`, unchanged.
 ## Objective
 
 - Spec target: spec-0004
-- Objective: apply `CR-20260923-0011` in mode `re-derive`. AC-0004-0041,
+- Objective: apply `CR-20260923-0015` in mode `re-derive`. AC-0004-0041,
   BR-0004-0035, EX-0004-0044 and TC-0004-0076 state that a `blocked` row passes
   on a well-formed `Blocked-By`, naming what it waits on and the status it was
   blocked at, as `TDDLIST_BLOCKED_MISSING_REF` checks.
 
 ## Inputs reviewed
 
-- `.qfai/decisions/CR-20260923-0011-spec-0004-passes-a-blocked-row-the-kept-check-fails.md`
+- `.qfai/decisions/CR-20260923-0015-spec-0004-passes-a-blocked-row-the-kept-check-fails.md`
 - `discussion-20260923060900824` (REQ-0004), read as reference input
 - `.qfai/specs/spec-0004/03..07`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`
 - `packages/qfai/src/core/validators/tddList.ts` (`BLOCKED_BY_DEPARTURE_RE`,
@@ -38,7 +38,7 @@ first; earlier runs follow under `## Prior run`, unchanged.
 ## Decisions made
 
 - DR-0004-0043 / DL-0029: a `blocked` row passes on a well-formed
-  `Blocked-By` — the check the spec keeps, stated as it is (CR-20260923-0011).
+  `Blocked-By` — the check the spec keeps, stated as it is (CR-20260923-0015).
 
 ## Work performed
 
@@ -98,7 +98,7 @@ node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --f
 
 | Phase | Session | Ended at | Wrote at             | Frontier                            | Evidence |
 | ----- | ------- | -------- | -------------------- | ----------------------------------- | -------- |
-| 2     | skipped | -        | 2026-09-23T20:05:55Z | empty: answered by CR-20260923-0011 | -        |
+| 2     | skipped | -        | 2026-09-23T20:05:55Z | empty: answered by CR-20260923-0015 | -        |
 | 2c.1  | skipped | -        | -                    | empty: answered by DR-0004-0034     | -        |
 
 - Batch record: none
@@ -107,10 +107,10 @@ node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --f
 
 | Step | Role (sub-agent)     | Agent instance         | Task title                                                                | Input (refs)                                                                              | Output (refs)                                                                                    | Status (PASS/REVISE/PENDING) |
 | ---- | -------------------- | ---------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------- |
-| 1    | requirements-analyst | cr-0004-author         | Change Request for the `Blocked-By` defect                                | `/qfai-atdd` run key `2026-09-23T19:33:24.738Z`; EX-0004-0044; BR-0004-0035; `tddList.ts` | `CR-20260923-0011`, Class `defect`, approved by yusuke_senaga                                    | PASS                         |
-| 2    | requirements-analyst | cr-0004-author         | Phase 2 re-derive: AC-0004-0041, BR-0004-0035, EX-0004-0044, TC-0004-0076 | `CR-20260923-0011` `## Proposed change`                                                   | Files under Work performed; DR-0004-0043; validate sdd `--spec spec-0004`: 0 errors              | PASS                         |
+| 1    | requirements-analyst | cr-0004-author         | Change Request for the `Blocked-By` defect                                | `/qfai-atdd` run key `2026-09-23T19:33:24.738Z`; EX-0004-0044; BR-0004-0035; `tddList.ts` | `CR-20260923-0015`, Class `defect`, approved by yusuke_senaga                                    | PASS                         |
+| 2    | requirements-analyst | cr-0004-author         | Phase 2 re-derive: AC-0004-0041, BR-0004-0035, EX-0004-0044, TC-0004-0076 | `CR-20260923-0015` `## Proposed change`                                                   | Files under Work performed; DR-0004-0043; validate sdd `--spec spec-0004`: 0 errors              | PASS                         |
 | 3    | requirements-analyst | cr-0004-author         | Phase 2b and 2c read only; Phase 4 delta                                  | `tdd/test-list.md` TDD-0069..TDD-0071; DR-0004-0034                                       | No ledger write; DELTA-0002, DL-0029, `## Change Requests` row; CR `Resolution` and `Applied at` | PASS                         |
-| 4    | completion-reviewer  | gate-cr0004-completion | Reviewer Gate for this rerun                                              | this section, `CR-20260923-0011`, `.qfai/specs/spec-0004/**`                              | `review-20260923201700600` R01: PASS, advisories A1-A3 only; `summary.json` overall PASS         | PASS                         |
+| 4    | completion-reviewer  | gate-cr0004-completion | Reviewer Gate for this rerun                                              | this section, `CR-20260923-0015`, `.qfai/specs/spec-0004/**`                              | `review-20260923201700600` R01: PASS, advisories A1-A3 only; `summary.json` overall PASS         | PASS                         |
 
 ## Gaps / Open risks
 

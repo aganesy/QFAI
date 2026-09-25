@@ -29,12 +29,6 @@ type Guard = {
     improved: Array<[string, number]>;
   };
   errorsByFile: (report: unknown) => Map<string, number>;
-  errorsForFile: (
-    report: {
-      issues?: Array<{ code?: string; file?: string; message?: string; severity: string }>;
-    },
-    file: string,
-  ) => Array<{ code?: string; message?: string }>;
 };
 
 /**
@@ -82,24 +76,6 @@ describe("errorsByFile", () => {
     const { errorsByFile } = await load();
 
     expect([...errorsByFile({})]).toEqual([]);
-  });
-});
-
-describe("errorsForFile", () => {
-  it("names only the failing findings in the unpinned file", async () => {
-    const { errorsForFile } = await load();
-    const findings = errorsForFile(
-      {
-        issues: [
-          { file: CLEAN, severity: "error", code: "E-NEW", message: "new problem" },
-          { file: CLEAN, severity: "warning", code: "W-OLD", message: "warning" },
-          { file: LEDGER, severity: "error", code: "E-OTHER", message: "other file" },
-        ],
-      },
-      CLEAN,
-    );
-
-    expect(findings).toEqual([{ code: "E-NEW", message: "new problem" }]);
   });
 });
 

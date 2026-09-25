@@ -329,7 +329,7 @@
 - Context: AC-0004-0041, BR-0004-0035, EX-0004-0044 and TC-0004-0076 said a `blocked` row passes when its `Blocked-By` is filled or non-empty. The check they keep, `TDDLIST_BLOCKED_MISSING_REF` through `parseBlockedBy` in `tddList.ts`, also requires `— blocked at <status>`. EX-0004-0044's passing value, `spec-0004:TDD-0001`, raises that error, so a test written to the example could not pass.
 - Decision: The four items state the check as it is. A `blocked` row needs what it waits on and the status it was blocked at, one of `todo`, `red`, `green`, `refactor` or `review-fix`. EX-0004-0044 and TC-0004-0076 use `spec-0004:TDD-0001 — blocked at todo` for the passing row. The empty-cell boundary is unchanged.
 - Consequences: No product code changes. TDD-0069 and TDD-0071 take the new fixture value and keep their boundaries. TDD-0070 is unchanged. All three stay at `todo`, so the sweep resets nothing. The contract join in DR-0004-0034 still holds, since it names the same code and column.
-- Related: CR-20260923-0011, AC-0004-0041, BR-0004-0035, EX-0004-0044, TC-0004-0076, TDD-0069..TDD-0071, DR-0004-0034. `09_delta.md` DL-0029.
+- Related: CR-20260923-0015, AC-0004-0041, BR-0004-0035, EX-0004-0044, TC-0004-0076, TDD-0069..TDD-0071, DR-0004-0034. `09_delta.md` DL-0029.
 
 ### DR-0004-0044: The work-log absence obligations are withdrawn
 

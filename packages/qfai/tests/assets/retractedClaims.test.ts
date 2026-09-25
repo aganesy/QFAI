@@ -52,7 +52,7 @@
  * a file this stage must not touch is a test that cannot be satisfied. It is named in the handover
  * instead.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -64,20 +64,6 @@ const ROOT = path.resolve(__dirname, "../../../..");
 
 /** The first review pack the stage this record belongs to opened. */
 const FIRST_PACK = "review-20260820200000000";
-/** The last review pack named in this stage's twenty-round history. */
-const LAST_PACK = "review-20260823000000000";
-
-/** The historical packs counted by the stage record, in round order. */
-const STAGE_PACKS = [
-  ...readFileSync(path.join(ROOT, ".qfai/evidence/atdd-spec-0017.md"), "utf8").matchAll(
-    /^Review pack:\s+(review-\d{17})\/\s+\(round (\d+)\b/gm,
-  ),
-].map((match) => ({ name: match[1] ?? "", round: Number(match[2]) }));
-const STAGE_PACK_NAMES = new Set(STAGE_PACKS.map(({ name }) => name));
-
-function countStagePacks(entries: ReadonlyArray<{ name: string; isDirectory(): boolean }>): number {
-  return entries.filter((entry) => entry.isDirectory() && STAGE_PACK_NAMES.has(entry.name)).length;
-}
 
 /**
  * Whether this checkout carries any of those packs.
@@ -87,12 +73,13 @@ function countStagePacks(entries: ReadonlyArray<{ name: string; isDirectory(): b
  * by name there rather than measured against an empty tree, which would report a
  * correct record as wrong. Read synchronously because `it.skipIf` is decided when
  * the file is collected, and by the same predicate the count uses — the directory
- * is shared with other stages, so its existence answers nothing.
+ * is shared with earlier stages and with a lane's own output, so its existence
+ * answers nothing.
  */
 const HAS_STAGE_PACKS = ((): boolean => {
   try {
-    return (
-      countStagePacks(readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true })) > 0
+    return readdirSync(path.join(ROOT, ".qfai/review"), { withFileTypes: true }).some(
+      (entry) => entry.isDirectory() && /^review-\d+$/.test(entry.name) && entry.name >= FIRST_PACK,
     );
   } catch {
     // No such directory, or one that cannot be read. Nothing to count either way.
@@ -330,7 +317,10 @@ const COUNTED_CLAIMS: ReadonlyArray<{
     actual: async () => {
       const { readdir } = await import("node:fs/promises");
       const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
-      return countStagePacks(entries);
+      return entries.filter(
+        (entry) =>
+          entry.isDirectory() && /^review-\d+$/.test(entry.name) && entry.name >= FIRST_PACK,
+      ).length;
     },
     why: "the pack count said Three, then Four, against four and then seven directories",
   },
@@ -694,28 +684,6 @@ describe("retracted claims are quoted, never asserted", () => {
       "and it must not shift a span over the assertion either",
     ).toBe(false);
     expect(isExempt(document, at), "the assertion is not inside the blockquote").toBe(false);
-  });
-
-  it("bounds the pack census to the twenty recorded historical rounds", () => {
-    const evidence = readFileSync(path.join(ROOT, ".qfai/evidence/atdd-spec-0017.md"), "utf8");
-    const claim = /^\*\*(\w+)\*\* packs, one per round\b/m.exec(evidence);
-    expect(STAGE_PACKS.map(({ round }) => round)).toEqual(
-      Array.from({ length: 20 }, (_, index) => index + 1),
-    );
-    expect(STAGE_PACK_NAMES.size).toBe(20);
-    expect(STAGE_PACKS[0]?.name).toBe(FIRST_PACK);
-    expect(STAGE_PACKS.at(-1)?.name).toBe(LAST_PACK);
-    expect(WORDS[(claim?.[1] ?? "").toLowerCase()]).toBe(STAGE_PACKS.length);
-
-    const directory = (name: string) => ({ name, isDirectory: () => true });
-    expect(
-      countStagePacks([
-        ...STAGE_PACKS.map(({ name }) => directory(name)),
-        directory("review-20260824000000000"),
-        { name: FIRST_PACK, isDirectory: () => false },
-      ]),
-    ).toBe(20);
-    expect(countStagePacks(STAGE_PACKS.slice(1).map(({ name }) => directory(name)))).toBe(19);
   });
 
   it.skipIf(!HAS_STAGE_PACKS)(

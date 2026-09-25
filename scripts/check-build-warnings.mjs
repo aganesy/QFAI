@@ -1,14 +1,9 @@
 /* global process */
 import { spawnSync } from "node:child_process";
 
-const onWindows = process.platform === "win32";
-const result = spawnSync(
-  onWindows ? "cmd.exe" : "pnpm",
-  onWindows ? ["/d", "/s", "/c", "pnpm -C packages/qfai build"] : ["-C", "packages/qfai", "build"],
-  {
-    encoding: "utf-8",
-  },
-);
+const result = spawnSync("pnpm", ["-C", "packages/qfai", "build"], {
+  encoding: "utf-8",
+});
 
 process.stdout.write(result.stdout ?? "");
 process.stderr.write(result.stderr ?? "");

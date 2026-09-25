@@ -163,7 +163,7 @@ it. None is parked: each is past `todo`.
     spec-0012 and spec-0015 on other rows. The open spec-0013 records
     (`CR-20260913-0001`, `-0003`, `-0004`, `-0008`, `-0010`, `-0011`, `-0014`)
     block other rows. None names a row above.
-  - `CR-20260923-0011` (applied) reworded AC-0004-0041, which this CR removes.
+  - `CR-20260923-0015` (applied) reworded AC-0004-0041, which this CR removes.
     This CR assumes it has landed.
 
 ### Relation to `CR-20260924-0006`

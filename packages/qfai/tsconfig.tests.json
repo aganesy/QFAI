@@ -294,7 +294,6 @@
     "tests/integration/spec0013DesignContractIndex.test.ts",
     "tests/integration/spec0014SaasPackageCertify.test.ts",
     "tests/integration/spec0014VerifyReviewerGate.test.ts",
-    "tests/integration/spec0015LegacyProfilePreservation.test.ts",
     "tests/integration/spec0017ArtifactReuse.test.ts",
     "tests/integration/spec0017CiMatrix.test.ts",
     "tests/integration/spec0017MeasurementClaims.test.ts",

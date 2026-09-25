@@ -386,7 +386,7 @@ Two things are left to `qa-gatekeeper` rather than decided here:
   nothing had been doing: `tsc -b` covers `src/**` only, so every "check-types clean" claim about a test
   file was empty. `pnpm check-types` runs it, and `eslint.config.js` re-enables the four promise rules over
   the same set
-- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 12 tests requiring a claim a review
+- **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 11 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found. The eleventh asserts the coordinate model the previous version's docstring
   only described, and it took two attempts: the first checked span arithmetic, and three mutations
@@ -431,7 +431,7 @@ pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   the two skipped read the review archive and are skipped by name where this
   checkout does not hold every pack the record certifies
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
-  -> Tests 11 passed | 1 skipped (12), exit 0 (current checkout; the historical pack archive is absent)
+  -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017RunnerParallelismE2E.test.ts
   -> Tests 2 passed (2), exit 0
 pnpm -C packages/qfai exec vitest run --project integration tests/integration/spec0017OwnWorkflowScope.test.ts
@@ -3051,7 +3051,7 @@ a merge can invalidate has no author to hold responsible for it.
 The count and its split across the two include roots are on one line, and both are derived by the same
 walk:
 
-e2e callsites at this tree: 2431 (packages/qfai/tests/assets 2238, packages/qfai/tests/e2e 193)
+e2e callsites at this tree: 2430 (packages/qfai/tests/assets 2237, packages/qfai/tests/e2e 193)
 
 **That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is

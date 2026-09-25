@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260923-0011`
+- ID: `CR-20260923-0015`
 - Title: `spec-0004 passes a blocked row the kept check fails`
 - Raised by: `/qfai-atdd` (run key `2026-09-23T19:33:24.738Z`)
 - Raised at: `2026-09-23T20:04:55Z`
@@ -160,3 +160,31 @@ correct fix under `## Proposed change`.
   `spec-0004/TDD-0071` stay at `todo` with their boundaries.
 - Ledger rows retired: none.
 - Evidence: `.qfai/evidence/sdd-spec-0004.md`, the current run.
+
+## Renumbering
+
+This record was `CR-20260923-0011`, the ID the `main` branch gives the spec-0003
+record `CR-20260923-0011-the-rest-of-spec-0003-still-states-obligations-the-product-reversed.md`.
+It is now `CR-20260923-0015`, the next ID no branch uses.
+
+Citations of this record now use `CR-20260923-0015`, in:
+
+- `.qfai/specs/spec-0004/07_Decisions.md` and `09_delta.md`
+- `.qfai/evidence/sdd-spec-0004.md`
+- `.qfai/evidence/atdd-spec-0003.md`, `atdd-spec-0004.md`, `atdd-spec-0011.md` and `atdd-spec-0013.md`
+- `CR-20260925-0010`
+
+Six citations still read `CR-20260923-0011`. Each sits inside a
+`### TDD-NNNN` section of `.qfai/evidence/atdd-spec-0004.md`, under that
+row's review record, so it is left as recorded:
+
+| Line | Section        |
+| ---- | -------------- |
+| 924  | `### TDD-0067` |
+| 976  | `### TDD-0069` |
+| 1029 | `### TDD-0069` |
+| 1617 | `### TDD-0069` |
+| 1657 | `### TDD-0071` |
+| 2754 | `### TDD-0070` |
+
+In those six places, `CR-20260923-0011` means this record.
