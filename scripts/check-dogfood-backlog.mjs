@@ -88,6 +88,23 @@ function fail(message) {
   process.exit(1);
 }
 
+/**
+ * The commands a re-pin takes, one per line, in the order they run.
+ *
+ * The backlog file is a pinned guard input, so rewriting it moves its digest.
+ * The guard bytes are resealed next, and the verification bodies last, because
+ * resealing the guard bytes rewrites the workflow step those bodies digest.
+ */
+export function repinSteps(profile) {
+  return [
+    `node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`,
+    "node scripts/pin-guard-bytes.mjs",
+    "node scripts/pin-verification-bodies.mjs",
+  ]
+    .map((step) => `  ${step}`)
+    .join("\n");
+}
+
 function readProfile() {
   const at = process.argv.indexOf("--profile");
   const value = at === -1 ? "" : (process.argv[at + 1] ?? "");
@@ -165,7 +182,8 @@ function main() {
   if (unpinned.length > 0 || over.length > 0) {
     console.error(
       "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.\n" +
-        `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+        "Fix the rows the findings name, then re-pin in the same change:\n\n" +
+        repinSteps(profile),
     );
     process.exit(1);
   }
@@ -177,7 +195,7 @@ function main() {
     for (const [file, n] of improved) {
       console.error(`  ${file}: ${String(n)} -> ${String(counts.get(file) ?? 0)}`);
     }
-    console.error(`\n  node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin`);
+    console.error(`\n${repinSteps(profile)}`);
     process.exit(1);
   }
 

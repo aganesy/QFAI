@@ -59,6 +59,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `code: message` under the refusal. GitHub caps the annotations a run shows,
   so the findings that changed the count were often not visible anywhere.
 
+- **The dogfooding backlog guard names every command a re-pin takes** (#2415).
+  `scripts/dogfood-backlog.json` is a pinned guard input, so re-pinning it
+  moves its digest. When a pin is behind the tree or a file is over its pin,
+  the guard now lists `node scripts/pin-guard-bytes.mjs` and then
+  `node scripts/pin-verification-bodies.mjs` after the `--pin` command.
+  Following the old message alone failed the lint lane on the stale digest.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at
