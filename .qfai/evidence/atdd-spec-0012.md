@@ -229,6 +229,15 @@ boundary, the `/qfai-atdd` handover names the predicate and the mutation, and
 line holds the named call at this revision, and nothing surfaced during the run
 that the spec, the change requests or the handover leave open.
 
+### /qfai-implement — run started 2026-09-25T11:33:00.000Z
+
+Preflight: confidence high
+
+No session opened. The run reopens TDD-0578 to TDD-0581 to take the reviews
+their earlier close skipped. The spec, the ledger rows and their tests are
+settled input, and each row's test already passes, which routes it to the
+falsifiability branch without a decision to make.
+
 ## Ledger rows advanced
 
 This run takes up the rows `CR-20260923-0002` owes, as `CR-20260923-0004`
@@ -2666,6 +2675,31 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 | 47 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0577 code review, attempt 1 | #tdd-0577 | review-20260925100000000 <!-- qfai:not-a-citation --> | PASS |
 | 48 | orchestrator | orchestrator | /qfai-implement: TDD-0577 checkpoint verification, off a checkpoint boundary | #tdd-0577 | Checkpoint verification fields | PASS |
 
+### Rows for the /qfai-implement run started 2026-09-25T11:33:00.000Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 49 | orchestrator | orchestrator | /qfai-implement: sweep TDD-0578 to TDD-0581 `exception -> todo`, so each row takes the reviews DR-0298 waived | DR-0298; `.qfai/waivers.yml` WVR-20260925-12 | a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12; test-list.md rows at `todo`, DR-0298 kept; the four ids out of WVR-20260925-12 | PASS |
+| 50 | - | n/a | grilling(-@2026-09-25T11:33:00.000Z/none): none | - | - | PASS |
+| 51 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0578 falsifiability run, the entry-check anchor dropped from the reference | #tdd-0578 | a8bcd2e54c8b30d333b471178d5bdb537aaff895; #tdd-0578 Round 1 falsifiability fields | PASS |
+| 52 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0578 RED phase gate on the falsifiability mutation run | #tdd-0578 Round 1 | reviewed revision a8bcd2e54c8b30d333b471178d5bdb537aaff895 | PASS |
+| 53 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0578 mutation reverted, then the TDD-0579 falsifiability run, the operation renamed | #tdd-0578, #tdd-0579 | fa90184c2641b327f05d7a8df9571ebe66217caf; 793bff8e9279fd07bd5948bd061a2a63baecc7d8; #tdd-0579 Round 1 falsifiability fields | PASS |
+| 54 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0579 RED phase gate on the falsifiability mutation run | #tdd-0579 Round 1 | reviewed revision 793bff8e9279fd07bd5948bd061a2a63baecc7d8 | PASS |
+| 55 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0579 mutation reverted, then the TDD-0580 falsifiability run, "only" dropped from the target-spec bullet | #tdd-0579, #tdd-0580 | 14ce70fe5ba334bc1eda1179d94d190ae66ace73; 4a64f00575939e3068a7a236521ab945861db7b3; #tdd-0580 Round 1 falsifiability fields | PASS |
+| 56 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0580 RED phase gate on the falsifiability mutation run | #tdd-0580 Round 1 | reviewed revision 4a64f00575939e3068a7a236521ab945861db7b3 | PASS |
+| 57 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0580 mutation reverted, then the TDD-0581 falsifiability run, the outcome `blocked` changed to `needs_repair` | #tdd-0580, #tdd-0581 | 786132c9015cce6fef7d4b8af493023c6e529b73; 4334e1979f8f14822dc8651d368f149858c0df91; #tdd-0581 Round 1 falsifiability fields | PASS |
+| 58 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0581 RED phase gate on the falsifiability mutation run | #tdd-0581 Round 1 | reviewed revision 4334e1979f8f14822dc8651d368f149858c0df91 | PASS |
+| 59 | delivery-planner | delivery-planner#1 | /qfai-implement plan phase: confirm the named rows TDD-0578 to TDD-0581, routed after their RED runs rather than before them | spec-0012 ledger; 06_Test-Cases.md TC-0012-0491 to TC-0012-0494; the three test files; the four mutation commits | each row exists, is T2 and needs no group, each selector is a sufficient slice of its TC, the ledger order stands, no parallel dispatch; the late routing invalidates no RED because no scope objection exists | PASS |
+| 60 | test-design-analyst | test-design-analyst#1 | /qfai-implement plan phase: coverage and layer ownership for TDD-0578 to TDD-0581, routed after their RED runs | 06_Test-Cases.md; 03_Acceptance-Criteria.md; 04_Business-Rules.md; 05_Examples.md; the three test files | Integration owns each L3 TC; every Verify clause has an assertion; no TC, AC or BR in range lacks a row; advisories under Gaps / Open risks | PASS |
+| 61 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0581 mutation reverted, then the restored GREEN and the refactor verify of all four rows | #tdd-0578 to #tdd-0581 | f98dc65eb2e44bb278dbcbc14c9a851958f01cc3; Round 1 GREEN and Refactor verify fields of each row | PASS |
+| 62 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0578 build-phase GREEN, refactor verify and the mutation as oracle proof | #tdd-0578 | reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | PASS |
+| 63 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0579 build-phase GREEN, refactor verify and the mutation as oracle proof | #tdd-0579 | reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | PASS |
+| 64 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0580 build-phase GREEN, refactor verify and the mutation as oracle proof | #tdd-0580 | reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | PASS |
+| 65 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0581 build-phase GREEN, refactor verify and the mutation as oracle proof | #tdd-0581 | reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | PASS |
+| 66 | completion-reviewer | completion-reviewer#1 | /qfai-implement: completion review of TDD-0578 to TDD-0581, attempt 1 | #tdd-0578 to #tdd-0581; spec-0012; f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | one response per row, R01 in review-20260925120900001 to review-20260925120900004 <!-- qfai:not-a-citation --> | PASS |
+| 67 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: code quality review of TDD-0578 to TDD-0581, attempt 1 | #tdd-0578 to #tdd-0581; the three tests and the shipped reference; f98dc65eb2e44bb278dbcbc14c9a851958f01cc3 | one response per row, R02 in the same four packs | PASS |
+| 68 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0578 to TDD-0581, off a checkpoint boundary; the four rows `refactor -> done` with `REV:` in the Evidence cell | #tdd-0578 to #tdd-0581 | Checkpoint verification fields; test-list.md rows | PASS |
+
 ## Execution logs
 
 - focused suites:
@@ -2895,6 +2929,21 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 - `TC-0012-0276` の ordering assertion は string index ベースで、実装の大幅な整形変更には比較的弱い。
 - source-inspection 型 ATDD はこの repo の既存パターンに整合するが、runtime behavior を直接実行するテストではないため rationale を残す。
 - Resolved by `CR-20260924-0002`: `TC-0012-0490` named `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line while its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The change request points the line at `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`, which keeps the `RED test hash` of the four `done` rows whose manifest names the other file.
+- The `/qfai-implement` run started 2026-09-25T11:33:00.000Z routed its plan
+  phase after the four RED runs of `TDD-0578` to `TDD-0581` instead of before
+  them. `delivery-planner` confirmed each row's scope with no objection, so no
+  RED had to be retaken.
+- Each of `TDD-0578` to `TDD-0581` rests on one mutation of one clause. The
+  other clauses of their cases were not shown failing: the one-citing-line
+  check of `TC-0012-0491`, the `Operation` header of `TC-0012-0492`, three of
+  the four clauses of `TC-0012-0493`, and the writes-nothing clause of
+  `TC-0012-0494`.
+- `TC-0012-0492` holds the operation set as a literal, so a change to the
+  workflow vocabulary would not fail it. `TC-0012-0494` does not check the
+  `cause` and `owningSpec` that `EX-0012-0195` gives the `debts` entry. Either
+  needs a Change Request to `/qfai-sdd`.
+- `WVR-20260925-12` still names `TDD-0336`, `TDD-0337`, `TDD-0338`, `TDD-0582`
+  and `TDD-0583`, which still owe the reviews it waived.
 
 ## Final status (PASS/FAIL) + who confirmed
 
@@ -2911,49 +2960,342 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 
 ## Ledger rows advanced
 
+### TDD-0578
+
+- TDD-ID: TDD-0578
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts
+- Selector: TC-0012-0491 (TDD-0578): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check
+- TC-ref: TC-0012-0491
+- Reopened: `exception` -> `todo` at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its RED and GREEN were never put to `qa-gatekeeper`, so they are not this row's RED. Its fields are in the history of this file at revision a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12.
+- Branch: falsifiability — the skill already cites the reference on one line and the reference already cites the entry check, so the test passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, the opening line that points at the shared operating baseline's `#workflow-run-entry-check-mandatory` section
+- Mutation: the pointer loses its `#workflow-run-entry-check-mandatory` anchor, committed alone as a8bcd2e54c8b30d333b471178d5bdb537aaff895 and reverted by the commit after it
+- Why it fails: the reference then names the baseline file but not the entry check in it, and `expect(reference).toContain(ENTRY_CHECK)` fails
+
+The test observes the two clauses of the case:
+
+| Clause | Observation |
+| ------ | ----------- |
+| `SKILL.md` cites the reference on one line | exactly one line of the shipped `qfai-prototyping/SKILL.md` contains `references/orchestrated-mode.md` |
+| the reference cites the entry check | the shipped reference contains `.qfai/assistant/constitution/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` |
+
+First run, at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/prototypingEntryCheckSpec0012.test.ts -t "TC-0012-0491 \(TDD-0578\): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check"
+  Test Files 1 passed (1); Tests 1 passed (1)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, the opening line citing `.qfai/assistant/constitution/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingEntryCheckSpec0012.test.ts -t "TC-0012-0491 \(TDD-0578\): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected '# qfai-prototyping in a workflow run\…' to contain '.qfai/assistant/constitution/shared-s…'` at `tests/integration/prototypingEntryCheckSpec0012.test.ts:21:23`
+
+The edit:
+
+```diff
+-Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` first. This file applies only to the `worker` state: the skill holds a QFAI work order that matches an issued one.
++Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-baseline.md` first. This file applies only to the `worker` state: the skill holds a QFAI work order that matches an issued one.
+```
+
+- Round 1: Falsifiability revision: a8bcd2e54c8b30d333b471178d5bdb537aaff895
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 0d8620da13001a4da47874760eaea86ad8555682d6a26218de026dbb697ada43
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts
+```
+
+- Round 1: Revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingEntryCheckSpec0012.test.ts -t "TC-0012-0491 \(TDD-0578\): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Taken after the mutation's revert, on a tree equal to a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12 under `packages/`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingEntryCheckSpec0012.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision a8bcd2e54c8b30d333b471178d5bdb537aaff895; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120900001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 9b7ca92fab3c663602daef68981ad583ef7c97494ac4d50571cc3130ec0a2b30
+- Spec review: PASS
+- Spec reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Spec audited evidence hash: 52a9ed2fd37f7760b36179a648a22840b5742d2d9138a31b5a11eca18eb593a1
+- Spec review pack: .qfai/review/review-20260925120900001 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 9b7ca92fab3c663602daef68981ad583ef7c97494ac4d50571cc3130ec0a2b30
+- Code quality review: PASS
+- Code quality reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Code quality audited evidence hash: 52a9ed2fd37f7760b36179a648a22840b5742d2d9138a31b5a11eca18eb593a1
+- Code quality review pack: .qfai/review/review-20260925120900001 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 9b7ca92fab3c663602daef68981ad583ef7c97494ac4d50571cc3130ec0a2b30
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingEntryCheckSpec0012.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0012 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification seal: 064e549346dfbef5cf722cd14fca4851ec86c59a66861997ae530fc50a5bf9e5
+
 ### TDD-0579
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0579
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
-- Selector: `TC-0012-0492 (TDD-0579): The Operations table lists exactly existing-runtime-contract`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingOperationsSpec0012.test.ts --testNamePattern='TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the Operations table landed with the plan skills' orchestrated-mode references before this test was written
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
+- Test file: packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts
+- Selector: TC-0012-0492 (TDD-0579): The Operations table lists exactly existing-runtime-contract
+- TC-ref: TC-0012-0492
+- Reopened: `exception` -> `todo` at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its RED and GREEN were never put to `qa-gatekeeper`, so they are not this row's RED. Its fields are in the history of this file at revision a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12.
+- Branch: falsifiability — the reference's Operations table already lists exactly `existing-runtime-contract`, so the test passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Operations`, the table row naming the one operation the skill serves
+- Mutation: the operation `existing-runtime-contract` renamed to `existing-runtime`, committed alone as 793bff8e9279fd07bd5948bd061a2a63baecc7d8 and reverted by the commit after it
+- Why it fails: the table then lists an operation the plan vocabulary does not give the skill, and `expect([...ids].sort()).toEqual(["existing-runtime-contract"])` fails
+
+The test takes the first table under `## Operations` and observes the two
+clauses of the case:
+
+| Clause | Observation |
+| ------ | ----------- |
+| the first column is headed `Operation` | the table's header cell is `Operation` |
+| the backticked IDs are exactly the set the test holds | the IDs in the first column equal `["existing-runtime-contract"]` |
+
+First run, at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/prototypingOperationsSpec0012.test.ts -t "TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract"
+  Test Files 1 passed (1); Tests 1 passed (1)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Operations`, the table row for `existing-runtime-contract`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingOperationsSpec0012.test.ts -t "TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [ 'existing-runtime' ] to deeply equal [ 'existing-runtime-contract' ]` at `tests/integration/prototypingOperationsSpec0012.test.ts:18:29`
+
+The edit:
+
+```diff
+-| `existing-runtime-contract` | Prototype against the runtime contract the bound spec already has |
++| `existing-runtime`          | Prototype against the runtime contract the bound spec already has |
+```
+
+- Round 1: Falsifiability revision: 793bff8e9279fd07bd5948bd061a2a63baecc7d8
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 785411323b911162ae972d26e6283581b28482f64517761c9f3630beb0db48d7
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts
+```
+
+- Round 1: Revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingOperationsSpec0012.test.ts -t "TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Taken after the mutation's revert, on a tree equal to a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12 under `packages/`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingOperationsSpec0012.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 793bff8e9279fd07bd5948bd061a2a63baecc7d8; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120900002 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): fab6ab6cc614d312b742613e9cda46cfe2673a3af920d64b448bdbe404310c07
+- Spec review: PASS
+- Spec reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Spec audited evidence hash: 01c26b689cca7015ac4e49028b0c496cd9ab02f1990d0f15e047bf595b9d6895
+- Spec review pack: .qfai/review/review-20260925120900002 <!-- qfai:not-a-citation -->
+- Spec review pack seal: fab6ab6cc614d312b742613e9cda46cfe2673a3af920d64b448bdbe404310c07
+- Code quality review: PASS
+- Code quality reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Code quality audited evidence hash: 01c26b689cca7015ac4e49028b0c496cd9ab02f1990d0f15e047bf595b9d6895
+- Code quality review pack: .qfai/review/review-20260925120900002 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: fab6ab6cc614d312b742613e9cda46cfe2673a3af920d64b448bdbe404310c07
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingOperationsSpec0012.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0012 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification seal: f31623b0ec5fa99651fbe794dc6bd9d81bb86cc909bbdc40b86e4129b0f561ac
 
 ### TDD-0580
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0580
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
-- Selector: `TC-0012-0493 (TDD-0580): A work order confines the stage to its target spec`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+- Test file: packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Selector: TC-0012-0493 (TDD-0580): A work order confines the stage to its target spec
+- TC-ref: TC-0012-0493
+- Reopened: `exception` -> `todo` at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its RED and GREEN were never put to `qa-gatekeeper`, so they are not this row's RED. Its fields are in the history of this file at revision a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12.
+- Branch: falsifiability — the reference's `## Work order scope` already confines the stage to the target spec, so the test passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Work order scope`, the bullet that keeps the skill on the spec the work order's `target` names
+- Mutation: `The skill works only on the spec` to `The skill works on the spec`, committed alone as 4a64f00575939e3068a7a236521ab945861db7b3 and reverted by the commit after it
+- Why it fails: without "only" the bullet no longer confines the skill to the target spec, and ``expect(text).toMatch(/works only on the spec the work order's `target` names/i)`` fails
+
+The test reads `## Work order scope` from the shipped reference and observes
+the four clauses of the case:
+
+| Clause | Observation |
+| ------ | ----------- |
+| works only on the target spec | the section states that the skill works only on the spec the work order's `target` names |
+| settles the one visual decision within what exists | the section states that it settles the one visual decision the plan needs within the existing `DESIGN.md` and contracts |
+| creates no contract | the section states that it creates no contract |
+| a standalone invocation is unchanged | the section states that a standalone invocation still resolves every UI-bearing spec |
+
+First run, at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec"
+  Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Work order scope`, the bullet confining the skill to the spec the work order's `target` names
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: expected '## Work order scope - The skill works…' to match /works only on the spec the work orde…/i` at `tests/integration/prototypingWorkOrderScopeSpec0012.test.ts:26:18`; the skipped case is TDD-0581's, which the selector leaves out
+
+The edit:
+
+```diff
+-- The skill works only on the spec the work order's `target` names. It settles
++- The skill works on the spec the work order's `target` names. It settles
+```
+
+- Round 1: Falsifiability revision: 4a64f00575939e3068a7a236521ab945861db7b3
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: c7facfe59735d40de63b078ca7857d47ef884599522d7f4fcd3f94af1f3b9e62
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+```
+
+- Round 1: Revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken after the mutation's revert, on a tree equal to a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12 under `packages/`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 4a64f00575939e3068a7a236521ab945861db7b3; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120900003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): bbfd830e7ba2485170aca89929949fad84a3d8277adce05da85b1ff020ca840c
+- Spec review: PASS
+- Spec reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Spec audited evidence hash: 2abdec3b4f76733cba3a70346f304f4c87aacf71614aad2bc519bb1c223a1e1f
+- Spec review pack: .qfai/review/review-20260925120900003 <!-- qfai:not-a-citation -->
+- Spec review pack seal: bbfd830e7ba2485170aca89929949fad84a3d8277adce05da85b1ff020ca840c
+- Code quality review: PASS
+- Code quality reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Code quality audited evidence hash: 2abdec3b4f76733cba3a70346f304f4c87aacf71614aad2bc519bb1c223a1e1f
+- Code quality review pack: .qfai/review/review-20260925120900003 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: bbfd830e7ba2485170aca89929949fad84a3d8277adce05da85b1ff020ca840c
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, since other rows of spec-0012 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification seal: 0dbc36eec5727cadecc42a20af1fb382e423de3527645cdba7bb8292cd60863a
 
 ### TDD-0581
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0581
 - Layer: Integration
-- Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
-- Selector: `TC-0012-0494 (TDD-0581): A target that is not UI-bearing is returned blocked`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+- Test file: packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Selector: TC-0012-0494 (TDD-0581): A target that is not UI-bearing is returned blocked
+- TC-ref: TC-0012-0494
+- Reopened: `exception` -> `todo` at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its RED and GREEN were never put to `qa-gatekeeper`, so they are not this row's RED. Its fields are in the history of this file at revision a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12.
+- Branch: falsifiability — the reference's `## Work order scope` already returns a target that is not UI-bearing as `blocked`, so the test passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Work order scope`, the bullet that returns a target that is not UI-bearing with outcome `blocked`
+- Mutation: the outcome `blocked` changed to `needs_repair`, committed alone as 4334e1979f8f14822dc8651d368f149858c0df91 and reverted by the commit after it
+- Why it fails: the section then returns the target for repair rather than as blocked, and ``expect(text).toMatch(/returns outcome `blocked`, listing the cause in `debts` with `resolvingOwner` `operator`/i)`` fails
 
-### TDD-0578
+The test reads `## Work order scope` from the shipped reference and observes
+the two clauses of the case:
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: Integration
-- Test file: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
-- Selector: `TC-0012-0491 (TDD-0578): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0491 \(TDD-0578\)' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the citation line and the reference landed with the plan skills' orchestrated-mode references
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+| Clause | Observation |
+| ------ | ----------- |
+| nothing is written for a target that is not UI-bearing | the section states that the skill then writes no `DESIGN.md`, no UI contract and no surface declaration |
+| the target is returned blocked, owned by the operator | the section states that it returns outcome `blocked`, listing the cause in `debts` with `resolvingOwner` `operator` |
+
+First run, at a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked"
+  Test Files 1 passed (1); Tests 1 passed | 1 skipped (2)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md, `## Work order scope`, the bullet returning outcome `blocked` with the cause in `debts` and `resolvingOwner` `operator`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on ``AssertionError: expected '## Work order scope - The skill works…' to match /returns outcome `blocked`, listing t…/i`` at `tests/integration/prototypingWorkOrderScopeSpec0012.test.ts:40:18`; the skipped case is TDD-0580's, which the selector leaves out
+
+The edit:
+
+```diff
+-  UI contract and no surface declaration. It returns outcome `blocked`, listing
++  UI contract and no surface declaration. It returns outcome `needs_repair`, listing
+```
+
+- Round 1: Falsifiability revision: 4334e1979f8f14822dc8651d368f149858c0df91
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: c7facfe59735d40de63b078ca7857d47ef884599522d7f4fcd3f94af1f3b9e62
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/recordProse.ts
+packages/qfai/tests/helpers/shippedAssistant.ts
+packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+```
+
+- Round 1: Revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts -t "TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken after the mutation's revert, on a tree equal to a86eeb2b259f7d9f9dd85efab5b8e29a2f51ce12 under `packages/`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 4334e1979f8f14822dc8651d368f149858c0df91; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120900004 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 2c85082beded9b74bb413cff8b01d2725a211d2f9b545ed591e38aa2b8c54db0
+- Spec review: PASS
+- Spec reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Spec audited evidence hash: 8f5dcda76b748d55682c4ec2fd09766b49ccc928d52d633aa1775944b824f914
+- Spec review pack: .qfai/review/review-20260925120900004 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 2c85082beded9b74bb413cff8b01d2725a211d2f9b545ed591e38aa2b8c54db0
+- Code quality review: PASS
+- Code quality reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Code quality audited evidence hash: 8f5dcda76b748d55682c4ec2fd09766b49ccc928d52d633aa1775944b824f914
+- Code quality review pack: .qfai/review/review-20260925120900004 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 2c85082beded9b74bb413cff8b01d2725a211d2f9b545ed591e38aa2b8c54db0
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, since other rows of spec-0012 are still open, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: f98dc65eb2e44bb278dbcbc14c9a851958f01cc3
+- Checkpoint verification seal: 0dbc36eec5727cadecc42a20af1fb382e423de3527645cdba7bb8292cd60863a
 
 ### TDD-0337
 
