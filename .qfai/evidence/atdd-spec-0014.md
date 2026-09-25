@@ -410,6 +410,10 @@ packages/qfai/tests/integration/verify/orchestrated/stageResultReceipts.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts -t "TC-0014-0037 \(TDD-0042\): The stage result names this run's verify\.json and its independent review"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageResultReceipts.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+
 ### TDD-0043
 
 - TDD-ID: TDD-0043
@@ -453,6 +457,10 @@ packages/qfai/tests/integration/verify/orchestrated/foreignReport.test.ts
 - Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts -t "TC-0014-0038 \(TDD-0043\): A report from elsewhere is never offered as this run's"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/foreignReport.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 
 ### TDD-0044
 
@@ -498,6 +506,10 @@ packages/qfai/tests/integration/verify/orchestrated/unrunGate.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts -t "TC-0014-0039 \(TDD-0044\): A gate that did not run is reported unrun"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/unrunGate.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+
 ### TDD-0045
 
 - TDD-ID: TDD-0045
@@ -541,6 +553,10 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 
 ### TDD-0046
 
@@ -586,6 +602,10 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+
 ### TDD-0047
 
 - TDD-ID: TDD-0047
@@ -629,6 +649,10 @@ packages/qfai/tests/integration/verify/orchestrated/stageSkillHandover.test.ts
 - Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts -t "TC-0014-0042 \(TDD-0047\): The verify stage follows the stage-skill handover"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/stageSkillHandover.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 
 ### TDD-0048
 
@@ -674,6 +698,10 @@ packages/qfai/tests/integration/verify/orchestrated/operationsTable.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts -t "TC-0014-0043 \(TDD-0048\): The Operations table lists exactly verify-full"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/operationsTable.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
+
 ### TDD-0050
 
 - TDD-ID: TDD-0050
@@ -717,6 +745,10 @@ packages/qfai/tests/integration/verify/orchestrated/missingEnvironment.test.ts
 - Round 1: Revision: 6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts -t "TC-0014-0044 \(TDD-0050\): A missing environment blocks the stage"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/missingEnvironment.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's shipped sentence already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1d8a422c214fe7bf9c06501849029d4d82180194
 
 ## Coverage Depth Matrix
 
