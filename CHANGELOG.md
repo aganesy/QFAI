@@ -223,6 +223,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **The routing eval stops when the host command cannot start** (#2442). The
+  maintainer's eval runner spawned the host command once per seed without
+  checking that it ran. A mistyped command, or a Windows `.cmd` shim spawned
+  without a shell, still produced an eval record in which every case failed.
+  The runner now stops at the first command that does not start, names it,
+  and exits non-zero without writing a record. A command that starts and then
+  fails a case is still recorded as a failed case.
 
 ## [1.12.3] - 2026-09-24
 

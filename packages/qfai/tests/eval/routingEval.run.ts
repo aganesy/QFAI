@@ -29,6 +29,7 @@ import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   UnknownFactKeyError,
   type RunRecord,
@@ -147,7 +148,7 @@ async function runIn(root: string, baseRoot: string, seed: Seed, argv: string[])
     each === "{prompt}" ? seed.userPrompt : each,
   );
   const started = Date.now();
-  spawnSync(command, args, { cwd: root, encoding: "utf8", shell: false });
+  runHost(command, args, root);
   return { wallClockMs: Date.now() - started, ...(await observe(root, seed.id)) };
 }
 
@@ -166,8 +167,11 @@ async function runEval(): Promise<void> {
     .map((seed) => seed.id);
   const baseRoot = await base();
   const runs: Record<string, Awaited<ReturnType<typeof runSeed>>> = {};
-  for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
-  await removeTempTree(baseRoot);
+  try {
+    for (const seed of seeds) runs[seed.id] = await runSeed(baseRoot, seed, argv);
+  } finally {
+    await removeTempTree(baseRoot);
+  }
   const observed = Object.values(runs).flatMap((each) => ("run" in each ? [each.run] : []));
   const cases = scoreCases(seeds, observed).map((score) => ({ ...score, run: runs[score.seedId] }));
   const { version }: { version: string } = JSON.parse(
