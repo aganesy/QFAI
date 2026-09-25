@@ -166,7 +166,7 @@ review waived.
 
 - Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md, condition 4 under `## UI-bearing Packs` — `design system is not finalized here (discussion is planner-first).`, which keeps the design system out of what a UI-bearing pack must settle at discussion
 - Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
-- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on ``AssertionError: expected '1. Both reference registries in `04_S…' to match /design\s+system\s+is\s+not\s+finalized/`` at `tests/integration/discussionSkillTemplateIntegration.test.ts:147:23`
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on ``AssertionError: expected '1. Both reference registries in `04_S…' to match /design\s+system\s+is\s+not\s+finalized/`` at `tests/integration/discussionSkillTemplateIntegration.test.ts:147:23`
 
 The edit, the negation dropped from condition 4 at line 64:
 
@@ -175,9 +175,9 @@ The edit, the negation dropped from condition 4 at line 64:
 +   design system is finalized here (discussion is planner-first).
 ```
 
-- Round 1: Falsifiability revision: working-tree+6060fccdca596fe5fb9bb99d61a8acd38184b22c44cad0e7e0ba01aa68f4943f
+- Round 1: Falsifiability revision: working-tree+9632777761eed227adbe65f43d29600b1de4faeeac8be7f852f6ada5573710b5
 - Round 1: RED failure mode: falsifiability
-- Round 1: RED test hash: 2f58fd8eed2a9ad961c2472bb4ac0d45f102e454bb29f0a94c85df2eb9578518
+- Round 1: RED test hash: 17c8ef63cde49f3f25f4748631a5dcc373f9afb504c7e7e7265db98382d28079
 - Round 1: RED test manifest:
 
 ```text
@@ -185,16 +185,19 @@ packages/qfai/tests/helpers/stdout.ts
 packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
 ```
 
-- Round 1: Revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- Round 1: Re-taken. The round was first observed with the test file at
+  `828fdace78bc09c28b22ec8510653729e75a83da`. A case for another spec has since
+  been added to that file, so a recorded observation over it would describe a
+  tree nobody has. The falsifiability run, the GREEN and the refactor
+  verification were taken again on the merged tree rather than the old values
+  being kept. The mutation still fails this row's case at the same assertion.
+- Round 1: Revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
-- Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
-- Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
-- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the mutated tree working-tree+6060fccdca596fe5fb9bb99d61a8acd38184b22c44cad0e7e0ba01aa68f4943f; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. The manifest was then widened to list tests/helpers/stdout.ts, which the test imports, and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
-
+- Refactor verify result: Test Files 2 passed (2); Tests 25 passed (25). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
+- Refactor verify revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
 
 ### TDD-0009
 
