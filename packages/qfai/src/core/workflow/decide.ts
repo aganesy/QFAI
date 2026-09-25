@@ -2,6 +2,7 @@ import { createHash, createHmac } from "node:crypto";
 import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
+import { defaultConfig } from "../config.js";
 import {
   isRecord,
   parseMeasurement,
@@ -528,6 +529,8 @@ export interface WorkflowFacts {
   // The worktree and branch this operation runs in, and the watched digests now.
   identity?: WorkflowIdentity;
   policyNow?: WorkflowPolicyDigests;
+  // The configured specs directory, relative to the project root with `/` separators.
+  specsDir?: string;
   // Each Change Request record, whether it is approved, and the paths it authorizes.
   changeRequests?: { recordPath: string; approved: boolean; paths: string[] }[];
 }
@@ -1102,15 +1105,13 @@ function diagnosisInputs(
 // Lift when: the command adapter always supplies the bound spec's ledger rows.
 // The records a stage is defined to write for the spec its work order binds, each named for
 // that spec. Every other kind writes only its checked scope or git-ignored output.
-// SIMPLIFIED: names the bound spec's records under the default specs directory.
-// Lift when: the command adapter supplies the configured specs directory.
 // SIMPLIFIED: a prototype work order names no record, as for a target that is not UI-bearing.
 // Lift when: the facts say whether a prototype's target is UI-bearing.
-function recordAreasOf(workOrder: WorkflowWorkOrder): string[] {
+function recordAreasOf(workOrder: WorkflowWorkOrder, facts: WorkflowFacts): string[] {
   const target = workOrder.target;
   if (target?.kind !== "spec") return [];
   const specId = target.specId;
-  const pack = `.qfai/specs/${specId}`;
+  const pack = `${facts.specsDir ?? defaultConfig.paths.specsDir}/${specId}`;
   const ledger = `${pack}/tdd/test-list.md`;
   const implementRecords = [ledger, `.qfai/evidence/implement-${specId}.md`];
   const atddRecords = [
@@ -2503,7 +2504,7 @@ export function decide(
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
-    const recordAreas = recordAreasOf(nextWorkOrder);
+    const recordAreas = recordAreasOf(nextWorkOrder, facts);
     if (recordAreas.length > 0) nextWorkOrder.recordAreas = recordAreas;
     const skipped = skippedBefore(
       plan,

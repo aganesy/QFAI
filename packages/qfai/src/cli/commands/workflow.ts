@@ -21,6 +21,7 @@ import {
   receiptDependenciesOf,
   receiptValidityOf,
   routingFacts,
+  specsDirOf,
   startFacts,
 } from "../../core/workflow/observe.js";
 import {
@@ -430,21 +431,25 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
+// accepted, so the row set can be compared; at issue, the specs directory its records lie in;
+// and at `accept`, where each changed path really is.
 async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { state } = snapshot.run;
+  const issuing = input.operation === "next" && state === "ready";
   const reads =
-    (input.operation === "next" && state === "ready") ||
+    issuing ||
     (input.operation === "accept" && state === "running") ||
     input.operation === "resume";
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
+  const specsDir = issuing ? await specsDirOf(root) : undefined;
   const accepting = input.operation === "accept" && state === "running";
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
   const receiptValidity =
     input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
   return {
     ...(ledger ? { ledger } : {}),
+    ...(specsDir ? { specsDir } : {}),
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
   };

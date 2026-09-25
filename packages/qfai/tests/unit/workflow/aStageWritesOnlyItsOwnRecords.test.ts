@@ -5,9 +5,15 @@
 // QFAI:SPEC-0018:TC-0018-0250
 // QFAI:SPEC-0018:TC-0018-0251
 
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type { WorkflowFacts } from "../../../src/core/workflow/decide.js";
+import { specsDirOf } from "../../../src/core/workflow/observe.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
@@ -36,7 +42,12 @@ function boundedPlan(stageKind: string, skill: string, operation: string) {
 }
 
 // Issues the middle stage's work order, bound to spec-0001.
-function issueMiddle(stageKind: string, skill: string, operation: string) {
+function issueMiddle(
+  stageKind: string,
+  skill: string,
+  operation: string,
+  facts: WorkflowFacts = {},
+) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-records", state: "ready", sequence: 8 },
     plan: boundedPlan(stageKind, skill, operation),
@@ -45,7 +56,7 @@ function issueMiddle(stageKind: string, skill: string, operation: string) {
       { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
     ],
   };
-  const issued = decide(ready, { operation: "next" }, {});
+  const issued = decide(ready, { operation: "next" }, facts);
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
   if (!workOrder || !run) throw new Error("next issues the middle stage's work order");
@@ -53,8 +64,14 @@ function issueMiddle(stageKind: string, skill: string, operation: string) {
 }
 
 // Accepts a result of the middle stage that changed exactly `paths`.
-function acceptChanging(stageKind: string, skill: string, operation: string, paths: string[]) {
-  const { snapshot, workOrder, run } = issueMiddle(stageKind, skill, operation);
+function acceptChanging(
+  stageKind: string,
+  skill: string,
+  operation: string,
+  paths: string[],
+  facts: WorkflowFacts = {},
+) {
+  const { snapshot, workOrder, run } = issueMiddle(stageKind, skill, operation, facts);
   const decision = decide(
     snapshot,
     {
@@ -86,11 +103,27 @@ function refusedWriteScope(path: string) {
   return { ok: false, reasons: [{ reason: "write-scope", subject: path }] };
 }
 
-it("TC-0018-0246 (TDD-0479): own ledger and evidence accepted", () => {
-  expect(acceptChanging(...implement, [LEDGER, IMPLEMENT_EVIDENCE])).toEqual({
-    recordAreas: [LEDGER, IMPLEMENT_EVIDENCE],
-    ok: true,
-    reasons: undefined,
+// The specs directory the observer reads from a project whose config moves it.
+async function configuredSpecsDir(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-records-"));
+  try {
+    await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  specsDir: docs/specs\n");
+    return await specsDirOf(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+it("TC-0018-0246 (TDD-0479): own ledger and evidence accepted", async () => {
+  const movedLedger = "docs/specs/spec-0001/tdd/test-list.md";
+  const specsDir = await configuredSpecsDir();
+
+  expect({
+    default: acceptChanging(...implement, [LEDGER, IMPLEMENT_EVIDENCE]),
+    configured: acceptChanging(...implement, [movedLedger, IMPLEMENT_EVIDENCE], { specsDir }),
+  }).toEqual({
+    default: { recordAreas: [LEDGER, IMPLEMENT_EVIDENCE], ok: true, reasons: undefined },
+    configured: { recordAreas: [movedLedger, IMPLEMENT_EVIDENCE], ok: true, reasons: undefined },
   });
 });
 

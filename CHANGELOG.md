@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A workflow work order names its spec records under the configured specs
+  directory** (#2330). `qfai workflow next` always put a stage's own ledger
+  and spec-pack records under `.qfai/specs`, so a project that sets
+  `paths.specsDir` had its writes to those records refused as `write-scope`.
+  The command now reads the specs directory from `qfai.config.yaml` when it
+  issues a work order, and `recordAreas` names the bound spec's
+  `tdd/test-list.md`, `06_Test-Cases.md` and `09_delta.md` there.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

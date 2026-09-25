@@ -197,6 +197,15 @@ function parsedRecord(text: string): Record<string, unknown> {
   }
 }
 
+// The configured specs directory, relative to the project root with `/` separators.
+export async function specsDirOf(root: string): Promise<string> {
+  const { config } = await loadConfig(root);
+  return path
+    .relative(root, resolvePath(root, config, "specsDir"))
+    .split(path.sep)
+    .join("/");
+}
+
 // The bound spec's ledger rows, read with the ledger parser: each row's ID, status and a digest
 // of its cells. None when the spec has no ledger file.
 export async function ledgerFactsOf(root: string, specId: string) {
