@@ -6,6 +6,8 @@
 // QFAI:SPEC-0018:TC-0018-0146
 // QFAI:SPEC-0018:TC-0018-0147
 // QFAI:SPEC-0018:TC-0018-0148
+// QFAI:SPEC-0018:TC-0018-0149
+// QFAI:SPEC-0018:TC-0018-0150
 
 import { expect, it } from "vitest";
 
@@ -517,3 +519,52 @@ for (const [title, state, operation, named] of noEdge) {
     });
   });
 }
+
+const terminalOperations = ["next", "accept", "decision", "resume", "finish"];
+const terminalStop: Parameters<typeof decide>[1] = {
+  operation: "decision",
+  stop: true,
+  answeredBy: "operator",
+};
+
+for (const [title, state] of [
+  ["TC-0018-0149 (TDD-0201): completed", "completed"],
+  ["TC-0018-0149 (TDD-0202): cancelled", "cancelled"],
+  ["TC-0018-0149 (TDD-0203): failed", "failed"],
+]) {
+  it(title, () => {
+    const snapshot = inState(state);
+    const outcomes = [
+      ...terminalOperations.map((operation) => operate(snapshot, operation)),
+      decide(snapshot, terminalStop, {}),
+    ].map(refusalOrUnmet);
+
+    expect(outcomes).toEqual(
+      Array.from({ length: terminalOperations.length + 1 }, () => ({
+        state,
+        events: [],
+        named: ["run-terminal"],
+      })),
+    );
+  });
+}
+
+it("TC-0018-0150 (TDD-0204): Decide finish on a run in running", () => {
+  const snapshot = { ...runningRun(), completionTarget: "qfai_done" as const };
+  const finished = decide(snapshot, { operation: "finish" }, metFacts());
+  const outstanding = (finished.verdict.unmet ?? []).filter(
+    (entry) => entry.condition === "work-order-outstanding",
+  );
+
+  expect({ ...edge(finished), outstanding }).toEqual({
+    state: "running",
+    events: [],
+    outstanding: [
+      {
+        condition: "work-order-outstanding",
+        subject: snapshot.outstandingWorkOrder.workOrderId,
+        owner: "qfai-sdd",
+      },
+    ],
+  });
+});

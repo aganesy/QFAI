@@ -208,12 +208,24 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0198 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0199 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0200 | TC-0018-0148 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0201 | TC-0018-0149 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0202 | TC-0018-0149 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0203 | TC-0018-0149 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0204 | TC-0018-0150 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0205 | TC-0018-0151 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0206 | TC-0018-0152 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0207 | TC-0018-0153 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0208 | TC-0018-0154 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0209 | TC-0018-0155 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0210 | TC-0018-0156 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0211 | TC-0018-0156 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0215 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0216 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0217 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0218 | TC-0018-0165 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -3697,6 +3709,116 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0148 (TDD-0200): finish`
 - Production files: none
 
+### TDD-0201
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0149 (TDD-0201): completed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0149 \(TDD-0201\): completed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0157 (commit `8d4b1d4c8`), whose terminal-state guard refuses every operation on a `completed` run, a `stop` included, with `run-terminal` and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0149 (TDD-0201): completed`
+- Production files: none
+
+### TDD-0202
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0149 (TDD-0202): cancelled`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0149 \(TDD-0202\): cancelled' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0157 (commit `8d4b1d4c8`), whose terminal-state guard refuses every operation on a `cancelled` run, a `stop` included, with `run-terminal` and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0149 (TDD-0202): cancelled`
+- Production files: none
+
+### TDD-0203
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0149 (TDD-0203): failed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0149 \(TDD-0203\): failed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0157 (commit `8d4b1d4c8`), whose terminal-state guard refuses every operation on a `failed` run, a `stop` included, with `run-terminal` and no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0149 (TDD-0203): failed`
+- Production files: none
+
+### TDD-0204
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts`
+- Selector: `TC-0018-0150 (TDD-0204): Decide finish on a run in running`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts --testNamePattern='TC-0018-0150 \(TDD-0204\): Decide finish on a run in running' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0036 (commit `f5d638aae`), whose `finish` lists `work-order-outstanding` on a `running` run with the issued work order's skill as its owner and leaves the state `running` with no events
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/transitionsFollowTheEdgeTable.test.ts > TC-0018-0150 (TDD-0204): Decide finish on a run in running`
+- Production files: none
+
+### TDD-0205
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts`
+- Selector: `TC-0018-0151 (TDD-0205): Four results in turn with delegation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts --testNamePattern='TC-0018-0151 \(TDD-0205\): Four results in turn with delegation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [ { state: 'blocked', …(3) } ] to deeply equal [ { state: 'running', …(3) }, …(3) ]` at `tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts:65:16`: the first saturated result blocked the run as an `unrun` one instead of returning a retry
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts > TC-0018-0151 (TDD-0205): Four results in turn with delegation`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0206
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts`
+- Selector: `TC-0018-0152 (TDD-0206): A delegation unavailable on a stage after the first delegated one`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts --testNamePattern='TC-0018-0152 \(TDD-0206\): A delegation unavailable on a stage after the first delegated one' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'blocked', …(2) } to deeply equal { state: 'blocked', …(2) }` at `tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts:92:6`: the run blocked with no `halt` naming `delegation-unavailable`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/saturatedAndUnavailableDelegation.test.ts > TC-0018-0152 (TDD-0206): A delegation unavailable on a stage after the first delegated one`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0207
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aTestFailureGoesToItsOwner.test.ts`
+- Selector: `TC-0018-0153 (TDD-0207): An implement result with testObservation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aTestFailureGoesToItsOwner.test.ts --testNamePattern='TC-0018-0153 \(TDD-0207\): An implement result with testObservation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0101 (commit `6bb84aaee`), whose `needs_repair` routing sends the next work order to the plan stage the finding's `resolvingOwner` serves; no path returns `retry` for a result without a saturated delegation
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aTestFailureGoesToItsOwner.test.ts > TC-0018-0153 (TDD-0207): An implement result with testObservation`
+- Production files: none
+
+### TDD-0208
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/staleInputIsRefreshed.test.ts`
+- Selector: `TC-0018-0154 (TDD-0208): A result whose submitted digest of an input differs from the digest in the facts`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/staleInputIsRefreshed.test.ts --testNamePattern='TC-0018-0154 \(TDD-0208\): A result whose submitted digest of an input differs from the digest in the facts' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: undefined, …(3) } to deeply equal { code: 'invalid-input', …(3) }` at `tests/unit/workflow/staleInputIsRefreshed.test.ts:59:6`: the result with a stale digest was accepted
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/staleInputIsRefreshed.test.ts > TC-0018-0154 (TDD-0208): A result whose submitted digest of an input differs from the digest in the facts`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0209
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aBudgetIsNeverAPass.test.ts`
+- Selector: `TC-0018-0155 (TDD-0209): Four replans in one run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aBudgetIsNeverAPass.test.ts --testNamePattern='TC-0018-0155 \(TDD-0209\): Four replans in one run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { states: [ 'routing', …(3) ], …(2) } to deeply equal { states: [ 'routing', …(3) ], …(2) }` at `tests/unit/workflow/aBudgetIsNeverAPass.test.ts:82:6`: the fourth replan moved the run to `routing` again instead of `blocked` with `budget-exhausted`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aBudgetIsNeverAPass.test.ts > TC-0018-0155 (TDD-0209): Four replans in one run`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0210
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aBudgetIsNeverAPass.test.ts`
+- Selector: `TC-0018-0156 (TDD-0210): same-path`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aBudgetIsNeverAPass.test.ts --testNamePattern='TC-0018-0156 \(TDD-0210\): same-path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(2) } to deeply equal { state: 'blocked', …(2) }` at `tests/unit/workflow/aBudgetIsNeverAPass.test.ts:158:38`: the fourth repair for the same finding code and path was accepted for repair
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aBudgetIsNeverAPass.test.ts > TC-0018-0156 (TDD-0210): same-path`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0211
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aBudgetIsNeverAPass.test.ts`
+- Selector: `TC-0018-0156 (TDD-0211): other-path`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aBudgetIsNeverAPass.test.ts --testNamePattern='TC-0018-0156 \(TDD-0211\): other-path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0101 (commit `6bb84aaee`), whose `needs_repair` routing accepts the result and issues the repair to the finding's owner; the cause on another path has no repair count
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aBudgetIsNeverAPass.test.ts > TC-0018-0156 (TDD-0211): other-path`
+- Production files: none
+
 ### TDD-0212
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -3757,6 +3879,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:84:47`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0217): explicit-stage`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0218
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theDirectPlan.test.ts`
+- Selector: `TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned accepted results`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theDirectPlan.test.ts --testNamePattern='TC-0018-0165 \(TDD-0218\): Drive a direct run from start to finish with canned accepted results' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 once the fixture was complete: already satisfied by TDD-0026 (commit `db90cccff`), whose direct drive issues and accepts both stages, and TDD-0035 (commit `f5d638aae`), whose `finish` completes a `ready` run. The two earlier runs failed on the test's own fixture, not on production code: the routing result carried no proposal, and then the canned verify result carried no `qa-gatekeeper` review, which `finish` lists as `review-missing`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theDirectPlan.test.ts > TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned accepted results`
+- Production files: none
 
 ### TDD-0527
 

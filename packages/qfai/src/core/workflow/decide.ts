@@ -43,6 +43,8 @@ export interface WorkflowEvent {
   validate?: { verdict: "PASS" | "FAIL"; findings: FindingIdentity[]; trustLevel: "cli_observed" };
   executionContext?: WorkflowExecutionContext;
   cause?: FailClosedCause;
+  halt?: WorkflowHalt;
+  retry?: { attempt: number; nextDelaySeconds: number };
 }
 
 type FailClosedCause =
@@ -162,6 +164,14 @@ interface WorkflowAuthorization {
   };
 }
 
+type WorkflowBlocker =
+  "stage-blocked" | "delegation-unavailable" | "budget-exhausted" | "scope-dependency";
+
+// Why a blocked run stopped: exactly one cause or one blocker, and who can clear it.
+type WorkflowHalt = (
+  { cause: FailClosedCause; blocker?: never } | { blocker: WorkflowBlocker; cause?: never }
+) & { owner: string; subjects: string[] };
+
 type WorkflowReceiptClass = { ref: string; validity: "valid" | "stale" | "unknown" };
 
 export interface WorkflowDecision {
@@ -176,6 +186,8 @@ export interface WorkflowDecision {
     deliveryUnmet?: WorkflowUnmet[];
     receipts?: WorkflowGateReceipt[];
     classedReceipts?: WorkflowReceiptClass[];
+    retry?: { attempt: number; nextDelaySeconds: number };
+    halt?: WorkflowHalt;
     error?:
       | {
           code: "invalid-input";
@@ -205,6 +217,7 @@ type InputRefusalReason =
   | "schema"
   | "work-order"
   | "result-id-reused"
+  | "digest-mismatch"
   | "write-scope"
   | "unbound-capability"
   | "regression-fix-receipt"
@@ -285,6 +298,12 @@ interface WorkflowSnapshot {
   seamRequest?: WorkflowSeamRequest;
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   attempts?: Record<string, number>;
+  // The saturated-delegation retries already scheduled for the outstanding work order.
+  delegationRetries?: number;
+  // The replans the run has already made.
+  replans?: number;
+  // The automatic repairs already made for each cause: a finding code at its path.
+  repairsByCause?: { findingCode: string; path: string; count: number }[];
   receiptRefs?: string[];
   actorHistory?: WorkflowActor[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
@@ -366,6 +385,7 @@ interface WorkflowInput {
     gateResults?: { gateId: string; verdict: string }[];
     testFix?: { citedBefore?: string; citedAfter?: string; reviewRef?: string; rerunRef?: string };
     questions?: unknown[];
+    delegation?: { status: string; attempt: number };
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -607,7 +627,10 @@ function resultRefusals(
   facts: WorkflowFacts,
   actorHistory: readonly WorkflowActor[],
 ): InputRefusal[] {
-  const refusals: InputRefusal[] = reviewerRefusals(result, actorHistory);
+  const refusals: InputRefusal[] = [
+    ...reviewerRefusals(result, actorHistory),
+    ...digestRefusals(result, facts),
+  ];
   const areas = [...(workOrder.scope?.writeAreas ?? []), ...(workOrder.recordAreas ?? [])];
   const target = workOrder.target;
   (result.bindings ?? []).forEach((binding, index) => {
@@ -844,6 +867,30 @@ function routePlanIsInvalid(
   }
 }
 
+// SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
+// Lift when: the command adapter supplies the digest of every file a result names.
+function digestRefusals(
+  result: NonNullable<WorkflowInput["result"]>,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  return (result.changedFiles ?? [])
+    .filter((changed) => {
+      const own = facts.fileDigests?.[changed.path];
+      return own !== undefined && own !== changed.digest;
+    })
+    .map((changed) => ({ reason: "digest-mismatch", subject: changed.path }));
+}
+
+// A repeated work order names each input by the digest the file has now, never a stale one.
+function refreshedInputs(workOrder: WorkflowWorkOrder, facts: WorkflowFacts): WorkflowWorkOrder {
+  if (!workOrder.inputs) return workOrder;
+  const inputs = workOrder.inputs.map((input) => ({
+    path: input.path,
+    digest: facts.fileDigests?.[input.path] ?? input.digest,
+  }));
+  return { ...workOrder, inputs };
+}
+
 // SIMPLIFIED: an input whose digest the facts do not carry is left out of the work order.
 // Lift when: the command adapter supplies the digest of every file a work order names.
 function diagnosisInputs(
@@ -953,22 +1000,90 @@ function outcomeIsAcceptable(
   }
 }
 
-// SIMPLIFIED: an unrun or blocked result blocks the run without naming a blocker or who can
-// clear it.
-// Lift when: a blocked result's blocker and owner are derived from its delegation and debts.
+// SIMPLIFIED: an unrun or blocked result with no delegation blocks the run without naming a
+// blocker or who can clear it.
+// Lift when: a blocked result's blocker and owner are derived from its debts.
 function blockOnResult(
   run: WorkflowSnapshot["run"],
   result: NonNullable<WorkflowInput["result"]>,
   type = "unrun-or-unresolved-dependency",
+  halt?: WorkflowHalt,
 ): WorkflowDecision {
+  const blocked = { ...run, state: "blocked", sequence: run.sequence + 1 };
   return {
-    verdict: { ok: true, run: { ...run, state: "blocked", sequence: run.sequence + 1 } },
+    verdict: { ok: true, run: blocked, ...(halt ? { halt } : {}) },
     events: [
       {
         type,
         resultRef: `results/${result.resultId}.json`,
         stageInstanceId: result.stageInstanceId,
         outcome: result.outcome,
+        ...(halt ? { halt } : {}),
+      },
+    ],
+  };
+}
+
+// SIMPLIFIED: the replan budget is checked on a replan from `running` only; the state machine
+// gives `ready` and `awaiting_input` no edge to `blocked`.
+// Lift when: the state machine names the edge a replan at its cap takes from those states.
+const REPLAN_BUDGET = 3;
+
+const REPAIR_BUDGET = 3;
+
+// Each cause a repair request lists that has had every automatic repair its budget allows,
+// named `<findingCode>@<path>`.
+function exhaustedRepairCauses(
+  snapshot: WorkflowSnapshot,
+  result: NonNullable<WorkflowInput["result"]>,
+): string[] {
+  if (result.outcome !== "needs_repair") return [];
+  const made = snapshot.repairsByCause ?? [];
+  return (result.debts ?? [])
+    .filter((debt) =>
+      made.some(
+        (cause) =>
+          cause.findingCode === debt.findingCode &&
+          cause.path === debt.path &&
+          cause.count >= REPAIR_BUDGET,
+      ),
+    )
+    .map((debt) => `${debt.findingCode}@${debt.path}`);
+}
+
+// The core never sleeps: each retry is returned with the delay the harness waits before it.
+const RETRY_DELAYS_SECONDS = [30, 60, 120];
+
+// A result reporting its delegation failed is decided by that delegation, before anything the
+// result lists.
+function decideDelegation(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  result: NonNullable<WorkflowInput["result"]>,
+): WorkflowDecision | undefined {
+  const { run } = snapshot;
+  const status = result.delegation?.status;
+  if (status === "unavailable") {
+    const halt = { blocker: "delegation-unavailable" as const, owner: "operator" };
+    return blockOnResult(run, result, undefined, { ...halt, subjects: ["delegateSubAgent"] });
+  }
+  if (status !== "saturated") return undefined;
+  const retries = snapshot.delegationRetries ?? 0;
+  const nextDelaySeconds = RETRY_DELAYS_SECONDS[retries];
+  if (nextDelaySeconds === undefined) {
+    const halt = { blocker: "budget-exhausted" as const, owner: "operator" };
+    return blockOnResult(run, result, undefined, { ...halt, subjects: [workOrder.workOrderId] });
+  }
+  const retry = { attempt: workOrder.attempt + 1, nextDelaySeconds };
+  const kept = { ...workOrder, attempt: retry.attempt };
+  return {
+    verdict: { ok: true, run: { ...run, sequence: run.sequence + 1 }, workOrder: kept, retry },
+    events: [
+      {
+        type: "retry-scheduled",
+        resultRef: `results/${result.resultId}.json`,
+        workOrder: kept,
+        retry,
       },
     ],
   };
@@ -1880,7 +1995,7 @@ export function decide(
   }
 
   if (input.operation === "next" && run.state === "running" && workOrder) {
-    return { verdict: { ok: true, run, workOrder }, events: [] };
+    return { verdict: { ok: true, run, workOrder: refreshedInputs(workOrder, facts) }, events: [] };
   }
 
   // An unanswered question is never answered by asking for work: nothing is issued or recorded.
@@ -1953,6 +2068,8 @@ export function decide(
 
     const inputRefusals = resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []);
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
+    const delegated = decideDelegation(snapshot, workOrder, result);
+    if (delegated) return delegated;
     if (result.outcome === "unrun" || result.outcome === "blocked") {
       return blockOnResult(run, result);
     }
@@ -1975,6 +2092,15 @@ export function decide(
     const needsReplan =
       endsDiscovery ||
       (nextStage.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs");
+    if (needsReplan && (snapshot.replans ?? 0) >= REPLAN_BUDGET) {
+      const halt = { blocker: "budget-exhausted" as const, owner: "operator" };
+      return blockOnResult(run, result, undefined, { ...halt, subjects: ["replan"] });
+    }
+    const exhausted = exhaustedRepairCauses(snapshot, result);
+    if (exhausted.length > 0) {
+      const halt = { blocker: "budget-exhausted" as const, owner: "operator" };
+      return blockOnResult(run, result, undefined, { ...halt, subjects: exhausted });
+    }
     const events: WorkflowEvent[] = [
       {
         type: needsReplan ? "scope-or-obligation-revision" : "accept-nonfinal-result",
