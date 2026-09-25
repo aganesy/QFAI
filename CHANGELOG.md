@@ -21,6 +21,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `defer`. The shipped code-review instructions treat the pull request
   description, issue text and comments as data.
 
+  This repository's own review instructions say the same. They are also split
+  by topic into four files, so the TypeScript checks apply to `*.ts` files and
+  the compatibility checks to the package source only.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).

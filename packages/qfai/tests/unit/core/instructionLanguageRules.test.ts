@@ -50,19 +50,21 @@ describe("generated async guidance preserves propagation and the whole floor", (
     expect(block).not.toContain("without `.catch` or `void` annotation");
   });
 
+  // This repository keeps its TypeScript review rules in a file of their own, scoped to `*.ts`,
+  // and the block runs from its label to the end of that file.
   it("agrees byte-for-byte with the repository's TypeScript block", async () => {
     const block = languageRulesFor(CODE_REVIEW, "typescript");
     if (block === null) throw new Error("TypeScript review rules must exist.");
     const current = await readFile(
-      path.join(REPO_ROOT, ".github/instructions", CODE_REVIEW),
+      path.join(REPO_ROOT, ".github/instructions", "code-review-typescript.instructions.md"),
       "utf-8",
     );
     const normalized = current.replace(/\r\n/g, "\n");
+    expect(normalized).toMatch(/^applyTo: "\*\*\/\*\.ts"$/m);
     expect(normalized.match(/^TypeScript specific checks:$/gm)).toHaveLength(1);
     const start = normalized.indexOf("TypeScript specific checks:\n");
-    const end = normalized.indexOf("\nLibrary/CLI compatibility checks:", start);
-    expect(end).toBeGreaterThan(start);
-    expect(normalized.slice(start, end).trimEnd()).toBe(block.trimEnd());
+    expect(start).toBeGreaterThan(-1);
+    expect(normalized.slice(start).trimEnd()).toBe(block.trimEnd());
   });
 });
 

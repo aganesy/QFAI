@@ -1206,8 +1206,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       "packages/qfai/assets/init/root/AGENTS.md",
       "packages/qfai/assets/init/root/CLAUDE.md",
       "packages/qfai/src/cli/commands/init.ts",
-      // The reviewer that reads a pull request's description.
+      // The reviewer that reads a pull request's description, shipped and in this repository.
       "packages/qfai/assets/init/.github/instructions/code-review.instructions.md",
+      ".github/instructions/code-review.instructions.md",
     ])("%s cites the rule master", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
       expect(text).toContain("untrusted-content.md");
