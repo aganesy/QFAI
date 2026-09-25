@@ -51,7 +51,7 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 - Output path is fixed: `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.
 - All 15 mandatory fixed files remain unchanged.
-- UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
+- Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.
 - Completion requires `Disposition: open` count to be zero in `11_OQ-Register.md`.
 - If UI requirements exist, behavior obligations are primary and HTML+CSS mock is optional fallback only.
 - When an HTML+CSS mock includes links, author them in anchor-form (`<a href="#name">`); external `http(s)://` links are also allowed. Do NOT use same-origin absolute paths (`/orders/`) — a static mock cannot serve them and the validator rejects them (QFAI-MOCK-010).

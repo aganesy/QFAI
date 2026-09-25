@@ -257,6 +257,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a `## AC-0001` section still counts as part of that criterion, not as
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack. The screen-contract
+  template names the brand direction the user chose in `01_Context.md`.
 
 ## [1.12.3] - 2026-09-24
 

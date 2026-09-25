@@ -608,6 +608,47 @@ jobs:
         # there is no invocation on that side for a worker cap to bound.
         run: QFAI_TEST_MAX_WORKERS="$(nproc)" pnpm -C packages/qfai test:${{ matrix.slice }}
 
+  # ── 4a. Windows parity ───────────────────────────────────────────
+  # Init and upgrade must behave on Windows as on Linux: CRLF checkouts, paths
+  # with spaces and the provenance lock. This job runs the package's
+  # `test:windows-parity` list on a Windows runner, the list a developer runs
+  # locally. It builds the package itself, because the integration suites spawn
+  # the built CLI and `dist/` has to be made here.
+  #
+  # SHIPPED-CI: not-applicable
+  # Because: the shipped test lanes run the adopter's own scripts on the runner the adopter names, so the shipped set has no QFAI suite or fixed platform to add.
+  windows-parity:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change.
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    permissions:
+      contents: read
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The suites read their temp root through `os.tmpdir()`, so pointing TEMP
+      # and TMP at a directory whose name has a space reaches every case without
+      # editing one. A workflow command file cannot carry the value to a later
+      # step inside the verdict's closure, so the test step sets it itself.
+      - name: Create a temp root whose name has a space
+        shell: pwsh
+        env:
+          QFAI_TEMP_ROOT: ${{ runner.temp }}\qfai tmp
+        run: New-Item -ItemType Directory -Force -Path $env:QFAI_TEMP_ROOT | Out-Null
+      - uses: ./.github/actions/setup
+      - name: Build qfai on the Windows runner
+        run: pnpm -C packages/qfai build
+      - name: Run the Windows parity suites
+        env:
+          TEMP: ${{ runner.temp }}\qfai tmp
+          TMP: ${{ runner.temp }}\qfai tmp
+        run: pnpm -C packages/qfai test:windows-parity
+
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`
   # (the DESIGN.md compliance scanner) retains >= 90% statement coverage.
@@ -847,6 +888,7 @@ jobs:
         check-types-future,
         node-floor,
         test,
+        windows-parity,
         scanner-coverage,
         build,
       ]

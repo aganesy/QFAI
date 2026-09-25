@@ -196,7 +196,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
+  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`)
+  may include `prototyping.yaml` as an optional recommendation artifact;
+  cli-only packs omit it, and non-ui discussion packs typically omit it.
 - **qfai-sdd**: Triage requirements against the existing story tree. Write
   policy, business flows, stories with AC and EX, then enforcing contracts with
   BR. Record triage, change requests and unresolved questions in the two root

@@ -563,6 +563,9 @@ export async function runInit(
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  const differingSkills = options.force
+    ? 0
+    : await countDifferingSkills(qfaiAssets, destRoot, skillsResult.skipped);
   // The copy above is create-only and this release ships no README to copy, so
   // the one an earlier release left behind is removed here rather than
   // overwritten.
@@ -740,7 +743,7 @@ export async function runInit(
     );
   }
 
-  for (const note of upgradeResult.preservedNotes) {
+  for (const note of [...upgradeResult.preservedNotes, ...differingSkillsNote(differingSkills)]) {
     info(note);
   }
 
@@ -762,6 +765,41 @@ export async function runInit(
 // ---------------------------------------------------------------------------
 // Governed assistant assets: provenance record + upgrade path
 // ---------------------------------------------------------------------------
+
+/**
+ * How many shipped skills a plain run left alone because the project's copy
+ * differs from the template. Line endings are ignored, so a CRLF checkout of an
+ * unedited skill is not counted.
+ */
+async function countDifferingSkills(
+  qfaiAssets: string,
+  destRoot: string,
+  skipped: readonly string[],
+): Promise<number> {
+  const destQfai = path.join(destRoot, ".qfai");
+  const skillsDir = path.join(destRoot, ...ASSISTANT_DIR.split("/"), "skill");
+  const differing = new Set<string>();
+  for (const dest of skipped) {
+    const relative = path.relative(skillsDir, dest);
+    const skill = relative.split(path.sep)[0] ?? "";
+    if (relative.startsWith("..") || skill === "" || differing.has(skill)) continue;
+    const source = path.join(qfaiAssets, path.relative(destQfai, dest));
+    const shipped = await hashAssistantAssetFile(source, { allowSymlink: true });
+    if ((await hashAssistantAssetFile(dest)) !== shipped) differing.add(skill);
+  }
+  return differing.size;
+}
+
+function differingSkillsNote(count: number): string[] {
+  if (count === 0) return [];
+  return count === 1
+    ? [
+        "  1 shipped skill differs from this release and was left as it is. `qfai init --force` updates it: it replaces it with the shipped version, overwriting local edits.",
+      ]
+    : [
+        `  ${String(count)} shipped skills differ from this release and were left as they are. \`qfai init --force\` updates them: it replaces them with the shipped versions, overwriting local edits.`,
+      ];
+}
 
 function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
   return paths.filter((candidate) => !excluded.has(candidate));
