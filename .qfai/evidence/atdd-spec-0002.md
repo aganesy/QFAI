@@ -161,6 +161,37 @@ did not run.
 The row was reopened from `exception`, where `DR-0298` had closed it with its
 review waived.
 
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md, condition 4 under `## UI-bearing Packs` — `design system is not finalized here (discussion is planner-first).`, which keeps the design system out of what a UI-bearing pack must settle at discussion
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on ``AssertionError: expected '1. Both reference registries in `04_S…' to match /design\s+system\s+is\s+not\s+finalized/`` at `tests/integration/discussionSkillTemplateIntegration.test.ts:147:23`
+
+The edit, the negation dropped from condition 4 at line 64:
+
+```diff
+-   design system is not finalized here (discussion is planner-first).
++   design system is finalized here (discussion is planner-first).
+```
+
+- Round 1: Falsifiability revision: working-tree+6060fccdca596fe5fb9bb99d61a8acd38184b22c44cad0e7e0ba01aa68f4943f
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 2f58fd8eed2a9ad961c2472bb4ac0d45f102e454bb29f0a94c85df2eb9578518
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
+```
+
+- Round 1: Revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
+- Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
+
 ### TDD-0009
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -191,6 +222,37 @@ review waived.
 
 The row was reopened from `exception`, where `DR-0298` had closed it with its
 review waived.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md, condition 5 under `## UI-bearing Packs` — ``A direction taken without the user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.``, which requires a brand direction the user did not choose to be marked as an assumption in the matrix `qfai init` installs
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0002PlannerFirstE2E.test.ts -t "US-0002-0005"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected 'UI-bearing Packs\n\nCompletion is blo…' to match /taken\s+without\s+the\s+user\s+carrie…/` at `tests/e2e/spec0002PlannerFirstE2E.test.ts:40:25`
+
+The edit, the marker dropped from condition 5 at line 68:
+
+```diff
+-   user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
++   user carries no marker and an open entry in `11_OQ-Register.md`.
+```
+
+- Round 1: Falsifiability revision: working-tree+64c75cd77ebc0efaa7be2cf5ad80c6926bd5ca9d5ed76c0a4196059053ae08c5
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 32024a896f6ae95837816ac90b8ff4155c70ea0b1e681ff84ae8501204866041
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts
+packages/qfai/tests/helpers/stdout.ts
+```
+
+- Round 1: Revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0002PlannerFirstE2E.test.ts -t "US-0002-0005"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
+- Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
 
 ## Coverage Depth Matrix
 
