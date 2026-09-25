@@ -44,13 +44,11 @@ function issued(accepted: number, extra: Partial<Snapshot> = {}): Snapshot {
     run: { id: "run-drift", state: "ready", sequence: 10 },
     plan,
     specBinding: { specId: "spec-0001" },
-    acceptedStages: stages
-      .slice(0, accepted)
-      .map(({ stageInstanceId, stageKind }) => ({
-        stageInstanceId,
-        stageKind,
-        outcome: "accepted",
-      })),
+    acceptedStages: stages.slice(0, accepted).map(({ stageInstanceId, stageKind }) => ({
+      stageInstanceId,
+      stageKind,
+      outcome: "accepted",
+    })),
     ...extra,
   };
   const decision = decide(ready, { operation: "next" }, facts);

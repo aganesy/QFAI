@@ -12,7 +12,7 @@ function acceptRequestKind(requestKind: string) {
         workOrderId: "routing-1",
         stageInstanceId: "routing-stage-1",
         attempt: 1,
-        stageKind: "routing",
+        stageKind: "route",
       },
     },
     {

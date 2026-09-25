@@ -20,7 +20,7 @@ it("TC-0018-0012 (TDD-0015): unknown-path", () => {
       workOrderId: "routing-1",
       stageInstanceId: "routing-stage-1",
       attempt: 1,
-      stageKind: "routing",
+      stageKind: "route",
     },
   };
   const input = {
@@ -146,7 +146,7 @@ function acceptRouting(proposal: Proposal, facts: Parameters<typeof decide>[2] =
         workOrderId: "routing-1",
         stageInstanceId: "routing-stage-1",
         attempt: 1,
-        stageKind: "routing",
+        stageKind: "route",
       },
     },
     {

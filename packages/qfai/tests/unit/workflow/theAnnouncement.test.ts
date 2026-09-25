@@ -42,7 +42,7 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
       workOrderId: "routing-1",
       stageInstanceId: "routing-stage-1",
       attempt: 1,
-      stageKind: "routing",
+      stageKind: "route",
     },
   };
   const input = {

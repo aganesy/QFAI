@@ -268,19 +268,31 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0258 | TC-0018-0224 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0259 | TC-0018-0225 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0261 | TC-0018-0011 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0262 | TC-0018-0017 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0263 | TC-0018-0019 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0264 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0265 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0266 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0267 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0268 | TC-0018-0024 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0269 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0270 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0271 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0272 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0273 | TC-0018-0026 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0310 | TC-0018-0065 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0365 | TC-0018-0164 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0366 | TC-0018-0166 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0371 | TC-0018-0168 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0372 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0373 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0374 | TC-0018-0170 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0376 | TC-0018-0173 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0377 | TC-0018-0174 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0378 | TC-0018-0175 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0389 | TC-0018-0183 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0390 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0391 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
@@ -4461,6 +4473,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0011 (TDD-0261): Read the shipped qfai-run skill and its references`
 - Production files: none
 
+### TDD-0262
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/startCreatesTheRunAndNothingElse.test.ts`
+- Selector: `TC-0018-0017 (TDD-0262): Built CLI start on a temp repo in mode active`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/startCreatesTheRunAndNothingElse.test.ts --testNamePattern='TC-0018-0017 \(TDD-0262\): Built CLI start on a temp repo in mode active' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, state: undefined, …(3) } to deeply equal { exit: +0, state: 'routing', …(3) }` at `tests/integration/workflow/startCreatesTheRunAndNothingElse.test.ts:40`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/startCreatesTheRunAndNothingElse.test.ts > TC-0018-0017 (TDD-0262): Built CLI start on a temp repo in mode active`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
 ### TDD-0263
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4520,6 +4543,71 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` routing entry, which routes only the orchestrator and names no review profile; the role, routing and autopilot validators report nothing for it
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0024 (TDD-0268): Read the qfai-run routing block and its shipped manifest entry`
 - Production files: none
+
+### TDD-0269
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/sevenOperations.test.ts`
+- Selector: `TC-0018-0025 (TDD-0269): op-route`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/sevenOperations.test.ts --testNamePattern='TC-0018-0025 \(TDD-0269\): op-route' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, code: undefined } to deeply equal { exit: 2, code: 'invalid-input' }` at `tests/integration/workflow/sevenOperations.test.ts:22`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0025 (TDD-0269): op-route`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0270
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/sevenOperations.test.ts`
+- Selector: `TC-0018-0025 (TDD-0270): op-exec`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/sevenOperations.test.ts --testNamePattern='TC-0018-0025 \(TDD-0270\): op-exec' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, code: undefined } to deeply equal { exit: 2, code: 'invalid-input' }` at `tests/integration/workflow/sevenOperations.test.ts:22`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0025 (TDD-0270): op-exec`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0271
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/sevenOperations.test.ts`
+- Selector: `TC-0018-0025 (TDD-0271): op-unknown`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/sevenOperations.test.ts --testNamePattern='TC-0018-0025 \(TDD-0271\): op-unknown' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, code: undefined } to deeply equal { exit: 2, code: 'invalid-input' }` at `tests/integration/workflow/sevenOperations.test.ts:22`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0025 (TDD-0271): op-unknown`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0272
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/sevenOperations.test.ts`
+- Selector: `TC-0018-0025 (TDD-0272): flag-unknown`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/sevenOperations.test.ts --testNamePattern='TC-0018-0025 \(TDD-0272\): flag-unknown' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, code: undefined } to deeply equal { exit: 2, code: 'invalid-input' }` at `tests/integration/workflow/sevenOperations.test.ts:22`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0025 (TDD-0272): flag-unknown`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0273
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/sevenOperations.test.ts`
+- Selector: `TC-0018-0026 (TDD-0273): Built CLI npx qfai workflow --help`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/sevenOperations.test.ts --testNamePattern='TC-0018-0026 \(TDD-0273\): Built CLI npx qfai workflow --help' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, operations: [ …(145) ] } to deeply equal { exit: +0, operations: [ …(7) ] }` at `tests/integration/workflow/sevenOperations.test.ts:34`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0026 (TDD-0273): Built CLI npx qfai workflow --help`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0310
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/theMissingTestBranch.test.ts`
+- Selector: `TC-0018-0065 (TDD-0310): Load the shipped bugfix`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/theMissingTestBranch.test.ts --testNamePattern='TC-0018-0065 \(TDD-0310\): Load the shipped bugfix' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0263, whose plan loader reads the shipped `bugfix.yml` with the stages, predicates and final `verify-full` stage this case names
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/theMissingTestBranch.test.ts > TC-0018-0065 (TDD-0310): Load the shipped bugfix`
+- Production files: none; `packages/qfai/src/core/workflow/plans.ts` already loads the plan
 
 ### TDD-0315
 
@@ -4581,6 +4669,28 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0168 (TDD-0371): Read the shipped qfai-maintain guidance`
 - Production files: none
 
+### TDD-0372
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/offAndShadowCreateNoRun.test.ts`
+- Selector: `TC-0018-0169 (TDD-0372): off`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/offAndShadowCreateNoRun.test.ts --testNamePattern='TC-0018-0169 \(TDD-0372\): off' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, ok: undefined, …(4) } to deeply equal { exit: +0, ok: true, …(4) }` at `tests/integration/workflow/offAndShadowCreateNoRun.test.ts:32`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/offAndShadowCreateNoRun.test.ts > TC-0018-0169 (TDD-0372): off`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0373
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/offAndShadowCreateNoRun.test.ts`
+- Selector: `TC-0018-0169 (TDD-0373): shadow`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/offAndShadowCreateNoRun.test.ts --testNamePattern='TC-0018-0169 \(TDD-0373\): shadow' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, ok: undefined, …(4) } to deeply equal { exit: +0, ok: true, …(4) }` at `tests/integration/workflow/offAndShadowCreateNoRun.test.ts:32`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/offAndShadowCreateNoRun.test.ts > TC-0018-0169 (TDD-0373): shadow`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
 ### TDD-0374
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4590,6 +4700,38 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` mode table. The route is proposed as its stages in plain words, since the operator never sees a route name
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0170 (TDD-0374): Read the mode guidance of the shipped qfai-run`
 - Production files: none
+
+### TDD-0376
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/mode.test.ts`
+- Selector: `TC-0018-0173 (TDD-0376): Built CLI start with no workflow key in qfai`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/mode.test.ts --testNamePattern='TC-0018-0173 \(TDD-0376\): Built CLI start with no workflow key in qfai' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { created: false, mode: undefined } to deeply equal { created: true, mode: 'active' }` at `tests/integration/workflow/mode.test.ts:19`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/mode.test.ts > TC-0018-0173 (TDD-0376): Built CLI start with no workflow key in qfai`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0377
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/mode.test.ts`
+- Selector: `TC-0018-0174 (TDD-0377): npx qfai validate with workflow`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/mode.test.ts --testNamePattern='TC-0018-0174 \(TDD-0377\): npx qfai validate with workflow' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'error' ]` at `tests/integration/workflow/mode.test.ts:33`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/mode.test.ts > TC-0018-0174 (TDD-0377): npx qfai validate with workflow`
+- Production files: `packages/qfai/src/core/config.ts`
+
+### TDD-0378
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/anInvalidModeIsRefused.test.ts`
+- Selector: `TC-0018-0175 (TDD-0378): Built CLI start with workflow`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/anInvalidModeIsRefused.test.ts --testNamePattern='TC-0018-0175 \(TDD-0378\): Built CLI start with workflow' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, code: undefined, …(2) } to deeply equal { exit: 2, code: 'fail-closed', …(2) }` at `tests/integration/workflow/anInvalidModeIsRefused.test.ts:29`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/anInvalidModeIsRefused.test.ts > TC-0018-0175 (TDD-0378): Built CLI start with workflow`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
+- RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
 
 ### TDD-0389
 

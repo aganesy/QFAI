@@ -107,7 +107,7 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
     workOrderId: "routing-1",
     stageInstanceId: "routing-stage-1",
     attempt: 1,
-    stageKind: "routing",
+    stageKind: "route",
   };
   const routed = accept(
     { run: started, outstandingWorkOrder: routingWorkOrder },

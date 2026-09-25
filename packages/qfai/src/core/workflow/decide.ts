@@ -143,7 +143,7 @@ interface WorkflowBinding {
   specId: string;
 }
 
-interface WorkflowWorkOrder {
+export interface WorkflowWorkOrder {
   workOrderId: string;
   stageInstanceId: string;
   attempt: number;
@@ -292,8 +292,10 @@ interface WorkflowPlan {
   riskSignals?: string[];
 }
 
-interface WorkflowSnapshot {
+export interface WorkflowSnapshot {
   run: { id: string; state: string; sequence: number };
+  // What `start` fixed for the run. The core reads none of it; the snapshot file holds it.
+  executionContext?: WorkflowExecutionContext;
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
@@ -382,7 +384,7 @@ interface WorkflowSeamRequest {
   targetTestId: string;
 }
 
-interface WorkflowInput {
+export interface WorkflowInput {
   operation: string;
   request?: { text: string };
   harness?: WorkflowHarness;
@@ -454,7 +456,7 @@ interface WorkflowDebt {
   blockingExtent: string;
 }
 
-interface WorkflowFacts {
+export interface WorkflowFacts {
   now?: string;
   pathExistence?: Record<string, boolean>;
   acceptanceObligationsUnmet?: boolean;
@@ -626,6 +628,44 @@ function scopeOf(writeAreas: string[], effects: string[]): NonNullable<WorkflowW
   const fields = { writeAreas, protectedTargets: [], allowedEffects: effects, nonGoals: [] };
   const digest = createHash("sha256").update(JSON.stringify(fields)).digest("hex");
   return { digest, writeAreas, allowedEffects: effects };
+}
+
+// A work order as `next` returns it and the run's work-orders directory holds it: every field
+// the contract names, the run it belongs to and the sequence its result must carry.
+// SIMPLIFIED: requires no gate of its own, and carries no protected targets or non-goals; the
+// gates are judged at `finish`.
+// Lift when: a stage kind is defined to require a gate, or the checked plan keeps the
+// proposal's protected targets and a source of non-goals.
+export function workOrderDocument(
+  runId: string,
+  expectedSequence: number,
+  workOrder: WorkflowWorkOrder,
+) {
+  const scope = workOrder.scope ?? scopeOf([], []);
+  return {
+    runId,
+    ...workOrder,
+    scope: {
+      digest: scope.digest ?? "",
+      writeAreas: scope.writeAreas,
+      protectedTargets: [],
+      allowedEffects: scope.allowedEffects ?? [],
+      nonGoals: [],
+    },
+    recordAreas: workOrder.recordAreas ?? [],
+    inputs: workOrder.inputs ?? [],
+    requiredGates: [],
+    requiredReviewerRoles: workOrder.requiredReviewerRoles ?? [],
+    actorHistory: workOrder.actorHistory ?? [],
+    authorizationRefs: workOrder.authorizationRefs ?? [],
+    priorStageReceiptRefs: workOrder.priorStageReceiptRefs ?? [],
+    expectedSequence,
+  };
+}
+
+// The digest of a checked write scope, as an authorization records it: no effect is allowed yet.
+export function scopeDigestOf(writeAreas: string[]): string {
+  return scopeOf(writeAreas, []).digest ?? "";
 }
 
 // An external effect is allowed only where a project policy names it. A request that asks
@@ -2133,6 +2173,28 @@ function decideStop(run: WorkflowSnapshot["run"], input: WorkflowInput): Workflo
   };
 }
 
+// The routing work order. Its kind, skill and operation are built in, and no plan names it; it
+// changes no state, and `next` returns it again until its result is accepted.
+function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
+  const { run, outstandingWorkOrder } = snapshot;
+  if (outstandingWorkOrder?.stageKind === "route") {
+    return { verdict: { ok: true, run, workOrder: outstandingWorkOrder }, events: [] };
+  }
+  const attempt = (snapshot.attempts?.route ?? 0) + 1;
+  const workOrder: WorkflowWorkOrder = {
+    workOrderId: `work-order-route-${attempt}`,
+    stageInstanceId: "route",
+    attempt,
+    stageKind: "route",
+    executor: { skill: "qfai-run" },
+    operation: "route",
+  };
+  return {
+    verdict: { ok: true, run: { ...run, sequence: run.sequence + 1 }, workOrder },
+    events: [{ type: "work-order-issued", workOrder }],
+  };
+}
+
 // Before `start` there is no run, so `start` alone takes no snapshot.
 export function decide(
   snapshot: null,
@@ -2178,6 +2240,7 @@ export function decide(
 
   if (input.operation === "finish") return decideFinish(snapshot, facts);
   if (input.operation === "resume") return decideResume(snapshot, facts);
+  if (input.operation === "next" && run.state === "routing") return issueRouting(snapshot);
 
   if (input.operation === "decision") {
     return decideAnswer(snapshot, input, facts);
@@ -2459,7 +2522,7 @@ export function decide(
   if (
     input.operation === "accept" &&
     run.state === "routing" &&
-    workOrder?.stageKind === "routing" &&
+    workOrder?.stageKind === "route" &&
     result?.outcome === "blocked"
   ) {
     return blockOnResult(run, result, "missing-capability");
@@ -2470,7 +2533,7 @@ export function decide(
   if (
     input.operation !== "accept" ||
     run.state !== "routing" ||
-    workOrder?.stageKind !== "routing" ||
+    workOrder?.stageKind !== "route" ||
     result?.workOrderId !== workOrder.workOrderId ||
     result.stageInstanceId !== workOrder.stageInstanceId ||
     result.attempt !== workOrder.attempt ||

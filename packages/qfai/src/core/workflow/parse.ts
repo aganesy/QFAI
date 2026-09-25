@@ -207,3 +207,63 @@ export function parseMeasurement(value: unknown): ParsedMeasurement {
   if (isMeasurement(value)) return { ok: true, measurement: value };
   return { ok: false, subjects: isRecord(value) ? measurementSubjects(value) : ["measurement"] };
 }
+
+type SchemaReason = { reason: "schema"; subject: string };
+
+// The fields named here, each of the type given, and nothing the input cannot carry.
+function fieldRefusals(
+  value: Record<string, unknown>,
+  fields: Record<string, "string" | "number" | "boolean" | "object">,
+  required: readonly string[],
+  closed: boolean,
+): SchemaReason[] {
+  const wrong = Object.entries(fields).filter(([name, type]) => {
+    const field = value[name];
+    if (field === undefined) return required.includes(name);
+    return type === "object" ? !isRecord(field) : typeof field !== type;
+  });
+  const unknown = closed ? Object.keys(value).filter((name) => !(name in fields)) : [];
+  return [...wrong.map(([name]) => name), ...unknown].map((subject) => ({
+    reason: "schema",
+    subject,
+  }));
+}
+
+const RESULT_FIELDS = {
+  resultId: "string",
+  workOrderId: "string",
+  stageInstanceId: "string",
+  attempt: "number",
+  expectedSequence: "number",
+  outcome: "string",
+} as const;
+
+// A stage result's identity fields, and a route proposal's reference shape where it carries one.
+// SIMPLIFIED: every other field is checked by the decision function where it reads it.
+// Lift when: a stage result field the decision function never reads gets a refusal row.
+export function stageResultRefusals(value: Record<string, unknown>): SchemaReason[] {
+  const identity = fieldRefusals(value, RESULT_FIELDS, Object.keys(RESULT_FIELDS), false);
+  if (value.proposal === undefined || identity.length > 0) return identity;
+  const references = parseRouteReferences(value.proposal);
+  return references.ok ? [] : references.error.reasons;
+}
+
+const DECISION_FIELDS = {
+  questionId: "string",
+  answer: "object",
+  answeredBy: "string",
+  expectedSequence: "number",
+  stop: "boolean",
+} as const;
+
+// A decision input holds these and no other field.
+export function decisionInputRefusals(value: Record<string, unknown>): SchemaReason[] {
+  return fieldRefusals(value, DECISION_FIELDS, [], true);
+}
+
+const START_FIELDS = { request: "object", completionTarget: "string", harness: "object" } as const;
+
+// A start input's own fields; a field it may not carry is the decision function's refusal.
+export function startInputRefusals(value: Record<string, unknown>): SchemaReason[] {
+  return fieldRefusals(value, START_FIELDS, ["request", "harness"], false);
+}

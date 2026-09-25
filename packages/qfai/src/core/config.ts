@@ -372,6 +372,14 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues);
+  if (readWorkflowMode(parsed) === null) {
+    issues.push(
+      configIssue(
+        configPath,
+        "workflow.mode must be active, shadow or off; an absent key means active.",
+      ),
+    );
+  }
   return { config: normalized, issues, configPath, document: parsed };
 }
 

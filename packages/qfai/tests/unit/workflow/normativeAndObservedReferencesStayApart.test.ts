@@ -23,7 +23,7 @@ it("TC-0018-0015 (TDD-0025): Decide accept of a routing result with normative re
             workOrderId: "routing-1",
             stageInstanceId: "routing-stage-1",
             attempt: 1,
-            stageKind: "routing",
+            stageKind: "route",
           },
         },
         {

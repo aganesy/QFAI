@@ -16,7 +16,7 @@ it("TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in o
       workOrderId: "routing-1",
       stageInstanceId: "routing-stage-1",
       attempt: 1,
-      stageKind: "routing",
+      stageKind: "route",
     },
   };
   const input = {

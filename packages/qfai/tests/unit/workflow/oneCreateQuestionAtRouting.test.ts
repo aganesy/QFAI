@@ -17,7 +17,7 @@ it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked pro
       workOrderId: "routing-1",
       stageInstanceId: "routing-stage-1",
       attempt: 1,
-      stageKind: "routing",
+      stageKind: "route",
     },
   };
   const input = {
