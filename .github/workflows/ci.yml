@@ -906,6 +906,7 @@ jobs:
         check-types-future,
         node-floor,
         test,
+        windows-parity,
         scanner-coverage,
         build,
       ]
