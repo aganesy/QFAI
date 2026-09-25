@@ -700,8 +700,8 @@ each required capability as `true` or `false`:
 
 - The set is fixed and every capability is required.
 - An unknown host, Copilot included, or any `false` is refused at `start`:
-  `fail-closed`, cause `unsupported-capability`, naming the host or the
-  capability.
+  `fail-closed`, cause `unsupported-capability`, with `subjects` naming the
+  host or each capability reported `false`.
 - The report is recorded as `agent_captured`. The first stage that needs a real
   delegation is the probe: a result reporting it `unavailable` moves the run to
   `blocked` with cause `unsupported-capability`, naming `delegateSubAgent`.
@@ -929,11 +929,12 @@ to act. While an operation runs, stdout stays empty.
 - A successful document adds the operation's own payload beside `ok` and `run`.
 - `error` is `{ code, message }`. `reasons[]` of `{ reason, subject }` is added on
   `proposal-refused` and `invalid-input`, and `cause` on `fail-closed` and
-  `io-error`.
+  `io-error`. A `fail-closed` refusal with cause `unsupported-capability` adds
+  `subjects[]`: the unsupported host, or each capability reported `false`.
 - `message` is one English sentence in the operator's words: what happened and
   what to do next. It carries no request shape and no internal identifier.
   `qfai-run` relays it in the operator's working language.
-- Tests assert codes, reasons and causes, never message text.
+- Tests assert codes, reasons, causes and subjects, never message text.
 
 The refusal codes form a closed set. They are not validate findings and stay out
 of the emitted rule codes.

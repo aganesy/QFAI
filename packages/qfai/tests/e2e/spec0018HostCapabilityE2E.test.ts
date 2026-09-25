@@ -1,9 +1,9 @@
 /**
  * E2E: a run starts only on a host that can carry it (spec-0018).
  *
- * On a `qfai init` project, a capability report with a gap is refused at `start` and leaves no
- * run; a passing report starts one, and a first stage whose delegation fails leaves it `blocked`,
- * naming the missing capability.
+ * On a `qfai init` project, a capability report with a gap is refused at `start`, naming the
+ * capability, and leaves no run; a passing report starts one, and a first stage whose delegation
+ * fails leaves it `blocked`, naming the missing capability.
  */
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -60,13 +60,14 @@ it("US-0018-0009 (TDD-0463): a capability gap is refused at start, and a failed 
       refused.status,
       field(refused.json, "error.code"),
       field(refused.json, "error.cause"),
+      field(refused.json, "error.subjects"),
     ],
     runsAfterGap,
     stage: field(issued.json, "workOrder.stageKind"),
     state: field(blocked.json, "run.state"),
     halt: field(blocked.json, "halt"),
   }).toEqual({
-    refused: [2, "fail-closed", "unsupported-capability"],
+    refused: [2, "fail-closed", "unsupported-capability", ["delegateSubAgent"]],
     runsAfterGap: [],
     stage: "discussion",
     state: "blocked",

@@ -45,6 +45,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A `qfai workflow start` refused for the host names what was refused in a
+  field** (#2315). The `fail-closed` refusal with cause
+  `unsupported-capability` now carries `subjects`: the host that is not
+  supported, or each capability the host reported as unavailable. A script can
+  read what was refused without parsing the message.
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as
