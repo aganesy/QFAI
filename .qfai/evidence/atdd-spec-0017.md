@@ -2215,10 +2215,11 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected undefined to be 'windows-latest' // Object.is equality`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts` (new, one annotated describe)
-- Open: the job has not had its trial run on a Windows runner. Its `timeout-minutes` of 30 is an
-  unmeasured ceiling, and the per-suite counts, timings and the code-path pin's before and after
-  figures (22 instances, 290 minutes, 20 installs before; 23, 320 and 21 after) are still owed to
-  DR-0017-0024 once that run exists.
+- Measured: DR-0017-0024 records 20 green Windows runs from 2026-09-25. On the default branch the
+  list ran 146 files and 1,329 tests in 427.3 s, and the slowest job took 582 s. The job's
+  `timeout-minutes` is set from that at 20, down from 30. The code-path pin moved from 22
+  instances, 290 minutes and 20 installs to 23, 320 and 21 with the job, and to 310 minutes with
+  the measured timeout.
 
 ## Coverage Depth Matrix
 
