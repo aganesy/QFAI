@@ -63,7 +63,7 @@ No test is added. The run re-uses the two cases in
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0035` | `TC-0001-0026` | Integration | falsifiability | blocked |
-| `TDD-0036` | `TC-0001-0027` | Integration | falsifiability | todo   |
+| `TDD-0036` | `TC-0001-0027` | Integration | falsifiability | refactor |
 
 ### TDD-0035
 
@@ -124,11 +124,13 @@ packages/qfai/tests/integration/stageSkillEntryCheckSpec0001.test.ts
 
 - Round 1: Revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
 - Round 1: GREEN command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts -t "TC-0001-0027: a work order that matches no issued one edits nothing and is refused" (run from `packages/qfai`)
-- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md`, which restores the file as it is at that revision
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2): the row's case passes and the file's other case, `TC-0001-0026`, is the one `-t` leaves out. Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/constitution/shared-skill-operating-baseline.md`, which restores the file as it is at that revision
 
 - Refactor verify command: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/stageSkillEntryCheckSpec0001.test.ts (run from `packages/qfai`)
 - Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: 22822f5a5efd828b06a40a30175d963a3bbe27d8
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the mutated tree working-tree+aa99dee9b05c3cca23f2007b3211e63d782491c913d9540c0bdf61256bbb6052; qa-gatekeeper#2 — build-phase GREEN + oracle proof at 233cb417abb855bdc2e90138ee292bc7c2c0e82e, whose code tree is 22822f5a5efd828b06a40a30175d963a3bbe27d8)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate with the mutation in place (baseline line 176, refusal to the operator); AssertionError at stageSkillEntryCheckSpec0001.test.ts:45:22; the TC-0001-0026 case still passes; Falsifiability revision and RED test hash recompute; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof after the revert: selector 1 passed | 1 skipped, file 2/2, no diff under packages/ against 22822f5a5
 
 ## Coverage Depth Matrix
 
