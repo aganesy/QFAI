@@ -55,35 +55,58 @@ function allowedNames(listPath) {
 }
 
 /**
- * The packages the package manager's own configuration permits to build.
+ * The packages the package manager's own configuration permits to build, or `null` where it keeps
+ * no such list.
  *
  * Scanned line by line, for the reason the lockfile is: this runs before anything guarantees a
  * dependency is present, and a guard that needs `node_modules` to decide whether `node_modules`
  * is trustworthy has a hole in the middle of it.
  *
- * Only a `true` is a permission. An explicit `false` is a denial and needs no counterpart here.
+ * **Which means it reads less of YAML than the package manager does, so it fails CLOSED.** A
+ * value it does not recognise is refused rather than skipped: `!!bool true`, an alias, an
+ * anchor and a flow mapping are all permissions the manager would honour and a line scan would
+ * pass over in silence, which is the drift this comparison exists to stop. Only a bare `true`
+ * or `false` is read, and anything else — including the key carrying a value on its own line —
+ * throws.
+ *
+ * **No list at all is not a disagreement.** A tree written before the manager required one keeps
+ * none, and the re-publish path checks out exactly such a tree. There the manager decides nothing
+ * and the allow-list beside this file is the whole answer, so the comparison is skipped rather
+ * than failed. A tree whose manager does require a list cannot reach that branch quietly: the
+ * rebuild it performs refuses every package the list does not name.
  *
  * @param {string} workspacePath the workspace configuration file
- * @returns {string[]} the permitted package names
+ * @returns {string[] | null} the permitted package names, or null where no list is declared
  */
 function permittedNames(workspacePath) {
   const lines = readFileSync(workspacePath, "utf-8").split(/\r?\n/);
   const names = [];
   let inBlock = false;
   for (const line of lines) {
-    if (/^allowBuilds:\s*$/.test(line)) {
+    if (/^allowBuilds\s*:/.test(line)) {
+      if (!/^allowBuilds\s*:\s*(?:#.*)?$/.test(line)) {
+        throw new Error(
+          `allowBuilds in ${workspacePath} carries a value this check cannot read: ${line.trim()}`,
+        );
+      }
       inBlock = true;
       continue;
     }
     if (!inBlock) continue;
-    if (line.trim() === "") continue;
+    if (line.trim() === "" || /^\s*#/.test(line)) continue;
     if (!/^\s/.test(line)) break;
-    const entry = /^\s+(?:'([^']+)'|"([^"]+)"|([^\s:#][^:]*?))\s*:\s*(\S+)\s*$/.exec(line);
-    if (entry === null) continue;
+    const entry = /^\s+(?:'([^']+)'|"([^"]+)"|([A-Za-z0-9@._/-]+))\s*:\s*(true|false)\s*$/.exec(
+      line,
+    );
+    if (entry === null) {
+      throw new Error(
+        `allowBuilds in ${workspacePath} holds an entry this check cannot read: ${line.trim()}`,
+      );
+    }
     const name = entry[1] ?? entry[2] ?? entry[3];
     if (name !== undefined && entry[4] === "true") names.push(name);
   }
-  return names;
+  return inBlock ? names : null;
 }
 
 /**
@@ -155,34 +178,43 @@ function main(lockPath, listPath, workspacePath) {
   let permitted;
   try {
     permitted = permittedNames(workspacePath);
-  } catch {
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error);
     stdout.write(
-      `::error::verify-rebuild-sources: cannot read ${workspacePath}, so what the package manager permits to build cannot be compared with the allow-list.\n`,
+      `::error::verify-rebuild-sources: ${why}. What the package manager permits to build has to be readable here, or the comparison below passes over a permission nobody reviewed.\n`,
     );
     return 1;
   }
 
-  // Both directions. A name the manager permits and the list does not is a permission nobody
-  // reviewed; a name the list carries and the manager does not is a rebuild that cannot run,
-  // and naming it here beats reading it out of the manager's own error one step later.
-  let disagreed = false;
-  for (const name of permitted) {
-    if (!names.includes(name)) {
-      stdout.write(
-        `::error::verify-rebuild-sources: ${name} may build according to ${workspacePath} and is absent from ${listPath}. What may run install scripts is decided in one place, and the list is that place.\n`,
-      );
-      disagreed = true;
+  if (permitted === null) {
+    // A tree whose manager keeps no such list, which the re-publish path checks out by design.
+    // Stated rather than silent: a skipped comparison reads exactly like a satisfied one.
+    stdout.write(
+      `verify-rebuild-sources: ${workspacePath} declares no allowBuilds, so the allow-list is the whole permission\n`,
+    );
+  } else {
+    // Both directions. A name the manager permits and the list does not is a permission nobody
+    // reviewed; a name the list carries and the manager does not is a rebuild that cannot run,
+    // and naming it here beats reading it out of the manager's own error one step later.
+    let disagreed = false;
+    for (const name of permitted) {
+      if (!names.includes(name)) {
+        stdout.write(
+          `::error::verify-rebuild-sources: ${name} may build according to ${workspacePath} and is absent from ${listPath}. What may run install scripts is decided in one place, and the list is that place.\n`,
+        );
+        disagreed = true;
+      }
     }
-  }
-  for (const name of names) {
-    if (!permitted.includes(name)) {
-      stdout.write(
-        `::error::verify-rebuild-sources: ${name} is on ${listPath} and ${workspacePath} does not permit it to build, so the rebuild beside this check cannot run it.\n`,
-      );
-      disagreed = true;
+    for (const name of names) {
+      if (!permitted.includes(name)) {
+        stdout.write(
+          `::error::verify-rebuild-sources: ${name} is on ${listPath} and ${workspacePath} does not permit it to build, so the rebuild beside this check cannot run it.\n`,
+        );
+        disagreed = true;
+      }
     }
+    if (disagreed) return 1;
   }
-  if (disagreed) return 1;
 
   if (names.length === 0) {
     // An empty allow-list is a legitimate state: nothing is rebuilt, so nothing needs verifying.

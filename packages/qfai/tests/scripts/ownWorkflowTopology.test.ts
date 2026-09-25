@@ -2939,6 +2939,89 @@ describe("a permitted rebuild is verified against where the package comes from",
     }
   });
 
+  it("refuses either list holding a name the other does not", () => {
+    // The agreeing fixture above measures the lockfile resolution. This measures the comparison
+    // itself: each branch of it, and the two shapes that must not be read as agreement.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-rebuild-agree-"));
+    try {
+      const lockPath = path.join(dir, "pnpm-lock.yaml");
+      writeFileSync(
+        lockPath,
+        [
+          "lockfileVersion: '9.0'",
+          "",
+          "packages:",
+          "",
+          "  esbuild@0.21.5:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+          "  sharp@0.33.0:",
+          "    resolution: {integrity: sha512-deadbeef}",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const verify = (listText: string, workspaceText: string): { status: number; out: string } => {
+        const list = path.join(dir, "dependency-builds.txt");
+        const workspace = path.join(dir, "pnpm-workspace.yaml");
+        writeFileSync(list, listText, "utf-8");
+        writeFileSync(workspace, workspaceText, "utf-8");
+        const run = spawnSync("node", [VERIFIER, lockPath, list, workspace], {
+          encoding: "utf-8",
+        });
+        if (run.error !== undefined) throw run.error;
+        return { status: run.status ?? -1, out: `${run.stdout}${run.stderr}` };
+      };
+
+      const agreeing = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n");
+      expect
+        .soft(agreeing.status, `two lists naming the same package agree:\n${agreeing.out}`)
+        .toBe(0);
+
+      // The manager permits what nobody reviewed. This is the direction that matters: under an
+      // ordinary install — one this job does not perform — that permission is what runs code.
+      const managerOnly = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: true\n");
+      expect.soft(managerOnly.status, "a permission absent from the allow-list must fail").toBe(1);
+      expect
+        .soft(managerOnly.out, "and name the package the allow-list never reviewed")
+        .toContain("sharp");
+
+      // And the other way: the list names what the manager will refuse to build, which is a
+      // rebuild that stops the step later and with a worse message.
+      const listOnly = verify("esbuild\nsharp\n", "allowBuilds:\n  esbuild: true\n");
+      expect.soft(listOnly.status, "an allow-list entry the manager denies must fail").toBe(1);
+      expect.soft(listOnly.out, "and name it").toContain("sharp");
+
+      // A denial is not a permission, so it owes the allow-list nothing.
+      const denied = verify("esbuild\n", "allowBuilds:\n  esbuild: true\n  sharp: false\n");
+      expect.soft(denied.status, `an explicit false needs no counterpart:\n${denied.out}`).toBe(0);
+
+      // FAIL CLOSED on a value this check cannot read. The manager honours more of YAML than a
+      // line scan does, and a permission it skips in silence is the drift this exists to stop.
+      for (const [shape, why] of [
+        ["allowBuilds:\n  esbuild: true\n  sharp: !!bool true\n", "a tagged boolean"],
+        ["allowBuilds:\n  esbuild: true\n  sharp: yes\n", "another spelling of true"],
+        ["allowBuilds: { esbuild: true }\n", "a flow mapping on the key's own line"],
+      ] as Array<[string, string]>) {
+        const unreadable = verify("esbuild\n", shape);
+        expect.soft(unreadable.status, `${why} must be refused, not skipped`).toBe(1);
+      }
+
+      // And no list at all is not a disagreement. The re-publish path checks out a tree written
+      // before the manager required one, and there the allow-list is the whole permission.
+      const absent = verify("esbuild\n", 'packages:\n  - "packages/qfai"\n');
+      expect
+        .soft(absent.status, `a tree declaring no allowBuilds must still pass:\n${absent.out}`)
+        .toBe(0);
+      expect
+        .soft(absent.out, "and say so, because a skipped comparison reads like a satisfied one")
+        .toContain("declares no allowBuilds");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("runs that verification before the rebuild, in every reader", () => {
     // Ordering, not presence: verifying after the rebuild verifies nothing.
     const action = readFileSync(

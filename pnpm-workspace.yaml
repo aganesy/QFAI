@@ -7,5 +7,10 @@ packages:
 # action that reads it so a re-published tag can see it. This is the same decision in the
 # package manager's vocabulary, and `verify-rebuild-sources.mjs` refuses any disagreement
 # between the two before a rebuild runs.
+#
+# A `false` is a decision too, and it is written down for that reason: without it the package
+# manager adds the package back as an open question on every install, and an answer nobody
+# recorded is one the next person answers again.
 allowBuilds:
+  '@jackchuka/mdschema': false
   esbuild: true

@@ -13,7 +13,7 @@
 
 ## Package manager
 
-- pnpm 9.15.9, pinned in the root `package.json#packageManager`. The
+- pnpm 12.5.1, pinned in the root `package.json#packageManager`. The
   workspace is private and installs its own package nowhere;
   `scripts/check-not-a-dependency.mjs` refuses an install that would create
   such a dependency.
