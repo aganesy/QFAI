@@ -2,17 +2,51 @@
 
 ## Purpose
 
-Link each obligation in this spec to the implementation file that realizes it and
-the test file that proves it. `npx qfai validate` reads this file to enforce
-implementation integrity: when a spec's `03_Acceptance-Criteria.md` or
-`04_Business-Rules.md` changes on a branch, every implementation file linked from
-a changed spec must also have changed in that branch, otherwise `QFAI-TRACE-001`
-(severity `error`) fires.
+Link each `BR-*` / `AC-*` in this spec to the implementation file that realizes it and the test
+file that proves it. `npx qfai validate --profile tdd` and `--profile full` compare each changed
+obligation with its merge-base copy. A changed obligation needs an active binding in the first
+table, and an unchanged active implementation needs current test proof. Otherwise
+`QFAI-TRACE-001` (severity `error`) fires.
+
+## Ledger Table (required when this file exists)
+
+One row per obligation and implementation file. Each row names the primary source file and the
+test that exercises it.
+
+| BR/AC        | Implementation File                                                                               | Test File                                                                 | Notes                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| AC-0012-0176 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md                        | packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts     | The skill cites its orchestrated-mode reference once.          |
+| AC-0012-0177 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts     | The Operations table.                                          |
+| AC-0012-0178 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts | A work order confines the stage to its target spec.            |
+| BR-0012-0018 | packages/qfai/src/core/validators/prototypingEvidence.ts                                          | packages/qfai/tests/validators/prototypingEvidence.test.ts                | The latest iteration is always the accepted one.               |
+| BR-0012-0026 | packages/qfai/src/cli/commands/prototypingIterate.ts                                              | packages/qfai/tests/cli/commands/prototypingIterate.test.ts               | The DESIGN.md lock and cache hashes are compared with disk.    |
+| BR-0012-0029 | packages/qfai/src/core/prototyping/iteration.ts                                                   | packages/qfai/tests/core/prototyping/iteration.test.ts                    | The cycle budget and terminator index constants.               |
+| BR-0012-0031 | packages/qfai/src/core/prototyping/evaluatorReview.ts                                             | packages/qfai/tests/core/prototyping/evaluatorReview.test.ts              | The four ordinal axes and the six `*Feel` fields.              |
+| BR-0012-0032 | packages/qfai/src/core/prototyping/iteration.ts                                                   | packages/qfai/tests/core/prototyping/iteration.test.ts                    | Convergence across every spec and screen pair.                 |
+| BR-0012-0035 | packages/qfai/src/core/prototyping/iterationPaths.ts                                              | packages/qfai/tests/core/prototyping/iterationPaths.test.ts               | The per-spec iteration directory helpers.                      |
+| BR-0012-0041 | packages/qfai/src/core/prototyping/designMdViolations.ts                                          | packages/qfai/tests/core/prototyping/designMdViolations.test.ts           | The preflight allowlist and the body-only scan scope.          |
+| BR-0012-0045 | packages/qfai/src/core/prototyping/evaluatorReview.ts                                             | packages/qfai/tests/core/prototyping/evaluatorReview.test.ts              | The prose critique cap.                                        |
+| BR-0012-0136 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md                        | packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts     | The entry check and the one-line citation.                     |
+| BR-0012-0137 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts     | The operations the workflow vocabulary assigns.                |
+| BR-0012-0138 | packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md | packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts | The target spec only, and `blocked` when it is not UI-bearing. |
+
+No row binds the generator prompt's pivot guidance (`REQ-0012-0030`), the removal of retired
+concepts (`REQ-0012-0036`), the skill size budget (`BR-0012-0025`) or the `design-system.yaml`
+mirror (`BR-0012-0027`). None of them has both a source file and a test that exercises it.
+
+### Planned bindings
+
+An existing file that realizes an obligation but has not been edited for it stays here until that
+edit. It is not an active binding and carries no proof.
+
+| Implementation File                                  | State today | BR / AC it will realize | Test File (planned)                                                                              | Promotion trigger             |
+| ---------------------------------------------------- | ----------- | ----------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------- |
+| packages/qfai/src/cli/commands/prototypingIterate.ts | present     | AC-0012-0084            | packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts | First edit for this criterion |
 
 ## Layer SSOT
 
 Where each layer of the prototyping surface currently lives. This is the
-entry point; the row-level obligations are in the ledger table below.
+entry point; the row-level obligations are in the ledger table above.
 
 | Layer                          | Current SSOT                                                                     |
 | ------------------------------ | -------------------------------------------------------------------------------- |
@@ -33,29 +67,6 @@ entry point; the row-level obligations are in the ledger table below.
 | Test todo validator            | `packages/qfai/src/core/validators/testTodoStubs.ts`                             |
 | UI evidence validator          | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`                       |
 | Validate gate                  | `packages/qfai/src/core/validate.ts`                                             |
-
-## Ledger Table (required when this file exists)
-
-This table records the **primary** code SUT for each REQ. Secondary
-SUTs and per-iter checks are reachable via the AC/BR-Refs in
-`03_Acceptance-Criteria.md` and `04_Business-Rules.md`. Empty rows
-mean no machine SUT exists; the row notes how the requirement is
-otherwise enforced.
-
-| Requirement   | Implementation File                                                                                                                                    | Test File                                                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| REQ-0012-0030 | `assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md` (skill prompt is SUT for generator pivot-directive contract)      | `tests/skill/prototypingSkill.test.ts` (skill asset / prompt assertions)                                                            |
-| REQ-0012-0031 | `packages/qfai/src/core/prototyping/evaluatorReview.ts` (4-axis schema + 200–500 word prose enforcement)                                               | `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`                                                                      |
-| REQ-0012-0032 | `packages/qfai/src/core/prototyping/iteration.ts` (`shouldStop()` decision logic)                                                                      | `packages/qfai/tests/core/prototyping/iteration.test.ts`                                                                            |
-| REQ-0012-0033 | `packages/qfai/src/core/validators/prototypingEvidence.ts` (`acceptedIterationIndex === iterations.length - 1` enforcement; QFAI-PROT-007)             | `packages/qfai/tests/validators/prototypingEvidence.test.ts`                                                                        |
-| REQ-0012-0034 | `packages/qfai/src/core/prototyping/evaluatorReview.ts` (`validateAntiPatternCap` enforces IA cap on lap detection)                                    | `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`                                                                      |
-| REQ-0012-0035 | `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts` (per-iter file shape) + `prototypingEvidence.ts`                                            | `packages/qfai/tests/validators/prototypingEvidence.test.ts`                                                                        |
-| REQ-0012-0036 | (no machine gate over the full codebase; manual audit at release plus the existing distributed-surface guard for the shipped surface only)             | `(no machine gate; manual audit at release)` — tracked as a follow-up to add a dedicated grep gate over `packages/qfai/src/**` etc. |
-| REQ-0012-0037 | (no machine SUT in this PR; the SKILL.md / references size budget is documented in `_policies/11_Slice-Policy.md` §size-budget and audited by humans)  | `(no machine gate; manual audit)` — follow-up to add `tests/scripts/skillSizeBudget.test.ts`                                        |
-| REQ-0012-0038 | `packages/qfai/src/cli/commands/prototypingIterate.ts` (lock-vs-live + cache-vs-live SHA gate; `designMdLock.ts` is the lock-sha extractor SSOT)       | `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`                                                                       |
-| REQ-0012-0039 | `packages/qfai/src/core/prototyping/evaluatorReview.ts` (`ORDINAL_AXES` is the SSOT constant)                                                          | `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`                                                                      |
-| REQ-0012-0040 | `packages/qfai/src/core/prototyping/designMdViolations.ts` (`findDesignMdViolations` pure scanner)                                                     | `packages/qfai/tests/core/prototyping/designMdViolations.test.ts`                                                                   |
-| REQ-0012-0041 | (no machine SUT in this PR; `design-system.yaml` is produced by `/qfai-prototyping` post-loop, schema mirror is documented in `references/handoff.md`) | `(no machine gate; manual audit)` — follow-up to add a deterministic mirror unit test                                               |
 
 ## Notes
 
