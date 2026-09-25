@@ -37,6 +37,10 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0028 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0029 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0030 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0031 | TC-0018-0018 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0032 | TC-0018-0021 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0033 | TC-0018-0022 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0034 | TC-0018-0023 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -1782,6 +1786,46 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:699:18` — `next` refused the discovery plan, so nothing was issued and the run stayed `ready`.
 - GREEN result: exit 0; `✓ ... TC-0018-0016 (TDD-0030): discovery`, 1 passed, 4 skipped. The `discussion` work order names `qfai-discussion` / `resolve-unsettled-product-scope`; accepting its result fires `scope-or-obligation-revision` and returns the run to `routing`. The other four plan selectors still pass after the route checks moved into `routePlanIsInvalid`.
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (`routePlanIsInvalid` holds the per-route plan checks and accepts a discovery plan whose stages name a skill and operation; `accept` of the last discovery stage moves `running` to `routing`; feature and discovery stage predicates stay unevaluated under a marked simplification).
+
+### TDD-0031
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/nextRepeatsAnUnansweredWorkOrder.test.ts`
+- Selector: `TC-0018-0018 (TDD-0031): next twice on a run in running, then resume twice, with no result between`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/nextRepeatsAnUnansweredWorkOrder.test.ts --testNamePattern='TC-0018-0018 \(TDD-0031\): next twice on a run in running, then resume twice, with no result between' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(...).toEqual(...)` at `tests/unit/workflow/nextRepeatsAnUnansweredWorkOrder.test.ts:43:52` — `next` and `resume` on a run in `running` returned no work order.
+- GREEN result: exit 0; `✓ ... TC-0018-0018 (TDD-0031): ...`, 1 passed. All four calls return `work-order-direct-edit-1`.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`next` in `running` returns the outstanding work order and publishes nothing; `resume` in `running` fires the interruption, reconcile and dispatch edges and returns the same work order; its missing revalidation is a marked simplification).
+
+### TDD-0032
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts`
+- Selector: `TC-0018-0021 (TDD-0032): Decide accept of a result with notRun`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts --testNamePattern='TC-0018-0021 \(TDD-0032\): Decide accept of a result with notRun' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(...)` at `tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts:64:18` — the accepted event carried no `notRun`, so the stage's reason was not recorded.
+- GREEN result: exit 0; `✓ ... TC-0018-0021 (TDD-0032): ...`, 1 passed. The accepted event records `notRun` with its reason, and no `receipt-recorded` event is published.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (the accepted stage event carries the result's `notRun`).
+
+### TDD-0033
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts`
+- Selector: `TC-0018-0022 (TDD-0033): A result with notRun and no reason`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts --testNamePattern='TC-0018-0022 \(TDD-0033\): A result with notRun and no reason' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `toEqual(refusedInput("skip-unexplained"))` at `tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts:93:53` — a `not_applicable` skip with no reason was accepted.
+- GREEN result: exit 0; `✓ ... TC-0018-0022 (TDD-0033): ...`, 1 passed, 1 skipped. `invalid-input` / `skip-unexplained`; state `running`, no events.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`notRunRefusalOf` refuses a `not_applicable` entry with no reason; `invalid-input` now carries `reasons[]`).
+
+### TDD-0034
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts`
+- Selector: `TC-0018-0023 (TDD-0034): A result with notRun`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts --testNamePattern='TC-0018-0023 \(TDD-0034\): A result with notRun' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `toEqual(refusedInput("reuse-stale"))` at `tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts:101:5` — a reuse naming a receipt classed `stale` was accepted.
+- GREEN result: exit 0; `✓ ... TC-0018-0023 (TDD-0034): A result with notRun`, 1 passed, 2 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (a `reused` entry whose receipt is not classed `valid` in `facts.receiptValidity` is `reuse-stale`; `unknown` counts as not valid).
 
 ### TDD-0527
 

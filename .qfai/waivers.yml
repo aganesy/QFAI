@@ -31,6 +31,10 @@ waivers:
         - TDD-0028
         - TDD-0029
         - TDD-0030
+        - TDD-0031
+        - TDD-0032
+        - TDD-0033
+        - TDD-0034
         - TDD-0527
         - TDD-0528
         - TDD-0529

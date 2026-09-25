@@ -23,7 +23,11 @@ export interface WorkflowEvent {
   outcome?: string;
   binding?: WorkflowBinding;
   plan?: WorkflowPlan;
+  notRun?: WorkflowNotRun;
 }
+
+type WorkflowNotRun =
+  { kind: "not_applicable"; reason?: string } | { kind: "reused"; receiptRef: string };
 
 interface WorkflowBinding {
   slotId: string;
@@ -70,7 +74,11 @@ export interface WorkflowDecision {
     workOrder?: WorkflowWorkOrder | null;
     plan?: WorkflowPlan;
     error?:
-      | { code: "invalid-input"; message: string }
+      | {
+          code: "invalid-input";
+          message: string;
+          reasons?: { reason: InputRefusalReason; subject: string }[];
+        }
       | {
           code: "proposal-refused";
           message: string;
@@ -79,6 +87,8 @@ export interface WorkflowDecision {
   };
   events: WorkflowEvent[];
 }
+
+type InputRefusalReason = "skip-unexplained" | "reuse-stale";
 
 type ProposalRefusalReason =
   | "unknown-path"
@@ -150,6 +160,7 @@ interface WorkflowInput {
     outcome: string;
     diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] };
     bindings?: WorkflowBinding[];
+    notRun?: WorkflowNotRun;
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -180,6 +191,7 @@ interface WorkflowFacts {
   plans?: Record<string, { route: string; stages: PlanStages }>;
   specs?: Record<string, { lifecycle: string }>;
   contractIds?: string[];
+  receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
 }
 
 type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
@@ -268,6 +280,17 @@ function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): Workflow
     expectedBehaviorRefs: proposal.expectedBehaviorRefs,
     observedRefs: proposal.observedRefs,
   };
+}
+
+function notRunRefusalOf(
+  notRun: WorkflowNotRun | undefined,
+  facts: WorkflowFacts,
+): InputRefusalReason | undefined {
+  if (notRun?.kind === "not_applicable" && !notRun.reason?.trim()) return "skip-unexplained";
+  if (notRun?.kind === "reused" && facts.receiptValidity?.[notRun.receiptRef] !== "valid") {
+    return "reuse-stale";
+  }
+  return undefined;
 }
 
 function refusalsOf(reason: ProposalRefusalReason, subjects: readonly string[]): ProposalRefusal[] {
@@ -641,6 +664,24 @@ export function decide(
     };
   }
 
+  if (input.operation === "next" && run.state === "running" && workOrder) {
+    return { verdict: { ok: true, run, workOrder }, events: [] };
+  }
+
+  // SIMPLIFIED: resume reissues the outstanding work order without revalidating the run.
+  // Lift when: observers supply the identity, integrity and receipt facts resume checks.
+  if (input.operation === "resume" && run.state === "running" && workOrder) {
+    const events: WorkflowEvent[] = [
+      { type: "observed-session-interruption" },
+      { type: "reconciled-resume" },
+      { type: "dispatch-work-order" },
+    ];
+    return {
+      verdict: { ok: true, run: { ...run, sequence: run.sequence + events.length }, workOrder },
+      events,
+    };
+  }
+
   if (input.operation === "accept" && run.state === "running") {
     const plan = snapshot.plan;
     const acceptedStages = snapshot.acceptedStages ?? [];
@@ -695,6 +736,22 @@ export function decide(
       };
     }
 
+    const notRunRefusal = notRunRefusalOf(result.notRun, facts);
+    if (notRunRefusal) {
+      return {
+        verdict: {
+          ok: false,
+          run,
+          error: {
+            code: "invalid-input",
+            message:
+              "The stage result skips its stage without a valid reason. Fix it and submit again.",
+            reasons: [{ reason: notRunRefusal, subject: "notRun" }],
+          },
+        },
+        events: [],
+      };
+    }
     const approvedCapability = snapshot.approval?.target?.capability;
     if (
       plan.route === "feature" &&
@@ -716,6 +773,7 @@ export function decide(
         resultRef: `results/${result.resultId}.json`,
         stageInstanceId: workOrder.stageInstanceId,
         outcome: result.outcome,
+        ...(result.notRun ? { notRun: result.notRun } : {}),
       },
       ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
         type: "binding-recorded",
