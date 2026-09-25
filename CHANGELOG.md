@@ -84,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow accept` refuses a stage result the stage result schema
+  refuses** (#2347). The command took a result that carried a key the schema
+  does not define, or that left out `testObservation`, which the schema
+  requires. Each is now refused `invalid-input`, with reason `schema` naming
+  the key. `TC-0018-0235` and `TC-0018-0236` cover both.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

@@ -236,14 +236,39 @@ const RESULT_FIELDS = {
   attempt: "number",
   expectedSequence: "number",
   outcome: "string",
+  testObservation: "string",
 } as const;
 
-// A stage result's identity fields, and a route proposal's reference shape where it carries one.
-// SIMPLIFIED: every other field is checked by the decision function where it reads it.
-// Lift when: a stage result field the decision function never reads gets a refusal row.
+// The other fields a stage result may carry. The decision function checks each where it reads it.
+const RESULT_CONTENT_FIELDS: readonly string[] = [
+  "changedFiles",
+  "artifactRefs",
+  "gateResults",
+  "reviewResults",
+  "debts",
+  "questions",
+  "notRun",
+  "red",
+  "seam",
+  "seamRequest",
+  "testFix",
+  "regressionFix",
+  "diagnosis",
+  "bindings",
+  "delegation",
+  "measurement",
+  "proposal",
+];
+
+// A stage result's required fields, no key outside the stage result schema, and a route
+// proposal's reference shape where it carries one.
 export function stageResultRefusals(value: Record<string, unknown>): SchemaReason[] {
   const identity = fieldRefusals(value, RESULT_FIELDS, Object.keys(RESULT_FIELDS), false);
-  if (value.proposal === undefined || identity.length > 0) return identity;
+  const unknown = Object.keys(value)
+    .filter((name) => !(name in RESULT_FIELDS) && !RESULT_CONTENT_FIELDS.includes(name))
+    .map((subject): SchemaReason => ({ reason: "schema", subject }));
+  const refusals = [...identity, ...unknown];
+  if (value.proposal === undefined || refusals.length > 0) return refusals;
   const references = parseRouteReferences(value.proposal);
   return references.ok ? [] : references.error.reasons;
 }

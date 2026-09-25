@@ -9,9 +9,11 @@ import Ajv2020 from "ajv/dist/2020";
 import { expect, it } from "vitest";
 
 import {
+  isRecord,
   parseMeasurement,
   parseQuestionInput,
   parseRouteReferences,
+  stageResultRefusals,
 } from "../../../src/core/workflow/parse.js";
 import { workOrderDocument } from "../../../src/core/workflow/decide.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
@@ -53,7 +55,7 @@ async function payloadExamples(): Promise<{ heading: string; payload: unknown }[
 
 function routingResult(examples: { heading: string; payload: unknown }[]) {
   const found = examples.find((example) => example.heading === "Routing result")?.payload;
-  if (typeof found !== "object" || found === null || !("proposal" in found)) {
+  if (!isRecord(found) || !("proposal" in found)) {
     throw new Error("The payload reference carries no routing result example.");
   }
   return { result: found, proposal: found.proposal };
@@ -92,7 +94,7 @@ it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the
       name: "routing result",
       schema: RESULT,
       payload: result,
-      parser: parseRouteReferences(proposal).ok,
+      parser: parseRouteReferences(proposal).ok && stageResultRefusals(result).length === 0,
     },
     {
       name: "proposal",
@@ -129,6 +131,13 @@ it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the
     const payload = withReference(proposal, field, entry);
     cases.push({ name, schema: PROPOSAL, payload, parser: parseRouteReferences(payload).ok });
   }
+  const unobserved = { ...result, testObservation: undefined };
+  cases.push({
+    name: "stage result missing testObservation",
+    schema: RESULT,
+    payload: JSON.parse(JSON.stringify(unobserved)),
+    parser: stageResultRefusals(unobserved).length === 0,
+  });
   const unmeasured = { ...measurement, wallClockMs: undefined };
   cases.push({
     name: "measurement missing a field",
@@ -154,18 +163,24 @@ it("TC-0018-0235 (TDD-0452): Validate every payload example and fixture with the
 
 it("TC-0018-0236 (TDD-0453): A planted payload with an unknown key", async () => {
   const validate = await loadValidator();
-  const { proposal } = routingResult(await payloadExamples());
+  const { result, proposal } = routingResult(await payloadExamples());
   const reference = withReference(proposal, "observedRefs", {
     kind: "path",
     ref: "src/checkout/total.ts",
     note: "added by hand",
   });
   const extraMeasure = { ...measurement, gpuSeconds: 3 };
+  const extraResult = { ...result, reviewer: "self" };
 
   expect({
     reference: [parseRouteReferences(reference).ok, validate(PROPOSAL, reference)],
     measurement: [parseMeasurement(extraMeasure).ok, validate(MEASUREMENT, extraMeasure)],
-  }).toEqual({ reference: [false, false], measurement: [false, false] });
+    result: [stageResultRefusals(extraResult), validate(RESULT, extraResult)],
+  }).toEqual({
+    reference: [false, false],
+    measurement: [false, false],
+    result: [[{ reason: "schema", subject: "reviewer" }], false],
+  });
 });
 
 it("A work order carries a target unless it is the routing or a discussion work order", async () => {
