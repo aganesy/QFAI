@@ -84,6 +84,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Four spec-0014 ledger rows name the tests that reach their obligations**
+  (#2425). Two approved Change Requests are applied:
+
+  - `CR-20260913-0005`: `TDD-0009` now names the reviewer-gate cases, and
+    `TDD-0035` and `TDD-0036` name the cases that run `certify` from the
+    command line. `TDD-0036` keeps the refusal boundary, and a new row,
+    `TDD-0051`, carries the promotion. All four are at `todo`. `09_delta.md`
+    states that the `v1.7.16` chains starting at reused story IDs bind
+    nothing.
+  - `CR-20260913-0006`, option 2: `TC-0014-0034` is an `integration` case. Its
+    test, `cycle 0 deletes fullHarness`, moves to the command's integration
+    suite, and `TDD-0034` follows it at `todo`.
+
+  `CR-20260913-0002` is not applied yet.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

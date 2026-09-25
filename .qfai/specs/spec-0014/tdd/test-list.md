@@ -2,20 +2,21 @@
 
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
 | -------- | ------------ | ----------- | --------------------------------------------------------------- | --------------------------- | --------- | ------------ | ---------------------------------------- |
-| TDD-0009 | TC-0014-0009 | integration | - | packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts | TC-0014-0009 | done | DR-0014-0001 | current verify semantics suite pass | - | - | - | - | - | - |
+| TDD-0009 | TC-0014-0009 | integration | - | packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts | ["verify's binding gate fails on a render critique the reviewer returned REVISE", "a REVISE from a routed blocking reviewer blocks DONE and handoff"] | todo | CR-20260913-0005 | - | - | - | - | - | - | - |
 | TDD-0018 | TC-0014-0018 | integration | - | packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts | TC-0014-0018 | done | DR-0014-0001 | current verify semantics suite pass | - | - | - | - | - | - |
 | TDD-0019 | TC-0014-0019 | integration | - | packages/qfai/tests/integration/verifySemanticsSpec0014.test.ts | TC-0014-0019 | done | DR-0014-0001 | current verify semantics suite pass | - | - | - | - | - | - |
 | TDD-0028 | TC-0014-0028 | unit | - | packages/qfai/tests/validators/prototypingDesignSystem.test.ts | PROT-DS01 happy path | exception | DR-0014-0002 | current prototyping validator pass | - | - | - | - | - | - |
 | TDD-0029 | TC-0014-0029 | unit | - | packages/qfai/tests/validators/prototypingDesignSystem.test.ts | PROT-DS01 failure path | exception | DR-0014-0002 | current prototyping validator pass | - | - | - | - | - | - |
 | TDD-0033 | TC-0014-0033 | unit | - | packages/qfai/tests/cli/commands/prototypingIterate.test.ts | iter-NN path layout | done | DR-0014-0001 | current iterate path-layout suite pass | - | - | - | - | - | - |
-| TDD-0034 | TC-0014-0034 | unit | - | packages/qfai/tests/cli/commands/prototypingIterate.test.ts | cycle 0 deletes fullHarness | done | DR-0014-0001 | current iterate cycle-0 reset suite pass | - | - | - | - | - | - |
+| TDD-0034 | TC-0014-0034 | integration | - | packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0FullHarness.test.ts | cycle 0 deletes fullHarness | todo | CR-20260913-0006 | - | - | - | - | - | - | - |
 
 ## CHG-006 v1.9.2 second-wave — certify --scope saas-package + --upgrade-scope (2026-05-31)
 
 | TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence | US-Refs | CON-API-Refs | Owning module | Blocked-By | BR-Ref | Boundary |
 | -------- | ------------ | ----------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------ | ---------------------------- | -------------------------------------------------------------- |
-| TDD-0035 | TC-0014-0035 | integration | - | packages/qfai/tests/integration/cli/commands/prototypingCertify.saasPackage.test.ts | certify --scope saas-package seals a scope-limited certificate | done | DR-0014-0004 (cites DR-0274) | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166 | - | - | - | - | - | - |
-| TDD-0036 | TC-0014-0036 | integration | - | packages/qfai/tests/integration/cli/commands/prototypingCertify.upgradeScope.test.ts | certify --upgrade-scope full upgrades a saas-package cert to full DONE | done | DR-0014-0004 (cites DR-0274) | RED→GREEN 2026-06-01 (W5 c5f61e12); reviewers PASS×3; REQ-0166 | - | - | - | - | - | - |
+| TDD-0035 | TC-0014-0035 | integration | - | packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts | seals a certificate scoped to saas-package whose notes name every skipped gate | todo | CR-20260913-0005 | - | - | - | - | - | - | - |
+| TDD-0036 | TC-0014-0036 | integration | - | packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts | refuses the upgrade while the skipped gates are missing, naming them | todo | CR-20260913-0005 | - | - | - | - | - | - | refusal |
+| TDD-0051 | TC-0014-0036 | integration | - | packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts | promotes the certificate to full once the skipped gates pass | todo | CR-20260913-0005 | - | - | - | - | - | - | promotion |
 | TDD-0037 | - | E2E | T2 | - | - | todo | - | - | US-0014-0013 | - | - | - | - | - |
 | TDD-0038 | - | E2E | T2 | - | - | todo | - | - | US-0014-0014 | - | - | - | - | - |
 | TDD-0039 | - | E2E | T2 | - | - | todo | - | - | US-0014-0018 | - | - | - | - | - |
@@ -24,7 +25,8 @@
 
 CHG-006 notes:
 
-- TDD-0035..0036 cover REQ-0166 (certify side; validate-profile side `qfai validate --profile saas-package` owned by spec-0004). Certificate carries `scope: "saas-package"` + non-empty `notes:` naming each skipped ATDD / implement-class gate; never claims full DONE. `--upgrade-scope full` gated on missing gates landing. Cross-spec decisions cited from `_policies/08_Decisions.md` DR-0274; one-minor deprecation window per OC-63.
+- TDD-0035, TDD-0036 and TDD-0051 cover REQ-0166 (certify side; validate-profile side `qfai validate --profile saas-package` owned by spec-0004). Certificate carries `scope: "saas-package"` + non-empty `notes:` naming each skipped ATDD / implement-class gate; never claims full DONE. `--upgrade-scope full` gated on missing gates landing. Cross-spec decisions cited from `_policies/08_Decisions.md` DR-0274; one-minor deprecation window per OC-63.
+- TDD-0036 and TDD-0051 carry the two boundaries of TC-0014-0036: the refusal while a skipped gate is missing, and the promotion once the gates pass. Each fails on its own, so each has a row (CR-20260913-0005).
 - Ledger sync follow-up: the spec-0014 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.
 
 ## 2026-09-24 intent-driven entry (discussion-20260923171450572)

@@ -160,6 +160,8 @@ US-0014-0012 → AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009
 
 ### Traceability Chain (v1.7.16 additions)
 
+The live pack reuses `US-0014-0013`, `US-0014-0014`, `US-0014-0018` and `US-0014-0019` for other stories, so the chains below that start at those IDs bind nothing in it.
+
 ```text
 US-0014-0013 -> AC-0014-0015 -> BR-0014-0016 -> EX-0014-0016, EX-0014-0017, EX-0014-0018 -> TC-0014-0020, TC-0014-0021, TC-0014-0022
 US-0014-0014 -> AC-0014-0016 -> BR-0014-0017 -> EX-0014-0019 -> TC-0014-0023
@@ -297,6 +299,8 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T06:04:36Z |
 | CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T07:34:27Z |
 | CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-25T10:20:50Z |
+| CR-20260913-0005 | `spec-0014/tdd/test-list.md`, `09_delta.md`                                            | re-derive | user        | 2026-09-25T22:32:12Z |
+| CR-20260913-0006 | `spec-0014/06_Test-Cases.md`, `tdd/test-list.md`                                       | re-derive | user        | 2026-09-25T22:32:12Z |
 
 ## Merge reconciliation (2026-09-25)
 

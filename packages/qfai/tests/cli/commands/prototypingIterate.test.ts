@@ -1062,7 +1062,7 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
 
   /**
    * Runs cycle 0 over a `prototyping.json` holding a stale value for each of
-   * the five properties the cases below assert, and a value the reset does not
+   * the four properties the cases below assert, and a value the reset does not
    * write for each of the two it re-seeds. Returns the project root once the
    * command has exited 0, so a caller reads what the reset left.
    *
@@ -1079,11 +1079,6 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
       // Not the 0 the reset writes, so a reset that kept the prior value fails.
       acceptedIterationIndex: 3,
       stopReason: "converged",
-      fullHarness: {
-        runId: "legacy-prior-run",
-        status: "complete",
-        scoringTrace: [{ axis: "ux", score: 5 }],
-      },
       // Legacy per-loop plan block: no current writer produces it, but
       // validatePrototypingDelegationMap reads it, so a stale assignment
       // must not survive the hard reset and block the fresh loop.
@@ -1098,15 +1093,10 @@ describe("runPrototypingIterate cycle 0 hard reset", () => {
     return root;
   }
 
-  // One property per case. The reset clears three blocks and re-seeds two, and
-  // a single case asserting all five reports only the first that fails, so a
-  // change that breaks two of them reads as one.
-  // QFAI:SPEC-0014:TC-0014-0034
-  it("cycle 0 deletes fullHarness", async () => {
-    const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
-    expect("fullHarness" in body).toBe(false);
-  });
-
+  // One property per case: two cleared blocks and two re-seeded fields. A
+  // single case asserting all four reports only the first that fails, so a
+  // change that breaks two of them reads as one. The third block the reset
+  // clears, fullHarness, has its case in the command's integration suite.
   it("cycle 0 deletes reviewerGate", async () => {
     const body = await readProtoJson(await runCycleZeroFromPriorLoopState());
     expect("reviewerGate" in body).toBe(false);

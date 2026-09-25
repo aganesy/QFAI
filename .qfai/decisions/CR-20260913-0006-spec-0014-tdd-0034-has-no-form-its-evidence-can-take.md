@@ -9,7 +9,7 @@
 - Approved by: `user (Codex interactive decision)`
 - Approved at: `2026-09-24T21:12:39Z`
 - Approved option: `2`
-- Applied at: `-`
+- Applied at: `2026-09-25T22:32:12Z`
 - Superseded by: `-`
 
 ## Context
@@ -128,4 +128,24 @@ with the chain above it and its row (option 3)?
 
 ## Resolution
 
-Not yet resolved.
+Option 2 is applied. The rerun and the ledger sweep are done.
+
+- `06_Test-Cases.md`: `TC-0014-0034`'s `Level` is `integration`. No other
+  cell moves.
+- The case `cycle 0 deletes fullHarness` moved from
+  `packages/qfai/tests/cli/commands/prototypingIterate.test.ts` to
+  `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0FullHarness.test.ts`,
+  with the `TC-0014-0034` annotation. It seeds the same legacy block, runs
+  cycle 0 through `runPrototypingIterate` and makes the same one assertion.
+  The unit suite keeps the reset's other four cases and no longer seeds the
+  block.
+- `tdd/test-list.md`: `TDD-0034` is reset to `todo` with this record in
+  `DR-ID`, `Layer` `integration`, and `Test file` naming the new suite. Its
+  `Selector` is unchanged.
+- `09_delta.md` carries this record's row in `## Change Requests`.
+
+The ledger already had the template's columns and the stories' `E2E` rows, so
+the rerun added neither.
+
+`/qfai-implement spec-0014` records the row's evidence on the falsifiability
+path, with the production path and symbol as its `Satisfied-by`.

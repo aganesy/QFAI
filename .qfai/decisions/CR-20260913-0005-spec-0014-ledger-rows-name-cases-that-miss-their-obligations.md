@@ -9,7 +9,7 @@
 - Approved by: `user (Codex interactive decision)`
 - Approved at: `2026-09-24T21:12:39Z`
 - Approved option: `-`
-- Applied at: `-`
+- Applied at: `2026-09-25T22:32:12Z`
 - Superseded by: `-`
 
 ## Context
@@ -181,4 +181,32 @@ obligations and reset them to `todo`, split `TDD-0036`'s promotion into
 
 ## Resolution
 
-Not yet resolved.
+Applied. The ledger rerun and the ledger sweep are done.
+
+The record was checked against the tree before it was applied:
+
+- `TDD-0042` now belongs to a row the 2026-09-24 intent-driven entry added, so
+  the promotion row takes `TDD-0051`, the next free id. Its obligation, test
+  and `Boundary` are the ones this record approved.
+- The ledger already has the template's columns, and `TDD-0037` to `TDD-0041`
+  are the `E2E` rows of the pack's five stories. The rerun adds no column and
+  seeds no row beyond `TDD-0051`.
+- `TDD-0009`'s second `Selector` entry drops its `shipped: ` prefix. The case
+  title is built from a template string, so the file does not contain that
+  prefix and the entry would not resolve. Without it the entry selects the
+  same clause in both the shipped and the installed copy of the skill.
+
+What the rerun wrote:
+
+| Row        | `Test file`                                                          | `Selector`                                                                                                                                              | `Boundary`  | `Status` | `DR-ID`            |
+| ---------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------- | ------------------ |
+| `TDD-0009` | `packages/qfai/tests/integration/spec0014VerifyReviewerGate.test.ts` | `["verify's binding gate fails on a render critique the reviewer returned REVISE", "a REVISE from a routed blocking reviewer blocks DONE and handoff"]` | `-`         | `todo`   | `CR-20260913-0005` |
+| `TDD-0035` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `seals a certificate scoped to saas-package whose notes name every skipped gate`                                                                        | `-`         | `todo`   | `CR-20260913-0005` |
+| `TDD-0036` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `refuses the upgrade while the skipped gates are missing, naming them`                                                                                  | `refusal`   | `todo`   | `CR-20260913-0005` |
+| `TDD-0051` | `packages/qfai/tests/integration/spec0014SaasPackageCertify.test.ts` | `promotes the certificate to full once the skipped gates pass`                                                                                          | `promotion` | `todo`   | `CR-20260913-0005` |
+
+`09_delta.md` carries the sentence above the `v1.7.16` traceability block and
+this record's row in `## Change Requests`. No row is retired.
+
+`/qfai-implement spec-0014` records fresh evidence for the four rows on the
+falsifiability path.
