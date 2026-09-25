@@ -37,6 +37,9 @@ the test fail, then the restored run as its GREEN.
 - `TDD-0464` takes its mutation in the published `packages/qfai/README.md`. The claim check the
   story relies on is test-side code that never ships, so the README statement it reads is the one
   shipped artifact that carries the story. Adopted between agents: see the `/qfai-implement` session below.
+- Each mutation was reverted before `qa-gatekeeper` was routed. The gatekeeper re-applied each recorded diff and
+  matched its tree address to the recorded `Falsifiability revision`, taking `HEAD` as
+  `040df779f969c686b4691293753df01714598fce`. The commits after it change only this file, which the address excludes.
 - The earlier entries in `implement-spec-0018.md` stay as the record of the
   waived close. The new cycle writes here, the evidence file an `E2E` row owns.
 
@@ -153,6 +156,8 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018StopForMyDecisionE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree eaa8daf3 matches; selector fails :67:6 on routed run `ready`, issuing a work order instead of waiting; hash 33df5982 recomputes; GREEN and file 2/2 at HEAD
 
 ### TDD-0459
 
@@ -219,6 +224,7 @@ index 56e7a7ecd..ec6667a1d 100644
 +    receipts.some(({ ref, validity }) => ref === stage.receiptRef && validity === "valid"),
    );
  }
+ 
 ```
 
 - Round 1: Falsifiability revision: working-tree+5705bf6dcfb18e806b1728dc74066652cbb0a2540dbfde8eba70c2c134b4939b
@@ -240,6 +246,8 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 5705bf6d matches; selector fails :50:6, `checkpointOf` inverted makes resume reissue `sdd`; hash fb67b16c recomputes; GREEN and file 1/1 at HEAD
 
 ### TDD-0460
 
@@ -325,6 +333,8 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018AskWithoutStartingE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 01b73c86 matches; selector fails :39:6, `status` under the lock leaves `.qfai/runs/` (`runs: true`); hash 4dd0ce8c recomputes; GREEN and file 1/1 at HEAD
 
 ### TDD-0462
 
@@ -412,6 +422,8 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ChooseTheModeE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 383d6887 matches; selector fails :54:6, off/shadow create a run and write files; hash e958a4d5 recomputes; GREEN and file 1/1 at HEAD
 
 ### TDD-0463
 
@@ -500,6 +512,8 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018HostCapabilityE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 715cc137 matches; selector fails :68:6, halt becomes `delegation-unavailable`, not `unsupported-capability` (EX-0018-0102); hash 4bc1b315 recomputes; GREEN and file 1/1 at HEAD
 
 ### TDD-0464
 
@@ -572,6 +586,7 @@ index e31adb6a2..edf9e84ce 100644
 +- Codex (`codex`)
  
  ### Cross-AI rules and the writing reminder
+ 
 ```
 
 - Round 1: Falsifiability revision: working-tree+f080b3f6abaa5e2aaf79806ba980e15be1f642f9ab1b622d592686a1e6c69b41
@@ -595,6 +610,8 @@ packages/qfai/tests/helpers/tempTree.ts
 - Refactor verify command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ClaimAHostE2E.test.ts --reporter=verbose
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — mutated tree f080b3f6 matches; selector fails :123:79 with the published README claiming `codex` without a record; hash 04d2096d recomputes; GREEN and file 1/1 at HEAD
 
 ## Work Orders Summary
 
@@ -603,6 +620,8 @@ packages/qfai/tests/helpers/tempTree.ts
 | 1 | - | n/a | grilling(-@2026-09-25T16:12:02.339Z/none): none | - | - | PASS |
 | 2 | acceptance-test-engineer | acceptance-test-engineer#1 | P1b-P4b: classify the six rows and hand each over on the falsifiability branch | the six test files; `02_User-stories.md`; `03_Acceptance-Criteria.md` | #tdd-0458 to #tdd-0464 | PASS |
 | 3 | acceptance-test-engineer | acceptance-test-engineer#1 | grilling(S1@2026-09-25T16:25:34.799Z/agents): take the TDD-0464 mutation in `packages/qfai/README.md` | #tdd-0464 | #tdd-0464; the claim check is test-side code, so a mutation there would edit a test this stage does not own. No position disagreed | PASS |
+| 4 | backend-engineer | backend-engineer#1 | Red 3c: apply, run and revert each row's mutation; record the GREEN and the refactor-verify run | #tdd-0458 to #tdd-0464 handovers | `#### Round 1` of each row | PASS |
+| 5 | qa-gatekeeper | qa-gatekeeper#1 | red + build gates: re-create each mutated tree, confirm the RED, the hash and the GREEN | #tdd-0458 to #tdd-0464 | `qa-gatekeeper attempts` of each row | PASS |
 
 ## Final status (PASS/FAIL) + who confirmed
 
