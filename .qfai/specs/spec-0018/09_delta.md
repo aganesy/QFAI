@@ -143,6 +143,19 @@
   AC-0018-0039 are unchanged. IDs are unchanged. TDD-0388 stays at todo; this
   CR goes in its DR-ID.
 
+- Change ID: DELTA-0012
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0015 option 1. A run with no new capability binds the one
+  spec its proposal's `affectedSpecIds` names when its plan is accepted, and a
+  proposal naming none or several is refused `proposal-refused` with reason
+  `spec-binding`. The `maintenance` and `verify` work orders carry no target.
+  TC-0018-0012 gains the `spec-binding` reason and counts nine. No other item of
+  this spec changes, and no ID changes. The E2E journeys TDD-0456, TDD-0457 and
+  TDD-0461 keep their obligations. A ninth TC-0018-0012 row, boundary
+  `spec-binding`, is to be seeded.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -616,6 +629,7 @@ through `finish`, so its example ends that way.
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/06_Test-Cases.md`                                                                         | re-derive | user        | 2026-09-25T06:04:36Z |
 | CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                       | re-derive | user        | 2026-09-25T07:34:27Z |
 | CR-20260925-0014 | `spec-0018/06_Test-Cases.md`                                                                                                                 | re-derive | user        | 2026-09-25T08:17:46Z |
+| CR-20260925-0015 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/06_Test-Cases.md`                         | re-derive | user        | 2026-09-25T10:20:50Z |
 
 ## Merge reconciliation (2026-09-25)
 

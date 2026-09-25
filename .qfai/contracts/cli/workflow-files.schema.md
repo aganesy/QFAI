@@ -118,6 +118,10 @@ Realizes: `discussion-20260923171450572#REQ-0023`,
   HMAC-SHA-256 under the run's key. A bare hash of a short request could be
   confirmed by guessing it. The key stays in `request.private.json`, so the
   runtime tree can still prove a match.
+- **Spec binding.** A spec bound from the proposal's `affectedSpecIds` has no
+  slot, so it adds no `targetBindings` entry. The journal's `binding-recorded`
+  event and the execution context's spec binding hold it (CLI-WF
+  `### Route proposal`).
 - **No private input.** The tracked tree holds no conversation text, no secret or
   token, and no absolute local path. The one prose it carries is a question and
   its options, as the question put them.
