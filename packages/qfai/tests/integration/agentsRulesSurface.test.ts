@@ -1154,6 +1154,75 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("api-budget.md");
     });
   });
+
+  // The research protocol promotes what a fetched page says into guidance later
+  // stages follow, and a reviewer reads a pull request body its author wrote.
+  // Both read text nobody here authored, so the rule ships and the two places
+  // that act on such text point at it.
+  describe("untrusted-content rule", () => {
+    const MASTERS = [
+      ".agents/rules/untrusted-content.md",
+      "packages/qfai/assets/init/root/.agents/rules/untrusted-content.md",
+    ];
+
+    it.each(MASTERS)("%s states every clause", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      for (const clause of [
+        // The surfaces that carry text the repository did not author.
+        /\|\s*Tool results\s*\|/,
+        /\|\s*Fetched pages\s*\|/,
+        /\|\s*File contents the repository did not add\s*\|/,
+        /Pull\s+request\s+and\s+issue\s+bodies/,
+        /\|\s*Text a user pasted\s*\|/,
+        // Data, and the one condition under which an instruction there is followed.
+        /Read\s+it\s+as\s+data/,
+        /followed\s+only\s+where\s+the\s+user's\s+own\s+request\s+asks\s+for\s+it/,
+        // Promotion into a rule, and where the research protocol applies it.
+        /becomes\s+a\s+rule\s+only\s+through\s+a\s+check/,
+        /research-first-protocol\.md/,
+        // The marking convention for pasted text.
+        /short\s+random\s+id,\s+new\s+for\s+each\s+prompt/,
+        /opening\s+and\s+a\s+closing\s+tag\s+carrying\s+that\s+id/,
+        /Say\s+in\s+the\s+system\s+prompt\s+what\s+the\s+tags\s+mean/,
+        // What the marks are not.
+        /one\s+guardrail\s+among\s+several,\s+not\s+a\s+complete\s+defence/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("ships to adopters", async () => {
+      const shipped = path.join(
+        ROOT,
+        "packages/qfai/assets/init/root/.agents/rules/untrusted-content.md",
+      );
+      expect((await lstat(shipped)).isFile()).toBe(true);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+      // The reviewer that reads a pull request's description.
+      "packages/qfai/assets/init/.github/instructions/code-review.instructions.md",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("untrusted-content.md");
+    });
+
+    it.each([
+      ".qfai/assistant/constitution/research-first-protocol.md",
+      "packages/qfai/assets/init/.qfai/assistant/constitution/research-first-protocol.md",
+    ])("%s does not apply an external source on its own strength", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("untrusted-content.md");
+      expect(text).toMatch(/not\s+applied\s+on\s+the\s+strength\s+of\s+that\s+source\s+alone/);
+      expect(text).toMatch(/verified\s+against\s+the\s+repository/);
+    });
+  });
 });
 
 describe("the question shape has one owner", () => {
