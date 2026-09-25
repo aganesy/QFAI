@@ -92,6 +92,7 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result).toEqual({ ok: true, url: null });
   });
 
+  // QFAI:SPEC-0012:TC-0012-0486
   it("returns ok=false with the operator-facing flag named when URL composition throws", () => {
     // `new URL(":::", "not-a-base")` throws (`:::` is not a valid URL
     // and `"not-a-base"` is not a valid absolute base) — the catch
