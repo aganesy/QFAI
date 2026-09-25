@@ -282,7 +282,7 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
     expect(body).toContain('"$GITHUB_OUTPUT"');
   });
 
-  it("the full-history request appears on the detection job only, across the whole shipped set", async () => {
+  it("full history is requested only by the detection and document scope jobs, and by the validation job on a pull request, across the whole shipped set", async () => {
     /** Occurrences of a mapping key anywhere in a parsed YAML tree. */
     function countKeyOccurrences(node: unknown, key: string): number {
       if (Array.isArray(node)) {

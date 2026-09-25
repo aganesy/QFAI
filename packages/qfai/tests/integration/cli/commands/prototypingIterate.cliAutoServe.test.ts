@@ -128,7 +128,22 @@ async function seedMinimal(root: string): Promise<void> {
   );
 }
 
+async function listenOnEphemeralPort(): Promise<{ server: Server; port: number }> {
+  const server = createServer();
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const address = server.address();
+  if (!address || typeof address !== "object") {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    throw new Error("could not bind blocker to ephemeral port");
+  }
+  return { server, port: address.port };
+}
+
 describe("iterate --auto-serve: (1) CLI flag parses", () => {
+  // QFAI:EX-0001-0135-01
   it("parseArgs sets options.prototypingAutoServe=true when --auto-serve is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--auto-serve"],
@@ -140,6 +155,7 @@ describe("iterate --auto-serve: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingAutoServe).toBe(true);
   });
 
+  // QFAI:EX-0001-0135-01
   it("parseArgs leaves prototypingAutoServe undefined when --auto-serve is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -167,6 +183,7 @@ describe("iterate --auto-serve: (2) threading via injected serverRunner reaches 
 });
 
 describe("iterate --auto-serve: (3) default runner fallback when serverRunner omitted", () => {
+  // QFAI:EX-0001-0135-01
   it("dynamically loads defaultServerRunner; deferred sentinel error is gone", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -179,23 +196,35 @@ describe("iterate --auto-serve: (3) default runner fallback when serverRunner om
       writes.push(String(c));
       return true;
     });
+    // A port that was free a moment ago, so the default runner can bind it.
+    const probe = await listenOnEphemeralPort();
+    await new Promise<void>((resolve) => probe.server.close(() => resolve()));
+    const listenSpy = vi.spyOn(NetServer.prototype, "listen");
     try {
       const exit = await runPrototypingIterate({
         root,
         cycle: 0,
-        targetUrl: "http://localhost:5173",
+        targetUrl: `http://127.0.0.1:${probe.port}/`,
         autoServe: true,
       });
+      const listenPorts = listenSpy.mock.calls.map((call) => call[0]);
+      const started = listenSpy.mock.contexts.filter(
+        (ctx): ctx is NetServer => ctx instanceof NetServer,
+      );
       const joined = writes.join("\n");
       // Sentinel string from the Phase 2 stub must be REPLACED.
       expect(joined).not.toMatch(/no default wiring yet/);
       // The default runner module must be importable (smoke test).
       const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
       expect(typeof mod.defaultServerRunner).toBe("function");
-      // exit is a number (0 on successful spawn + teardown, 2 on
-      // EADDRINUSE etc.).
-      expect(typeof exit).toBe("number");
+      // With no runner injected, iterate starts the default server on the
+      // --target-url port, completes the cycle and tears the server down.
+      expect(exit).toBe(0);
+      expect(listenPorts).toEqual([probe.port]);
+      expect(started).toHaveLength(1);
+      expect(started.filter((server) => server.listening)).toEqual([]);
     } finally {
+      listenSpy.mockRestore();
       stdoutSpy.mockRestore();
       stderrSpy.mockRestore();
     }
@@ -270,6 +299,7 @@ describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
     }
   });
 
+  // QFAI:EX-0001-0135-01
   it("default runner teardown resolves within 2000ms", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -585,20 +615,6 @@ describe("iterate --auto-serve: (7) foreign-process refusal on EADDRINUSE", () =
 });
 
 describe("iterate --auto-serve: (8) default runner refuses a held port", () => {
-  async function listenOnEphemeralPort(): Promise<{ server: Server; port: number }> {
-    const server = createServer();
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(0, "127.0.0.1", () => resolve());
-    });
-    const address = server.address();
-    if (!address || typeof address !== "object") {
-      await new Promise<void>((resolve) => server.close(() => resolve()));
-      throw new Error("could not bind blocker to ephemeral port");
-    }
-    return { server, port: address.port };
-  }
-
   async function canConnect(port: number): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
       const socket = connect({ host: "127.0.0.1", port });

@@ -212,6 +212,7 @@
     "tests/integration/cliStartupCost.test.ts",
     "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/explorationRelaxationAudit.test.ts",
+    "tests/integration/initCopilotLegacyWindow.test.ts",
     "tests/integration/prototypingExplorationRelaxationScope.test.ts",
     "tests/integration/scripts/checkPackLocations.deletion.test.ts",
     "tests/integration/scripts/checkPackLocations.textScope.test.ts",

@@ -194,3 +194,4 @@
 | US-0001-0188 | Research Observability                                                          | `user-story-0001-0188/` |
 | US-0001-0189 | Evaluation Harness for Research Quality                                         | `user-story-0001-0189/` |
 | US-0001-0190 | Human-in-the-Loop Review Gates                                                  | `user-story-0001-0190/` |
+| US-0001-0191 | Read-only convergence peek                                                      | `user-story-0001-0191/` |

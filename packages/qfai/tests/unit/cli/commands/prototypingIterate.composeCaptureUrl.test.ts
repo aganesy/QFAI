@@ -25,6 +25,7 @@
  *      `--target-url=` flag named (NOT the internal `targetUrl=`
  *      field name), pinning the operator surface of the catch branch.
  */
+// QFAI:EX-0001-0134-02
 import { describe, expect, it } from "vitest";
 
 import { composeCaptureUrl } from "../../../../src/cli/commands/prototypingIterate.js";

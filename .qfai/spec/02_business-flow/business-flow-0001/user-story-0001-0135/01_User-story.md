@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF) so that iterate can start and tear down a local HTTP server through a runner that refuses a port another process holds. (REQ-0012-0062)
+As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --auto-serve` flag (default OFF) so that iterate can start and tear down a local HTTP server through a runner that refuses a port another process holds. (REQ-0012-0062, REQ-0012-0076)
 
 ## Legacy Source Scope
 
