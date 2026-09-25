@@ -82,6 +82,31 @@ describe("the implementation reviewer flags dropped promises, not uncaught propa
   );
 });
 
+describe("the implementation reviewer reads silent failure and type invariants", () => {
+  it.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
+    "%s names both remits on the card and in the baseline",
+    async (tree) => {
+      const card = await readFile(
+        path.join(ROOT, tree, "assistant/agents/implementation-reviewer.md"),
+        "utf-8",
+      );
+      const flat = card.replace(/\s+/g, " ");
+      expect(flat).toContain("Read every error path the change adds or alters for silent failure");
+      expect(flat).toContain("a catch that also swallows errors it did not expect");
+      expect(flat).toContain("a fallback that hides the problem instead of handling it");
+      expect(flat).toContain("one without them is an unmarked simplification");
+      expect(flat).toContain("Read every type the change adds or alters for invariants it owns");
+      expect(flat).toContain("no invariant lives only in a comment or in its callers");
+      const baseline = await readFile(
+        path.join(ROOT, tree, "assistant/constitution/shared-skill-delegation-baseline.md"),
+        "utf-8",
+      );
+      const row = baseline.split("\n").find((line) => line.startsWith("| `/qfai-implement`"));
+      expect(row).toContain("silent failure and type invariants included");
+    },
+  );
+});
+
 describe("reviewer stop conditions distinguish named-rule defects from new product obligations", () => {
   it.each(
     ["packages/qfai/assets/init/.qfai", ".qfai"].flatMap((tree) =>
