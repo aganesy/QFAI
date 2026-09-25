@@ -115,6 +115,22 @@ describe("defaultCaptureScreen — HTTP response-status guard", () => {
   });
 
   // QFAI:SPEC-0012:TC-0012-0487
+  it("REJECTS a 400 response, the first status of the rejection boundary", async () => {
+    const dir = await newTempDir();
+    const page = makeStubPage({ status: () => 400 });
+    vi.doMock("playwright", () => makeStubModule(page));
+    const result = await defaultCaptureScreen({
+      screenId: "bad",
+      url: "http://localhost/bad",
+      pngPath: path.join(dir, "bad.png"),
+      htmlPath: path.join(dir, "bad.html"),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/HTTP 400/);
+    expect(page.screenshot).not.toHaveBeenCalled();
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0487
   it("REJECTS a null response (no navigation occurred)", async () => {
     const dir = await newTempDir();
     const page = makeStubPage(null);
