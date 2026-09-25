@@ -22,6 +22,7 @@ import {
   receiptValidityOf,
   routingFacts,
   startFacts,
+  uiBearingSpecIdsOf,
 } from "../../core/workflow/observe.js";
 import {
   decisionInputRefusals,
@@ -439,6 +440,8 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     input.operation === "resume";
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
+  const issuing = input.operation === "next" && state === "ready" && specId !== undefined;
+  const uiBearingSpecIds = issuing ? await uiBearingSpecIdsOf(root) : undefined;
   const accepting = input.operation === "accept" && state === "running";
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
   const receiptValidity =
@@ -447,6 +450,7 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     ...(ledger ? { ledger } : {}),
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
+    ...(uiBearingSpecIds ? { uiBearingSpecIds } : {}),
   };
 }
 

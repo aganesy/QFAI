@@ -5,11 +5,18 @@
 // QFAI:SPEC-0018:TC-0018-0250
 // QFAI:SPEC-0018:TC-0018-0251
 
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { uiBearingSpecIdsOf } from "../../../src/core/workflow/observe.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 type Snapshot = Parameters<typeof decide>[0];
+type Facts = Parameters<typeof decide>[2];
 
 const specBinding = { specId: "spec-0001" };
 const LEDGER = ".qfai/specs/spec-0001/tdd/test-list.md";
@@ -36,7 +43,7 @@ function boundedPlan(stageKind: string, skill: string, operation: string) {
 }
 
 // Issues the middle stage's work order, bound to spec-0001.
-function issueMiddle(stageKind: string, skill: string, operation: string) {
+function issueMiddle(stageKind: string, skill: string, operation: string, facts: Facts = {}) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-records", state: "ready", sequence: 8 },
     plan: boundedPlan(stageKind, skill, operation),
@@ -45,7 +52,7 @@ function issueMiddle(stageKind: string, skill: string, operation: string) {
       { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
     ],
   };
-  const issued = decide(ready, { operation: "next" }, {});
+  const issued = decide(ready, { operation: "next" }, facts);
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
   if (!workOrder || !run) throw new Error("next issues the middle stage's work order");
@@ -192,6 +199,38 @@ for (const [title, stage, recordAreas] of derivations) {
     expect(issueMiddle(...stage).workOrder.recordAreas).toEqual(recordAreas);
   });
 }
+
+const prototype: [string, string, string] = [
+  "prototype",
+  "qfai-prototyping",
+  "existing-runtime-contract",
+];
+
+it("a prototype on a UI-bearing target names its session record", () => {
+  expect([
+    issueMiddle(...prototype, { uiBearingSpecIds: ["spec-0001"] }).workOrder.recordAreas,
+    issueMiddle(...prototype, { uiBearingSpecIds: ["spec-0002"] }).workOrder.recordAreas,
+  ]).toEqual([[".qfai/evidence/prototyping/grilling.md"], undefined]);
+});
+
+it("the UI-bearing specs are read from each spec's declaration", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-bearing-"));
+  try {
+    const specs = path.join(root, ".qfai", "specs");
+    const declarations: [string, string][] = [
+      ["spec-0001", "---\nsurface_type: ui-bearing\n---\n# Export screen\n"],
+      ["spec-0002", "# Export job\n"],
+    ];
+    for (const [specId, text] of declarations) {
+      await mkdir(path.join(specs, specId), { recursive: true });
+      await writeFile(path.join(specs, specId, "01_Spec.md"), text);
+    }
+
+    expect(await uiBearingSpecIdsOf(root)).toEqual(["spec-0001"]);
+  } finally {
+    await removeTempTree(root);
+  }
+});
 
 // The checked plan a routing result becomes, for the same bounded-change stages.
 function checkedPlanDocument() {

@@ -505,6 +505,8 @@ export interface WorkflowFacts {
   acceptanceObligationsUnmet?: boolean;
   plans?: Record<string, { route: string; stages: PlanStages }>;
   specs?: Record<string, { lifecycle: string }>;
+  // Each spec the project declares UI-bearing, as `spec-<number>`.
+  uiBearingSpecIds?: string[];
   contractIds?: string[];
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
   itemReferences?: Record<string, "resolved" | "unresolved">;
@@ -1104,9 +1106,7 @@ function diagnosisInputs(
 // that spec. Every other kind writes only its checked scope or git-ignored output.
 // SIMPLIFIED: names the bound spec's records under the default specs directory.
 // Lift when: the command adapter supplies the configured specs directory.
-// SIMPLIFIED: a prototype work order names no record, as for a target that is not UI-bearing.
-// Lift when: the facts say whether a prototype's target is UI-bearing.
-function recordAreasOf(workOrder: WorkflowWorkOrder): string[] {
+function recordAreasOf(workOrder: WorkflowWorkOrder, facts: WorkflowFacts): string[] {
   const target = workOrder.target;
   if (target?.kind !== "spec") return [];
   const specId = target.specId;
@@ -1133,6 +1133,10 @@ function recordAreasOf(workOrder: WorkflowWorkOrder): string[] {
         `${pack}/09_delta.md`,
         `.qfai/evidence/sdd-${specId}.md`,
       ];
+    case "prototype":
+      return facts.uiBearingSpecIds?.includes(specId)
+        ? [".qfai/evidence/prototyping/grilling.md"]
+        : [];
     default:
       return [];
   }
@@ -2503,7 +2507,7 @@ export function decide(
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
-    const recordAreas = recordAreasOf(nextWorkOrder);
+    const recordAreas = recordAreasOf(nextWorkOrder, facts);
     if (recordAreas.length > 0) nextWorkOrder.recordAreas = recordAreas;
     const skipped = skippedBefore(
       plan,
