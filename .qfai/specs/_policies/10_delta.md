@@ -951,12 +951,25 @@ This table holds the one `CREATE` and the policy-layer rows. The rows for each e
 
 Per-spec rows are in the `09_delta.md` of spec-0001, spec-0003, spec-0004, spec-0008, spec-0010, spec-0011, spec-0012, spec-0013, spec-0014, spec-0015 and spec-0017.
 
+## 2026-09-25 — The brand direction and `prototyping.yaml`, restated to the product
+
+`CR-20260912-0003` settled two statements the product had replaced, and the
+policy layer stated both globally.
+
+| File                | Statement                        | Now says                                                                                                     |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `05_Contracts.md`   | who authors root `DESIGN.md`     | `/qfai-sdd` Phase 0, from the direction the discussion pack records; discussion writes no `DESIGN.md`        |
+| `06_Glossary.md`    | `DESIGN.md`, `exploration-first` | the same producer; the posture binds the screen explorations, and the user chooses the brand direction       |
+| `07_Constraints.md` | `TC-12`                          | the design system is mirrored from root `DESIGN.md` after the loop and is never a discussion input           |
+| `08_Decisions.md`   | `DR-0282`                        | superseded: `prototyping.yaml` is optional for a pack with a visual prototyping surface and required of none |
+
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                      | Mode      | Approved by                                             | Applied at           |
-| ---------------- | -------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | -------------------- |
-| CR-20260913-0007 | `_policies/08_Decisions.md`                                                            | re-derive | user (current session's delegated implementation scope) | -                    |
-| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-24T18:26:35Z |
-| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user                                                    | 2026-09-24T19:00:08Z |
+| CR ID            | Upstream artifact                                                                                                   | Mode      | Approved by                                             | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | -------------------- |
+| CR-20260913-0007 | `_policies/08_Decisions.md`                                                                                         | re-derive | user (current session's delegated implementation scope) | -                    |
+| CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                                              | re-derive | user                                                    | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                              | re-derive | user                                                    | 2026-09-24T19:00:08Z |
+| CR-20260912-0003 | `_policies/05_Contracts.md`; `_policies/06_Glossary.md`; `_policies/07_Constraints.md`; `_policies/08_Decisions.md` | re-derive | user                                                    | 2026-09-25T00:21:41Z |
 
 - DR-0012-002 cites this CR in Related. Source profile/catalog changes and their operating mirrors are physically applied. Scoped SDD validation has zero errors; full scoped and global SDD validation retain 61 and 96 baseline errors. Current attestations remain pending, Applied at remains unset and no baseline finding is waived.

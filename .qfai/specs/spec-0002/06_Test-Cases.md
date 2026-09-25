@@ -2,13 +2,13 @@
 
 ## Test Case Table (required)
 
-| TC-ID        | Level | AC-Refs      | EX-Ref       | Steps                                                | Expected                                            | Notes                |
-| ------------ | ----- | ------------ | ------------ | ---------------------------------------------------- | --------------------------------------------------- | -------------------- |
-| TC-0002-0001 | L3    | AC-0002-0001 | EX-0002-0001 | discussion-pack fixture with 15 files; run readiness | required-file issue is not reported                 | 15 files pass        |
-| TC-0002-0008 | L3    | AC-0002-0008 | EX-0002-0008 | discussion artifacts omit selected direction         | planner-first pass is preserved                     | no winner in discuss |
-| TC-0002-0009 | L3    | AC-0002-0008 | EX-0002-0009 | discussion artifact asserts single final winner      | planner-first violation is emitted                  | negative posture     |
-| TC-0002-0010 | L3    | AC-0002-0009 | EX-0002-0010 | non-UI pack without sidecars                         | no UI-only blocking issue                           | non-ui safe skip     |
-| TC-0002-0011 | L3    | AC-0002-0010 | EX-0002-0011 | inspect README / SKILL canonical wording             | `prototyping.yaml` requiredness matches active rule | wording consistency  |
+| TC-ID        | Level | AC-Refs      | EX-Ref       | Steps                                                                                         | Expected                                                                                                                                      | Notes                 |
+| ------------ | ----- | ------------ | ------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| TC-0002-0001 | L3    | AC-0002-0001 | EX-0002-0001 | discussion-pack fixture with 15 files; run readiness                                          | required-file issue is not reported                                                                                                           | 15 files pass         |
+| TC-0002-0008 | L3    | AC-0002-0008 | EX-0002-0008 | read the shipped discussion completion conditions for a UI-bearing pack                       | no selected screen exploration or finalized design system is a completion condition, and the brand direction is recorded as the user's choice | explorations unranked |
+| TC-0002-0009 | L3    | AC-0002-0008 | EX-0002-0009 | read the shipped completion conditions against a pack that marks one screen exploration final | they refuse completion: the explorations must be carried unranked                                                                             | negative posture      |
+| TC-0002-0010 | L3    | AC-0002-0009 | EX-0002-0010 | non-UI pack without sidecars                                                                  | no UI-only blocking issue                                                                                                                     | non-ui safe skip      |
+| TC-0002-0011 | L3    | AC-0002-0010 | EX-0002-0011 | inspect the package README, the discussion skill and its artifact rules                       | each carries the same sentence: optional for a pack with a visual prototyping surface, none for a cli-only pack                               | wording consistency   |
 
 ## Notes
 

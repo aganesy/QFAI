@@ -17,10 +17,11 @@ Scenario: discussion-pack が 15 必須ファイルを含む
 
 ```gherkin
 # AC-0002-0008
-Scenario: discussion は visual winner を選ばない
-  Given UI-bearing discussion pack
-  When discussion artifacts を検査する
-  Then selected direction や finalized design system を discussion の完了条件として要求しない
+Scenario: discussion ranks no screen exploration
+  Given a UI-bearing discussion pack
+  When its discussion artifacts are inspected
+  Then neither a selected screen exploration nor a finalized design system is a discussion completion condition
+  And the only direction discussion records is the brand direction the user chose
 ```
 
 ```gherkin
@@ -33,20 +34,21 @@ Scenario: 非 UI パックは sidecar requirement をバイパスする
 
 ```gherkin
 # AC-0002-0010
-Scenario: UI-bearing discussion packs require prototyping.yaml
-  Given latest discussion pack is UI-bearing
-  When discussion README / skill contract を検証する
-  Then `prototyping.yaml` requiredness が明記されている
+Scenario: prototyping.yaml is optional for a pack with a visual prototyping surface
+  Given the shipped discussion README and skill contract
+  When their wording for `prototyping.yaml` is inspected
+  Then they offer it as optional to a pack whose surfaces include web, mobile, desktop or mixed
+  And they say a cli-only pack carries none
 ```
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                              | Notes    | Priority |
-| ------------ | ---------------------------------- | -------- | -------- |
-| AC-0002-0001 | 15 必須ファイル                    | REQ-0001 | P1       |
-| AC-0002-0008 | planner-first / no winner          | REQ-0012 | P1       |
-| AC-0002-0009 | non-UI safe skip                   | REQ-0005 | P1       |
-| AC-0002-0010 | prototyping.yaml requiredness text | REQ-0005 | P1       |
+| AC-ID        | Title                                 | Notes    | Priority |
+| ------------ | ------------------------------------- | -------- | -------- |
+| AC-0002-0001 | 15 必須ファイル                       | REQ-0001 | P1       |
+| AC-0002-0008 | planner-first / explorations unranked | REQ-0012 | P1       |
+| AC-0002-0009 | non-UI safe skip                      | REQ-0005 | P1       |
+| AC-0002-0010 | prototyping.yaml optionality text     | REQ-0005 | P1       |
 
 > v1.8.9: AC-0002-0002..0007 (the legacy exploration-sidecar / OQ-blocker
 > behaviors proven by the now-retired `discussionDesignHardening` validator)

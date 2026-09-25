@@ -1060,6 +1060,8 @@ discussion-20260416023323603（v1.7.15 rev8 leaf-field ref grammar closure）、
 
 ### DR-0282: prototyping.yaml as Required Side Artifact
 
+- Status: superseded
+- Related: CR-20260912-0003. A discussion pack with a visual prototyping surface (`web`, `mobile`, `desktop` or `mixed`) may carry `prototyping.yaml` as an optional recommendation, a cli-only pack carries none, and readiness requires it of no pack. DR-0240 states that neutrality.
 - Decision: discussion-pack の必須アーティファクトとして prototyping.yaml を追加し、SDD preflight のブロッカーとする
 - Context: prototyping mode recommendation が discussion-pack 内に構造化されておらず、mode 選択の根拠がトレースできなかった
 - Rationale: prototyping.yaml により mode selection の根拠が明示的にキャプチャされ、SDD preflight で schema validation が可能になる

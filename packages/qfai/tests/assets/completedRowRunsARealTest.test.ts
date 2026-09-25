@@ -54,8 +54,6 @@ const KNOWN_CARRIER_ONLY: readonly string[] = [
   // The list is long because the condition is old. It is not a licence to add
   // to it: a row reaching `done` over a document is the thing this reports.
   "spec-0002 TDD-0001 TC-0002-0001",
-  "spec-0002 TDD-0009 TC-0002-0009",
-  "spec-0002 TDD-0010 TC-0002-0009",
   "spec-0003 TDD-0033 TC-0003-0033",
   "spec-0003 TDD-0055 TC-0003-0028",
   "spec-0004 TDD-0003 TC-0004-0003",
@@ -63,9 +61,6 @@ const KNOWN_CARRIER_ONLY: readonly string[] = [
   "spec-0004 TDD-0006 TC-0004-0006",
   "spec-0004 TDD-0009 TC-0004-0009",
   "spec-0004 TDD-0010 TC-0004-0010",
-  "spec-0010 TDD-0006 TC-0010-0006",
-  "spec-0010 TDD-0007 TC-0010-0006",
-  "spec-0010 TDD-0008 TC-0010-0006",
   "spec-0012 TDD-0295 TC-0012-0295",
   "spec-0012 TDD-0340 TC-0012-0330",
   "spec-0012 TDD-0341 TC-0012-0331",

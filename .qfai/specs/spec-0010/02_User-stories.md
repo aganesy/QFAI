@@ -10,7 +10,7 @@
 - US-0010-0006: Screen Contracts
 - US-0010-0007: Review Input Bundle
 - US-0010-0008: No Early Winner
-- US-0010-0009: DESIGN.md Draft Authoring
+- US-0010-0009: Design Direction Handoff
 - US-0010-0010: Legacy Sidecar Drop
 - US-0010-0011: Mock template emits anchor-form hrefs by default
 - US-0010-0012: Discussion writes the active session pointer
@@ -46,11 +46,11 @@ As a prototyping reviewer, I want `50_review_input_bundle.md` to mention best-of
 
 ## US-0010-0008: No Early Winner
 
-As a QFAI user, I want discussion to stop short of selecting the winning visual direction, so that breakthrough can still happen inside prototyping.
+As a QFAI user, I want discussion to carry the screen explorations unranked and to record only the brand direction I choose, so that the screen design can still be found inside prototyping.
 
-## US-0010-0009: DESIGN.md Draft Authoring
+## US-0010-0009: Design Direction Handoff
 
-As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vision / visual identity become the single source of truth for downstream skills.
+As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` Phase 0 authors root `DESIGN.md` from my choice rather than from an assistant's guess.
 
 ## US-0010-0010: Legacy Sidecar Drop
 

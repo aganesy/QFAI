@@ -2,7 +2,7 @@
 
 ## AC-0010-0001
 
-Given a UI-bearing discussion pack, when sidecar generation completes, then `uiux/40_screen_contracts.md` and `uiux/50_review_input_bundle.md` exist, and none of the legacy sidecars AC-0010-0008 forbids is written. Brand-level inputs are in root `DESIGN.md` (AC-0010-0007), not in a sidecar.
+Given a UI-bearing discussion pack, when sidecar generation completes, then `uiux/40_screen_contracts.md` and `uiux/50_review_input_bundle.md` exist, and none of the legacy sidecars AC-0010-0008 forbids is written. Brand-level inputs are in root `DESIGN.md`, which `/qfai-sdd` Phase 0 authors from the direction AC-0010-0007 records, not in a sidecar.
 
 ## AC-0010-0005
 
@@ -10,13 +10,13 @@ Given `50_review_input_bundle.md`, when validated, then it documents best-of-his
 
 ## AC-0010-0006
 
-Given a UI-bearing discussion pack, when inspected, then it does not declare a final winner direction or finalized design system.
+Given a UI-bearing discussion pack, when inspected, then its screen explorations are carried unranked, it declares no final design system, and the only direction it records is the brand direction the user chose.
 
-## AC-0010-0007: DESIGN.md draft as discussion phase output
+## AC-0010-0007: Design direction recorded for `/qfai-sdd` Phase 0
 
-- Given a `/qfai-discussion` UI-bearing run completes,
+- Given a `/qfai-discussion` run whose classified surfaces, primary or secondary, include `web`, `mobile`, `desktop` or `mixed`,
 - When the discussion pack is finalized,
-- Then root `DESIGN.md` exists at the consuming-project root with required token tables (color / typography / radius / shadow) parseable per the design-md reference under the active design contracts of this spec's discussion deliverables.
+- Then `01_Context.md#Design Direction` names the adopted theme and who chose it, and discussion writes no root `DESIGN.md`: `/qfai-sdd` Phase 0 authors that file from the recorded direction.
 
 ## AC-0010-0008: legacy sidecars not emitted
 

@@ -6,6 +6,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack. spec-0002 and spec-0010
+  now state the product's rules for the discussion stage: it records the brand
+  direction the user chooses and ranks none of the screen explorations, and
+  `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+
 - **The completion gate reads a `Record re-attestation`** (#2196). Repairing a
   completed row's evidence record after its review moves the bytes the review
   hashed, so the recorded `Audited evidence hash` no longer recomputes. The
