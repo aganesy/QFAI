@@ -100,10 +100,26 @@ records proof for a test that already existed.
 Unchanged by this run. The spec's obligations and their coverage are scored in
 the Coverage Depth Matrix below.
 
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-25T01:55:05.779Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260925-0008` fixes the two rows, the boundary each
+owns and the test case both verify. The verify text names both catalog shapes
+the first case builds, and the skill section the second case reads. Nothing
+surfaced during the run that the spec or the change request leaves open.
+
 ## Ledger rows advanced
 
 The original four rows were already `done`. The three new rows remain `todo`
 until the orchestrator writes their ledger cells after implementation gates.
+
+The run started 2026-09-25T01:55:05.779Z adds `TDD-0110` and `TDD-0111`, the two rows
+`CR-20260925-0008` seeds on `TC-0013-0010`. Both cases passed on their first
+run, so both take branch 2. `/qfai-implement` Phase Red step 3c applies each
+mutation and writes the falsifiability trio into the row's entry.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
 | ---------- | --------------- | ----------- | -------------- | ------ |
@@ -114,6 +130,8 @@ until the orchestrator writes their ledger cells after implementation gates.
 | `TDD-0081` | `TC-0013-0036`  | integration | falsifiability | todo   |
 | `TDD-0082` | `TC-0013-0037`  | integration | falsifiability | todo   |
 | `TDD-0083` | `TC-0013-0037`  | integration | falsifiability | todo   |
+| `TDD-0110` | `TC-0013-0010`  | integration | falsifiability | todo   |
+| `TDD-0111` | `TC-0013-0010`  | integration | falsifiability | todo   |
 
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
@@ -548,6 +566,64 @@ These three rows still require an integrated-tree checkpoint, review-pack seal,
 and completion-reviewer verdict before the ledger can reach `done`. The old
 Coverage Depth Matrix below predates `BR-0013-0021` and these two new TCs;
 its revision is a separate stage-wide obligation.
+
+### TDD-0110
+
+- TDD-ID: TDD-0110
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+- Selector: reports a spec id the catalog moves to another capability
+- TC-ref: TC-0013-0010
+- Branch: falsifiability — the validator already reports a moved spec id, so the case passed on its first run
+- Predicate to break: packages/qfai/src/core/validators/specSplitByCapability.ts:552, `capReferenceIssues` — `if (specText.trim().length === 0 || !specText.includes(capId)) {`, the check that a spec's `01_Spec.md` names the capability the catalog pairs it with
+- Mutation: `if (specText.trim().length === 0 || !specText.includes(capId)) {` to `if (specText.trim().length === 0) {`
+- Why it fails: every fixture spec has a non-empty `01_Spec.md`, so the mutated check reports nothing.
+  The two catalogs that keep the assignment still return `[]`.
+  The catalog with its `Spec` cells swapped also returns `[]` where the case expects two `QFAI-SPLIT-105` findings, so `toEqual` fails as an assertion at `tests/integration/sddSkillSpec0013.test.ts:271`
+- Type check: the mutated condition is still a boolean, and the line passes `tsc`
+- Other rows: `TDD-0111` and `TDD-0010` still pass, because neither case calls the validator
+- Classification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), at working-tree+8780ce78c6acf9aece8eaa7511b618d8c7b70b6c555c5f7ad8b3ef85928c2cbe
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/core/validators/specSplitByCapability.ts, `capReferenceIssues` — `QFAI-SPLIT-105` for a spec whose `01_Spec.md` does not name the capability the catalog pairs it with
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+```
+
+### TDD-0111
+
+- TDD-ID: TDD-0111
+- Layer: integration
+- Test file: packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+- Selector: SKILL.md makes reordering the capability-to-spec mapping a Change Request
+- TC-ref: TC-0013-0010
+- Branch: falsifiability — the skill already states the rule, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md:267, the `## Arguments and Target Selection (Mandatory)` bullet `- Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.`
+- Mutation: delete line 267
+- Why it fails: the section no longer holds the sentence, so `expect(section).toContain(...)` fails as an assertion at `tests/integration/sddSkillSpec0013.test.ts:287`.
+  The heading is still there, so the `start` check above it passes and the failure is the rule's own
+- Type check: the edit is to a Markdown file, so no type-checked file changes
+- Other rows: `TDD-0110` and `TDD-0010` still pass. No other case in the file reads that sentence, and `TDD-0010`'s cases read the `### No-argument batch delegation (MUST)` block
+- Classification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL.md makes reordering the capability-to-spec mapping a Change Request"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24), at working-tree+8780ce78c6acf9aece8eaa7511b618d8c7b70b6c555c5f7ad8b3ef85928c2cbe
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md, `## Arguments and Target Selection (Mandatory)` — the bullet making a reorder of the capability-to-spec mapping a Change Request
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/sddSkillSpec0013.test.ts
+```
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
@@ -562,6 +638,14 @@ every total.
 | ------------------- | -------------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the forty-nine obligations and write the matrix    | PASS                         |
 | completion-reviewer | Audit every claim this file makes against the repository | PENDING |
+
+### Rows for the run started 2026-09-25T01:55:05.779Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | acceptance-test-engineer | Write the `TDD-0110` and `TDD-0111` cases under a `TC-0013-0010` describe the `TDD-0010` selector does not match | CR-20260925-0008, 06_Test-Cases.md `TC-0013-0010` | `sddSkillSpec0013.test.ts` | PASS |
+| 2 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0110` and `TDD-0111` on the falsifiability branch | the test file, `specSplitByCapability.ts`, the `qfai-sdd` `SKILL.md` | #tdd-0110, #tdd-0111 | PASS |
+| 3 | - | n/a | grilling(-@2026-09-25T01:55:05.779Z/none): none | - | - | PASS |
 
 ## Cross-spec obligations
 
@@ -611,6 +695,24 @@ None.
 
 Recorded per row above, and summarized in the table under
 "Commands executed + key outputs".
+
+### Checks for the run started 2026-09-25T01:55:05.779Z
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "<Selector>"
+  TDD-0110 reports a spec id the catalog moves to another capability   Tests 1 passed | 23 skipped (24)
+  TDD-0111 SKILL.md makes reordering the capability-to-spec mapping a Change Request   Tests 1 passed | 23 skipped (24)
+  TDD-0010 TC-0013-0010: Batch Mode Targets Every Capability   Tests 2 passed | 22 skipped (24)
+pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+  Test Files 1 passed (1); Tests 24 passed (24)
+eslint and prettier --check on the test file   -> exit 0
+RED test hash over the manifest                 -> 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
+```
+
+`TDD-0010`'s selector still selects its own two cases and neither new one.
+`tsconfig.tests.json` does not list the test file, so `tsc` ran on a scratch
+config that extends it and includes only that file, with exit 0. The scratch
+config is deleted.
 
 ## Gaps / Open risks
 
@@ -694,6 +796,11 @@ the second over the UI contracts. The two message texts and severities are
 maintained separately. Nothing here depends on that, and no test covers the
 pair, so a change to one can silently diverge from the other.
 
+**The Coverage Depth Matrix predates `TDD-0110` and `TDD-0111`.** Its
+`TC-0013-0010` and `BR-0013-0007` rows still score the case as it was before
+the two clauses had a test. Rescoring them is part of the stage-wide matrix
+revision, as it is for the three optional-side-artifact rows.
+
 ## Final status
 
 Historical PASS for the original four rows, each for the part of its obligation named
@@ -703,3 +810,7 @@ rather than claimed.
 
 The three new rows have live P1d falsifiability PASS and focused GREEN. Their
 full checkpoint, review pack and completion verdict remain pending.
+
+`TDD-0110` and `TDD-0111` are handed over on the falsifiability branch. Their
+mutation runs, `qa-gatekeeper` verdicts, GREEN, review packs and checkpoint are
+`/qfai-implement`'s, and remain pending.
