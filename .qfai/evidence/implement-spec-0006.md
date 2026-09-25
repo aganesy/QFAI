@@ -1413,6 +1413,34 @@ cannot distinguish two rounds whose entry names and statuses are identical.
 - The file holds six tests and four of the `it`s are this row's; the other two are `TDD-0030`'s. A
   file-scoped count is a file count.
 
+#### Mutation sites and assertions on the current code (`b5d357c14`)
+
+Two of the sites and assertions recorded above are no longer live. A re-measurement of this row cites
+the ones below.
+
+- **`M1` fails `drift.test.ts:140`, not `:137`.** Its site, `hasDrifted`'s unreadable branch, is live.
+  The assertion it fails has moved:
+  - recorded: `:137`, `an unreadable installed workflow must still produce a finding`;
+  - now: `:140`, `details.modified must be a string array`.
+
+  The `ok` arm in `core/doctor.ts` registers `workflows.integrity` whenever a recorded name was
+  compared. The check therefore exists whether or not anything drifted, and `:137` stays green. The
+  cross-spec re-run at `03762f3cf` observed this; `atdd-spec-0004.md` records it under
+  `### Re-run results: spec-0006`.
+- **The `M2`, `M2a` and `M2b` needle is dead code.**
+  `if (packaged.kind === "absent" || installed.kind === "absent") { return false; }` still occurs once
+  in `hasDrifted`, but no input reaches it. `diffInstalledShippedWorkflows` settles both absences before
+  it calls `hasDrifted`:
+  - packaged side: the `continue` after `(await digestFile(path.join(packagedDir, name))).kind === "absent"`;
+  - installed side: the `declined` branch after `(await digestFile(installedPath)).kind === "absent"`.
+
+  Those two statements are the live sites of `M2a` and `M2b`, and `M2` is both at once. The docblock on
+  `hasDrifted` records that changing the dead branch's return value leaves the four drift suites green.
+  The cross-spec re-run observed the same: all three mutants survive at the recorded needle.
+- **Owed: the three mutants at their live sites.** The cross-spec re-run rebuilt them there and records
+  that they fail. It does not record their needles, replacements or results. Each still needs a
+  recorded run at its live site: needle, replacement, mutant blob, and the assertion it fails.
+
 ## Round-2 verdicts, and the measurement that settles the one blocking finding
 
 ### `implementation-reviewer`: PASS
@@ -2166,6 +2194,21 @@ record that it is unfilled.
     file already says so at another row. Any equivalent is multi-edit too.
   - `M6`'s recorded literal was **never unique**, at its base or now. Same class as `TDD-0030`'s two.
 - The file holds two tests; the other is `TDD-0038`'s.
+
+#### `A3` on the current code (`b5d357c14`)
+
+`A3` is the finding-exists guard: `the recorded stale file must still produce a workflows.integrity
+finding in this tree`. The mutation tables below list it among `M2`'s failures. On the current code it
+has no mutant of its own. A re-measurement of this row cites the assertions that actually fail.
+
+- **`M2` no longer fails `A3`.** This row's control is a recorded name that is compared. Under `M2` it
+  does not drift, so the `ok` arm in `core/doctor.ts` registers `workflows.integrity`, and `check` is
+  defined. Read from the code, not re-run: `M2` now reaches the severity assertion, `A5` and `A6`,
+  which expect the drift emission.
+- **No mutant can fail `A3` alone.** `check` is `findings[0]`, so it is undefined only when `findings`
+  is empty. The registration-count pin, `toHaveLength(1)`, then fails as well. A mutant that stops the
+  registration fails both. `TDD-0038` drops its own `toBeDefined()` for the same reason.
+- **Owed: `M2` re-run on the current code**, naming each assertion it fails.
 
 ### Oracle proof: three mutations, because one leaves two assertions unexercised
 
@@ -6297,6 +6340,32 @@ the defective print. No other recorded measurement is multi-edit.
   of its own — it is already a pointer into this section rather than a copy. Under Option A it needed
   no edit at all, and it is the shape the rule asks for.
 - The file holds two tests; the other is `TDD-0033`'s.
+
+#### Mutation sites on the current code (`b5d357c14`)
+
+`M2`'s recorded site is dead code, so every result above that includes `M2` is stale. A
+re-measurement of this row uses the live site below.
+
+- **Dead site.** `M2` edits `hasDrifted`'s absence answer, and the bullet above names that answer as
+  the symbol to follow. No input reaches it now. `diffInstalledShippedWorkflows` moves a recorded name
+  whose installed file is absent into `declined` before it calls `hasDrifted`. `### TDD-0029` gives the
+  detail.
+- **Live site.** The installed-absent answer is the `declined` branch after
+  `(await digestFile(installedPath)).kind === "absent"` in `diffInstalledShippedWorkflows`.
+- **Stale results.** Three runs rest on `M2`:
+  - `M2` against this row;
+  - `M3`, which is `M1` then `M2`;
+  - `M2` against `drift.test.ts`, which this section calls load-bearing.
+
+  `M2`'s replacement is `TDD-0029`'s `M2b`. The cross-spec re-run at `03762f3cf` observed `M2b` survive
+  at this needle, so the `drift.test.ts` run no longer fails `TDD-0029`'s second `it`. At this needle
+  `M3` is `M1` alone.
+- **`M1`, `M4` and `M6`.** Their needles still occur once. Under `M1` the entry-less name now reaches the
+  `declined` branch instead of `hasDrifted`. Whether the silence still needs two causes is part of the
+  re-measurement.
+- **Owed.** `M2` rebuilt at the live site, and `M3` rebuilt from it. Run both against this row and
+  against `drift.test.ts`, and re-run `M1`. Record the needle, replacement, mutant blob and failing
+  assertion of each.
 
 ### TDD-0039
 

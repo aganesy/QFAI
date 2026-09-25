@@ -223,6 +223,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **spec-0006 oracle records name the sites and assertions live on the current
+  code** (#2419). The records of `TDD-0029`, `TDD-0033` and `TDD-0038` cited a
+  mutation site that is now dead code, or an assertion the recorded mutant no
+  longer fails. Each record now names the live site or assertion and lists the
+  mutant runs still owed there. `CR-20260925-0016` and `CR-20260925-0007` are
+  still open and are not applied.
 
 ## [1.12.3] - 2026-09-24
 
