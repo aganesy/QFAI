@@ -353,6 +353,13 @@ The seven rows `CR-20260925-0010` split out of `TDD-0516` and `TDD-0517`:
 writes their tests and this file holds their evidence. The run stops each row at
 `refactor`; the `qa-gatekeeper` turns and the reviews follow it.
 
+
+Open entries from the gate of the `/qfai-implement` run started
+2026-09-25T03:38:07.172Z. Each is repaired in place before spec-0012 completion
+is declared.
+
+- `record:unchecked`, `TDD-0516`, `TDD-0578`, `TDD-0579`, `TDD-0580`, `TDD-0581`, `TDD-0517` and `TDD-0582`, Round 1: the ledger moved to `red`, `green` and `refactor` before the qa-gatekeeper verdict; the gate was taken after the revert, on trees rebuilt from each row's Round 1 revision.
+
 ## Preflight
 
 - Change Request preflight: `CR-20260925-0010` is approved and applied, and
@@ -405,6 +412,7 @@ Preflight: session opened
 | 4 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0516` tests open an `https://` URL with no `--target-url`, and an origin-only `http://` URL against one | `composeCaptureUrl`; `TC-0012-0486` | #tdd-0516; joining an absolute URL to a base returns it unchanged apart from normalising a bare origin, so the existing inputs passed with the passthrough branch removed | PASS |
 | 5 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0578` tests join to bases under `/app/`, and its mutation is the concatenation `targetUrl + screenUrl` | `composeCaptureUrl`; `TC-0012-0486`; `EX-0012-0187`; CR-20260925-0010 approved action 3 | #tdd-0578; with the existing bases, joining and concatenating give the same string. `EX-0012-0187` already joins `/` to a base ending `/app/` | PASS |
 | 6 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0517` selector holds the three captured statuses and the two refused ones, and one mutation, the comparison inverted, fails all five | `defaultCaptureScreen`; `TC-0012-0487`; `selector-granularity.md` | #tdd-0517; the five tests are the two sides of the one `status >= 400` predicate. Removing the branch would leave the three captured statuses passing | PASS |
+| 7 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: RED phase gate on the seven rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0516, #tdd-0578, #tdd-0579, #tdd-0580, #tdd-0581, #tdd-0517, #tdd-0582 | qa-gatekeeper fields | PASS |
 
 ## Items processed
 
@@ -478,6 +486,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+2b1114d882b623ac16a819f86e35b74f0ba8fe9b7de301e1b606416375b4c64c at HEAD e0d26853c; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt e0d26853c + the prototypingIterate.ts:1787 edit; it matches working-tree+2b1114d8…; run separately, entry 1 fails as an assertion at composeCaptureUrl.test.ts:37:20 and entry 2 at :44:20; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the passthrough branch; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0578
 
@@ -540,6 +550,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+fd3b026956603d54fea0faded5ab6aa1f89f6cc3a2692c6a810b5833bcc9cea9 at HEAD 349b4a973; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 349b4a973 + the prototypingIterate.ts:1804 edit; it matches working-tree+fd3b0269…; concatenation fails entry 1 at :52:20 (…/app//orders/new) and entry 2 at :61:20 (…/app/startorders/new), each run separately; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the new URL join; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0579
 
@@ -589,6 +601,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+cc84a53600adb3d8f0924a91437cbe44f225330724d31d1310fce4d75b552aca at HEAD bcaf8cc4c; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt bcaf8cc4c + the prototypingIterate.ts:1784 edit; it matches working-tree+cc84a536…; entry 1 fails at :85:20 and entry 2 at :91:20, each run separately; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the screenUrl === undefined fallback; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0580
 
@@ -626,6 +640,8 @@ The edit, the missing-base branch never taken:
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+39313e981986337482643858aac11489f7d091ab66887c3738c8327cf7dc628c at HEAD d4c7798e8; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt d4c7798e8 + the prototypingIterate.ts:1790 edit; it matches working-tree+39313e98…; the selector fails as an assertion at :76:27; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the targetUrl === undefined branch; advisory: the recorded edit is invisible to the contract, which a mutation at :1797 would catch at :67:23; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0581
 
@@ -663,6 +679,8 @@ The edit, the `catch` answering `ok: true`:
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+81818420bf085dc5c0cd6684fd1d3216ad24aad92429c31ae449baaa4a6b30b0 at HEAD 11d0a6112; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 11d0a6112 + the prototypingIterate.ts:1809 edit; it matches working-tree+81818420…; the selector fails as an assertion at :103:23; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the catch; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0517
 
@@ -722,6 +740,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+f92f4da3797a42130188cd2664118d741cf0612d094965e4d7c1eb9f69ca442e at HEAD 22b107140; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 22b107140 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+f92f4da3…; the five entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :143:23 and :157:23; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside status >= 400; advisory: status 400 itself is untested; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ### TDD-0582
 
@@ -759,6 +779,8 @@ The edit, the missing-response branch never taken:
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
 - Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+805682d1508c17e117f9b2ab07cefcd2c1a491468636dba810d1f1da2f4dd685 at HEAD 974b74da4; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 974b74da4 + the defaultCaptureScreen.ts:114 edit; it matches working-tree+805682d1…; the selector fails at :129:27 on the contracted no-response reason; -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside the response === null refusal; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
 
 ## Test results summary
 
