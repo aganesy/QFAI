@@ -742,7 +742,7 @@ Test Files  1 passed (1)
 Tests       1 passed (1)
 ```
 
-- Round 1: Oracle proof: Replaced only the returned run state `"awaiting_input"` with `"routing"` in `decide.ts`, ran the GREEN command, and observed exit 1 inside the selected test at line 89. The unchanged CREATE question still matched. Restored the one-line mutation immediately and reran GREEN with exit 0. This mutation proves the state predicate discriminates; it does not establish the later proposal-refusal or environment checks.
+- Round 1: Oracle proof: Replaced only the returned run state `"awaiting_input"` with `"routing"` in `decide.ts` and ran the GREEN command, `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`). It exited 1: the selected test `TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability` failed at line 89 on `state: 'routing'` against `awaiting_input`. The unchanged CREATE question still matched. Restored the one-line mutation immediately and reran GREEN with exit 0. This mutation proves the state predicate discriminates; it does not establish the later proposal-refusal or environment checks.
 
 ```diff
 -      run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
@@ -764,13 +764,15 @@ Tests       1 failed (1)
 - Relevant suite: narrow suite, reverse dependency closure resolved. The new production module has no production importer; the only test importer is this row's test, and no test imports that test file.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; one selected test passed after applying `CR-20260924-0007`. No source or test file changed in this review fix.
-- Refactor verify revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` (two consecutive calculations agreed; 2,495 path records).
-- Round 1: Review pack (attempt 1): `review-20260924182257625` (not committed).
-- Round 1: Review pack seal (attempt 1): `c8fe3a3493e4ba295c17cb6ea37da07e8a40043400305134232521bd44dcbd2b` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
+- Refactor verify revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`
+  Two consecutive calculations agreed; 2,495 path records.
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260924182257625 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): `c8fe3a3493e4ba295c17cb6ea37da07e8a40043400305134232521bd44dcbd2b`
 - Round 1: reviewer verdict (attempt 1): REVISE. The completion reviewer passed. The implementation reviewer found that `decide.ts` has no production consumer and the owning Plan does not record the independently required pure decision seam as an exception to its three-consumer rule. The behaviour-preserving review path applied `CR-20260924-0007`; the next review stays in Round 1.
-- Round 1: Review pack (attempt 2): `review-20260924205303198` (not committed).
-- Round 1: Review pack seal (attempt 2): `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286` (four files, Markdown normalized and JSON raw).
-- Round 1: reviewer verdict (attempt 2): PASS. Both completion and implementation reviewers independently matched `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` and audited evidence hash `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`. The Plan now records the narrow pure-decision-function exception and its requiring obligation.
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260924205303198 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`
+- Round 1: reviewer verdict (attempt 2): PASS
+  Both completion and implementation reviewers independently matched `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8` and audited evidence hash `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`. The Plan now records the narrow pure-decision-function exception and its requiring obligation.
 
 ```text
 ✓ |unit| tests/unit/workflow/oneCreateQuestionAtRouting.test.ts > TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability
@@ -778,30 +780,37 @@ Test Files  1 passed (1)
 Tests       1 passed (1)
 ```
 
-- Spec review: PASS.
-- Spec reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
-- Spec audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`.
-- Spec review pack: `review-20260924205303198` (not committed).
-- Spec review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`.
-- Code quality review: PASS.
-- Code quality reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
-- Code quality audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`.
-- Code quality review pack: `review-20260924205303198` (not committed).
-- Code quality review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`.
-- Prototype parity: n/a (not UI-affecting).
-- Prototype parity reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`.
+- Spec review: PASS
+- Spec reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`
+- Spec audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`
+- Spec review pack: .qfai/review/review-20260924205303198 <!-- qfai:not-a-citation -->
+- Spec review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`
+- Code quality review: PASS
+- Code quality reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`
+- Code quality audited evidence hash: `bb3d6729c2a604a0c159a33b97fbfb037c69f1f7a03a1edbc27288466796313e`
+- Code quality review pack: .qfai/review/review-20260924205303198 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: `1339c2cbea4597d24d008416c4c6c56b34f907c6a7b8593712979be899d5c286`
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`
 - Checkpoint verification command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose`
 - Checkpoint verification cwd: `packages/qfai`
 - Checkpoint verification result: `PASS; exit 0; TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability; one selected test passed`
 - Checkpoint verification revision: `working-tree+f6cd0be7eecbfe928f840cabe5a6da3f9c7dbe20cdea8f673111d9927d7649d8`
-- Checkpoint verification seal: `038d4cc6eb8316fd6162cf0e468b3b3541cb373b531b3a1fb674378799063162` (the canonical revision, command and result lines above).
+- Checkpoint verification seal: `038d4cc6eb8316fd6162cf0e468b3b3541cb373b531b3a1fb674378799063162`
+- Record re-attestation reason: `record:QFAI-TDDLIST-008` under "Record defects". The review and phase-authored fields above were repaired in form, and this row's Coverage Depth Matrix slice joined the audited subject after the verdicts.
+- Spec record re-attestation: 3627db8cd1d6dc1d53208841a84b5db255cd4435accb2b4a951052ae62eb786b
+- Spec record re-attestation pack: .qfai/review/review-20260926014000001 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 6d7a27f28f5a09a47536d5aae93dc9ca9506520b9fded17975251ebb58f68352
+- Code quality record re-attestation: 3627db8cd1d6dc1d53208841a84b5db255cd4435accb2b4a951052ae62eb786b
+- Code quality record re-attestation pack: .qfai/review/review-20260926014000001 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 6d7a27f28f5a09a47536d5aae93dc9ca9506520b9fded17975251ebb58f68352
 
 ### TDD-0002
 
 - TDD-ID: TDD-0002
 - Layer: Unit
 - Test file: `packages/qfai/tests/unit/workflow/oneCreateQuestionAtRouting.test.ts`
-- Selector: `TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results`
+- Selector: `TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted resu`
 - TC-ref: TC-0018-0002
 - Owning module: `packages/qfai/src/core/workflow/decide.ts`
 - qa-gatekeeper: PASS x4 (qa-gatekeeper#1 — Round 1 RED at `working-tree+cb4e1c475a4107cd444205d53400e180bd69e605a2e7efa602e5323a571d3233`; Round 1 GREEN at `working-tree+57fbb854370cb0f18a6da8a1a9a2099c07b899e9f55d1421416beeb550890b25`; Round 2 RED at `working-tree+baf390ccbdb55a4ef3f6b53c5f80fbe0cc593adf5942c67f51e7c4bdc0681db8`; Round 2 GREEN and both oracle proofs at `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`; all against HEAD `ccca63a7ad553c8eb4bbd4da38f52d2d74189cdd`)
@@ -930,13 +939,13 @@ Test Files  1 failed (1)
 +      run: { ...run, state: "routing", sequence: run.sequence + 2 },
 ```
 
+#### Round 1 refactor and review
+
 - Refactor decision: no code edit. The `next` and `accept` branches validate different state boundaries. A common abstraction would precede the later schema, receipt and staleness obligations; the current source marks the limited checks and their lifting conditions.
 - Relevant suite: the shared test file is the reverse dependency closure of `decide.ts`. The two selectors include this row and completed TDD-0001. A scan of the other 18 specs found 386 `done` rows with no direct ownership of either file; no other production importer reaches the source.
-- Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
-- Refactor verify result: exit 0; both TDD-0001 and TDD-0002 selectors passed, with no source or test edit after the GREEN observations.
-- Refactor verify revision: `working-tree+57fbb854370cb0f18a6da8a1a9a2099c07b899e9f55d1421416beeb550890b25` (two consecutive calculations agreed; 2,495 path records).
-- Round 1: Review pack (attempt 1): `review-20260924220400000` (not committed).
-- Round 1: Review pack seal (attempt 1): `3cfbbe264b6a8975bfb21219e1fb5ffec4d85ac64f967513a2303fd55e6f1916` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
+- Round 1 refactor verification, superseded by the row-level fields after Round 2: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`) exited 0. Both TDD-0001 and TDD-0002 selectors passed, with no source or test edit after the GREEN observations. The tree was `working-tree+57fbb854370cb0f18a6da8a1a9a2099c07b899e9f55d1421416beeb550890b25` (two consecutive calculations agreed; 2,495 path records).
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260924220400000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): `3cfbbe264b6a8975bfb21219e1fb5ffec4d85ac64f967513a2303fd55e6f1916`
 - Round 1: reviewer verdict (attempt 1): REVISE
 
 #### Round 2
@@ -1032,7 +1041,7 @@ Tests       1 passed | 1 skipped (2)
 - Round 2: Oracle proof plan: After GREEN, omit or corrupt only the `accept-nonfinal-result` event's `resultRef` and confirm this selector fails on replay identity while the work order remains issued. Restore and rerun GREEN. Also repeat Round 1's extra-CREATE-event mutation under the changed test and confirm `laterCreateQuestions: 1` against expected `0`, then restore and rerun GREEN.
 - Round 2: Revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
 - Round 2: GREEN command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose --testNamePattern=TC-0018-0002` (cwd: `packages/qfai`)
-- Round 2: GREEN result: exit 0; the selector passed with the `sdd`, `acceptance`, `implement` and `verify` work orders in order. The test replayed three accepted results from work-order events and `resultRef` documents, reported no replay failure and saw no later CREATE question. The complete shared test file passed 2/2. Restored source SHA-256: `78a84088d91dff0b946d33daec125669950ca618539ac72087461da7893e20ea`; test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`.
+- Round 2: GREEN result: exit 0; the selector passed with the `sdd`, `acceptance`, `implement` and `verify` work orders in order. The test replayed three accepted results from work-order events and `resultRef` documents, reported `replayFailure: null` and saw no later CREATE question. The complete shared test file passed 2/2. Restored source SHA-256: `78a84088d91dff0b946d33daec125669950ca618539ac72087461da7893e20ea`; test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`.
 
 ```text
 ✓ |unit| tests/unit/workflow/oneCreateQuestionAtRouting.test.ts > TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results
@@ -1040,7 +1049,7 @@ Test Files  1 passed (1)
 Tests       1 passed | 1 skipped (2)
 ```
 
-- Round 2: Oracle proof: Two mutations were taken against the final source and changed test. First, the accepted event's `resultRef` pointed to a missing result document. The selector failed at line 233 with replay failure, no replayed results and only `sdd` issued. Second, a non-routing SDD `next` emitted one CREATE question while retaining its work order. The selector failed at line 233 with `laterCreateQuestions: 1` against expected `0`; stage order and replayed results still matched. Each mutation was removed immediately and the same selector passed again.
+- Round 2: Oracle proof: Two mutations were taken against the final source and changed test, each run under the GREEN command, `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose --testNamePattern=TC-0018-0002` (cwd: `packages/qfai`), which selects `TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results`. First, the accepted event's `resultRef` pointed to a missing result document. The command exited 1 and the selector failed at line 233 with replay failure, no replayed results and only `sdd` issued. Second, a non-routing SDD `next` emitted one CREATE question while retaining its work order. The command exited 1 and the selector failed at line 233 with `laterCreateQuestions: 1` against expected `0`; stage order and replayed results still matched. Each mutation was removed immediately and the same selector passed again.
 
 ```diff
 @@ -184,7 +184,7 @@ export function decide(
@@ -1110,27 +1119,35 @@ Tests  1 failed | 1 skipped (2)
 - Relevant suite: the shared test file covers the touched `decide.ts` module and its current reverse dependency closure; no production importer reaches the source. Both TDD-0001 and TDD-0002 selectors run in this file.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; both selectors passed (2/2). No source or test edit followed the restored Round 2 GREEN observations. Source SHA-256: `78a84088d91dff0b946d33daec125669950ca618539ac72087461da7893e20ea`; test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`.
-- Refactor verify revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37` (two consecutive calculations agreed; 2,495 path records).
-- Round 2: Review pack (attempt 1): `review-20260924223559000` (not committed).
-- Round 2: Review pack seal (attempt 1): `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
+- Refactor verify revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
+  Two consecutive calculations agreed; 2,495 path records.
+- Round 2: Review pack (attempt 1): .qfai/review/review-20260924223559000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal (attempt 1): `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`
 - Round 2: reviewer verdict (attempt 1): PASS
-- Spec review: PASS.
-- Spec reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
-- Spec audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`.
-- Spec review pack: `review-20260924223559000` (not committed).
-- Spec review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`.
-- Code quality review: PASS.
-- Code quality reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
-- Code quality audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`.
-- Code quality review pack: `review-20260924223559000` (not committed).
-- Code quality review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`.
-- Prototype parity: n/a (not UI-affecting).
-- Prototype parity reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`.
+- Spec review: PASS
+- Spec reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
+- Spec audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`
+- Spec review pack: .qfai/review/review-20260924223559000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`
+- Code quality review: PASS
+- Code quality reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
+- Code quality audited evidence hash: `f69cef78559c1b0f8c94365654f35c6e213e592e318b0550536fa4812ce1560d`
+- Code quality review pack: .qfai/review/review-20260924223559000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: `0d02f352eed07ba045537c4ad4b82e90d3ad21a5ef2e0d7428e32758179b0943`
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
 - Checkpoint verification command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --reporter=verbose`
 - Checkpoint verification cwd: `packages/qfai`
 - Checkpoint verification result: `PASS; exit 0; TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability; TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results; two selected tests passed`
 - Checkpoint verification revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
-- Checkpoint verification seal: `23e1c7229e251f931727c205a6fe17e21b456536d84f5000951b1285edea3449` (the canonical revision, command and result lines above).
+- Checkpoint verification seal: `23e1c7229e251f931727c205a6fe17e21b456536d84f5000951b1285edea3449`
+- Record re-attestation reason: `record:QFAI-TDDLIST-008` under "Record defects". The review and phase-authored fields above were repaired in form, and this row's Coverage Depth Matrix slice joined the audited subject after the verdicts.
+- Spec record re-attestation: 99b981094412f37d006a53eed08c910e386c54be4b00132c46f62f0f5601d4e7
+- Spec record re-attestation pack: .qfai/review/review-20260926014000002 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 3124b6f204a927de11711431baf4ec78076ad807b3d40ddc27691c415a27d32f
+- Code quality record re-attestation: 99b981094412f37d006a53eed08c910e386c54be4b00132c46f62f0f5601d4e7
+- Code quality record re-attestation pack: .qfai/review/review-20260926014000002 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 3124b6f204a927de11711431baf4ec78076ad807b3d40ddc27691c415a27d32f
 
 #### Fixture correction under CR-20260924-0008
 
@@ -1305,7 +1322,8 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
 
 #### Round 1
 
-- Round 1: RED revision: `working-tree+5cfdcc5a3a2d209496a007fcd45ec33679a5b9a9de0d5662edb8cec7e657a1d9` (two calculations agreed; 2,499 path records).
+- Round 1: RED revision: `working-tree+5cfdcc5a3a2d209496a007fcd45ec33679a5b9a9de0d5662edb8cec7e657a1d9`
+  Two calculations agreed; 2,499 path records.
 - Round 1: RED test hash: `9723548aff0abb35de027693ba4cd34638934c3c7b197de6ae93992de3f3ee27`
 - Seam file SHA-256: `cdf08d52b6d28845f871730a9fd72837426c425bf1c041dec560a0d71ff16682`
 - Round 1: RED command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneApprovalPerCapability.test.ts --testNamePattern=TC-0018-0004 --reporter=verbose` (cwd: `packages/qfai`)
@@ -1335,7 +1353,8 @@ Test Files 1 passed (1); Tests 1 passed (1); exit 0
 ```
 
 - Round 1: Oracle proof plan: After GREEN, temporarily give the second CREATE question the first question's `slotId` while preserving both questions and their goals. The selector must fail on `distinctSlots: false` against `true`. Restore the source and rerun the selector and shared suite.
-- Round 1: Revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628` (two calculations agreed; 2,499 path records).
+- Round 1: Revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
+  Two calculations agreed; 2,499 path records.
 - Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneApprovalPerCapability.test.ts --testNamePattern=TC-0018-0004 --reporter=verbose` (cwd: `packages/qfai`)
 - Round 1: GREEN result: exit 0; the selected test passed 1/1. The routing branch maps both valid capabilities to CREATE questions with distinct indexed question and slot IDs. One capability retains its existing IDs and `sequence + 2`; two emit two `question-opened` events and one `unsettled-material-input` event with `sequence + 3`. The three-file suite passed all four selectors after restoring the oracle mutation. Restored source SHA-256: `264cbf0c2d034e55f0457a2d61b907c53ecd25c3aa8be2ca6038aa6ce3195344`; TDD-0004 test SHA-256: `9723548aff0abb35de027693ba4cd34638934c3c7b197de6ae93992de3f3ee27`.
 
@@ -1344,7 +1363,7 @@ Test Files 1 passed (1); Tests 1 passed (1); exit 0
 Test Files 1 passed (1); Tests 1 passed (1); exit 0
 ```
 
-- Round 1: Oracle proof: A temporary source mutation gave the second CREATE question the first question's `slotId` and preserved the two questions, their goals, `sameRound: true`, state `awaiting_input` and zero work orders. The selected test failed at `tests/unit/workflow/oneApprovalPerCapability.test.ts:104:18` on `distinctSlots: false` against expected `true`. The source was restored immediately; the selector passed 1/1 and the three-file suite passed 4/4. Source and test hashes returned to those in the GREEN result.
+- Round 1: Oracle proof: A temporary source mutation gave the second CREATE question the first question's `slotId` and preserved the two questions, their goals, `sameRound: true`, state `awaiting_input` and zero work orders. Under the GREEN command, `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneApprovalPerCapability.test.ts --testNamePattern=TC-0018-0004 --reporter=verbose` (cwd: `packages/qfai`), the command exited 1 and the selected test `TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in one routing round` failed at `tests/unit/workflow/oneApprovalPerCapability.test.ts:104:18` on `distinctSlots: false` against expected `true`. The source was restored immediately; the selector passed 1/1 and the three-file suite passed 4/4. Source and test hashes returned to those in the GREEN result.
 
 ```diff
 @@ -347,7 +347,7 @@ export function decide(
@@ -1372,7 +1391,8 @@ Restored relevant suite: exit 0; Test Files 3 passed (3); Tests 4 passed (4).
 - Relevant suite: `oneCreateQuestionAtRouting.test.ts`, `theAnswerIsABoundHumanDecision.test.ts` and `oneApprovalPerCapability.test.ts` are the reverse dependency closure of `decide.ts` and cover TDD-0001 through TDD-0004.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; three test files and all four selectors passed before and after the completed-row mutations. No source or test edit followed the restored GREEN run.
-- Refactor verify revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628` (two calculations agreed; 2,499 path records).
+- Refactor verify revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
+  Two calculations agreed; 2,499 path records.
 - Completed-row oracle re-verification: On the current source, TDD-0001's returned-state mutation failed its selector at line 90:18 on `routing` versus `awaiting_input`. TDD-0002's missing-result-reference mutation failed at line 233:6 with replay failure and only SDD issued. Its later CREATE-event mutation failed at line 233:6 on `laterCreateQuestions: 1` against expected `0`. Each source mutation was removed immediately. The relevant suite passed 4/4 afterward. Restored source SHA-256: `264cbf0c2d034e55f0457a2d61b907c53ecd25c3aa8be2ca6038aa6ce3195344`; shared test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`; TDD-0003 test SHA-256: `4dbed72930d7f8e4034c517eac21041120c5352944aae3082e4a17086dda6cc5`; TDD-0004 test SHA-256: `9723548aff0abb35de027693ba4cd34638934c3c7b197de6ae93992de3f3ee27`.
 
 ```text
@@ -1382,26 +1402,33 @@ TC-0018-0002 extra CREATE mutation: exit 1; line 233:6; laterCreateQuestions exp
 Restored suite: exit 0; Test Files 3 passed (3); Tests 4 passed (4).
 ```
 
-- Round 1: Review pack (attempt 1): `review-20260925001224837` (not committed).
-- Round 1: Review pack seal (attempt 1): `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
-- Round 1: reviewer verdict (attempt 1): PASS.
-- Spec review: PASS.
-- Spec reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
-- Spec audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`.
-- Spec review pack: `review-20260925001224837` (not committed).
-- Spec review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`.
-- Code quality review: PASS.
-- Code quality reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
-- Code quality audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`.
-- Code quality review pack: `review-20260925001224837` (not committed).
-- Code quality review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`.
-- Prototype parity: n/a (not UI-affecting).
-- Prototype parity reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`.
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925001224837 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`
+- Round 1: reviewer verdict (attempt 1): PASS
+- Spec review: PASS
+- Spec reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
+- Spec audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`
+- Spec review pack: .qfai/review/review-20260925001224837 <!-- qfai:not-a-citation -->
+- Spec review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`
+- Code quality review: PASS
+- Code quality reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
+- Code quality audited evidence hash: `748d67d6cb2b70285f6502c00993cdcf8dcec22f6cc5aa5289c15cfa061afa68`
+- Code quality review pack: .qfai/review/review-20260925001224837 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: `118d059f26cce67536c545949ab34b16d2f74d1ad2afd4081fb439cc72478edc`
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
 - Checkpoint verification command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts --reporter=verbose`
 - Checkpoint verification cwd: `packages/qfai`
 - Checkpoint verification result: `PASS; exit 0; TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability; TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results; TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order; TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in one routing round; four selected tests passed`
 - Checkpoint verification revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
 - Checkpoint verification seal: `8e6ec6ed825762871b8b12387526e38079fd264b0c941be10ecad9c56086085a`
+- Record re-attestation reason: `record:QFAI-TDDLIST-008` under "Record defects". The review and phase-authored fields above were repaired in form, and this row's Coverage Depth Matrix slice joined the audited subject after the verdicts.
+- Spec record re-attestation: 123841373f46945e5c2fec7a064a117aa844a8ec02c6280902d05e7f3581e2a3
+- Spec record re-attestation pack: .qfai/review/review-20260926014000003 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: fec54be73d19c190e7f224ea04ae11e8b88c469dbbc88697b78fa8e245d31d7b
+- Code quality record re-attestation: 123841373f46945e5c2fec7a064a117aa844a8ec02c6280902d05e7f3581e2a3
+- Code quality record re-attestation pack: .qfai/review/review-20260926014000003 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: fec54be73d19c190e7f224ea04ae11e8b88c469dbbc88697b78fa8e245d31d7b
 
 ### TDD-0005
 
@@ -1495,7 +1522,8 @@ Restored suite: exit 0; Test Files 3 passed (3); Tests 4 passed (4).
 
 #### Round 1
 
-- Round 1: RED revision: `working-tree+25095ae4136a17dde3a3535e3cb918e8255bcfb30f6f476fa03891800ce0022b` (two calculations agreed; 2,500 path records).
+- Round 1: RED revision: `working-tree+25095ae4136a17dde3a3535e3cb918e8255bcfb30f6f476fa03891800ce0022b`
+  Two calculations agreed; 2,500 path records.
 - Round 1: RED test hash: `1fe32377edb633b89ca38722a823c947c1b1d2e2b7613f84a869176230197646`
 - Seam file SHA-256: `264cbf0c2d034e55f0457a2d61b907c53ecd25c3aa8be2ca6038aa6ce3195344`
 - Round 1: RED command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts --testNamePattern=TC-0018-0008 --reporter=verbose` (cwd: `packages/qfai`)
@@ -1550,7 +1578,8 @@ Test Files 1 passed (1); Tests 1 passed (1); exit 0
 ```
 
 - Round 1: Oracle proof plan: After GREEN, temporarily omit the `authorized-stop` event while preserving the `cancelled` verdict and recorded stop authorization. The selector must fail on `stopEvents: 0` against `1`. Restore the source and rerun the selector and relevant suite.
-- Round 1: Revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578` (two calculations agreed; 2,500 path records).
+- Round 1: Revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
+  Two calculations agreed; 2,500 path records.
 - Round 1: GREEN command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts --testNamePattern=TC-0018-0008 --reporter=verbose` (cwd: `packages/qfai`)
 - Round 1: GREEN result: exit 0; the selected test passed 1/1. A valid stop answer records a `human_decision` with effect `stop`, emits `authorized-stop`, returns `cancelled` with sequence advanced by the two events, and issues no work order or binding. The existing proceed path stays `ready` with one event. The four-file relevant suite passed all five selectors after restoring the oracle mutation. Restored source SHA-256: `a2ff1270001346bd89f9b770925e8ff0bbef10a5e98852c409c6ef7bd8406029`; TDD-0013 test SHA-256: `1fe32377edb633b89ca38722a823c947c1b1d2e2b7613f84a869176230197646`.
 
@@ -1559,7 +1588,7 @@ Test Files 1 passed (1); Tests 1 passed (1); exit 0
 Test Files 1 passed (1); Tests 1 passed (1); exit 0
 ```
 
-- Round 1: Oracle proof: A temporary source mutation omitted only the `authorized-stop` event, preserving the recorded stop authorization and `cancelled` verdict. The same selector failed at `tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts:86:18` on `stopEvents: 0` against expected `1`. The source was restored immediately; the selector passed 1/1 and the four-file suite passed 5/5. Source and test hashes returned to the GREEN values.
+- Round 1: Oracle proof: A temporary source mutation omitted only the `authorized-stop` event, preserving the recorded stop authorization and `cancelled` verdict. Under the GREEN command, `node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts --testNamePattern=TC-0018-0008 --reporter=verbose` (cwd: `packages/qfai`), the command exited 1 and the selected test `TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding or work order` failed at `tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts:86:18` on `stopEvents: 0` against expected `1`. The source was restored immediately; the selector passed 1/1 and the four-file suite passed 5/5. Source and test hashes returned to the GREEN values.
 
 ```diff
 -    if (chosen.effect === "stop") events.push({ type: "authorized-stop" });
@@ -1581,7 +1610,8 @@ Restored relevant suite: exit 0; Test Files 4 passed (4); Tests 5 passed (5).
 - Relevant suite: four unit test files directly import `decide.ts`; no production importer reaches it. They cover TDD-0001 through TDD-0004 and TDD-0013.
 - Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts --reporter=verbose` (cwd: `packages/qfai`).
 - Refactor verify result: exit 0; four files and all five selectors passed before and after the completed-row oracle mutations. No source or test edit followed the restored GREEN run.
-- Refactor verify revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578` (two calculations agreed; 2,500 path records).
+- Refactor verify revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
+  Two calculations agreed; 2,500 path records.
 - Completed-row oracle re-verification: TDD-0001's returned-state mutation failed its selector at line 90:18 on `routing` versus `awaiting_input`. TDD-0002's missing-result-reference mutation failed at line 233:6 with replay failure and only SDD issued. Its later CREATE-event mutation failed at line 233:6 on `laterCreateQuestions: 1` against expected `0`. TDD-0004's duplicated slot-ID mutation failed at line 104:18 on `distinctSlots: false` against `true`. Each source mutation was removed immediately; the relevant suite passed 5/5 afterward. Restored source SHA-256: `a2ff1270001346bd89f9b770925e8ff0bbef10a5e98852c409c6ef7bd8406029`; test SHA-256 values: TDD-0001/0002 `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`, TDD-0003 `4dbed72930d7f8e4034c517eac21041120c5352944aae3082e4a17086dda6cc5`, TDD-0004 `9723548aff0abb35de027693ba4cd34638934c3c7b197de6ae93992de3f3ee27`, TDD-0013 `1fe32377edb633b89ca38722a823c947c1b1d2e2b7613f84a869176230197646`.
 
 ```text
@@ -1592,26 +1622,33 @@ TC-0018-0004 duplicated slot mutation: exit 1; line 104:18; distinctSlots expect
 Restored suite: exit 0; Test Files 4 passed (4); Tests 5 passed (5).
 ```
 
-- Round 1: Review pack (attempt 1): `review-20260925005231037` (not committed).
-- Round 1: Review pack seal (attempt 1): `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
-- Round 1: reviewer verdict (attempt 1): PASS.
-- Spec review: PASS.
-- Spec reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
-- Spec audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`.
-- Spec review pack: `review-20260925005231037` (not committed).
-- Spec review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`.
-- Code quality review: PASS.
-- Code quality reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
-- Code quality audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`.
-- Code quality review pack: `review-20260925005231037` (not committed).
-- Code quality review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`.
-- Prototype parity: n/a (not UI-affecting).
-- Prototype parity reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`.
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925005231037 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`
+- Round 1: reviewer verdict (attempt 1): PASS
+- Spec review: PASS
+- Spec reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
+- Spec audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`
+- Spec review pack: .qfai/review/review-20260925005231037 <!-- qfai:not-a-citation -->
+- Spec review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`
+- Code quality review: PASS
+- Code quality reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
+- Code quality audited evidence hash: `1ad1a9d6a9e3351c9a502d5bd4d44d984fb36b3a2f619c0951c644fa7882a16a`
+- Code quality review pack: .qfai/review/review-20260925005231037 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: `51bc232f68df1ff99750fdaa733848e00338f16752ad067ef3da4e7ecf37ad4e`
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
 - Checkpoint verification command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts tests/unit/workflow/oneApprovalPerCapability.test.ts tests/unit/workflow/aDeclineIsAStopWithNothingTracked.test.ts --reporter=verbose`
 - Checkpoint verification cwd: `packages/qfai`
 - Checkpoint verification result: `PASS; exit 0; TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability; TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results; TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order; TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in one routing round; TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding or work order; five selected tests passed`
 - Checkpoint verification revision: `working-tree+ff201ff1cb6562950dbd48dc94cd90d67d6831bcc3f83b56a91a904142437578`
 - Checkpoint verification seal: `a248375e5b52de270e8bd8485aceb177c4c4b1dfee914b078f7845acc1d46ff5`
+- Record re-attestation reason: `record:QFAI-TDDLIST-008` under "Record defects". The review and phase-authored fields above were repaired in form, and this row's Coverage Depth Matrix slice joined the audited subject after the verdicts.
+- Spec record re-attestation: 0b51758045fe9912543ba32d955e9f77efde3252e76e77e404d4cb8493c89677
+- Spec record re-attestation pack: .qfai/review/review-20260926014000004 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 32adc42b07b9e38cd1c55bf381b876cd948b5aeba195222c5af1aeb8a940270c
+- Code quality record re-attestation: 0b51758045fe9912543ba32d955e9f77efde3252e76e77e404d4cb8493c89677
+- Code quality record re-attestation pack: .qfai/review/review-20260926014000004 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 32adc42b07b9e38cd1c55bf381b876cd948b5aeba195222c5af1aeb8a940270c
 
 ### TDD-0014
 
@@ -7322,6 +7359,10 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 
 - Repaired — `record:ROUND-EVIDENCE`, TDD-0003: Round 1 phase evidence records its RED, GREEN, oracle and review fields without `Round 1:` or a `#### Round 1` block, although that was the single cycle observed. The Round 1 implementation review reported this advisory. Existing values were moved into Round 1 before opening Round 2; the sealed Round 1 review pack is preserved.
 - Repaired — `record:ROUND-EVIDENCE`, TDD-0028: `Round 1: Revision` sat with the RED record, above the RED fields, and held the RED tree's address. `Revision` names the GREEN tree and is outside the RED subject. The line now sits below the RED record and holds the GREEN address. `Round 1: RED revision` still holds the RED address, unchanged.
+- Repaired — `record:QFAI-TDDLIST-008`, TDD-0001, TDD-0002, TDD-0004 and TDD-0013, reported by `validate --profile tdd` after the four rows reached `done`, outside any review round. The gate read none of their review fields: verdicts, revisions, hashes and seals carried a trailing period or a parenthetical note, and pack paths lacked the `.qfai/review/` prefix. Each value now stands alone, and no value changed. A revision's calculation note moved to the line below it. Three kinds of note were dropped because none was a claim about the run: the seal-method note, which restated the standard seal procedure; `(not committed)` on pack paths, which the `qfai:not-a-citation` marker now carries; and the note on TDD-0001's and TDD-0002's `Checkpoint verification seal` naming the lines it seals.
+- Repaired — `record:QFAI-TDDLIST-008`, the same four rows: the last round's `Oracle proof` did not quote the GREEN command or the row's selector, although its own output block shows the mutation ran under that command. Each proof now quotes both. On TDD-0001, TDD-0004 and TDD-0013 the last `Round 1: reviewer verdict` read `PASS.`, which the gate does not read as `PASS`. The period is gone. Only TDD-0001 had prose after it, and that prose moved to the line below.
+- Repaired — `record:QFAI-TDDLIST-008`, TDD-0002: `Selector` copied the full test title, while the ledger holds its first 115 characters. It now copies the ledger. The Round 1 refactor and review lines sat inside the preceding `Shared-artifact re-verify` block, so the gate read neither the Round 1 `REVISE` nor its pack. A `#### Round 1 refactor and review` heading now closes that block. The Round 1 refactor verification, which Round 2 superseded, is prose, so the row keeps one `Refactor verify revision`. `Round 2: GREEN result` said "no replay failure", which the gate reads as a failure word; it now names the value, `replayFailure: null`.
+- Each repair above moved bytes the completion reviews had hashed, and the Coverage Depth Matrix slice for each row joined the audited subject after those reviews. A completion-reviewer and an implementation-reviewer re-read each repaired entry at its recorded revision. The rows record their re-attestations beside the verdicts they supersede.
 
 ## Test results summary
 

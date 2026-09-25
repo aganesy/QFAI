@@ -223,6 +223,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **Four finished spec-0018 rows pass the completion gate** (#2300).
+  `TDD-0001`, `TDD-0002`, `TDD-0004` and `TDD-0013` reached `done` with
+  evidence fields the gate could not read, so `QFAI-TDDLIST-008` reported all
+  four. Their records are repaired in form only, and a completion-reviewer and
+  an implementation-reviewer re-attested each one at its recorded revision.
+  spec-0018 leaves the `tdd` and `full` backlogs in
+  `scripts/dogfood-backlog.json`. So do the spec-0012, spec-0014 and spec-0017
+  traceability ledgers: their counts were `QFAI-TRACE` findings that only a
+  branch changing those specs' rules or criteria raises.
 
 ## [1.12.3] - 2026-09-24
 
