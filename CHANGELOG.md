@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The implementation reviewer checks silent failure and type invariants**
+  (#2248). It reads each error path a change adds or alters for an empty catch,
+  a silent return, a catch that swallows unexpected errors, and a fallback that
+  hides the problem. It reads each type a change adds or alters for invariants
+  held at construction and across mutations, not only in comments or callers.
+  The `/qfai-implement` reviewer remit names both. Both rules already existed;
+  no reviewer read code against them.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
