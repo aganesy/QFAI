@@ -154,8 +154,7 @@ export const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
  * date is not decoration: it is the only field standing between a
  * `deprecated` / `removed` bullet and a whole ledger dropping out of the gate.
  * Round-tripping through UTC catches the rollover (`2026-02-30` becomes
- * `2026-03-02`), the same way `waivers.ts` and `worklogSurface.ts` check the
- * dates they act on.
+ * `2026-03-02`).
  */
 export function isValidDeprecatedAt(value: string): boolean {
   const match = DEPRECATED_AT_RE.exec(value);

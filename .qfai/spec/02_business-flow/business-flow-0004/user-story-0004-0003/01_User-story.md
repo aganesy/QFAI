@@ -25,8 +25,6 @@
   the project. No `qfai` subcommand is added.
 - `.qfai/evidence/migration-spec-to-story/plan.yaml`, written by the skill, and
   `.qfai/evidence/migration-spec-to-story/id-map.json`, written by step 4.
-- The `.qfai/steering/*.md` work-log entries, which step 4 re-keys from spec
-  IDs to flows and decision rows.
 - The archive directories `.qfai/evidence/migration-spec-to-story/legacy/` and
   `.qfai/evidence/migration-spec-to-story/retired/`.
 - The Markdown report each step prints on standard output, and the exit codes.

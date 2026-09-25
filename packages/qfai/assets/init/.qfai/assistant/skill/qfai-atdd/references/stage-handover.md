@@ -14,7 +14,5 @@ evidence file path. State whether the branch is observed RED, an already
 implemented surface with a falsifiability check, or an unresolved gap. Name
 the next production change and any shared artifact another flow reads.
 
-Read the current work-log schema in `rule/worklog-entry.schema.md`. A handoff
-entry must use its required sections and write trigger. A missing or malformed
-proof is not repaired by inventing a lifecycle status: keep the obligation
-open, record the reason, and return it to the ATDD owner.
+A missing or malformed proof is not repaired by inventing a lifecycle status:
+keep the obligation open, record the reason, and return it to the ATDD owner.

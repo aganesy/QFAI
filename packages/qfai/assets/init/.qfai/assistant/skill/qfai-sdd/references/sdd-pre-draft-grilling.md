@@ -17,7 +17,7 @@ The checkpoint occurs before this invocation's first design mutation in that sta
 
 - Include every role routed to draft the stage's artifacts in one frontier. A reviewing role, or a separate instance of a drafting role, acts as griller. Keep authorship, grilling, and final review as distinct invocations.
 - Read existing policy, decisions, open questions, discussion provenance, and current contracts before asking. Do not ask the user for facts already recorded there.
-- The griller identifies options and failure cases, gives an evidence-based recommendation, and stops when a critical product decision needs the user. The orchestrator routes that question through the normal steering mechanism; an agent's preference cannot supply approval.
+- The griller identifies options and failure cases, gives an evidence-based recommendation, and stops when a critical product decision needs the user. The orchestrator routes that question to the user; an agent's preference cannot supply approval.
 - Adopt a supported recommendation in the appropriate `decisions.md` row or in the authored artifact. Record an unresolved choice in `open-questions.md` with its next action. Record a rejected option as a REJECTED decision row so it remains excluded on reruns.
 - In each affected `.qfai/evidence/sdd-BF-NNNN.md`, record the checkpoint, participants, frontier, recommendation, disposition, and the decision or OQ IDs. A skipped checkpoint is a failed gate, not an implicit approval.
 

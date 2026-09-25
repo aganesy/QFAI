@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-WORKLOG-DRIFT` justification contract), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).
+As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-REJECTED-READOPT` justification contract), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).
 
 ## Legacy Source Scope
 

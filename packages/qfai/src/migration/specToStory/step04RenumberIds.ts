@@ -9,7 +9,6 @@ import { escapeTableCell } from "../../core/specPackParsers.js";
 import { nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
-import { collectWorklogEntries } from "../../core/worklogEntries.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { ID_MAP_PATH, readIdMap, serializeIdMap, type MigrationIdMap } from "./idMap.js";
 import { parseLegacyRecords, retiredLegacyStatus, withoutLegacyRecords } from "./legacyRecords.js";
@@ -741,112 +740,6 @@ async function archiveExamples(
   return operations;
 }
 
-function flowIdsForPack(map: MigrationIdMap, pack: string): string[] {
-  return [
-    ...new Set(
-      Object.entries(map.ids[pack] ?? {})
-        .filter(([oldId, newId]) => oldId.startsWith("US-") && newId.startsWith("US-"))
-        .map(([, newId]) => `BF-${newId.slice(3, 7)}`),
-    ),
-  ].sort();
-}
-
-async function rekeyWorklogs(
-  context: MigrationContext,
-  map: MigrationIdMap,
-  forAPerson: string[],
-): Promise<MigrationOperation[]> {
-  const operations: MigrationOperation[] = [];
-  const entries = await collectWorklogEntries(context.root);
-  const decisionsRaw = await readOptional(path.join(context.specsDir, "decisions.md"));
-  const decisionsTable = decisionsRaw === null ? null : parseRecordTable(decisionsRaw, "decisions");
-  if (decisionsTable !== null && decisionsTable.errors.length > 0) {
-    throw new MigrationInputError("decisions.md has an invalid table");
-  }
-  const decisions = decisionsTable?.rows ?? [];
-  for (const entry of entries) {
-    if (entry.readError !== null) {
-      throw new MigrationInputError(`${entry.relativePath}: ${entry.readError}`);
-    }
-    const original = await readOptional(entry.filePath);
-    if (original === null) continue;
-    const match = /^(\uFEFF?)---\r?\n([\s\S]*?)\r?\n---(\r?\n?)([\s\S]*)$/.exec(original);
-    if (!match) throw new MigrationInputError(`${entry.relativePath}: invalid frontmatter`);
-    const document = parseDocument(match[2] ?? "");
-    if (document.errors.length > 0) {
-      throw new MigrationInputError(`${entry.relativePath}: invalid YAML frontmatter`);
-    }
-    let changed = false;
-    const scope = document.get("scope");
-    if (typeof scope === "string" && /^spec-\d{4}$/.test(scope)) {
-      const flows = flowIdsForPack(map, scope);
-      if (flows.length === 1) {
-        document.set("scope", flows[0]);
-        changed = true;
-      } else {
-        forAPerson.push(`${entry.relativePath}: scope ${scope} maps to ${flows.length} flows`);
-      }
-    }
-    const rawLinks = document.get("links", true);
-    if (rawLinks !== undefined) {
-      const data: unknown = document.toJS();
-      const links = isObject(data) ? data.links : undefined;
-      if (Array.isArray(links)) {
-        const converted: unknown[] = [];
-        let linksChanged = false;
-        for (const link of links) {
-          if (typeof link !== "string" || !/^spec-\d{4}$/.test(link)) {
-            converted.push(link);
-            continue;
-          }
-          const flows = flowIdsForPack(map, link);
-          const targets =
-            flows.length > 0 ? flows : map.retiredPacks[link] ? [map.retiredPacks[link]] : [];
-          if (targets.length === 0) {
-            converted.push(link);
-            forAPerson.push(`${entry.relativePath}: link ${link} has no migrated flow or decision`);
-            continue;
-          }
-          converted.push(...targets);
-          linksChanged = true;
-        }
-        if (linksChanged) {
-          document.set("links", converted);
-          changed = true;
-        }
-      }
-    }
-    const promoteTo = document.get("promote-to");
-    const oldDecisionFile =
-      typeof promoteTo === "string" && /^spec-\d{4}\/07_Decisions\.md$/.test(promoteTo)
-        ? `${relative(context.root, context.specsDir)}/${promoteTo}`
-        : null;
-    if (oldDecisionFile !== null) {
-      document.set("promote-to", "decisions.md");
-      changed = true;
-    }
-    const promotedTo = document.get("promoted-to");
-    if (typeof promotedTo === "string" && /^DR-\d+(?:-\d+)?$/.test(promotedTo)) {
-      const matched =
-        oldDecisionFile === null
-          ? []
-          : decisions.filter((row) => row.content.includes(`${oldDecisionFile}#${promotedTo}:`));
-      if (matched.length === 1) {
-        document.set("promoted-to", matched[0]?.id);
-        changed = true;
-      } else {
-        forAPerson.push(`${entry.relativePath}: promoted-to ${promotedTo} has no unique DEC row`);
-      }
-    }
-    if (!changed) continue;
-    const content = `${match[1] ?? ""}---\n${String(document).trimEnd()}\n---${match[3] ?? "\n"}${match[4] ?? ""}`;
-    if (content !== original) {
-      operations.push({ kind: "write", target: entry.relativePath, content });
-    }
-  }
-  return operations;
-}
-
 export const step04: MigrationStep = {
   number: 4,
   writeSet: ["qfai", "specs", "contracts"],
@@ -861,13 +754,11 @@ export const step04: MigrationStep = {
     if (plan === null) throw new MigrationInputError(`${PLAN_PATH} is missing`);
     if (packIds.length === 0 && existingMap !== null) {
       assertUnchangedPlacements(plan, existingMap);
-      operations.push(...(await rekeyWorklogs(context, existingMap, forAPerson)));
       return { operations, forAPerson };
     }
     const packs = await Promise.all(packIds.map((id) => readOldPack(context, id)));
     if (existingMap !== null && packs.every((pack) => pack.retired)) {
       assertUnchangedPlacements(plan, existingMap);
-      operations.push(...(await rekeyWorklogs(context, existingMap, forAPerson)));
       return { operations, forAPerson };
     }
     for (const pack of packs.filter((item) => !item.retired)) {
@@ -1206,7 +1097,6 @@ export const step04: MigrationStep = {
         );
       }
     }
-    operations.push(...(await rekeyWorklogs(context, map, forAPerson)));
     return { operations, forAPerson };
   },
 };

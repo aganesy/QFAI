@@ -38,10 +38,9 @@ contract paths from configuration; do not assume a directory name. Read
 agent cards before assigning work. An EX is the unit of implementation review;
 the BF is the unit of scoped completion.
 
-Read open work-log entries with global or current-flow scope before authoring.
-Cite consulted entry IDs in the completion report. Apply the write triggers and
-handoff body in `rule/worklog-entry.schema.md`. An unscoped discovery is
-recorded without stopping the current flow.
+Send a decision, a question for the user or an out-of-scope discovery to
+`/qfai-sdd` as a change request. An out-of-scope discovery does not stop the
+current flow.
 
 For UI work, read root `DESIGN.md` and the linked UI contracts under
 `<paths.contractsDir>/ui/` before changing the surface. Review rendered HTML
@@ -176,7 +175,7 @@ When no EX work remains at entry, still run the current flow checkpoint;
 report "nothing to do" only after the scoped gate and applicable commands
 have passed. Record unresolved risks and upstream findings without calling
 them complete. Give the user the changed EX IDs, test paths, command results,
-review verdicts, evidence path, and consulted work-log IDs.
+review verdicts and evidence path.
 `/qfai-verify` owns the repository-wide gate.
 
 ## Grilling (MANDATORY)
@@ -232,7 +231,5 @@ If they cannot be resolved, stop at preflight and report the missing source.
 
 project_memory:
 
-- Read open global and current-flow work-log entries before authoring.
-- Apply kind-specific write triggers and cite consulted IDs on completion.
 - Select EX work from a fresh flow-scoped validator result, one EX at a time.
 - Keep BF E2E and AC integration or API obligations with `/qfai-atdd`.

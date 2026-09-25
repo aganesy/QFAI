@@ -14,7 +14,6 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - Story tree: `.qfai/spec/` (policy, four business flows, and contracts).
   - Skills and shared rules: `.qfai/assistant/skill/` and `.qfai/assistant/rule/`.
   - Agent cards and prompts: `.qfai/assistant/agent/` and `.qfai/assistant/prompt/`.
-  - AI work log: `.qfai/steering/` (schema: `.qfai/spec/03_contract/cli/worklog-entry.schema.md`).
   - Routing defaults: `packages/qfai/assets/defaults/` in this source repository.
 - Edit shipped assistant content under `packages/qfai/assets/init/.qfai/assistant/`;
   the matching `.qfai/assistant/` tree in this repository is generated.

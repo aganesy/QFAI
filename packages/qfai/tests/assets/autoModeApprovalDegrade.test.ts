@@ -16,10 +16,10 @@ describe("qfai-sdd approval in no-question mode", () => {
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(skill).toContain("--auto");
       expect(skill).toContain("sdd-triage.md");
-      expect(skill).toContain("consultation-needed");
       expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("leave approval-required rows at TODO");
       expect(triage).toContain("stop before their dependent writes");
+      expect(triage).toContain("report every pending row with its operation and target");
       expect(triage).toContain(
         "Approval-free changes may proceed only if they do not depend on a pending row",
       );

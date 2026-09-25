@@ -55,7 +55,7 @@ describe("qfai-sdd triage surface", () => {
     }
     expect(content).toContain("In --auto, ask no question");
     expect(content).toContain("stop before their dependent writes");
-    expect(content).toContain("consultation-needed");
+    expect(content).toContain("report every pending row with its operation and target");
   });
 
   it("traces companion changes through contracts", async () => {

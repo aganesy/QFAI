@@ -37,7 +37,7 @@ An unanswered critical product decision opens its Content with Unadjudicated: an
 
 ## Approval and no-question mode
 
-Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, leave approval-required rows at TODO, stop before their dependent writes, and write a consultation-needed work-log entry. Approval-free changes may proceed only if they do not depend on a pending row.
+Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSEDE, and UPDATE:REMOVE. Present the target and rationale. Do not self-approve. In --auto, ask no question, leave approval-required rows at TODO, stop before their dependent writes, and report every pending row with its operation and target. Approval-free changes may proceed only if they do not depend on a pending row.
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
 

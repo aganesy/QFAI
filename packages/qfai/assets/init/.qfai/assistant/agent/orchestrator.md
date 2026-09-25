@@ -47,7 +47,7 @@ specialization_tags:
 - .qfai/assistant/rule/agent-selection.md (routing and this card's frontmatter are authoritative)
 - .qfai/assistant/rule/test-layers.md (SSOT for hard coverage obligations)
 - <paths.specsDir>/decisions.md and open-questions.md (DEC rows and unresolved questions)
-- The affected BF/US/AC/EX story files, active contracts, work-log entries, stage evidence and current review packs
+- The affected BF/US/AC/EX story files, active contracts, stage evidence and current review packs
 
 ## Deliverables (MANDATORY)
 

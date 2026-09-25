@@ -31,7 +31,6 @@ QFAI itself has no project API, database, or rendered UI contract. Those familie
 | CLI-RESEARCH     | Research protocol        | —           | `.qfai/spec/03_contract/cli/research-protocol.md`            | Provider-independent source handling.               |
 | CLI-WFSET        | Shipped workflows        | —           | `.qfai/spec/03_contract/cli/shipped-workflows.md`            | Distributed CI workflow ownership and shape.        |
 | CLI-STORY-AUTHOR | Story authoring          | —           | `.qfai/spec/03_contract/cli/story-tree-authoring.md`         | SDD and migration authoring boundaries.             |
-| CLI-WLOG         | Work-log entry           | —           | `.qfai/spec/03_contract/cli/worklog-entry.schema.md`         | Steering entry schema and handoff fields.           |
 
 ## Rule ownership
 

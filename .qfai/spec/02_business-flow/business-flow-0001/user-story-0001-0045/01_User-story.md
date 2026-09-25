@@ -1,8 +1,8 @@
-# US-0001-0045: Reviewer finding justification and handoff validation
+# US-0001-0045: Reviewer finding justification
 
 ## User Story
 
-As a Reviewer-Gate consumer, I want `qfai validate` to require non-empty `justification:` on every `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` finding and to flag `kind: handoff` entries missing any of the 5 required body sections via `R-HANDOFF-INCOMPLETE`, so that reviewer findings are auditable and handoffs are operationally complete (REQ-0036, REQ-0042).
+As a Reviewer-Gate consumer, I want `qfai validate` to require non-empty `justification:` on every `R-REJECTED-READOPT` finding, so that reviewer findings are auditable (REQ-0036).
 
 ## Legacy Source Scope
 

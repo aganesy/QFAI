@@ -139,7 +139,7 @@ Planning and coverage estimates are signals, not gates. The gate records
 PASS or REVISE for the reviewed revision; an author does not review its own
 artifact.
 
-When a stage needs user input or cannot proceed, write a `.qfai/steering/<id>.md` entry with the kind required by `.qfai/assistant/rule/worklog-entry.schema.md`. An approval still pending is `consultation-needed`. Follow the gate-failure repair protocol in the shared operating baseline. Do not bypass a failed gate.
+When a stage needs user input or cannot proceed, record the question as a row of `open-questions.md` and report what the stage waits on. Follow the gate-failure repair protocol in the shared operating baseline. Do not bypass a failed gate.
 
 ## Completion
 

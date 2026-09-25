@@ -45,10 +45,6 @@ export async function validateAssistantTreeMigration(
       if (isAssistantLayer(entry.name)) continue;
       if (EXTRA_DIRS.has(entry.name)) continue;
       if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
-      // Distinct finding code — `W-WORKLOG-SCHEMA` is reserved by
-      // contract for worklog-entry frontmatter shape problems. The
-      // assistant-layer enum guard is a separate concern and uses its own
-      // dedicated code to avoid code-class overload.
       issues.push(
         issue(
           "W-ASSISTANT-LAYOUT",

@@ -33,7 +33,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/implementParallelPolicy.test.ts",
   "tests/assets/implementStageBinding.test.ts",
   "tests/assets/initAssetsRootMirror.test.ts",
-  "tests/assets/initContractSteeringSeed.test.ts",
   "tests/assets/integrationVerifyRemedy.test.ts",
   "tests/assets/layerVocabularyCrosswalk.test.ts",
   "tests/assets/ledgerWriteAuthorization.test.ts",
@@ -55,7 +54,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/swallowedListItem.test.ts",
   "tests/assets/uiuxSidecar.test.ts",
   "tests/assets/workOrderUpstreamBan.test.ts",
-  "tests/assets/worklogSchemaShipped.test.ts",
   "tests/cli/args.test.ts",
   "tests/cli/commands/prototypingCertify.test.ts",
   "tests/cli/commands/prototypingIterate.test.ts",
@@ -377,5 +375,4 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/validators/uix/screenContract.test.ts",
   "tests/validators/uix/threeLayer.test.ts",
   "tests/validators/uix/trendScan.test.ts",
-  "tests/validators/worklogSurface.test.ts",
 ];
