@@ -314,6 +314,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0446 | TC-0018-0229 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0447 | TC-0018-0230 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0448 | TC-0018-0231 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0449 | TC-0018-0232 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0452 | TC-0018-0235 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0453 | TC-0018-0236 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
@@ -4919,6 +4920,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the five schemas this change adds, each `$id` `urn:qfai:workflow:<name>` and none carrying `schemaVersion`; the pre-build lint reports nothing in the plans, and the post-build guard, run over a package publishing the plans and the schemas, exits 0 and fails when `spec-0042` is planted in a schema
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/shippedAssets.test.ts > TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans`
 - Production files: `packages/qfai/assets/schemas/workflow/authorization.schema.json`, `execution-context.schema.json`, `route-proposal.schema.json`, `stage-result.schema.json`, `work-order.schema.json`
+
+### TDD-0449
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/shippedAssets.test.ts`
+- Selector: `TC-0018-0232 (TDD-0449): Run the canonical launcher check over the shipped tree`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/shippedAssets.test.ts --testNamePattern='TC-0018-0232 \(TDD-0449\): Run the canonical launcher check over the shipped tree' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { bare: [ …(20) ], mentioned: true } to deeply equal { bare: [], mentioned: true }` at `tests/integration/workflow/shippedAssets.test.ts:139`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/shippedAssets.test.ts > TC-0018-0232 (TDD-0449): Run the canonical launcher check over the shipped tree`
+- Production files: `packages/qfai/assets/init/.qfai/assistant/constitution/{shared-skill-delegation-baseline,shared-skill-operating-baseline,workflow}.md`, the `SKILL.md` of `qfai-atdd`, `qfai-discussion`, `qfai-implement`, `qfai-maintain`, `qfai-prototyping`, `qfai-run` (front matter included), `qfai-sdd` and `qfai-verify`, the `references/orchestrated-mode.md` of `qfai-atdd`, `qfai-implement`, `qfai-sdd` and `qfai-verify`, and the entry directive in `packages/qfai/assets/init/root/AGENTS.md` and `CLAUDE.md`, each mention rewritten to `npx qfai workflow`. `packages/qfai/tests/assets/canonicalQfaiLauncher.test.ts` adds `workflow` to `SUBCOMMANDS`; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts` expects the rewritten entry directive.
 
 ### TDD-0452
 

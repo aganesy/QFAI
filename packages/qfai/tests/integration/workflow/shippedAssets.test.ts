@@ -1,5 +1,6 @@
 // QFAI:SPEC-0018:TC-0018-0230
 // QFAI:SPEC-0018:TC-0018-0231
+// QFAI:SPEC-0018:TC-0018-0232
 
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
@@ -117,4 +118,23 @@ it("TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans", async
     planLeaks: [],
     guard: 0,
   });
+});
+
+it("TC-0018-0232 (TDD-0449): Run the canonical launcher check over the shipped tree", async () => {
+  const files = (await filesUnder(path.join("assets", "init"))).filter((file) =>
+    /\.(md|ya?ml|json|txt)$/.test(file),
+  );
+  const bare: string[] = [];
+  let canonical = 0;
+  for (const file of files) {
+    const lines = (await readFile(path.join(packageRoot, file), "utf8")).split(/\r?\n/);
+    lines.forEach((line, index) => {
+      for (const match of line.matchAll(/(npx )?qfai workflow\b/g)) {
+        if (match[1] === undefined) bare.push(`${file}:${index + 1}`);
+        else canonical++;
+      }
+    });
+  }
+
+  expect({ bare, mentioned: canonical > 0 }).toEqual({ bare: [], mentioned: true });
 });

@@ -1,4 +1,4 @@
-Send a first free-text change request to the `qfai-run` skill, which takes it through `qfai workflow` to completion.
+Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.
 
 # Agent Instructions
 

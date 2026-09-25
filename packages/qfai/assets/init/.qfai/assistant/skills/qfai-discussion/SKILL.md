@@ -25,7 +25,7 @@ mode: interactive-by-default
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 

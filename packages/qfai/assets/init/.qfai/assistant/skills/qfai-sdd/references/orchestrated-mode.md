@@ -1,6 +1,6 @@
 # qfai-sdd in a workflow run
 
-What `/qfai-sdd` does when `qfai workflow` hands it a work order. The field
+What `/qfai-sdd` does when `npx qfai workflow` hands it a work order. The field
 names are those of the work order and the stage result.
 
 ## Entry check

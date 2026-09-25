@@ -1,7 +1,7 @@
 ---
 name: qfai-run
 title: QFAI Run (Change request entry)
-description: "Use when the operator states a change, a fix or a question about the project in plain words and names no stage skill. Takes the request through `qfai workflow`, one stage after another, to its completion target."
+description: "Use when the operator states a change, a fix or a question about the project in plain words and names no stage skill. Takes the request through `npx qfai workflow`, one stage after another, to its completion target."
 argument-hint: "<the change, in your own words>"
 allowed-tools: [Read, Glob, Grep, Write, Bash, TodoWrite, Task, Agent]
 roles: [orchestrator]
@@ -13,7 +13,7 @@ mode: execution-focused
 [DRIFT-PROTOCOL:MANDATORY]
 
 The operator states a change once. This skill proposes the route and hands each
-stage to its owning skill; `qfai workflow` decides what happens next.
+stage to its owning skill; `npx qfai workflow` decides what happens next.
 
 - Every call and payload shape: `references/payloads.md`.
 - What the operator sees, and how questions are put: `references/operator-screens.md`.
@@ -74,7 +74,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-que
 ## Inputs Priority
 
 - P1: `.qfai/assistant/constitution/*`
-- P2: what `qfai workflow` returns: the work order, the verdict, the open questions
+- P2: what `npx qfai workflow` returns: the work order, the verdict, the open questions
 - P3: `.qfai/assistant/catalog/*`
 - P4: the operator's request
 

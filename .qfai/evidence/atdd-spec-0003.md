@@ -749,6 +749,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/root/AGENTS.md` and `packages/qfai/assets/init/root/CLAUDE.md` (the entry directive as their first line), `packages/qfai/src/core/agentEntryPoints.ts` (`addEntryPointDirectives`; the operative-copy scan reads the code spans the directive itself holds as visible text), `packages/qfai/src/cli/commands/init.ts` (the directives go through the entry-point writer, and its report names each directive it added), `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
 
 ### TDD-0101
 
@@ -761,6 +762,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: as TDD-0100
 - The entry directive is followed by the line break alone, so the project's bytes start on the next line. The review directive keeps its blank line.
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
 
 ### TDD-0102
 
@@ -773,6 +775,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: as TDD-0100, plus the existing entry-point tests in `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, whose projects now keep a `REVIEW.md` where they expect the review directive
 - Design choice: follows TC-0003-0068 over the previous unconditional behaviour. Init adds the review directive to an existing entry point only when the project has `REVIEW.md`. A fresh copy of the template still carries it, as the template's own sentence is conditional on the file.
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
 
 ### TDD-0103
 
@@ -784,6 +787,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED result: exit 1; `AssertionError: the shipped AGENTS.md carries the entry directive: expected undefined to be defined`
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: as TDD-0100
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
 
 ### TDD-0104
 
@@ -795,6 +799,7 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the entry-point writer already refuses a symbolic link and names it
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/entryDirective.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stderr, where the refusal is written)
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
 
 ### TDD-0105
 

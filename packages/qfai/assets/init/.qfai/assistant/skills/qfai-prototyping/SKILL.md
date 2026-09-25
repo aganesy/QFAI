@@ -20,7 +20,7 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-Inside a `qfai workflow` run, follow `references/orchestrated-mode.md`.
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 This skill is static-first and file-based by default: it runs every
 UI-bearing spec resolved at cycle 0 through up to 10 iterations against

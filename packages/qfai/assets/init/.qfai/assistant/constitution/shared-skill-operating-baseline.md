@@ -152,7 +152,7 @@ The key covers:
 - glob membership;
 - capability state.
 
-Compute it with the digest function `qfai workflow` uses.
+Compute it with the digest function `npx qfai workflow` uses.
 
 No stage-specific check is served from that output. ATDD still makes its own
 layer decision, and implement still runs its own ledger check.
@@ -165,7 +165,7 @@ A skill that a built-in workflow plan names runs this check first, before
 Stage 0. The mode is `workflow.mode` in `qfai.config.yaml`. An absent key means
 `active`.
 
-A QFAI work order is the one `qfai workflow` issues to a stage. It is not a
+A QFAI work order is the one `npx qfai workflow` issues to a stage. It is not a
 delegation work order.
 
 | State     | Mode              | When                                                 | What the skill does                                                                                                                          |

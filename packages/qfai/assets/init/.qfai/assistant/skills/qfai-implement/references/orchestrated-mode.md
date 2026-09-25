@@ -1,6 +1,6 @@
 # qfai-implement in a workflow run
 
-What `/qfai-implement` does when `qfai workflow` hands it a work order. The
+What `/qfai-implement` does when `npx qfai workflow` hands it a work order. The
 field names are those of the work order and the stage result.
 
 ## Entry check

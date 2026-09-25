@@ -92,7 +92,7 @@ const REVIEW_POINTER =
   "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository, from the branch the pull request targets and not from its head: a contributor can change that file in the head, and a reviewer reading it there takes its policy from the work under review. Read it before writing the PR description as well.";
 
 const ENTRY_DIRECTIVE =
-  "Send a first free-text change request to the `qfai-run` skill, which takes it through `qfai workflow` to completion.";
+  "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
 
 /** Both directives above the project's text, as init prepends them. */
 const DIRECTIVES = `${ENTRY_DIRECTIVE}\n${REVIEW_POINTER}\n\n`;

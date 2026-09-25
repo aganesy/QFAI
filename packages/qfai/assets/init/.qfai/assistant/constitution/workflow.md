@@ -31,7 +31,7 @@ These values are restated from `.qfai/assistant/constitution/change-classificati
 Do not proceed without a declared Change Type.
 
 The workflow routes are orthogonal to the Change Type. A route of
-`qfai workflow` says which stages run; the Change Type says what kind of change
+`npx qfai workflow` says which stages run; the Change Type says what kind of change
 it is. A run declares both.
 
 ---

@@ -259,7 +259,7 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 
 ## Inside a workflow run
 
-A run is one `qfai workflow` run, and its work orders are the ones the CLI
+A run is one `npx qfai workflow` run, and its work orders are the ones the CLI
 issues to a stage.
 
 ### Actor history in a run
