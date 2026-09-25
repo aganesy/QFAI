@@ -83,6 +83,7 @@ const ADOPTER_BODY = [
   "",
 ].join("\n");
 
+// QFAI:AC-0003-0011-04
 describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never reported, while a provenance-backed stale file still is", () => {
   it("keeps silent about the unrecorded colliding file while reporting the recorded stale one", async () => {
     // The collision has to predate the install: the root template copy is
@@ -275,6 +276,7 @@ describe("TC-0006-0031 (TDD-0033): an adopter-authored name collision is never r
  */
 const ABSENT_NAME = "qfai-tests.yml";
 
+// QFAI:AC-0003-0011-03
 describe("TC-0006-0030 (TDD-0038): a shipped name with no provenance entry and absent from disk yields no drift finding, while a live entry-bearing stale file is still reported", () => {
   // TC-0006-0030 leg (b), re-quoted after `CR-20260810-0001` Option A reworded it
   // — 「`absent` の name は `workflows.integrity` finding の title / message /

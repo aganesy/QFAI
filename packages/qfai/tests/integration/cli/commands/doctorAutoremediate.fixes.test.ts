@@ -40,6 +40,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:AC-0003-0009-01
 describe("doctor --autoremediate fixes install + clean + config", () => {
   it("invokes install runner for missing deps, archives stale packs, writes default-keyed config fields", async () => {
     const root = await newTempDir("fixes");

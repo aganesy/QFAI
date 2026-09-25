@@ -40,6 +40,7 @@ async function writePackageFile(root: string, rel: string, content: string): Pro
   await writeFile(abs, content, "utf-8");
 }
 
+// QFAI:AC-0003-0010-02
 describe("detectSkillManifestDrift — SSOT-sync Pair III", () => {
   it("symmetric (both sides reference canonical field) → no findings", async () => {
     const root = await newTempDir("symmetric");

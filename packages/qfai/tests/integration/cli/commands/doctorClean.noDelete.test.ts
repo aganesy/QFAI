@@ -47,6 +47,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:AC-0003-0008-02
 describe("doctor --clean never deletes; validate review excludes _archive", () => {
   it("second --clean run is a no-op after the first archived the pack", async () => {
     const root = await newTempDir("idempotent");

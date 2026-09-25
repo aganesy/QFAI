@@ -124,6 +124,7 @@ function failingIdsOtherThanDrift(checks: { id: string; severity: string }[]): s
     .map((entry) => entry.id);
 }
 
+// QFAI:AC-0003-0011-05
 describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on warning", () => {
   it("exits 0 with summary.warning still 0 while the drift advisory is emitted", async () => {
     const dir = await pool.seedAdopterTree();
@@ -206,6 +207,7 @@ describe("TC-0006-0032 (TDD-0034): a drift-only tree exits 0 under --fail-on war
   });
 });
 
+// QFAI:AC-0003-0011-05
 describe("TC-0006-0033 (TDD-0035): an unrelated warning still exits 1 under --fail-on warning", () => {
   it("exits 1 on the unrelated warning while the drift finding stays info", async () => {
     const dir = await pool.seedAdopterTree();

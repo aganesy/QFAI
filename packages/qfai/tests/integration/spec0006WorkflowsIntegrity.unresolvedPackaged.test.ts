@@ -122,6 +122,7 @@ const pool = useAdopterTreePool();
  */
 const STALE_NAME = "qfai-tests.yml";
 
+// QFAI:AC-0003-0011-03
 describe("TC-0006-0030 (TDD-0039): an unresolvable packaged workflows directory skips at severity info with an empty modified list", () => {
   it("registers one info-severity skip that reports no drift, in a tree whose drift is otherwise reported", async () => {
     const dir = await pool.seedAdopterTree();
