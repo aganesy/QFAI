@@ -31,29 +31,33 @@ whose `done` rested only on an annotation carrier: each selector selects no
 test, and the only file naming the case is
 `tests/integration/qfai-traceability.md`, which declares no test.
 
-| Operation | Sub-op | Subject                                                                    | Result                                                                                                                 |
-| --------- | ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| UPDATE    | MODIFY | `TDD-0295`, `0341`, `0346`, `0348`, `0354`, `0356`, `0357`, `0358`, `0362` | Reset to `todo` with the Change Request in `DR-ID`. Each case stays active and needs a test that runs.                 |
-| UPDATE    | REMOVE | `TDD-0349`, `0359`; `TC-0012-0340`, `TC-0012-0350`                         | Retired and reserved. Their cases sat under superseded criteria, so the cases and their carrier lines are removed too. |
-| UPDATE    | REMOVE | `TDD-0353`                                                                 | Retired and reserved. Its case `TC-0012-0344` is already superseded and is not a coverage target, so it stays.         |
+| Operation | Sub-op | Subject                                                                    | Result                                                                                                                          |
+| --------- | ------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| UPDATE    | MODIFY | `TDD-0295`, `0341`, `0346`, `0348`, `0354`, `0356`, `0357`, `0358`, `0362` | Reset to `todo` with the Change Request in `DR-ID`. Each case stays active and needs a test that runs.                          |
+| UPDATE    | REMOVE | `TDD-0349`, `0359`; `TC-0012-0340`, `TC-0012-0350`                         | Retired and reserved. Both cases declare `Level: L1` under a superseded criterion, so they and their carrier lines are removed. |
+| UPDATE    | REMOVE | `TDD-0353`                                                                 | Retired and reserved. Its case `TC-0012-0344` declares no `Level`, so it owes no row and stays.                                 |
 
 Each retired row's `Evidence` is kept verbatim under `## TDD-ID reservations`.
 No test is deleted, because none of the retired selectors selected one.
 
-Two retirements the request names are held: `TDD-0340` on `TC-0012-0330` and
-`TDD-0351` on `TC-0012-0342`. Each case is the only one left for a superseded
-example or criterion (`EX-0012-0117`, `AC-0012-0030`). Removing the case leaves
-that item with no case, which fails the `sdd` profile, and removing the item
-edits `05_Examples.md`, which this request does not name. Both rows stay `done`
-until that is decided.
+Two retirements the request names are held, and both rows stay `done`. Each
+case declares `Level: L1` and is the only case left for a superseded item, so
+removing the case fails the `sdd` profile unless the item goes too:
 
-Also still owed under this request:
+- `TDD-0340` on `TC-0012-0330`, the last case for `EX-0012-0117`. Removing the
+  example edits `05_Examples.md`, which the request does not name.
+- `TDD-0351` on `TC-0012-0342`, the last case for `AC-0012-0030`. Removing the
+  criterion goes beyond the request, which retires rows and changes no product
+  acceptance.
 
-- the six rows that are not carrier-only: `TDD-0453`, `0456`, `0457`, `0459`,
-  `0465` and `0486`;
-- the matrix splits and new boundary rows;
-- the tests the reset rows need, from `/qfai-implement spec-0012` and
-  `/qfai-atdd spec-0012`.
+Retiring them needs a Change Request that names the example and the criterion.
+
+The owner rerun still owes the resets of the six rows that are not carrier-only
+(`TDD-0453`, `0456`, `0457`, `0459`, `0465`, `0486`), and the matrix splits
+and new boundary rows. `Applied at` is set once those and the two held
+retirements are done. The tests the
+reset rows need follow from `/qfai-implement spec-0012` and
+`/qfai-atdd spec-0012`.
 
 `TDD-0346` and `TDD-0356` may not survive that run as written: the shipped
 `SKILL.md` is over 500 lines where `TC-0012-0337` allows 130, and

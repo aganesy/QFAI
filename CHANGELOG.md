@@ -92,8 +92,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   superseded (`TDD-0349`, `0353`, `0359`) are retired, and the cases of the
   first and last, `TC-0012-0340` and `TC-0012-0350`, are removed. The spec-0012
   ledger reports 48 fewer errors under the `tdd` and `full` profiles.
-  `TDD-0340` and `TDD-0351` stay `done`: retiring them needs a superseded
-  example and criterion removed as well, which the request does not cover.
+  `TDD-0340` and `TDD-0351` stay `done`. Each case is the last one for a
+  superseded example or criterion, and removing those needs a request of its
+  own.
 
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
