@@ -1348,8 +1348,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // rule the run now seeds beside the other masters, which orders the surfaces a question about
     // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what
     // it wrote; dropping that one bullet reproduces `7f4f473a…` byte for byte.
+    //
+    // Re-pinned for the legacy-layout item, which now says the `steering/` and `instructions/`
+    // layout is past its compatibility window and that `qfai init` reports it on stderr as a
+    // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
+    // into a temp root; restoring the old item reproduces `12e26902…` byte for byte.
     ".github/copilot-instructions.md",
-    "12e26902977a535b2bac46e9d995c1a92d1a9c5a26443a5c767a052a73b85948",
+    "be3d8ce275912acc833f4270b46a24f51495cb4b02bfb41f100b1d32a9750ba9",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it

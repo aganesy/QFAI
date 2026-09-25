@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --capture` flag (default OFF) so that I can opt into PNG / HTML capture per the Capture contract without breaking the default no-capture posture. (REQ-0012-0061)
+As an `/qfai-prototyping` operator, I want an opt-in `qfai prototyping iterate --capture` flag (default OFF) so that I can opt into PNG / HTML capture per the Capture contract without breaking the default no-capture posture. (REQ-0012-0061, REQ-0012-0075)
 
 ## Legacy Source Scope
 

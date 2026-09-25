@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a CI gatekeeper, I want `iterate` to emit a `prototyping.json` that passes `qfai validate --profile prototyping --fail-on error` without orchestrator post-processing, so that downstream automation can rely on the iterate output directly. (REQ-0012-0063)
+As a CI gatekeeper, I want `iterate` to emit a `prototyping.json` that passes `qfai validate --profile prototyping --fail-on error` without orchestrator post-processing, so that downstream automation can rely on the iterate output directly. (REQ-0012-0063, REQ-0012-0077)
 
 ## Legacy Source Scope
 
