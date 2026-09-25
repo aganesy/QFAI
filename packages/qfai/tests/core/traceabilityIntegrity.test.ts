@@ -1212,6 +1212,49 @@ describe("changed obligations and their bindings", () => {
     expect(await compareCriteria(before, after)).toEqual([["AC-0099-0001"]]);
   });
 
+  const lastCriterionBeforeClosingSection = [
+    "# 03 Acceptance Criteria",
+    "",
+    "## AC-0099-0001: First outcome",
+    "",
+    "The initial boundary applies.",
+    "",
+    "## AC-0099-0002: Second outcome",
+    "",
+    "```gherkin",
+    "# AC-0099-0002",
+    "# Source: discussion-20260101000000000#DAC-001-01",
+    "Scenario: Second outcome",
+    "  Then the stable result appears",
+    "```",
+    "",
+    "## Completion Gate",
+    "",
+    "Every criterion above has a passing test.",
+  ].join("\n");
+
+  it("reports only the new criterion when one is inserted after the last", async () => {
+    const after = lastCriterionBeforeClosingSection.replace(
+      "## Completion Gate",
+      "## AC-0099-0003: Third outcome\n\nThe added boundary applies.\n\n## Completion Gate",
+    );
+
+    expect(await compareCriteria(lastCriterionBeforeClosingSection, after)).toEqual([
+      ["AC-0099-0003"],
+    ]);
+  });
+
+  it("still reports the last criterion when its own text changes", async () => {
+    const after = lastCriterionBeforeClosingSection.replace(
+      "the stable result",
+      "the stronger result",
+    );
+
+    expect(await compareCriteria(lastCriterionBeforeClosingSection, after)).toEqual([
+      ["AC-0099-0002"],
+    ]);
+  });
+
   async function proofFixture(
     overrides: {
       proof?: string;
