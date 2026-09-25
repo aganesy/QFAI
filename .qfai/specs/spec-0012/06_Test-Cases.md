@@ -1483,6 +1483,15 @@
 - Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
 - Verify REQ-0012-0076: with no runner injected and the target port held by another process, the default runner refuses the port. The listener holding the port is still listening afterwards, no other port is bound, and iterate exits 2 with a reason on stderr naming the held port.
 
+## TC-0012-0490
+
+- EX-Ref: EX-0012-0190
+- AC-Refs: AC-0012-0084
+- Type: integration
+- Level: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`
+- Verify REQ-0012-0062 failed teardown: with an injected runner whose teardown rejects, iterate prints a line on stdout naming the `--auto-serve` teardown and the rejection's reason, and exits with the code a cycle whose teardown resolves exits with.
+
 ## Legacy Coverage Continuity
 
 - The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.
