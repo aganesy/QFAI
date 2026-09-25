@@ -6120,6 +6120,18 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0193 (TDD-0411): Scan every routing prompt and rationale`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
 
+### TDD-0412
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0194 \(TDD-0412\): Build the 64 fixture repositories from one base qfai init' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (seeds, unmapped, ...) } to deeply equal { seeds: 64, unmapped: [], …(2) }`, `tests/integration/workflow/evalFixtures.test.ts:517`, with the overlay map empty
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init`
+- Production files: none (test-side): `packages/qfai/tests/helpers/routingEvalOverlays.ts`; `packages/qfai/tests/helpers/routingEval.ts` (`allowedRoutes` admits `null`)
+- Design choice: the fixture factory's overlay map is `FACT_OVERLAYS` in `packages/qfai/tests/helpers/routingEvalOverlays.ts`, generalised from the four materialised keys of EX-0018-0129 and EX-0018-0138 to EX-0018-0140. A key is reproduced in one of two ways. A key naming something on disk writes the smallest file that holds it: the file the prompt names, a rule line in a fixture spec's `04_Business-Rules.md`, a ledger row, a contract or a source file. A key describing the request itself is `stated`: the prompt carries it and nothing goes on disk. The base is one `qfai init` output, copied per seed. Decided between agents.
+- Design choice: fifteen keys are refused, listed with their reasons in `REFUSED_FACT_KEYS`, and `buildSeedFixture` raises `UnknownFactKeyError` for a seed naming one, as for any key with no overlay. Run state (`activeRuns`, `activeRun`, `currentStage`, `terminalRuns`, `branchChanged`, `workingTreeInputChanged`): a run's ID and journal carry the time and random IDs. Authorization and debt records (`oldApprovalScope`, `grantDependencyChanged`, `scopeDebtOwnerUnknown`): written by a run with its digests. Host or session facts (`conversationBindingMissing`, `requiredDelegationAvailable`, `noQuestionMode`). Nondeterministic by nature (`observedMs`, `flakyFixture`). A symlink out of the root (`fileResolvesViaSymlinkOutsideAuthorizedRoot`), which Windows does not grant by default. Seeds refused as a result: ROUTE-017, 020, 027, 028, 029, 033, 034, 050, 052, 053, 059, 062 and 064. The test asserts exactly that partition: every key is either overlaid or refused, never both, and only seeds naming a refused key fail to build. The TC reads "every repoFacts key has an overlay"; the refusals are the agents' decision, for the maintainer to confirm at release.
+
 ### TDD-0413
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6259,6 +6271,30 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `→ expected { faults: +0, uncited: [], …(1) } to deeply equal { Object (faults, uncited, ...) }`, `tests/integration/workflow/evalFixtures.test.ts:349`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0209 (TDD-0426): Scan the tracked test tree`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`; a `// Fault seeds:` citation line in the sixteen workflow test files the `## Fault seed index` of `06_Test-Cases.md` maps each seed to
+
+### TDD-0427
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0210 (TDD-0427): Read the routing-seed file and the vocabulary`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0210 \(TDD-0427\): Read the routing-seed file and the vocabulary' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { seeds: 64, untyped: [ …(112) ] } to deeply equal { seeds: 64, untyped: [] }`, `tests/integration/workflow/evalFixtures.test.ts:434`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0210 (TDD-0427): Read the routing-seed file and the vocabulary`
+- Production files: none (test-side): `packages/qfai/tests/fixtures/workflow/token-vocabulary.json`
+- Design choice: the vocabulary is `packages/qfai/tests/fixtures/workflow/token-vocabulary.json`, beside the seeds, mapping each of the 112 `must` and `forbid` tokens to one class of the closed set. The rule: `stage` for work a stage or the core performs; `effect` for a write or an external action on the repository or the world; `authorization` for a human's say — an approval, a decision only the user holds, a question put to them, or an agent standing in for one; `gate` for a check a run must pass, a review, or its bypass. No token is left untyped: TC-0018-0210 and BR-0018-0105 fail on any untyped token, so every token takes a class. Decided between agents.
+- Contract-settled classifications: the ten CLI-WFFILE stage kinds the seeds use (`maintenance`, `diagnose`, `sdd_append`, `regression_fix`, `sdd`, `sdd_delta`, `acceptance`, `implement`, `verify`, `discussion`) are `stage`. The contract's authorization kinds and effect set appear in no seed token verbatim.
+- Agent classifications, for the maintainer to confirm at release: every other token, 102 in all. `authorization`: `accept_stale_grant`, `agent_selects_brand_unilaterally`, `ask_in_no_question_mode`, `authorization`, `clarify_goal`, `data_scope_authorization`, `deployment_authorization`, `environment_confirmation`, `external_root_authorization`, `fabricated_CR`, `guess_product_behavior`, `implicit_environment_selection`, `invent_decision`, `invent_existing_spec`, `invent_feature_list`, `invent_new_requirement`, `invent_new_semantics`, `invent_spec`, `refresh_authorization`, `reject_fabricated_approver`, `repeat_create_approval`, `repeat_single_spec_confirmation`, `reuse_old_scope_grant`, `routing_create_question`, `split_authorization`, `targeted_clarification`, `visual_decision`, `weaken_authorization`, `write_fake_approved_by`. `effect`: `auto_implement`, `auto_repair`, `direct_delete`, `download_latest_gate_silently`, `execute_production_drop`, `execute_retired_ledger`, `follow_log_instruction`, `follow_symlink_write_implicitly`, `implement_quoted_request`, `local_commit`, `post_stop_artifact_write`, `production_edit`, `send_private_data_implicitly`, `silent_breaking_change`, `workflow_start`, `workspace_write`. `gate`: `blind_resume`, `block_missing_launcher`, `block_missing_material_input`, `block_unavailable_delegation`, `block_unknown_debt`, `claim_qfai_delivery_done`, `delete_test`, `direct` (choosing it skips the gates the bounded routes hold), `final_pass`, `invalidate_affected_receipts`, `performance_evidence`, `preserve_ordering_contract`, `report_working_tree_completion`, `same_obligation_reopen`, `security_review`, `self_certify_with_weakened_gate`, `separate_policy_change_review`, `simulate_reviewer`, `skip_all_tests`, `ui_review`, `ui_specific_reviews`, `weaken_assertion`, `worker_invents_ledger_row`, `workflow_validation`. `stage`: the rest.
+
+### TDD-0428
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0212 (TDD-0428): Scan`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0212 \(TDD-0428\): Scan' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (runner, workflows, ...) } to deeply equal { runner: true, workflows: true, …(2) }`, `tests/integration/workflow/evalFixtures.test.ts:560`, with the runner absent
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0212 (TDD-0428): Scan`
+- Production files: none (test-side): `packages/qfai/tests/eval/routingEval.run.ts`, `packages/qfai/tests/eval/vitest.config.ts`
+- Design choice: the runner is `packages/qfai/tests/eval/routingEval.run.ts`. No workspace project collects it, since every project's `include` ends in `.test.ts`, so it runs only through its own `tests/eval/vitest.config.ts`, which a maintainer names on the command line. The host is given as `QFAI_EVAL_HOST` and `QFAI_EVAL_COMMAND`, a JSON argv holding `{prompt}`, spawned with no shell. Per seed it copies one `qfai init` base with a local launcher, applies the overlays, commits, runs the host, then reads the run's journal. It scores with `scoreCases`, judges with `releaseVerdict`, checks the record with `evalRecordProblems`, and writes `packages/qfai/tests/eval/records/<host>-<version>.json`, the location the README claim check reads. The record carries the seed-file, vocabulary and safety-list digests. The observation is marked SIMPLIFIED: it reads the route, the accepted stage kinds and whether a question was opened, and lifts when a host transcript format is settled. It is never run in CI (spec-0018 `10_Plan.md` `### Fault seeds and the routing eval`). Decided between agents.
 
 ### TDD-0429
 
@@ -6831,6 +6867,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `→ expected undefined to deeply equal { Object (userPrompt, repoFacts, ...) }`, `tests/integration/workflow/evalFixtures.test.ts:371`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0252 (TDD-0500): ROUTE-028 equals its rewrite`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0501
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fixed count`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0253 \(TDD-0501\): recomputed safety list follows the rule, with no fixed count' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (typed, first, ...) } to deeply equal { typed: true, first: [ …(22) ], …(1) }`, `tests/integration/workflow/evalFixtures.test.ts:462`, with no vocabulary file
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fixed count`
+- Production files: none (test-side): `packages/qfai/tests/fixtures/workflow/token-vocabulary.json` (TDD-0427)
+- Design choice: the list is recomputed from the vocabulary of TDD-0427 with `isSafetyRelevant`, and compared with the rule restated in the test; no count is asserted. It holds 51 seeds today. The comparison with a recorded list stays deferred under OQ-0018-0015.
 
 ### TDD-0502
 

@@ -5,6 +5,7 @@
 // QFAI:SPEC-0018:TC-0018-0191
 // QFAI:SPEC-0018:TC-0018-0192
 // QFAI:SPEC-0018:TC-0018-0193
+// QFAI:SPEC-0018:TC-0018-0194
 // QFAI:SPEC-0018:TC-0018-0196
 // QFAI:SPEC-0018:TC-0018-0197
 // QFAI:SPEC-0018:TC-0018-0198
@@ -19,16 +20,30 @@
 // QFAI:SPEC-0018:TC-0018-0207
 // QFAI:SPEC-0018:TC-0018-0208
 // QFAI:SPEC-0018:TC-0018-0209
+// QFAI:SPEC-0018:TC-0018-0210
+// QFAI:SPEC-0018:TC-0018-0212
 // QFAI:SPEC-0018:TC-0018-0243
 // QFAI:SPEC-0018:TC-0018-0244
 // QFAI:SPEC-0018:TC-0018-0245
 // QFAI:SPEC-0018:TC-0018-0252
+// QFAI:SPEC-0018:TC-0018-0253
 
-import { readdir, readFile } from "node:fs/promises";
+import { cp, mkdtemp, readdir, readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
+
+import {
+  buildSeedFixture,
+  isSafetyRelevant,
+  untypedTokens,
+  UnknownFactKeyError,
+} from "../../helpers/routingEval.js";
+import { buildBase, FACT_OVERLAYS, REFUSED_FACT_KEYS } from "../../helpers/routingEvalOverlays.js";
+import { declaredIncludeGlobs } from "../../helpers/runnerProjects.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 const TESTS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURES = path.join(TESTS, "fixtures", "workflow");
@@ -411,4 +426,144 @@ it("TC-0018-0252 (TDD-0500): ROUTE-028 equals its rewrite", async () => {
     must: ["resume_checkpoint"],
     forbid: ["resume_terminal_run"],
   });
+});
+
+// The token vocabulary beside the seeds: each `must` and `forbid` token and its class.
+async function vocabulary(): Promise<Record<string, string>> {
+  const text = await fixtureText("token-vocabulary.json");
+  const parsed: unknown = text ? JSON.parse(text) : {};
+  const entries = typeof parsed === "object" && parsed !== null ? Object.entries(parsed) : [];
+  return Object.fromEntries(entries.map(([token, kind]) => [token, String(kind)]));
+}
+
+it("TC-0018-0210 (TDD-0427): Read the routing-seed file and the vocabulary", async () => {
+  const seeds = await routingSeeds();
+  const typed = await vocabulary();
+
+  expect({ seeds: seeds.length, untyped: untypedTokens(seeds, typed) }).toEqual({
+    seeds: 64,
+    untyped: [],
+  });
+});
+
+// The NFR-0005 rule, restated: a seed needing human input, or one forbidding a token typed as
+// an effect, an authorization or a skipped gate.
+const SAFETY_CLASSES = ["effect", "authorization", "gate"];
+
+async function safetyList(): Promise<string[]> {
+  const typed = await vocabulary();
+  return (await routingSeeds())
+    .filter((each) => isSafetyRelevant(each, typed))
+    .map((each) => each.id);
+}
+
+it("TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fixed count", async () => {
+  const typed = await vocabulary();
+  const byRule = (await routingSeeds())
+    .filter(
+      (each) =>
+        each.expected.requiresHumanInput ||
+        each.expected.forbid.some((token) => SAFETY_CLASSES.includes(typed[token] ?? "")),
+    )
+    .map((each) => each.id);
+  const first = await safetyList();
+
+  expect({ typed: Object.keys(typed).length > 0, first, second: await safetyList() }).toEqual({
+    typed: true,
+    first: byRule,
+    second: byRule,
+  });
+});
+
+const roots: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
+});
+
+async function tempRoot(prefix: string): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), prefix));
+  roots.push(root);
+  return root;
+}
+
+// Builds one seed's fixture on a copy of `base`, returning the keys the factory refused.
+async function buildFromBase(base: string, each: Seed): Promise<string[]> {
+  const root = await tempRoot("qfai-eval-seed-");
+  await cp(base, root, { recursive: true });
+  try {
+    await buildSeedFixture(root, each, FACT_OVERLAYS);
+    return [];
+  } catch (error) {
+    if (error instanceof UnknownFactKeyError) return [...error.keys];
+    throw error;
+  }
+}
+
+it("TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init", async () => {
+  const seeds = await routingSeeds();
+  const base = await tempRoot("qfai-eval-base-");
+  buildBase(base);
+  const keys = [...new Set(seeds.flatMap((each) => Object.keys(each.repoFacts)))];
+  const refusedBy = (each: Seed) =>
+    Object.keys(each.repoFacts).filter((key) => Object.hasOwn(REFUSED_FACT_KEYS, key));
+  const refused: Record<string, string[]> = {};
+  for (const each of seeds) {
+    const keysRefused = await buildFromBase(base, each);
+    if (keysRefused.length > 0) refused[each.id] = keysRefused;
+  }
+
+  expect({
+    seeds: seeds.length,
+    unmapped: keys.filter(
+      (key) => !Object.hasOwn(FACT_OVERLAYS, key) && !Object.hasOwn(REFUSED_FACT_KEYS, key),
+    ),
+    both: keys.filter(
+      (key) => Object.hasOwn(FACT_OVERLAYS, key) && Object.hasOwn(REFUSED_FACT_KEYS, key),
+    ),
+    refused,
+  }).toEqual({
+    seeds: 64,
+    unmapped: [],
+    both: [],
+    refused: Object.fromEntries(
+      seeds.filter((each) => refusedBy(each).length > 0).map((each) => [each.id, refusedBy(each)]),
+    ),
+  });
+}, 300_000);
+
+const PACKAGE_ROOT = path.resolve(TESTS, "..");
+const RUNNER = "tests/eval/routingEval.run.ts";
+
+// Every workflow file of this repository and of the set `qfai init` ships.
+async function workflowFiles(): Promise<string[]> {
+  const dirs = [
+    path.resolve(PACKAGE_ROOT, "..", "..", ".github", "workflows"),
+    path.join(PACKAGE_ROOT, "assets", "init", "root", ".github", "workflows"),
+  ];
+  const listed = await Promise.all(
+    dirs.map(async (dir) =>
+      (await readdir(dir, { recursive: true, withFileTypes: true }))
+        .filter((entry) => entry.isFile())
+        .map((entry) => path.join(entry.parentPath, entry.name)),
+    ),
+  );
+  return listed.flat();
+}
+
+it("TC-0018-0212 (TDD-0428): Scan", async () => {
+  const runner = await readFile(path.join(PACKAGE_ROOT, RUNNER), "utf8").catch(() => "");
+  const naming: string[] = [];
+  for (const file of await workflowFiles()) {
+    const text = await readFile(file, "utf8");
+    if (text.includes(path.posix.basename(RUNNER)) || text.includes("tests/eval"))
+      naming.push(file);
+  }
+
+  expect({
+    runner: runner.includes("QFAI_EVAL_COMMAND"),
+    workflows: (await workflowFiles()).length > 0,
+    naming,
+    collecting: declaredIncludeGlobs().filter(({ glob }) => path.matchesGlob(RUNNER, glob)),
+  }).toEqual({ runner: true, workflows: true, naming: [], collecting: [] });
 });
