@@ -35,9 +35,9 @@ revision `fa483eab391a3f731d93f61b28d35951c697496b`. Each mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
-| Run                       | Command                                                | Result             |
-| ------------------------- | ------------------------------------------------------ | ------------------ |
-| `TDD-0011` GREEN          | `npx vitest run tests/validators/uix/threeLayer.test.ts` | 10 passed        |
+| Run                       | Command                                                  | Result             |
+| ------------------------- | -------------------------------------------------------- | ------------------ |
+| `TDD-0011` GREEN          | `npx vitest run tests/validators/uix/threeLayer.test.ts` | 10 passed          |
 | `TDD-0011` falsifiability | `npx vitest run tests/validators/uix/threeLayer.test.ts` | 1 failed, 9 passed |
 
 ## Items processed
@@ -138,14 +138,33 @@ so neither can pass a review until its test moves. `TDD-0012` also needs its
 
 ### Plan phase
 
-| Role                          | Instance                 | Verdict | Summary                                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------------------- | ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `delivery-planner` (blocking) | `delivery-planner#1`     | PASS    | No Change Request blocks a row. Each row has no `BR-Ref`, so each is its own review unit. Dispatch is serial: the rows' tests read the same shipped files, so one row's mutation is reverted and `git diff` is clean before the next starts. Only files under `packages/qfai/assets/init/**` are mutated                                                                             |
-| `test-design-analyst`         | `test-design-analyst#1`  | REVISE  | Not blocking. `TDD-0008` and `TDD-0016` can discharge their obligations; `TDD-0016` does not assert the story's first clause. `TDD-0009`'s test is in `tests/e2e` with no annotation for its `L3` case, and `TDD-0012`'s is in `tests/assets` under a `validators` Layer cell. Both need a test move before review, so both are left at `exception` by this run |
+| Role                          | Instance                | Verdict | Summary                                                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------- | ----------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | No Change Request blocks a row. Each row has no `BR-Ref`, so each is its own review unit. Dispatch is serial: the rows' tests read the same shipped files, so one row's mutation is reverted and `git diff` is clean before the next starts. Only files under `packages/qfai/assets/init/**` are mutated                                                        |
+| `test-design-analyst`         | `test-design-analyst#1` | REVISE  | Not blocking. `TDD-0008` and `TDD-0016` can discharge their obligations; `TDD-0016` does not assert the story's first clause. `TDD-0009`'s test is in `tests/e2e` with no annotation for its `L3` case, and `TDD-0012`'s is in `tests/assets` under a `validators` Layer cell. Both need a test move before review, so both are left at `exception` by this run |
 
 ### Work Orders Summary
 
-| Step | Role (sub-agent)    | Agent instance        | Task title                                                             | Input (refs)                                              | Output (refs) | Status (PASS/REVISE/PENDING) |
-| ---- | ------------------- | --------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- | ------------- | ---------------------------- |
-| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: order and dispatch for the four rows the waiver parked    | test-list.md, 06_Test-Cases.md, 02_User-stories.md, CR-\* | #plan-phase   | PASS                         |
-| 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0002 rows | test-list.md, 06_Test-Cases.md, 02_User-stories.md        | #plan-phase   | REVISE                       |
+| Step | Role (sub-agent)    | Agent instance        | Task title                                                                   | Input (refs)                                              | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------- | --------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- | ------------- | ---------------------------- |
+| 1    | delivery-planner    | delivery-planner#1    | /qfai-implement plan: order and dispatch for the four rows the waiver parked | test-list.md, 06_Test-Cases.md, 02_User-stories.md, CR-\* | #plan-phase   | PASS                         |
+| 2    | test-design-analyst | test-design-analyst#1 | /qfai-implement plan: coverage and layer check over the spec-0002 rows       | test-list.md, 06_Test-Cases.md, 02_User-stories.md        | #plan-phase   | REVISE                       |
+
+## Record defects
+
+Open entries from the reviews of the `/qfai-implement` run started
+2026-09-25T10:08:44.375Z. Each is repaired before spec-0002 completion is
+declared.
+
+- `record:evidence-repeated-runs`, `TDD-0008`, Round 1: the re-take on the
+  merged base overwrote the first run's falsifiability, GREEN and
+  refactor-verify values instead of listing both runs. The handover's
+  `Classification result` and `Other rows` still describe the pre-merge test
+  file, and the mutation also fails the spec-0010 case at line 643 of the same
+  file.
+- `record:stage-evidence-currency`, `coverage-depth-spec-0002.md`: Finding 4
+  and the closing section still describe `TDD-0008` at `todo` and a six-row
+  ledger.
+- `record:falsifiability-entry-complete-before-gate`, `TDD-0016`, Round 1: the
+  RED test manifest was widened after `qa-gatekeeper#2` passed the RED. The
+  build-phase gate recomputed it, and the rework round re-takes it.

@@ -90,14 +90,14 @@ Nothing surfaced during the run that the spec or the handover leaves open.
 at.
 
 The run started 2026-09-25T10:14:58.575Z hands over `TDD-0008` and `TDD-0016`.
-Both rows are back at `todo`, and both cases passed on their first run, so both
-take branch 2. `/qfai-implement` Phase Red step 3c applies each mutation and
+Both rows were reopened at `todo`, and both cases passed on their first run, so
+both take branch 2. `/qfai-implement` Phase Red step 3c applies each mutation and
 writes the falsifiability trio into the row's entry.
 
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0001` | `TC-0002-0001` | integration | falsifiability | done   |
-| `TDD-0008` | `TC-0002-0008` | integration | falsifiability | refactor |
+| `TDD-0008` | `TC-0002-0008` | integration | falsifiability | done |
 | `TDD-0016` | `US-0002-0005` | E2E         | falsifiability | review-fix |
 
 ### TDD-0001
@@ -200,6 +200,26 @@ packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
 - Refactor verify revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#4, Round 1 re-taken — RED phase gate on the mutated tree working-tree+9632777761eed227adbe65f43d29600b1de4faeeac8be7f852f6ada5573710b5; qa-gatekeeper#5 — build-phase GREEN and oracle proof at 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS and qa-gatekeeper#3 PASS on the round as first taken, before the base changed the test file; both are superseded. qa-gatekeeper#4 PASS — the re-taken RED with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. qa-gatekeeper#5 PASS — GREEN re-run, the mutation re-applied and restored byte for byte, the refactor verify reproduced
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Spec review: PASS
+- Spec reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Spec audited evidence hash: 7a84f40edc4630d87a58eded896a748e9772c55f49eead491c24cbbf7c480f00
+- Spec review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Code quality review: PASS
+- Code quality reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Code quality audited evidence hash: 7a84f40edc4630d87a58eded896a748e9772c55f49eead491c24cbbf7c480f00
+- Code quality review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 2 passed (2); Tests 25 passed (25). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Checkpoint verification seal: 983dd8b0961d7889da9423751c97b334f16a46b8d7bf01ce8e45617daa5ebca4
 
 ### TDD-0009
 
@@ -309,6 +329,9 @@ every total.
 | 15 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0008 falsifiability run, GREEN and refactor verify re-taken on the merged base | #tdd-0008, discussion-completion-matrix.md | Round 1 | PASS |
 | 16 | qa-gatekeeper | qa-gatekeeper#4 | /qfai-implement: TDD-0008 re-taken RED phase gate on the mutated tree | #tdd-0008 | qa-gatekeeper fields | PASS |
 | 17 | qa-gatekeeper | qa-gatekeeper#5 | /qfai-implement: TDD-0008 build-phase GREEN and oracle proof on the merged base | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 18 | completion-reviewer | completion-reviewer#2 | /qfai-implement: TDD-0008 completion review on the merged base | #tdd-0008 | review-20260925120442083 <!-- qfai:not-a-citation --> | PASS |
+| 19 | implementation-reviewer | implementation-reviewer#2 | /qfai-implement: TDD-0008 code review on the merged base | #tdd-0008 | review-20260925120442083 <!-- qfai:not-a-citation --> | PASS |
+| 20 | orchestrator | orchestrator | /qfai-implement: TDD-0008 checkpoint verification, off a checkpoint boundary | #tdd-0008 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
