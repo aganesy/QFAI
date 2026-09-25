@@ -128,6 +128,13 @@ waivers:
         - TDD-0101
         - TDD-0102
         - TDD-0103
+        - TDD-0104
+        - TDD-0105
+        - TDD-0106
+        - TDD-0107
+        - TDD-0108
+        - TDD-0109
+        - TDD-0110
         - TDD-0212
         - TDD-0213
         - TDD-0214

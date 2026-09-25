@@ -2,16 +2,24 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
-import type { NormativeReferenceKind, ObservedReferenceKind, RouteReference } from "./parse.js";
+import { parseDecisionQuestion } from "./parse.js";
+import type {
+  NormativeReferenceKind,
+  ObservedReferenceKind,
+  QuestionEffect,
+  RouteReference,
+} from "./parse.js";
+
+type WorkflowCapability = { goal: string; covers: string[]; excludes: string[]; slotId: string };
 
 export interface WorkflowQuestion {
   questionId: string;
-  kind: "create";
+  kind: "create" | "decision" | "fact";
   text: string;
-  options: { optionId: string; label: string; description: string; effect: "proceed" | "stop" }[];
-  selection: { min: 1; max: 1 };
-  recommendation: string;
-  capability: { goal: string; covers: string[]; excludes: string[]; slotId: string };
+  options: { optionId: string; label: string; description: string; effect: QuestionEffect }[];
+  selection: { min: number; max: number };
+  recommendation?: string;
+  capability?: WorkflowCapability;
 }
 
 export interface WorkflowEvent {
@@ -73,13 +81,13 @@ interface WorkflowAuthorization {
   questionId: string;
   question: Pick<WorkflowQuestion, "text" | "options" | "selection">;
   answer: { optionIds: string[] };
-  effect: "proceed" | "stop";
+  effect: QuestionEffect;
   answeredBy: string;
   operation: "CREATE";
   target: {
     kind: "new_capability";
     slotId: string;
-    capability: Omit<WorkflowQuestion["capability"], "slotId">;
+    capability: Omit<WorkflowCapability, "slotId">;
   };
 }
 
@@ -166,7 +174,7 @@ interface WorkflowSnapshot {
   plan?: { route: string; stages: PlanStages; writeScope?: string[] };
   specBinding?: { specId: string };
   diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] } | null;
-  capabilities?: WorkflowQuestion["capability"][];
+  capabilities?: WorkflowCapability[];
   approval?: {
     authorizationId?: string;
     scopeDigest?: string;
@@ -176,7 +184,7 @@ interface WorkflowSnapshot {
     target?: {
       kind: string;
       slotId: string;
-      capability?: Omit<WorkflowQuestion["capability"], "slotId">;
+      capability?: Omit<WorkflowCapability, "slotId">;
     };
   };
   acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
@@ -488,10 +496,7 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
   ];
 }
 
-function createQuestion(
-  questionId: string,
-  capability: WorkflowQuestion["capability"],
-): WorkflowQuestion {
+function createQuestion(questionId: string, capability: WorkflowCapability): WorkflowQuestion {
   return {
     questionId,
     kind: "create",
@@ -518,7 +523,7 @@ function createQuestion(
 
 function reaskCreate(
   run: WorkflowSnapshot["run"],
-  capability: WorkflowQuestion["capability"],
+  capability: WorkflowCapability,
 ): WorkflowDecision {
   const question = createQuestion(`question-${run.sequence + 1}-1`, capability);
   return {
@@ -549,7 +554,7 @@ function approvalIsStale(snapshot: WorkflowSnapshot): boolean {
   );
 }
 
-function currentCapability(snapshot: WorkflowSnapshot): WorkflowQuestion["capability"] | undefined {
+function currentCapability(snapshot: WorkflowSnapshot): WorkflowCapability | undefined {
   const slotId = snapshot.approval?.target?.slotId;
   return snapshot.capabilities?.find((capability) => capability.slotId === slotId);
 }
@@ -923,7 +928,7 @@ export function decide(
       !facts.now ||
       !Number.isFinite(Date.parse(facts.now)) ||
       new Date(facts.now).toISOString() !== facts.now ||
-      !question.capability.slotId
+      !question.capability?.slotId
     ) {
       return {
         verdict: {
@@ -1280,7 +1285,12 @@ export function decide(
   }
 
   const plan = checkedPlan(proposal, facts);
-  if (capabilities.length === 0) {
+  const questionInputs = (proposal.unresolvedQuestions ?? []).map(parseDecisionQuestion);
+  const decisionInputs = questionInputs.flatMap((question) => question ?? []);
+  if (decisionInputs.length !== questionInputs.length) {
+    return refusedWith(run, [{ reason: "schema", subject: "unresolvedQuestions" }]);
+  }
+  if (capabilities.length === 0 && decisionInputs.length === 0) {
     if (!plan) {
       return {
         verdict: {
@@ -1308,6 +1318,12 @@ export function decide(
       slotId: `slot-${run.sequence + 1}-${index + 1}`,
     }),
   );
+  decisionInputs.forEach((input) => {
+    questions.push({
+      ...input,
+      questionId: `question-${run.sequence + 1}-${questions.length + 1}`,
+    });
+  });
 
   return {
     verdict: {

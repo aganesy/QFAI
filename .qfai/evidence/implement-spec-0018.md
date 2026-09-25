@@ -87,6 +87,13 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0101 | TC-0018-0082 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0102 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0103 | TC-0018-0083 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0104 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0105 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0106 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0107 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0108 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0109 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0110 | TC-0018-0084 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2351,6 +2358,78 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `expect(refusalOf(...)).toEqual(refused)` at `tests/unit/workflow/aTestFixDeclaresItsEvidence.test.ts:125:50` — `reasons` was empty.
 - GREEN result: exit 0; `✓ … TC-0018-0083 (TDD-0103)`, 1 passed
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0104
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0104): data-loss`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0104\): data-loss' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0104)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+- Note: `parse.ts` gains `parseDecisionQuestion`, which reads a question input from the routing result; a malformed one is refused `invalid-input` with reason `schema`. A routing result's decision questions are stored with core-minted IDs beside any `create` question, and move the run to `awaiting_input`. Fact questions are not read yet, marked `SIMPLIFIED` in `parse.ts`.
+
+### TDD-0105
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0105): breaking-public-contract`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0105\): breaking-public-contract' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0105)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0106
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0106): authorization-loosened`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0106\): authorization-loosened' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0106)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0107
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0107): secret-egress`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0107\): secret-egress' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0107)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0108
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0108): production-effect`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0108\): production-effect' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0108)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0109
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0109): requirement-dropped`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0109\): requirement-dropped' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0109)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
+
+### TDD-0110
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aMaterialRiskStopsRouting.test.ts`
+- Selector: `TC-0018-0084 (TDD-0110): out-of-scope-work`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aMaterialRiskStopsRouting.test.ts --testNamePattern='TC-0018-0084 \(TDD-0110\): out-of-scope-work' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual({...})` at `tests/unit/workflow/aMaterialRiskStopsRouting.test.ts:104:20` — the proposal went to `ready` by `plan-accepted` and no question was open.
+- GREEN result: exit 0; `✓ … TC-0018-0084 (TDD-0110)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/parse.ts`
 
 ### TDD-0212
 

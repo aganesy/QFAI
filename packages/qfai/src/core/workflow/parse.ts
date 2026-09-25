@@ -78,3 +78,64 @@ export function parseRouteReferences(proposal: unknown): ParsedRouteReferences {
     observedRefs: observed.references,
   };
 }
+
+export type QuestionEffect = "proceed" | "replan" | "stop";
+
+export interface QuestionOption {
+  optionId: string;
+  label: string;
+  description: string;
+  effect: QuestionEffect;
+}
+
+export interface DecisionQuestionInput {
+  kind: "decision";
+  text: string;
+  options: QuestionOption[];
+  selection: { min: number; max: number };
+  recommendation?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseOption(value: unknown): QuestionOption | undefined {
+  if (!isRecord(value)) return undefined;
+  const { optionId, label, description, effect } = value;
+  if (typeof optionId !== "string" || !optionId || typeof label !== "string" || !label) {
+    return undefined;
+  }
+  if (typeof description !== "string" || !description) return undefined;
+  if (effect !== "proceed" && effect !== "replan" && effect !== "stop") return undefined;
+  return { optionId, label, description, effect };
+}
+
+// SIMPLIFIED: reads a decision question with options; a fact question is not read.
+// Lift when: a routing or stage result opens a fact question.
+export function parseDecisionQuestion(value: unknown): DecisionQuestionInput | undefined {
+  if (!isRecord(value) || value.kind !== "decision") return undefined;
+  const { text, options, selection, recommendation } = value;
+  if (typeof text !== "string" || !text.trim() || !Array.isArray(options)) return undefined;
+  const parsed = options.flatMap((option: unknown) => parseOption(option) ?? []);
+  if (parsed.length === 0 || parsed.length !== options.length || !isRecord(selection)) {
+    return undefined;
+  }
+  const { min, max } = selection;
+  if (!Number.isInteger(min) || !Number.isInteger(max)) return undefined;
+  if (typeof min !== "number" || typeof max !== "number" || min < 1 || max < min) return undefined;
+  if (max > parsed.length) return undefined;
+  if (
+    recommendation !== undefined &&
+    !parsed.some((option) => option.optionId === recommendation)
+  ) {
+    return undefined;
+  }
+  return {
+    kind: "decision",
+    text,
+    options: parsed,
+    selection: { min, max },
+    ...(typeof recommendation === "string" ? { recommendation } : {}),
+  };
+}

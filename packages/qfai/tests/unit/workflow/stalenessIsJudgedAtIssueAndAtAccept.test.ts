@@ -57,7 +57,7 @@ function observe(decision: ReturnType<typeof decide>) {
     workOrder: decision.verdict.workOrder ?? null,
     questions: (decision.verdict.questions ?? []).map((question) => ({
       kind: question.kind,
-      slotId: question.capability.slotId,
+      slotId: question.capability?.slotId,
     })),
     eventTypes: decision.events.map((event) => event.type),
   };
