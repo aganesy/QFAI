@@ -13,7 +13,6 @@ Scenario: The plan becomes flows and stories with new IDs, and the ID map record
   Then every story, criterion and example is in its story directory under its new ID
   And each flow has its business-flow.md and user-stories.md, and business-flows.md lists every flow
   And id-map.json maps every old ID to its new one
-  And every work-log entry names flows and decision rows in place of the old spec IDs
 
 # AC-0004-0007-02
 # Parent: US-0004-0007

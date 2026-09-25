@@ -121,15 +121,6 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(rounds).toContain("repeat observations whose inputs moved");
   });
 
-  it("reads current work-log entries and writes triggered handoffs", async () => {
-    const implement = await read("skill/qfai-implement/SKILL.md");
-    const schema = await read("rule/worklog-entry.schema.md");
-    expect(implement).toContain("Read open work-log entries with global or current-flow scope");
-    expect(implement).toContain("Apply the write triggers and");
-    expect(schema).toContain("kind: handoff");
-    expect(schema).toContain("unscoped-discovery");
-  });
-
   it("keeps the assistant file budget and review boundaries explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
     const implement = await read("skill/qfai-implement/SKILL.md");

@@ -456,8 +456,6 @@ export const GATE_GROUP_FAMILIES = {
   "story-atdd-depth": ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
   sdd: [
     "QFAI-AUTOPILOT-*",
-    "W-WORKLOG-*",
-    "W-PENDING-PROMOTION",
     "W-ASSISTANT-LAYOUT",
     "W-SKILL-DOC-BROKEN-REF",
     "W-SKILL-PROJECT-MEMORY",
@@ -468,8 +466,6 @@ export const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    "R-HANDOFF-INCOMPLETE",
-    "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
   ],
   "reviewer-gate-shared": [

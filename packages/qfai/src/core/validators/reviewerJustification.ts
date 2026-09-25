@@ -15,14 +15,12 @@ import { exists, issue } from "./utils.js";
 // Empty justification is treated as advisory-failing (error severity).
 //
 // The set is composed from three sources:
-//   1. The historical R-WORKLOG-DRIFT family (REQ-0006 contract).
+//   1. R-REJECTED-READOPT (REQ-0006 contract).
 //   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
 //   3. The 8-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
-  "R-WORKLOG-DRIFT",
   "R-REJECTED-READOPT",
-  "R-HANDOFF-INCOMPLETE",
   // Second-wave Reviewer-Gate findings that MUST carry a non-empty
   // justification. Empty / whitespace-only justifications are treated
   // as advisory-failing to enforce non-empty justifications across spec families.
@@ -138,8 +136,8 @@ type ReviewerReport = {
 
 /**
  * Scans every `*.json` file under `.qfai/review/**` for findings whose
- * code is on the advisory-failing list (R-WORKLOG-DRIFT,
- * R-REJECTED-READOPT, R-HANDOFF-INCOMPLETE). Each finding with an
+ * code is on the advisory-failing list (R-REJECTED-READOPT, the
+ * second-wave codes and the justification catalog). Each finding with an
  * empty `justification:` field is surfaced as an error at the host
  * code so reviewer drift can be caught by `qfai validate --fail-on
  * error`. The scan is unfiltered — any JSON file in the tree that

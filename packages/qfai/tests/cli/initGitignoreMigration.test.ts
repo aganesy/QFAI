@@ -243,17 +243,14 @@ describe("--force regenerates the standard asset trees", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
-      const steering = path.join(root, ".qfai", "steering", "_template", "entry.md");
       await writeFile(agent, "# stale" + NL, "utf-8");
       await mkdir(path.dirname(manifest), { recursive: true });
       await writeFile(manifest, "tuned: true" + NL, "utf-8");
-      const projectContent = await readFile(steering, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       expect(await readFile(agent, "utf-8")).not.toBe("# stale" + NL);
       expect(await readFile(manifest, "utf-8")).toBe("tuned: true" + NL);
-      expect(await readFile(steering, "utf-8")).toBe(projectContent);
     });
   });
 

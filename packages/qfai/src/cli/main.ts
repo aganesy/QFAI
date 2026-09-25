@@ -459,7 +459,7 @@ Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
   --dir <path>    init: output directory (init only; --dir wins when both are given)
   --force         init: overwrite .qfai/assistant/{skill,agent}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
-                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; the story tree, steering entries, rule/*.local.md overlays and assistant/skill.local/** are never overwritten)
+                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; the story tree, rule/*.local.md overlays and assistant/skill.local/** are never overwritten)
                   It deletes as well as overwrites: the wrappers a past qfai placed in
                   .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
                   that are no longer shipped (including the real directories from before they

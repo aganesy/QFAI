@@ -37,7 +37,7 @@
 | US-0001-0031 | instructions の force 更新                                                      | `user-story-0001-0031/` |
 | US-0001-0032 | instructions アクティベーション案内                                             | `user-story-0001-0032/` |
 | US-0001-0033 | `.gitignore` 管理ブロック自動追記                                               | `user-story-0001-0033/` |
-| US-0001-0034 | 4-layer asset-tree + work-log surface seeding                                   | `user-story-0001-0034/` |
+| US-0001-0034 | 4-layer asset-tree seeding                                                      | `user-story-0001-0034/` |
 | US-0001-0035 | --upgrade-assistant-tree migration helper                                       | `user-story-0001-0035/` |
 | US-0001-0036 | assistantPaths.ts SSOT module                                                   | `user-story-0001-0036/` |
 | US-0001-0037 | legacy layout past its sunset                                                   | `user-story-0001-0037/` |
@@ -47,9 +47,7 @@
 | US-0001-0041 | Canonical production validators                                                 | `user-story-0001-0041/` |
 | US-0001-0042 | Prototyping skill and UI evidence validation                                    | `user-story-0001-0042/` |
 | US-0001-0043 | Canonical assistant-tree layers                                                 | `user-story-0001-0043/` |
-| US-0001-0044 | Work-log frontmatter and link validation                                        | `user-story-0001-0044/` |
-| US-0001-0045 | Reviewer finding justification and handoff validation                           | `user-story-0001-0045/` |
-| US-0001-0046 | Decision promotion and stale work-log warnings                                  | `user-story-0001-0046/` |
+| US-0001-0045 | Reviewer finding justification                                                  | `user-story-0001-0045/` |
 | US-0001-0047 | Deprecated assistant paths and skill project memory                             | `user-story-0001-0047/` |
 | US-0001-0048 | Skill-document references and migration notes                                   | `user-story-0001-0048/` |
 | US-0001-0049 | Profile-specific validation reports                                             | `user-story-0001-0049/` |

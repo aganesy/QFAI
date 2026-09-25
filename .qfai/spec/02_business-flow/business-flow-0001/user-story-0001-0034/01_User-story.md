@@ -1,11 +1,11 @@
-# US-0001-0034: 4-layer asset-tree + work-log surface seeding
+# US-0001-0034: 4-layer asset-tree seeding
 
 ## User Story
 
 - Parent: CAP-0003
-- Goal: `qfai init` seeds a new project with the four assistant-tree layers (`constitution/`, `manifest/`, `catalog/`, `process/`) and the project-root `.qfai/steering/` AI work-log surface, so one command realises the layout the CHG-003 discussion pack agreed. With the `rule/ skill/ agent/ prompt/` assistant tree, init seeds `.qfai/assistant/rule/`, `skill/` (each skill with its own `references/`), `agent/` and `prompt/` in place of the four layers
-- Non-goals: validate-side enforcement (spec-0004 が担当)、frontmatter schema 検証 (spec-0004 担当)、Reviewer-Gate drift findings (spec-0015 担当)
-- Notes: REQ-0018 / REQ-0019 を実装する。`assistantPaths.ts` (REQ-0022) を経由してパス文字列を解決すること
+- Goal: `qfai init` seeds a new project with the four assistant-tree layers (`constitution/`, `manifest/`, `catalog/`, `process/`), so one command realises the layout the CHG-003 discussion pack agreed. With the `rule/ skill/ agent/ prompt/` assistant tree, init seeds `.qfai/assistant/rule/`, `skill/` (each skill with its own `references/`), `agent/` and `prompt/` in place of the four layers
+- Non-goals: validate-side enforcement (spec-0004 が担当)、Reviewer-Gate drift findings (spec-0015 担当)
+- Notes: Implements REQ-0018. The work-log seed of REQ-0019 is withdrawn by discussion-20260923060900824#REQ-0001. Path strings are resolved through `assistantPaths.ts` (REQ-0022)
 
 ## Legacy Source Scope
 

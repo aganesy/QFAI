@@ -95,17 +95,17 @@ the project's Standard commands in `<paths.contractsDir>/tech.md` (by default
     (`assistant/rule/`, `skill/`, `agent/` and `prompt/`), plus `qfai.config.yaml`.
   - Options:
 
-    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                   |
-    | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                               |
-    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                   |
-    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content, routing overrides and steering are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
-    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                               |
-    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-spec-to-story`. Unrecognized assistant files stay in place.                                                                                                           |
-    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                 |
-    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                      |
-    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                           |
-    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                               |
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                         |
+    | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                     |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
+    | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
+    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-spec-to-story`. Unrecognized assistant files stay in place.                                                                                                 |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
+    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                     |
 
   - `D-DEPRECATED-PATH` means legacy assistant steering remains past its
     supported window. Run `npx qfai init --upgrade-assistant-tree` to copy
@@ -582,8 +582,7 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   ├── prompt
 │   │   ├── rule
 │   │   │   ├── constitution.md
-│   │   │   ├── test-layers.md
-│   │   │   └── worklog-entry.schema.md
+│   │   │   └── test-layers.md
 │   │   └── skill
 │   │       ├── qfai-migration-spec-to-story
 │   │       │   └── SKILL.md
@@ -616,21 +615,6 @@ where it stays current across upgrades. A README beside the artifacts is a
 second copy that nothing refreshes. A release that finds the one earlier
 versions wrote at the root of the assistant tree removes it, and leaves a README
 a project wrote for itself alone.
-
-### AI work-log surface (`.qfai/steering/`)
-
-`qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
-AI coding agents, with an `entry.md` template under `_template/`. Each entry is a
-markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
-the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
-`W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
-
-The frontmatter contract and the **per-kind write trigger** — which `kind` an
-agent writes when — are in the shipped
-`.qfai/assistant/rule/worklog-entry.schema.md`.
-
-Note that `.qfai/steering/` (the work-log surface) is a different directory from
-the legacy `.qfai/assistant/steering/` (the pre-recut assistant path).
 
 Integration wrappers are also generated for immediate use:
 

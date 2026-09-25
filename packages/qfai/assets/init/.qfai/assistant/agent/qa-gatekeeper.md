@@ -109,9 +109,9 @@ scope or the whole flow.
 ## Completion and runtime gate
 
 - Read the current BF's ATDD or implement evidence, test selectors,
-  command/results, reviewer verdicts, review pack seals and work-log
-  handoff. Use `rule/audited-evidence-hash.md` and the owning skill's
-  evidence reference to check freshness.
+  command/results, reviewer verdicts and review pack seals. Use
+  `rule/audited-evidence-hash.md` and the owning skill's evidence reference to
+  check freshness.
 - An ATDD gate uses
   `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error`.
   An implementation gate uses

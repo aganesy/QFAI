@@ -53,7 +53,6 @@ const changedPathPatterns: readonly (readonly RegExp[])[] = [
     /^\.qfai\/(?:prototypes|prototype)\//,
     /^\.qfai\/assistant\/(?:skills(?:\.local)?|skill(?:\.local)?|agents|agent|prompts|prompt)\//,
     /^\.qfai\/evidence\/(?:decisions|decision)\//,
-    /^\.qfai\/steering\/_templates?\//,
     /^\.qfai\/report\/specs?-coverage\//,
     /^\.qfai\/evidence\/migration-spec-to-story\/legacy\/(?:specs|contracts)\//,
     /^qfai\.config\.yaml$/,
@@ -73,7 +72,6 @@ const changedPathPatterns: readonly (readonly RegExp[])[] = [
   [
     /^\.qfai\/spec\/(?:02_business-flow|spec-\d{4}|_policies|03_contract)\//,
     /^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/,
-    /^\.qfai\/worklog\//,
   ],
   [/^\.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/user-story-\d{4}-\d{4}\/03_Example\.md$/],
   [
@@ -690,7 +688,6 @@ describe("BF-0004 acceptance criteria", () => {
         /^\.qfai\/assistant\/(?:skills(?:\.local)?|skill(?:\.local)?|agents|agent|prompts|prompt)\//,
         /^\.qfai\/(?:prototypes|prototype)\//,
         /^\.qfai\/evidence\/(?:decisions|decision|migration-spec-to-story\/legacy)\//,
-        /^\.qfai\/steering\/_templates?\//,
         /^\.qfai\/report\/specs?-coverage\//,
         /^qfai\.config\.yaml$/,
       ],
@@ -703,10 +700,7 @@ describe("BF-0004 acceptance criteria", () => {
         /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:_policies|assistant)\//,
         /^qfai\.config\.yaml$/,
       ],
-      [
-        /^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/,
-        /^\.qfai\/steering\//,
-      ],
+      [/^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/],
       [],
       [],
       [
@@ -1366,118 +1360,6 @@ describe("BF-0004 acceptance criteria", () => {
       "TC-0001-0001": "EX-0001-0001-01",
       "TC-0001-0003": "EX-0001-0001-02",
     });
-  });
-
-  it("rekeys steering scopes, links and promotions while retaining unresolved references and stable reruns", async () => {
-    // QFAI:EX-0004-0007-10
-    // QFAI:EX-0004-0007-11
-    const root = await project();
-    const oldSpecs = path.join(root, ".qfai/specs");
-    const firstStories = path.join(oldSpecs, "spec-0001/02_User-stories.md");
-    await writeFile(
-      firstStories,
-      `${await readFile(firstStories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I track it.\n`,
-    );
-    const active = path.join(oldSpecs, "spec-0002");
-    await mkdir(active, { recursive: true });
-    for (const [name, content] of [
-      [
-        "01_Spec.md",
-        "# Second Capability\n\n- Spec: spec-0002\n- Status: active\n\n## Scope\n\nTrack a different order.\n",
-      ],
-      [
-        "02_User-stories.md",
-        "# User Stories\n\n## US-0002-0001: Track another order\n\nAs a buyer, I track another order.\n",
-      ],
-      ["03_Acceptance-Criteria.md", "# Acceptance Criteria\n"],
-      ["04_Business-Rules.md", "# Business Rules\n"],
-      ["05_Examples.md", "# Examples\n"],
-      ["06_Test-Cases.md", "# Test Cases\n"],
-    ] as const) {
-      await writeFile(path.join(active, name), content);
-    }
-    const retired = path.join(oldSpecs, "spec-0003");
-    await cp(path.join(fixtureRoot, ".qfai/specs/spec-0002"), retired, { recursive: true });
-    for (const name of await readdir(retired)) {
-      const file = path.join(retired, name);
-      await writeFile(file, (await readFile(file, "utf8")).replaceAll("0002", "0003"));
-    }
-    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
-    const plan = parseYaml(await readFile(planPath, "utf8")) as {
-      flows: Array<{
-        title: string;
-        from?: string;
-        stories: Array<{ id: string; criteria?: string[] }>;
-      }>;
-      rules: Array<{ id: string; contract: string }>;
-    };
-    plan.flows.push(
-      { title: "Track the receipt", stories: [{ id: "US-0001-0002" }] },
-      { title: "Track another order", stories: [{ id: "US-0002-0001" }] },
-    );
-    await writeFile(planPath, stringifyYaml(plan));
-    const steering = path.join(root, ".qfai/steering");
-    await mkdir(steering, { recursive: true });
-    const originals = new Map([
-      [
-        "single.md",
-        "---\nscope: spec-0002\nlinks:\n  - spec-0002\n  - spec-0003\n  - spec-9999\npromote-to: spec-0001/07_Decisions.md\npromoted-to: DR-0001-0001\n---\nSingle-flow note.\n",
-      ],
-      [
-        "multi.md",
-        "---\nscope: spec-0001\nlinks: [spec-0001]\npromoted-to: DR-9999\n---\nMulti-flow note.\n",
-      ],
-      ["global.md", "---\nscope: global\n---\nGlobal note.\n"],
-    ]);
-    for (const [name, content] of originals) await writeFile(path.join(steering, name), content);
-    prepareThrough(root, 3);
-    const decisions = await readFile(path.join(root, ".qfai/spec/decisions.md"), "utf8");
-    const decisionId = (fragment: string): string => {
-      const row = decisions.split(/\r?\n/).find((line) => line.includes(fragment));
-      const id = row?.split("|")[1]?.trim();
-      if (!id || !/^DEC-\d{4}$/.test(id)) throw new Error(`Missing decision for ${fragment}`);
-      return id;
-    };
-    const retiredId = decisionId("spec-0003 is superseded by spec-0001");
-    const promotedId = decisionId("#DR-0001-0001:");
-    const first = step(root, 4);
-    expect(first.status).toBe(3);
-    const person = section(first.stdout, "For a person").join("\n");
-    expect(person).toContain(".qfai/steering/multi.md: scope spec-0001 maps to 2 flows");
-    expect(person).toContain(
-      ".qfai/steering/single.md: link spec-9999 has no migrated flow or decision",
-    );
-    expect(person).toContain(".qfai/steering/multi.md: promoted-to DR-9999 has no unique DEC row");
-    expect(person).not.toContain(".qfai/steering/global.md");
-    const parsed = async (name: string): Promise<Record<string, unknown>> => {
-      const raw = await readFile(path.join(steering, name), "utf8");
-      const yaml = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw)?.[1];
-      if (!yaml) throw new Error(`Missing frontmatter in ${name}`);
-      return parseYaml(yaml) as Record<string, unknown>;
-    };
-    expect(await parsed("single.md")).toMatchObject({
-      scope: "BF-0003",
-      links: ["BF-0003", retiredId, "spec-9999"],
-      "promote-to": "decisions.md",
-      "promoted-to": promotedId,
-    });
-    expect(await parsed("multi.md")).toMatchObject({
-      scope: "spec-0001",
-      links: ["BF-0001", "BF-0002"],
-      "promoted-to": "DR-9999",
-    });
-    expect(await readFile(path.join(steering, "global.md"), "utf8")).toBe(
-      originals.get("global.md"),
-    );
-    const migrated = new Map<string, string>();
-    for (const name of originals.keys()) {
-      migrated.set(name, await readFile(path.join(steering, name), "utf8"));
-    }
-    const rerun = step(root, 4);
-    expect([0, 3]).toContain(rerun.status);
-    for (const [name, content] of migrated) {
-      expect(await readFile(path.join(steering, name), "utf8"), name).toBe(content);
-    }
   });
 
   // QFAI:AC-0004-0008-01

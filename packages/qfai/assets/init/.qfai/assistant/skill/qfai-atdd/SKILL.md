@@ -30,10 +30,9 @@ explicit assumptions in the stage evidence.
 
 The active scope is one `BF-NNNN` business flow. Read its stories, acceptance
 criteria, examples and owning contracts under `paths.specsDir` before authoring.
-Use the configured paths; the default tree is `.qfai/spec/`. Read open work-log
-entries with global or current-flow scope and cite consulted entry IDs in the
-completion report. Follow `rule/worklog-entry.schema.md` for write triggers and
-handoff entries. Read `rule/test-layers.md` for the layer vocabulary.
+Use the configured paths; the default tree is `.qfai/spec/`. Send a decision, a
+question for the user or an out-of-scope discovery to `/qfai-sdd` as a change
+request. Read `rule/test-layers.md` for the layer vocabulary.
 
 ### Ownership and annotation
 
@@ -121,8 +120,9 @@ An author cannot certify their own tests. Resolve blocking findings using
 For a failed gate, follow
 `rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
-Write a handoff entry naming BF and AC IDs, test paths and selectors, commands
-and outcomes, evidence paths, unresolved findings and implementation work.
+Write a handoff entry in `.qfai/evidence/atdd-BF-NNNN.md` naming BF and AC IDs,
+test paths and selectors, commands and outcomes, evidence paths, unresolved
+findings and implementation work.
 Follow `references/stage-handover.md`. Keep cross-flow findings with their
 owning flow; see `references/cross-spec-obligations.md`.
 
@@ -206,7 +206,5 @@ If they cannot be resolved, stop at preflight and report the missing source.
 
 project_memory:
 
-- Read open global and current-flow work-log entries before writing.
-- Apply kind-specific write triggers and cite consulted IDs on completion.
 - BF maps to E2E; AC maps to integration or API; EX tests belong to implement.
 - Placeholders and unasserted annotations discharge no obligation.

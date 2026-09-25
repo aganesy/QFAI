@@ -3024,7 +3024,7 @@ describe("qfai init", () => {
     }
   });
 
-  it("seeds the singular assistant tree and project steering template", async () => {
+  it("seeds the singular assistant tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-singular-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -3033,9 +3033,6 @@ describe("qfai init", () => {
           (await readdir(path.join(root, ".qfai", "assistant", layer))).length,
         ).toBeGreaterThan(0);
       }
-      expect(
-        await readFile(path.join(root, ".qfai", "steering", "_template", "entry.md"), "utf-8"),
-      ).toContain("kind: decision");
       for (const retired of ["constitution", "manifest", "process"]) {
         await expect(readdir(path.join(root, ".qfai", "assistant", retired))).rejects.toMatchObject(
           { code: "ENOENT" },

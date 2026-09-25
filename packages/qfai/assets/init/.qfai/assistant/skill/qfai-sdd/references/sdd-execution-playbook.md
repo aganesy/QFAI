@@ -45,7 +45,7 @@ source and rerun. Record each command, result, log path, and contract executabil
 from ../templates/evidence/sdd-flow.md. Route independent reviewers under review-cycle-playbook.md; all blocking
 verdicts must be PASS. Report unfinished approval, source, or gate work as an incomplete run.
 
-For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, record the pending ownership in the work log and do not claim a flow gate passed.
+For a contract-scoped change, apply the same gate to every existing BF whose obligations rely on the contract, whether or not its BF file changed. When no BF owns the contract, say so in the report, record the pending ownership as an `open-questions.md` row, and do not claim a flow gate passed.
 
 ## Contract-scoped rerun
 

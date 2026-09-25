@@ -21,7 +21,6 @@ export const STEP01_RENAMES = [
   [".qfai/assistant/agents", ".qfai/assistant/agent"],
   [".qfai/assistant/prompts", ".qfai/assistant/prompt"],
   [".qfai/evidence/decisions", ".qfai/evidence/decision"],
-  [".qfai/steering/_templates", ".qfai/steering/_template"],
   [".qfai/report/specs-coverage", ".qfai/report/spec-coverage"],
 ] as const;
 

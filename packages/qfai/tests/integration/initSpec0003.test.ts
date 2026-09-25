@@ -246,15 +246,6 @@ describe("TC-0003-0021: singular assistant-tree seed", () => {
   });
 });
 
-describe("TC-0003-0022: project-root steering surface seed", () => {
-  it("init seeds the create-only steering entry under _template", async () => {
-    const content = await readFile(INIT_CLI, "utf-8");
-    expect(content).toContain("seedProjectSteering");
-    expect(content).toContain("joinProjectSteering");
-    expect(content).toContain('{ rel: ["_template", "entry.md"]');
-  });
-});
-
 describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
   it("init moves only named legacy assets while keeping existing destinations", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
@@ -272,11 +263,9 @@ describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
     const mod = await import("../../src/core/paths/assistantPaths.js");
     expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
-    expect(typeof mod.joinProjectSteering).toBe("function");
     expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
       path.join("project", ".qfai", "assistant", "rule", "quality.md"),
     );
-    expect(mod.PROJECT_STEERING_TEMPLATES_SUBDIR).toBe("_template");
   });
 });
 

@@ -1,10 +1,8 @@
 /**
  * Validator: reviewerJustification (.qfai/review/**\/*.json).
  *
- * Covers TC-0004-0018: empty justification on an advisory-failing finding
- * (R-WORKLOG-DRIFT) causes validate to exit error.
+ * Reports that hold no code requiring a justification raise no finding.
  */
-// QFAI:EX-0001-0045-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -43,31 +41,6 @@ describe("reviewerJustification validator", () => {
     }
   });
 
-  // TC-0004-0018: empty justification on R-WORKLOG-DRIFT
-  it("TC-0004-0018: emits error when R-WORKLOG-DRIFT carries empty justification", async () => {
-    const root = await newRoot("revjust-empty");
-    try {
-      await seedReviewerReport(root, {
-        findings: [
-          { code: "R-WORKLOG-DRIFT", justification: "" },
-          {
-            code: "R-HANDOFF-INCOMPLETE",
-            justification: "missing State and Constraints sections.",
-          },
-        ],
-      });
-      const issues = await validateReviewerJustification(root, await getConfig(root));
-      const drift = issues.filter((i) => i.code === "R-WORKLOG-DRIFT");
-      expect(drift.length).toBe(1);
-      expect(drift[0]?.severity).toBe("error");
-      // Non-empty justification on a different code should NOT fire.
-      const handoff = issues.filter((i) => i.code === "R-HANDOFF-INCOMPLETE");
-      expect(handoff.length).toBe(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("does not fire on non-advisory codes regardless of justification", async () => {
     const root = await newRoot("revjust-noncare");
     try {
@@ -84,9 +57,8 @@ describe("reviewerJustification validator", () => {
   // Regression: R-AUTOPILOT-POLICY-WIDENED is an auxiliary warning-class
   // code OUTSIDE the mandatory-justification catalog. An empty
   // `justification:` on WIDENED must NOT trigger the advisory-failing
-  // rejection — only the closed 8-code catalog (plus the historical
-  // R-WORKLOG-DRIFT family + CHG-005 codes) participates in that
-  // contract.
+  // rejection — only the closed 8-code catalog (plus `R-REJECTED-READOPT` and
+  // the second-wave codes) participates in that contract.
   it("does not fire on R-AUTOPILOT-POLICY-WIDENED with empty justification (auxiliary warning-class)", async () => {
     const root = await newRoot("revjust-widened");
     try {
