@@ -2,11 +2,11 @@
 
 Gate item 10 sends an `E2E` / `API` / `Integration` row's evidence to the file
 its `Layer` owns — `.qfai/evidence/atdd-<spec-id>.md`. Before that split every
-row wrote to `.qfai/evidence/implement-<spec-id>.md`, and a row that predates it
-still carries an anchor there. Item 10 accepts such an anchor only from a row
-that says so: `Pre-split-evidence: implement` in its `Evidence` cell. This file
-defines the pass that writes that marker. `Phase: Stage 0 + Preflight` step 3 is
-the only thing that runs it.
+row wrote to `.qfai/evidence/implement-<spec-id>.md`, and an `E2E` / `API` row
+that predates it still carries an anchor there. Item 10 accepts such an anchor
+only from a row that says so: `Pre-split-evidence: implement` in its `Evidence`
+cell. This file defines the pass that writes that marker. `Phase: Stage 0 +
+Preflight` step 3 is the only thing that runs it.
 
 ## Why the gate does not write it
 
@@ -99,6 +99,11 @@ downstream re-examines them.
   the pass again. That is harmless rather than a second migration: the procedure
   is idempotent — a row that already carries the marker is left alone — and it
   re-derives the same answer from the same history.
+- **Commit the markers on their own, once.** The pass edits ledgers of specs
+  other than the one in hand, and those edits are a repository migration, not
+  part of that spec's change. Committed, they reach every checkout, and a fresh
+  clone's re-run finds no unmarked legacy row and writes nothing. Left out of
+  the commit or reverted, they come back in every checkout the pass runs in.
 
 ## Which ledgers: every one in the repository
 
@@ -111,8 +116,8 @@ attempt after that.
 
 ## The procedure
 
-**Write it once, from the history**, for **every** `E2E` / `API` / `Integration`
-row past `todo` in every one of those ledgers — `red` and `green` and `refactor`
+**Write it once, from the history**, for **every** `E2E` / `API` row past `todo`
+in every one of those ledgers — `red` and `green` and `refactor`
 as much as `done` and `review-fix`. A row interrupted mid-cycle by the upgrade
 has legitimately stored evidence in the implement file too, and skipping it
 leaves that row unable to finish: unmarked, it is judged by the current rule
@@ -163,10 +168,10 @@ For each such row:
    lawfully held its implement anchor since before the split is refused the
    marker and stays ungateable — the failure this pass exists to remove.
    - **`Layer` counts, because it moves who owns the evidence.** A post-split
-     commit that retypes a `Unit` or `Component` row to `E2E` / `API` /
-     `Integration` and leaves `Status` and the anchor alone has advanced the row
-     into ATDD ownership. Watching only `Status` and the anchor skips it, the
-     walk settles on an older — possibly pre-split — status update, and the
+     commit that retypes a `Unit`, `Component` or `Integration` row to `E2E` /
+     `API` and leaves `Status` and the anchor alone has advanced the row into
+     the layer it is judged by now. Watching only `Status` and the anchor skips
+     it, the walk settles on an older — possibly pre-split — status update, and the
      marker lands on a row that is ATDD-owned today and has never produced a
      handoff. Derive the boundary for the layer the row carries **now**, not the
      one it carried at `A`.
@@ -226,10 +231,9 @@ acceptance to the one case the marker exists to keep out: a row that never
 produced an ATDD handoff. So the pass verifies when the row was last advanced,
 not only where its evidence pointed.
 
-The layers moved at different releases — `E2E` and `API` first, `Integration` in
-the release after — so the boundary is per layer. Derive it from the vendored
-skill tree the repository commits. For a row whose `Layer` is `L`, the boundary
-`B(L)` is the **oldest** commit whose
+The boundary is derived per layer, from the vendored skill tree the repository
+commits, so each row is dated against the commit that moved its own layer. For
+a row whose `Layer` is `L`, the boundary `B(L)` is the **oldest** commit whose
 `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md` already
 routes `L` to `atdd-<spec-id>.md` (its `Evidence` column names `L` in that
 list):
@@ -301,25 +305,29 @@ for on every attempt, and a `done` row has no transition left that could produce
 one — the permanent failure this whole pass exists to remove. `B(L)` says where
 to start looking; only the contract at `A` says what the row was written under.
 
-Resolve `B(L)` once per layer per run and cache it: it is at most three walks of
+Resolve `B(L)` once per layer per run and cache it: it is at most two walks of
 one file's history, never one per row.
 
-## `Integration` is in scope, and it is the newest legacy case
+## `Integration` is out of scope
 
-`Integration` joined the ATDD file one release **after** `E2E` and `API`. Before
-that, an ordinary Integration row stored its evidence in
-`implement-<spec-id>.md` like every other row this skill drove, so a repository
-upgrading across that release has Integration rows already `done`, `review-fix`
-or mid-cycle whose anchors point there lawfully. Excluding them would leave them
-exactly where the marker exists to prevent: item 10 demands an ATDD anchor they
-have no lawful entry for, and a `done` row has no transition that would let it
-produce one. They take the same history test as `E2E` / `API`, against their own
-later `B(Integration)`.
+An `Integration` row gets no marker. `Integration` reached the ATDD file in the
+same release as `E2E` and `API`, so a project upgrading from one release to the
+next has no `Integration` row that lawfully kept an implement anchor. The
+validator reads the marker on `E2E` / `API` rows only, and reports it on any
+other row (`evidence-cell-grammar.md`). Written on an `Integration` row, it
+licenses nothing and is one more edit the pass makes to a ledger it was not
+asked about.
+
+## The marker and the length cap
+
+The marker does not count toward the `Evidence` cell's 240-character cap
+(`evidence-cell-grammar.md`). A cell inside the cap before the pass stays inside
+it after, so the pass never changes which finding a row draws.
 
 ## What the marker does not license
 
-Status and anchor alone cannot tell a legacy row from a new `E2E` / `API` /
-`Integration` row written to the wrong file — which is why item 10 refuses an
+Status and anchor alone cannot tell a legacy row from a new `E2E` / `API` row
+written to the wrong file — which is why item 10 refuses an
 implement anchor that carries no marker, and why this pass reads history rather
 than status. Marking a row whose last advance already pointed at the ATDD file,
 or whose last advance came after its layer's split, would let a row that never

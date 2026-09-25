@@ -28,11 +28,10 @@ The cell is a pointer, not the payload
 
 ## Compatibility: a row that predates the evidence split
 
-**Compatibility:** an `E2E` / `API` / `Integration` row advanced past `todo`
-before its layer's split has its evidence and anchor in `implement-<spec-id>.md`,
-which was the contract at the time. `Integration` moved to the ATDD file one
-release **after** `E2E` / `API`, so its legacy rows are the newest of them and
-are covered here too.
+**Compatibility:** an `E2E` / `API` row advanced past `todo` before its layer's
+split has its evidence and anchor in `implement-<spec-id>.md`, which was the
+contract at the time. `Integration` moved to the ATDD file in the same release,
+so it has no legacy row and no marker.
 
 **Identify it by a marker, not by its status**: the row carries
 `Pre-split-evidence: implement` in its `Evidence` cell. Status and anchor alone

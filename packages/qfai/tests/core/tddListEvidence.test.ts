@@ -6530,6 +6530,36 @@ describe("QFAI-TDDLIST-012", () => {
     });
   });
 
+  // The pre-split marker pass appends the marker to a cell it did not write.
+  // Counted, it moved a cell inside the cap past it, and the row's finding
+  // changed although nothing but the marker had.
+  it("does not count a trailing compatibility marker against the cap", async () => {
+    await withProject(async (root) => {
+      const evidence = `${"y".repeat(230)} Pre-split-evidence: implement`;
+      expect(evidence.length).toBeGreaterThan(240);
+      const codes = await runOn(root, ledger([{ status: "done", evidence, layer: "E2E" }]));
+      expect(codes).not.toContain("QFAI-TDDLIST-012");
+      // Still prose, so the grammar reports it once the cap does not.
+      expect(codes).toContain("QFAI-TDDLIST-011");
+    });
+  });
+
+  it("still reports a cell past the cap without its marker", async () => {
+    await withProject(async (root) => {
+      const evidence = `${"y".repeat(241)} Pre-split-evidence: implement`;
+      const codes = await runOn(root, ledger([{ status: "done", evidence, layer: "E2E" }]));
+      expect(codes).toContain("QFAI-TDDLIST-012");
+    });
+  });
+
+  it("counts a marker that is not at the end of the cell", async () => {
+    await withProject(async (root) => {
+      const evidence = `Pre-split-evidence: implement ${"y".repeat(220)}`;
+      const codes = await runOn(root, ledger([{ status: "done", evidence, layer: "E2E" }]));
+      expect(codes).toContain("QFAI-TDDLIST-012");
+    });
+  });
+
   it("is waivable", async () => {
     await withProject(async (root) => {
       await runOn(root, ledger([{ status: "done", evidence: OVERSIZE }]));
