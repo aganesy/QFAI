@@ -41,6 +41,23 @@ export interface WorkflowEvent {
   debts?: WorkflowDebt[];
   gateResults?: WorkflowGateReceipt[];
   validate?: { verdict: "PASS" | "FAIL"; findings: FindingIdentity[]; trustLevel: "cli_observed" };
+  executionContext?: WorkflowExecutionContext;
+}
+
+// The host's capability report, each capability reported true or false.
+interface WorkflowHarness {
+  host: string;
+  capabilities: Record<string, boolean>;
+}
+
+interface WorkflowExecutionContext {
+  runId: string;
+  qfaiVersion: string;
+  policyDigests: Record<string, string>;
+  manifestDigests: Record<string, string>;
+  planDigests: Record<string, string>;
+  harness: WorkflowHarness;
+  requestDigest: string;
 }
 
 interface WorkflowGateReceipt {
@@ -136,6 +153,8 @@ interface WorkflowAuthorization {
   };
 }
 
+type WorkflowReceiptClass = { ref: string; validity: "valid" | "stale" | "unknown" };
+
 export interface WorkflowDecision {
   verdict: {
     ok: boolean;
@@ -147,13 +166,14 @@ export interface WorkflowDecision {
     unmet?: WorkflowUnmet[];
     deliveryUnmet?: WorkflowUnmet[];
     receipts?: WorkflowGateReceipt[];
+    classedReceipts?: WorkflowReceiptClass[];
     error?:
       | {
           code: "invalid-input";
           message: string;
           reasons?: InputRefusal[];
         }
-      | { code: "stale-sequence" | "no-open-question"; message: string }
+      | { code: "stale-sequence" | "no-open-question" | "answer-conflict"; message: string }
       | {
           code: "proposal-refused";
           message: string;
@@ -256,6 +276,10 @@ interface WorkflowSnapshot {
   actorHistory?: WorkflowActor[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
   authorizations?: { authorizationId: string; kind: string; policy?: WorkflowPolicy }[];
+  answeredQuestions?: Record<
+    string,
+    { answer: WorkflowAuthorization["answer"]; verdict: WorkflowDecision["verdict"] }
+  >;
   // The run's key for free-text answers, read from its private request file.
   digestKey?: string;
 }
@@ -270,6 +294,7 @@ interface WorkflowAcceptedStage {
   stageInstanceId: string;
   stageKind: string;
   outcome: string;
+  receiptRef?: string;
   gateResults?: WorkflowGateReceipt[];
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
@@ -291,6 +316,8 @@ interface WorkflowSeamRequest {
 
 interface WorkflowInput {
   operation: string;
+  request?: { text: string };
+  harness?: WorkflowHarness;
   questionId?: string;
   answer?: { optionIds?: string[]; value?: string };
   answeredBy?: string;
@@ -369,6 +396,8 @@ interface WorkflowFacts {
     rows: { rowId: string; status: string; digest: string; layer?: string; tcLevels?: string[] }[];
   };
   completion?: WorkflowCompletionFacts;
+  // What `start` fixes for the run: its minted ID and key, and the tool and policy it runs under.
+  start?: Omit<WorkflowExecutionContext, "harness" | "requestDigest"> & { digestKey: string };
   // The always-required reviewers of the review profile each skill is routed to.
   reviewerRoles?: Record<string, string[]>;
 }
@@ -1252,6 +1281,48 @@ function completionUnmet(
   });
 }
 
+function classedReceipts(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
+  return (snapshot.acceptedStages ?? []).flatMap((stage): WorkflowReceiptClass[] =>
+    stage.receiptRef
+      ? [
+          {
+            ref: stage.receiptRef,
+            validity: facts.receiptValidity?.[stage.receiptRef] ?? "unknown",
+          },
+        ]
+      : [],
+  );
+}
+
+// A receipt that is not valid, including one whose dependency cannot be read, reopens its
+// stage: the run restarts at the first accepted stage whose receipt does not hold.
+// SIMPLIFIED: resume revalidates receipts only, not the worktree identity, the journal or digests.
+// Lift when: observers supply the identity and integrity facts resume checks.
+function resumeFromCheckpoint(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+): WorkflowDecision | undefined {
+  const receipts = classedReceipts(snapshot, facts);
+  const accepted = snapshot.acceptedStages ?? [];
+  const checkpoint = accepted.findIndex((stage) =>
+    receipts.some(({ ref, validity }) => ref === stage.receiptRef && validity !== "valid"),
+  );
+  if (checkpoint < 0) return undefined;
+  const events: WorkflowEvent[] = [
+    { type: "observed-session-interruption" },
+    { type: "reconciled-resume" },
+  ];
+  const { outstandingWorkOrder: _abandoned, ...rest } = snapshot;
+  const run = { ...snapshot.run, state: "ready", sequence: snapshot.run.sequence + events.length };
+  const acceptedStages = accepted.slice(0, checkpoint);
+  const issued = decide({ ...rest, run, acceptedStages }, { operation: "next" }, facts);
+  if (!issued.verdict.ok) return issued;
+  return {
+    verdict: { ...issued.verdict, classedReceipts: receipts },
+    events: [...events, ...issued.events],
+  };
+}
+
 function decideFinish(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run, completionTarget } = snapshot;
   const completion = facts.completion;
@@ -1308,13 +1379,65 @@ function answerEvents(authorization: WorkflowAuthorization): WorkflowEvent[] {
 
 // A value is kept only as a digest under the run's key, so the tracked record cannot be
 // matched against a guess.
-function valueAnswer(question: WorkflowQuestion, value: string | undefined, key?: string) {
+function keyedDigest(text: string, key: string | undefined) {
+  if (!key || !/^[a-f0-9]{64}$/.test(key)) return undefined;
+  return createHmac("sha256", Buffer.from(key, "hex")).update(text).digest("hex");
+}
+
+function valueDigestOf(value: string | undefined, key: string | undefined) {
   const normalized = value?.normalize("NFC").trim();
-  if (!normalized || !question.effect || !key || !/^[a-f0-9]{64}$/.test(key)) return undefined;
-  const valueDigest = createHmac("sha256", Buffer.from(key, "hex"))
-    .update(normalized)
-    .digest("hex");
+  return normalized ? keyedDigest(normalized, key) : undefined;
+}
+
+// SIMPLIFIED: start records the execution context from the facts it is given; it checks no
+// capability report, active run or baseline.
+// Lift when: start's own refusals and its validate baseline are decided here.
+function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecision {
+  const start = facts.start;
+  const text = input.request?.text ?? "";
+  const requestDigest = text.trim() ? keyedDigest(text, start?.digestKey) : undefined;
+  if (input.operation !== "start" || !start || !requestDigest || !input.harness) {
+    const message = "The run could not be started. Check the request and try again.";
+    return {
+      verdict: { ok: false, run: null, error: { code: "invalid-input", message } },
+      events: [],
+    };
+  }
+  const { digestKey: _key, ...fixed } = start;
+  const executionContext = { ...fixed, harness: input.harness, requestDigest };
+  const events = [{ type: "run-created", executionContext }, { type: "capture-request" }];
+  const run = { id: start.runId, state: "routing", sequence: events.length };
+  return { verdict: { ok: true, run }, events };
+}
+
+function valueAnswer(question: WorkflowQuestion, value: string | undefined, key?: string) {
+  const valueDigest = valueDigestOf(value, key);
+  if (!valueDigest || !question.effect) return undefined;
   return { answer: { valueDigest }, effect: question.effect };
+}
+
+// An answer is identified by its sorted option IDs, or by its value's keyed digest.
+function normalizedAnswer(input: WorkflowInput, key: string | undefined) {
+  const { value, optionIds } = input.answer ?? {};
+  if (value !== undefined) return { valueDigest: valueDigestOf(value, key) };
+  return { optionIds: [...(optionIds ?? [])].sort() };
+}
+
+// A repeated answer returns the verdict it was given; a different one is refused.
+function replayedAnswer(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+): WorkflowDecision | undefined {
+  const recorded = input.questionId ? snapshot.answeredQuestions?.[input.questionId] : undefined;
+  if (!recorded) return undefined;
+  const same =
+    JSON.stringify(normalizedAnswer(input, snapshot.digestKey)) === JSON.stringify(recorded.answer);
+  if (same) return { verdict: recorded.verdict, events: [] };
+  const message = "That question already has a different answer. Read the run's status.";
+  return {
+    verdict: { ok: false, run: snapshot.run, error: { code: "answer-conflict", message } },
+    events: [],
+  };
 }
 
 function answerOf(
@@ -1343,6 +1466,8 @@ function decideAnswer(
   input: WorkflowInput,
   facts: WorkflowFacts,
 ): WorkflowDecision {
+  const replayed = replayedAnswer(snapshot, input);
+  if (replayed) return replayed;
   const { run, scopeDigest } = snapshot;
   const question = snapshot.openQuestions?.find(
     (openQuestion) => openQuestion.questionId === input.questionId,
@@ -1416,11 +1541,23 @@ function decideAnswer(
   return { verdict: { ok: true, run: next }, events };
 }
 
+// Before `start` there is no run, so `start` alone takes no snapshot.
+export function decide(
+  snapshot: null,
+  input: WorkflowInput & { operation: "start" },
+  facts: WorkflowFacts,
+): WorkflowDecision;
 export function decide(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
   facts: WorkflowFacts,
+): WorkflowDecision;
+export function decide(
+  snapshot: WorkflowSnapshot | null,
+  input: WorkflowInput,
+  facts: WorkflowFacts,
 ): WorkflowDecision {
+  if (!snapshot) return decideStart(input, facts);
   const run = snapshot.run;
   const workOrder = snapshot.outstandingWorkOrder;
   const result = input.result;
@@ -1581,9 +1718,9 @@ export function decide(
     return { verdict: { ok: true, run, workOrder: null, questions }, events: [] };
   }
 
-  // SIMPLIFIED: resume reissues the outstanding work order without revalidating the run.
-  // Lift when: observers supply the identity, integrity and receipt facts resume checks.
   if (input.operation === "resume" && run.state === "running" && workOrder) {
+    const checkpoint = resumeFromCheckpoint(snapshot, facts);
+    if (checkpoint) return checkpoint;
     const events: WorkflowEvent[] = [
       { type: "observed-session-interruption" },
       { type: "reconciled-resume" },

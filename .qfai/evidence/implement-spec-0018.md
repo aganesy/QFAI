@@ -146,6 +146,16 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0136 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0137 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0138 | TC-0018-0098 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0139 | TC-0018-0099 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0140 | TC-0018-0100 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0141 | TC-0018-0101 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0142 | TC-0018-0101 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0143 | TC-0018-0101 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0144 | TC-0018-0105 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0145 | TC-0018-0109 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0146 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0147 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0148 | TC-0018-0122 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -3014,6 +3024,106 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `AssertionError: expected { ok: true, code: undefined, …(2) } to deeply equal { ok: false, …(3) }` at `tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts:146`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/agentWrittenApprovalsAreRefused.test.ts > TC-0018-0098 (TDD-0138): confidence-at-decision`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0139
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts`
+- Selector: `TC-0018-0099 (TDD-0139): The same question and the same answer submitted twice`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts --testNamePattern='TC-0018-0099 \(TDD-0139\): The same question and the same answer submitted twice' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (sameVerdict, events, ...) } to deeply equal { sameVerdict: true, events: [], …(1) }` at `tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts:86`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts > TC-0018-0099 (TDD-0139): The same question and the same answer submitted twice`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0140
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts`
+- Selector: `TC-0018-0100 (TDD-0140): A different answer to the answered question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts --testNamePattern='TC-0018-0100 \(TDD-0140\): A different answer to the answered question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (code, events) } to deeply equal { code: 'answer-conflict', events: [] }` at `tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts:91`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts > TC-0018-0100 (TDD-0140): A different answer to the answered question`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0141
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts`
+- Selector: `TC-0018-0101 (TDD-0141): nfd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts --testNamePattern='TC-0018-0101 \(TDD-0141\): nfd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { sameVerdict: false, events: [] } to deeply equal { sameVerdict: true, events: [] }` at `tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts:110`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts > TC-0018-0101 (TDD-0141): nfd`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0142
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts`
+- Selector: `TC-0018-0101 (TDD-0142): white-space`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts --testNamePattern='TC-0018-0101 \(TDD-0142\): white-space' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { sameVerdict: false, events: [] } to deeply equal { sameVerdict: true, events: [] }` at `tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts:110`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts > TC-0018-0101 (TDD-0142): white-space`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0143
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts`
+- Selector: `TC-0018-0101 (TDD-0143): option-order`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts --testNamePattern='TC-0018-0101 \(TDD-0143\): option-order' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { sameVerdict: false, events: [] } to deeply equal { sameVerdict: true, events: [] }` at `tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts:110`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aDecisionIsIdentifiedByItsQuestionAndAnswer.test.ts > TC-0018-0101 (TDD-0143): option-order`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0144
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theExecutionContext.test.ts`
+- Selector: `TC-0018-0105 (TDD-0144): Decide start`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theExecutionContext.test.ts --testNamePattern='TC-0018-0105 \(TDD-0144\): Decide start' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: null, context: undefined } to deeply equal { run: { …(3) }, context: { …(7) } }` at `tests/unit/workflow/theExecutionContext.test.ts:42` (line as the file now stands; the start input was reshaped to the contract's `request: { text }` and `harness: { host, capabilities }` after the run)
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theExecutionContext.test.ts > TC-0018-0105 (TDD-0144): Decide start`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0145
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/resumeFromTheSmallestValidCheckpoint.test.ts`
+- Selector: `TC-0018-0109 (TDD-0145): resume facts where one receipt's dependency cannot be read`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/resumeFromTheSmallestValidCheckpoint.test.ts --testNamePattern='TC-0018-0109 \(TDD-0145\): resume facts where one receipt's dependency cannot be read' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { receipts: undefined, …(3) } to deeply equal { receipts: [ { …(2) } ], …(3) }` at `tests/unit/workflow/resumeFromTheSmallestValidCheckpoint.test.ts:39`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/resumeFromTheSmallestValidCheckpoint.test.ts > TC-0018-0109 (TDD-0145): resume facts where one receipt's dependency cannot be read`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0146
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0122 (TDD-0146): ebusy`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0122 \(TDD-0146\): ebusy' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { refusal: undefined, …(2) } to deeply equal { Object (refusal, exitCode, ...) }` at `tests/unit/workflow/persistence.test.ts:24`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0122 (TDD-0146): ebusy`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0147
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0122 (TDD-0147): eperm`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0122 \(TDD-0147\): eperm' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { refusal: undefined, …(2) } to deeply equal { Object (refusal, exitCode, ...) }` at `tests/unit/workflow/persistence.test.ts:24`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0122 (TDD-0147): eperm`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0148
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0122 (TDD-0148): eacces`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0122 \(TDD-0148\): eacces' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { refusal: undefined, …(2) } to deeply equal { Object (refusal, exitCode, ...) }` at `tests/unit/workflow/persistence.test.ts:24`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0122 (TDD-0148): eacces`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
 
 ### TDD-0212
 
