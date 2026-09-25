@@ -84,6 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The spec-0003, spec-0011 and spec-0013 ATDD summaries describe the current
+  ledgers** (#2417). Their gaps and final status no longer report the work-log
+  rows the removal withdrew as handed over or closed, and each checkpoint that
+  closed them says they were withdrawn since. The spec-0003 summary reports
+  `TDD-0094` as `done`, and the spec-0013 one reports the rows an earlier
+  request reset as `todo` or `blocked`. A new, open Change Request asks to reset
+  spec-0003 `TDD-0001`, whose recorded proof predates an edit to its test. The
+  cross-spec re-verify of that row cannot clear the finding on a fresh clone,
+  because the review pack it would need is not committed.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
