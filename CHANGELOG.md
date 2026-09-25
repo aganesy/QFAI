@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The reporting contract covers what an agent says while it works**
+  (#2237). `constitution/communication.md` now has the agent say in one
+  sentence what it is about to do before its first tool call, and give an
+  update only when something important is found or the direction changes. The
+  final report leads with the outcome. An earlier statement is corrected
+  plainly when the error would change the user's code, conclusions or
+  decisions; a slip that changes none of those is fixed without comment.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
