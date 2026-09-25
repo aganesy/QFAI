@@ -31,12 +31,12 @@
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: integration
 - Reset by: `CR-20260912-0003` (option 1; TC-0010-0006 re-derived). The earlier selector named no case in its file.
-- Test file: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
+- Test file: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
 - Selector: `TC-0010-0006: the skill's planner-first guidance ranks no exploration and keeps the brand direction the user's`
 - RED command (cwd `packages/qfai`): as TDD-0006
 - RED result: already satisfied: exit 0 for this case on the first run
 - GREEN result: exit 0; 26 passed (26)
-- Changed files: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
+- Changed files: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
 
 ### TDD-0010
 

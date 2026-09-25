@@ -1818,7 +1818,8 @@ describe("assets guardrails", () => {
 
   it("keeps package README aligned with discussion completion contract", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
-    const readme = await readFile(readmePath, "utf-8");
+    // Line breaks read as spaces: the README wraps a sentence the skill keeps on one line.
+    const readme = (await readFile(readmePath, "utf-8")).replace(/\s*\n\s*/g, " ");
 
     // W-3: README must express canonical discussion completion contract
     expect(readme).toContain(
@@ -2018,7 +2019,8 @@ describe("assets guardrails", () => {
     // All three must express the canonical completion contract wording
     const canonicalPhrase =
       "Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.";
-    expect(packageReadme).toContain(canonicalPhrase);
+    // The README wraps the phrase, so its line breaks read as spaces.
+    expect(packageReadme.replace(/\s*\n\s*/g, " ")).toContain(canonicalPhrase);
     expect(rules).toContain(canonicalPhrase);
     expect(skill).toContain(canonicalPhrase);
   });

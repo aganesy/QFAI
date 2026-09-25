@@ -83,7 +83,7 @@ Part A was put to the user with three options. Parts B, C and D were put with
 options 1 and 2 only; their option 3 is recorded here to meet the template
 minimum and was not presented.
 
-**Part A**
+### Part A
 
 | #   | Option                                                             | Cost                                           | Risk                                                               | Recommended |
 | --- | ------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------ | ----------- |
@@ -91,7 +91,7 @@ minimum and was not presented.
 | 2   | Drop only the two `DR-0297` citations; keep `CLI-WF` and `CLI-VAL` | Two cases reworded                             | Shipped skills name contract files an adopter does not have        |             |
 | 3   | Leave the six cases as they are                                    | None now                                       | The six rows stay open and `QFAI-ATDD-112` keeps the merge blocked |             |
 
-**Part B**
+### Part B
 
 | #   | Option                                                        | Cost                               | Risk                                                                | Recommended |
 | --- | ------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------- | ----------- |
@@ -99,7 +99,7 @@ minimum and was not presented.
 | 2   | Add a trust-level key to `gateResults` so the input can exist | Schema, parser and contract change | Widens a payload to carry a claim the core must then ignore         |             |
 | 3   | Retire the case                                               | A retirement and a tombstone       | The L1 check that a submitted gate decides nothing is lost          |             |
 
-**Part C**
+### Part C
 
 | #   | Option                                                                                         | Cost                | Risk                                                             | Recommended |
 | --- | ---------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------- | ----------- |
@@ -107,7 +107,7 @@ minimum and was not presented.
 | 2   | Every condition but `debt-open` names `operator`                                               | One sentence        | A missing stage points the operator at nobody who can produce it |             |
 | 3   | Leave the owner to the implementation                                                          | None now            | Owners drift between the command and the completion report       |             |
 
-**Part D**
+### Part D
 
 | #   | Option                                                                 | Cost                       | Risk                                                               | Recommended |
 | --- | ---------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------ | ----------- |

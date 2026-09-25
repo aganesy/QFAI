@@ -13,6 +13,14 @@
 | CR-20260923-0014 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T20:55:46Z |
 | CR-20260924-0001 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
 | CR-20260924-0002 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-24T19:00:08Z |
+| CR-20260925-0005 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md`                                                                                                | re-derive | user                                                           | 2026-09-24T23:35:15Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T02:36:35Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-25T03:23:20Z |
+| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T06:04:36Z |
+| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T07:34:27Z |
 
 ## 2026-09-04
 
@@ -476,19 +484,6 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
 - Obligation reconciliation: BR-0012-0138 and AC-0012-0178 list the non-UI cause of a
   `blocked` prototype result in its `debts`, owned by `operator`, as CLI-WF `### Stage result`
   states. The ledger rows are unchanged.
-
-## Change Requests
-
-| CR ID            | Upstream artifact                                                                         | Mode      | Approved by | Applied at           |
-| ---------------- | ----------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
-| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-24T18:26:35Z |
-| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-24T19:00:08Z |
-| CR-20260925-0005 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md` | re-derive | user        | 2026-09-24T23:35:15Z |
-| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T02:36:35Z |
-| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T03:00:14Z |
-| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`    | re-derive | user        | 2026-09-25T03:23:20Z |
-| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T06:04:36Z |
-| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                    | re-derive | user        | 2026-09-25T07:34:27Z |
 
 ## 2026-09-25 — Ledger boundary reconciliation
 
