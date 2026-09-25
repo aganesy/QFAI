@@ -763,6 +763,14 @@ Every write operation takes these steps, in this order:
   `newer-record` by every operation. A record the core cannot parse is reported as
   `legacy`, is never reported as a success, and is not counted as a non-terminal
   run.
+- `legacy` is a report, not a state of the [state machine](#state-machine): no
+  event leads to it or leaves it, and nothing is written to such a run. The
+  report is `run: { id, state: "legacy", sequence: 0 }`.
+  - `status --run` serves it with `ok: true` and exit 0. The document carries no
+    stage, work order, question or `cause`, so it never reads as `completed`.
+  - Every other operation naming the run is refused `unknown-run`, exit 2, with
+    the same `run`.
+  - `status` without `--run` skips the run, as it skips a terminal one.
 
 Realizes: `discussion-20260923171450572#REQ-0026`,
 `discussion-20260923171450572#REQ-0027`, `discussion-20260923171450572#REQ-0068`,
@@ -950,7 +958,7 @@ of the emitted rule codes.
 | `identity-mismatch` | The run belongs to another worktree                                                                        |
 | `newer-record`      | The run was written by a newer package                                                                     |
 | `fail-closed`       | A fail-closed cause, named in `cause`                                                                      |
-| `unknown-run`       | `--run` names no run                                                                                       |
+| `unknown-run`       | `--run` names no run, or a run whose record is reported `legacy`                                           |
 | `torn-event`        | A published event does not parse                                                                           |
 | `sequence-gap`      | The journal skips a sequence number                                                                        |
 | `hash-mismatch`     | An event's `prevHash` does not match                                                                       |
@@ -1336,6 +1344,7 @@ Source: SCR-012. Actor: `qfai-run` through the harness, or the operator by hand.
 | `blocked`        | The cause or blocker and who can clear it, as `host:halt-notice` names them               |
 | `empty`          | No run in this worktree: `run: null` and the mode, exit 0                                 |
 | `error`          | `unknown-run`; or a journal failing integrity, reported as `failed` with its code, exit 0 |
+| `legacy`         | A record the core cannot parse: `ok: true`, the run in state `legacy`, exit 0             |
 
 A terminal run reports its terminal state.
 

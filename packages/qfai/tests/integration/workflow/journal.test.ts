@@ -229,12 +229,22 @@ it("TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse
     JSON.stringify({ state: "running", stage: "implement" }),
   );
   const reported = workflow(root, ["status", "--run", legacy]);
+  const refused = workflow(root, ["next", "--run", legacy]);
   const started = workflow(root, ["start", "--in", await inbox(root, null, "start", START_INPUT)]);
 
   expect({
-    state: field(reported.json, "run.state"),
+    status: [field(reported.json, "ok"), field(reported.json, "run"), reported.status],
+    unread: ["stage", "workOrder", "questions", "cause"].map((key) => field(reported.json, key)),
+    next: [field(refused.json, "ok"), field(refused.json, "error.code"), refused.status],
+    nextRun: field(refused.json, "run.state"),
     start: [field(started.json, "ok"), field(started.json, "error.code")],
-  }).toEqual({ state: "legacy", start: [true, undefined] });
+  }).toEqual({
+    status: [true, { id: legacy, state: "legacy", sequence: 0 }, 0],
+    unread: [undefined, undefined, undefined, undefined],
+    next: [false, "unknown-run", 2],
+    nextRun: "legacy",
+    start: [true, undefined],
+  });
 });
 
 it("TC-0018-0117 (TDD-0336): Built CLI", async () => {
