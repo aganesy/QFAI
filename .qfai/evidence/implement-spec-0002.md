@@ -105,6 +105,45 @@ projects above declare themselves inactive and did not run.
 - GREEN result: exit 0; 1 passed | 93 skipped (94)
 - Changed files: `packages/qfai/tests/assets/assets.test.ts` (the TC annotation on the re-pointed case)
 
+## Shared-artifact re-verify
+
+`CR-20260912-0003` approved action 7 re-verifies `TDD-0011` in place, with
+`Status` left at `done`. Its obligation, `TC-0002-0010`, and its case,
+`skips non-UI packs`, did not change. The row's `### TDD-0011` entry above is
+not rewritten; this block carries the fresh observation.
+
+The test file has not changed since the entry's revision
+`fa483eab391a3f731d93f61b28d35951c697496b`. The annotation edits the Change
+Request names are in `d2d1a33be` and `c09247729`, both ancestors of that
+revision. The `non-UI skip` fixture has not been edited. So no assertion
+moved, and no falsifiability evidence is owed beyond the re-taken proof below.
+
+### spec-0002/TDD-0011
+
+- Evidence file: .qfai/evidence/implement-spec-0002.md
+- Revision: b5d357c14ae396a0d436491692af17be018b278c
+- Selector: skips non-UI packs
+- TC-ref: TC-0002-0010
+- Re-verify command: cd packages/qfai && npx vitest run tests/validators/uix/threeLayer.test.ts -t "skips non-UI packs"
+- Re-verify result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 9 skipped (10)
+- Proof command: cd packages/qfai && npx vitest run tests/validators/uix/threeLayer.test.ts, with the line `if (!(await isUiBearingSpec(root))) return [];` removed from `validateThreeLayerFamilyCompleteness` in `packages/qfai/src/core/validators/uix/threeLayer.ts`. This is the mutation the entry's `Round 1: Satisfied-by` names. The file's SHA-256 is `81a5e79a4a9534a1486ce9d33aa474f2c3d109761a9491f615bc315313481b03` at the revision above and `f994e6acfc4becd749a678f9aa8c3f21ce4320319b1ae49b3e39569fb0e7d349` with that one line and its newline deleted; nothing else in the tree differed.
+- Proof result: FAIL — exit 1; Test Files 1 failed (1); Tests 1 failed | 9 passed (10). Only the row's own case fails, at `tests/validators/uix/threeLayer.test.ts:218:20`, with `AssertionError: expected [ { …(6) }, { …(6) }, { …(6) } ] to have a length of +0 but got 3` — one issue per canonical sidecar the non-UI pack does not have.
+- Restored GREEN command: cd packages/qfai && npx vitest run tests/validators/uix/threeLayer.test.ts, after the file was restored from a copy of its pre-mutation bytes and its SHA-256 read back as `81a5e79a…1b03`.
+- Restored GREEN result: PASS — exit 0; Test Files 1 passed (1); Tests 10 passed (10)
+- Refactor verify command: cd packages/qfai && npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts
+- Refactor verify result: PASS — exit 0; Test Files 2 passed (2); Tests 33 passed (33). Round 1 counted 36 because `sddPreflight.test.ts` had three more cases before `2da2aed1c`; `threeLayer.test.ts` still runs all 10.
+- RED test manifest:
+
+```text
+packages/qfai/tests/validators/uix/threeLayer.test.ts
+```
+
+- RED test hash: 6e3670043157d44f32dd3a256599773b496ff5399b0182c7abf08ce7e2922ca6
+- Status: `done`, unchanged.
+- product-surface-reviewer: not required. The row is a `validators` row with no display logic.
+- implementation-reviewer: PASS on 2026-09-26, over this block at `b5d357c14ae396a0d436491692af17be018b278c`. It re-ran the selector and the refactor verify, recomputed the mutated-file hash and the RED test hash, and checked every field the validator reads.
+- completion-reviewer: PASS on 2026-09-26, over this block at `b5d357c14ae396a0d436491692af17be018b278c`. It re-ran the selector and the mutation in a scratch copy, and confirmed that `TC-0002-0010` is still covered, the ledger row is untouched and the `### TDD-0011` entry is unchanged.
+
 ## Test results summary
 
 `TDD-0011` green at the recorded revision, and falsified by a mutation of the
