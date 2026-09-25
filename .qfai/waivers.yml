@@ -181,10 +181,6 @@ waivers:
         - TDD-0336
         - TDD-0337
         - TDD-0338
-        - TDD-0578
-        - TDD-0579
-        - TDD-0580
-        - TDD-0581
         - TDD-0582
         - TDD-0583
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
