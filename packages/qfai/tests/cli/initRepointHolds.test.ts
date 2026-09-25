@@ -122,6 +122,35 @@ describe("qfai init and the holds of an interrupted repair", () => {
     });
   });
 
+  it("keeps a respelled singular link working when symlinks are refused", async () => {
+    await withInitializedProject(async (root) => {
+      const wrapper = wrapperOf(root);
+      await rm(wrapper);
+      const respelled = SINGULAR_TARGET.toUpperCase();
+      await symlink(respelled, wrapper, "dir");
+      let attempts = 0;
+
+      await expect(
+        runInit(
+          { dir: root, force: false, dryRun: false, yes: true },
+          {
+            platform: "win32",
+            createSymlink: () => {
+              attempts += 1;
+              return Promise.reject(eperm());
+            },
+          },
+        ),
+      ).rejects.toThrow(/Failed to create a symlink \(EPERM\)/);
+
+      // Rewritten through a hold like the plural link, so the refused write
+      // leaves the original link in place rather than an empty path.
+      expect(attempts).toBe(2);
+      expect(await readlink(wrapper)).toBe(respelled);
+      expect(await holdsBeside(wrapper)).toEqual([]);
+    });
+  });
+
   it("rewrites a link the gate reports though it reaches the right directory", async () => {
     await withInitializedProject(async (root) => {
       const wrapper = wrapperOf(root);

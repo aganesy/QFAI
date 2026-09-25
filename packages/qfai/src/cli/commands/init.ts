@@ -5950,6 +5950,26 @@ async function writeManagedLink(
           throw symlinkFailure(err, options.platform);
         }
       }
+      if (
+        !options.force &&
+        sameLinkTarget(path.dirname(linkPath), currentTarget, target, options.platform)
+      ) {
+        // A working link spelt differently from the gate's form is rewritten
+        // through a hold too, so a refused write leaves it working.
+        if (options.dryRun) return "created";
+        try {
+          return await replaceLinkThroughHold(
+            linkPath,
+            target,
+            type,
+            note,
+            currentTarget,
+            createSymlink,
+          );
+        } catch (err: unknown) {
+          throw symlinkFailure(err, options.platform);
+        }
+      }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
         await rm(linkPath, { recursive: true, force: true });
