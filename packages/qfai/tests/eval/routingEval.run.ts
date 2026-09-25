@@ -4,10 +4,18 @@
  *   QFAI_EVAL_HOST=claude-code QFAI_EVAL_COMMAND='["claude", "-p", "{prompt}"]' \
  *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
  *
+ *   QFAI_EVAL_HOST=codex \
+ *     QFAI_EVAL_COMMAND='["codex", "exec", "--sandbox", "workspace-write", "{prompt}"]' \
+ *     node node_modules/vitest/vitest.mjs run --config tests/eval/vitest.config.ts
+ *
+ * `codex exec` starts in a read-only sandbox, where `npx qfai` cannot write its run, so the
+ * Codex command asks for a writable workspace.
+ *
  * `QFAI_EVAL_COMMAND` is the host's argv as a JSON array, `{prompt}` standing for the seed's
- * prompt. It is spawned without a shell. Each seed's fixture is built from one `qfai init` base
- * with the local launcher installed; the runner reads what the run recorded, scores every case
- * and writes the eval record to `tests/eval/records/<host>-<version>.json`.
+ * prompt. It is spawned without a shell, so on Windows it names an executable such as
+ * `codex.exe`, not a `.cmd` shim. Each seed's fixture is built from one `qfai init` base with
+ * the local launcher installed; the runner reads what the run recorded, scores every case and
+ * writes the eval record to `tests/eval/records/<host>-<version>.json`.
  */
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";

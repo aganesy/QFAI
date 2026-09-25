@@ -82,6 +82,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **The routing eval runner names the command that runs it against Codex**
+  (#2302). `codex exec` starts in a read-only sandbox, where `npx qfai` cannot
+  write its run, so the documented command asks for a writable workspace. On
+  Windows the command names an executable such as `codex.exe`, because the
+  runner starts it without a shell and a `.cmd` shim cannot start that way.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
