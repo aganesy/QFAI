@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow` keeps each stage result it records under the run's
+  `results/`** (#2348). A journal event named `results/<resultId>.json`, but
+  the core never wrote that file. It is now written before the event is
+  published, as the run's write steps require. The tracked `summary.json`
+  lists the digest of that file first in each stage's `receiptDigests`,
+  followed by the digests of the stage's report copies.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

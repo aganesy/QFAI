@@ -161,6 +161,36 @@ it("TC-0018-0242 (TDD-0471): the tracked summary copies nothing of settled", asy
   }).toEqual({ summary: true, settledField: false, question: false, chosen: false });
 });
 
+it("Built CLI: each accepted result is kept under results/, and its digest leads the stage's receipt digests", async () => {
+  const root = await minimalProject();
+  const { runId } = await featureRunAt(root, "implement");
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  const accepted = journal.ok
+    ? journal.records.filter((record) => record.event === "accept-nonfinal-result")
+    : [];
+  const kept = await Promise.all(
+    accepted.map(async (record) => {
+      const file = path.join(runDir, ...String(record.resultRef).split("/"));
+      const bytes = await readFile(file).catch(() => undefined);
+      if (!bytes) return { resultId: "missing", digest: "missing" };
+      const resultId = field(JSON.parse(bytes.toString("utf8")), "resultId");
+      return { resultId, digest: createHash("sha256").update(bytes).digest("hex") };
+    }),
+  );
+  const stages = field(await trackedSummary(root, runId), "stages");
+
+  expect({
+    accepted: accepted.length > 0,
+    resultIds: kept.map((each) => `results/${String(each.resultId)}.json`),
+    leading: Array.isArray(stages) ? stages.map((stage) => field(stage, "receiptDigests.0")) : [],
+  }).toEqual({
+    accepted: true,
+    resultIds: accepted.map((record) => record.resultRef),
+    leading: kept.map((each) => each.digest),
+  });
+});
+
 const NEWER: [string, string[]][] = [
   ["TC-0018-0106 (TDD-0319): next", ["next"]],
   ["TC-0018-0106 (TDD-0320): accept", ["accept", "--in"]],
