@@ -344,3 +344,390 @@ Open entries from the reviews of the `/qfai-implement` run started
 is declared.
 
 - `record:unchecked`, `TDD-0577`, Round 1: the row-level `qa-gatekeeper: PASS` line does not name the attempt, round and trees its one attempt covered — the RED gate on the rebuilt mutated tree and the build-phase GREEN at 79af8ad63. That is written only in the `qa-gatekeeper attempts` line. The gate ran after the ledger had already moved to `green` and `refactor`.
+
+# /qfai-implement — run started 2026-09-25T03:38:07.172Z
+
+The seven rows `CR-20260925-0010` split out of `TDD-0516` and `TDD-0517`:
+`TDD-0516` and `TDD-0578` to `TDD-0581` on `TC-0012-0486`, and `TDD-0517` and
+`TDD-0582` on `TC-0012-0487`. All are `Unit` rows on `L1` cases, so this stage
+writes their tests and this file holds their evidence. The run stops each row at
+`refactor`; the `qa-gatekeeper` turns and the reviews follow it.
+
+## Preflight
+
+- Change Request preflight: `CR-20260925-0010` is approved and applied, and
+  names `spec-0012/TDD-0516` and `spec-0012/TDD-0517` for reset. Both are at
+  `todo` and carry it in `DR-ID`, so the reset writes nothing more. No open
+  Change Request names any of the seven rows.
+- Pre-split evidence pass: the seven rows are `Unit` rows, which the pass does
+  not read.
+- Skeleton: `node scripts/smoke-qfai-cli.mjs` at `f11181534` printed
+  `smoke-qfai-cli: qfai -> US-0003-0001 reached; the dry run planned 325 path(s)`
+  and exited 0, so the `qfai` entrypoint recorded in `.qfai/evidence/skeleton.md`
+  still starts.
+- Cross-spec check: no other spec's ledger names
+  `prototypingIterate.composeCaptureUrl.test.ts`,
+  `defaultCaptureScreen.responseStatus.test.ts`, `prototypingIterate.ts` or
+  `defaultCaptureScreen.ts` in a `done` row.
+- Shared-artifact check: no `done` row's RED test manifest lists either test
+  file, so editing them owes no `Shared-artifact re-verify` block.
+
+## Plan phase
+
+Taken at `f11181534`, after the preflight and before any row moved.
+`agent-routing.yml` routes this phase with `rerun_policy:
+changed-scope-dependents`.
+
+| Role                          | Instance                | Verdict | Summary |
+| ----------------------------- | ----------------------- | ------- | ------- |
+| `delivery-planner` (blocking) | `stage4-agent (inline)` | PASS    | The seven rows exist, none is blocked, and each names one boundary. `TDD-0516` and `TDD-0578` to `TDD-0581` are T1 and form one group keyed `BR-0012-0066`; `TDD-0517` and `TDD-0582` are T2 and are each reviewed alone. No parallel dispatch: the five T1 rows edit one test file and the two T2 rows another. Order: `TDD-0516`, `TDD-0578`, `TDD-0579`, `TDD-0580`, `TDD-0581`, `TDD-0517`, `TDD-0582` — the group first, in the order `TC-0012-0486` states its boundaries, then the two T2 rows in the order `TC-0012-0487` states them |
+| `test-design-analyst`         | `stage4-agent (inline)` | PASS    | Every clause of `TC-0012-0486` and `TC-0012-0487` maps to exactly one of the seven rows, each `Boundary` is unique within its case, and all seven carry the case in `TC-Refs` under `Layer` `Unit`, which `L1` owns. `node packages/qfai/dist/cli/index.mjs validate --profile tdd` at `f11181534` reports no finding on the seven rows or on either case. The other `todo` rows of the ledger are outside this invocation, which the change request scopes to these seven |
+
+## Grilling Session
+
+### /qfai-implement — run started 2026-09-25T03:38:07.172Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T03:42:40Z | f111815346474c86b6b4f41d126021acc505d559 | 2026-09-25T03:43:06Z | preflight: what each row's test and mutation must be for the mutation to fail it | empty | none in flight | 4 | 0 | 0 |
+
+## Work Orders Summary
+
+### Rows for the /qfai-implement run started 2026-09-25T03:38:07.172Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | delivery-planner | stage4-agent (inline) | /qfai-implement plan: tiers, the T1 group, dispatch and order of the seven rows of CR-20260925-0010 | test-list.md; CR-20260925-0010; `volume-policy.md` | #plan-phase | PASS |
+| 2 | test-design-analyst | stage4-agent (inline) | /qfai-implement plan: coverage and layer check of the seven rows against TC-0012-0486 and TC-0012-0487 | test-list.md; 06_Test-Cases.md; `selector-granularity.md` | #plan-phase | PASS |
+| 3 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): `Satisfied-by` on the seven rows names `TDD-0514` with the path, symbol and predicate each mutation breaks | `red-not-observable.md`; `qa-gatekeeper.md`; 16_Traceability-ledger.md `TDD-0514`, `TDD-0516`, `TDD-0517` | each row's `Round 1: Satisfied-by`; a `Unit` row needs a sibling row, and the cycle that wired `--capture` under `TDD-0514` wrote `composeCaptureUrl` and the default runner's response guard. That row now holds the flag boundary alone, so the path and symbol name what is mutated | PASS |
+| 4 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0516` tests open an `https://` URL with no `--target-url`, and an origin-only `http://` URL against one | `composeCaptureUrl`; `TC-0012-0486` | #tdd-0516; joining an absolute URL to a base returns it unchanged apart from normalising a bare origin, so the existing inputs passed with the passthrough branch removed | PASS |
+| 5 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0578` tests join to bases under `/app/`, and its mutation is the concatenation `targetUrl + screenUrl` | `composeCaptureUrl`; `TC-0012-0486`; `EX-0012-0187`; CR-20260925-0010 approved action 3 | #tdd-0578; with the existing bases, joining and concatenating give the same string. `EX-0012-0187` already joins `/` to a base ending `/app/` | PASS |
+| 6 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0517` selector holds the three captured statuses and the two refused ones, and one mutation, the comparison inverted, fails all five | `defaultCaptureScreen`; `TC-0012-0487`; `selector-granularity.md` | #tdd-0517; the five tests are the two sides of the one `status >= 400` predicate. Removing the branch would leave the three captured statuses passing | PASS |
+
+## Items processed
+
+Each row runs the falsifiability path. The rows' predicates were written by the
+cycle that wired `--capture` under `TDD-0514`, so every test passed on its first
+run. Each row's test edit was committed before its mutation, so each Round 1
+`Revision` is that commit. Every mutation was reverted with `git checkout` on the
+production file, and the tree then read as the commit again.
+
+Each command runs from the repository root. A `-t` pattern escapes the
+parentheses in a test title, so that it selects exactly one test.
+
+### TDD-0516
+
+- TDD-ID: TDD-0516
+- Layer: unit
+- Test file: packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts
+- Selector: ["opens an https:// screen URL as written when no --target-url is set","opens an http:// screen URL as written rather than joining it to --target-url"]
+- TC-ref: TC-0012-0486
+
+Boundary `absolute-url-opened-as-written`, tier T1, review group
+`BR-0012-0066`.
+
+The two tests replace two that could not fail on this boundary. Joining an
+absolute URL to a base returns it unchanged, so with the passthrough branch
+removed the old `https://example.com/page` and `http://example.com/page` cases
+passed: Tests 2 passed | 6 skipped (8). The new inputs differ from a join:
+
+| Test | Input | A join gives |
+| ---- | ----- | ------------ |
+| `https://` | `https://example.com/page`, no `--target-url` | a rejection, since the route has no base |
+| `http://` | `http://example.com` against `http://localhost:5173` | `http://example.com/`, the origin normalised |
+
+The `https://` test no longer passes a base. The `http://` test keeps the case
+where a base is set and the screen URL still wins.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `/^https?:\/\//i.test(screenUrl)` branch that returns an absolute URL as written
+- Round 1: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "opens an https:// screen URL as written when no --target-url is set"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "opens an http:// screen URL as written rather than joining it to --target-url"
+```
+
+- Round 1: Falsifiability result: One run per entry, both against the tree below. Entry 1: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on `AssertionError: expected { ok: false, …(1) } to deeply equal { ok: true, …(1) }` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:37:20`. Entry 2: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on `AssertionError: expected { Object (ok, url) } to deeply equal { ok: true, url: 'http://example.com' }` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:44:20`
+
+The edit, the passthrough branch never taken:
+
+```diff
+@@ -1786,3 +1786,3 @@ export function composeCaptureUrl(
+   }
+-  if (/^https?:\/\//i.test(screenUrl)) {
++  if (false) {
+     return { ok: true, url: screenUrl };
+```
+
+- Round 1: Falsifiability revision: working-tree+2b1114d882b623ac16a819f86e35b74f0ba8fe9b7de301e1b606416375b4c64c
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: e0d26853c7c36f8f152c9f7e9d191a13fd79c0d5
+- Round 1: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "opens an https:// screen URL as written when no --target-url is set"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "opens an http:// screen URL as written rather than joining it to --target-url"
+```
+
+- Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+### TDD-0578
+
+- TDD-ID: TDD-0578
+- Layer: Unit
+- Test file: packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts
+- Selector: ["joins a leading-slash route to the origin of --target-url","joins a route with no leading slash to the directory of --target-url"]
+- TC-ref: TC-0012-0486
+
+Boundary `route-relative-url-joined-to-target-url`, tier T1, review group
+`BR-0012-0066`.
+
+The old tests joined `/orders/new` to `http://localhost:3000` and `orders/new`
+to `http://localhost:3000/`. On both bases a plain concatenation of base and
+route gives the same URL as `new URL(route, base)`, so only the
+unparseable-pair test failed when the join was replaced by concatenation. The
+new bases make the two differ:
+
+| Test | Route and base | `new URL(route, base)` | Concatenation |
+| ---- | -------------- | ---------------------- | ------------- |
+| Leading slash | `/orders/new`, `http://localhost:3000/app/` | `http://localhost:3000/orders/new` | `http://localhost:3000/app//orders/new` |
+| No leading slash | `orders/new`, `http://localhost:3000/app/start` | `http://localhost:3000/app/orders/new` | `http://localhost:3000/app/startorders/new` |
+
+`EX-0012-0187` joins `/` to a base ending `/app/` in the same way.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `new URL(screenUrl, targetUrl)` join inside the `try`
+- Round 1: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "joins a leading-slash route to the origin of --target-url"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "joins a route with no leading slash to the directory of --target-url"
+```
+
+- Round 1: Falsifiability result: One run per entry, both against the tree below. Entry 1: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on `AssertionError: expected { ok: true, …(1) } to deeply equal { ok: true, …(1) }` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:52:20`, received `"url": "http://localhost:3000/app//orders/new"`. Entry 2: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on the same assertion at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:61:20`, received `"url": "http://localhost:3000/app/startorders/new"`
+
+The edit, the join replaced by string concatenation:
+
+```diff
+@@ -1803,3 +1803,3 @@ export function composeCaptureUrl(
+   try {
+-    return { ok: true, url: new URL(screenUrl, targetUrl).toString() };
++    return { ok: true, url: targetUrl + screenUrl };
+   } catch (cause) {
+```
+
+- Round 1: Falsifiability revision: working-tree+fd3b026956603d54fea0faded5ab6aa1f89f6cc3a2692c6a810b5833bcc9cea9
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: 349b4a9738172fe60e00e30ca4ff5671cf55d077
+- Round 1: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "joins a leading-slash route to the origin of --target-url"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "joins a route with no leading slash to the directory of --target-url"
+```
+
+- Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+### TDD-0579
+
+- TDD-ID: TDD-0579
+- Layer: Unit
+- Test file: packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts
+- Selector: ["falls back to targetUrl when screen URL is undefined","falls back to null when both screen URL and targetUrl are undefined"]
+- TC-ref: TC-0012-0486
+
+Boundary `no-screen-url-falls-back-to-target-url`, tier T1, review group
+`BR-0012-0066`. The two tests are unchanged apart from the case's annotation.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `screenUrl === undefined` branch that returns `targetUrl ?? null`
+- Round 1: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "falls back to targetUrl when screen URL is undefined"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "falls back to null when both screen URL and targetUrl are undefined"
+```
+
+- Round 1: Falsifiability result: One run per entry, both against the tree below. Entry 1: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on `AssertionError: expected { ok: true, …(1) } to deeply equal { ok: true, …(1) }` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:85:20`. Entry 2: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8), failing on `AssertionError: expected { ok: false, …(1) } to deeply equal { ok: true, url: null }` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:91:20`
+
+The edit, the fallback branch never taken:
+
+```diff
+@@ -1783,3 +1783,3 @@ export function composeCaptureUrl(
+ ): ComposeCaptureUrlResult {
+-  if (screenUrl === undefined) {
++  if (false) {
+     return { ok: true, url: targetUrl ?? null };
+```
+
+- Round 1: Falsifiability revision: working-tree+cc84a53600adb3d8f0924a91437cbe44f225330724d31d1310fce4d75b552aca
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: bcaf8cc4c8b0dbdd4ddd3c59e681c1f66123720b
+- Round 1: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "falls back to targetUrl when screen URL is undefined"
+pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "falls back to null when both screen URL and targetUrl are undefined"
+```
+
+- Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+### TDD-0580
+
+- TDD-ID: TDD-0580
+- Layer: Unit
+- Test file: packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts
+- Selector: returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl
+- TC-ref: TC-0012-0486
+
+Boundary `route-relative-url-without-target-url-rejected`, tier T1, review
+group `BR-0012-0066`. The test is unchanged apart from the case's annotation.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `targetUrl === undefined` branch that rejects a route-relative URL with a reason naming `--target-url`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8). The case fails on `AssertionError: expected 'has unparseable URL composition (scre…' to match /route-relative URL/` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:76:27`. The route reaches `new URL("/orders/new", undefined)`, which throws, and the `catch` answers with its own reason
+
+The edit, the missing-base branch never taken:
+
+```diff
+@@ -1789,3 +1789,3 @@ export function composeCaptureUrl(
+   }
+-  if (targetUrl === undefined) {
++  if (false) {
+     // Operator-facing diagnostic: name the public CLI flag
+```
+
+- Round 1: Falsifiability revision: working-tree+39313e981986337482643858aac11489f7d091ab66887c3738c8327cf7dc628c
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: d4c7798e81905b99a0b13af37fd6ab2b11d72865
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+### TDD-0581
+
+- TDD-ID: TDD-0581
+- Layer: Unit
+- Test file: packages/qfai/tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts
+- Selector: returns ok=false with the operator-facing flag named when URL composition throws
+- TC-ref: TC-0012-0486
+
+Boundary `uncomposable-pair-rejected`, tier T1, review group `BR-0012-0066`.
+The test is unchanged apart from the case's annotation.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `catch` around `new URL(...)` that rejects the pair with a reason naming `--target-url`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when URL composition throws"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8). The case fails on `AssertionError: expected true to be false // Object.is equality` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:103:23`
+
+The edit, the `catch` answering `ok: true`:
+
+```diff
+@@ -1808,3 +1808,3 @@ export function composeCaptureUrl(
+     return {
+-      ok: false,
++      ok: true,
+       reason:
+```
+
+- Round 1: Falsifiability revision: working-tree+81818420bf085dc5c0cd6684fd1d3216ad24aad92429c31ae449baaa4a6b30b0
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: 11d0a611206c5450f7976cc67be6b88f697fa1e9
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when URL composition throws"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+### TDD-0517
+
+- TDD-ID: TDD-0517
+- Layer: unit
+- Test file: packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Selector: ["ACCEPTS a 200 OK response and writes PNG/HTML","REJECTS a 404 Not Found response with reason mentioning the status","REJECTS a 500 Internal Server Error response","ACCEPTS a 204 No Content response (still 2xx)","ACCEPTS a 399 response, the last status below the 400 rejection boundary"]
+- TC-ref: TC-0012-0487
+
+Boundary `status-400-or-above-rejected`, tier T2, reviewed alone. The five
+tests are unchanged apart from the case's annotation. They are the two sides of
+one predicate, `status >= 400`: 200, 204 and 399 are captured, and 404 and 500
+are refused with the status in the reason and no screenshot. Inverting the
+comparison fails all five. Removing the branch would fail only the two refused
+statuses.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `status >= 400` refusal
+- Round 1: Falsifiability command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 404 Not Found response with reason mentioning the status"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 500 Internal Server Error response"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 204 No Content response \(still 2xx\)"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 399 response, the last status below the 400 rejection boundary"
+```
+
+- Round 1: Falsifiability result: One run per entry, all against the tree below, each Test Files 1 failed (1); Tests 1 failed | 5 skipped (6). Entry 1 (200) fails on `AssertionError: expected false to be true // Object.is equality` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:79:23`. Entry 2 (404) fails on `AssertionError: expected true to be false // Object.is equality` at `:96:23`. Entry 3 (500) fails on the same at `:112:23`. Entry 4 (204) fails on `AssertionError: expected false to be true // Object.is equality` at `:143:23`. Entry 5 (399) fails on the same at `:157:23`
+
+The edit, the comparison inverted:
+
+```diff
+@@ -121,3 +121,3 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
+     const status = response.status();
+-    if (status >= 400) {
++    if (status < 400) {
+       return {
+```
+
+- Round 1: Falsifiability revision: working-tree+f92f4da3797a42130188cd2664118d741cf0612d094965e4d7c1eb9f69ca442e
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: 22b1071404ad8f651e901f284456293e57b841ec
+- Round 1: GREEN command:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 404 Not Found response with reason mentioning the status"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 500 Internal Server Error response"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 204 No Content response \(still 2xx\)"
+pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 399 response, the last status below the 400 rejection boundary"
+```
+
+- Round 1: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
+
+### TDD-0582
+
+- TDD-ID: TDD-0582
+- Layer: Unit
+- Test file: packages/qfai/tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Selector: REJECTS a null response (no navigation occurred)
+- TC-ref: TC-0012-0487
+
+Boundary `no-response-rejected`, tier T2, reviewed alone. The test is unchanged
+apart from the case's annotation.
+
+#### Round 1
+
+- Round 1: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `response === null` refusal
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a null response \(no navigation occurred\)"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 5 skipped (6). The case fails on `AssertionError: expected 'screen nullresp capture failed (TypeE…' to match /no response/` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:129:27`. The runner reads `status()` from the missing response, and its outer `catch` reports the `TypeError` instead
+
+The edit, the missing-response branch never taken:
+
+```diff
+@@ -113,3 +113,3 @@ export const defaultCaptureScreen = async (args: CaptureArgs): Promise<CaptureRe
+     // pages do not silently become "valid" capture evidence.
+-    if (response === null) {
++    if (false) {
+       return {
+```
+
+- Round 1: Falsifiability revision: working-tree+805682d1508c17e117f9b2ab07cefcd2c1a491468636dba810d1f1da2f4dd685
+- Round 1: RED failure mode: falsifiability
+- Round 1: Revision: 974b74da4715962fceb02de8db96ee70881536c3
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a null response \(no navigation occurred\)"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
