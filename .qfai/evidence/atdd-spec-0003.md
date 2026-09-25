@@ -1172,8 +1172,8 @@ The Refactor verify fields taken after Round 1, superseded by the ones after Rou
 - Refactor verify revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
 ```
 
-- qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate on the observed RED against the pre-fix surface at cb835cbff; build-phase GREEN + oracle proof)
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the observed RED (bullets 1, 2, 4 at :42:24, :47:24, :55:22) and its assertion-stripped run, reviewed revision cb835cbff1313257292d405fa4b39d0f703b59a5; build-phase GREEN + oracle proof (item deleted, bullets 1-3 at :41:24, :47:24, :51:24), reviewed revision b639815a9f23e6de8f2e59baf28c62f3935814f0. Gate taken after GREEN and refactor, on the kept RED commit
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2 — RED phase gate at routing phase red on the Round 2 observed RED against the pre-fix item (bullets 1, 2, 4 at :42:24, :47:24, :55:22) and its assertion-stripped run, reviewed revision working-tree+10211e58331aa55965284d65840388a810a5cdac73312e4634f5d957ea196a94; qa-gatekeeper#3 — build-phase GREEN (4 of 4) + oracle proof (legacy-layout item deleted, bullets 1-3 at :41:24, :47:24, :51:24; restored to blob 94c2c242053742f9a45c10e6d8b823390b8749e1), reviewed revision 1365bf908d90c90ec068a24eeb5c0852de9a3ec1)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, Round 1, stale — RED gate and build gate both taken after GREEN and refactor, on the kept RED commit cb835cbff1313257292d405fa4b39d0f703b59a5 and build revision b639815a9f23e6de8f2e59baf28c62f3935814f0; superseded by Round 2. qa-gatekeeper#2 PASS, Round 2 RED phase gate at routing phase red, reviewed revision working-tree+10211e58331aa55965284d65840388a810a5cdac73312e4634f5d957ea196a94. qa-gatekeeper#3 PASS, Round 2 build-phase GREEN + oracle proof, reviewed revision 1365bf908d90c90ec068a24eeb5c0852de9a3ec1
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the observed RED was not gated before GREEN, the test and fix name no sub-agent, and the coverage matrix lacks TC-0003-0059; the row goes back for a fresh observation as Round 2
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925140000000 <!-- qfai:not-a-citation -->
@@ -1326,7 +1326,7 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 64 | - | n/a | grilling(-@2026-09-25T03:20:00.000Z/none): none | - | - | PASS |
 | 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0011; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
 | 66 | acceptance-test-engineer | general-purpose sub-agent (not the routed role); the RED is re-observed in Round 2 at row 77 | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0011 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
-| 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation | PENDING |
+| 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation; taken in the /qfai-implement review-fix as row 78 (qa-gatekeeper#2, Round 2) | PENDING |
 | 68 | - | n/a | grilling(-@2026-09-25T03:24:00.000Z/none): none | - | - | PASS |
 | 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0011 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
 | 70 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0094 | spec-0003 ledger; 06_Test-Cases.md; 02_User-stories.md; test-layers.md | Integration is right for the Level and the directory; every verify bullet has an assertion; no obligation of the CR lacks a row; advisory to read any `warning` in the item, adopted | PASS |
@@ -1341,6 +1341,7 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 79 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Round 2 GREEN on the restored fix, and its Oracle proof | #tdd-0094 Round 2 | packages/qfai/src/cli/commands/init.ts restored to blob 94c2c242053742f9a45c10e6d8b823390b8749e1; #tdd-0094 Round 2 Revision, GREEN and Oracle proof fields | PASS |
 | 80 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: TDD-0094 Refactor verify after Round 2 | #tdd-0094 | Refactor verify fields, the Round 1 copies fenced as superseded; the REV of the TDD-0094 ledger row | PASS |
 | 81 | backend-engineer | backend-engineer#1 | /qfai-implement review-fix: correct the matrix totals and the TDD-0094 status lines of this file | coverage-depth-spec-0003.md; #tdd-0094 | Coverage Depth Matrix, Gaps / Open risks and Final status | PASS |
+| 82 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement review-fix: TDD-0094 Round 2 build-phase GREEN + oracle proof | #tdd-0094 Round 2 | reviewed revision 1365bf908d90c90ec068a24eeb5c0852de9a3ec1 | PASS |
 
 ## Cross-spec obligations
 
