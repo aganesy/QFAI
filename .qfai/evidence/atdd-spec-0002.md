@@ -198,6 +198,8 @@ packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 25 passed (25). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
 - Refactor verify revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#4, Round 1 re-taken — RED phase gate on the mutated tree working-tree+9632777761eed227adbe65f43d29600b1de4faeeac8be7f852f6ada5573710b5; qa-gatekeeper#5 — build-phase GREEN and oracle proof at 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS and qa-gatekeeper#3 PASS on the round as first taken, before the base changed the test file; both are superseded. qa-gatekeeper#4 PASS — the re-taken RED with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. qa-gatekeeper#5 PASS — GREEN re-run, the mutation re-applied and restored byte for byte, the refactor verify reproduced
 
 ### TDD-0009
 
@@ -304,6 +306,9 @@ every total.
 | 12 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0008 code review, on the tree before the base branch changed the row's test file; superseded | #tdd-0008 | review-20260925110715891 <!-- qfai:not-a-citation --> | PASS |
 | 13 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0016 completion review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | REVISE |
 | 14 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0016 code review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | PASS |
+| 15 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0008 falsifiability run, GREEN and refactor verify re-taken on the merged base | #tdd-0008, discussion-completion-matrix.md | Round 1 | PASS |
+| 16 | qa-gatekeeper | qa-gatekeeper#4 | /qfai-implement: TDD-0008 re-taken RED phase gate on the mutated tree | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 17 | qa-gatekeeper | qa-gatekeeper#5 | /qfai-implement: TDD-0008 build-phase GREEN and oracle proof on the merged base | #tdd-0008 | qa-gatekeeper fields | PASS |
 
 ## Cross-spec obligations
 
