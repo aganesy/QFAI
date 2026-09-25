@@ -45,6 +45,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A stale CREATE approval is covered through the built CLI** (#2325).
+  `qfai workflow` rebuilds a run's state from its journal, which records the
+  scope digest and capability text of every approval. A new test drives a run
+  whose approval predates a replan that widened the write scope, and shows
+  `next` asks for the approval again instead of issuing the SDD work order.
+  Behaviour is unchanged.
+
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as
