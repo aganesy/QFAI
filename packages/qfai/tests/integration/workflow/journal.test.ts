@@ -41,6 +41,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
 import { readJournal, snapshotOf, writeSnapshot } from "../../../src/core/workflow/persistence.js";
 import {
@@ -379,7 +380,8 @@ it("TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, 
 it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-area path", async () => {
   const root = await minimalProject();
   await mkdir(path.join(root, "src"), { recursive: true });
-  await writeFile(path.join(root, "src", "total.ts"), "export const total = 0;\n");
+  const text = "export const total = 0;\n";
+  await writeFile(path.join(root, "src", "total.ts"), text);
   const caseInsensitive = existsSync(path.join(root, "SRC", "TOTAL.TS"));
   const { runId, issued } = await featureRunAt(root, "implement");
   const submitted = await submit(
@@ -387,7 +389,7 @@ it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-a
     runId,
     "accept",
     resultFor(issued.json, "implement-1", {
-      changedFiles: [{ path: "SRC/total.ts", digest: "submitted" }],
+      changedFiles: [{ path: "SRC/total.ts", digest: hashAssistantAssetText(text) }],
     }),
   );
 
@@ -399,6 +401,37 @@ it("TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-a
       ? { ok: true, reasons: undefined }
       : { ok: false, reasons: [{ reason: "write-scope", subject: "SRC/total.ts" }] },
   );
+});
+
+it("accept refuses a changed file whose submitted digest is not the file's own", async () => {
+  const root = await minimalProject();
+  const text = "export const total = 0;\r\n";
+  const review = "PASS\n";
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(path.join(root, "src", "total.ts"), text);
+  await mkdir(path.join(root, ".qfai", "review"), { recursive: true });
+  await writeFile(path.join(root, ".qfai", "review", "implement.md"), review);
+  const { runId, issued } = await featureRunAt(root, "implement");
+  const result = (resultId: string, digest: string) =>
+    resultFor(issued.json, resultId, {
+      changedFiles: [{ path: "src/total.ts", digest }],
+      artifactRefs: [{ path: ".qfai/review/implement.md", digest: hashAssistantAssetText(review) }],
+    });
+  const refused = await submit(root, runId, "accept", result("implement-1", "0".repeat(64)));
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    result("implement-2", hashAssistantAssetText(text)),
+  );
+
+  expect({
+    reasons: field(refused.json, "error.reasons"),
+    ok: field(accepted.json, "ok"),
+  }).toEqual({
+    reasons: [{ reason: "digest-mismatch", subject: "src/total.ts" }],
+    ok: true,
+  });
 });
 
 async function integrityRefusal(root: string, runId: string) {

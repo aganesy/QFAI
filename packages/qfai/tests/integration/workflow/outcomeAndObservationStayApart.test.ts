@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import {
   featureRunAt,
   field,
@@ -27,7 +28,7 @@ it("TC-0018-0050 (TDD-0307): Built CLI accept of a verify result naming its veri
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/report/verify.json", digest: "submitted" }],
+      artifactRefs: [{ path: ".qfai/report/verify.json", digest: hashAssistantAssetText(report) }],
     }),
   );
   const copy = path.join(root, ".qfai", "runs", runId, "reports", "verify", "verify.json");

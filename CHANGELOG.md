@@ -84,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow accept` checks the digest of every file a stage result
+  names, and a work order names its input files** (#2327, #2328). The command
+  read no file digests, so a submitted digest was never checked and the
+  `sdd_append` work order after a `missing-test` diagnosis left out the
+  reproduction record. The command now reads the digest of each
+  `changedFiles` and `artifactRefs` entry, each input of the outstanding work
+  order and the diagnosis's reproduction record. A submitted digest that
+  differs from the file is refused as `invalid-input` with reason
+  `digest-mismatch`. A digest is the SHA-256 of the file's text with CRLF line
+  endings read as LF.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

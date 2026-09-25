@@ -17,6 +17,7 @@ import {
   completionFacts,
   identityOf,
   ledgerFactsOf,
+  namedFileDigestsOf,
   policyNowOf,
   receiptDependenciesOf,
   receiptValidityOf,
@@ -430,7 +431,8 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
+// accepted, so the row set can be compared; at `accept`, where each changed path really is; and
+// the digest of every file the operation names.
 async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { state } = snapshot.run;
   const reads =
@@ -443,7 +445,9 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
   const receiptValidity =
     input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
+  const fileDigests = await namedFileDigestsOf(root, snapshot, input);
   return {
+    fileDigests,
     ...(ledger ? { ledger } : {}),
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),

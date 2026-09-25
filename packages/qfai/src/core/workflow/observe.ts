@@ -12,7 +12,7 @@ import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
-import { areaCovers } from "./decide.js";
+import { areaCovers, submittedFileRefs } from "./decide.js";
 import type {
   WorkflowDependency,
   WorkflowFacts,
@@ -230,6 +230,32 @@ async function dependencyDigest(root: string, dependency: string): Promise<strin
   }
   const members = await fg(dependency, { cwd: root, dot: true, onlyFiles: true });
   return hashAssistantAssetText(members.sort().join("\n"));
+}
+
+// The digest of every file an operation names: each changed file and artifact of a submitted
+// result, each input of the outstanding work order, and the reproduction record of a diagnosis.
+// A path that names no regular file under the project's real root has none.
+export async function namedFileDigestsOf(
+  root: string,
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+): Promise<Digests> {
+  const named = [
+    ...submittedFileRefs(input.result?.changedFiles),
+    ...submittedFileRefs(input.result?.artifactRefs),
+    ...(snapshot.outstandingWorkOrder?.inputs ?? []),
+  ].map((each) => each.path);
+  if (snapshot.diagnosis) named.push(snapshot.diagnosis.reproductionRef);
+  const realRoot = await realpath(root);
+  const entries = await Promise.all(
+    [...new Set(named)].map(async (each) => {
+      const digest = (await isProjectFile(realRoot, root, each))
+        ? await dependencyDigest(root, each)
+        : undefined;
+      return digest === undefined ? [] : [[each, digest] as const];
+    }),
+  );
+  return Object.fromEntries(entries.flat());
 }
 
 // SIMPLIFIED: the obligation fingerprint is the digest of the bound spec's user stories,

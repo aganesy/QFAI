@@ -1,8 +1,16 @@
 // QFAI:SPEC-0018:TC-0018-0066
 
-import { expect, it } from "vitest";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
+import { afterEach, expect, it } from "vitest";
+
+import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
 import { decide } from "../../../src/core/workflow/decide.js";
+import type { WorkflowInput, WorkflowSnapshot } from "../../../src/core/workflow/decide.js";
+import { namedFileDigestsOf } from "../../../src/core/workflow/observe.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 const plan = {
   route: "bugfix",
@@ -27,22 +35,32 @@ const plan = {
   writeScope: ["src/forms/**"],
 };
 const reproductionRef = "evidence/empty-value-reproduction.json";
-const reproductionDigest = "a".repeat(64);
+const reproductionText = '{"input":"","observed":"accepted"}\n';
 
-it("TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-test diagnosis", () => {
-  const decision = decide(
-    {
-      run: { id: "run-append", state: "ready", sequence: 7 },
-      plan,
-      specBinding: { specId: "spec-0007" },
-      diagnosis: { verdict: "missing-test", reproductionRef, matchedRowIds: [] },
-      acceptedStages: [
-        { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
-      ],
-    },
-    { operation: "next" },
-    { fileDigests: { [reproductionRef]: reproductionDigest } },
-  );
+let root: string | undefined;
+
+afterEach(async () => {
+  if (root) await removeTempTree(root);
+  root = undefined;
+});
+
+it("TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-test diagnosis", async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "qfai-appended-row-"));
+  await mkdir(path.join(root, "evidence"), { recursive: true });
+  await writeFile(path.join(root, reproductionRef), reproductionText);
+  const snapshot: WorkflowSnapshot = {
+    run: { id: "run-append", state: "ready", sequence: 7 },
+    plan,
+    specBinding: { specId: "spec-0007" },
+    diagnosis: { verdict: "missing-test", reproductionRef, matchedRowIds: [] },
+    acceptedStages: [
+      { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
+    ],
+  };
+  const next: WorkflowInput = { operation: "next" };
+  const decision = decide(snapshot, next, {
+    fileDigests: await namedFileDigestsOf(root, snapshot, next),
+  });
   const workOrder = decision.verdict.workOrder;
   const writable = [...(workOrder?.scope?.writeAreas ?? []), ...(workOrder?.recordAreas ?? [])];
 
@@ -57,7 +75,7 @@ it("TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-tes
     ),
   }).toEqual({
     stageKind: "sdd_append",
-    inputs: [{ path: reproductionRef, digest: reproductionDigest }],
+    inputs: [{ path: reproductionRef, digest: hashAssistantAssetText(reproductionText) }],
     changeRequestWritable: false,
     stageKindsWritingChangeRequests: [],
   });
