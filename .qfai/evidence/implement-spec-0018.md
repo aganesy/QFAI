@@ -312,6 +312,8 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0438 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0439 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0446 | TC-0018-0229 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0447 | TC-0018-0230 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0448 | TC-0018-0231 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0466 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
@@ -4895,6 +4897,26 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run/SKILL.md`, then 149 lines. It stays at 150 lines after the request-kind guidance of TDD-0356 was added
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0229 (TDD-0446): Count the lines of the shipped qfai-run/SKILL`
 - Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/SKILL.md`
+
+### TDD-0447
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/shippedAssets.test.ts`
+- Selector: `TC-0018-0230 (TDD-0447): Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/shippedAssets.test.ts --testNamePattern='TC-0018-0230 \(TDD-0447\): Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped entry skills and plans and the five schemas this change adds, the longest of them 284 lines
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/shippedAssets.test.ts > TC-0018-0230 (TDD-0447): Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas`
+- Production files: `packages/qfai/assets/schemas/workflow/authorization.schema.json`, `execution-context.schema.json`, `route-proposal.schema.json`, `stage-result.schema.json`, `work-order.schema.json`
+
+### TDD-0448
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/shippedAssets.test.ts`
+- Selector: `TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/shippedAssets.test.ts --testNamePattern='TC-0018-0231 \(TDD-0448\): Read the five shipped schemas and the plans' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the five schemas this change adds, each `$id` `urn:qfai:workflow:<name>` and none carrying `schemaVersion`; the pre-build lint reports nothing in the plans, and the post-build guard, run over a package publishing the plans and the schemas, exits 0 and fails when `spec-0042` is planted in a schema
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/shippedAssets.test.ts > TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans`
+- Production files: `packages/qfai/assets/schemas/workflow/authorization.schema.json`, `execution-context.schema.json`, `route-proposal.schema.json`, `stage-result.schema.json`, `work-order.schema.json`
 
 ### TDD-0465
 

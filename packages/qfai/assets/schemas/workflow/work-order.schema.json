@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:work-order",
+  "title": "Work order",
+  "description": "One stage's work, as next returns it and the run's work-orders directory holds it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "workOrderId",
+    "stageInstanceId",
+    "attempt",
+    "stageKind",
+    "operation",
+    "executor",
+    "target",
+    "scope",
+    "recordAreas",
+    "inputs",
+    "requiredGates",
+    "requiredReviewerRoles",
+    "actorHistory",
+    "authorizationRefs",
+    "priorStageReceiptRefs",
+    "expectedSequence"
+  ],
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "workOrderId": { "type": "string", "minLength": 1 },
+    "stageInstanceId": { "type": "string", "minLength": 1 },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "stageKind": { "type": "string", "minLength": 1 },
+    "operation": { "type": "string", "minLength": 1 },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill"],
+      "properties": { "skill": { "type": "string", "minLength": 1 } }
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "specId"],
+          "properties": {
+            "kind": { "const": "spec" },
+            "specId": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "slotId"],
+          "properties": {
+            "kind": { "const": "new_capability" },
+            "slotId": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "writeAreas", "protectedTargets", "allowedEffects", "nonGoals"],
+      "properties": {
+        "digest": { "type": "string", "minLength": 1 },
+        "writeAreas": { "$ref": "#/$defs/strings" },
+        "protectedTargets": { "$ref": "#/$defs/strings" },
+        "allowedEffects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "push",
+              "pull-request",
+              "merge",
+              "deploy",
+              "production-migration",
+              "extra-spending"
+            ]
+          }
+        },
+        "nonGoals": { "$ref": "#/$defs/strings" }
+      }
+    },
+    "recordAreas": {
+      "description": "The stage's own records for the bound spec, held apart from the scope.",
+      "$ref": "#/$defs/strings"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "digest"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "digest": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "ledger": {
+      "description": "Row IDs only; the run never copies a row's status.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["specId", "rowIds", "rowSetDigest"],
+      "properties": {
+        "specId": { "type": "string", "minLength": 1 },
+        "rowIds": { "$ref": "#/$defs/strings" },
+        "rowSetDigest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checkpointRef": { "type": "string", "minLength": 1 },
+    "parentWorkOrderId": { "type": "string", "minLength": 1 },
+    "requiredGates": { "$ref": "#/$defs/strings" },
+    "requiredReviewerRoles": { "$ref": "#/$defs/strings" },
+    "actorHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "agentInstance"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "agentInstance": { "type": "string", "minLength": 1 },
+          "stageInstanceId": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authorizationRefs": { "$ref": "#/$defs/strings" },
+    "priorStageReceiptRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "validity"],
+        "properties": {
+          "ref": { "type": "string", "minLength": 1 },
+          "validity": { "enum": ["valid", "stale", "unknown"] }
+        }
+      }
+    },
+    "settled": {
+      "description": "Runtime only: the checked proposal's routing result and every answered question.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routingResultId", "answers"],
+      "properties": {
+        "routingResultId": { "type": "string", "minLength": 1 },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["questionId", "text", "chosen"],
+            "properties": {
+              "questionId": { "type": "string", "minLength": 1 },
+              "text": { "type": "string" },
+              "chosen": {
+                "oneOf": [{ "type": "string" }, { "$ref": "#/$defs/strings" }]
+              }
+            }
+          }
+        }
+      }
+    },
+    "expectedSequence": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "strings": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}
