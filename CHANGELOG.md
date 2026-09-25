@@ -84,6 +84,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow` judges a run's changes against where the run started**
+  (#2340, #2344). `start` now records `HEAD` and the state of every path that
+  was dirty or untracked then. Every write operation and `finish` compare the
+  tree against that record, so a change the run commits outside its write scope
+  blocks the run with `invariant-violation` and is reported as
+  `diff-out-of-scope`. A path that was dirty at `start` counts only once its
+  content, type or mode changes. `uncommitted` names only the run's own
+  changes. Under `validation.failOn: never`, `finish` still reads the
+  validate findings, so a debt whose finding remains stays `debt-open` while
+  the validate gate passes.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

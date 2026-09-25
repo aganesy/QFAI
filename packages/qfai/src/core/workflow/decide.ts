@@ -104,6 +104,13 @@ interface WorkflowExecutionContext {
   requestDigest: string;
 }
 
+// The run change boundary `start` fixes: the commit the run began at, or `null` before the
+// first commit, and the state of each path dirty or untracked then.
+interface WorkflowBoundary {
+  head: string | null;
+  paths: Record<string, string>;
+}
+
 // The worktree real path and branch a run was started in.
 interface WorkflowIdentity {
   worktree: string;
@@ -332,6 +339,7 @@ export interface WorkflowSnapshot {
   // What `start` fixed for the run. The core reads its policy, manifest and plan digests.
   executionContext?: WorkflowExecutionContext;
   identity?: WorkflowIdentity;
+  boundary?: WorkflowBoundary;
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
@@ -535,7 +543,7 @@ export interface WorkflowFacts {
 // What `finish` observes: validate run in process, the offered verify report, the tool and
 // policy digests, and the run's cumulative changed and uncommitted paths.
 interface WorkflowCompletionFacts {
-  validate: { failOn: Severity; findings: (FindingIdentity & { severity: Severity })[] };
+  validate: { failOn: Severity | "never"; findings: (FindingIdentity & { severity: Severity })[] };
   verifyReport?: { runId: string; stageInstanceId: string; status: string; scope: string };
   toolVersion: string;
   cliEntryDigest: string;
@@ -1533,8 +1541,10 @@ function findingKey(finding: FindingIdentity): string {
   return JSON.stringify([finding.code, finding.file, [...finding.refs].sort()]);
 }
 
+// Under `failOn: never` no finding fails the gate, while each still keeps its debt open.
 function failingFindings(completion: WorkflowCompletionFacts): FindingIdentity[] {
   const { failOn, findings } = completion.validate;
+  if (failOn === "never") return [];
   return findings
     .filter((finding) => SEVERITY_RANK[finding.severity] >= SEVERITY_RANK[failOn])
     .map(({ code, file, refs }) => ({ code, file, refs }));

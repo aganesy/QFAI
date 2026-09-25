@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, readlink, realpath, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,7 +7,7 @@ import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
-import { gitStdout, uncommittedPaths } from "../gitChanges.js";
+import { gitStdout, normalizeRepoPath, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
@@ -72,8 +72,6 @@ export async function identityOf(root: string): Promise<NonNullable<WorkflowFact
 }
 
 // What `start` fixes for the run: its ID and key, and the tool and policy it runs under.
-// SIMPLIFIED: takes no run change boundary snapshot.
-// Lift when: the change boundary observers land.
 export async function startFacts(root: string, runId: string): Promise<WorkflowFacts> {
   const [qfaiVersion, policyNow, plans] = await Promise.all([
     resolveToolVersion(),
@@ -83,6 +81,66 @@ export async function startFacts(root: string, runId: string): Promise<WorkflowF
   const digestKey = randomBytes(32).toString("hex");
   const start = { runId, qfaiVersion, digestKey, ...policyNow };
   return { start, ...(plans.cause ? { cause: plans.cause } : {}) };
+}
+
+type Boundary = NonNullable<WorkflowSnapshot["boundary"]>;
+
+function sha256(bytes: string | Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+// A path's state as the run change boundary compares it: its file type, its executable bit and
+// a digest of its bytes, or `absent`.
+async function pathStateOf(root: string, file: string): Promise<string> {
+  const full = path.join(root, file);
+  const info = await lstat(full).catch(() => undefined);
+  if (!info) return "absent";
+  if (info.isSymbolicLink()) return `link:${sha256(await readlink(full))}`;
+  if (!info.isFile()) return "other";
+  const mode = (info.mode & 0o111) === 0 ? "644" : "755";
+  return `file:${mode}:${sha256(await readFile(full))}`;
+}
+
+async function pathStatesOf(root: string, files: readonly string[]) {
+  const entries = await Promise.all(
+    files.map(async (file) => [file, await pathStateOf(root, file)] as const),
+  );
+  return Object.fromEntries(entries);
+}
+
+// The paths a `-z` git listing holds, or none when git could not run.
+function listed(output: string | null): string[] {
+  return (output ?? "").split("\0").filter(Boolean).map(normalizeRepoPath);
+}
+
+// What `start` fixes of the run change boundary: `HEAD`, and the state of each path that is
+// dirty in the index or working tree, or untracked and not ignored. None outside a repository.
+export async function boundaryOf(root: string): Promise<Boundary | undefined> {
+  const dirty = uncommittedPaths(root);
+  if (dirty === null) return undefined;
+  const head = gitStdout(root, ["rev-parse", "--verify", "--quiet", "HEAD"])?.trim() || null;
+  return { head, paths: await pathStatesOf(root, dirty) };
+}
+
+// The run's cumulative changed paths: each path that differs from the `HEAD` fixed at `start`,
+// through a commit, the index or the working tree, or is untracked and not ignored; and each path
+// dirty at `start` whose state is no longer the one recorded then.
+// SIMPLIFIED: a run started before the repository's first commit reads its changes from the
+// working tree alone, so a commit it makes is not counted.
+// Lift when: a run is started in a repository that has no commit yet.
+export async function runChangedPaths(
+  root: string,
+  boundary: Boundary | undefined,
+): Promise<string[]> {
+  const { head, paths: started } = boundary ?? { head: null, paths: {} };
+  const sinceHead = head
+    ? listed(gitStdout(root, ["diff", "--name-only", "--no-renames", "-z", head]))
+    : (uncommittedPaths(root) ?? []);
+  const untracked = listed(gitStdout(root, ["ls-files", "--others", "--exclude-standard", "-z"]));
+  const now = await pathStatesOf(root, Object.keys(started));
+  const changed = [...sinceHead, ...untracked].filter((file) => started[file] === undefined);
+  const moved = Object.keys(started).filter((file) => now[file] !== started[file]);
+  return [...new Set([...changed, ...moved])].sort();
 }
 
 // Validate in process, as the project configures it, with the report files it writes sent to a
@@ -332,10 +390,7 @@ async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
 }
 
 // What `finish` observes: validate run in process, this run's verify report, the tool and
-// policy it runs under, and the working tree's uncommitted paths.
-// SIMPLIFIED: the run's changed paths are the uncommitted ones, so a change committed during the
-// run is not counted; and under `failOn: never` no finding is reported, so no debt stays open.
-// Lift when: `start` fixes the commit the run began at, and a `never` project runs a workflow.
+// policy it runs under, and the run's cumulative changed paths and which of them are uncommitted.
 export async function completionFacts(
   root: string,
   runDir: string,
@@ -351,24 +406,22 @@ export async function completionFacts(
       verifyReportOf(runDir, snapshot),
     ],
   );
-  const failOn = loaded.config.validation.failOn;
   const findings = result.issues.map((issue) => ({
     code: issue.code,
     file: issue.file ?? "",
     refs: [...(issue.refs ?? [])].sort(),
     severity: issue.severity,
   }));
-  const changed = uncommittedPaths(root) ?? [];
-  const validate =
-    failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
+  const changed = await runChangedPaths(root, snapshot.boundary);
+  const uncommitted = new Set(uncommittedPaths(root) ?? []);
   const completion = {
-    validate,
+    validate: { failOn: loaded.config.validation.failOn, findings },
     ...(verifyReport ? { verifyReport } : {}),
     toolVersion,
     cliEntryDigest: entryDigest,
     policyDigests,
     changedPaths: changed,
-    uncommittedPaths: changed,
+    uncommittedPaths: changed.filter((file) => uncommitted.has(file)),
   };
   return { completion };
 }

@@ -14,6 +14,7 @@ import type {
 } from "../../core/workflow/decide.js";
 import {
   baselineOf,
+  boundaryOf,
   completionFacts,
   identityOf,
   ledgerFactsOf,
@@ -21,6 +22,7 @@ import {
   receiptDependenciesOf,
   receiptValidityOf,
   routingFacts,
+  runChangedPaths,
   startFacts,
 } from "../../core/workflow/observe.js";
 import {
@@ -421,12 +423,16 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
   const { snapshot } = loaded;
   if (input.operation === "finish") return completionFacts(root, loaded.runDir, snapshot);
   if (input.operation === "decision") return { now: new Date().toISOString() };
-  const [identity, policyNow] = await Promise.all([identityOf(root), policyNowOf(root)]);
+  const [identity, policyNow, observedChangedPaths] = await Promise.all([
+    identityOf(root),
+    policyNowOf(root),
+    runChangedPaths(root, snapshot.boundary),
+  ]);
   const facts =
     input.operation === "accept" && snapshot.run.state === "routing"
       ? await routingFacts(root, input.result?.proposal)
       : await stageFacts(root, snapshot, input);
-  return { ...facts, identity, policyNow };
+  return { ...facts, identity, policyNow, observedChangedPaths };
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
@@ -623,7 +629,8 @@ function completionTargetOf(value: Record<string, unknown>): CompletionTarget | 
   return COMPLETION_TARGETS.find((known) => known === target);
 }
 
-// Step 7 of `start`: the run directory, the private request copy and the first two events.
+// Steps 6 and 7 of `start`: the validate baseline, the git identity and the run change boundary;
+// then the run directory, the private request copy and the first two events.
 async function createRun(
   root: string,
   decision: WorkflowDecision,
@@ -633,10 +640,12 @@ async function createRun(
   const runsDir = path.join(root, RUNS_DIR);
   const runId = facts.start?.runId ?? "";
   const completionTarget = completionTargetOf(input) ?? "qfai_done";
+  const boundary = await boundaryOf(root);
   const start = {
     completionTarget,
     baseline: await baselineOf(root),
     identity: await identityOf(root),
+    ...(boundary ? { boundary } : {}),
   };
   const runDir = await createRunDir(runsDir, runId);
   const request = { request: input.request, digestKey: facts.start?.digestKey, answers: [] };
