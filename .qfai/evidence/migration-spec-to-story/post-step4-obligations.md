@@ -44,12 +44,16 @@ Each item is counted once, in the first column that applies.
 | Kind | Existing decision row | Migration record only | Decision row added with this register | Total |
 | ---- | --------------------- | --------------------- | ------------------------------------- | ----- |
 | AC   | 6                     | 0                     | 12                                    | 18    |
-| EX   | 23                    | 44                    | 30                                    | 97    |
+| EX   | 23                    | 43                    | 31                                    | 97    |
 | BR   | 5                     | 0                     | 7                                     | 12    |
 
-- A migration record names 1 AC and 57 EX: the 44 above, and 13 that also
-  have an existing decision row. EX-0001-0041-01 is counted under its record,
-  `region-a-br-audit.csv`, and also cites DEC-0728.
+- A migration record names 1 AC and 56 EX: the 43 above, and 13 that also
+  have an existing decision row.
+- EX-0001-0041-01 is counted under DEC-0728, which records it as newly written
+  for a criterion that had no example. `region-a-br-audit.csv` lists it for
+  BR-0100 in its `new_ex_refs_from_old_ex` column, and that listing is wrong:
+  the old example of BR-0004-0002, EX-0004-0004, became EX-0001-0039-01. The
+  audit is an unchanged copy, so the listing is not corrected there.
 - The six decision rows added with this register are DEC-0725 to DEC-0730 in
   `.qfai/spec/decisions.md`. Each restates an approved story, a migrated rule
   or a recorded decision, so no item needed an open question.
@@ -96,7 +100,7 @@ directory. "(new)" marks a decision row added with this register.
 | EX-0001-0037-01 | `business-flow-0001/user-story-0001-0037` | `df55ba0c2`   | `step04-ex-provenance.csv` line 20 (EX-0003-0023)                                                                                                                       |
 | EX-0001-0037-02 | `business-flow-0001/user-story-0001-0037` | `df55ba0c2`   | `step04-ex-provenance.csv` line 20 (EX-0003-0023)                                                                                                                       |
 | EX-0001-0039-01 | `business-flow-0001/user-story-0001-0039` | `df55ba0c2`   | `step04-ex-provenance.csv` line 22 (EX-0004-0004)                                                                                                                       |
-| EX-0001-0041-01 | `business-flow-0001/user-story-0001-0041` | `df55ba0c2`   | DEC-0728 (new); `region-a-br-audit.csv` (BR-0100)                                                                                                                       |
+| EX-0001-0041-01 | `business-flow-0001/user-story-0001-0041` | `df55ba0c2`   | DEC-0728 (new)                                                                                                                                                          |
 | EX-0001-0049-03 | `business-flow-0001/user-story-0001-0049` | `df55ba0c2`   | `step04-ex-provenance.csv` line 23 (EX-0004-0037); `manual-contract-rehome.md`                                                                                          |
 | EX-0001-0049-04 | `business-flow-0001/user-story-0001-0049` | `df55ba0c2`   | `step04-ex-provenance.csv` line 23 (EX-0004-0037); `manual-contract-rehome.md`                                                                                          |
 | EX-0001-0069-03 | `business-flow-0001/user-story-0001-0069` | `df55ba0c2`   | `step04-ex-provenance.csv` line 24 (EX-0008-0001); `manual-contract-rehome.md`                                                                                          |
