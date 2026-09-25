@@ -5,10 +5,10 @@
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-13T01:15:15Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (Codex interactive decision)`
+- Approved at: `2026-09-24T21:12:39Z`
+- Approved option: `2`
 - Applied at: `-`
 - Superseded by: `-`
 
@@ -80,25 +80,16 @@ meets, to escape a form question rather than because the requirement changed.
 
 - Specs: `spec-0014`
 - Plans: `none`
-- Tests: `spec-0014/TDD-0034` — `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`,
-  and under option 2 the integration suite the case moves into
+- Tests: `spec-0014/TDD-0034` — the integration suite the case moves into
 - Contracts: `none`
 - Schema: `none`
-- Upstream paths edited under this CR, by outcome:
+- Upstream paths edited under approved option 2:
 
-  | Path                                              | Kept under      |
-  | ------------------------------------------------- | --------------- |
-  | `.qfai/specs/spec-0014/tdd/test-list.md`          | every option    |
-  | `.qfai/specs/spec-0014/07_Decisions.md`           | option 1        |
-  | `.qfai/specs/spec-0014/06_Test-Cases.md`          | options 2 and 3 |
-  | `.qfai/specs/spec-0014/03_Acceptance-Criteria.md` | option 3        |
-  | `.qfai/specs/spec-0014/04_Business-Rules.md`      | option 3        |
-  | `.qfai/specs/spec-0014/05_Examples.md`            | option 3        |
-  | `.qfai/specs/spec-0014/09_delta.md`               | every option    |
-
-  This section is reduced to the approved outcome before `Status: approved` is
-  written: `QFAI-DRIFT-001` reads the paths here and not the outcome beside
-  them.
+  | Path                                     | Purpose                     |
+  | ---------------------------------------- | --------------------------- |
+  | `.qfai/specs/spec-0014/tdd/test-list.md` | Re-level and reset TDD-0034 |
+  | `.qfai/specs/spec-0014/06_Test-Cases.md` | Re-level TC-0014-0034       |
+  | `.qfai/specs/spec-0014/09_delta.md`      | Record the applied decision |
 
 ## Decision needed from user
 

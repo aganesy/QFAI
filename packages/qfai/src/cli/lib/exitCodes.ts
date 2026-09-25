@@ -167,6 +167,15 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
+    label: "workflow",
+    lines: [
+      `${EXIT_CODES.ok} = the operation was processed, whatever state the run is left in,`,
+      `${EXIT_CODES.findings} = finish with an unmet target, a damaged run record, or a run file`,
+      "      that could not be written,",
+      `${EXIT_CODES.inputError} = every other refusal`,
+    ],
+  },
+  {
     label: "other commands",
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,

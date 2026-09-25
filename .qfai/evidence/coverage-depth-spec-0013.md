@@ -1623,3 +1623,33 @@ of the same kind and is counted apart from the seven, because what it needs reco
 acceptance criterion rather than the product: until that is settled neither it nor the criterion can
 be scored honestly at all. Until those are
 settled, the honest verdict for all of them is the one recorded above.
+
+## Update: the work-log removal
+
+Produced by `test-design-analyst` in the `coverage` phase of the `/qfai-atdd` run started
+`2026-09-23T19:33:24.738Z`, over the working tree of branch `claude/qfai-steering-discussion-69d8a9`.
+Everything above this section is the census, and this section leaves it as it stands. That census
+is the 49-row assessment run at revision `e0f367b48e905c3b36fb7b1689706982dbea5162`, extended later
+with the two optional-artifact rows `TC-0013-0036` and `TC-0013-0037` and their business rule
+`BR-0013-0021`, as its `## Scope` records.
+
+This section scored the rows the work-log removal appended to the pack. `CR-20260925-0010` withdrew
+all of them, with their ledger rows and their tests:
+
+- the test cases `TC-0013-0038` (`TDD-0110`, `TDD-0112`, `TDD-0113`, `TDD-0114`) and `TC-0013-0039`
+  (`TDD-0111`, `TDD-0115`);
+- the business rules they covered, `BR-0013-0023` and `BR-0013-0022`.
+
+The pack again declares 14 user stories, 37 test cases and 21 business rules, the set the census
+above scores. This section adds no row and no cell.
+
+No existing cell moves. The two scored files `tests/core/sddPreflight.test.ts` and
+`tests/cli/commands/sddPreflight.test.ts` received cosmetic edits in this change: example strings and
+titles, under `SRC-0008` of `.qfai/evidence/discussion-20260923060900824.md`. No assertion a scored
+cell rests on changed.
+
+### Totals for the stage evidence
+
+The totals `## Follow-up this matrix does not discharge` states stand: **✅ 78 / ⚠️ 117 / ❌ 312**,
+`n/a` 15, across 522 scored cells: 459 matrix depth cells (51 rows × 9 columns) and 63 business rule
+cells (21 rows × 3 columns). `Status` is a row verdict and is excluded.

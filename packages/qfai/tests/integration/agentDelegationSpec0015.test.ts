@@ -356,7 +356,32 @@ describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
       expect(reviewModes).toHaveProperty("pattern-doubler");
       const bound = yamlMapping(reviewModes["pattern-doubler"], "pattern-doubler");
       expect(bound.numeric_targets).toBe("ignored");
+      expect(bound.missing_mandatory_pairing).toBe("required");
       expect(bound.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
+      expect(await readAsset(catalogPath)).toBe(currentCatalog);
+      expect(yamlMapping(rules.required, "required").spec).toEqual(
+        expect.arrayContaining(["UserStories", "AcceptanceCriteria", "Examples", "TestCases"]),
+      );
+      expect(yamlMapping(rules.quality_gates, "quality_gates").defaults).toEqual(
+        expect.arrayContaining([
+          { id: "completion-reviewer", role: "Completion Reviewer" },
+          { id: "qa-gatekeeper", role: "QA Gatekeeper" },
+        ]),
+      );
+      expect(
+        (await readAssistantAssetsLock(assistantDir))?.files["catalog/review-gate.rules.yml"],
+      ).toBe(hashAssistantAssetText(currentCatalog));
+
+      await writeFile(catalogPath, olderCatalog, "utf-8");
+      await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+      expect(await readAsset(catalogPath), "mismatching receipt: catalog refreshed").toBe(
+        olderCatalog,
+      );
+      expect(await readAsset(profilesPath), "mismatching receipt: adopter profiles changed").toBe(
+        adopterProfiles,
+      );
     } finally {
       await removeTempTree(root);
     }

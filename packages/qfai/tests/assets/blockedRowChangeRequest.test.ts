@@ -72,17 +72,25 @@ async function blockedRows(): Promise<BlockedRow[]> {
       // A pack with no ledger has no rows to read.
       continue;
     }
+    // The `Status` column is read by its header: `blocked` is also a workflow
+    // state, so a `Boundary` or `Selector` cell may carry the same word.
+    let statusColumn = -1;
     let blockedByIndex = -1;
     for (const line of text.split(/\r?\n/)) {
-      if (!line.startsWith("|")) continue;
+      if (!line.startsWith("|")) {
+        statusColumn = -1;
+        blockedByIndex = -1;
+        continue;
+      }
       const cells = line.split("|").map((cell) => cell.trim());
       const tdd = cells[1] ?? "";
       if (tdd === "TDD-ID") {
+        statusColumn = cells.indexOf("Status");
         blockedByIndex = cells.indexOf("Blocked-By");
         continue;
       }
       if (!/^TDD-\d{4}$/.test(tdd)) continue;
-      if (!cells.some((cell) => cell.toLowerCase() === "blocked")) continue;
+      if ((cells[statusColumn] ?? "").toLowerCase() !== "blocked") continue;
       // DR-ID records the approved reset that created a row. Only Blocked-By
       // names the decisions that currently prevent that row from proceeding.
       const blockedBy = cells[blockedByIndex] ?? "";

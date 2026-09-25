@@ -114,7 +114,8 @@ describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () 
           "recommendation is useful.",
       );
       expect(skill).toContain(
-        "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact",
+        "Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include " +
+          "`prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it",
       );
       // The UI-bearing completion gate must keep omitting it. The slice ends at
       // the next `## ` heading rather than at `## Non-UI Packs`, because the

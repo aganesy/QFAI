@@ -38,6 +38,46 @@ run is its approved action 2.
   `tests/integration/**`, where `TC-0003-0001`'s `Level` routes it. The reasoning is
   in the `TDD-0001` entry.
 
+### /qfai-atdd run 2026-09-23T19:33:24.738Z
+
+- **The work-log removal cases, `TC-0003-0059` … `-0061`, are in two files,**
+  as S1 D3 set out: `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts`
+  (`TDD-0094` … `TDD-0097`) and
+  `packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts`
+  (`TDD-0098`, `TDD-0099`), both added to `packages/qfai/tsconfig.tests.json`.
+  Every `it` of a file was written before the first RED of that file, because
+  the file's RED test hash covers all of them.
+- **Every row stops at `refactor`, by user decision.** Stage gate P1c takes each
+  branch-1 row through its checkpoint before the next row's test is written.
+  This run departs from that: the change is green only at its head, so each
+  row stops at `refactor` after its RED, its GREEN, its reviews and its local
+  per-row checkpoint. All rows' full-suite checkpoints close together on the
+  final head's CI, and all rows go `done` after that run passes. Authority: the
+  user's answer to a structured question (AskUserQuestion), relayed by the
+  orchestrator. The same decision is recorded in `atdd-spec-0004.md`.
+- **REDs before their shared GREENs.** One GREEN satisfies several rows: the
+  seed removal (`TDD-0094`, `TDD-0096`, `TDD-0097`), the instructions line
+  (`TDD-0095`), and the asset withdrawal (`TDD-0098`, `TDD-0099` and spec-0004
+  `TDD-0068`). Each RED is taken before the GREEN that satisfies it.
+- **The `BR-0003-0009` negative goes to a Change Request (S1 D13, user).** The
+  refusal to write outside the project is a safety-floor `⚠️` cell this change
+  did not create. The user chose to add its test through a Change Request, and
+  spec-0003's ATDD is reported not PASS on that cell until it lands. The
+  Change Request is `CR-20260924-0005`, open.
+- **Row numbers.** After the merge of main, this change's spec-0003 rows are
+  `TDD-0094` … `TDD-0099`. S1's decisions name them by their earlier numbers
+  (`TDD-0092` … `TDD-0097`): D7's `TDD-0095` is now `TDD-0097`, and D10's
+  `TDD-0097` is now `TDD-0099`.
+
+**Rows sharing a GREEN take their REDs first (user, S2).** A refinement of S1 D2 (one row
+at a time), adjudicated by the user through a structured question (AskUserQuestion) after
+S1 had ended, so it is recorded as session S2 of this run rather than under S1.
+
+- Decision: rows that one GREEN satisfies take their REDs before that GREEN. GREENs and
+  reviews stay per row.
+- Reason: after a shared GREEN, a later row would pass on its first run and have no RED
+  left to observe. The sibling-satisfied branch would need the sibling `done`, which the
+  stop-at-`refactor` decision rules out until the final head.
 ## Grilling Session
 
 ### /qfai-atdd — run started 2026-09-23T03:14:36.552Z
@@ -87,6 +127,56 @@ Preflight: confidence high
 | Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-23T11:44:45Z | 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209 | 2026-09-23T11:44:51Z | TDD-0037 is done under a replaced test, and the one exit from done, the upstream reset, is refused for a row the approving CR's actions do not name | empty | none in flight | 1 | 0 | 0 |
+
+### /qfai-atdd — run started 2026-09-23T19:33:24.738Z
+
+Preflight: session opened
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T20:13:17.289Z | working-tree+ecbebad44db0972da88c2858d175f303772e80ba665e4a380c68ea3e59caf750 | 2026-09-24T00:16:53.938Z | preflight | empty | none in flight | 15 | 0 | 4 |
+| S2 | adopted | 2026-09-24T00:43:09.001Z | working-tree+2d31f83a01de922411629aeea5788fc3beee710b71763d4d8200234911c37d55 | 2026-09-24T00:43:37.959Z | whether rows one GREEN satisfies take their REDs before that GREEN | empty | none in flight | 1 | 0 | 1 |
+
+S1 is the preflight session of the one `/qfai-atdd` run that covers spec-0003,
+spec-0004, spec-0011 and spec-0013; `.qfai/evidence/atdd-spec-0004.md` carries
+the same row. `Work resumed` here is this run's first spec-0003 test write.
+
+Escalated S1: D1 — `EX-0004-0044` gives a passing `Blocked-By` the kept check rejects. User: fix the example and BR via a Change Request. Done as `CR-20260923-0015` (applied; spec-0004 DR-0004-0043, DL-0029). TDD-0069..0071 fixtures use `spec-0004:TDD-0001 — blocked at todo`.
+
+Escalated S1: D2 — batch every RED first vs the P1c per-row loop. User: one row at a time (the P1c loop).
+
+Escalated S1: D13 — the BR-0003-0009 negative (refusal to write outside the project) is a safety-floor ⚠️ that this change did not create. User: raise a Change Request to add that test; spec-0003's ATDD is reported not PASS on that cell until it lands.
+
+Escalated S1: N1 — `/qfai-implement` checkpoints need the related suites and full-suite runs, beyond "only the new tests". User: run checkpoints locally too (this task only). Superseded by the user's later answer (AskUserQuestion, 2026-09-23): the full package suite runs on CI through a pushed draft PR at the boundaries, and the local per-row set is the row's test, the direct-import test files, both type checks and the rule-code drift check.
+
+Escalated S2: D2-refinement — several rows are satisfied by one shared GREEN, so a later row would pass on its first run after that GREEN, and the sibling-satisfied branch needs the sibling `done`, which the stop-at-`refactor` decision rules out. User: take the REDs of rows sharing a GREEN before that GREEN; GREENs and reviews per row.
+
+### /qfai-implement — run started 2026-09-24T05:57:51.031Z
+
+Preflight: session opened
+
+### /qfai-implement — run started 2026-09-24T08:22:12.576Z
+
+Preflight: confidence high. The removal decisions, row order, Oracle mutations and
+checkpoint set were adopted in the spec-0004 implementation run's S3 work orders.
+This invocation implements only spec-0003 TDD-0094..0099 against those decisions.
+The start time is recovered from the Codex host session JSONL
+`C:\Users\pc\.codex\sessions\2026\09\24\rollout-2026-09-24T17-13-01-01a0d279-8384-7d01-9f7a-748e0a8fd80c.jsonl`,
+ordinal 216 (`clock__curr_time` call at `2026-09-24T08:22:12.576Z`) immediately
+before ordinal 218's second-precision response.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-24T09:59:55.341Z | working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb | 2026-09-24T10:00:28.295Z | on-detection: recover the original run key from the host clock event | empty | none in flight | 1 | 0 | 0 |
+
+S1 opened after the run started, when the second-precision heading failed the
+completion record check. The griller's final message is recorded at ordinal 3098
+(`2026-09-24T09:59:55.341Z`) in the parent Codex host session JSONL
+`C:\Users\pc\.codex\sessions\2026\09\24\rollout-2026-09-24T15-26-56-01a0d218-8066-7e52-a3a5-63c8f72ae407.jsonl`.
+The first resumed edit is ordinal 2032 (`FileChange` at
+`2026-09-24T10:00:28.295Z`) in the child session JSONL named above. The
+working-tree address excludes evidence and ledgers; captures before and after
+this decision agree on the `Revision` shown for S1.
 
 ### /qfai-atdd — run started 2026-09-25T03:20:00.000Z
 
@@ -178,11 +268,31 @@ The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 | integration | 2 | 22 moved, 21 kept |
 | e2e | 1 | 23 kept |
 
+### /qfai-atdd run 2026-09-23T19:33:24.738Z
+
+| Layer       | Raw count | Signal | Evidence                                                   | Notes                                                                                      |
+| ----------- | --------: | -----: | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| E2E         |        27 |     37 | the `US-0003-*` stories of `02_User-stories.md`; no `L5` TC | Surface opt-in is off project-wide, so every non-planned `US-*` is required                 |
+| API         |         0 |      0 | no `CON-API-*` referenced; no `L4` TC                      | `CLI-INIT` is a CLI contract                                                               |
+| Integration |        46 |     63 | integration-routed `TC-0003-*`; no `CON-DB-*`              | From the test-design-analyst's P0 for this run                                             |
+
+`total` = 73. Signals are shares of that total in whole percent, planning
+signals only.
+
 ## Coverage obligations checklist
 
 - `TC-0003-0056`, `-0057`, `-0058`: annotated under `tests/integration/**`.
 - The other obligations of this pack are scored in the Coverage Depth Matrix; this
   run took up only the rows `CR-20260923-0003` names.
+
+### /qfai-atdd run 2026-09-23T19:33:24.738Z
+
+| Kind        | Required                  | Home                                 | This run                                                                         |
+| ----------- | ------------------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `US-*`      | 27                        | `tests/e2e/**`                       | Unchanged by this change; not scored in this run (S1 D13)                        |
+| `TC-*`      | 46 integration-routed     | `packages/qfai/tests/integration/**` | `TC-0003-0059` … `-0061` written (`TDD-0094` … `TDD-0099`), not yet run          |
+| `CON-API-*` | none                      | `tests/api/**`                       | none owed                                                                        |
+| `CON-DB-*`  | none                      | `tests/integration/**`               | none owed                                                                        |
 
 ## Ledger rows advanced
 
@@ -199,6 +309,17 @@ The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
 | `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
 | `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
 | `TDD-0094` | `TC-0003-0059` | Integration | observed-red | [TDD-0094](#tdd-0094) |
+| `TDD-0095` | `TC-0003-0059` | Integration | observed-red | [TDD-0095](#tdd-0095) |
+| `TDD-0096` | `TC-0003-0060` | Integration | observed-red | [TDD-0096](#tdd-0096) |
+| `TDD-0097` | `TC-0003-0060` | Integration | observed-red | [TDD-0097](#tdd-0097) |
+| `TDD-0098` | `TC-0003-0061` | Integration | observed-red | [TDD-0098](#tdd-0098) |
+| `TDD-0099` | `TC-0003-0061` | Integration | observed-red | [TDD-0099](#tdd-0099) |
+
+Rows `TDD-0094` … `TDD-0099` of this branch are withdrawn by `CR-20260925-0010`. Their ledger
+rows are deleted and their test files are deleted. `TDD-0095` … `TDD-0099` are tombstoned.
+The withdrawn `TDD-0094` never merged under that ID: main assigned it to the row
+`CR-20260925-0011` seeds, and the `TDD-0094` row above is main's. The withdrawn row's section
+is headed `Withdrawn TDD-0094 (never merged)`, and stays as history with the other five.
 
 ### TDD-0058
 
@@ -1272,9 +1393,2216 @@ the selector has again been seen to fail.
 - Checkpoint verification revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
 - Checkpoint verification seal: e355f7b07a46e63150a7980e9035766f2e37b4c3dd9a99a056ddc79f7581cc15
 
+### Withdrawn TDD-0094 (never merged)
+
+- TDD-ID: TDD-0094
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+- Selector: TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+- TC-ref: TC-0003-0059
+- Boundary: `no-steering-path`
+- EX-ref: EX-0003-0052; AC-ref: AC-0003-0039; BR-ref: BR-0003-0049 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: `runInit` in `packages/qfai/src/cli/commands/init.ts` calls `seedProjectSteering`, which writes `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md` create-only. No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture: a fresh temporary directory; one plain `runInit`, with stdout and stderr each
+  captured by `vi.spyOn(process.<stream>, "write")` and split into lines, `\` normalised to
+  `/`. `info` and `warn` write to stdout and `error` to stderr, and `runInit` calls all three.
+- Oracle:
+  - read-proof (S1 D5): exactly one captured stdout line starts `qfai init: dest=`, so the
+    captured report is the one init printed;
+  - absence, one `toEqual`: `lstat` of `.qfai/steering` fails with `ENOENT`, and no
+    captured line of either stream names `.qfai/steering` followed by `/` or the end of the line (S1
+    D4; `.qfai/assistant/steering/` does not match).
+- Expected RED, from reading the code before the run (the RED below matches it): `.qfai/steering` exists,
+  holding the two seed files.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: REVISE
+  - Time: 2026-09-24T00:23:35Z
+  - Reviewed: test hash `7604ef12…6c7da1`, at tree `working-tree+e5d63a1b…184502`,
+    the single selector entry above, and the Round 1 plan below. No RED had
+    been run.
+  - "The report names none" belongs to this boundary. TC-0003-0059's first
+    bullet puts it inside `no-steering-path` itself: "no path exists under
+    `.qfai/steering/`, and the report names none". EX-0003-0052 says the same.
+    One `toEqual` over both halves is therefore one boundary.
+  - Reason, sufficiency gap: the test captures only `process.stdout`. Init's
+    report is written to two streams. In `packages/qfai/src/cli/lib/logger.ts`,
+    `info` and `warn` write to stdout and `error` writes to stderr, and
+    `runInit` calls `error` more than once. A report line on stderr naming
+    `.qfai/steering/` would pass this test, so the "names none" half covers
+    only part of the report.
+  - What holds:
+    - Checking the directory itself (`lstat` `ENOENT`) reads "no path under
+      `.qfai/steering/`" the way S1 D4 reads "names": `.qfai/steering`
+      followed by `/` or the end. An empty seeded directory is therefore a
+      failure, which is the right result.
+    - The `qfai init: dest=` read-proof is legitimate (S1 D5). It shows the
+      capture holds the report init printed.
+    - The single mutation, restoring `seedProjectSteering`, fails the row.
+  - To clear:
+    1. Capture `process.stderr.write` alongside stdout, and run the
+       `STEERING_PATH` check over the lines of both. Keep the `dest=`
+       read-proof on stdout.
+    2. Record the new file hash and resubmit it for scope approval before any
+       RED is run. The hash covers the whole file, so the resubmission covers
+       `TDD-0095`, `TDD-0096` and `TDD-0097` too.
+- Scope approval (`delivery-planner`), on file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Reason: the REVISE is cleared. `captureReport` now spies on
+    `process.stderr.write` as well as stdout, and the `STEERING_PATH` check
+    runs over the lines of both streams. The `dest=` read-proof stays on
+    stdout, where `info` writes it. The "names none" half now covers the whole
+    report init prints.
+  - The rest is unchanged from the earlier verdict: the `lstat` `ENOENT` half,
+    one `toEqual`, one boundary, and the seed-restoring mutation.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the seed-removal round.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0094`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: c362525dc7a14900652ac262918049830753db71ac2bb092e71f555f20aa50a9
+  (lstat-mode form `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`; same bytes as approved)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:30:35.069Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 127 passed: one captured stdout line starts
+  `qfai init: dest=`. The failure is the absence assertion at line 136, inside the
+  selected test: `.qfai/steering` exists, and two captured report lines name the seed files
+  under it, `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md`.
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none 1747ms
+   → expected { steering: 'exists', …(1) } to deeply equal { steering: 'ENOENT', reportLines: [] }
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+AssertionError: expected { steering: 'exists', …(1) } to deeply equal { steering: 'ENOENT', reportLines: [] }
+
+- Expected
++ Received
+
+  {
+-   "reportLines": [],
+-   "steering": "ENOENT",
++   "reportLines": [
++     "    - .qfai/steering/.gitkeep",
++     "    - .qfai/steering/_templates/entry.md",
++   ],
++   "steering": "exists",
+  }
+
+ ❯ tests/integration/spec0003InitWorklogSurface.test.ts:136:39
+    134|       STEERING_PATH.test(line),
+    135|     );
+    136|     expect({ steering, reportLines }).toEqual({ steering: "ENOENT", re…
+       |                                       ^
+    137|   });
+    138|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  09:30:38
+   Duration  3.16s (transform 671ms, setup 86ms, import 991ms, tests 1.75s, environment 0ms)
+```
+
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -124,16 +124,17 @@ describe("TC-0003-0059: no work-log path or instructions line after init", () =>
+   it("TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none", async () => {
+     const report = await init(root, false);
+
+-    expect(
++    void [
+       report.stdout.filter((line) => line.startsWith("qfai init: dest=")),
+       "the captured report is the one init printed",
+-    ).toHaveLength(1);
++      expect,
++    ];
+
+     const steering = await lstatOutcome(path.join(root, ".qfai", "steering"));
+     const reportLines = [...report.stdout, ...report.stderr].filter((line) =>
+       STEERING_PATH.test(line),
+     );
+-    expect({ steering, reportLines }).toEqual({ steering: "ENOENT", reportLines: [] });
++    void [{ steering, reportLines }, { steering: "ENOENT", reportLines: [] }];
+   });
+
+   it("TC-0003-0059: the generated copilot-instructions.md has no work-log line", async () => {
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"
+ ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none 1329ms
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  09:32:22
+   Duration  2.84s (transform 689ms, setup 108ms, import 1.02s, tests 1.33s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/cli/commands/init.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`
+  1. Restore the `seedProjectSteering(destRoot, options.dryRun)` call in `runInit`, with the
+     function it calls. It writes the two seed files under `.qfai/steering/`.
+     The selector must fail on `steering`, which is then `exists`.
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e706e39a…6a9f`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e706e39a…6a9f`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003InitWorklogSurface.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The module loads, and no seam was used. The line 127 `dest=` read-proof passed. The failure is the assertion at line 136 inside the selector: `steering` is `exists`, and two report lines name `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md`. That is the path the row forbids, and the stderr capture is included.
+  - Scope against TC-0003-0059 first bullet / EX-0003-0052 / AC-0003-0039 / BR-0003-0049: no path under `.qfai/steering/` and a report that names none, in one `toEqual`, with the S1 D4 boundary. Nothing else is asserted.
+  - Oracle proof plan: restore `seedProjectSteering` in `runInit`. That is the code this round removes, and it names the GREEN command. Acceptable.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none 2432ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 3 skipped (4)
+  ```
+- Round 1: Oracle proof: The first attempt restored only init.ts while assistantPaths.ts still lacked the old constants; it failed with TypeError before the assertion and is not relied on. Restoring both old modules then made the selector fail at line 136: the directory existed and the report named .gitkeep and _templates/entry.md. Both modules were restored byte-equal to the GREEN copies. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none 20624ms
+  AssertionError: expected { steering: 'exists', …(1) } to deeply equal { steering: 'ENOENT', reportLines: [] }
+
+  - Expected
+  + Received
+
+    {
+  -   "reportLines": [],
+  -   "steering": "ENOENT",
+  +   "reportLines": [
+  +     "    - .qfai/steering/.gitkeep",
+  +     "    - .qfai/steering/_templates/entry.md",
+  +   ],
+  +   "steering": "exists",
+    }
+
+   ❯ tests/integration/spec0003InitWorklogSurface.test.ts:136:39
+  Test Files  1 failed (1)
+  Tests  1 failed | 3 skipped (4)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `init.ts` SHA-256 equals the pinned GREEN copy `A500A0332F802120F22078A7F59E2E5C8BBBB1FC45AEC46C3BBC9127EB5BAD58`; `assistantPaths.ts` equals `619B27174C0A158978C38C3774F403038F53851770F17E6F0A370DA547164FB4`.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:54:08.284Z; green → refactor at 2026-09-24T10:17:11.710Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931266 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: a1dbdb989eaf86b910bc865907785305fee3ca67fe6935757f118e2432bcc902
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: bd657a1fba6b098cd8965674f6cdec82e59808461efff391df51d21b16bcf313
+- Spec review pack: .qfai/review/review-20260924110931266 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a1dbdb989eaf86b910bc865907785305fee3ca67fe6935757f118e2432bcc902
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: bd657a1fba6b098cd8965674f6cdec82e59808461efff391df51d21b16bcf313
+- Code quality review pack: .qfai/review/review-20260924110931266 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a1dbdb989eaf86b910bc865907785305fee3ca67fe6935757f118e2432bcc902
+- Spec record re-attestation: e20a5cf87e4e23a3793530f8c052f905108dabe7aaf784deec52a57e6d032b43
+- Spec record re-attestation pack: .qfai/review/review-20260924170316601 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: f0af41c1f0082518534d44227d67abebcbcbf26659222a87f8c04519da639f8d
+- Code quality record re-attestation: e20a5cf87e4e23a3793530f8c052f905108dabe7aaf784deec52a57e6d032b43
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316601 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: f0af41c1f0082518534d44227d67abebcbcbf26659222a87f8c04519da639f8d
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: 82375a070ded3de888765279424bbf374406c1df08694fae883f09b544af41e5
+
+### TDD-0095
+
+- TDD-ID: TDD-0095
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+- Selector: TC-0003-0059: the generated copilot-instructions.md has no work-log line
+- TC-ref: TC-0003-0059
+- Boundary: `no-worklog-instructions-line`
+- EX-ref: EX-0003-0052; AC-ref: AC-0003-0039; BR-ref: BR-0003-0049 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts` writes the line "AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: …)". No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture: a fresh temporary directory; one plain `runInit`; the generated
+  `.github/copilot-instructions.md` is read and split into lines.
+- Oracle (S1 D11):
+  - read-proof (S1 D5): the line `## Golden rules` is found exactly once, so the file
+    read is the instructions file init generated;
+  - absence: no line contains `.qfai/steering/` or `worklog-entry.schema.md`
+    (case-sensitive) or matches `work-log` case-insensitively.
+- Expected RED, from reading the code before the run (the RED below matches it): the "AI work-log surface"
+  line is the one line found.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:23:35Z
+  - Covers: this row's `it` body and the helpers it calls (`init`,
+    `captureReport`), as read at file hash `7604ef12…6c7da1`, with the single
+    selector entry above. The file hash will change when the sibling REVISEs
+    are applied. The resubmission must show this `it` unchanged, and I
+    re-confirm it on the new hash before the RED runs.
+  - Sufficiency: the whole of TC-0003-0059's second bullet. One plain init
+    runs in an empty directory, and the generated
+    `.github/copilot-instructions.md` is read line by line. The absence check
+    follows S1 D11: `.qfai/steering/` and `worklog-entry.schema.md`
+    case-sensitive, `work-log` case-insensitive. That catches the one line
+    `buildCopilotInstructions` writes today ("AI work-log surface
+    (per-project): …"). It does not catch the separate legacy
+    `.qfai/assistant/steering/` lines, which are not the work-log surface.
+  - One boundary: `no-worklog-instructions-line`. It asserts nothing about
+    paths or the report, which belong to `TDD-0094`.
+  - The `## Golden rules` read-proof is legitimate (S1 D5). It shows the file
+    read is the one init generated.
+- Scope approval (`delivery-planner`), on file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Re-confirmed on the new hash: the `it` body reads as it did at
+    `7604ef12…6c7da1`. `init` now returns both streams, and this row ignores
+    the value. The earlier PASS reasons hold.
+  - Advisory, not scope: the local `const lines` in this `it` shadows the
+    module-level `lines` helper the capture now uses. It compiles and changes
+    no behaviour, but a `no-shadow` lint rule would flag it.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the instructions-line round.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0095`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: c362525dc7a14900652ac262918049830753db71ac2bb092e71f555f20aa50a9
+  (lstat-mode form `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`; same bytes as approved)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:30:42.081Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 144 passed: `## Golden rules` is found exactly once. The
+  failure is the absence assertion at line 155, inside the selector: the one line found
+  is "AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: …)".
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line 1515ms
+   → expected [ Array(1) ] to deeply equal []
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+AssertionError: expected [ Array(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/assistant/catalog/worklog-entry.schema.md`)",
++ ]
+
+ ❯ tests/integration/spec0003InitWorklogSurface.test.ts:155:26
+    153|         /work-log/i.test(line),
+    154|     );
+    155|     expect(workLogLines).toEqual([]);
+       |                          ^
+    156|   });
+    157| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  09:30:48
+   Duration  3.35s (transform 926ms, setup 110ms, import 1.28s, tests 1.52s, environment 0ms)
+```
+
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -141,10 +141,11 @@ describe("TC-0003-0059: no work-log path or instructions line after init", () =>
+     const text = await readFile(path.join(root, ".github", "copilot-instructions.md"), "utf-8");
+     const lines = text.split(/\r?\n/);
+
+-    expect(
++    void [
+       lines.filter((line) => line === "## Golden rules"),
+       "the instructions file init generated was read",
+-    ).toHaveLength(1);
++      expect,
++    ];
+
+     const workLogLines = lines.filter(
+       (line) =>
+@@ -152,7 +153,7 @@ describe("TC-0003-0059: no work-log path or instructions line after init", () =>
+         line.includes("worklog-entry.schema.md") ||
+         /work-log/i.test(line),
+     );
+-    expect(workLogLines).toEqual([]);
++    void [workLogLines, []];
+   });
+ });
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line 4503ms
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  09:32:32
+   Duration  6.49s (transform 913ms, setup 115ms, import 1.22s, tests 4.51s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/cli/commands/init.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`
+  1. Restore the "AI work-log surface (per-project): `.qfai/steering/` …" line in
+     `buildCopilotInstructions`. The selector must fail on `workLogLines`.
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e706e39a…6a9f`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e706e39a…6a9f`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003InitWorklogSurface.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The line 144 `## Golden rules` read-proof passed. The failure is the assertion at line 155 inside the selector: the one line found is the AI work-log surface line naming `.qfai/steering/`, which is the predicate.
+  - Scope against TC-0003-0059 second bullet: the S1 D11 absence tokens (`.qfai/steering/` and `worklog-entry.schema.md` case-sensitive, `work-log` case-insensitive). The legacy `.qfai/assistant/steering/` lines do not match. Nothing else is asserted.
+  - Oracle proof plan: restore that line in `buildCopilotInstructions`. That is the code this round removes, and it names the GREEN command. Acceptable.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line 1813ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 3 skipped (4)
+  ```
+- Round 1: Oracle proof: Restoring only the removed buildCopilotInstructions line made this selector fail at line 155 with the work-log line in the generated file. init.ts was restored byte-equal to the GREEN copy. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line 2673ms
+  AssertionError: expected [ Array(1) ] to deeply equal []
+
+  - Expected
+  + Received
+
+  - []
+  + [
+  +   "  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/assistant/catalog/worklog-entry.schema.md`)",
+  + ]
+
+   ❯ tests/integration/spec0003InitWorklogSurface.test.ts:155:26
+  Test Files  1 failed (1)
+  Tests  1 failed | 3 skipped (4)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `init.ts` SHA-256 equals the pinned GREEN copy `A500A0332F802120F22078A7F59E2E5C8BBBB1FC45AEC46C3BBC9127EB5BAD58`; `assistantPaths.ts` equals `619B27174C0A158978C38C3774F403038F53851770F17E6F0A370DA547164FB4`.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:54:17.876Z; green → refactor at 2026-09-24T10:17:16.677Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931267 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 38b977a51602a204b37ff5f2aa7c5aa24557d3b48fb130855266cf935df8e31a
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: b11566b3a43a54f72e1fa5b72d835ed3482d9e1afdd9a5caa2aadeb6c580fcb8
+- Spec review pack: .qfai/review/review-20260924110931267 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 38b977a51602a204b37ff5f2aa7c5aa24557d3b48fb130855266cf935df8e31a
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: b11566b3a43a54f72e1fa5b72d835ed3482d9e1afdd9a5caa2aadeb6c580fcb8
+- Code quality review pack: .qfai/review/review-20260924110931267 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 38b977a51602a204b37ff5f2aa7c5aa24557d3b48fb130855266cf935df8e31a
+- Spec record re-attestation: 0998eb9914dc405479f4f8d5ef1f9972f6c6867e78ebc30fcbf717d469f41c83
+- Spec record re-attestation pack: .qfai/review/review-20260924170316623 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: b2ccbbc9ba2a30f21c0fafacabaf9f8dc700cd56f3afcecae59edc1d63ea8b3d
+- Code quality record re-attestation: 0998eb9914dc405479f4f8d5ef1f9972f6c6867e78ebc30fcbf717d469f41c83
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316623 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: b2ccbbc9ba2a30f21c0fafacabaf9f8dc700cd56f3afcecae59edc1d63ea8b3d
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: d8352bf9749a8fbd53ca78044d5294290fc7c6064d0808aa4b04c7e09edb111b
+
+### TDD-0096
+
+- TDD-ID: TDD-0096
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+- Selector: TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+- TC-ref: TC-0003-0060
+- Boundary: `plain-init-byte-identical`
+- EX-ref: EX-0003-0053; AC-ref: AC-0003-0039; BR-ref: BR-0003-0049 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: `runInit` in `packages/qfai/src/cli/commands/init.ts` calls `seedProjectSteering`, which writes `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md` create-only. No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture (S1 D7, D8): a fresh temporary directory; one plain `runInit`; then everything
+  under `.qfai/steering/` is removed and exactly the EX-0003-0053 set is written: an edited
+  `README.md` and one adopter entry, `2026-09-01-adopter-note.md`, with no `.gitkeep` and
+  no `_templates/entry.md`. Every entry under it is recorded by its relative path: a file by its SHA-256, a
+  directory or a link by its kind, so an init that adds an empty directory changes the
+  record.
+- Oracle:
+  - read-proof (S1 D5): the recorded path set is exactly those two files, so the walk read
+    the populated directory and the comparison is not over an empty set;
+  - after a second plain `runInit`, the snapshot equals the record: the same entries, each
+    file with the same SHA-256.
+- Expected RED, from reading the code before the run (the RED below matches it): the snapshot gains `.gitkeep`
+  and `_templates/entry.md`.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: REVISE
+  - Time: 2026-09-24T00:23:35Z
+  - Reviewed: test hash `7604ef12…6c7da1`, at tree `working-tree+e5d63a1b…184502`,
+    the single selector entry above, and the Round 1 plan below. No RED had
+    been run.
+  - Reason, sufficiency gap: TC-0003-0060 and EX-0003-0053 compare "the path
+    set under `.qfai/steering/`" and each file's SHA-256. `snapshot` skips
+    every entry that is not a file (`if (!entry.isFile()) continue`), so a
+    directory is not in the recorded path set. BR-0003-0049 says init creates
+    no path there. An init that created an empty `_templates/` directory, or
+    any other empty directory, would pass this row. The seed being removed
+    creates exactly that directory before it writes into it.
+  - What holds:
+    - The fixture is S1 D7 and D8: its own directory, the directory cleared,
+      exactly the EX-0003-0053 set written.
+    - The read-proof is legitimate (S1 D5). It shows the walk read the
+      populated directory.
+    - One boundary: `plain-init-byte-identical`, one plain run, one
+      comparison. Nothing from `--force` is asserted.
+    - The single mutation, restoring `seedProjectSteering`, fails the row.
+  - To clear:
+    1. Have `snapshot` record every entry under the directory by its relative
+       path: a file by its SHA-256, and anything else by its kind (for
+       example `dir`, `symlink`). The recorded path set is then the TC's path
+       set. The read-proof's two expected keys stay as they are, because the
+       EX-0003-0053 set holds no subdirectory.
+    2. Record the new file hash and resubmit it for scope approval before any
+       RED is run.
+- Scope approval (`delivery-planner`), on file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Reason: the REVISE is cleared. `snapshot` records every entry under the
+    directory: a file by its SHA-256, a directory as `directory`, a link as
+    `symlink`, anything else as `other`. The compared path set is now the TC's
+    path set, so an empty directory created under `.qfai/steering/` fails the
+    row.
+  - The read-proof keys are still the two EX-0003-0053 files, which is correct
+    because that set holds no subdirectory. The fixture, the single plain run
+    and the seed-restoring mutation are unchanged.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the seed-removal round.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0096`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Shared-artifact re-verify
+
+##### spec-0003/TDD-0094
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Selector: TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+- Re-verify command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none"
+- Re-verify result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reverify-0094.log.
+- Proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none", with the old seed call and its path constants restored in init.ts and assistantPaths.ts; executed by tmp/spec0003-reproof-init.ps1 -Id 0094.
+- Proof result: FAIL — exit 1; Test Files 1 failed (1); Tests 1 failed | 3 skipped (4); AssertionError at spec0003InitWorklogSurface.test.ts:136:39: the restored seed creates the work-log directory and prints its paths. Mutated tree working-tree+4960f8f4923bcf337b342f4aa279ed14f1c9d45907a13e980711dcea15a09d9c was captured twice before and after the run.
+- Restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none", after the production files were restored byte-equal to their GREEN copies.
+- Restored GREEN result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reproof-0094-restored-green.log. Restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 was captured twice.
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- RED test hash: 2f338c75881d325fb4806c94bb45aef2825c23e00f71d2f5709c2c7625bd16ca
+
+##### spec-0003/TDD-0095
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Selector: TC-0003-0059: the generated copilot-instructions.md has no work-log line
+- Re-verify command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line"
+- Re-verify result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reverify-0095.log.
+- Proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line", with the removed work-log instructions line restored in init.ts; executed by tmp/spec0003-reproof-init.ps1 -Id 0095.
+- Proof result: FAIL — exit 1; Test Files 1 failed (1); Tests 1 failed | 3 skipped (4); AssertionError at spec0003InitWorklogSurface.test.ts:155:26: the restored instruction line appears in the generated file. Mutated tree working-tree+021c9f6c67b04b862b55c493e7dde0d4ae1420b1944302c9df91c2c578445928 was captured twice before and after the run.
+- Restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0059: the generated copilot-instructions.md has no work-log line", after the production files were restored byte-equal to their GREEN copies.
+- Restored GREEN result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reproof-0095-restored-green.log. Restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 was captured twice.
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- RED test hash: 2f338c75881d325fb4806c94bb45aef2825c23e00f71d2f5709c2c7625bd16ca
+
+##### spec-0003/TDD-0097
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Selector: TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+- Re-verify command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"
+- Re-verify result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reverify-0097.log.
+- Proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical", with seedProjectSteering restored only when options.force is true, alongside its path constants; executed by tmp/spec0003-reproof-init.ps1 -Id 0097.
+- Proof result: FAIL — exit 1; Test Files 1 failed (1); Tests 1 failed | 3 skipped (4); AssertionError at spec0003InitWorklogSurface.test.ts:186:38: force-only seeding adds .gitkeep and _templates; the TDD-0096 plain-init control passed under the same mutation. Mutated tree working-tree+f2926e8682bb3716030323d257fe02b9d624ea4f3a6213e26a0312904ff44556 was captured twice before and after the run.
+- Restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical", after the production files were restored byte-equal to their GREEN copies.
+- Restored GREEN result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); captured in tmp/spec0003-reproof-0097-restored-green.log. Restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 was captured twice.
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- RED test hash: 2f338c75881d325fb4806c94bb45aef2825c23e00f71d2f5709c2c7625bd16ca
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: 2f338c75881d325fb4806c94bb45aef2825c23e00f71d2f5709c2c7625bd16ca
+  (test-only replacement after implementation-reviewer REVISE; original RED hash `c362525dc7a14900652ac262918049830753db71ac2bb092e71f555f20aa50a9` and lstat-mode hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f` remain historical)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- Round 1: RED test replacement: test-only replacement — implementation-reviewer series Round 1, attempt 1, replacement ordinal 1, REVISE. Internal decision IDs in the test comment and a stale description of the adopter directory were replaced with current-behaviour wording. The selector and production behaviour are unchanged. The corrected test passed on first run, so this is the no-new-behaviour path and no new TDD round opens. The original RED observation stays at its original RED revision.
+- Round 1: Test-only replacement command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Test-only replacement result: exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4).
+- Round 1: Test-only replacement revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 (two equal address captures before and after both corrected-selector runs).
+- Round 1: Replacement proof revision: working-tree+4960f8f4923bcf337b342f4aa279ed14f1c9d45907a13e980711dcea15a09d9c (test-only replacement after implementation-reviewer REVISE; two equal captures before and after mutation).
+- Round 1: Original Oracle proof status: stale — test replaced; the original failure remains historical.
+- Round 1: Replacement proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical", with the original production mutation re-applied by tmp/spec0003-reproof-init.ps1 -Id 0096.
+- Round 1: Replacement proof result: exit 1; Test Files 1 failed (1); Tests 1 failed | 3 skipped (4); AssertionError at spec0003InitWorklogSurface.test.ts:171:38: .gitkeep and _templates were added to the two adopter files.
+- Round 1: Replacement restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical", after byte-equal production restoration.
+- Round 1: Replacement restored GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed | 3 skipped (4); restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 captured twice.
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:30:59.361Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 164 passed: the recorded entries are exactly the two
+  EX-0003-0053 files. The failure is the snapshot comparison at line 171, inside the
+  selected test: after the second plain run the directory also holds `.gitkeep`, the
+  directory `_templates` and `_templates/entry.md`, and the two recorded files keep
+  their SHA-256.
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical 3947ms
+   → expected { …(5) } to deeply equal { …(2) }
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+AssertionError: expected { …(5) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
++   ".gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "2026-09-01-adopter-note.md": "0279029a3a8c1faae53351e8dce6242f23d51b0f3ab4eba7b7436b765735edbe",
+    "README.md": "dcb675ef0ee351f1d67f3df795d4de8acff893772ee15183b7a6f28c15e8970e",
++   "_templates": "directory",
++   "_templates/entry.md": "486cea9e9f27a7088f632ea4a33987a6ecd3da4c82e124fb620194cf595ddcdc",
+  }
+
+ ❯ tests/integration/spec0003InitWorklogSurface.test.ts:171:38
+    169|
+    170|     await init(root, false);
+    171|     expect(await snapshot(steering)).toEqual(before);
+       |                                      ^
+    172|   });
+    173|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  09:31:03
+   Duration  6.03s (transform 823ms, setup 98ms, import 1.16s, tests 3.95s, environment 0ms)
+```
+
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -162,13 +162,15 @@ describe("TC-0003-0060: populated work-log directory unchanged by init and init
+     const steering = await populateSteering(root);
+     const before = await snapshot(steering);
+
+-    expect(Object.keys(before).sort(), "the walk read the populated directory").toEqual([
+-      "2026-09-01-adopter-note.md",
+-      "README.md",
+-    ]);
++    void [
++      Object.keys(before).sort(),
++      "the walk read the populated directory",
++      ["2026-09-01-adopter-note.md", "README.md"],
++      expect,
++    ];
+
+     await init(root, false);
+-    expect(await snapshot(steering)).toEqual(before);
++    void [await snapshot(steering), before];
+   });
+
+   it("TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical", async () => {
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical 4076ms
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  09:32:45
+   Duration  5.57s (transform 702ms, setup 94ms, import 996ms, tests 4.08s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/cli/commands/init.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+  1. Restore the `seedProjectSteering(destRoot, options.dryRun)` call in `runInit`, with the
+     function it calls. It writes the two seed files under `.qfai/steering/`.
+     The selector must fail on the snapshot comparison.
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e706e39a…6a9f`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e706e39a…6a9f`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003InitWorklogSurface.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The line 164 read-proof passed (exactly the two EX-0003-0053 files). The failure is the snapshot comparison at line 171 inside the selector: the second plain run added `.gitkeep`, the directory `_templates` and `_templates/entry.md`, while the two recorded files kept their SHA-256. The directory entry is caught because `snapshot` now records every entry.
+  - Scope against TC-0003-0060 / EX-0003-0053 (plain run): one plain run and one comparison, with S1 D7/D8 fixture discipline. Nothing from `--force` is asserted.
+  - Oracle proof plan: restore the unconditional `seedProjectSteering` call. That is the code this round removes, and it names the GREEN command. Acceptable.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical 4966ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 3 skipped (4)
+  ```
+- Round 1: Oracle proof: The first attempt restored only init.ts while assistantPaths.ts still lacked the old constants; it failed with TypeError before the assertion and is not relied on. Restoring both old modules then made this selector fail at line 171: .gitkeep, _templates and _templates/entry.md appeared beside the two unchanged adopter files. Both modules were restored byte-equal to the GREEN copies. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical 49299ms
+  AssertionError: expected { …(5) } to deeply equal { …(2) }
+
+  - Expected
+  + Received
+
+    {
+  +   ".gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "2026-09-01-adopter-note.md": "0279029a3a8c1faae53351e8dce6242f23d51b0f3ab4eba7b7436b765735edbe",
+      "README.md": "dcb675ef0ee351f1d67f3df795d4de8acff893772ee15183b7a6f28c15e8970e",
+  +   "_templates": "directory",
+  +   "_templates/entry.md": "486cea9e9f27a7088f632ea4a33987a6ecd3da4c82e124fb620194cf595ddcdc",
+    }
+
+   ❯ tests/integration/spec0003InitWorklogSurface.test.ts:171:38
+  Test Files  1 failed (1)
+  Tests  1 failed | 3 skipped (4)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `init.ts` SHA-256 equals the pinned GREEN copy `A500A0332F802120F22078A7F59E2E5C8BBBB1FC45AEC46C3BBC9127EB5BAD58`; `assistantPaths.ts` equals `619B27174C0A158978C38C3774F403038F53851770F17E6F0A370DA547164FB4`.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:54:29.618Z; green → refactor at 2026-09-24T10:17:27.769Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931268 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: cac593842a90f9207a3e600afc2d8ccfcdfc4b9591d5571a5db07f6499f2f299
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: 3e6a447a61a846caab2d347a1c93b2a7172bcf69fff2db761be942b89819d497
+- Spec review pack: .qfai/review/review-20260924110931268 <!-- qfai:not-a-citation -->
+- Spec review pack seal: cac593842a90f9207a3e600afc2d8ccfcdfc4b9591d5571a5db07f6499f2f299
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: 3e6a447a61a846caab2d347a1c93b2a7172bcf69fff2db761be942b89819d497
+- Code quality review pack: .qfai/review/review-20260924110931268 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: cac593842a90f9207a3e600afc2d8ccfcdfc4b9591d5571a5db07f6499f2f299
+- Spec record re-attestation: 29a1f5840b58535ee39390887cff1e54613e6542cafd7c4302566aaa9a120c33
+- Spec record re-attestation pack: .qfai/review/review-20260924170316635 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 71ab0c7b2b7b7e74afb09c9a071cc844f154d1a97a952cb7628b520579933ee5
+- Code quality record re-attestation: 29a1f5840b58535ee39390887cff1e54613e6542cafd7c4302566aaa9a120c33
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316635 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 71ab0c7b2b7b7e74afb09c9a071cc844f154d1a97a952cb7628b520579933ee5
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: 7d14dd584c81e8c66186595d7a10c036dcb1064ecdd1706f8a376f9513aa9b4d
+
+### TDD-0097
+
+- TDD-ID: TDD-0097
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+- Selector: TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+- TC-ref: TC-0003-0060
+- Boundary: `force-init-byte-identical`
+- EX-ref: EX-0003-0053; AC-ref: AC-0003-0039; BR-ref: BR-0003-0049 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: `runInit` in `packages/qfai/src/cli/commands/init.ts` calls `seedProjectSteering`, which writes `.qfai/steering/.gitkeep` and `.qfai/steering/_templates/entry.md` create-only. No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture: as `TDD-0096`, in its own directory (S1 D7).
+- Oracle:
+  - read-proof (S1 D5): the recorded path set is exactly the two EX-0003-0053 files;
+  - after a plain `runInit` and then `runInit` with `--force`, the snapshot, taken as in
+    `TDD-0096` (every entry, a file by its SHA-256 and anything else by its kind), equals
+    the record taken before both runs (S1 D7).
+- Expected RED, from reading the code before the run (the RED below matches it): the snapshot gains `.gitkeep`
+  and `_templates/entry.md`.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: REVISE
+  - Time: 2026-09-24T00:23:35Z
+  - Reviewed: test hash `7604ef12…6c7da1`, at tree `working-tree+e5d63a1b…184502`,
+    the single selector entry above, and the Round 1 plan below. No RED had
+    been run.
+  - Reason 1, the same sufficiency gap as `TDD-0096`: `snapshot` leaves
+    directories out of the path set. The same fix clears it here.
+  - Reason 2, the boundary is not shown on its own: the Oracle proof's only
+    mutation (restore `seedProjectSteering`) is `TDD-0096`'s. That mutation
+    makes the plain run in this row's sequence change the directory, so it
+    fails `TDD-0096` and this row together. It never shows that this row
+    fails when only `--force` touches `.qfai/steering/`. As planned, nothing
+    shows `force-init-byte-identical` can be observed apart from
+    `plain-init-byte-identical`.
+  - What holds:
+    - The sequence (plain run, then `--force`, compared against the setup
+      record) is TC-0003-0060's Action and S1 D7. It is not an addition.
+    - The read-proof is legitimate (S1 D5).
+    - The only assertion is after `--force`. Nothing after the plain run is
+      asserted, so `TDD-0096`'s check is not repeated.
+  - To clear:
+    1. Apply `TDD-0096`'s `snapshot` fix. The helper is shared.
+    2. Replace the Oracle proof mutation with one in `runInit`
+       (`packages/qfai/src/cli/commands/init.ts`, this row's `Owning
+       module`) that touches `.qfai/steering/` only when `force` is true. For
+       example, call `seedProjectSteering` only under `--force`. The selector
+       must fail on the snapshot comparison while `TDD-0096`'s selector still
+       passes. Name both commands in the proof.
+    3. Resubmit with the new file hash before any RED is run.
+  - Advisory for `qa-gatekeeper`, not scope: on today's tree the plain run
+    seeds `.gitkeep` and `_templates/entry.md`, and the seed is create-only.
+    So this row's RED will most likely show a difference the plain run made,
+    not one `--force` made. Whether that is admissible as this row's RED is
+    the gatekeeper's call. If it is not, the coupling is in TC-0003-0060's
+    Action. That needs a Change Request to `/qfai-sdd`, not a re-scope here.
+- Scope approval (`delivery-planner`), on file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Reason: both parts of the REVISE are cleared.
+    1. `snapshot` is shared and now records every entry, as for `TDD-0096`.
+    2. The Oracle proof's only mutation calls `seedProjectSteering` in
+       `runInit` only when `options.force` is true. Under it, this row must
+       fail and `TDD-0096`'s selector must still pass, and both commands are
+       named. That shows `force-init-byte-identical` can fail apart from
+       `plain-init-byte-identical`.
+  - Replace, not add, is what the REVISE asked for. The unconditional seed
+    mutation is `TDD-0096`'s falsifier and tests nothing this row owns alone.
+    Keeping it here would only repeat that row's proof.
+  - The sequence (plain run, then `--force`, compared against the setup
+    record) and the read-proof are unchanged.
+  - The advisory for `qa-gatekeeper` still stands. Today's seed is create-only,
+    so this row's RED will probably show a change the plain run made. Whether
+    that is admissible is the gatekeeper's call.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the seed-removal round.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0097`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: c362525dc7a14900652ac262918049830753db71ac2bb092e71f555f20aa50a9
+  (lstat-mode form `e706e39a993039b40c5007c2f69229fca24786c22ae05d4377b0086c70796a9f`; same bytes as approved)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts
+```
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:31:10.485Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 178 passed. The failure is the snapshot comparison at line
+  186, inside the selector, after the plain run and then the `--force` run: the
+  directory gains the same three entries as `TDD-0096`'s RED, `.gitkeep`, `_templates`
+  and `_templates/entry.md`.
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical 4293ms
+   → expected { …(5) } to deeply equal { …(2) }
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical
+AssertionError: expected { …(5) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
++   ".gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "2026-09-01-adopter-note.md": "0279029a3a8c1faae53351e8dce6242f23d51b0f3ab4eba7b7436b765735edbe",
+    "README.md": "dcb675ef0ee351f1d67f3df795d4de8acff893772ee15183b7a6f28c15e8970e",
++   "_templates": "directory",
++   "_templates/entry.md": "486cea9e9f27a7088f632ea4a33987a6ecd3da4c82e124fb620194cf595ddcdc",
+  }
+
+ ❯ tests/integration/spec0003InitWorklogSurface.test.ts:186:38
+    184|     await init(root, false);
+    185|     await init(root, true);
+    186|     expect(await snapshot(steering)).toEqual(before);
+       |                                      ^
+    187|   });
+    188| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  09:31:16
+   Duration  5.92s (transform 703ms, setup 91ms, import 995ms, tests 4.30s, environment 0ms)
+```
+
+- What this RED does and does not show: the seed is create-only and runs on both the
+  plain run and the `--force` run, so this run cannot tell which of the two added the
+  three entries. On this tree the plain run alone adds them, as `TDD-0096`'s RED shows.
+  What failed is the row's own predicate, the directory after plain-then-`--force`
+  against the record taken before both, as an assertion inside the selector, so the
+  failure is admissible. It does not show that the `--force` run changes the directory.
+  That is the job of the planned Oracle proof at GREEN, which seeds only under
+  `--force`: this selector must then fail while `TDD-0096`'s passes. The branch stays
+  `observed-red`: the test did fail, which rules out branch 2, and a RED was
+  observable, which rules out branch 3.
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -176,13 +176,15 @@ describe("TC-0003-0060: populated work-log directory unchanged by init and init
+     const steering = await populateSteering(root);
+     const before = await snapshot(steering);
+
+-    expect(Object.keys(before).sort(), "the walk read the populated directory").toEqual([
+-      "2026-09-01-adopter-note.md",
+-      "README.md",
+-    ]);
++    void [
++      Object.keys(before).sort(),
++      "the walk read the populated directory",
++      ["2026-09-01-adopter-note.md", "README.md"],
++      expect,
++    ];
+
+     await init(root, false);
+     await init(root, true);
+-    expect(await snapshot(steering)).toEqual(before);
++    void [await snapshot(steering), before];
+   });
+ });
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: init in an empty directory creates no .qfai/steering/ path and its report names none
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0059: no work-log path or instructions line after init > TC-0003-0059: the generated copilot-instructions.md has no work-log line
+ ↓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical
+ ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical 10379ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 3 skipped (4)
+   Start at  09:32:59
+   Duration  12.29s (transform 914ms, setup 103ms, import 1.30s, tests 10.38s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/cli/commands/init.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`
+  1. In `runInit`, call `seedProjectSteering(destRoot, options.dryRun)` only when
+     `options.force` is true, restoring the function it calls. That touches
+     `.qfai/steering/` on the `--force` run alone, adding `.gitkeep` and
+     `_templates/entry.md`.
+     - This row's selector, the GREEN command above, must fail on the snapshot
+       comparison.
+     - `TDD-0096`'s selector must still pass under the same mutation:
+       `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+  - This replaces the plan's earlier mutation, an unconditional
+    `seedProjectSteering` call, which fails `TDD-0096` just as well and so does not
+    show that this row's `--force` run is what it checks (scope REVISE, to-clear
+    item 2).
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e706e39a…6a9f`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e706e39a…6a9f`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003InitWorklogSurface.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The line 178 read-proof passed. The failure is the snapshot comparison at line 186 inside the selector, after the plain run and then `--force`: the same three entries as the TDD-0096 RED.
+  - Admissibility of a RED the plain run caused (the question the scope approval deferred): admissible. The criterion is that an assertion inside the row selector fails, naming the predicate the row owns, on a tree that does not yet make it pass. The predicate here is the one TC-0003-0060 states: the directory after plain-then-`--force` equals the record taken before both. The plain run is part of the TC Action, not a fixture error, and the assertion, not the fixture, raised the failure. The strip passes, so the failure is the assertion. What the RED cannot show, that the `--force` run alone is caught, is a question of discrimination, which the Oracle proof answers and the RED does not. This does not open a Change Request: the coupling is the TC Action, and it leaves the RED admissible.
+  - Condition for the build gate (does not affect this PASS): the discrimination of this row rests entirely on the planned `--force`-only mutation. At GREEN, the proof must show both of these under that one mutation: this selector fails at line 186 on the snapshot comparison, and the TDD-0096 selector passes. Record both commands and outputs. A proof that shows only this row failing, or one taken with the unconditional seed, does not show the `force-init-byte-identical` boundary and will be REVISEd.
+  - Scope: one assertion after `--force`. Nothing is asserted after the plain run, so the TDD-0096 check is not repeated.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical 8460ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 3 skipped (4)
+  ```
+- Round 1: Oracle proof: Restoring the old modules with seedProjectSteering called only when options.force is true made this selector fail at line 186 on the added .gitkeep and _templates entries; in the same run TDD-0096's plain-init selector passed. Both modules were restored byte-equal to the GREEN copies. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical 4046ms
+  AssertionError: expected { …(5) } to deeply equal { …(2) }
+
+  - Expected
+  + Received
+
+    {
+  +   ".gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "2026-09-01-adopter-note.md": "0279029a3a8c1faae53351e8dce6242f23d51b0f3ab4eba7b7436b765735edbe",
+      "README.md": "dcb675ef0ee351f1d67f3df795d4de8acff893772ee15183b7a6f28c15e8970e",
+  +   "_templates": "directory",
+  +   "_templates/entry.md": "486cea9e9f27a7088f632ea4a33987a6ecd3da4c82e124fb620194cf595ddcdc",
+    }
+
+   ❯ tests/integration/spec0003InitWorklogSurface.test.ts:186:38
+  Test Files  1 failed (1)
+  Tests  1 failed | 3 skipped (4)
+  ```
+- Round 1: Oracle control command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Oracle control result: exit 0 under the same force-only mutation; actual verbose runner output:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003InitWorklogSurface.test.ts > TC-0003-0060: populated work-log directory unchanged by init and init --force > TC-0003-0060: plain init leaves a populated .qfai/steering/ byte-identical 2103ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 3 skipped (4)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `init.ts` SHA-256 equals the pinned GREEN copy `A500A0332F802120F22078A7F59E2E5C8BBBB1FC45AEC46C3BBC9127EB5BAD58`; `assistantPaths.ts` equals `619B27174C0A158978C38C3774F403038F53851770F17E6F0A370DA547164FB4`.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:54:39.972Z; green → refactor at 2026-09-24T10:17:33.086Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931269 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 4fa8051b6cc308692e02aa152df2795c9cd23f0e1bd42d58e7fb1fdee77c887f
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: d8b2fe473bfb5dfdf05bb05424e0ca779a1462558c3a212e8e252d21d9361c0b
+- Spec review pack: .qfai/review/review-20260924110931269 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4fa8051b6cc308692e02aa152df2795c9cd23f0e1bd42d58e7fb1fdee77c887f
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: d8b2fe473bfb5dfdf05bb05424e0ca779a1462558c3a212e8e252d21d9361c0b
+- Code quality review pack: .qfai/review/review-20260924110931269 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4fa8051b6cc308692e02aa152df2795c9cd23f0e1bd42d58e7fb1fdee77c887f
+- Spec record re-attestation: 29e57295c3119a161f2fa13b75ec81e53053d3dd78bcde2f30caf0f7396e3352
+- Spec record re-attestation pack: .qfai/review/review-20260924170316645 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 7ab74e80f3adbd3d29643b2ecd918386f35041b874a52151d21ed04f1debde93
+- Code quality record re-attestation: 29e57295c3119a161f2fa13b75ec81e53053d3dd78bcde2f30caf0f7396e3352
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316645 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 7ab74e80f3adbd3d29643b2ecd918386f35041b874a52151d21ed04f1debde93
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003InitWorklogSurface.test.ts --reporter=verbose -t "TC-0003-0060: init --force leaves a populated .qfai/steering/ byte-identical"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: 26d4b01614d1b0983064d1a258dc0b38c30e127a2397ab826a7fbafbf50aecb5
+
+### TDD-0098
+
+- TDD-ID: TDD-0098
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts
+- Selector: TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md
+- TC-ref: TC-0003-0061
+- Boundary: `unedited-copy-retired`
+- EX-ref: EX-0003-0054; AC-ref: AC-0003-0039; BR-ref: BR-0003-0050 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: the release still ships `catalog/worklog-entry.schema.md` (`packages/qfai/src/core/governedAssistantManifest.ts` and the asset under `packages/qfai/assets/init/.qfai/assistant/catalog/`), so `init --force` treats a recorded copy as a governed file to refresh, never as a withdrawn one to retire. No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture (S1 D9): a fresh temporary directory; one plain `runInit`; then
+  `.qfai/assistant/catalog/worklog-entry.schema.md` is written from an inline literal and
+  its `.assets.lock.json` record is set to `hashAssistantAssetText` of that literal, with
+  `readAssistantAssetsLock` and `writeAssistantAssetsLock`. Then `runInit` with `--force`.
+- Oracle:
+  - read-proof (S1 D5): the re-read lock still records other governed files, so init
+    rewrote a readable record;
+  - one `toEqual`: `lstat` of the schema fails with `ENOENT`, and the lock has no key
+    `catalog/worklog-entry.schema.md`.
+- Expected RED, from reading the code before the run (the RED below matches it): the copy matches its record but
+  not the shipped file, so `--force` refreshes it as a stale copy. The file exists with the
+  shipped content, and its record holds the shipped hash.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:23:35Z
+  - Covers: this row's `it` body and the helpers it calls (`recordedSchema`,
+    `init`, `lstatOutcome`), as read at file hash `204bc910…02f3d1`, with the
+    single selector entry above. The resubmission must show them unchanged,
+    and I re-confirm on the new hash before the RED runs.
+  - Sufficiency: the whole of TC-0003-0061's first bullet. The initialised
+    tree holds the schema with a matching lock record, built with the
+    exported helpers per S1 D9. `--force` runs. Then one `toEqual` checks
+    that the file is gone (`ENOENT`) and that the lock has no key for it.
+    Those are the two parts of the bullet.
+  - One boundary: `unedited-copy-retired`. The edited copy and the note are
+    `TDD-0099`'s and are not asserted here.
+  - The read-proof is legitimate (S1 D5). "No key" over a lock that is
+    missing or empty would pass without init having written a record, and
+    requiring other keys closes that gap.
+  - The Oracle proof mutation lands in this row's `Owning module`. Leaving
+    out the `retireWithdrawnGovernedAssets` mutation because it is outside
+    that module is correct.
+- Scope approval (`delivery-planner`), on file hash `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Re-confirmed on the new hash: the `it` body and the helpers it calls
+    (`recordedSchema`, `init`, `lstatOutcome`) read as they did at
+    `204bc910…02f3d1`. The earlier PASS reasons hold.
+  - Correction to the hand-off note: this file's `captureReport` still reads
+    stdout only. The hash moved because of `TDD-0099`'s fix, not a stderr
+    capture. That does not affect this row, which reads no report.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the asset-withdrawal round, which also satisfies spec-0004 `TDD-0068`.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0098`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Shared-artifact re-verify
+
+##### spec-0003/TDD-0099
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Selector: TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it
+- Re-verify command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"
+- Re-verify result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 1 skipped (2); captured in tmp/spec0003-reverify-0099.log.
+- Proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it", with the withdrawn schema restored in the governed manifest and as a shipped asset; executed by tmp/spec0003-reproof-schema.ps1 -Id 0099.
+- Proof result: FAIL — exit 1; Test Files 1 failed (1); Tests 1 failed | 1 skipped (2); AssertionError at spec0003WithdrawnSchemaRetirement.test.ts:138:83: the edited content remains but the withdrawn-asset note is absent. Mutated tree working-tree+20c6a5554b0295f8b3f7f166fff4b071947d6f41c8844733f3331c04914444d5 was captured twice before and after the run.
+- Restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it", after the production files were restored byte-equal to their GREEN copies and the temporary schema asset was removed.
+- Restored GREEN result: PASS — exit 0; Test Files 1 passed (1); Tests 1 passed | 1 skipped (2); captured in tmp/spec0003-reproof-0099-restored-green.log. Restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 was captured twice.
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts
+```
+
+- RED test hash: 05b8528c8046c0eca535da1b70cb101614dc231665696275646c22283196df05
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: 05b8528c8046c0eca535da1b70cb101614dc231665696275646c22283196df05
+  (test-only replacement after implementation-reviewer REVISE; original RED hash `b99314b92e448eed6dc213c87316799021d60f8b9f31ebc6900691bf1f56a347` and lstat-mode hash `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6` remain historical)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts
+```
+
+- Round 1: RED test replacement: test-only replacement — implementation-reviewer series Round 1, attempt 1, replacement ordinal 1, REVISE. The internal decision ID in the test comment was replaced with a description of the current fixture. The selector and production behaviour are unchanged. The corrected test passed on first run, so this is the no-new-behaviour path and no new TDD round opens. The original RED observation stays at its original RED revision.
+- Round 1: Test-only replacement command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+- Round 1: Test-only replacement result: exit 0; Test Files 1 passed (1); Tests 1 passed | 1 skipped (2).
+- Round 1: Test-only replacement revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 (two equal address captures before and after both corrected-selector runs).
+- Round 1: Replacement proof revision: working-tree+20c6a5554b0295f8b3f7f166fff4b071947d6f41c8844733f3331c04914444d5 (test-only replacement after implementation-reviewer REVISE; two equal captures before and after mutation).
+- Round 1: Original Oracle proof status: stale — test replaced; the original failure remains historical.
+- Round 1: Replacement proof command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md", with the original production mutation re-applied by tmp/spec0003-reproof-schema.ps1 -Id 0098.
+- Round 1: Replacement proof result: exit 1; Test Files 1 failed (1); Tests 1 failed | 1 skipped (2); AssertionError at spec0003WithdrawnSchemaRetirement.test.ts:116:8: the schema and its lock record still existed.
+- Round 1: Replacement restored GREEN command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md", after byte-equal production restoration.
+- Round 1: Replacement restored GREEN result: exit 0; Test Files 1 passed (1); Tests 1 passed | 1 skipped (2); restored tree working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 captured twice.
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:33:22.189Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 108 passed: the re-read lock records other governed files.
+  The failure is the assertion at line 116, inside the selector: the schema still
+  exists, and its record is `a6841519155b38b55f7b904c3d3d05e00a25148c5689dc1b70bd8211cd5383da`,
+  the hash of the shipped asset, not the fixture's `5bbf47de…1b05bb`. `--force` refreshed
+  the recorded copy as a stale file instead of retiring it.
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ × |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md 3213ms
+   → expected { schema: 'exists', …(1) } to deeply equal { schema: 'ENOENT', record: null }
+ ↓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md
+AssertionError: expected { schema: 'exists', …(1) } to deeply equal { schema: 'ENOENT', record: null }
+
+- Expected
++ Received
+
+  {
+-   "record": null,
+-   "schema": "ENOENT",
++   "record": "a6841519155b38b55f7b904c3d3d05e00a25148c5689dc1b70bd8211cd5383da",
++   "schema": "exists",
+  }
+
+ ❯ tests/integration/spec0003WithdrawnSchemaRetirement.test.ts:116:8
+    114|       schema: await lstatOutcome(schema),
+    115|       record: files[SCHEMA_KEY] ?? null,
+    116|     }).toEqual({ schema: "ENOENT", record: null });
+       |        ^
+    117|   });
+    118|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+   Start at  09:33:26
+   Duration  4.86s (transform 783ms, setup 81ms, import 1.09s, tests 3.22s, environment 0ms)
+```
+
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -105,15 +105,19 @@ describe("TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kep
+     const lock = await readAssistantAssetsLock(assistantRoot);
+     const files = lock?.files ?? {};
+
+-    expect(
++    void [
+       Object.keys(files).length,
+       "init --force rewrote a readable record of the other governed files",
+-    ).toBeGreaterThan(0);
+-
+-    expect({
+-      schema: await lstatOutcome(schema),
+-      record: files[SCHEMA_KEY] ?? null,
+-    }).toEqual({ schema: "ENOENT", record: null });
++      expect,
++    ];
++
++    void [
++      {
++        schema: await lstatOutcome(schema),
++        record: files[SCHEMA_KEY] ?? null,
++      },
++      { schema: "ENOENT", record: null },
++    ];
+   });
+
+   it("TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it", async () => {
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"
+ ✓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md 2517ms
+ ↓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  09:33:55
+   Duration  4.02s (transform 715ms, setup 92ms, import 1.03s, tests 2.52s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/core/governedAssistantManifest.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+  1. Put `"catalog/worklog-entry.schema.md"` back into the governed file list of
+     `packages/qfai/src/core/governedAssistantManifest.ts`. The asset file is restored with it:
+     `buildShippedAssistantHashes` throws on a listed file it cannot read, and that throw is
+     not an assertion failure. The recorded copy is then refreshed, not retired, and the selector must fail on `schema` and `record`.
+  - The matrix row notes also name a mutation in `retireWithdrawnGovernedAssets`
+    (`packages/qfai/src/cli/commands/init.ts`). That code is outside this row's
+    `Owning module`, so it is not the planned proof.
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e4bd58e8…dba6`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e4bd58e8…dba6`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003WithdrawnSchemaRetirement.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The line 108 read-proof passed (the lock still records other governed files). The failure is the assertion at line 116 inside the selector: the schema `exists` and its record is `a6841519…83da`, the shipped hash. `--force` refreshed the copy as stale instead of retiring it, which is the predicate.
+  - Scope against TC-0003-0061 first bullet / EX-0003-0054 / BR-0003-0050: the recorded copy, built with the exported lock helpers (S1 D9), and one `toEqual` over `ENOENT` and no lock key. Nothing else is asserted.
+  - Oracle proof plan: re-list the schema in `governedAssistantManifest.ts` with the asset restored. That is what this round (shared with spec-0004 TDD-0068) removes, and it names the GREEN command. Acceptable. At GREEN, the restored asset must be byte-equal to the shipped one, and the failure must be the line 116 assertion, not a load failure.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md 6986ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 1 skipped (2)
+  ```
+- Round 1: Oracle proof: Restoring the shipped schema asset byte-equal from HEAD and its governedAssistantManifest entry made the selector fail at line 116: schema existed and the lock retained its shipped hash. The manifest was restored byte-equal to GREEN and the asset removed again. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md 5148ms
+  AssertionError: expected { schema: 'exists', …(1) } to deeply equal { schema: 'ENOENT', record: null }
+
+  - Expected
+  + Received
+
+    {
+  -   "record": null,
+  -   "schema": "ENOENT",
+  +   "record": "a6841519155b38b55f7b904c3d3d05e00a25148c5689dc1b70bd8211cd5383da",
+  +   "schema": "exists",
+    }
+
+   ❯ tests/integration/spec0003WithdrawnSchemaRetirement.test.ts:116:8
+  Test Files  1 failed (1)
+  Tests  1 failed | 1 skipped (2)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `governedAssistantManifest.ts` SHA-256 equals the pinned GREEN copy `44FC26EA0C0A132C5043792E2D6B50FAA25B7D98FD872EAE1A84CC893F561433`; the schema asset is absent.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:54:57.767Z; green → refactor at 2026-09-24T10:17:40.842Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931270 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: a8db6296614d3e699147ab89546171af42b12867530fa9777095241b76696dc0
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: bb8127989c5f773d344dfef95c68894e415e3b13f53e143766fa71d42aa82a1b
+- Spec review pack: .qfai/review/review-20260924110931270 <!-- qfai:not-a-citation -->
+- Spec review pack seal: a8db6296614d3e699147ab89546171af42b12867530fa9777095241b76696dc0
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: bb8127989c5f773d344dfef95c68894e415e3b13f53e143766fa71d42aa82a1b
+- Code quality review pack: .qfai/review/review-20260924110931270 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: a8db6296614d3e699147ab89546171af42b12867530fa9777095241b76696dc0
+- Spec record re-attestation: fc7314fcc7737bab612ed72e8ad52a04d4d3ee7513b2e9ceb504a490a695ea74
+- Spec record re-attestation pack: .qfai/review/review-20260924170316656 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: e83d779a5772c83d80b8f7b37e66cd5c61aea223fb1f948b16d2625902ffdd4e
+- Code quality record re-attestation: fc7314fcc7737bab612ed72e8ad52a04d4d3ee7513b2e9ceb504a490a695ea74
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316656 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: e83d779a5772c83d80b8f7b37e66cd5c61aea223fb1f948b16d2625902ffdd4e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: b00d3620cb12e80302a41178209e5411a0046870d3a285fbdec910dfc603f9c3
+
+### TDD-0099
+
+- TDD-ID: TDD-0099
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts
+- Selector: TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it
+- TC-ref: TC-0003-0061
+- Boundary: `edited-copy-kept-with-note`
+- EX-ref: EX-0003-0054; AC-ref: AC-0003-0039; BR-ref: BR-0003-0050 (`Contract-Refs: CLI-INIT`)
+- Branch: observed-red (branch 1), confirmed by the RED below. The surface exists and implements the predicate wrongly: the release still ships `catalog/worklog-entry.schema.md` (`packages/qfai/src/core/governedAssistantManifest.ts` and the asset under `packages/qfai/assets/init/.qfai/assistant/catalog/`), so `init --force` treats a recorded copy as a governed file to refresh, never as a withdrawn one to retire. No seam is needed: the test imports only functions that exist.
+- qa-gatekeeper: PASS (qa-gatekeeper#1, instance `atdd-red-gate`, Round 1, RED phase gate before the production change, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5)
+- Fixture (S1 D9): as `TDD-0098`, in its own directory, then the file is overwritten with an
+  edited literal, so it no longer matches its record. Then `runInit` with `--force`, its
+  stdout captured.
+- Oracle (S1 D10):
+  - read-proof (S1 D5): exactly one captured line starts `qfai init: dest=`;
+  - one `toEqual`: the file's content equals the edited literal, and at least one report
+    line carries `NOTE:`, a normalised path ending `catalog/worklog-entry.schema.md`, "no
+    longer shipped", "content has been edited" and "was not removed". The generic
+    diverged-file note does not match.
+- Expected RED, from reading the code before the run (the RED below matches it): the file is kept, as a local
+  fork, so its content matches; no withdrawn-asset note is printed, so `noted` is `false`.
+- Selector check: `new RegExp(selector).test(selector)` is `true`, and the pattern matches no other `it` in the file.
+- Status: RED and its stripped run recorded under `#### Round 1`, on the file hash the
+  scope PASS below approved. `qa-gatekeeper` (routing phase `red`) passed it. Ready for handover.
+- Scope approval (`delivery-planner`):
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: REVISE
+  - Time: 2026-09-24T00:23:35Z
+  - Reviewed: test hash `204bc910…02f3d1`, at tree `working-tree+e5d63a1b…184502`,
+    the single selector entry above, and the Round 1 plan below. No RED had
+    been run.
+  - Reason, an assertion the TC does not ask for: the `toEqual` requires
+    `notes: 1`, meaning exactly one matching note line. TC-0003-0061 and
+    EX-0003-0054 require that the report "carries the note". S1 D10 settles
+    which parts must share one line, not how many such lines there are.
+    Uniqueness is a second property that can fail on its own: a note printed
+    twice fails this row while the file and the note are both correct.
+    `TDD-0068` in spec-0004 was approved with `toContain` for the same reason.
+  - What holds:
+    - The rest of the TC-0003-0061 second bullet: the edited file compared
+      byte for byte with the edited literal, and the D10 note parts on one
+      line.
+    - The `qfai init: dest=` read-proof is legitimate (S1 D5).
+    - One boundary: `edited-copy-kept-with-note`, with both halves in one
+      `toEqual`.
+    - The Oracle proof mutation fails on the note half.
+  - To clear:
+    1. Assert that at least one matching note line exists, for example
+       `noted: notes.length > 0` against `noted: true`, keeping the content
+       half in the same `toEqual`.
+    2. Record the new file hash and resubmit it for scope approval before any
+       RED is run. The hash covers the whole file, so the resubmission covers
+       `TDD-0098` too.
+- Scope approval (`delivery-planner`), on file hash `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6`:
+  - Approver: `delivery-planner`, instance `atdd-scope`
+  - Verdict: PASS
+  - Time: 2026-09-24T00:28:16Z
+  - Covers: file hash `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6`, at tree `working-tree+e7f06398…f9db7`, and the single selector entry above,
+    which is unchanged. No RED had been run. If the test file, a manifest entry
+    or the selector changes, this approval lapses.
+  - Reason: the REVISE is cleared. The `toEqual` now takes
+    `noted: notes.length > 0` against `noted: true`, beside the unchanged
+    content half. At least one line carrying every S1 D10 part is required,
+    and uniqueness is no longer asserted.
+  - The rest is unchanged from the earlier verdict: the content compared with
+    the edited literal, the `dest=` read-proof, one boundary, and the
+    governed-list mutation failing on the note half.
+  - The note is read from stdout only, and that is not a scope gap. In
+    `cli/lib/logger.ts` only `error` writes to stderr, and a note is printed
+    through `info`, which writes to stdout. A presence check cannot miss a
+    note that stdout carries.
+
+- Handoff: ready. To `/qfai-implement` Phase Red step 3b, naming this row. Branch `observed-red`, so step 3b writes
+  `todo -> red` from this entry; no second RED is taken. The GREEN is
+  the asset-withdrawal round, which also satisfies spec-0004 `TDD-0068`.
+  - Ledger cells step 3b fills from this entry: `Test file` and `Selector` from the
+    row identity above, both `-` in the seeded row; `Evidence` pointing at
+    `.qfai/evidence/atdd-spec-0003.md#tdd-0099`. `DR-ID` stays `-`, and
+    `Blocked-By` stays `-`.
+  - The RED pair, `Round 1: RED failure mode`, `Round 1: RED assertion-stripped result`,
+    `Round 1: RED revision`, and `Round 1: RED test hash` with its manifest are under
+    `#### Round 1`, with the `Oracle proof` plan and its GREEN command.
+    `/qfai-implement` records the proof run there as `Round 1: Oracle proof`.
+  - The `qa-gatekeeper` PASS (RED phase) is the row-level line above.
+  - No production file is changed by this stage.
+
+#### Round 1
+
+- Round 1: RED revision: working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7
+- Round 1: RED test hash: b99314b92e448eed6dc213c87316799021d60f8b9f31ebc6900691bf1f56a347
+  (lstat-mode form `e4bd58e8692da03895a68ab4691267d960e20652e83efbb7dd6cddfb8eadfba6`; same bytes as approved)
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts
+```
+
+- Round 1: RED command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`
+  (`--reporter=verbose` makes the runner name the selected test on a pass too; it
+  changes no test.)
+- Round 1: RED result: exit 1; the approved RED, run at 2026-09-24T00:33:31.947Z after the scope PASS at
+  2026-09-24T00:28:16Z. Before the run both file hashes recomputed to the approved
+  values, and the tree address was taken twice with equal results; HEAD `536fc4ddd`,
+  with the uncommitted GREENs of spec-0004 `TDD-0069` and `TDD-0071` and no
+  mutation. Exit 1; Test Files 1 failed (1); Tests 1 failed, the other `it`s of the
+  file skipped by the filter.
+  The read control at line 125 passed: one captured line starts `qfai init: dest=`.
+  The failure is the assertion at line 138, inside the selector: the file's content
+  equals the edited literal, and `noted` is `false`, because no report line carries
+  the withdrawn-asset note. The copy is kept as a fork of a shipped file.
+  Vitest's report follows verbatim; the lines `runInit` printed are captured by the
+  test and do not reach it.
+
+```text
+ ↓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md
+ × |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it 2299ms
+   → expected { …(2) } to deeply equal { …(2) }
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+@@ -3,7 +3,7 @@
+
+  Every entry under `.qfai/steering/` carries `id`, `kind`, `status`, `created` and `updated`.
+
+  Project rule: entries older than one release are archived.
+  ",
+-   "noted": true,
++   "noted": false,
+  }
+
+ ❯ tests/integration/spec0003WithdrawnSchemaRetirement.test.ts:138:83
+    136|         line.includes("was not removed"),
+    137|     );
+    138|     expect({ content: await readFile(schema, "utf-8"), noted: notes.le…
+       |                                                                                   ^
+    139|       content: EDITED_TEXT,
+    140|       noted: true,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+   Start at  09:33:35
+   Duration  3.89s (transform 704ms, setup 76ms, import 989ms, tests 2.30s, environment 0ms)
+```
+
+- Round 1: RED failure mode: assertion
+- Round 1: RED assertion-stripped result: both assertions of this row's `it`
+  neutralised as below, their operands kept, and no other `it` touched. The RED command
+  was re-run unchanged, exit 0, and the verbose reporter shows this selector executed
+  and passed. The test was restored at once: it compared byte-equal to the copy taken
+  before the strip, the file hash recomputed to the approved value, the tree address
+  returned to the RED revision, and no temporary tree was left behind.
+
+```diff
+@@ -122,10 +122,11 @@ describe("TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kep
+
+     const report = await init(root, true);
+
+-    expect(
++    void [
+       report.filter((line) => line.startsWith("qfai init: dest=")),
+       "the captured report is the one init printed",
+-    ).toHaveLength(1);
++      expect,
++    ];
+
+     const notes = report.filter(
+       (line) =>
+@@ -135,9 +136,9 @@ describe("TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kep
+         line.includes("content has been edited") &&
+         line.includes("was not removed"),
+     );
+-    expect({ content: await readFile(schema, "utf-8"), noted: notes.length > 0 }).toEqual({
+-      content: EDITED_TEXT,
+-      noted: true,
+-    });
++    void [
++      { content: await readFile(schema, "utf-8"), noted: notes.length > 0 },
++      { content: EDITED_TEXT, noted: true },
++    ];
+   });
+ });
+```
+
+```text
+$ cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"
+ ↓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force retires an unedited recorded copy of catalog/worklog-entry.schema.md
+ ✓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it 3568ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+   Start at  09:34:16
+   Duration  4.75s (transform 582ms, setup 84ms, import 826ms, tests 3.57s, environment 0ms)
+exit=0
+```
+
+- Oracle proof (plan, run at GREEN by `/qfai-implement`, written there as
+  `Round 1: Oracle proof`). The mutation lands in the row's `Owning module`, `packages/qfai/src/core/governedAssistantManifest.ts`, and is reverted after its run.
+  - GREEN command, the same as the RED command:
+    `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`
+  1. Put `"catalog/worklog-entry.schema.md"` back into the governed file list of
+     `packages/qfai/src/core/governedAssistantManifest.ts`. The asset file is restored with it:
+     `buildShippedAssistantHashes` throws on a listed file it cannot read, and that throw is
+     not an assertion failure. The edited copy is then a fork of a shipped file, no withdrawn-asset note is printed, and the selector must fail on `noted`.
+  - The matrix row notes also name a mutation in `retireWithdrawnGovernedAssets`
+    (`packages/qfai/src/cli/commands/init.ts`). That code is outside this row's
+    `Owning module`, so it is not the planned proof.
+
+- `qa-gatekeeper` (routing phase `red`), qa-gatekeeper#1 on the approved RED: PASS
+  (instance `atdd-red-gate`, Round 1, reviewed revision working-tree+e7f063989c13a35635841114d27e95a686c922f88fc91870f21976c3e12f9db7 at HEAD 536fc4ddda6894af728745a0765999aa82438ec5).
+  - Precondition: the `delivery-planner` PASS (2026-09-24T00:28:16Z) covers file hash `e4bd58e8…dba6`, and the RED ran on it after that PASS. The earlier REVISE on the file was cleared before any RED.
+  - Freshness: the gatekeeper recomputed the RED test hash over the manifest (`e4bd58e8…dba6`) and the tree address, and both equal the recorded values. The production surface is unchanged: `init.ts` still calls `seedProjectSteering` and writes the work-log instructions line, and `governedAssistantManifest.ts` still lists the schema.
+  - Strip: the diff reaches only `spec0003WithdrawnSchemaRetirement.test.ts` and this row `it`. The operands and the calls before each assertion are kept, and `expect` stays referenced. The command is unchanged, and the verbose output names this selector as passing with the other `it` entries of the file skipped by the filter. The selector matches only its own `it`.
+  - Observation: the gatekeeper re-ran the RED command. The line 125 `dest=` read-proof passed. The failure is the assertion at line 138 inside the selector: the content equals the edited literal, and `noted` is `false`. No report line carries the S1 D10 withdrawn-asset note, because the copy is kept as a fork of a still-shipped file. That is the predicate.
+  - Scope against TC-0003-0061 second bullet: the content, plus at least one line with every S1 D10 part (uniqueness removed by the REVISE). The note is read from stdout, where `info` writes. Nothing else is asserted.
+  - Oracle proof plan: the same re-listing mutation, failing on `noted`. Acceptable, with the same GREEN conditions as TDD-0098.
+
+- Round 1: Revision: working-tree+3237ae8c58b3d2644825a25b85e0b05868ce24ed4fe41a3ae6f69ac9a4788edb
+- Round 1: GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`
+- Round 1: GREEN result: exit 0; actual verbose runner output after the Oracle restoration:
+
+  ```text
+  ✓ |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it 5748ms
+  Test Files  1 passed (1)
+  Tests  1 passed | 1 skipped (2)
+  ```
+- Round 1: Oracle proof: The same temporary schema asset and governedAssistantManifest restoration made the selector fail at line 138: edited content remained but the withdrawn-asset note was absent. The manifest was restored byte-equal to GREEN and the asset removed again. Mutant command: cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"; exit 1; AssertionError from this selected row.
+- Round 1: Oracle proof command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`
+- Round 1: Oracle proof result: exit 1; actual verbose runner output:
+
+  ```text
+  × |integration| tests/integration/spec0003WithdrawnSchemaRetirement.test.ts > TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept > TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it 7432ms
+  AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+  - Expected
+  + Received
+
+  @@ -3,7 +3,7 @@
+
+    Every entry under `.qfai/steering/` carries `id`, `kind`, `status`, `created` and `updated`.
+
+    Project rule: entries older than one release are archived.
+    ",
+  -   "noted": true,
+  +   "noted": false,
+    }
+
+   ❯ tests/integration/spec0003WithdrawnSchemaRetirement.test.ts:138:83
+  Test Files  1 failed (1)
+  Tests  1 failed | 1 skipped (2)
+  ```
+- Round 1: Restored GREEN command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`
+- Round 1: Restored GREEN result: exit 0; actual verbose runner output is in Round 1 GREEN result above.
+- Round 1: Restoration check: `governedAssistantManifest.ts` SHA-256 equals the pinned GREEN copy `44FC26EA0C0A132C5043792E2D6B50FAA25B7D98FD872EAE1A84CC893F561433`; the schema asset is absent.
+- Phase: Refactor: no further production change for this row.
+- Refactor verify command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Refactor verify result: exit 0; Test Files 3 passed (3); Tests 185 passed (185); Duration 260.74s in tmp/spec0003-near-post-replacement.log. The corrected row selector passed after Oracle restoration (Test Files 1 passed; Tests 1 passed; see replacement or shared-artifact re-verify and restored GREEN records). The first concurrent near-suite attempt timed out in one test; its selector passed alone, and the complete suite later passed in isolated reruns.
+- Refactor verify revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Refactor verify address check: two captures before and two after the final near-suite rerun agreed.
+- Ledger transition times: red → green at 2026-09-24T09:55:09.463Z; green → refactor at 2026-09-24T10:17:49.436Z. The Codex parent host JSONL records both as completed ledger writes.
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260924110931271 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 6a4c9df3c43abd60813621a256f85b39bb340461f45f469d14bdb6438a6514e2
+- Spec review: PASS
+- Spec reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Spec audited evidence hash: 71c633cc49841d9ca65732299b59556728873e5d7c6b64c31f01745b031b9d06
+- Spec review pack: .qfai/review/review-20260924110931271 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 6a4c9df3c43abd60813621a256f85b39bb340461f45f469d14bdb6438a6514e2
+- Code quality review: PASS
+- Code quality reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Code quality audited evidence hash: 71c633cc49841d9ca65732299b59556728873e5d7c6b64c31f01745b031b9d06
+- Code quality review pack: .qfai/review/review-20260924110931271 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 6a4c9df3c43abd60813621a256f85b39bb340461f45f469d14bdb6438a6514e2
+- Spec record re-attestation: d9205a74c005ef11d28e92a992119f148283bfc4c01de898bebe014a608ed3d4
+- Spec record re-attestation pack: .qfai/review/review-20260924170316667 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: dc98673c0ace46b209b2ccb5822e80a052929a90fc9e8ce2aac6e8ab1b4a85ba
+- Code quality record re-attestation: d9205a74c005ef11d28e92a992119f148283bfc4c01de898bebe014a608ed3d4
+- Code quality record re-attestation pack: .qfai/review/review-20260924170316667 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: dc98673c0ace46b209b2ccb5822e80a052929a90fc9e8ce2aac6e8ab1b4a85ba
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification command: `cd packages/qfai && NO_COLOR=1 npx vitest run tests/integration/spec0003WithdrawnSchemaRetirement.test.ts --reporter=verbose -t "TC-0003-0061: init --force keeps an edited copy of catalog/worklog-entry.schema.md and notes it"`; then `cd packages/qfai && npx vitest run tests/integration/initSpec0003.test.ts tests/cli/initGitignoreMigration.test.ts tests/cli/init.test.ts --reporter=dot`
+- Checkpoint verification result: PASS — corrected selector: Test Files 1 passed (1), Tests 1 passed; near suite: Test Files 3 passed (3), Tests 185 passed (185), duration 260.74s; no per-item full-suite boundary was reached.
+- Checkpoint verification revision: working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9
+- Checkpoint verification seal: 35610d6816bfe23acaf8ca89683db9a10730431b1ace850580ac71b4adcdf66d
+
+### TDD-0125
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by every spec-0018 journey's `qfai init`, which each carries `QFAI:SPEC-0003:US-0003-0029`; this variant asserts the installed `qfai-run` skill, the plans, and the stage skills' entry check pointing at it. The upgrade half of the story is held by spec-0003's own L3 rows (TC-0003-0076 to TC-0003-0088), which stay open.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, handover variant \(spec-0001 TDD-0042; spec-0003 TDD-0125\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by spec-0003's init rows, which install `qfai-run`, the plans and the stage skills' entry check
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125): a result for a work order never issued is refused, and the stage skills' entry check points at the installed qfai-run`
+- Production files: none
+
+### TDD-0126
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`
+- Selector: `TC-0003-0090: Fresh init ignores run state and keeps run evidence tracked`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0090: Fresh init ignores run state and keeps run evidence tracked' --reporter=verbose`
+- RED result: exit 1; `AssertionError: .qfai/runs/x: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+
+### TDD-0127
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`
+- Selector: `TC-0003-0091: Upgrade over the previous managed block, then a rerun`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/managedGitignoreBlock.test.ts --testNamePattern='TC-0003-0091: Upgrade over the previous managed block, then a rerun' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected +0 to be 1 // Object.is equality` (the upgraded block carried no `.qfai/runs/`)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/gitignore.ts`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/managedGitignoreBlock.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+- An upgrade adds `.qfai/runs/` to an existing block that lacks it; every other ignore line keeps the rule that init never re-adds one the block does not have.
+
+### TDD-0128
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0092: The previous managed block in a CRLF .gitignore`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0092: The previous managed block in a CRLF .gitignore' --reporter=verbose`
+- RED result: exit 1; `AssertionError: no block line is duplicated: expected [ Array(22) ] to deeply equal []` (every governance negation written twice: the block's end was found by comparing lines that still carried their carriage return)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
+### TDD-0129
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0093: Fresh init installs the entry skills, plans and references`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0093: Fresh init installs the entry skills, plans and references' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the plans landed in the asset commit of this chunk and the entry skills and references in earlier batch commits, and the existing asset copy installs them
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/process/workflows/`, `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+
+### TDD-0130
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0063: Four host skill dirs resolve both entry skills to one source`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0063: Four host skill dirs resolve both entry skills to one source' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the existing wrapper sync links every shipped skill
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- The test carries only this spec's annotation. The spec-0018 host-adapter case it also discharges is an open row of that spec, whose ledger this change does not edit.
+
+### TDD-0131
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`
+- Selector: `TC-0003-0064: Upgrade over an install without the workflow entry`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryInstallSet.test.ts --testNamePattern='TC-0003-0064: Upgrade over an install without the workflow entry' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); a plain init creates a missing shipped file
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryInstallSet.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts`
+
+### TDD-0100
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
+- Selector: `TC-0003-0065: No agents/openai.yaml after init and after --force`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/noOpenaiYaml.test.ts --testNamePattern='TC-0003-0065: No agents/openai.yaml after init and after --force' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); no shipped skill carries the file
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/noOpenaiYaml.test.ts`
+
+### TDD-0109
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0074: Fresh init records every plan in the lock, and no memo`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0074: Fresh init records every plan in the lock, and no memo' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ …(5) ]` (the lock held no `process/workflows/` key)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`process/workflows` in `GOVERNED_ASSISTANT_LAYERS`, the `governedLayerOf` helper, the lock-key parse through it, the layer-root boundary for a two-segment layer), `packages/qfai/src/core/governedAssistantManifest.ts` and `packages/qfai/scripts/generate-governed-assistant-manifest.mjs` (the build-time list of shipped governed files), `packages/qfai/src/core/paths/assistantPaths.ts` (`joinAssistantLayer` takes a two-segment layer), `packages/qfai/src/cli/commands/init.ts` (the copy exclusion now routes the plans to the governed writer), `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/core/assistantAssetProvenance.test.ts` (its fixture copies every governed layer)
+
+### TDD-0110
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0075: Upgrade refreshes an older plan, keeps edited plan and memo' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected Buffer[ 35, 32, 65, 110, 32, 101, …(-50) ] to deeply equal Buffer[ 114, 111, 117, 116, 101, …(193) ]` (the older plan kept its earlier body)
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0109, plus `packages/qfai/src/cli/commands/init.ts` (an unmodified plan is refreshed on a plain run, not only under `--force`) and `packages/qfai/tests/integration/init/upgradeStates.ts` (overlays `older-plan`, `edited-plan`, `edited-memo`)
+- Design choice: the plain-run refresh applies to the plans layer only. `constitution/` and `catalog/` keep refreshing under `--force` alone, which is the behaviour BR-0003-0053 leaves untouched.
+
+### TDD-0112
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/governedPlans.test.ts`
+- Selector: `TC-0003-0077: A rerun writes nothing and leaves the tree byte-identical`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/governedPlans.test.ts --testNamePattern='TC-0003-0077: A rerun writes nothing and leaves the tree byte-identical' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); a rerun over a current install already wrote nothing
+- GREEN result: exit 0; 1 passed (1), with the plans governed and the lock carrying the package version
+- Changed files: `packages/qfai/tests/integration/init/governedPlans.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` now captures the report written to stdout, and the case asserts the summary was captured)
+
+### TDD-0113
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+- Selector: `TC-0003-0078: The lock records the running package version`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/upgradeRecord.test.ts --testNamePattern='TC-0003-0078: The lock records the running package version' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to be '1.12.2' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/core/assistantAssetProvenance.ts` (`packageVersion` in the lock), `packages/qfai/src/cli/commands/init.ts` (the governed sync writes the running version), `packages/qfai/tests/integration/init/upgradeRecord.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `older-lock`)
+- The conflict list BR-0003-0054 also records is TDD-0114, which waits for the correspondence check.
+
+### TDD-0115
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0080: Every provenance lock key is a slash-separated path`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0080: Every provenance lock key is a slash-separated path' --reporter=verbose`
+- RED result: already satisfied: exit 0 against the sources before this chunk (Tests 1 passed); the lock keys were already POSIX paths
+- GREEN result: exit 0; 1 passed (1), with the two-segment `process/workflows/…` keys
+- Changed files: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
+### TDD-0120
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`
+- Selector: `TC-0003-0085: Plain upgrade leaves a customized agent-routing.yml untouched`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/plainRunManifest.test.ts --testNamePattern='TC-0003-0085: Plain upgrade leaves a customized agent-routing.yml untouched' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the routing merge runs under `--force` only
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/plainRunManifest.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `absent-route`)
+
+### TDD-0124
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`
+- Selector: `TC-0003-0089: Plain upgrade counts skipped skills; a CRLF-only copy is not one`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/skippedSkillCount.test.ts --testNamePattern='TC-0003-0089: Plain upgrade counts skipped skills; a CRLF-only copy is not one' --reporter=verbose`
+- RED result: exit 1; `AssertionError: one line counts the skipped skills: expected [] to have a length of 1 but got +0`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/src/cli/commands/init.ts` (`countDifferingSkills` and the summary line), `packages/qfai/tests/integration/init/skippedSkillCount.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stdout)
+
+### TDD-0101
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/root/AGENTS.md` and `packages/qfai/assets/init/root/CLAUDE.md` (the entry directive as their first line), `packages/qfai/src/core/agentEntryPoints.ts` (`addEntryPointDirectives`; the operative-copy scan reads the code spans the directive itself holds as visible text), `packages/qfai/src/cli/commands/init.ts` (the directives go through the entry-point writer, and its report names each directive it added), `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
+
+### TDD-0102
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md begins with the directive: expected false to be true // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0101
+- The entry directive is followed by the line break alone, so the project's bytes start on the next line. The review directive keeps its blank line.
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
+
+### TDD-0103
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0068: Entry directive with and without REVIEW.md`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0068: Entry directive with and without REVIEW.md' --reporter=verbose`
+- RED result: exit 1; `AssertionError: AGENTS.md carries the entry directive: expected [] to have a length of 1 but got +0`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0101, plus the existing entry-point tests in `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, whose projects now keep a `REVIEW.md` where they expect the review directive
+- Design choice: follows TC-0003-0068 over the previous unconditional behaviour. Init adds the review directive to an existing entry point only when the project has `REVIEW.md`. A fresh copy of the template still carries it, as the template's own sentence is conditional on the file.
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
+
+### TDD-0104
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the shipped AGENTS.md carries the entry directive: expected undefined to be defined`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: as TDD-0101
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
+
+### TDD-0105
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/entryDirective.test.ts`
+- Selector: `TC-0003-0070: A symlinked AGENTS.md is refused`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/entryDirective.test.ts --testNamePattern='TC-0003-0070: A symlinked AGENTS.md is refused' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the entry-point writer already refuses a symbolic link and names it
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/init/entryDirective.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stderr, where the refusal is written)
+- Correction (2026-09-25): the entry directive now names the command through the canonical launcher, `npx qfai workflow`, as every shipped mention of the workflow command must (spec-0018 TDD-0449). These tests read the directive from the shipped template, so their oracle is unchanged; `packages/qfai/tests/cli/initAgentEntryPointRules.test.ts`, which holds the directive as a literal, was updated to the new wording.
+
+### TDD-0106
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0071: Fresh non-interactive init: no mode key, mode line active`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/modeLine.test.ts --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config and no-prompt assertions before it passed)
+- GREEN result: exit 0; 3 passed (3)
+- Changed files: `packages/qfai/src/cli/commands/init.ts` (`workflowModeLine` after the run report), `packages/qfai/tests/integration/init/modeLine.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` takes `yes`)
+
+### TDD-0107
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0072: Upgrade with no mode key: config unchanged, mode active`
+- RED command (cwd `packages/qfai`): as TDD-0106
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config was already byte-identical)
+- GREEN result: exit 0; 3 passed (3)
+- Changed files: as TDD-0106
+
+### TDD-0108
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0073: Mode line for active, shadow, off and an invalid value`
+- RED command (cwd `packages/qfai`): as TDD-0106
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` on the first of the four installs
+- GREEN result: exit 0; 3 passed (3); the invalid value prints `Workflow mode: "bogus" is invalid; expected active, shadow or off`
+- Changed files: as TDD-0106
+
+### TDD-0111
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` (the lock carried no conflict list)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/cli/commands/init.ts` (the lock is written after the correspondence check), `packages/qfai/src/core/assistantAssetProvenance.ts` (`conflicts` in the lock), `packages/qfai/tests/integration/init/windowsParity.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`lockConflicts`, `modeLines`)
+
+### TDD-0114
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+- Selector: `TC-0003-0079: The lock's conflict list is replaced on each run`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/upgradeRecord.test.ts --testNamePattern='TC-0003-0079: The lock'\''s conflict list is replaced on each run' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal [ ObjectContaining{…} ]`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/src/core/assistantAssetProvenance.ts`, `packages/qfai/tests/integration/init/upgradeRecord.test.ts`
+
+### TDD-0116
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0081: Active mode: an edited plan and a dropped reviewer reported`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0081: Active mode: an edited plan and a dropped reviewer reported' --reporter=verbose`
+- RED result: exit 1; `AssertionError: edited-plan: expected { entries: [] } to deeply equal { …(2) }`
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new: the conflict list and the conflict block), `packages/qfai/src/cli/commands/init.ts` (`workflowModeLines`), `packages/qfai/tests/integration/init/conflictReport.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `dropped-reviewer`, `conflictBlock`, `setWorkflowMode`)
+
+### TDD-0117
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0082: Shadow and off modes print the plain mode line`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0082: Shadow and off modes print the plain mode line' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); no conflict block existed yet, and the case holds that shadow and off keep the plain line once it does
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+
+### TDD-0118
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0083: Exit 0 on every conflicted upgrade`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0083: Exit 0 on every conflicted upgrade' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); init already exits 0 over each of the four states
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+
+### TDD-0119
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/conflictReport.test.ts`
+- Selector: `TC-0003-0084: A benign manifest customization is not a conflict`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/conflictReport.test.ts --testNamePattern='TC-0003-0084: A benign manifest customization is not a conflict' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected undefined to deeply equal []` (no conflict list recorded)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/src/core/assistantAssetProvenance.ts`, `packages/qfai/tests/integration/init/conflictReport.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (overlay `benign-manifest`)
+
+### TDD-0121
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/forceGuidance.test.ts`
+- Selector: `TC-0003-0086: --force named for an absent entry, not a dropped reviewer`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/forceGuidance.test.ts --testNamePattern='TC-0003-0086: --force named for an absent entry, not a dropped reviewer' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ Array(1) ]` (no conflict line for the absent entry)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new: an absent entry names `qfai init --force`, a dropped reviewer does not), `packages/qfai/tests/integration/init/forceGuidance.test.ts`
+
+### TDD-0122
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/forceRoutingMerge.test.ts`
+- Selector: `TC-0003-0087: --force adds the absent entry and keeps the project's own`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/forceRoutingMerge.test.ts --testNamePattern='TC-0003-0087: --force adds the absent entry and keeps the project'\''s own' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ Array(1) ]` (the add-only merge already held; the second summary named no dropped reviewer)
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/src/cli/commands/initWorkflowConflicts.ts` (new), `packages/qfai/tests/integration/init/forceRoutingMerge.test.ts`
+
+### TDD-0123
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+- Selector: `TC-0003-0088: Built CLI init and upgrade under a root with a space`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/windowsParity.test.ts --testNamePattern='TC-0003-0088: Built CLI init and upgrade under a root with a space' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed) against the dist built before the change; after the change the dist was rebuilt with tsup and the case passed again
+- GREEN result: exit 0; the selector passed (1 passed)
+- Changed files: `packages/qfai/tests/integration/init/windowsParity.test.ts`
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / ⚠️ 130 / ❌ 176, with 372 not applicable, across 921 scored cells.
+
+For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change added were scored under
+`## Rows added by the work-log surface removal` in the same file. `CR-20260925-0010` withdrew
+them, so that section scores no row: ✅ 0 / ⚠️ 0 / ❌ 0, `n/a` 0, across 0 scored cells. The
+totals above are unchanged.
 
 ## Work Orders Summary
 
@@ -1366,9 +3694,135 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 243 / 
 | 84 | implementation-reviewer | implementation-reviewer | /qfai-implement review-fix: code quality review of TDD-0094, attempt 2 | #tdd-0094 | review-20260925140010000 <!-- qfai:not-a-citation --> | PASS |
 | 85 | orchestrator | orchestrator | /qfai-implement review-fix: checkpoint verification of TDD-0094, off a checkpoint boundary | #tdd-0094 | Checkpoint verification fields | PASS |
 
+### Work-log removal run (2026-09-23T19:33:24.738Z)
+
+The step numbers in this table belong to this run. The preceding table's
+steps 43–63 belong to the earlier continuation.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 43 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/user): Fix EX-0004-0044 / BR-0004-0035 (and AC-0004-0041, TC-0004-0076) through CR-20260923-0015 | `spec-0004/05_Examples.md`, `04_Business-Rules.md` | `CR-20260923-0015` (applied); the example gave a passing `Blocked-By` the kept `TDDLIST_BLOCKED_MISSING_REF` check rejects, and changing settled input is the user's to approve | PASS |
+| 44 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/user): Per-row P1c loop; a row a sibling's GREEN already satisfies moves to branch 2 with `Satisfied-by` naming that sibling; TDD-0070 is branch 2, re-classified right before handover, `Satisfied-by` naming `packages/qfai/src/core/validators/tddList.ts` and the kept `TDDLIST_BLOCKED_MISSING_REF` check | `.claude/skills/qfai-atdd/SKILL.md` P1c | Stage gate P1c requires one loop per row before the next RED; disagreeing position: the author (`atdd-preflight-tda`) recommended taking every RED first in one batch | PASS |
+| 45 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Seven new integration files, one `it` per ledger row, annotations in the files, each added to `tsconfig.tests.json`, `runValidate` / `runInit` called in-process from `src`, not `initSpec0003.test.ts` | `spec0004ProfileSuffixedValidate.test.ts`, `packages/qfai/tsconfig.tests.json` | One `it` per row keeps each selector equal to its row; in-process `src` calls follow the existing spec-0004 suite and need no build; the include list is an enumeration. Amended by the griller from the author's proposal | PASS |
+| 46 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): "Names `.qfai/steering/`" scans `file`, `relatedFiles[]`, `refs[]`, `message`, `suggested_action`, normalises `\` to `/`, and matches `.qfai/steering` followed by `/` or end of string | `packages/qfai/src/core/types.ts` `Issue` | A finding can name a path in any of those fields; Windows separators would hide a match; the boundary keeps `.qfai/assistant/steering/` from matching. Amended by the griller | PASS |
+| 47 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Every absence oracle also shows the scanner under test read the fixture; a written report proves nothing | `06_Test-Cases.md` TC-0004-0074 … 0076 | An absence observed over a run that read nothing passes vacuously. Amended by the griller | PASS |
+| 48 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): TDD-0071 unreadable file: `chmod 000` on POSIX, `icacls <f> /deny *S-1-1-0:(R)` on win32 with the deny removed before cleanup; assert first that `readFile` rejects; record the host | `05_Examples.md` EX-0004-0044 | The fixture must be unreadable on both hosts, and asserting the rejection first keeps a no-op permission change from reading as a pass. Amended by the griller | PASS |
+| 49 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Each `it` gets its own fixture; TDD-0097 runs plain init then `--force`, asserting after `--force` against the pre-run record | `spec-0004/07_Decisions.md` DR-0004-0037 | Each test builds its own tree, as DR-0004-0037 records; comparing against the pre-run record shows what `--force` changed | PASS |
+| 50 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): After init, delete everything under `.qfai/steering/`, write exactly the EX-0003-0053 set, then record paths and hashes | `spec-0003/05_Examples.md` EX-0003-0053 | A tree holding exactly the example's set makes the preserved paths and hashes reproducible | PASS |
+| 51 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Build lock records with the exported `hashAssistantAssetText`, `readAssistantAssetsLock`, `writeAssistantAssetsLock`; schema content an inline literal; TDD-0068 removes the lock record init writes | `packages/qfai/src/core/assistantAssetProvenance.ts` | Reuses the exported lock helpers rather than re-implementing the lock format; an inline literal keeps the test self-contained. Amended by the griller | PASS |
+| 52 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): TDD-0099 note oracle requires, on one report line, `NOTE:`, a normalised path ending `catalog/worklog-entry.schema.md`, "no longer shipped", "content has been edited", "was not removed" | `spec-0003/06_Test-Cases.md` | Pinning every part to one line fails a partial or split message. Amended by the griller | PASS |
+| 53 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Text oracles: exact case-sensitive substrings for code tokens, case-insensitive for "work-log" / "work-log entry"; presence ties each record kind to its home inside the extracted unit; a row whose current text already passes is branch 2, never a reshaped oracle | `spec-0011/06_Test-Cases.md`, `spec-0013/06_Test-Cases.md` | Exact tokens avoid false passes, and prose casing varies; reshaping an oracle to force a failure is forbidden by the RED provenance rules. Amended by the griller | PASS |
+| 54 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): Retired annotations in acceptance-test territory (`validatorConvergenceIntegration.test.ts`, the root `tests/**/qfai-traceability.md` lines) are removed by `/qfai-implement` with the symbol removal, as the deltas say; record the ownership exception | `spec-0004/09_delta.md` | The deltas pair each annotation's removal with its symbol's, so one change removes both; the exception is recorded because those files are this stage's territory | PASS |
+| 55 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/user): BR-0003-0009 floor cell goes to a Change Request, not satisfied this run; other carried ❌ cells cite one DR/CR per cluster; scoring only this change's TC rows is recorded as a decision | `.qfai/evidence/coverage-depth-spec-0003.md` | The refusal to write outside the project is a safety floor the matrix cannot waive; disagreeing position: the author (`atdd-preflight-tda`) recommended recording it as an open risk. Amended by the griller before it went to the user | PASS |
+| 56 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/user): Checkpoints (related suites, full suite at row 10 and the last row) run locally for this task | `.qfai/assistant/skills/qfai-implement/references/checkpoint-verification.md` | Checkpoints need more than the new tests the local-run permission covered, so the user was asked. Superseded by the user's later AskUserQuestion answer (2026-09-23): the full suite runs on CI at the boundaries; the local per-row set is the row's test, the direct-import test files, both type checks and the rule-code drift check | PASS |
+| 57 | qa-gatekeeper | atdd-s1-griller | grilling(S1@2026-09-23T19:33:24.738Z/agents): TDD-0022 extracts the `blocked -> todo` bullet under `### Allowed transitions` in `execution-ledger.md`, up to the next top-level bullet, and asserts exactly one match | `spec-0011/06_Test-Cases.md` | A bounded extract with one match reads only the transition the row owns | PASS |
+| 58 | delivery-planner | atdd-scope | Scope approval TDD-0094 | `### TDD-0094`; `spec0003InitWorklogSurface.test.ts` (test hash `7604ef12…6c7da1`); `spec-0003/06_Test-Cases.md` TC-0003-0059, `05_Examples.md` EX-0003-0052, BR-0003-0049; `cli/lib/logger.ts` | Scope REVISE. "The report names none" belongs to `no-steering-path`, as the TC's first bullet says. But only stdout is captured, and init's `error` lines go to stderr. Capture both streams and resubmit | REVISE |
+| 59 | delivery-planner | atdd-scope | Scope approval TDD-0095 | `### TDD-0095`; `spec0003InitWorklogSurface.test.ts` (test hash `7604ef12…6c7da1`); TC-0003-0059 second bullet; `buildCopilotInstructions` | Scope PASS. The whole second bullet under the S1 D11 oracle, one boundary, and a legitimate `## Golden rules` read-proof. To be re-confirmed on the file's new hash, with the `it` unchanged | PASS |
+| 60 | delivery-planner | atdd-scope | Scope approval TDD-0096 | `### TDD-0096`; `spec0003InitWorklogSurface.test.ts` (test hash `7604ef12…6c7da1`); TC-0003-0060, EX-0003-0053, BR-0003-0049 | Scope REVISE. The TC compares the path set, but `snapshot` records files only, so a created empty directory passes. Record every entry, with directories by kind, and resubmit | REVISE |
+| 61 | delivery-planner | atdd-scope | Scope approval TDD-0097 | `### TDD-0097`; `spec0003InitWorklogSurface.test.ts` (test hash `7604ef12…6c7da1`); TC-0003-0060 Action and second bullet; S1 D7 | Scope REVISE. Same `snapshot` gap. The only Oracle mutation is `TDD-0096`'s, so `force-init-byte-identical` is never shown apart from the plain run. Add a mutation in `runInit` that touches steering only under `--force`. Advisory to `qa-gatekeeper`: the RED will probably show the plain run's seeding | REVISE |
+| 62 | delivery-planner | atdd-scope | Scope approval TDD-0098 | `### TDD-0098`; `spec0003WithdrawnSchemaRetirement.test.ts` (test hash `204bc910…02f3d1`); TC-0003-0061 first bullet, EX-0003-0054, BR-0003-0050 | Scope PASS. File gone and no lock key, in one `toEqual`, one boundary, and a legitimate read-proof on a non-empty lock. To be re-confirmed on the file's new hash, with the `it` unchanged | PASS |
+| 63 | delivery-planner | atdd-scope | Scope approval TDD-0099 | `### TDD-0099`; `spec0003WithdrawnSchemaRetirement.test.ts` (test hash `204bc910…02f3d1`); TC-0003-0061 second bullet, EX-0003-0054, S1 D10 | Scope REVISE. `notes: 1` asserts uniqueness, which the TC does not ask ("carries the note"). Assert at least one matching line and resubmit | REVISE |
+| 64 | delivery-planner | atdd-scope | Scope approval TDD-0094 (resubmission) | `### TDD-0094`; `spec0003InitWorklogSurface.test.ts` (hash `e706e39a…796a9f`); step 58 REVISE | Scope PASS. stdout and stderr are both captured, and the path check reads both streams. The `dest=` read-proof stays on stdout. Otherwise unchanged | PASS |
+| 65 | delivery-planner | atdd-scope | Scope approval TDD-0095 (resubmission) | `### TDD-0095`; same file and hash; step 59 PASS | Scope PASS re-confirmed. The `it` body is unchanged. Advisory: the local `lines` shadows the new module-level helper | PASS |
+| 66 | delivery-planner | atdd-scope | Scope approval TDD-0096 (resubmission) | `### TDD-0096`; same file and hash; step 60 REVISE | Scope PASS. `snapshot` records every entry, files by SHA-256 and others by kind, so the compared set is the TC's path set | PASS |
+| 67 | delivery-planner | atdd-scope | Scope approval TDD-0097 (resubmission) | `### TDD-0097`; same file and hash; step 61 REVISE | Scope PASS. Shared `snapshot` fix. The only mutation is force-only seeding, under which this row fails and `TDD-0096` passes, both commands named. Replacing the unconditional mutation, not adding to it, is what was asked. The gatekeeper advisory on RED attribution stands | PASS |
+| 68 | delivery-planner | atdd-scope | Scope approval TDD-0098 (resubmission) | `### TDD-0098`; `spec0003WithdrawnSchemaRetirement.test.ts` (hash `e4bd58e8…eadfba6`); step 62 PASS | Scope PASS re-confirmed. The `it` and its helpers are unchanged. The hash moved because of `TDD-0099`'s fix: this file still captures stdout only | PASS |
+| 69 | delivery-planner | atdd-scope | Scope approval TDD-0099 (resubmission) | `### TDD-0099`; same file and hash; step 63 REVISE | Scope PASS. The note check is `notes.length > 0`, so uniqueness is no longer asserted. Stdout-only capture is sufficient because notes go through `info` | PASS |
+| 70 | acceptance-test-engineer | atdd-ate | TDD-0094 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts` (RED test hash `e706e39a…796a9f`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0094` Round 1 | PASS |
+| 71 | acceptance-test-engineer | atdd-ate | TDD-0095 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts` (RED test hash `e706e39a…796a9f`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0095` Round 1 | PASS |
+| 72 | acceptance-test-engineer | atdd-ate | TDD-0096 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts` (RED test hash `e706e39a…796a9f`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0096` Round 1 | PASS |
+| 73 | acceptance-test-engineer | atdd-ate | TDD-0097 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts` (RED test hash `e706e39a…796a9f`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0097` Round 1 | PASS |
+| 74 | acceptance-test-engineer | atdd-ate | TDD-0098 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts` (RED test hash `e4bd58e8…eadfba6`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0098` Round 1 | PASS |
+| 75 | acceptance-test-engineer | atdd-ate | TDD-0099 test + RED | `spec-0003/06_Test-Cases.md`, `05_Examples.md`, `04_Business-Rules.md`; S1 D3-D5, D7-D11 | `packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts` (RED test hash `e4bd58e8…eadfba6`); approved RED and its stripped run at `working-tree+e7f06398…12f9db7` in `### TDD-0099` Round 1 | PASS |
+| 76 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0094 | `### TDD-0094` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 136: `.qfai/steering` exists and the report names `.gitkeep` and `_templates/entry.md`, after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 77 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0095 | `### TDD-0095` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 155: the AI work-log surface instructions line, after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 78 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0096 | `### TDD-0096` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 171: the plain run adds `.gitkeep`, `_templates`, `_templates/entry.md`, after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 79 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0097 | `### TDD-0097` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 186 after plain then `--force`; admissible (own predicate, the TC Action). Required at the build gate: the `--force`-only mutation fails this selector while the TDD-0096 selector passes, after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 80 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0098 | `### TDD-0098` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 116: the copy refreshed to the shipped hash, not retired, after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 81 | qa-gatekeeper | atdd-red-gate | RED gate TDD-0099 | `### TDD-0099` Round 1 approved RED and its stripped run; `delivery-planner` PASS 00:28:16Z; RED revision working-tree+e7f06398… | PASS: RED reproduced at line 138: no withdrawn-asset note (`noted: false`), after its read-proof; file hash and revision recomputed equal; strip valid | PASS |
+| 82 | orchestrator | - | grilling(S2@2026-09-23T19:33:24.738Z/user): rows one GREEN satisfies take their REDs before that GREEN; GREENs and reviews stay per row | S1 D2; the stop-at-`refactor` decision | A shared GREEN would make a later row pass on its first run, and the sibling-satisfied branch needs the sibling `done`, which stop-at-`refactor` rules out. Refines S1 D2 (one row at a time) | PASS |
+| 83 | discovery-analyst | spec0003_grill | grilling(S1@2026-09-24T08:22:12.576Z/agents): recover the original run key from the adjacent host clock event | Child host session JSONL ordinal 216 and the existing second-precision heading | Adopt `2026-09-24T08:22:12.576Z` as the original run key; keep RED and Oracle observations, record the on-detection decision and re-request reviews under the corrected key | PASS |
+| 84 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0094 | `#tdd-0094`, TC-0003-0059, CLI-INIT | `#tdd-0094` GREEN, Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+| 85 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0095 | `#tdd-0095`, TC-0003-0059, CLI-INIT | `#tdd-0095` GREEN, Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+| 86 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0096 | `#tdd-0096`, TC-0003-0060, CLI-INIT | `#tdd-0096` GREEN, Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+| 87 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0097 | `#tdd-0097`, TC-0003-0060, CLI-INIT | `#tdd-0097` GREEN, force-only Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+| 88 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0098 | `#tdd-0098`, TC-0003-0061, CLI-INIT | `#tdd-0098` GREEN, Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+| 89 | backend-engineer | spec0003_impl | /qfai-implement: build and refactor TDD-0099 | `#tdd-0099`, TC-0003-0061, CLI-INIT | `#tdd-0099` GREEN, Oracle and Refactor verify at `working-tree+3237ae8c…9a4788edb` | PASS |
+
 ## Cross-spec obligations
 
-None.
+Code-ownership entries from `/qfai-implement` (`references/cross-spec-ownership.md`).
+No other spec's `done` row names a changed file in `Owning module` or `Test file`.
+The reverse walk cannot be completed, so the package fallback matches every `done`
+row of another spec whose `Test file` is a test module under `packages/qfai/`.
+Each blocked row's selector, and its recorded proof where it has one, was re-run
+read-only on a clean clone at `03762f3cf`, and `completion-reviewer` ruled every row
+from those results. The head `9f96f2b70` differs from `03762f3cf` only in CI files
+and `CHANGELOG.md`, so each ruling holds there.
+
+`CR-20260925-0010` deleted the source rows. `Withdrawn TDD-0094 (never merged)` is
+this change's row: main assigned `TDD-0094` to its own row before this change merged,
+and that row is a blocked row of the spec-0004, spec-0011 and spec-0013 entries.
+`TDD-0096` and `TDD-0097` are kept unique by their tombstones in
+`.qfai/specs/spec-0003/tdd/test-list.md`. The production edits stay, so the entries stay.
+
+### Files the source rows changed
+
+- `Withdrawn TDD-0094 (never merged)`: `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/src/core/paths/assistantPaths.ts`, `packages/qfai/tests/cli/init.test.ts`, `packages/qfai/tests/cli/initGitignoreMigration.test.ts`, `packages/qfai/tests/integration/initSpec0003.test.ts`
+- `TDD-0096`: `packages/qfai/README.md`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/src/core/paths/assistantPaths.ts`, `packages/qfai/tests/cli/init.test.ts`, `packages/qfai/tests/cli/initGitignoreMigration.test.ts`, `packages/qfai/tests/integration/initSpec0003.test.ts`
+- `TDD-0097`: `packages/qfai/README.md`, `packages/qfai/src/cli/commands/init.ts`, `packages/qfai/src/core/governedAssistantManifest.ts`, `packages/qfai/src/core/paths/assistantPaths.ts`, `packages/qfai/tests/cli/init.test.ts`, `packages/qfai/tests/cli/initGitignoreMigration.test.ts`, `packages/qfai/tests/integration/initSpec0003.test.ts`
+
+### Entries
+
+| TDD-ID | Blocked spec | Blocked TDD-IDs | File | Change required | Obligation at risk | Resolution |
+| ------ | ------------ | --------------- | ---- | --------------- | ------------------ | ---------- |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0002 | 2 rows: TDD-0001, TDD-0011 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0001, TDD-0011 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0002` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0002 | 1 row: TDD-0008 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but its case checks three file names in `SKILL.md` and does not observe TC-0002-0008 (no winner in discuss). The approved option 1 records that the product contradicts the TC and resets the row. See `### Re-run results: spec-0002` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260912-0003 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0002 | 1 row: TDD-0012 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but the CR records that this wording test passes while contradicting the acceptance criterion on `prototyping.yaml` requiredness (TC-0002-0011). See `### Re-run results: spec-0002` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260912-0003 |
+| Withdrawn TDD-0094 (never merged) | spec-0004 | 27 rows: TDD-0005, TDD-0011, TDD-0013..0014, TDD-0022, TDD-0024, TDD-0026, TDD-0032..0033, TDD-0035..0049, TDD-0051..0053 | the paths listed for it under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0004` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| TDD-0096, TDD-0097 | spec-0004 | 28 rows: TDD-0005, TDD-0011, TDD-0013..0014, TDD-0022, TDD-0024, TDD-0026, TDD-0032..0033, TDD-0035..0049, TDD-0051..0053, TDD-0072 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0072 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0004` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0004 | 1 row: TDD-0050 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but TC-0004-0070 expects the warning to name the 3..7 band. `designAudit.ts:255` names only the ceiling, and the case asserts `/at most 7/`. See `### Re-run results: spec-0004` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0001 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0004 | 11 rows: TDD-0003..0004, TDD-0006, TDD-0008..0010, TDD-0012, TDD-0015, TDD-0023, TDD-0025, TDD-0034 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0004` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0015 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0006 | 23 rows: TDD-0012..0019, TDD-0021..0031, TDD-0033, TDD-0038..0040 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0029..0031, TDD-0033, TDD-0038..0040 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-a` confirmed each holds. See `### Re-run results: spec-0006` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0006 | 1 row: TDD-0020 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. The CR is still `open`. See `### Re-run results: spec-0006` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0007 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0006 | 1 row: TDD-0032 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes (2/2), but mutants R20 to R29 of the recorded set have no record, so the full set cannot be replayed. The CR names the row. See `### Re-run results: spec-0006` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0016 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0008 | 2 rows: TDD-0013..0014 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0013..0014 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0008` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0010 | 6 rows: TDD-0001, TDD-0005, TDD-0013..0015, TDD-0017 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0010` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0010 | 3 rows: TDD-0006..0008 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0010` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260912-0003 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0010 | 1 row: TDD-0016 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but TC-0010-0012 expects pack finalization to write `currentId`. The case drives `qfai discussion use`, and no stage code writes the pointer. See `### Re-run results: spec-0010` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0013 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 133 rows: TDD-0286, TDD-0293..0294, TDD-0336, TDD-0338..0339, TDD-0343, TDD-0345, TDD-0350, TDD-0355, TDD-0360..0361, TDD-0363..0364, TDD-0367..0369, TDD-0371..0383, TDD-0385..0388, TDD-0403..0408, TDD-0417..0419, TDD-0425..0427, TDD-0430..0435, TDD-0439..0442, TDD-0444..0452, TDD-0454, TDD-0458, TDD-0460..0462, TDD-0466..0471, TDD-0473..0474, TDD-0476, TDD-0479, TDD-0481..0485, TDD-0487..0488, TDD-0490..0495, TDD-0497, TDD-0501..0505, TDD-0509..0515, TDD-0518..0527, TDD-0561..0577 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0469, TDD-0471, TDD-0497, TDD-0514..0515, TDD-0561..0577 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-a` and `xspec-cr-b` confirmed each holds. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 3 rows: TDD-0496, TDD-0516..0517 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Not `done` at `03762f3cf`: `CR-20260923-0001`, applied on main, reset the row, and its blocked table names it. A row that is not `done` certifies nothing the change can break. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260923-0001 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 25 rows: TDD-0337, TDD-0366, TDD-0389..0400, TDD-0415..0416, TDD-0421..0424, TDD-0428..0429, TDD-0437..0438, TDD-0443 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0001 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 23 rows: TDD-0295, TDD-0340..0341, TDD-0344, TDD-0346, TDD-0348..0349, TDD-0351, TDD-0353..0354, TDD-0356..0359, TDD-0362, TDD-0365, TDD-0370, TDD-0453, TDD-0456..0457, TDD-0459, TDD-0465, TDD-0486 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0002 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 1 row: TDD-0342 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0003 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 1 row: TDD-0507 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0004 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 4 rows: TDD-0489, TDD-0498..0500 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0005 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0012 | 8 rows: TDD-0455, TDD-0463..0464, TDD-0472, TDD-0475, TDD-0480, TDD-0506, TDD-0508 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. The CR is still `open`. See `### Re-run results: spec-0012` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260925-0007 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0013 | 2 rows: TDD-0110..0111 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0110..0111 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0013` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0014 | 3 rows: TDD-0018..0019, TDD-0034 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0019 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0014` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0014 | 1 row: TDD-0033 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector selects no test at `03762f3cf` (zero-selected capture), so no current run can confirm the obligation. The CR's `## Blocked downstream items` table names the row. See `### Re-run results: spec-0014` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0002 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0014 | 1 row: TDD-0009 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but TC-0014-0009 expects a REVISE to block verify. The selected blocks assert stale-sidecar migration errors. See `### Re-run results: spec-0014` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0005 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0014 | 1 row: TDD-0035 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but TC-0014-0035 runs the command. The cases call `runPrototypingCertify` directly, bypassing `src/cli/main.ts`, which this change edited. See `### Re-run results: spec-0014` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0005 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0014 | 1 row: TDD-0036 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | The selector passes, but the cases bypass the command line as for TDD-0035, and the row aggregates the refusal and promotion boundaries the CR splits. See `### Re-run results: spec-0014` in `.qfai/evidence/atdd-spec-0004.md` | CR-20260913-0005 |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0015 | 21 rows: TDD-0011..0012, TDD-0017..0035 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0015` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0016 | 28 rows: TDD-0001..0028 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0016` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+| Withdrawn TDD-0094 (never merged), TDD-0096, TDD-0097 | spec-0017 | 6 rows: TDD-0016, TDD-0030, TDD-0033..0035, TDD-0070 | the paths listed for each under `### Files the source rows changed` | Remove the project work-log seed and its report folding from `init` | Matched through the package fallback. At `03762f3cf` every selector passes. The recorded proof of TDD-0016, TDD-0030, TDD-0033..0035, TDD-0070 replays as recorded (`qa-gatekeeper` PASS). `xspec-cr-c` confirmed each holds. See `### Re-run results: spec-0017` in `.qfai/evidence/atdd-spec-0004.md` | re-reviewed |
+
+- The entry this section held for spec-0015 on `packages/qfai/src/cli/commands/init.ts`
+  is the spec-0015 line above, in the fields the rule defines.
+- `spec-0015/TDD-0039` left the blocked set. `3a8462986` reverted its closure, and the
+  row is `todo` at `03762f3cf`. A row that is not `done` certifies nothing, so no
+  re-run or review is owed for it.
+- Correction to decision D4 of the split grilling session: D4 sent `spec-0015/TDD-0039`
+  to review on the premise that the row is `done`. It is `todo`, so D4 no longer
+  applies to it.
+- Seven rows whose selector passes take a CR: spec-0002 `TDD-0008` and `TDD-0012`,
+  spec-0004 `TDD-0050`, spec-0010 `TDD-0016`, and spec-0014 `TDD-0009`, `TDD-0035` and
+  `TDD-0036`. `xspec-cr-c` ruled that each pass does not show the obligation holds, for
+  the reason in its line, and the CR records the same gap. No user has adjudicated these
+  seven rulings.
+- `CR-20260925-0007` is still `open`. Its eight spec-0012 rows and spec-0006 `TDD-0020`
+  stay blocked until the user approves it.
 
 ## Execution logs
 
@@ -1405,9 +3859,21 @@ Recorded per row under `## Ledger rows advanced`.
   Round 2 RED. Its GREEN, Oracle proof and Refactor verify are recorded; the
   build-phase gate on them, both reviews and the checkpoint are owed.
 
+### /qfai-atdd run 2026-09-23T19:33:24.738Z
+
+- `TDD-0094` … `TDD-0099`: REDs passed by `qa-gatekeeper` (RED phase) on the approved file
+  hashes; handoffs ready. Each GREEN, with its reviews, follows per row.
+- `TDD-0097`'s RED cannot tell whether the plain run or the `--force` run changed the
+  directory; the plain run alone does on this tree. The planned Oracle proof, which seeds
+  only under `--force`, is what shows the row checks the `--force` run.
+- The `BR-0003-0009` safety-floor cell (S1 D13) is raised as `CR-20260924-0005` (open).
+  spec-0003's ATDD is not PASS on that cell until it lands.
+- Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs
+  per row. All rows' full-suite checkpoints close together on the final head's CI.
+
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
-FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
+FAIL for the spec-wide ATDD pack; the scoped rows named below and in the first full CI checkpoint are done. The other ATDD-owned rows and the open safety-floor change request remain.
 
 The ten rows these runs took up are `done`: `TDD-0058` to `TDD-0063`, `TDD-0092`,
 `TDD-0093`, `TDD-0001` and `TDD-0037`. `/qfai-implement` took each through the
@@ -1418,3 +3884,10 @@ closed on the full suite.
 `TDD-0094` stands at `review-fix`, in Round 2: `qa-gatekeeper#2` passed its
 Round 2 RED, and its GREEN, Oracle proof and Refactor verify are recorded. The
 build-phase gate on the GREEN, both reviews and the checkpoint are owed.
+
+## First full CI checkpoint
+
+- Revision: b35f3efd5daa8a02a78e61a889dd7fc0721e3a9d
+- Run: https://github.com/aganesy/QFAI/actions/runs/36026684599
+- Result: PASS — build, lint, types, all nine package test slices, Node floor tests, and ci-pass succeeded.
+- Rows closed: TDD-0094, TDD-0095, TDD-0096, TDD-0097, TDD-0098, TDD-0099.

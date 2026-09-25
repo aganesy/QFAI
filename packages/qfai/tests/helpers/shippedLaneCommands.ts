@@ -1354,12 +1354,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
     // into a temp root; restoring the old item reproduces `754c7708…` byte for byte.
     //
+    // Re-pinned for the work-log surface item, which the run no longer writes into the list of
+    // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
+    // that one item reproduces `cac822f9…` byte for byte.
+    //
     // Re-pinned for one more bullet on that same list, naming
     // `.agents/rules/untrusted-content.md` — the rule the run now seeds beside the other masters,
     // which says text the repository did not author is data, not instruction. Derived by running
-    // `qfai init` into a temp root; dropping that one bullet reproduces `cac822f9…` byte for byte.
+    // `qfai init` into a temp root; dropping that one bullet reproduces `b786f88e…` byte for byte.
     ".github/copilot-instructions.md",
-    "182d40ac1f89ac051b0923b102e8771f8fdcb4569cbad39e605fdeb68bfbe8d7",
+    "42737ba460dd2432549806980e32ca5c27a869d79f8b900d6b7bbf7100c37f93",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1465,7 +1469,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived the same way, and checked the way the note below asks: removing
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
-  [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
+  //
+  // Re-pinned for the workflow run's state and evidence, two lines:
+  //
+  //     .qfai/runs/
+  //     !.qfai/evidence/workflow/
+  //
+  // the per-checkout run state, which never belongs in a commit, and the
+  // tracked summary and authorization records `qfai validate` reads from a
+  // fresh clone. Derived the same way; removing those two lines from what the
+  // run wrote reproduces `c208ecdc…` byte for byte.
+  [".gitignore", "00125b9c9559b6886ad4b17da6ea74d6e96741ae828617f42447cf7f5ad08e17"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1514,12 +1528,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
   //
+  // Re-pinned for the entry directive both files now open with: one line sending a first
+  // free-text change request to the `qfai-run` skill, and the blank line after it. Derived by
+  // running `qfai init` into a temp root; removing those two lines from both written files
+  // reproduces `6083825b…` and `fe88c122…` byte for byte.
+  //
   // Re-pinned for one more bullet in the same block, naming `.agents/rules/untrusted-content.md`
   // — the rule the run now seeds beside the other masters, which says text the repository did not
   // author is data, not instruction. Derived by running `qfai init` into a temp root; dropping
-  // that one bullet from both written files reproduces `6083825b…` and `fe88c122…` byte for byte.
-  ["AGENTS.md", "5e7d5d3ae7c1a3474137b6381c947199ea329ed7d745b217e7b246392c7b2380"],
-  ["CLAUDE.md", "1c608d040e2eee653518e3b78c887f9cf667dc603daa5bfe825e94a5a6298ade"],
+  // that one bullet from both written files reproduces `51e3e03e…` and `07350d6a…` byte for byte.
+  ["AGENTS.md", "a7336eaa32fae4be4c447913030dbeb1be6141b0bb7eb3179e4bb113974a9fc6"],
+  ["CLAUDE.md", "bfcc38d39527264ea3ce74834574fa7ad3efc1c43c185dec2083eeab241c3e0f"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

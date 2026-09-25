@@ -171,3 +171,159 @@ sequenceDiagram
 - レーン（CI の job / matrix leg）とレイヤー（テスト意味論）とスライス（QFAI 自身の matrix 次元）は同義ではない。用語定義は `06_Glossary.md` § CHG-007。
 - レイヤー語彙は増やさない（NFR-0015）。本節は既存の L1..L5 語彙のみを使う。
 - 配布側はさらに inert-by-default であり、アダプタが対応 script を宣言するまでテストレーンは 1 本も実行されない。
+
+## Intent-driven entry (CAP-0018)
+
+A run-driven path beside the flow above. The operator states a change once, in
+free text, and `qfai-run` drives the stage skills through `npx qfai workflow`.
+The flow above stays: a stage skill invoked by name runs standalone and ends at
+that stage. This section states the order between the actors. The operations,
+states and refusals are CLI-WF's (`.qfai/contracts/cli/qfai-workflow.md`), and
+the files and plans are CLI-WFFILE's (`.qfai/contracts/cli/workflow-files.schema.md`).
+
+### Actors / Systems
+
+- Actor: the operator, on Claude Code or Codex.
+- System: `qfai-run`, the entry skill, running inside the host session.
+- System: `npx qfai workflow`, the control core.
+- System: the stage skills a built-in plan dispatches, `qfai-maintain` included.
+
+### Preconditions
+
+- `qfai init` has installed `qfai-run`, `qfai-maintain`, the built-in plans and
+  the entry directive (`.qfai/contracts/cli/qfai-init.md` `## Workflow entry`).
+- `workflow.mode` is absent or `active`.
+- The host's capability report passes (CLI-WF `## Host capability report`).
+
+### Flow Overview
+
+1. The operator types a change request in free text.
+2. `qfai-run` classifies it. A request that is not a change is handled without a
+   run: an explanation, a plan only, a verification only, or one stage by name.
+3. `qfai-run` reads the mode. Under `off` the stage skills are invoked by name.
+   Under `shadow` it proposes the route and its reason and writes nothing. Under
+   `active` it calls `start`.
+4. `start` either refuses fail-closed, naming the cause and creating no run, or
+   creates the run.
+5. Routing is a stage instance. `next` returns the routing work order, and
+   `qfai-run` submits its route proposal through `accept`. When the plan needs a
+   new capability, the operator is asked once, and the answer goes through
+   `decision`.
+6. `qfai-run` announces the goal, the stages and the write scope, and asks
+   nothing.
+7. For each stage, `next` issues a work order, the stage skill does the work, and
+   `accept` checks the result. A material decision puts one question, answered
+   through `decision`.
+8. `finish` runs validate in process and reads this run's verify report and an
+   independent qa-gatekeeper PASS. A met target completes the run. An unmet one
+   lists each condition with its owner and leaves the run as it was.
+
+### Diagram
+
+```mermaid
+flowchart TD
+    REQ["Operator: free-text request"] --> KIND{"qfai-run: a change request?"}
+    KIND -->|No| NORUN["Handled without a run"]
+    KIND -->|Yes| MODE{"workflow.mode"}
+    BYNAME["Operator invokes a stage skill by name"] --> STANDALONE["Runs standalone and ends at that stage"]
+    MODE -->|off| BYNAME
+    MODE -->|shadow| SHADOW["Route and reason proposed, nothing written"]
+    MODE -->|active| START["npx qfai workflow start"]
+    START -->|"fail-closed cause"| HALT["Halt notice, no run created"]
+    START --> ROUTE["Routing work order, proposal through accept"]
+    ROUTE -->|"new capability"| CREATEQ{"CREATE question, asked once"}
+    CREATEQ -->|decline| CANCEL["cancelled, nothing tracked"]
+    CREATEQ -->|create| PLAN["Checked plan announced"]
+    ROUTE --> PLAN
+    PLAN --> LOOP["next: work order to a stage skill"]
+    LOOP --> RESULT["accept: stage result checked"]
+    RESULT -->|"material decision"| ASK["awaiting_input: operator answers through decision"]
+    ASK -->|proceed| LOOP
+    ASK -->|replan| ROUTE
+    ASK -->|stop| CANCEL
+    RESULT -->|"stage blocked"| BLOCKED["blocked: halt notice"]
+    BLOCKED -->|"resume once cleared"| LOOP
+    RESULT -->|"stages remain"| LOOP
+    RESULT -->|"every stage accepted"| FINISH{"finish: validate in process and final gates"}
+    FINISH -->|met| DONE["completed: qfai_done or working_tree"]
+    FINISH -->|unmet| UNMET["Unmet conditions with owners, run unchanged"]
+    UNMET --> LOOP
+```
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Op as Operator
+    participant Run as qfai-run
+    participant Core as npx qfai workflow
+    participant Stage as Stage skill
+    Note over Run,Core: States, edges and refusals are in CLI-WF, section State machine
+    Op->>Run: Free-text change request
+    Run->>Core: start
+    Core-->>Run: Run created
+    Run->>Core: next
+    Core-->>Run: Routing work order
+    Run->>Core: accept with the route proposal
+    Core-->>Run: Checked plan, or the CREATE question
+    opt The plan needs a new capability
+        Run->>Op: CREATE question
+        Op->>Run: Answer
+        Run->>Core: decision
+        alt Declined
+            Core-->>Run: cancelled
+            Run->>Op: Stopped, nothing tracked
+        else Approved
+            Core-->>Run: Plan continues
+        end
+    end
+    Run->>Op: Announcement: goal, stages, write scope
+    loop Each stage of the plan
+        Run->>Core: next
+        Core-->>Run: Work order
+        Run->>Stage: Work order
+        Stage-->>Run: Stage result
+        Run->>Core: accept
+        opt A material decision
+            Core-->>Run: awaiting_input with one question
+            Run->>Op: Question
+            Op->>Run: Answer
+            Run->>Core: decision
+        end
+    end
+    Run->>Core: finish
+    Core-->>Run: Target met, or the unmet conditions
+    Run->>Op: Completion report
+```
+
+### Alternate / Exception Flows
+
+- The operator stops the run. `qfai-run` records the stop through `decision`, the
+  run ends `cancelled`, and nothing further is written or asked (CLI-WF
+  `## Questions and decisions`).
+- A fail-closed cause found at `start` is refused, and no run is created. A cause
+  found later stops automatic chaining until it is cleared through `resume` or
+  the run is stopped (CLI-WF `## Fail-closed`, `## State machine`).
+- An interrupted session is restored when a new session is told to continue:
+  `resume` revalidates the run and returns the work order of the smallest valid
+  checkpoint (CLI-WF `## Operations`).
+- `/qfai-sdd` Stage 1 finds the CREATE authorization unapproved, mismatched or
+  stale. SDD asks nothing and persists no triage row, the run waits in
+  `awaiting_input`, and a new CREATE question is put (CLI-WF `## Authorizations`).
+- Under a no-question mode such as `--auto`, the question is not put and the run
+  stays `awaiting_input` (CLI-WF `### host:create-question`,
+  `### host:decision-question`).
+- A bugfix follows the diagnosis: a missing test gets an appended row from
+  `/qfai-sdd` (`sdd_append`), a defective test is fixed by the owner of its layer
+  (`test_fix`), and a regression is fixed in production code (`regression_fix`).
+  A `done` row stays `done` in all three (CLI-WFFILE `## Plan files`, CLI-WF
+  `## Ledger row-set check`).
+
+### Notes (CAP-0018)
+
+- The control core launches no AI and runs no repository command. It reads git
+  read-only and runs validate in process. Every stage runs in the host (CLI-WF
+  `## Boundaries`).
+- It is not the removed prototyping runtime that `07_Constraints.md` TC-10 keeps
+  out.
+- It is not a CI runner, which `01_Objective.md` puts out of scope. QFAI still
+  hosts no agent and executes no CI workflow.

@@ -937,6 +937,68 @@ file, so an entry here is what makes that citation checkable.
 - Related: AC-0017-0003, AC-0017-0006, AC-0017-0018, BR-0017-0006,
   BR-0017-0013, TC-0017-0007, TC-0017-0043
 
+### DR-0017-0024: a `windows-latest` job runs the control-core and init suites, and gates no merge yet
+
+- Status: accepted
+- Date: 2026-09-24
+- Context: `discussion-20260923171450572#NFR-0011` requires the journal, atomic
+  publish, lock, path handling, init and upgrade to behave the same on Windows as
+  on Linux, CRLF checkouts and paths with spaces included. Every job in
+  `.github/workflows/ci.yml` runs on `ubuntu-latest`, so nothing observes that
+  property today. The pack deferred how it is verified as its `OQ-0012`, and the
+  pack is not tracked, so this entry is the tracked record of the answer.
+- Decision: the user answered `OQ-0012` with A on 2026-09-24 (AskUserQuestion):
+  a `windows-latest` job limited to the control-core suites and the init and
+  migration suites.
+  - The job is `windows-parity` in `ci.yml`. It needs `detect` and carries the
+    `test` job's detection condition verbatim, so a documentation-only pull
+    request skips it and its check name stays declared.
+  - It sits in the aggregate verdict's `needs`, and the expected-required-context
+    declaration gains its entry.
+  - The suite list is the `test:windows-parity` script in
+    `packages/qfai/package.json`, which the job calls. A developer runs the same
+    list locally.
+  - The job builds the package itself before its tests, and sets `TEMP` and `TMP`
+    to a directory whose name has a space.
+  - Its `SHIPPED-CI:` disposition is `not-applicable`: the shipped test lanes run
+    the adopter's own scripts on the runner the adopter names, so the shipped set
+    has no QFAI suite or fixed platform to add.
+- The non-gating limit: the job turns the aggregate verdict `ci-pass` red on the
+  pull request that causes a Windows regression, which is the reason the answer
+  records. It does not block that pull request from merging. The repository's
+  only required status check is the job named `build` (OC-73), and `build` has no
+  `needs`, so no lane in `ci-pass`'s `needs` gates a merge today. The declaration
+  in `.github/required-status-contexts.json` expects `ci-pass`, and moving the
+  setting to match it is OQ-0017-0002, a repository-settings action no agent
+  takes. Until that lands, the Windows job gates merges exactly as far as `lint`
+  and `test` do.
+- Measurement: the change that adds the job appends here the trial run's
+  per-suite counts and timings, the `timeout-minutes` it sets from them, and the
+  code-path pin's before-and-after figures (BR-0017-0030, BR-0017-0067). This
+  record makes no cost claim before those numbers exist.
+- Rejected: a recorded manual Windows run before each release
+  - DO NOT: rely on a manual run to find a Windows regression. Temptation: it costs
+    no runner minutes, but the regression then ships from the pull request that
+    caused it and is found at release.
+- Rejected: both the job and a manual run
+  - DO NOT: add a second verification of the same property. Temptation: it looks
+    safer, and it is two records to keep true.
+- Rejected: the whole test suite on Windows
+  - DO NOT: widen the suite list beyond the control-core and init and migration
+    suites. Temptation: more coverage, but the answer limits the job, and suites
+    that read the repository's tracked links fail on a Windows checkout for a
+    reason that is not a parity defect.
+- Rejected: making the job named `build` depend on the Windows job
+  - DO NOT: put a conditional job under the required-context job. Temptation: it
+    would gate merges today, but `build` would then be skipped whenever detection
+    skips the job, and a skipped job reports success (OC-73, BR-0017-0012).
+- Consequences: a documentation-only pull request executes nothing more, so its
+  pin is unchanged. The code-path pin moves and is re-pinned in the same change.
+  A test red on the trial run is classed as platform-inapplicable, a parity
+  defect or a test defect, and no test leaves the list for being red.
+- Related: AC-0017-0037, AC-0017-0038, AC-0017-0039, BR-0017-0071, BR-0017-0072,
+  BR-0017-0073, BR-0017-0074; OQ-0017-0002; CLI-INIT `### Windows parity`.
+
 ## Approved change requests
 
 - CR-20260924-0001: retire the `pr-fix` and `pr-merge` skills and suites.

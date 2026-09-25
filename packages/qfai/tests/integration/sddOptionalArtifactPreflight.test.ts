@@ -4,8 +4,31 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { runSddPreflightCommand } from "../../src/cli/commands/sddPreflight.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
+
+type CommandVerdict = { exit: number; status: unknown; blockers: unknown };
+
+const COMMAND_READY: CommandVerdict = { exit: 0, status: "ready", blockers: [] };
+
+/** Runs `qfai sdd preflight --format json` on `root` and reads its exit code and report. */
+async function preflightCommand(root: string): Promise<CommandVerdict> {
+  const out: string[] = [];
+  const exit = await runSddPreflightCommand({
+    root,
+    format: "json",
+    write: (message) => out.push(message),
+    writeErr: () => undefined,
+  });
+  const report: unknown = JSON.parse(out.join("\n"));
+  if (typeof report !== "object" || report === null) throw new Error("no JSON report");
+  return {
+    exit,
+    status: "status" in report ? report.status : undefined,
+    blockers: "blockers" in report ? report.blockers : undefined,
+  };
+}
 
 const DISCUSSION_PACK_FILES = [
   "01_Context.md",
@@ -25,17 +48,32 @@ const DISCUSSION_PACK_FILES = [
   "99_delta.md",
 ] as const;
 
+const VALID_PROTOTYPING = [
+  "prototyping:",
+  "  recommended_mode: full-harness",
+  "  rationale: UI validation is recommended.",
+  "  allowed_modes:",
+  "    - full-harness",
+  "  surface: web",
+].join("\n");
+
 describe("SDD preflight optional discussion side artifact", () => {
   // QFAI:SPEC-0013:TC-0013-0036
   it("does not block when a usable discussion pack is missing prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
-      await seedDiscussionPack(root, "20260216010203010", false);
+      const packDir = await seedDiscussionPack(root, "20260216010203010", false);
 
       const result = await runSddPreflight(root, defaultConfig);
 
       expect(result.status).toBe("ready");
       expect(result.blockers).toHaveLength(0);
+      expect(await preflightCommand(root)).toEqual(COMMAND_READY);
+
+      // The same pack with a valid artifact reaches the same verdict, so absence decides nothing.
+      await writeFile(path.join(packDir, "prototyping.yaml"), VALID_PROTOTYPING, "utf-8");
+      expect((await runSddPreflight(root, defaultConfig)).status).toBe("ready");
+      expect(await preflightCommand(root)).toEqual(COMMAND_READY);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -56,6 +94,7 @@ describe("SDD preflight optional discussion side artifact", () => {
 
       expect(result.status).toBe("ready");
       expect(result.blockers).toHaveLength(0);
+      expect(await preflightCommand(root)).toEqual(COMMAND_READY);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -82,6 +121,7 @@ describe("SDD preflight optional discussion side artifact", () => {
 
       expect(result.status).toBe("ready");
       expect(result.blockers).toHaveLength(0);
+      expect(await preflightCommand(root)).toEqual(COMMAND_READY);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -104,18 +144,7 @@ async function seedDiscussionPack(
     );
   }
   if (includePrototyping) {
-    await writeFile(
-      path.join(packDir, "prototyping.yaml"),
-      [
-        "prototyping:",
-        "  recommended_mode: full-harness",
-        "  rationale: UI validation is recommended.",
-        "  allowed_modes:",
-        "    - full-harness",
-        "  surface: web",
-      ].join("\n"),
-      "utf-8",
-    );
+    await writeFile(path.join(packDir, "prototyping.yaml"), VALID_PROTOTYPING, "utf-8");
   }
   return packDir;
 }

@@ -55,6 +55,7 @@
         "check-types-future",
         "node-floor",
         "test",
+        "windows-parity",
         "scanner-coverage",
         "build"
       ],
@@ -83,6 +84,7 @@
         "check-types-future": "${{ needs.detect.outputs.full == 'true' }}",
         "node-floor": "${{ needs.detect.outputs.full == 'true' }}",
         "test": "${{ needs.detect.outputs.full == 'true' }}",
+        "windows-parity": "${{ needs.detect.outputs.full == 'true' }}",
         "scanner-coverage": "${{ needs.detect.outputs.full == 'true' }}"
       },
       "dependencyConditionsNote": [
@@ -207,7 +209,7 @@
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-changelog-released-sections.mjs": "a852f0e21c2a4cfee83a673b52ace2d607e7d6d3fc94f6f4e237799f8c18a1eb",
         "scripts/check-conflict-markers.mjs": "9759695e9cf3f2590a046c45640124a09ae4ce9146cf6cf24b2dfaf01e31b0da",
-        "scripts/check-doc-clarity.mjs": "ca7eed5283b49a844140cbb1ed611a19a1ac979e3fe062f25f5bb17e83d6bd6f",
+        "scripts/check-doc-clarity.mjs": "0795973a46d983c204cad0d8164d23d1ed03c96f4e280e6708afbfdbf602246b",
         "scripts/check-dogfood-backlog.mjs": "6b4a636519ba26b17eba0846cbf7ce3f85818140aa6830d3bc54c953a681860a",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
         "scripts/check-lifecycle-manifests.mjs": "1c701af6c814c2a9e5e6d5a5c8070a58d378f35d5caec24ba0152b95b7f28786",
@@ -231,7 +233,7 @@
         "scripts/check-workflow-hygiene.mjs": "58a6fd7de5fa5f97bd6ac703a52eed5fbac0a9388204baa55eb1366ff9830cd7",
         "scripts/derive-cli-message-allowlist-count.mjs": "6c67359c0073519a0fa5b3be5fc9866c49b1ec5bd4bce3feff985ba2fd962d87",
         "scripts/derive-e2e-callsites.mjs": "0185bc5abdcfa2fef223c02362aea44838a3c8dac53157c050d5c3285448c6d3",
-        "scripts/dogfood-backlog.json": "8493498f8cf401127ed9cbe4b3a036996ff63cc74b66cee21b2c5ad4b9aba7b7",
+        "scripts/dogfood-backlog.json": "ff80e028d9c5e4854bb18caff2a2623646b498053033e5f064c2a22b207911dd",
         "scripts/fresh-init-findings.json": "28bf7de140686f8df16666c3d2a9e5a8dd7deaa30d5bbbfcb8eda39494b9ecfe",
         "scripts/fresh-init-findings.mjs": "032493d612d6999edef2233ef94718a84d7c21843722c4c5050f2b879d165331",
         "scripts/gen-agent-catalog.mjs": "3a4ca269aabfd40dbebdf8579bee203d5a3ead0ad49c76647b593818d0b27da7",
@@ -375,6 +377,7 @@
         "Run future TypeScript compatibility check": "check-types-future",
         "Run the package test suite on the floor (${{ matrix.slice }})": "node-floor",
         "Run tests (${{ matrix.slice }})": "test",
+        "Run the Windows parity suites": "windows-parity",
         "Run scanner coverage gate": "scanner-coverage"
       },
       "gatedVerificationsNote": [
@@ -402,7 +405,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "1c0127391f64ac1c",
-        "Verify the toolchain action before running it": "9517c9592ea8aa78",
+        "Verify the toolchain action before running it": "f2b88baeb052a4df",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "211656e97a2f3714",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "f98ff7751afa6bbb",
@@ -410,11 +413,12 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "86794fd61276a087",
         "QFAI self-validate this repo (dogfooding — full profile)": "8595543957e8317a",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "22c15f5170fb6edc",
+        "Run lint gate": "166ee4a946258ef8",
         "Run type check": "51c5eeee942920dc",
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
         "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
+        "Run the Windows parity suites": "ba50f33ac55d61bd",
         "Run scanner coverage gate": "dbb04c7e4d66e944"
       },
       "verificationBodiesNote": [
@@ -473,10 +477,10 @@
         "because the verdict executes and is not one of its own dependencies."
       ],
       "codePathCostPin": {
-        "instances": 22,
-        "timeoutMinutesSum": 290,
-        "installInstances": 20,
-        "buildJobs": ["build", "node-floor", "test"]
+        "instances": 23,
+        "timeoutMinutesSum": 320,
+        "installInstances": 21,
+        "buildJobs": ["build", "node-floor", "test", "windows-parity"]
       },
       "codePathCostPinNote": [
         "What a code-path pull request costs, pinned as four figures recomputed from the workflow tree.",
