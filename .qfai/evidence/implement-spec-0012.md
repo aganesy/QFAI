@@ -1009,13 +1009,18 @@ Superseded by the refactor verify above; taken at `da2438ac0`.
 - Refactor verify revision: da2438ac0125a4cee3aaf1b110374f511452cf0b
 ```
 
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#3, Round 1 — re-issue on the renumbered block of the cycle qa-gatekeeper#2 gated as Round 2: falsifiability RED gate on the mutated tree working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284 at HEAD f5b43cae0; GREEN + oracle proof, refactor verify at 60282e684)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS on the five-status cycle from before CR-20260925-0012 (superseded, fenced above); qa-gatekeeper#2 PASS on this cycle while it was numbered Round 2 (its lines fenced below); qa-gatekeeper#3 PASS on the renumbered Round 1 — no new observation owed; each Round 1 field appears once outside fences and matches #2's values, except Satisfied-by, reworded in 60282e684 with the same sibling, path, symbol and predicate plus provenance a4d5a417b; re-run at fd8f64b06 (src and test file identical to f5b43cae0): with :122 inverted the six entries each fail as assertions at :79, :96, :112, :160, :174 and :128; status > 400 fails only :128:23; after git checkout each entry passes and the file passes 7/7
+
+qa-gatekeeper#2's verdict, given when this round was numbered Round 2, is kept
+below word for word. In it, `Round 1` is the fenced record from before
+`CR-20260925-0012` and `Round 2` is this Round 1. qa-gatekeeper#3 re-issued it
+on the renumbered block above.
+
+```text
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — falsifiability RED gate on the rebuilt mutated tree working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284 at HEAD f5b43cae0; GREEN + oracle proof at 0b7f820e7)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS on Round 1 (superseded by CR-20260925-0012, fenced above); qa-gatekeeper#2 PASS on Round 2 — rebuilt f5b43cae0 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+972b0fa5…; the six entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :160:23, :174:23 and :128:23; each -t selects one test; the edit stays inside status >= 400; the status > 400 run matches working-tree+cfcd3843… and fails only the 400 entry at :128:23; GREEN 1/1 per entry and both files 15/15 at 0b7f820e7. Gate taken after the revert, on the rebuilt tree
-
-The two lines above record qa-gatekeeper#2's verdict, given when this round was
-numbered Round 2. In them, `Round 1` is the fenced record from before
-`CR-20260925-0012` and `Round 2` is this Round 1. The round's content did not
-change with the number; the verdict's re-issue on the renumbered block is owed.
+```
 
 - Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them; rework path: no new production behaviour, so no round is opened. The routed roles re-took the plan phase, the refactor verify was refreshed and backend-engineer#2 re-attested the authoring
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925150001000 <!-- qfai:not-a-citation -->
@@ -1111,10 +1116,9 @@ entry as the record from before `CR-20260925-0012`.
 
 Every row is at `refactor`, with its refactor verify at `60282e684`. The five T1
 rows form the review group keyed `BR-0012-0066`; `TDD-0517` and `TDD-0582` are
-reviewed alone. qa-gatekeeper has passed every row's Round 1 except
-`TDD-0517`'s. Still owed:
+reviewed alone. qa-gatekeeper has passed every row's Round 1, and qa-gatekeeper#3
+re-issued `TDD-0517`'s on the renumbered block. Still owed:
 
-- qa-gatekeeper's re-issue of its verdict on `TDD-0517`'s renumbered Round 1;
 - the attempt-2 reviews: `completion-reviewer` and `implementation-reviewer` on
   the T1 group, and on `TDD-0517` and `TDD-0582` each alone;
 - the checkpoint verification of the group and of each T2 row.
@@ -1134,8 +1138,8 @@ reviewed alone. qa-gatekeeper has passed every row's Round 1 except
 
 ## Gaps / Open risks
 
-- The qa-gatekeeper gate re-issue, the reviews and the checkpoints listed under
-  `## Test results summary` are owed.
+- The reviews and the checkpoints listed under `## Test results summary` are
+  owed.
 - Each qa-gatekeeper RED gate was taken after the revert, on a tree rebuilt from
   the row's recorded revision and edit. `## Record defects` carries the ordering
   disclosure.
@@ -1214,6 +1218,7 @@ Preflight: session opened
 | 13 | backend-engineer | backend-engineer#2 | apply rows 10 and 11 to #tdd-0517 | rows 10 and 11; #tdd-0517 | #tdd-0517; the pre-reset `#### Round 1` and qa-gatekeeper#1's two lines are one fence under a note, and every live `Round 2:` field, the attempt-1 verdict and pack lines included, is now `Round 1:`. qa-gatekeeper#2's verdict names Round 2, so its re-issue on the renumbered block is owed | PASS |
 | 14 | backend-engineer | backend-engineer#2 | refactor verify of `TDD-0517`, refreshed at the committed tree | the recorded refactor-verify command; HEAD `60282e684` | #tdd-0517 `Refactor verify` fields; Test Files 2 passed (2), Tests 15 passed (15), revision `60282e684c6f0b18bf16c32d541435153ceb9329`. The copy at `da2438ac0` is fenced as superseded | PASS |
 | 15 | backend-engineer | backend-engineer#2 | re-attest `TDD-0517`: rebuild the recorded mutation at `60282e684` and run the six entries | #tdd-0517 Round 1 | I re-ran and attest the recorded falsifiability and GREEN. With `defaultCaptureScreen.ts:122` inverted to `status < 400` (working-tree+76f8c181…), each entry run separately fails as an assertion, Tests 1 failed \| 6 skipped (7), at `:79:23`, `:96:23`, `:112:23`, `:160:23`, `:174:23` and `:128:23`, as recorded. The recorded `status > 400` run also reproduces (working-tree+8f1559e1…): entries 1 to 5 pass and entry 6 fails at `:128:23`. Reverted with `git checkout`; each entry then passes, Tests 1 passed \| 6 skipped (7) | PASS |
+| 16 | qa-gatekeeper | qa-gatekeeper#3 | re-issue the RED phase and build-phase gate on `TDD-0517`'s renumbered Round 1 | #tdd-0517; qa-gatekeeper#2's lines | qa-gatekeeper fields; #2's lines fenced | PASS |
 
 ## Test results summary
 
@@ -1221,8 +1226,8 @@ Preflight: session opened
 | ---------- | ----- | ----------- | ----------------------------------- | --------------------------------- |
 | `TDD-0517` | 1     | `f5b43cae0` | `status < 400` fails all six entries | `status > 400` fails the 400 entry only |
 
-`TDD-0517` is at `refactor`, with its refactor verify at `60282e684`. Still
-owed: qa-gatekeeper's re-issue of its verdict on the renumbered Round 1, the
+`TDD-0517` is at `refactor`, with its refactor verify at `60282e684`, and
+qa-gatekeeper#3 re-issued its verdict on the renumbered Round 1. Still owed: the
 attempt-2 `completion-reviewer` and `implementation-reviewer` reviews, and the
 checkpoint verification.
 
