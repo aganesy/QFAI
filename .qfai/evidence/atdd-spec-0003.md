@@ -1170,6 +1170,10 @@ the selector has been seen to fail.
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate on the observed RED against the pre-fix surface at cb835cbff; build-phase GREEN + oracle proof)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the observed RED (bullets 1, 2, 4 at :42:24, :47:24, :55:22) and its assertion-stripped run, reviewed revision cb835cbff1313257292d405fa4b39d0f703b59a5; build-phase GREEN + oracle proof (item deleted, bullets 1-3 at :41:24, :47:24, :51:24), reviewed revision b639815a9f23e6de8f2e59baf28c62f3935814f0. Gate taken after GREEN and refactor, on the kept RED commit
 
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the observed RED was not gated before GREEN, the test and fix name no sub-agent, and the coverage matrix lacks TC-0003-0059; the row goes back for a fresh observation as Round 2
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925140000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 732b7ea573b06e1ec2e303ecada1c24fc8becfcb98fe9232de59bac6b60b8f25
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
@@ -1244,15 +1248,15 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 64 | - | n/a | grilling(-@2026-09-25T03:20:00.000Z/none): none | - | - | PASS |
 | 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0011; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
 | 66 | acceptance-test-engineer | stage run | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0011 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
-| 67 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | qa-gatekeeper fields | PASS |
+| 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation | PENDING |
 | 68 | - | n/a | grilling(-@2026-09-25T03:24:00.000Z/none): none | - | - | PASS |
 | 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0011 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
 | 70 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0094 | spec-0003 ledger; 06_Test-Cases.md; 02_User-stories.md; test-layers.md | Integration is right for the Level and the directory; every verify bullet has an assertion; no obligation of the CR lacks a row; advisory to read any `warning` in the item, adopted | PASS |
 | 71 | backend-engineer | stage run | /qfai-implement: TDD-0094 GREEN, correcting the legacy-layout item in `buildCopilotInstructions`, and the Oracle proof | #tdd-0094 | packages/qfai/src/cli/commands/init.ts; #tdd-0094 Round 1 | PASS |
 | 72 | backend-engineer | stage run | /qfai-implement: TDD-0094 Refactor verify | #tdd-0094 | Refactor verify fields | PASS |
 | 73 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0094 build-phase GREEN + oracle proof | #tdd-0094 | qa-gatekeeper fields | PASS |
-| 74 | completion-reviewer | - | /qfai-implement: completion review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
-| 75 | implementation-reviewer | - | /qfai-implement: code quality review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
+| 74 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0094, attempt 1 | #tdd-0094 | review-20260925140000000 <!-- qfai:not-a-citation --> | REVISE |
+| 75 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0094, attempt 1 | #tdd-0094 | review-20260925140000000 <!-- qfai:not-a-citation --> | PASS |
 | 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
 
 ## Cross-spec obligations
