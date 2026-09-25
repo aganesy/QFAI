@@ -60,7 +60,8 @@ export const PLAN_SKILLS = [
 /** The YAML front matter of a shipped `SKILL.md`, parsed; `{}` when there is none. */
 export function frontMatterOf(text: string): Record<string, unknown> {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
-  const parsed: unknown = match ? parse(match[1]) : null;
+  const body = match?.[1];
+  const parsed: unknown = body === undefined ? null : parse(body);
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
   return Object.fromEntries(Object.entries(parsed));
 }
