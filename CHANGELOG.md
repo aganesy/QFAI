@@ -45,6 +45,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai-run` says how to run a change that touches several specs** (#2395).
+  A run with no new capability works on one spec, so its route proposal names
+  exactly one in `affectedSpecIds`. The routing reference now says to run such a
+  change once per spec, starting the next run once `finish` reports the last.
+  The announcement names the part a later run makes.
+
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as

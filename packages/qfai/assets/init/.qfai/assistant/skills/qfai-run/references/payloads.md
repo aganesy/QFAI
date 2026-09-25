@@ -90,6 +90,11 @@ The routing work order's result carries the proposal.
   a file that exists, and holds no glob.
 - `newCapabilities` holds `{ goal, covers, excludes, evidence }` for each
   capability no spec owns. `evidence` is what shows no spec owns it.
+- With no `newCapabilities`, a plan that has a stage other than `route`,
+  `discussion`, `maintenance` and `verify` binds one spec, so `affectedSpecIds`
+  names exactly one. A change to several specs runs once per spec: narrow the
+  goal and write scope to one spec, and once `finish` reports that run, start
+  the next with the same request for the next spec.
 - `proposedWriteScope` never names `.git/`, `.qfai/runs/`, `.qfai/decisions/`,
   `.qfai/evidence/decisions/`, `.qfai/evidence/workflow/`,
   `.qfai/evidence/change-request-*.md` or `.qfai/evidence/decision-*.md`, and
