@@ -2175,13 +2175,29 @@ function requestNamesReviewUnit(
 }
 
 /**
- * The ids a request's one visible `TDD-ID` line lists, in order, or `null` when
- * the request states that line other than once or lists nothing on it.
+ * The ids a request names in one visible `TDD-ID` line or the documented
+ * `## TDD IDs` list. Both forms must name the whole review unit exactly once.
  */
 function requestedTddIds(request: string): string[] | null {
   const values = visibleLineFieldValues(request, "TDD-ID");
-  if (values.length !== 1) return null;
-  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  if (values.length > 1) return null;
+  if (values.length === 1) {
+    const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+    return members.length === 0 ? null : members;
+  }
+  const lines = maskEvidenceRegions(request.replace(/\r\n/g, "\n")).split("\n");
+  const headings = lines.flatMap((line, index) =>
+    /^#{1,6}\s+TDD IDs\s*$/i.test(line.trim()) ? [index] : [],
+  );
+  if (headings.length !== 1) return null;
+  const members: string[] = [];
+  for (const line of lines.slice((headings[0] ?? 0) + 1)) {
+    if (/^\s*#{1,6}\s+/.test(line)) break;
+    if (line.trim().length === 0) continue;
+    const member = /^\s*[-*]\s+(TDD-\d{4})\s*$/i.exec(line)?.[1];
+    if (member === undefined) return null;
+    members.push(member);
+  }
   return members.length === 0 ? null : members;
 }
 
@@ -3828,7 +3844,8 @@ async function invalidCompletedEvidenceArtifacts(
       ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      memberAuditedHashes(response, members)?.get(expected.tddId) !== auditedHash
+      bareSha256(memberAuditedHashes(response, members)?.get(expected.tddId) ?? "") !==
+        bareSha256(auditedHash)
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
@@ -4342,7 +4359,8 @@ function roundPackRecordsClosing(
       answered.length !== 1 ||
       verdict.revision === null ||
       revision !== verdict.revision ||
-      memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) !== verdict.hash
+      bareSha256(memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) ?? "") !==
+        bareSha256(verdict.hash)
     ) {
       return false;
     }
@@ -5036,6 +5054,21 @@ export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
  * project that will carry no such row treats warnings as failures.
  */
 export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
+
+/**
+ * Finding code for a ledger row that owes a test case and whose `TC-Refs`
+ * names none.
+ *
+ * Every other check on the column reads the ids the cell holds. A cell holding
+ * `-`, `n/a` or a requirement id gives them nothing to disagree with, so the
+ * row passes all of them while tracing to no test case.
+ *
+ * The shape of the cell decides, not whether it is empty: `REQ-… (follow-up)`
+ * fills the column and reads as a reference.
+ */
+export const TC_REFS_NAME_NO_TEST_CASE_CODE = "QFAI-TDDLIST-022";
+
+const CON_DB_TOKEN = /^CON-DB-\d+$/;
 
 /**
  * Finding code for a `done` row whose test case only an annotation carrier
@@ -5973,6 +6006,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // The columns themselves are Phase 2b's to write, so a ledger that predates
   // them is that phase's to migrate, and its gate is where the gap is heard.
   "QFAI-TDDLIST-020",
+  // `TC-Refs` is Phase 2b's cell, so a row it seeded with no test case there
+  // is seed damage, and the reader may not re-point the obligation.
+  TC_REFS_NAME_NO_TEST_CASE_CODE,
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -6553,6 +6589,9 @@ async function validateSpecTddList(
       ),
     );
   }
+
+  // A row that owes a test case and names none.
+  issues.push(...validateRowsNameATestCase(ledgerRows(), relPath, specNumber));
 
   // A `done` row whose test case only an annotation carrier names.
   issues.push(
@@ -7916,6 +7955,61 @@ function validateObligationColumn(
         [spec.column, spec.layer.toUpperCase(), ...unprotected],
         "change",
         `Add the ${spec.column} column to the ledger and record the ${spec.expected} each of these rows covers. Until then a Layer=${spec.layer.toUpperCase()} row can reach done with no auditable target: TC-Refs is forbidden on it, and there is no other cell for its obligation.`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * Whether the row records its obligation in a column other than `TC-Refs`, as
+ * its `Layer` allows.
+ *
+ * `E2E` and `API` rows may not carry a `TC-*` at all; their own columns are
+ * checked by {@link validateObligationColumn}. An `Integration` row seeded from
+ * a `CON-DB-*` contract carries that contract instead of a test case. The token
+ * is accepted in `TC-Refs` as well, because the shipped ledger header has no
+ * `CON-DB-Refs` column and the reference tells a reader to take a non-`TC-*`
+ * token in `TC-Refs` as the obligation its `Layer` names.
+ */
+function recordsObligationElsewhere(ref: LedgerRowRef): boolean {
+  const layer = cell(ref, "Layer").toLowerCase();
+  if (TC_FORBIDDEN_LAYERS.has(layer)) return true;
+  if (layer !== "integration") return false;
+  return [cell(ref, "CON-DB-Refs"), cell(ref, "TC-Refs")].some((value) =>
+    splitTcRefs(value).some((token) => CON_DB_TOKEN.test(token.toUpperCase())),
+  );
+}
+
+/**
+ * Reports every row that owes a test case and whose `TC-Refs` names none.
+ *
+ * Every status is read. A `todo` row seeded without a test case is the same
+ * defect as a `done` one, and one found before the work starts is cheaper to
+ * repair. A retired spec's findings are demoted by the caller.
+ */
+function validateRowsNameATestCase(
+  rows: Iterable<LedgerRowRef>,
+  relPath: string,
+  specNumber: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const ref of rows) {
+    const tcRefs = cell(ref, "TC-Refs");
+    if (splitTcRefs(tcRefs).some(isWellFormedTcRef)) continue;
+    if (recordsObligationElsewhere(ref)) continue;
+    const id = cell(ref, "TDD-ID");
+    const held = tcRefs.length === 0 ? "an empty TC-Refs" : `TC-Refs "${tcRefs}"`;
+    issues.push(
+      issue(
+        TC_REFS_NAME_NO_TEST_CASE_CODE,
+        `${id} in tdd/test-list.md for spec-${specNumber} (${ref.label}) holds ${held}, which names no test case. The checks on TC-Refs read the TC-* ids the cell holds, so this row is traced by none of them`,
+        "error",
+        relPath,
+        "tddList.tcRefsNameTestCase",
+        [id],
+        "change",
+        `Through /qfai-sdd, which owns TC-Refs: name the ${TEST_CASES_FILE_NAME} test case this row discharges, or retire the row.`,
       ),
     );
   }

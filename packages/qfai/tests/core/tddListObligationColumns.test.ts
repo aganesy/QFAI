@@ -808,6 +808,131 @@ describe("a done row rests on a test, not on an annotation carrier", () => {
   });
 });
 
+describe("a row that owes a test case names one in TC-Refs", () => {
+  const noTestCase = (
+    issues: Awaited<ReturnType<typeof validateTddList>>,
+  ): Awaited<ReturnType<typeof validateTddList>> =>
+    issues.filter((entry) => entry.code === "QFAI-TDDLIST-022");
+
+  it("reports a dash, at every status", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+        "| TDD-0002 | -       | Unit  | tests/b.test.ts | case b   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001", "TDD-0002"]);
+        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.message).toContain('TC-Refs "-"');
+        expect(found[0]?.suggested_action).toContain("/qfai-sdd");
+        expect(found[0]?.suggested_action).toContain("retire the row");
+      },
+    );
+  });
+
+  it("reports a requirement id, which fills the cell and names no test case", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | REQ-0001-0001 (follow-up) | Integration | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("REQ-0001-0001 (follow-up)");
+      },
+    );
+  });
+
+  it("accepts a test case beside other text", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | TC-0001-0001 (follow-up) | Unit | tests/a.test.ts | a | done | - | - |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("reports an empty TC-Refs cell", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 |         | Unit  | tests/a.test.ts | case a   | todo   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.message).toContain("holds an empty TC-Refs");
+      },
+    );
+  });
+
+  it("reports a CON-DB-* contract on a row whose Layer is not Integration", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | CON-DB-0001 | Unit | tests/a.test.ts | a | todo | - | - |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found.map((entry) => entry.refs?.[0])).toEqual(["TDD-0001"]);
+        expect(found[0]?.message).toContain('TC-Refs "CON-DB-0001"');
+      },
+    );
+  });
+
+  it("exempts a row whose Layer records its obligation in another column", async () => {
+    await withLedger(
+      [
+        `${BASE_HEADERS} US-Refs | CON-API-Refs | CON-DB-Refs |`,
+        `${BASE_SEP} ------- | ------------ | ----------- |`,
+        "| TDD-0001 | - | E2E         | tests/e2e/a.ts  | a | done | - | - | US-0001-0001 | -            | -           |",
+        "| TDD-0002 | - | API         | tests/api/a.ts  | b | done | - | - | -            | CON-API-0001 | -           |",
+        "| TDD-0003 | - | Integration | tests/a.test.ts | c | done | - | - | -            | -            | CON-DB-0001 |",
+        "| TDD-0004 | CON-DB-0002 | Integration | tests/b.test.ts | d | todo | - | - | - | - | -  |",
+      ],
+      (issues) => {
+        expect(noTestCase(issues)).toEqual([]);
+      },
+    );
+  });
+
+  it("demotes the finding on a retired spec", async () => {
+    await withLedger(
+      [
+        BASE_HEADERS,
+        BASE_SEP,
+        "| TDD-0001 | -       | Unit  | tests/a.test.ts | case a   | done   | -     | -        |",
+      ],
+      (issues) => {
+        const found = noTestCase(issues);
+        expect(found).toHaveLength(1);
+        expect(found[0]?.severity).toBe("info");
+      },
+      "# TC\n",
+      {
+        spec: [
+          "# SPEC-0001 Sample",
+          "",
+          "- Status: deprecated",
+          "- Deprecated-at: 2026-01-01",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+});
+
 // Anchored to this file, not to `process.cwd()`: from the repo root `../..`
 // resolves above the repo and every read below fails on an unrelated path.
 // tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root

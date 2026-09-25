@@ -59,7 +59,10 @@
 - EX-Ref: EX-0013-0005
 - AC-Refs: AC-0013-0027
 - Verify that an invocation with no argument targets every capability in
-  `_policies/03_Capabilities.md` and delegates Slice per spec.
+  `_policies/03_Capabilities.md` and delegates Slice per spec; that a catalog
+  which moves an assigned spec id to another capability, by its `Spec` cell or
+  by its row order, is reported; and that the skill requires a Change Request
+  to reorder the capability-to-spec mapping.
 
 ## TC-0013-0011: Plan Finalized After A Slice Is Grounded
 

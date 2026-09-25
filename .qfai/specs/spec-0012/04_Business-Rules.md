@@ -410,6 +410,20 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - The mutation-log MUST be git-ignored by default.
 - A code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
 
+## BR-0012-0066: `iterate --capture` navigation — the URL opened and the answer accepted (REQ-0012-0075)
+
+- AC-Refs: AC-0012-0059
+- A `screens[].url` beginning `http://` or `https://` MUST be opened as written. A route-relative one MUST be joined to `--target-url` with WHATWG `new URL(route, base)`. A screen with no URL falls back to `--target-url`, or to no URL when that is absent.
+- A route-relative `screens[].url` with no `--target-url`, or a pair that does not compose into a URL, MUST fail that screen with a reason naming the screen and `--target-url`, and iterate exits 2.
+- The default capture runner MUST treat a navigation that answers HTTP 400 or above, or answers nothing, as a capture failure for that screen, and MUST NOT take its screenshot.
+
+## BR-0012-0067: `iterate --check-convergence` is a read-only peek (REQ-0012-0078)
+
+- AC-Refs: AC-0012-0083
+- `--check-convergence` MUST read `.qfai/evidence/prototyping/prototyping.json`, and MUST NOT write a file, launch Playwright or start a cycle. It does not require `--target-url`.
+- `--cycle` MAY be omitted under `--check-convergence`, and then defaults to 9. A `--cycle` given is reported back and does not change what is read.
+- Converged means `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer. That state exits 0. Every other state exits 2 and names why: `max-iterations`, `license-verify-fail`, `input-error`, no terminal state yet, a `converged` record with no accepted iteration, or no readable `prototyping.json`.
+
 ## BR-0012-0068: a failed `--auto-serve` teardown is reported, not raised
 
 - AC-Refs: AC-0012-0084
