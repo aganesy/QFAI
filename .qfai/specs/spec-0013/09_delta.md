@@ -156,6 +156,7 @@ Rows owned by this spec.
 | CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
 | CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
 | CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260925-0008 | `spec-0013/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                          | re-derive    | claude-code (the user's standing instruction for this session) | 2026-09-25T01:55:00Z |
 
 ### CR-20260913-0009: Ledger boundary repair
 
