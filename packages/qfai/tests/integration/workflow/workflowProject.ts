@@ -96,7 +96,8 @@ export async function minimalProject(config?: string, prefix = "qfai-workflow-")
   await cp(path.join(ASSISTANT, "manifest"), path.join(assistant, "manifest"), { recursive: true });
   await writeStubSkills(root);
   if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
-  await writeFile(path.join(root, ".gitignore"), "/.qfai/runs/\n");
+  // As `qfai init` does: the run state, and the reports a stage writes, are never tracked.
+  await writeFile(path.join(root, ".gitignore"), "/.qfai/runs/\n/.qfai/report/\n");
   git(root, ["init", "-q"]);
   git(root, ["add", "-A"]);
   git(root, ["-c", "user.name=qfai", "-c", "user.email=qfai@example.com", "commit", "-qm", "init"]);

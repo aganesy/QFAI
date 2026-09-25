@@ -1,5 +1,6 @@
 // QFAI:SPEC-0018:TC-0018-0030
 // QFAI:SPEC-0018:TC-0018-0039
+// QFAI:SPEC-0018:TC-0018-0240
 
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -18,6 +19,7 @@ import {
   minimalProject,
   removeProjects,
   resultFor,
+  routedRun,
   submit,
   workflow,
 } from "./workflowProject.js";
@@ -154,4 +156,34 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     submitted: [{ gateId: "validate", verdict: "PASS", trustLevel: "agent_reported" }],
     notReadOnlyGit: [],
   });
+});
+
+it("TC-0018-0240: Under failOn never, a debt whose finding the finish validate still reports", async () => {
+  const root = await minimalProject("validation:\n  failOn: never\n");
+  const finding = (await validateQuietly(root)).issues.find((issue) => issue.file);
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const debt = {
+    findingCode: finding?.code,
+    path: finding?.file,
+    cause: "The finding stands after this stage.",
+    owningSpec: "spec-0001",
+    detectingCommand: "qfai validate",
+    resolvingOwner: "operator",
+    blockingExtent: "completion",
+  };
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    resultFor(issued.json, "discussion-1", { outcome: "accepted_with_debt", debts: [debt] }),
+  );
+  const unmet = field(workflow(root, ["finish", "--run", runId]).json, "unmet");
+  const conditions = (Array.isArray(unmet) ? unmet : []).map((entry) => field(entry, "condition"));
+
+  expect({
+    accepted: field(accepted.json, "ok"),
+    debtOpen: conditions.includes("debt-open"),
+    gateFailed: conditions.includes("gate-failed"),
+  }).toEqual({ accepted: true, debtOpen: true, gateFailed: false });
 });

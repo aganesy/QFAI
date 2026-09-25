@@ -37,9 +37,11 @@ function validities(receipts: Record<string, unknown>): unknown[] {
   return Object.values(receipts);
 }
 
+// The README lies inside the run's write scope, so the edit stays within the run change boundary,
+// and no receipt depends on it.
 it("TC-0018-0112 (TDD-0330): Git fixture with recorded receipts", async () => {
   const { outstanding, resumed, receipts } = await resumedAfter((root) =>
-    write(root, "README.md", "# An unrelated change\n"),
+    write(root, ".qfai/specs/README.md", "# An unrelated change\n"),
   );
 
   expect({

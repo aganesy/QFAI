@@ -1,12 +1,14 @@
 // QFAI:SPEC-0018:TC-0018-0179
+// QFAI:SPEC-0018:TC-0018-0181
 // QFAI:SPEC-0018:TC-0018-0182
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
 import {
+  commitAll,
   DISCOVERY_PROPOSAL,
   field,
   minimalProject,
@@ -78,4 +80,31 @@ it("TC-0018-0182 (TDD-0388): The run edits qfai", async () => {
     cause: field(accepted.json, "halt.cause"),
     config: await readFile(config, "utf8"),
   }).toEqual({ routed: true, state: "blocked", cause: "policy-drift", config: edited });
+});
+
+it("TC-0018-0181: A change committed during the run outside its write scope", async () => {
+  const root = await minimalProject();
+  await writeFile(path.join(root, "notes.md"), "Untracked before the run.\n");
+  const { runId } = await routedRun(root);
+  const issued = workflow(root, ["next", "--run", runId]);
+  await mkdir(path.join(root, "src"), { recursive: true });
+  await writeFile(path.join(root, "src", "leak.ts"), "export {};\n");
+  commitAll(root);
+  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
+  const finished = workflow(root, ["finish", "--run", runId]);
+  const unmet = field(finished.json, "unmet");
+
+  expect({
+    state: field(accepted.json, "run.state"),
+    cause: field(accepted.json, "halt.cause"),
+    subjects: field(accepted.json, "halt.subjects"),
+    outOfScope: (Array.isArray(unmet) ? unmet : [])
+      .filter((entry) => field(entry, "condition") === "diff-out-of-scope")
+      .map((entry) => field(entry, "subject")),
+  }).toEqual({
+    state: "blocked",
+    cause: "invariant-violation",
+    subjects: ["src/leak.ts"],
+    outOfScope: ["src/leak.ts"],
+  });
 });
