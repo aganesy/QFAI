@@ -1026,6 +1026,26 @@ on the renumbered block above.
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925150001000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): bbc2d0754efb091f2dc42e136e782407cfef444698a99d65a3f2848dd3d00a9b
 
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925150011000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): 66c8866672c9f7044d7f09dd92143ed06a821fa80311c2eb5ca85821d1ff7cb4
+- Spec review: PASS
+- Spec reviewed revision: 60282e684c6f0b18bf16c32d541435153ceb9329
+- Spec audited evidence hash: 2ef7ee7fee028eb769071bbbb27996efd412cbd946a28de49d0198abdd7c0ffa
+- Spec review pack: .qfai/review/review-20260925150011000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 66c8866672c9f7044d7f09dd92143ed06a821fa80311c2eb5ca85821d1ff7cb4
+- Code quality review: PASS
+- Code quality reviewed revision: 60282e684c6f0b18bf16c32d541435153ceb9329
+- Code quality audited evidence hash: 2ef7ee7fee028eb769071bbbb27996efd412cbd946a28de49d0198abdd7c0ffa
+- Code quality review pack: .qfai/review/review-20260925150011000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 66c8866672c9f7044d7f09dd92143ed06a821fa80311c2eb5ca85821d1ff7cb4
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 60282e684c6f0b18bf16c32d541435153ceb9329
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Checkpoint verification result: PASS — Test Files 2 passed (2); Tests 15 passed (15). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 60282e684c6f0b18bf16c32d541435153ceb9329
+- Checkpoint verification seal: 30a90ed42365d7e2c236a287c408f8cd091e0d9a865b6551d21da5b3d686feae
+
 ### TDD-0582
 
 - TDD-ID: TDD-0582
@@ -1114,14 +1134,11 @@ Superseded by the refactor verify above; taken at `cd137b5c6`, before the status
 cycle this run took on it, at `22b107140` over five entries, is fenced in its
 entry as the record from before `CR-20260925-0012`.
 
-Every row is at `refactor`, with its refactor verify at `60282e684`. The five T1
-rows form the review group keyed `BR-0012-0066`; `TDD-0517` and `TDD-0582` are
-reviewed alone. qa-gatekeeper has passed every row's Round 1, and qa-gatekeeper#3
-re-issued `TDD-0517`'s on the renumbered block. Still owed:
-
-- the attempt-2 reviews: `completion-reviewer` and `implementation-reviewer` on
-  the T1 group, and on `TDD-0517` and `TDD-0582` each alone;
-- the checkpoint verification of the group and of each T2 row.
+All seven rows are `done`. The T1 group keyed `BR-0012-0066` (`TDD-0516`,
+`TDD-0578`..`TDD-0581`) and `TDD-0582` passed their attempt-2 reviews in packs
+`review-20260925150010000` and `review-20260925150012000`; `TDD-0517` passed in
+`review-20260925150011000`. Each row's refactor verify and checkpoint are at
+`60282e684`.
 
 ## Commands executed
 
@@ -1138,8 +1155,6 @@ re-issued `TDD-0517`'s on the renumbered block. Still owed:
 
 ## Gaps / Open risks
 
-- The reviews and the checkpoints listed under `## Test results summary` are
-  owed.
 - Each qa-gatekeeper RED gate was taken after the revert, on a tree rebuilt from
   the row's recorded revision and edit. `## Record defects` carries the ordering
   disclosure.
@@ -1219,6 +1234,9 @@ Preflight: session opened
 | 14 | backend-engineer | backend-engineer#2 | refactor verify of `TDD-0517`, refreshed at the committed tree | the recorded refactor-verify command; HEAD `60282e684` | #tdd-0517 `Refactor verify` fields; Test Files 2 passed (2), Tests 15 passed (15), revision `60282e684c6f0b18bf16c32d541435153ceb9329`. The copy at `da2438ac0` is fenced as superseded | PASS |
 | 15 | backend-engineer | backend-engineer#2 | re-attest `TDD-0517`: rebuild the recorded mutation at `60282e684` and run the six entries | #tdd-0517 Round 1 | I re-ran and attest the recorded falsifiability and GREEN. With `defaultCaptureScreen.ts:122` inverted to `status < 400` (working-tree+76f8c181…), each entry run separately fails as an assertion, Tests 1 failed \| 6 skipped (7), at `:79:23`, `:96:23`, `:112:23`, `:160:23`, `:174:23` and `:128:23`, as recorded. The recorded `status > 400` run also reproduces (working-tree+8f1559e1…): entries 1 to 5 pass and entry 6 fails at `:128:23`. Reverted with `git checkout`; each entry then passes, Tests 1 passed \| 6 skipped (7) | PASS |
 | 16 | qa-gatekeeper | qa-gatekeeper#3 | re-issue the RED phase and build-phase gate on `TDD-0517`'s renumbered Round 1 | #tdd-0517; qa-gatekeeper#2's lines | qa-gatekeeper fields; #2's lines fenced | PASS |
+| 17 | completion-reviewer | completion-reviewer | completion review of `TDD-0517`, attempt 2 | #tdd-0517 | review-20260925150011000 <!-- qfai:not-a-citation --> | PASS |
+| 18 | implementation-reviewer | implementation-reviewer | code review of `TDD-0517`, attempt 2 | #tdd-0517 | review-20260925150011000 <!-- qfai:not-a-citation --> | PASS |
+| 19 | orchestrator | orchestrator | checkpoint verification of `TDD-0517`, off a checkpoint boundary | #tdd-0517 | Checkpoint verification fields | PASS |
 
 ## Test results summary
 
@@ -1226,10 +1244,9 @@ Preflight: session opened
 | ---------- | ----- | ----------- | ----------------------------------- | --------------------------------- |
 | `TDD-0517` | 1     | `f5b43cae0` | `status < 400` fails all six entries | `status > 400` fails the 400 entry only |
 
-`TDD-0517` is at `refactor`, with its refactor verify at `60282e684`, and
-qa-gatekeeper#3 re-issued its verdict on the renumbered Round 1. Still owed: the
-attempt-2 `completion-reviewer` and `implementation-reviewer` reviews, and the
-checkpoint verification.
+`TDD-0517` is `done`: qa-gatekeeper#3 re-issued its verdict on the renumbered
+Round 1, both reviewers passed attempt 2 in `review-20260925150011000`, and its
+refactor verify and checkpoint are at `60282e684`.
 
 ## Commands executed
 
