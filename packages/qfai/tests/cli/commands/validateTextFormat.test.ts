@@ -210,7 +210,11 @@ function classifyByGuideline(lines: string[], failOn: FailOn): { kind: LineKind;
   });
 }
 
-/** The ordered rules listed under `#### Classifying a line`, in document order. */
+/**
+ * The ordered rules listed under `#### Classifying a line`, in document order.
+ * A rule wrapped over several physical lines is returned whole, so an anchor on
+ * its second line is found in that rule rather than missed.
+ */
 function extractPrecedenceRules(guideline: string): string[] {
   const section = /#### Classifying a line\n([\s\S]*?)\n\nA message continuation/.exec(
     guideline,
@@ -218,10 +222,19 @@ function extractPrecedenceRules(guideline: string): string[] {
   if (section === undefined) {
     throw new Error("the text output grammar no longer documents a line-classification precedence");
   }
-  return section
-    .split("\n")
-    .filter((line) => /^\d+\. /.test(line))
-    .map((line) => line.replace(/^\d+\. /, ""));
+  const rules: string[] = [];
+  for (const line of section.split("\n")) {
+    const item = /^\d+\. (.*)$/.exec(line);
+    if (item?.[1] !== undefined) {
+      rules.push(item[1]);
+      continue;
+    }
+    const last = rules.length - 1;
+    if (last >= 0 && /^ +\S/.test(line)) {
+      rules[last] = `${rules[last]} ${line.trim()}`;
+    }
+  }
+  return rules;
 }
 
 const MULTILINE_FIX = [
@@ -547,6 +560,9 @@ describe("validate --format text matches the validate contract's text output gra
     for (const [index, anchor] of anchors.entries()) {
       expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
     }
+    expect(rules[6], "the last precedence rule must be the message-continuation fallback").toBe(
+      "Anything else continues the previous issue's message.",
+    );
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
     try {
