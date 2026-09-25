@@ -1098,8 +1098,6 @@ function diagnosisInputs(
   return [{ path: diagnosis.reproductionRef, digest }];
 }
 
-// SIMPLIFIED: a test fix whose defective row the ledger fact does not describe keeps the plan's skill.
-// Lift when: the command adapter always supplies the bound spec's ledger rows.
 // The records a stage is defined to write for the spec its work order binds, each named for
 // that spec. Every other kind writes only its checked scope or git-ignored output.
 // SIMPLIFIED: names the bound spec's records under the default specs directory.
@@ -1138,6 +1136,8 @@ function recordAreasOf(workOrder: WorkflowWorkOrder): string[] {
   }
 }
 
+// A test fix goes to the skill its defective row's layer selects. A row the bound spec's ledger
+// does not hold keeps the plan's skill.
 function executorSkill(
   stage: PlanStages[number],
   diagnosis: WorkflowSnapshot["diagnosis"],
