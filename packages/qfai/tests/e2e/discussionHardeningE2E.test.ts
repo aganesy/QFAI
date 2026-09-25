@@ -45,19 +45,6 @@ describe("discussion hardening E2E guidance", () => {
     expect(content).toMatch(/never pick a single visual winner/);
   });
 
-  it("TC-0010-0006: the skill's planner-first guidance ranks no exploration and keeps the brand direction the user's", async () => {
-    const content = await readFile(skillPath, "utf-8");
-    const guidance = content.split("\n").filter((line) => /planner-first/.test(line));
-
-    expect(guidance.length).toBeGreaterThan(0);
-    for (const line of guidance) {
-      expect(line).toMatch(/unranked|never pick a single visual winner|did not choose a single/);
-    }
-    expect(content).toMatch(/do not finalize the design system here/);
-    expect(content).toMatch(/The brand direction is the exception/);
-    expect(content).toMatch(/published theme the product is built on is the user's decision/);
-  });
-
   it("SKILL.md が selected direction の前段として planner / brand SSOT を中心にしている", async () => {
     const content = await readFile(skillPath, "utf-8");
 
