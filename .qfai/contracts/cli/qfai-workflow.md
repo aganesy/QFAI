@@ -821,10 +821,11 @@ event, but does not require a commit. Tracked `summary.json` keeps the state it
 had at its last write. `status` derives the current state from the journal.
 
 - It runs `validateProject()` in process: the whole project, profile `full`, the
-  project's `failOn`, with no shell and no process spawned. The runtime journal
-  records the verdict and finding identities as `cli_observed`, without request
-  text, free-text answers or raw validator output. That result, not an agent's,
-  decides the validate gate.
+  project's `failOn`, with no shell and no process spawned for it. The git reads
+  `finish` needs are the read-only argv reads [Boundaries](#boundaries) allows.
+  The runtime journal records the verdict and finding identities as
+  `cli_observed`, without request text, free-text answers or raw validator
+  output. That result, not an agent's, decides the validate gate.
 - Each remaining finding at or above `failOn` is reported as `pre-existing` or
   `new` against the `start` baseline. A finding's identity is its `code`, `file`
   and sorted `refs`. Neither kind is waived.

@@ -110,6 +110,18 @@
   a push only the request names, which is not carried. IDs are unchanged.
   TDD-0112 to TDD-0119 stay at todo; this CR goes in their DR-ID.
 
+- Change ID: DELTA-0009
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0012 option 1. `finish` needs read-only git reads
+  through argv, so TC-0018-0030 no longer expects zero child processes. It
+  expects that no child process runs validate and that each one `finish`
+  starts is a read-only `git` argv read. CLI-WF `## Completion` scopes "no
+  process spawned" to validate. EX-0018-0019, AC-0018-0006 and BR-0018-0019
+  are unchanged. IDs are unchanged. TDD-0303 stays at todo; this CR goes in
+  its DR-ID.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -580,3 +592,4 @@ through `finish`, so its example ends that way.
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/05_Examples.md`, `06_Test-Cases.md`                                                       | re-derive | user        | 2026-09-25T02:36:35Z |
 | CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/03..06`                                                                                   | re-derive | user        | 2026-09-25T03:00:14Z |
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`                                   | re-derive | user        | 2026-09-25T03:23:20Z |
+| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/06_Test-Cases.md`                                                                         | re-derive | user        | 2026-09-25T06:04:36Z |
