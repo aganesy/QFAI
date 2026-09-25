@@ -51,6 +51,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Three spec-0010 ledger rows close with the reviews their earlier close
+  skipped** (#2290). TDD-0030, TDD-0031 and TDD-0032 cover the discussion
+  stage's workflow-run reference. They had closed at `exception` under a
+  review waiver. Each is reopened, shown to fail when its predicate in the
+  shipped reference is broken, and closed at `done` after two qa-gatekeeper
+  turns and a completion and an implementation review. The three rows leave
+  the spec-0010 waiver. Seven rows stay under it.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

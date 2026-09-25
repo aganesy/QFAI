@@ -57,7 +57,7 @@ reading of the assertions, and a reviewer who reads one and disagrees overrides 
 | US-0010-0010 | n/a | ❌ | n/a | n/a | n/a | n/a | n/a | n/a | ❌ | ❌ |
 | US-0010-0011 | ⚠️ | ❌ | ⚠️ | n/a | n/a | n/a | n/a | n/a | ❌ | ❌ |
 | US-0010-0012 | ⚠️ | ❌ | n/a | n/a | ⚠️ | n/a | n/a | n/a | ❌ | ❌ |
-| US-0010-0013 | ⚠️ | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ⚠️ |
+| US-0010-0013 | ✅ | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ✅ |
 | TC-0010-0001 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0005 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0006 | ⚠️ | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
@@ -69,11 +69,11 @@ reading of the assertions, and a reviewer who reads one and disagrees overrides 
 | TC-0010-0012 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0013 | n/a | n/a | n/a | n/a | ⚠️ | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0014 | n/a | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ✅ |
-| TC-0010-0015 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
-| TC-0010-0016 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
+| TC-0010-0015 | n/a | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ✅ |
+| TC-0010-0016 | n/a | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ✅ |
 
-Matrix: **US 13 / TC 13**; scored cells **✅ 6 / ⚠️ 30 / ❌ 22** and n/a 176;
-status **✅ 2 / ⚠️ 13 / ❌ 11**.
+Matrix: **US 13 / TC 13**; scored cells **✅ 11 / ⚠️ 25 / ❌ 22** and n/a 176;
+status **✅ 5 / ⚠️ 10 / ❌ 11**.
 
 ### Business rule coverage (§7)
 
@@ -89,11 +89,11 @@ status **✅ 2 / ⚠️ 13 / ❌ 11**.
 | BR-0010-0011 | ⚠️ | n/a | n/a | TC-0010-0012 | ⚠️ |
 | BR-0010-0012 | ⚠️ | ⚠️ | ⚠️ | TC-0010-0013 | ⚠️ |
 | BR-0010-0013 | ✅ | n/a | n/a | TC-0010-0014 | ✅ |
-| BR-0010-0014 | ⚠️ | n/a | n/a | TC-0010-0015 | ⚠️ |
-| BR-0010-0015 | ⚠️ | n/a | n/a | TC-0010-0016 | ⚠️ |
+| BR-0010-0014 | ✅ | n/a | n/a | TC-0010-0015 | ✅ |
+| BR-0010-0015 | ✅ | n/a | n/a | TC-0010-0016 | ✅ |
 
-Business rules: **BR 12**; scored cells **✅ 1 / ⚠️ 14 / ❌ 1** and n/a 20;
-status **✅ 1 / ⚠️ 10 / ❌ 1**.
+Business rules: **BR 12**; scored cells **✅ 3 / ⚠️ 12 / ❌ 1** and n/a 20;
+status **✅ 3 / ⚠️ 8 / ❌ 1**.
 
 ## Every ❌ cell, named
 
@@ -127,7 +127,7 @@ Each is an open gap, not an exemption: the ledger row that would cover it is sti
 
 ## Every ⚠️ cell, named
 
-44 cell(s), each with the reason its mark was derived.
+37 cell(s), each with the reason its mark was derived.
 
 - `TC-0010-0001` · Normal path: the case's declared `Type` (normal); closed without a failing RED: TDD-0001.
 - `TC-0010-0001` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
@@ -148,17 +148,12 @@ Each is an open gap, not an exemption: the ledger row that would cover it is sti
 - `TC-0010-0012` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
 - `TC-0010-0013` · Boundary values: the case's declared `Type` (boundary); closed without a failing RED: TDD-0017.
 - `TC-0010-0013` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
-- `TC-0010-0015` · Normal path: the case's declared `Type` (normal); closed without a failing RED: TDD-0031.
-- `TC-0010-0015` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
-- `TC-0010-0016` · Normal path: the case's declared `Type` (normal); closed without a failing RED: TDD-0032.
-- `TC-0010-0016` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
 - `US-0010-0009` · Normal path: the story's E2E ledger rows; closed without a failing RED: TDD-0026.
 - `US-0010-0009` · Oracle strength: the story's E2E rows: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
 - `US-0010-0011` · Equivalence partitions: the 3 cases tracing to it through its criteria are its partitions; some are not fully covered.
 - `US-0010-0011` · Error path: 2 error case(s) (TC-0010-0010, TC-0010-0011); some are not fully covered.
 - `US-0010-0012` · Equivalence partitions: the 2 cases tracing to it through its criteria are its partitions; some are not fully covered.
 - `US-0010-0012` · Boundary values: 1 boundary case(s) (TC-0010-0013); some are not fully covered.
-- `US-0010-0013` · Equivalence partitions: the 3 cases tracing to it through its criteria are its partitions; some are not fully covered.
 - `BR-0010-0001` · Positive case: normal cases TC-0010-0001 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
 - `BR-0010-0005` · Positive case: normal cases TC-0010-0005 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
 - `BR-0010-0006` · Positive case: normal cases TC-0010-0006 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
@@ -171,8 +166,6 @@ Each is an open gap, not an exemption: the ledger row that would cover it is sti
 - `BR-0010-0012` · Positive case: only non-normal cases cover it (TC-0010-0013; no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria).
 - `BR-0010-0012` · Negative case: non-normal cases TC-0010-0013 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
 - `BR-0010-0012` · Conditional branches: the rule is conditional and only one side of its condition has a case.
-- `BR-0010-0014` · Positive case: normal cases TC-0010-0015 (the ledger rows naming it in `BR-Ref`); not all fully covered.
-- `BR-0010-0015` · Positive case: normal cases TC-0010-0016 (the ledger rows naming it in `BR-Ref`); not all fully covered.
 
 ## Story cells scored n/a
 

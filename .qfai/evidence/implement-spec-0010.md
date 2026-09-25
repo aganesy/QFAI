@@ -1,11 +1,14 @@
 # Implement Evidence: spec-0010
 
-Rows closed under DR-0298, one entry per row.
+Rows closed under DR-0298, one entry per row. Each entry is superseded by the
+reviewed entry in `atdd-spec-0010.md`, which the row's Evidence cell now
+points at, and is kept as the record of the earlier close.
 
 ## Ledger rows advanced
 
 ### TDD-0030
 
+- Superseded by: `.qfai/evidence/atdd-spec-0010.md#tdd-0030`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/discussionSettledInputsSpec0010.test.ts`
@@ -18,6 +21,7 @@ Rows closed under DR-0298, one entry per row.
 
 ### TDD-0031
 
+- Superseded by: `.qfai/evidence/atdd-spec-0010.md#tdd-0031`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/discussionEntryCheckSpec0010.test.ts`
@@ -30,6 +34,7 @@ Rows closed under DR-0298, one entry per row.
 
 ### TDD-0032
 
+- Superseded by: `.qfai/evidence/atdd-spec-0010.md#tdd-0032`, after the row was reopened and closed with its reviews
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/discussionOperationsSpec0010.test.ts`
