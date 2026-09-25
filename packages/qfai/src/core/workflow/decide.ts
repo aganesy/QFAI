@@ -2401,7 +2401,7 @@ export function decide(
       acceptedStages.length > selectedStages.length ||
       acceptedStages.some(
         (accepted, index) =>
-          accepted.outcome !== "accepted" ||
+          (accepted.outcome !== "accepted" && accepted.outcome !== "accepted_with_debt") ||
           accepted.stageInstanceId !== selectedStages[index]?.stageInstanceId ||
           accepted.stageKind !== selectedStages[index].stageKind,
       )
