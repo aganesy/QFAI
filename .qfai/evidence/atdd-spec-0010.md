@@ -168,6 +168,13 @@ packages/qfai/tests/integration/discussionSettledInputsSpec0010.test.ts
 - Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0010 are still at todo, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
 - Checkpoint verification revision: 9a886a6921fe9097741948f19a669679895ae419
 - Checkpoint verification seal: fa42a8b5dd5de223726ccd4a4462f1755d826603c2e9f884e360cfe20d9bb8b8
+- Record re-attestation reason: the audited subject gained this row's Coverage Depth Matrix slice when `coverage-depth-spec-0010.md` was added after the verdicts above. No record defect was repaired, so no queue code applies.
+- Spec record re-attestation: bb222505902f79a3a2659283def521de4cfe90f78d0572324b37b153a7aa5c1b
+- Spec record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
+- Code quality record re-attestation: bb222505902f79a3a2659283def521de4cfe90f78d0572324b37b153a7aa5c1b
+- Code quality record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
 
 ### TDD-0031
 
@@ -250,6 +257,13 @@ packages/qfai/tests/integration/discussionEntryCheckSpec0010.test.ts
 - Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0010 are still at todo, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
 - Checkpoint verification revision: 9a886a6921fe9097741948f19a669679895ae419
 - Checkpoint verification seal: d1f39d6c068d9ceee2c959a02b6705034aeba45eb8fc8c396529a4ee3164a881
+- Record re-attestation reason: the audited subject gained this row's Coverage Depth Matrix slice when `coverage-depth-spec-0010.md` was added after the verdicts above. No record defect was repaired, so no queue code applies.
+- Spec record re-attestation: 8074dde738e4b999a7bd0f34ca340fe63bf8a183b9fa0ada01a3908d4dedad22
+- Spec record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
+- Code quality record re-attestation: 8074dde738e4b999a7bd0f34ca340fe63bf8a183b9fa0ada01a3908d4dedad22
+- Code quality record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
 
 ### TDD-0032
 
@@ -333,6 +347,13 @@ packages/qfai/tests/integration/discussionOperationsSpec0010.test.ts
 - Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0010 are still at todo, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
 - Checkpoint verification revision: 9a886a6921fe9097741948f19a669679895ae419
 - Checkpoint verification seal: 752266afbe90cfa9635f0491cece3a91d1715bc366c328ab7082178d5878c9f7
+- Record re-attestation reason: the audited subject gained this row's Coverage Depth Matrix slice when `coverage-depth-spec-0010.md` was added after the verdicts above. No record defect was repaired, so no queue code applies.
+- Spec record re-attestation: 208f16d85921c47cf83c3ed651e36f59080f21b550f6d36d4140878c5e3d2a6f
+- Spec record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Spec record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
+- Code quality record re-attestation: 208f16d85921c47cf83c3ed651e36f59080f21b550f6d36d4140878c5e3d2a6f
+- Code quality record re-attestation pack: .qfai/review/review-20260925113300001 <!-- qfai:not-a-citation -->
+- Code quality record re-attestation pack seal: 2de9ac3cac1bd2ae6a216e33477b15c80b62dd4feecca692dc9db55a184aff7f
 
 ### TDD-0033
 
