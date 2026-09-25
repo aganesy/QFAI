@@ -7,6 +7,10 @@ import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
+import {
+  ResolveActiveDiscussionPackError,
+  resolveActiveDiscussionPack,
+} from "../discussionPack.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
@@ -20,6 +24,7 @@ import type {
   WorkflowSnapshot,
   WorkflowWorkOrder,
 } from "./decide.js";
+import { obligationFingerprints } from "./obligation.js";
 import { isRecord } from "./parse.js";
 import { checkInstalledPlans, loadBuiltInPlans, WORKFLOW_ROUTES } from "./plans.js";
 
@@ -220,42 +225,160 @@ export async function ledgerFactsOf(root: string, specId: string) {
 
 type Dependency = WorkflowDependency;
 const GLOB = /[*?[{]/;
+// The digest recorded for a file that does not exist, which stays valid while it still does not.
+const ABSENT = "absent";
+// A dependency that is not a project path is a fact the core recomputes: `qfai:<kind>[:<subject>]`.
+const FACT = "qfai:";
+const TOOL = "qfai:tool";
+const DISCUSSION = "qfai:discussion";
+const OBLIGATION = /^qfai:obligation:([^:]+):(.+)$/;
+const LIFECYCLE = /^qfai:lifecycle:(.+)$/;
+// SIMPLIFIED: the lockfiles these package managers write at the project root, and no other.
+// Lift when: a project keeps its lockfile below the root or uses another package manager.
+const LOCKFILES = [
+  "pnpm-lock.yaml",
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+  "yarn.lock",
+  "bun.lock",
+];
+
+// What one validity check reads once, however many receipts depend on it.
+interface FactReads {
+  obligations: Map<string, Promise<Map<string, string> | undefined>>;
+  specs?: Promise<NonNullable<WorkflowFacts["specs"]>>;
+  tool?: Promise<string>;
+  discussion?: Promise<{ digest: string; pack?: string }>;
+}
+
+async function toolDigest(): Promise<string> {
+  const [version, entry] = await Promise.all([resolveToolVersion(), cliEntryDigest()]);
+  return hashAssistantAssetText(`${version}\n${entry}`);
+}
+
+// The selected discussion pack's project-relative path and its digest; none selected is `""`.
+async function discussionOf(root: string): Promise<{ digest: string; pack?: string }> {
+  const selected = await resolveActiveDiscussionPack(root).catch((error: unknown) => {
+    if (error instanceof ResolveActiveDiscussionPackError) return undefined;
+    throw error;
+  });
+  const pack = selected && path.relative(root, selected).split(path.sep).join("/");
+  return { digest: hashAssistantAssetText(pack ?? ""), ...(pack ? { pack } : {}) };
+}
+
+async function lifecycleDigest(root: string, specId: string, reads: FactReads): Promise<string> {
+  reads.specs ??= specFacts(root);
+  return hashAssistantAssetText((await reads.specs)[specId]?.lifecycle ?? ABSENT);
+}
+
+async function obligationDigests(root: string, specId: string, reads: FactReads) {
+  const known = reads.obligations.get(specId) ?? obligationFingerprints(root, specId);
+  reads.obligations.set(specId, known);
+  return known;
+}
+
+async function factDigest(root: string, fact: string, reads: FactReads) {
+  const [, specId = "", rowId = ""] = OBLIGATION.exec(fact) ?? [];
+  if (rowId) {
+    const rows = await obligationDigests(root, specId, reads);
+    return rows && (rows.get(rowId) ?? ABSENT);
+  }
+  const lifecycle = LIFECYCLE.exec(fact)?.[1];
+  if (lifecycle !== undefined) return lifecycleDigest(root, lifecycle, reads);
+  if (fact === TOOL) return (reads.tool ??= toolDigest());
+  if (fact === DISCUSSION) return (reads.discussion ??= discussionOf(root)).then((d) => d.digest);
+  return undefined;
+}
 
 // A file's digest, or undefined when it cannot be read; a glob's, the digest of its sorted
-// member list, so an added or removed member changes it while no member's bytes do.
-async function dependencyDigest(root: string, dependency: string): Promise<string | undefined> {
-  if (!GLOB.test(dependency)) {
-    const text = await readFile(path.join(root, dependency), "utf8").catch(() => undefined);
-    return text === undefined ? undefined : hashAssistantAssetText(text);
-  }
-  const members = await fg(dependency, { cwd: root, dot: true, onlyFiles: true });
+// member list, so an added or removed member changes it while no member's bytes do; a fact's,
+// the digest the core computes for it now.
+async function dependencyDigest(
+  root: string,
+  dependency: string,
+  reads: FactReads,
+): Promise<string | undefined> {
+  if (dependency.startsWith(FACT)) return factDigest(root, dependency, reads);
+  if (GLOB.test(dependency)) return membershipDigest(root, dependency);
+  const text = await readFile(path.join(root, dependency), "utf8").catch(() => undefined);
+  return text === undefined ? undefined : hashAssistantAssetText(text);
+}
+
+async function membershipDigest(root: string, glob: string): Promise<string> {
+  const members = await fg(glob, { cwd: root, dot: true, onlyFiles: true });
   return hashAssistantAssetText(members.sort().join("\n"));
 }
 
-// SIMPLIFIED: the obligation fingerprint is the digest of the bound spec's user stories,
-// acceptance criteria, business rules and examples as whole files, not of the items a row cites.
-// Lift when: a receipt names the ledger rows it covers and an item's text can be read on its own.
-async function obligationOf(root: string, specId: string): Promise<Dependency[]> {
-  const { config } = await loadConfig(root);
-  const pack = path.relative(root, path.join(resolvePath(root, config, "specsDir"), specId));
-  const pattern = `${pack.split(path.sep).join("/")}/0[2-5]_*.md`;
-  const digests = await digestsOf(root, [pattern]);
-  return Object.entries(digests).map(([file, digest]) => ({
-    path: file,
-    digest,
+// The obligation fingerprint of each ledger row the work order covers; every row of the bound
+// spec's ledger when the work order names none.
+async function obligationOf(
+  root: string,
+  specId: string,
+  workOrder: WorkflowWorkOrder,
+): Promise<Dependency[]> {
+  const rows = await obligationFingerprints(root, specId);
+  if (!rows) return [];
+  const ledger = workOrder.ledger;
+  const covered = ledger?.specId === specId ? ledger.rowIds : [...rows.keys()];
+  return covered.map((rowId) => ({
+    path: `${FACT}obligation:${specId}:${rowId}`,
+    digest: rows.get(rowId) ?? ABSENT,
     class: "normative",
   }));
 }
 
+// Each file the patterns match, and the membership of each pattern.
+async function treeOf(root: string, patterns: string[]): Promise<Dependency[]> {
+  const files = await digestsOf(root, patterns);
+  const members = await Promise.all(
+    patterns.map(async (glob) => ({ path: glob, digest: await membershipDigest(root, glob) })),
+  );
+  return [
+    ...Object.entries(files).map(([file, digest]) => ({ path: file, digest })),
+    ...members,
+  ].map((each): Dependency => ({ ...each, class: "normative" }));
+}
+
+// What every receipt depends on besides its inputs: the config and the lockfiles, the policy and
+// the executor skill, the tool, the selected discussion pack, and the bound spec's lifecycle.
+async function contextOf(
+  root: string,
+  workOrder: WorkflowWorkOrder,
+  specId: string | undefined,
+): Promise<Dependency[]> {
+  const reads: FactReads = { obligations: new Map() };
+  const discussion = await discussionOf(root);
+  const skill = workOrder.executor?.skill;
+  const patterns = [
+    `${ASSISTANT}/constitution/**`,
+    ...(skill ? [`${ASSISTANT}/skills/${skill}/**`] : []),
+    ...(discussion.pack ? [`${discussion.pack}/**`] : []),
+  ];
+  const named = ["qfai.config.yaml", ...LOCKFILES].map(async (file) => ({
+    path: file,
+    digest: (await dependencyDigest(root, file, reads)) ?? ABSENT,
+  }));
+  const facts = [
+    { path: TOOL, digest: await toolDigest() },
+    { path: DISCUSSION, digest: discussion.digest },
+    ...(specId
+      ? [{ path: `${FACT}lifecycle:${specId}`, digest: await lifecycleDigest(root, specId, reads) }]
+      : []),
+  ];
+  const files = [...(await Promise.all(named)), ...facts].map((each): Dependency => ({
+    ...each,
+    class: "normative",
+  }));
+  return [...files, ...(await treeOf(root, patterns))];
+}
+
 const OBSERVED_TESTS = ["expected_red", "pass", "fail"];
 
-// What an accepted result's receipt depends on. Every receipt holds its work order's inputs. A
-// result that observed a test also holds the bound spec's obligation, and the files it changed:
-// as the oracle it observed at RED, or as the files a GREEN or verify ran, with the membership of
-// each glob write area covering one of them.
-// SIMPLIFIED: holds no tool, skill, lockfile, lifecycle, contract owner or discussion pack digest,
-// and a changed file that no longer exists is left out.
-// Lift when: a stage's result is shown to depend on one of them, or a stage deletes a file.
+// What an accepted result's receipt depends on. Every receipt holds its work order's inputs and
+// the context it ran in. A result that observed a test also holds the obligation of the ledger
+// rows it covers, and the files it changed: as the oracle it observed at RED, or as the files a
+// GREEN or verify ran, with the membership of each glob write area covering one of them. A
+// changed file that no longer exists is held as absent.
 export async function receiptDependenciesOf(
   root: string,
   workOrder: WorkflowWorkOrder,
@@ -266,7 +389,8 @@ export async function receiptDependenciesOf(
     ...input,
     class: "normative",
   }));
-  if (!OBSERVED_TESTS.includes(result.testObservation ?? "")) return inputs;
+  const context = await contextOf(root, workOrder, specId);
+  if (!OBSERVED_TESTS.includes(result.testObservation ?? "")) return [...inputs, ...context];
   const ran: Dependency["class"] =
     result.testObservation === "expected_red" ? "historical_observation" : "current_verification";
   const changed = (result.changedFiles ?? []).map((each) => each.path);
@@ -276,22 +400,34 @@ export async function receiptDependenciesOf(
           (area) => GLOB.test(area) && changed.some((file) => areaCovers(area, file)),
         )
       : [];
+  const reads: FactReads = { obligations: new Map() };
   const observed = await Promise.all(
-    [...changed, ...globs].map(async (each) => {
-      const digest = await dependencyDigest(root, each);
-      return digest === undefined ? [] : [{ path: each, digest, class: ran }];
-    }),
+    [...changed, ...globs].map(async (each) => ({
+      path: each,
+      digest: (await dependencyDigest(root, each, reads)) ?? ABSENT,
+      class: ran,
+    })),
   );
-  const obligation = specId ? await obligationOf(root, specId) : [];
-  return [...inputs, ...obligation, ...observed.flat()];
+  const obligation = specId ? await obligationOf(root, specId, workOrder) : [];
+  return [...inputs, ...context, ...obligation, ...observed];
 }
 
 // A receipt with no dependency record, or one whose dependency cannot be read, is `unknown`; one
 // whose rechecked dependency changed is `stale`. What a stage observed once is never rechecked.
-async function validityOf(root: string, dependencies: readonly Dependency[] | undefined) {
+async function validityOf(
+  root: string,
+  dependencies: readonly Dependency[] | undefined,
+  reads: FactReads,
+) {
   if (!dependencies) return "unknown";
   const checked = dependencies.filter((each) => each.class !== "historical_observation");
-  const now = await Promise.all(checked.map((each) => dependencyDigest(root, each.path)));
+  const now = await Promise.all(
+    checked.map(
+      async (each) =>
+        (await dependencyDigest(root, each.path, reads)) ??
+        (each.digest === ABSENT ? ABSENT : undefined),
+    ),
+  );
   if (now.includes(undefined)) return "unknown";
   return now.every((digest, index) => digest === checked[index]?.digest) ? "valid" : "stale";
 }
@@ -302,10 +438,11 @@ export async function receiptValidityOf(
   snapshot: WorkflowSnapshot,
 ): Promise<NonNullable<WorkflowFacts["receiptValidity"]>> {
   const stages = snapshot.acceptedStages ?? [];
+  const reads: FactReads = { obligations: new Map() };
   const classed = await Promise.all(
     stages.map(async (stage) =>
       stage.receiptRef
-        ? [[stage.receiptRef, await validityOf(root, stage.dependencies)] as const]
+        ? [[stage.receiptRef, await validityOf(root, stage.dependencies, reads)] as const]
         : [],
     ),
   );

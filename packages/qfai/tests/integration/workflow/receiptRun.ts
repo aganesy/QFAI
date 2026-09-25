@@ -30,6 +30,14 @@ const FILES: Record<string, string> = {
   [AC_FILE]: "# Acceptance criteria\n\nAC-0001-0001: the order lines are exported as CSV.\n",
   [`${PACK}/04_Business-Rules.md`]: "# Business rules\n\nBR-0001-0001: one line per order line.\n",
   [`${PACK}/05_Examples.md`]: "# Examples\n\nEX-0001-0001: two lines give two rows.\n",
+  [`${PACK}/06_Test-Cases.md`]: [
+    "# Test cases",
+    "",
+    "| TC-ID | Level | AC-Refs | EX-Ref |",
+    "| --- | --- | --- | --- |",
+    "| TC-0001-0001 | L1 | AC-0001-0001 | EX-0001-0001 |",
+    "",
+  ].join("\n"),
   [LEDGER_FILE]: [
     "# TDD Test List",
     "",
