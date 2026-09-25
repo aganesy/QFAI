@@ -1442,9 +1442,10 @@ function runStateUnmet(snapshot: WorkflowSnapshot): WorkflowUnmet[] {
     const questionIds = (snapshot.openQuestions ?? []).map((question) => question.questionId);
     return unmetOf("run-waiting", questionIds.length > 0 ? questionIds : ["question"]);
   }
-  // SIMPLIFIED: a blocked run is named by its state, not by its cause or blocker.
-  // Lift when: the snapshot carries the cause or blocker that moved the run to `blocked`.
-  return run.state === "blocked" ? unmetOf("run-waiting", ["blocked"]) : [];
+  if (run.state !== "blocked") return [];
+  const halt = snapshot.halt;
+  const named = halt?.cause ?? halt?.blocker;
+  return unmetOf("run-waiting", [named ?? "blocked"], halt?.owner);
 }
 
 function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowUnmet[] {
@@ -1529,9 +1530,6 @@ function scopeUnmet(
   ];
 }
 
-// A debt is resolved once the finish validate no longer reports its finding code at its path.
-// SIMPLIFIED: a later accepted result of the detecting stage kind does not resolve a debt.
-// Lift when: an accepted result's own findings are recorded beside its stage.
 // A debt is resolved once the finish validate, or a later accepted result of the stage kind
 // that detected it, no longer reports its finding code at its path.
 function debtUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
@@ -1940,9 +1938,11 @@ function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecisi
       events: [],
     };
   }
-  const unsupported = unsupportedHarness(input.harness);
+  const unsupported = facts.cause
+    ? `No run was created: the fail-closed cause ${facts.cause} holds. Invoke a stage skill by name instead.`
+    : unsupportedHarness(input.harness);
   if (unsupported) {
-    const cause = "unsupported-capability" as const;
+    const cause = facts.cause ?? "unsupported-capability";
     return {
       verdict: {
         ok: false,

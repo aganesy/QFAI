@@ -383,6 +383,7 @@
     "tests/assets/mdschemaRouting.test.ts",
     "tests/assets/gateItemBudget.test.ts",
     "tests/core/gitChanges.test.ts",
-    "tests/unit/workflow/**/*.ts"
+    "tests/unit/workflow/**/*.ts",
+    "tests/integration/workflow/**/*.ts"
   ]
 }

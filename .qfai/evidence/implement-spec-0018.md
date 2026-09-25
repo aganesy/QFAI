@@ -267,6 +267,32 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0257 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0258 | TC-0018-0224 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0259 | TC-0018-0225 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0263 | TC-0018-0019 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0264 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0265 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0266 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0267 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0365 | TC-0018-0164 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0389 | TC-0018-0183 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0390 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0391 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0392 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0393 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0394 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0395 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0396 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0397 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0398 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0399 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0400 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0401 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0402 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0403 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0404 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0405 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0406 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0407 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0466 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
@@ -4399,6 +4425,266 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on first run; already satisfied by TDD-0253 to TDD-0258: a record holding every field in its shape, with the tracked file's digest, raises none of their problems.
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file`
 - Production files: `packages/qfai/tests/helpers/routingEval.ts`
+
+### TDD-0263
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0019 (TDD-0263): Load the shipped feature`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0019 \(TDD-0263\): Load the shipped feature' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [] to deeply equal [ …(5) ]`, `tests/integration/workflow/plans.test.ts:136`; the plan loader returned no plan
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0019 (TDD-0263): Load the shipped feature`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0264
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0020 (TDD-0264): direct`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0020 \(TDD-0264\): direct' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (everyStageReachesVerify, ends) } to deeply equal { everyStageReachesVerify: true, …(1) }`, `tests/integration/workflow/plans.test.ts:156`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0020 (TDD-0264): direct`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0265
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0020 (TDD-0265): bugfix`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0020 \(TDD-0265\): bugfix' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (everyStageReachesVerify, ends) } to deeply equal { everyStageReachesVerify: true, …(1) }`, `tests/integration/workflow/plans.test.ts:156`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0020 (TDD-0265): bugfix`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0266
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0020 (TDD-0266): bounded-change`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0020 \(TDD-0266\): bounded-change' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (everyStageReachesVerify, ends) } to deeply equal { everyStageReachesVerify: true, …(1) }`, `tests/integration/workflow/plans.test.ts:156`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0020 (TDD-0266): bounded-change`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0267
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0020 (TDD-0267): feature`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0020 \(TDD-0267\): feature' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (everyStageReachesVerify, ends) } to deeply equal { everyStageReachesVerify: true, …(1) }`, `tests/integration/workflow/plans.test.ts:156`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0020 (TDD-0267): feature`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0315
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0094 (TDD-0315): Load the five shipped plans`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0094 \(TDD-0315\): Load the five shipped plans' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { routes: [], grill: [], …(1) } to deeply equal { …(3) }`, `tests/integration/workflow/plans.test.ts:172`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0094 (TDD-0315): Load the five shipped plans`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0365
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0164 (TDD-0365): Load the shipped direct`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0164 \(TDD-0365\): Load the shipped direct' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [] to deeply equal [ [ 'maintenance', …(3) ], …(1) ]`, `tests/integration/workflow/plans.test.ts:182`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0164 (TDD-0365): Load the shipped direct`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0389
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0183 (TDD-0389): A project agent-routing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0183 \(TDD-0389\): A project agent-routing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0390 to TDD-0399, whose installed-plan check reads the plans and not the routing manifest, so a customized manifest that keeps every role is not refused
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0183 (TDD-0389): A project agent-routing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0390
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0390): file-missing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0390\): file-missing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0390): file-missing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0391
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0391): not-mapping`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0391\): not-mapping' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0391): not-mapping`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0392
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0392): unknown-key`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0392\): unknown-key' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0392): unknown-key`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0393
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0393): route-name`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0393\): route-name' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0393): route-name`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0394
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0394): out-of-vocabulary`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0394\): out-of-vocabulary' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0394): out-of-vocabulary`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0395
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0395): kind-mismatch`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0395\): kind-mismatch' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0395): kind-mismatch`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0396
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0396): after-missing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0396\): after-missing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0396): after-missing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0397
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0397): cycle`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0397\): cycle' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0397): cycle`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0398
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0398): unreachable`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0398\): unreachable' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0398): unreachable`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0399
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0184 (TDD-0399): no-verify-path`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0184 \(TDD-0399\): no-verify-path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:282`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0184 (TDD-0399): no-verify-path`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0400
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0400): repair-prepare`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0400\): repair-prepare' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0400): repair-prepare`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0401
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0401): sdd-reconcile`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0401\): sdd-reconcile' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0401): sdd-reconcile`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0402
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0402): defect-reopen`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0402\): defect-reopen' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0402): defect-reopen`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0403
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0403): configure`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0403\): configure' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0403): configure`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0404
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0404): research`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0404\): research' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0404): research`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0405
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0185 (TDD-0405): ledger-reconcile-needed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0185 \(TDD-0405\): ledger-reconcile-needed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }`, `tests/integration/workflow/plans.test.ts:304`; the installed plans were not checked and `start` created a run
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0185 (TDD-0405): ledger-reconcile-needed`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0406
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0186 (TDD-0406): crlf-equal`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0186 \(TDD-0406\): crlf-equal' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0390 to TDD-0399, whose installed-plan check compares each installed copy with the package's after CRLF normalization
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0406): crlf-equal`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0407
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/plans.test.ts`
+- Selector: `TC-0018-0186 (TDD-0407): discovery-ends-routing`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/plans.test.ts --testNamePattern='TC-0018-0186 \(TDD-0407\): discovery-ends-routing' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0390 to TDD-0399, whose installed-plan check exempts discovery from the verify-path rule
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0407): discovery-ends-routing`
+- Production files: `packages/qfai/src/core/workflow/plans.ts`
 
 ### TDD-0465
 
