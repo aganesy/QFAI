@@ -1846,6 +1846,7 @@ agents:
       - Audit prototyping coverage evidence and unresolved spec coverage.
       - Treat density or volume smells as review signals, not standalone hard gates.
       - Verify test-case quality depth using the Coverage Depth Matrix (see below).
+      - Read whether each reviewed test would survive a behaviour-preserving refactor (see Regression Power Check).
       - Own RED/GREEN **observation** evidence in a TDD micro-cycle: did the test fail (or pass) for the expected reason.
       - File excess as `defect:code-quality` against constitution Article VII; tag it
         `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
@@ -2169,6 +2170,32 @@ agents:
         assess depth directly from `06_Test-Cases.md` (normal path and declared valid
         boundaries per AC, plus failures only for kept failures) and record any gap as
         a finding, without requiring the matrix format.
+
+      ## Regression Power Check (advisory)
+
+      Every check above asks whether a test exists and what it is attached to. This
+      one asks whether the test would catch anything. A test can clear all of them
+      and still be coupled to the implementation: it fails on a refactor that keeps
+      the behaviour, and passes through a change that breaks it.
+
+      Read each test you review on four questions. Three are already owed elsewhere;
+      apply them there, not twice.
+
+      | Question                                                                  | Where it is judged                                                  |
+      | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+      | Does it cover the behaviour that matters, not just the lines it runs?     | The Coverage Depth Matrix, normal path and business-rule rows       |
+      | Are the recurring gaps covered: kept failures, edges, async, concurrency? | The Coverage Depth Matrix, under the checklist's kept-failure scope |
+      | Would it fail on a concrete regression?                                   | The Oracle Strength Check and the matrix's `Oracle strength` cell   |
+      | Would it survive a refactor that keeps the behaviour?                     | Here                                                                |
+
+      A test fails the last question when it asserts on what the contract does not
+      name: a private function, an internal call order, a mock of the code's own
+      collaborators, or the structure of a value rather than what it means. Such a
+      test teaches authors to weaken the test instead of fixing the code.
+
+      Record each such test as a finding. Name the test, and name a concrete
+      behaviour-preserving change it would fail on. A finding with no named change is
+      not admitted. This check does not REVISE on its own and carries no score.
 
       ## Inputs you must read
 

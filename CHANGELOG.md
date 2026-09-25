@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qa-gatekeeper` asks whether a reviewed test would survive a refactor**
+  (#2253). Every other test check asks whether a test exists and what it is
+  attached to. A new advisory Regression Power Check points three of its four
+  questions at the Coverage Depth Matrix and the Oracle Strength Check, which
+  already own them, and adds the fourth: a test asserting on what the contract
+  does not name fails on a behaviour-preserving change. A finding must name
+  that change. It does not block on its own and carries no score.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
