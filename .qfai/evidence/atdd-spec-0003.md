@@ -88,6 +88,20 @@ Preflight: confidence high
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-23T11:44:45Z | 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209 | 2026-09-23T11:44:51Z | TDD-0037 is done under a replaced test, and the one exit from done, the upstream reset, is refused for a row the approving CR's actions do not name | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-25T03:20:00.000Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260925-0009` fixes the row, the test case it covers and
+the text it checks, and nothing surfaced during the run that the spec or the
+change request leaves open.
+
+### /qfai-implement — run started 2026-09-25T03:24:00.000Z
+
+Preflight: confidence high
+
+No session was opened: `CR-20260925-0009` settles every decision this row needs.
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -109,6 +123,11 @@ Preflight: confidence high
 - `packages/qfai/tests/integration/initSpec0003.test.ts`: the `TC-0003-0001` case
   now runs init into an empty directory and asserts all three verify bullets, for the
   `TDD-0001` row that `CR-20260923-0011` reset.
+
+- New `packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts`: the
+  `TC-0003-0059` case for `TDD-0094`, annotated `QFAI:SPEC-0003:TC-0003-0059`, and
+  listed in `packages/qfai/tsconfig.tests.json`. `tests/integration/qfai-traceability.md`
+  carries the case. `CR-20260925-0009` asked for it.
 
 ## Commands executed + key outputs
 
@@ -142,6 +161,16 @@ npx eslint packages/qfai/tests/integration/initSpec0003.test.ts packages/qfai/te
 
 The selector, mutation and re-verify runs are in each row's entry.
 
+For `TDD-0094`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window"
+  before the fix: Test Files 1 failed (1); Tests 3 failed | 1 passed (4)
+  after the fix:  Test Files 1 passed (1); Tests 4 passed (4)
+```
+
+The RED, stripped, Oracle proof and Refactor verify runs are in the row's entry.
+
 ## Test volume estimate
 
 | Layer | Files touched | Cases |
@@ -169,6 +198,7 @@ The selector, mutation and re-verify runs are in each row's entry.
 | `TDD-0093` | `TC-0003-0058` | Integration | falsifiability | [TDD-0093](#tdd-0093) |
 | `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
 | `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
+| `TDD-0094` | `TC-0003-0059` | Integration | observed-red | [TDD-0094](#tdd-0094) |
 
 ### TDD-0058
 
@@ -1041,6 +1071,106 @@ A second mutation, the one the earlier entry ran beyond the proof, exercises the
 - Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
 - Checkpoint verification seal: 645095fba21747e6dc9b7be0b1a48e5dd514dd440649e88e89a443576ba712a4
 
+### TDD-0094
+
+- TDD-ID: TDD-0094
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts
+- Selector: TC-0003-0059 (TDD-0094): generated Copilot instructions state the closed legacy window
+- TC-ref: TC-0003-0059
+- Branch: observed-red — the surface existed and was wrong. `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts` wrote a legacy-layout item that called the layout read-compatible and the finding a warning, so the case failed on its first run against the tree before the fix
+- Oracle proof plan: delete the legacy-layout item from `buildCopilotInstructions`. The three cases that read the item then fail on an assertion
+
+`CR-20260925-0009` seeded the row for `TC-0003-0059`. The case runs `runInit`
+into an empty temporary directory, reads the `.github/copilot-instructions.md`
+it wrote, and takes the top-level list item that mentions `D-DEPRECATED-PATH`,
+with its continuation lines joined.
+
+| Verify bullet | Assertion                                                                                                                 | Line   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1             | the item names `.qfai/assistant/steering/` and `.qfai/assistant/instructions/`, and says `past its compatibility window` | 41-43  |
+| 2             | the item says `` `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error ``                                       | 47     |
+| 3             | the item names `` `qfai init --upgrade-assistant-tree` ``                                                                 | 51     |
+| 4             | the file does not match `/read-compatible/i`, and the item does not match `/warning/i`                                    | 55, 56 |
+
+The file header carries `// QFAI:SPEC-0003:TC-0003-0059`, and
+`tests/integration/qfai-traceability.md` carries the case. The file is listed in
+`packages/qfai/tsconfig.tests.json`. `delivery-planner` approved the selector as
+one boundary before the RED was taken. On `test-design-analyst`'s advice the
+bullet 4 check reads any `warning` in the item rather than one phrasing of it.
+
+The selector contains `(` and `)`. Escape both when passing it to vitest `-t`.
+
+#### Shared-artifact re-verify
+
+The Test file is new, and the manifest's two helpers are unchanged, so no
+recorded `RED test hash` moves and no `spec-NNNN/TDD-NNNN` subsection is owed.
+
+#### Round 1
+
+- Round 1: RED command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window"
+- Round 1: RED result: FAIL — Test Files 1 failed (1); Tests 3 failed | 1 passed (4). Bullet 1 fails on `AssertionError: expected '- Legacy .qfai/assistant/steering/ …' to contain '.qfai/assistant/instructions/'` at `tests/integration/initCopilotLegacyWindow.test.ts:42:24`; bullet 2 on `expected '- Legacy .qfai/assistant/steering/ …' to contain 'qfai init reports it on stderr as a…'` at `:47:24`; bullet 4 on `expected '# QFAI repository instructions (Copil…' not to match /read-compatible/i` at `:55:22`. Bullet 3 passes: the old item already named the migration command
+- Round 1: RED failure mode: assertion
+- Round 1: RED revision: cb835cbff1313257292d405fa4b39d0f703b59a5
+- Round 1: RED assertion-stripped result:
+
+```text
+diff --git a/packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts b/packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts
+@@ -38,21 +38,21 @@
+   it("names both legacy surfaces and says their compatibility window has closed", () => {
+-    expect(legacyItem).toContain("`.qfai/assistant/steering/`");
+-    expect(legacyItem).toContain("`.qfai/assistant/instructions/`");
+-    expect(legacyItem).toContain("past its compatibility window");
++    void expect(legacyItem); void "`.qfai/assistant/steering/`";
++    void expect(legacyItem); void "`.qfai/assistant/instructions/`";
++    void expect(legacyItem); void "past its compatibility window";
+   });
+   it("says qfai init reports the layout on stderr as a D-DEPRECATED-PATH error", () => {
+-    expect(legacyItem).toContain("`qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error");
++    void expect(legacyItem); void "`qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error";
+   });
+   it("names the migration command", () => {
+-    expect(legacyItem).toContain("`qfai init --upgrade-assistant-tree`");
++    void expect(legacyItem); void "`qfai init --upgrade-assistant-tree`";
+   });
+   it("calls the layout neither read-compatible nor the finding a warning", () => {
+-    expect(text).not.toMatch(/read-compatible/i);
+-    expect(legacyItem).not.toMatch(/warning/i);
++    void expect(text); void /read-compatible/i;
++    void expect(legacyItem); void /warning/i;
+   });
+
+$ pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window"
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+exit 0. The file holds only this describe, so the four passing tests are the selector's four cases, none skipped. The test was restored with git checkout right after the run
+```
+
+- Round 1: RED test hash: 3a275edc43b270cfc60e2a298e42da2d829fd64507a9ceaf9bd95fc0fba18baa
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts
+```
+
+- Round 1: Revision: 65dc89241e8066d966498df056757471880ea433
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window"
+- Round 1: GREEN result: PASS — Test Files 1 passed (1); Tests 4 passed (4)
+- Round 1: Oracle proof: mutation — the three lines of the legacy-layout item deleted from `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts`, whose blob is 94c2c242053742f9a45c10e6d8b823390b8749e1 before and after. Command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window", which selects TC-0003-0059 (TDD-0094): generated Copilot instructions state the closed legacy window. Result: FAIL — Test Files 1 failed (1); Tests 3 failed | 1 passed (4): `AssertionError: expected '' to contain '.qfai/assistant/steering/'` at `tests/integration/initCopilotLegacyWindow.test.ts:41:24`, `expected '' to contain 'qfai init reports it on stderr as a…'` at `:47:24`, `expected '' to contain 'qfai init --upgrade-assistant-tree'` at `:51:24`. Reverted by restoring the file, whose blob is again 94c2c242053742f9a45c10e6d8b823390b8749e1; the same command then passes: Test Files 1 passed (1); Tests 4 passed (4)
+
+The RED showed bullets 1, 2 and 4 failing against the wrong text, and the
+Oracle proof showed bullets 1 to 3 failing without the item, so every assertion
+in the selector has been seen to fail.
+
+The `qa-gatekeeper` RED gate and build-phase gate on this row have not run.
+They are owed before the reviews.
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
+- Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783). No production or test file changed in this phase. The suite is the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
+- Refactor verify revision: 9da1b2d08d6402de57776c59fd061a728f3e1e2b
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
@@ -1112,6 +1242,19 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 61 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack; its record advisories are queued in implement-spec-0003.md `## Record defects` | PASS |
 | 62 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack | PASS |
 | 63 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0001 on its Test file and of TDD-0037 on the full suite | #tdd-0001, #tdd-0037 | Checkpoint verification fields | PASS |
+| 64 | - | n/a | grilling(-@2026-09-25T03:20:00.000Z/none): none | - | - | PASS |
+| 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0009; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
+| 66 | acceptance-test-engineer | stage run | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0009 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
+| 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation | PENDING |
+| 68 | - | n/a | grilling(-@2026-09-25T03:24:00.000Z/none): none | - | - | PASS |
+| 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0009 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
+| 70 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0094 | spec-0003 ledger; 06_Test-Cases.md; 02_User-stories.md; test-layers.md | Integration is right for the Level and the directory; every verify bullet has an assertion; no obligation of the CR lacks a row; advisory to read any `warning` in the item, adopted | PASS |
+| 71 | backend-engineer | stage run | /qfai-implement: TDD-0094 GREEN, correcting the legacy-layout item in `buildCopilotInstructions`, and the Oracle proof | #tdd-0094 | packages/qfai/src/cli/commands/init.ts; #tdd-0094 Round 1 | PASS |
+| 72 | backend-engineer | stage run | /qfai-implement: TDD-0094 Refactor verify | #tdd-0094 | Refactor verify fields | PASS |
+| 73 | qa-gatekeeper | - | /qfai-implement: TDD-0094 build-phase GREEN + oracle proof | #tdd-0094 | not run in this invocation | PENDING |
+| 74 | completion-reviewer | - | /qfai-implement: completion review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
+| 75 | implementation-reviewer | - | /qfai-implement: code quality review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
+| 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
 
 ## Cross-spec obligations
 
@@ -1148,6 +1291,9 @@ Recorded per row under `## Ledger rows advanced`.
 - The comments inside the `TDD-0037` count case still speak of four and three installs.
   Only the titles were in scope.
 
+- `TDD-0094` stands at `refactor`. Its `qa-gatekeeper` gates, both reviews and
+  its checkpoint have not run.
+
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
@@ -1157,3 +1303,6 @@ The ten rows these runs took up are `done`: `TDD-0058` to `TDD-0063`, `TDD-0092`
 falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
 `implementation-reviewer` passed each one. `TDD-0061`, `TDD-0093` and `TDD-0037`
 closed on the full suite.
+
+`TDD-0094` stands at `refactor`: its RED, GREEN, Oracle proof and Refactor verify
+are recorded, and its gates, reviews and checkpoint are owed.
