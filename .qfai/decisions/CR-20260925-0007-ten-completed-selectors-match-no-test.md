@@ -169,6 +169,16 @@ confirms it covers its row, followed by in-place re-verification of the ten rows
 4. Fill `Resolution` and `Applied at` once every row is written and re-verified,
    or has been sent to a record of its own under `## Proposed change`.
 
+## Corrections
+
+`spec-0015/TDD-0020` leaves this record's blocked set. Main's `6ebeb4b23` wrote
+the selector `## Proposed change` gives for the row. At `03762f3cf` it selects
+two cases that pass: emission at `info` with the three justification parts, and
+the non-emission control. `completion-reviewer` confirmed they cover
+`US-0015-0007`, which is this record's precondition for a written value, and the
+cross-spec review resolves the row `re-reviewed`. Nothing is left to write for
+it. The other nine rows stay blocked.
+
 ## Resolution
 
 Pending explicit approval and the owner rerun.

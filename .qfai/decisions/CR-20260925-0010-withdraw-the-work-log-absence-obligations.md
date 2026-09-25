@@ -9,7 +9,7 @@
 - Approved by: `user (Claude Code structured question)`
 - Approved at: `2026-09-25T04:52:16Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-25T08:49:47Z`
 - Superseded by: `-`
 
 ## Context
@@ -331,6 +331,42 @@ The item removals themselves are approved on the Triage rows of each spec
    rows `## Impact scope` names, and the prose line citing this CR in each
    `## Cross-spec obligations` section. Nothing else in those sections changes.
 
+## Corrections
+
+The approval fields above are unchanged. These lines correct what the record
+says about the tree it was applied to.
+
+1. `spec-0003/TDD-0094` with `TC-0003-0059`, and `spec-0013/TDD-0110` and
+   `TDD-0111`, mean this change's withdrawn rows, which never merged under those
+   ids. Main holds the ids (`CR-20260925-0011`, `CR-20260925-0008`) for live rows
+   this record does not withdraw. See spec-0003 `DELTA-0004` and spec-0013
+   `DELTA-0003`. The correction applies wherever the Context, the blocked table,
+   approved action 3 and `## Impact scope` name them.
+2. Approved action 3 must not be re-run as written. Its retire list names those
+   three ids, so a rerun would delete main's rows.
+3. No tombstone exists for those three ids. Their withdrawn rows are the
+   `Withdrawn … (never merged)` sections of `.qfai/evidence/atdd-spec-0003.md` and
+   `.qfai/evidence/atdd-spec-0013.md`, and the cross-spec entries name their
+   source rows that way. The tombstone keeps every other withdrawn id unique.
+4. `spec-0015/TDD-0039` is `todo`, not closed. `3a8462986` reverted the closure
+   `66ee3cf6d` made, so the contingency in approved action 6 does not reach it.
+5. One structured answer from the user, at `2026-09-25T04:52:16Z`, approved this
+   record and the Triage groups G1 to G4 recorded in the `09_delta.md` of
+   spec-0003, spec-0004, spec-0011 and spec-0013.
+
 ## Resolution
 
-Pending explicit approval and the owner reruns.
+Applied.
+
+| Step | Where                                                                                                       |
+| ---- | ----------------------------------------------------------------------------------------------------------- |
+| 1    | `CR-20260924-0006` is `superseded`, superseded by this record                                               |
+| 2    | `4c2c398b4`                                                                                                 |
+| 3, 4 | `dc10c15fe`                                                                                                 |
+| 5    | `03762f3cf`                                                                                                 |
+| 6    | `a3df9c15d` reverts the hunks here; main carries them in `d4538b814`                                        |
+| 7    | The repository gates on the branch head                                                                     |
+| 9    | The `## Cross-spec obligations` sections named in `## Impact scope`, and `.qfai/evidence/atdd-spec-0013.md` |
+
+In step 9 the ten rows `## Impact scope` names take `Resolution: CR-20260925-0010`,
+and each section carries one line citing this record for its retired source ids.

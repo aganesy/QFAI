@@ -110,6 +110,15 @@ const idx = source.indexOf(`function ${name}(`);
 const braceStart = source.indexOf("{", idx);
 ```
 
+The three mutations were replayed again on the head this record is reviewed
+against, `03762f3cf`. There the source is SHA-256
+`6465aa79efecadcabbdce3fd04303d987dda48a93313c04e7a081e4a3e054658` and the test
+is still `6a14f8e6`. Each mutant survives with exit `0` and the source is
+restored byte-identically (`tmp/xspec/runs2-replay.json`, labels
+`0003-TDD-0045-prune-prefix-match`, `0003-TDD-0048-planted-rm` and
+`0003-TDD-0054-record-check-removed`). The defect holds on both sources,
+`a500a033` and `6465aa79`.
+
 ## Proposed change
 
 Correct the three oracles so each fails when its guard is removed. No test
