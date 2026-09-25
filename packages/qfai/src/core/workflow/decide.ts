@@ -1147,11 +1147,16 @@ function executorSkill(
   const rowId = diagnosis?.matchedRowIds[0];
   const row = facts.ledger?.rows.find((candidate) => candidate.rowId === rowId);
   if (!row?.layer) return stage.skill;
-  const acceptanceLayer =
+  return isAcceptanceLayer(row) ? "qfai-atdd" : "qfai-implement";
+}
+
+// The ledger layers acceptance tests own: `E2E`, `API`, and `Integration` naming an L3 case.
+export function isAcceptanceLayer(row: { layer?: string; tcLevels?: string[] }): boolean {
+  return (
     row.layer === "E2E" ||
     row.layer === "API" ||
-    (row.layer === "Integration" && (row.tcLevels ?? []).includes("L3"));
-  return acceptanceLayer ? "qfai-atdd" : "qfai-implement";
+    (row.layer === "Integration" && (row.tcLevels ?? []).includes("L3"))
+  );
 }
 
 // The row set covers each row's ID, status and digest, so a moved status changes it.

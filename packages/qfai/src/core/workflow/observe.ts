@@ -10,9 +10,16 @@ import { loadConfig, resolvePath } from "../config.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
-import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
+import { collectTcLevels } from "../atddTraceability.js";
+import {
+  collectLedgerTables,
+  isLedgerRow,
+  resolveDeclaredTcId,
+  splitTcRefs,
+  TDD_TERMINAL_STATUSES,
+} from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
-import { areaCovers } from "./decide.js";
+import { areaCovers, isAcceptanceLayer } from "./decide.js";
 import type {
   WorkflowDependency,
   WorkflowFacts,
@@ -197,13 +204,35 @@ function parsedRecord(text: string): Record<string, unknown> {
   }
 }
 
-// The bound spec's ledger rows, read with the ledger parser: each row's ID, status and a digest
-// of its cells. None when the spec has no ledger file.
+// The level each test case in the spec declares, written `L1` to `L3`, keyed by TC ID.
+async function declaredTcLevelsOf(specDir: string): Promise<Map<string, string>> {
+  const text = await readFile(path.join(specDir, "06_Test-Cases.md"), "utf8").catch(() => "");
+  const levels = collectTcLevels(text);
+  return new Map([...levels].map(([id, level]) => [id, level.toUpperCase()]));
+}
+
+// The declared levels of the test cases a row's `TC-Refs` cell names.
+function rowTcLevels(cell: string, levels: Map<string, string>): string[] {
+  const declared = new Set(levels.keys());
+  const named = splitTcRefs(cell).flatMap((ref) => {
+    const id = resolveDeclaredTcId(ref, declared);
+    const level = id === undefined ? undefined : levels.get(id);
+    return level === undefined ? [] : [level];
+  });
+  return [...new Set(named)];
+}
+
+// The bound spec's ledger rows, read with the ledger parser: each row's ID, status, layer, a
+// digest of its cells, and the levels of the test cases it names. None when the spec has no
+// ledger file.
 export async function ledgerFactsOf(root: string, specId: string) {
   const { config } = await loadConfig(root);
-  const file = path.join(resolvePath(root, config, "specsDir"), specId, "tdd", "test-list.md");
-  const text = await readFile(file, "utf8").catch(() => undefined);
+  const specDir = path.join(resolvePath(root, config, "specsDir"), specId);
+  const text = await readFile(path.join(specDir, "tdd", "test-list.md"), "utf8").catch(
+    () => undefined,
+  );
   if (text === undefined) return undefined;
+  const levels = await declaredTcLevelsOf(specDir);
   const rows = collectLedgerTables(text).flatMap((scan) => {
     const statusIndex = scan.headers.indexOf("Status");
     return scan.table.rows
@@ -213,9 +242,34 @@ export async function ledgerFactsOf(root: string, specId: string) {
         status: (row[statusIndex] ?? "").trim(),
         digest: hashAssistantAssetText(row.map((cell) => cell.trim()).join("|")),
         layer: (row[scan.layerIndex] ?? "").trim(),
+        tcLevels: rowTcLevels(row[scan.tcRefsIndex] ?? "", levels),
       }));
   });
   return { specId, rows };
+}
+
+// Whether the plan's acceptance stage is due. Once the run has issued or accepted it, it stays
+// due, so the stages already accepted keep their place in the plan. Before that, it is due when
+// the bound spec's ledger holds an unfinished row in a layer acceptance tests own. A bugfix run
+// reads the ledger only after a `missing-test` diagnosis, the one branch that adds a row.
+// SIMPLIFIED: a bugfix run counts every unfinished acceptance-layer row, not only the one its
+// `sdd_append` stage added.
+// Lift when: the run records which rows its `sdd_append` stage added.
+export function acceptanceObligationsUnmetOf(
+  snapshot: WorkflowSnapshot,
+  ledger: WorkflowFacts["ledger"],
+): boolean {
+  const issued = snapshot.outstandingWorkOrder?.stageKind === "acceptance";
+  const accepted = (snapshot.acceptedStages ?? []).some(
+    (stage) => stage.stageKind === "acceptance",
+  );
+  if (issued || accepted) return true;
+  if (snapshot.plan?.route === "bugfix" && snapshot.diagnosis?.verdict !== "missing-test") {
+    return false;
+  }
+  return (ledger?.rows ?? []).some(
+    (row) => isAcceptanceLayer(row) && !TDD_TERMINAL_STATUSES.has(row.status),
+  );
 }
 
 type Dependency = WorkflowDependency;
