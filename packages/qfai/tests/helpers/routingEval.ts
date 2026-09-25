@@ -1,10 +1,27 @@
+import { spawnSync } from "node:child_process";
+
 import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 
 /**
  * The deterministic halves of the routing eval: the fixture factory, the token vocabulary check,
- * the safety derivation, per-case scoring and the eval record check. Only tests and the manual
- * eval runner read them, so they live beside the tests and never ship.
+ * the safety derivation, per-case scoring and the eval record check. Also the host launch, which
+ * stops the eval when the host command cannot start. Only tests and the manual eval runner read
+ * them, so they live beside the tests and never ship.
  */
+
+/**
+ * Runs the host command once, without a shell. A command that never started — not found, or a
+ * Windows `.cmd` shim that needs a shell — throws, naming the command, so no seed is scored
+ * against a host that never ran. A command that started returns whatever its exit, and its
+ * cases are scored as usual.
+ */
+export function runHost(command: string, args: readonly string[], cwd: string): void {
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", shell: false });
+  // A child that started ends with an exit code or a signal; one that never started has neither.
+  if (result.error && result.status === null && result.signal === null) {
+    throw new Error(`The host command did not start: ${command} (${result.error.message})`);
+  }
+}
 
 export interface RoutingSeed {
   id: string;

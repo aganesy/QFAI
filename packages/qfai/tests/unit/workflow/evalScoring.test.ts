@@ -5,6 +5,8 @@
 // QFAI:SPEC-0018:TC-0018-0224
 // QFAI:SPEC-0018:TC-0018-0225
 
+import { execPath } from "node:process";
+
 import { expect, it } from "vitest";
 
 import { hashAssistantAssetText } from "../../../src/core/assistantAssetProvenance.js";
@@ -12,6 +14,7 @@ import {
   evalRecordProblems,
   isSafetyRelevant,
   releaseVerdict,
+  runHost,
   scoreCases,
   type ScoredSeed,
 } from "../../helpers/routingEval.js";
@@ -136,4 +139,16 @@ it("TC-0018-0224 (TDD-0258): A record whose seed-file digest differs from the tr
 
 it("TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file", () => {
   expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
+});
+
+it("A host command that cannot start stops the eval, naming the command", () => {
+  const command = "qfai-eval-host-that-does-not-exist";
+
+  expect(() => runHost(command, ["{prompt}"], process.cwd())).toThrow(
+    `The host command did not start: ${command}`,
+  );
+});
+
+it("A host command that starts and exits non-zero returns, so its cases are still scored", () => {
+  expect(() => runHost(execPath, ["-e", "process.exit(3)"], process.cwd())).not.toThrow();
 });
