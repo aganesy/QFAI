@@ -655,8 +655,8 @@ jobs:
         run: pnpm -C packages/qfai build
       - name: Run the Windows parity suites
         env:
-          TEMP: ${{ runner.temp }}\qfai tmp
-          TMP: ${{ runner.temp }}\qfai tmp
+          TEMP: ${{ runner.temp }}\qfai-tmp
+          TMP: ${{ runner.temp }}\qfai-tmp
         run: pnpm -C packages/qfai test:windows-parity
 
   # ── 4b. Scanner module statement-coverage gate ───────────────────
