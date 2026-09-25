@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The shipped stage guidance says how to compute the digest of a file a
+  stage result names** (#2474). `qfai workflow accept` compares each
+  `changedFiles` and `artifactRefs` digest with its own: the SHA-256 of the
+  file's UTF-8 text with CRLF read as LF. No shipped skill said so, and a stage
+  that hashed the raw bytes of a CRLF file was refused `digest-mismatch`. The
+  shared skill operating baseline, which every skill's orchestrated-mode
+  reference cites, now states the computation and gives a `node` command that
+  prints it.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

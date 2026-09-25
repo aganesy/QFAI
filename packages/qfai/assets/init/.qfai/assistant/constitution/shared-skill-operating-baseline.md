@@ -186,6 +186,22 @@ delegation work order.
   new-capability slot. The stage works on that target and no other.
 - These statements add to the constitution. They except no article.
 
+### The digest of a file a stage result names
+
+Each `changedFiles` and `artifactRefs` entry of a stage result carries the
+file's `digest`. `npx qfai workflow accept` computes its own and refuses a
+different one as `digest-mismatch`.
+
+The digest is the lowercase hex SHA-256 of the file's UTF-8 text with every
+CRLF read as LF. A hash of the raw bytes matches only on a file with LF line
+endings.
+
+Compute it with:
+
+```sh
+node -e "const t=require('fs').readFileSync(process.argv[1],'utf8').replace(/\r\n/g,'\n');console.log(require('crypto').createHash('sha256').update(t,'utf8').digest('hex'))" <path>
+```
+
 ## Default Autopilot Policy inside a run
 
 Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
