@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0002 `TDD-0011` is re-verified in place** (#2312). The approved
+  change request for spec-0002 keeps this row `done` and asks for a fresh
+  observation rather than a reset. The row's selector was re-run on the current
+  tree, its recorded mutation was applied, reverted and re-run, and the test
+  file's manifest and hash were recorded. Two reviewers gave fresh verdicts.
+  The record is in the spec's implementation evidence, and the row's earlier
+  entry is unchanged.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
