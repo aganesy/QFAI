@@ -110,7 +110,6 @@ function fourthRepair(path: string) {
     stageInstanceId: "bounded-verify",
     attempt: 4,
     stageKind: "verify",
-    target: { kind: "spec" as const, specId: "spec-0007" },
     executor: { skill: "qfai-verify" },
     operation: "verify-full",
   };

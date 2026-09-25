@@ -132,7 +132,7 @@ it("US-0018-0001 (TDD-0455): one create question, then every stage from its work
         target: bound,
       },
       { stageKind: "implement", skill: "qfai-implement", operation: "implement", target: bound },
-      { stageKind: "verify", skill: "qfai-verify", operation: "verify-full", target: bound },
+      { stageKind: "verify", skill: "qfai-verify", operation: "verify-full", target: undefined },
     ],
     seamParent: true,
     attempts: [1, 2],

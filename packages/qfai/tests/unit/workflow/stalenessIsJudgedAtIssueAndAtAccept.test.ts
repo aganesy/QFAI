@@ -145,6 +145,30 @@ it("TC-0018-0006 (TDD-0011): widening-replan-at-accept", () => {
 it("TC-0018-0007 (TDD-0012): Bind the created spec ID, then issue the next SDD-bound work order", () => {
   const bound: Snapshot = {
     ...freshSnapshot(),
+    // A verify work order takes no target, so the stage after SDD is one that takes the spec.
+    plan: {
+      route: "feature",
+      stages: [
+        {
+          stageInstanceId: "feature-sdd",
+          stageKind: "sdd",
+          skill: "qfai-sdd",
+          operation: "new-capability",
+        },
+        {
+          stageInstanceId: "feature-implement",
+          stageKind: "implement",
+          skill: "qfai-implement",
+          operation: "implement",
+        },
+        {
+          stageInstanceId: "feature-verify",
+          stageKind: "verify",
+          skill: "qfai-verify",
+          operation: "verify-full",
+        },
+      ],
+    },
     run: { id: "run-feature", state: "ready", sequence: 9 },
     specBinding: { specId: "spec-0007" },
     acceptedStages: [{ stageInstanceId: "feature-sdd", stageKind: "sdd", outcome: "accepted" }],

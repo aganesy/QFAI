@@ -130,14 +130,14 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
         stageKind: "maintenance",
         skill: "qfai-maintain",
         operation: "non-normative-edit",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
       {
         stageInstanceId: "direct-verify",
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
@@ -308,7 +308,7 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
@@ -529,7 +529,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
