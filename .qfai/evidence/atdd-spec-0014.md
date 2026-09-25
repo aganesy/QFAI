@@ -604,11 +604,8 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md`, which restores the file as it is at that revision
 
-- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). Round 2 changed only the test file and no production file, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
 
-- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: reviewer verdict (attempt 1): REVISE — the status-set capture read only capital-letter values; the test was tightened and round 2 opened
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925143003000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): a1c7ea64ac1df9890fc2a171d12608e173bb14f33594a1db4f1ce91516276b17
 
@@ -639,6 +636,11 @@ packages/qfai/tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
 - Round 2: Revision: 1a53879a461f658a9c14344efd04570be3285af4
 - Round 2: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts -t "TC-0014-0040 \(TDD-0045\): verify\.json keeps its fields and values"
 - Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/verify-output-contract.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/verifyJsonUnchanged.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). Round 2 changed only the test file and no production file, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — RED phase gate on working-tree+33ce54526b6874c0667a998d1916d7e9361b7bcded20a75186b824b00b890353 at HEAD 1a53879a461f658a9c14344efd04570be3285af4: verify-output-contract.md:11 mutation adding "needs_repair" to the status row reproduced Test Files 1 failed (1); Tests 1 failed (1), AssertionError: expected [ 'PASS', 'needs_repair', 'FAIL' ] to deeply equal [ 'PASS', 'FAIL' ] at verifyJsonUnchanged.test.ts:40:83 inside the row's selector, the non-capital status value the round-1 review found the /"([A-Z]+)"/ capture missed; RED test hash 3aeb9d5e…a977b1 recomputes over the complete three-file manifest; build-phase GREEN + oracle proof at 1a53879a461f658a9c14344efd04570be3285af4: restored tree gives Test Files 1 passed (1); Tests 1 passed (1) with the TC-0014-0040 (TDD-0045) selector executing and passing, and the falsifiability trio stands as the oracle proof, mutating only the Satisfied-by predicate)
 
 ### TDD-0046
 
@@ -684,11 +686,8 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
 
-- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts
-- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). Round 2 changed only the test file and no production file, so there was nothing to refactor, and the whole test file is the relevant suite
-- Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
 
-- Round 1: reviewer verdict (attempt 1): REVISE
+- Round 1: reviewer verdict (attempt 1): REVISE — the table assertion ignored a fourth row without backticks; the test was tightened and round 2 opened
 - Round 1: Review pack (attempt 1): .qfai/review/review-20260925143004000 <!-- qfai:not-a-citation -->
 - Round 1: Review pack seal (attempt 1): 2ddada080279045bbb775a31994ac0c941938c3d5b3a1a8678832d26e9563754
 
@@ -719,6 +718,11 @@ packages/qfai/tests/integration/verify/orchestrated/repairRouting.test.ts
 - Round 2: Revision: 1a53879a461f658a9c14344efd04570be3285af4
 - Round 2: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts -t "TC-0014-0041 \(TDD-0046\): Verify sends each finding to its owner"
 - Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/references/orchestrated-mode.md`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/verify/orchestrated/repairRouting.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). Round 2 changed only the test file and no production file, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 1a53879a461f658a9c14344efd04570be3285af4
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — RED phase gate on working-tree+8ba05fea38b103ba6c161770f7336a26746301af15ef5bcfe88b3276e22750ea at HEAD 1a53879a461f658a9c14344efd04570be3285af4: orchestrated-mode.md:55 insertion of a fourth row \| \`config drift\` \| qfai-maintain \| reproduced Test Files 1 failed (1); Tests 1 failed (1), AssertionError: expected [ [ 'spec gap', 'qfai-sdd' ], …(3) ] to deeply equal [ [ 'spec gap', 'qfai-sdd' ], …(2) ] at repairRouting.test.ts:40:18 inside the row's selector, with the diff showing [ "config drift", "<qfai-maintain>" ], the fourth-row-with-unticked-owner case the round-1 review found the fromEntries map ignored; RED test hash 4564aeff…43c615 recomputes over the complete three-file manifest; build-phase GREEN + oracle proof at 1a53879a461f658a9c14344efd04570be3285af4: restored tree gives Test Files 1 passed (1); Tests 1 passed (1) with the TC-0014-0041 (TDD-0046) selector executing and passing, and the falsifiability trio stands as the oracle proof, mutating only the three-row table the Satisfied-by names)
 
 ### TDD-0047
 
