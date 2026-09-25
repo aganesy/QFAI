@@ -65,12 +65,13 @@ async function claimingCopies(): Promise<Record<string, string>> {
 it("TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package", async () => {
   const current = await version();
   const all = await readmes();
+  const recorded = recordedHosts(await records(), current);
 
+  // Each README claims exactly the hosts with a passing record: none until one is committed.
   expect({
-    claimed: Object.values(all).map((readme) => claimedHosts(readme)),
-    recorded: recordedHosts(await records(), current),
+    claimed: Object.values(all).map((readme) => claimedHosts(readme)?.sort()),
     problems: claimProblems(all, await records(), current),
-  }).toEqual({ claimed: [[], []], recorded: [], problems: [] });
+  }).toEqual({ claimed: [recorded, recorded], problems: [] });
 });
 
 it("TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record", async () => {
