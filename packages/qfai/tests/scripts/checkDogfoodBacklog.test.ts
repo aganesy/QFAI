@@ -35,6 +35,12 @@ type Guard = {
     },
     file: string,
   ) => Array<{ code?: string; message?: string }>;
+  findingKey: (finding: { code?: string; message?: string }) => string;
+  findingsByFile: (report: unknown) => Map<string, Record<string, number>>;
+  findingsOutsidePin: (
+    findings: Map<string, Record<string, number>>,
+    pinned: Record<string, Record<string, number>>,
+  ) => Array<{ file: string; key: string; n: number; held: number }>;
 };
 
 /**
@@ -145,5 +151,82 @@ describe("compareAgainstPin", () => {
     const { compareAgainstPin } = await load();
 
     expect(compareAgainstPin(new Map(), { [LEDGER]: 13 }).improved).toEqual([[LEDGER, 13]]);
+  });
+});
+
+describe("findingKey", () => {
+  it("names a ledger error by code and TDD-ID, so moving rows does not change it", async () => {
+    const { findingKey } = await load();
+
+    expect(
+      findingKey({
+        code: "QFAI-TDDLIST-008",
+        message: "Evidence anchor does not resolve for spec-0002 TDD-0001 (row 1), Status=done",
+      }),
+    ).toBe("QFAI-TDDLIST-008 TDD-0001");
+  });
+
+  it("keeps the message of an error with no TDD-ID, without its row and line numbers", async () => {
+    const { findingKey } = await load();
+
+    expect(
+      findingKey({
+        code: "TDDLIST_SELECTOR_UNRESOLVED",
+        message: 'Selector "missing screenshot" was not found (row 3, Status=done)',
+      }),
+    ).toBe(
+      'TDDLIST_SELECTOR_UNRESOLVED Selector "missing screenshot" was not found (row #, Status=done)',
+    );
+    expect(
+      findingKey({ code: "QFAI-TEST-003", message: "describe.skip at tests/a.test.ts:41" }),
+    ).toBe("QFAI-TEST-003 describe.skip at tests/a.test.ts:#");
+  });
+});
+
+describe("findingsOutsidePin", () => {
+  const FIXED = "QFAI-TDDLIST-008 TDD-0001";
+  const ADDED = "QFAI-TDDLIST-011 TDD-0002";
+
+  it("keys each file's errors by finding and ignores every softer severity", async () => {
+    const { findingsByFile } = await load();
+
+    const findings = findingsByFile({
+      issues: [
+        { file: LEDGER, severity: "error", code: "QFAI-TDDLIST-008", message: "TDD-0001 a" },
+        { file: LEDGER, severity: "error", code: "QFAI-TDDLIST-008", message: "TDD-0001 b" },
+        { file: LEDGER, severity: "warning", code: "QFAI-TDDLIST-011", message: "TDD-0002" },
+      ],
+    });
+
+    expect([...findings]).toEqual([[LEDGER, { [FIXED]: 2 }]]);
+  });
+
+  it("reports an error the pin omits when the same change fixes another in that file", async () => {
+    // The count stays at 1, so the count ratchet passes this change.
+    const { compareAgainstPin, findingsOutsidePin } = await load();
+
+    expect(compareAgainstPin(new Map([[LEDGER, 1]]), { [LEDGER]: 1 }).over).toEqual([]);
+    expect(
+      findingsOutsidePin(new Map([[LEDGER, { [ADDED]: 1 }]]), { [LEDGER]: { [FIXED]: 1 } }),
+    ).toEqual([{ file: LEDGER, key: ADDED, n: 1, held: 0 }]);
+  });
+
+  it("reports a pinned finding reported more often than its pin", async () => {
+    const { findingsOutsidePin } = await load();
+
+    expect(
+      findingsOutsidePin(new Map([[LEDGER, { [FIXED]: 3 }]]), { [LEDGER]: { [FIXED]: 2 } }),
+    ).toEqual([{ file: LEDGER, key: FIXED, n: 3, held: 2 }]);
+  });
+
+  it("passes a run whose findings the pin names, fewer included", async () => {
+    // A fixed finding is the count ratchet's to report, as a pin behind the tree.
+    const { findingsOutsidePin } = await load();
+
+    expect(
+      findingsOutsidePin(new Map([[LEDGER, { [FIXED]: 1 }]]), {
+        [LEDGER]: { [FIXED]: 2, [ADDED]: 1 },
+      }),
+    ).toEqual([]);
   });
 });

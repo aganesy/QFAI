@@ -174,6 +174,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
 
+- **The dogfooding lanes fail on a new error that another fix in the same file
+  would have hidden** (#2355). `scripts/check-dogfood-backlog.mjs` held each
+  pinned file to an error count. A change that fixed one error in a pinned
+  ledger and added a different one kept the count the same, and the lane
+  passed. The pin now also lists each file's errors one by one, under
+  `findings` in `scripts/dogfood-backlog.json`. A ledger error is named by its
+  code and TDD-ID. Any other error is named by its code and its message, with
+  row and line numbers removed. An error the list does not name fails the lane
+  whatever the file's count. `--pin` writes both. No count moves.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed

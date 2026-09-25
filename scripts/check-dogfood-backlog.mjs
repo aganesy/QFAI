@@ -13,18 +13,22 @@
  *
  * Fixing those means re-running the work and recording what it produced, spec
  * by spec. Writing a pointer to evidence nobody captured would be worse than
- * the backlog. Until the backfill lands, two contracts keep each lane
+ * the backlog. Until the backfill lands, three contracts keep each lane
  * meaningful:
  *
  * | Contract     | Holds                                                           |
  * | ------------ | --------------------------------------------------------------- |
  * | Held at zero | A file absent from the profile's pin may report no error at all |
  * | Ratchet      | A pinned file may report no more errors than its pinned count   |
+ * | Findings     | A pinned file may report no error its pinned findings omit      |
  *
  * A new gate failure in a clean file fails immediately, and one in a file
- * already carrying debt fails as soon as it raises that file's count. Neither
- * can be cleared by a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is
- * an error, which is what makes the backfill the only route out.
+ * already carrying debt fails as soon as it raises that file's count. A count
+ * alone misses a change that fixes one error and adds another in the same
+ * file, so each file's errors are also pinned one by one, and an error the pin
+ * does not name fails whatever the count says. None of these can be cleared by
+ * a waiver: `QFAI-WAIVER-002` refuses a waiver whose rule is an error, which is
+ * what makes the backfill the only route out.
  *
  * A file that improves is re-pinned in the same change, and one that reaches
  * zero is struck from the list rather than left at `0`, so the slot cannot be
@@ -49,6 +53,63 @@ const PIN_PATH = path.join(repoRoot, "scripts", "dogfood-backlog.json");
 // under review, never a resolution that would reach the published release.
 const CLI = path.join(repoRoot, "packages/qfai/dist/cli/index.mjs");
 const REPORT = path.join(repoRoot, ".qfai", "report", "validate.json");
+
+/**
+ * How the pin names one error: its code and what it is about.
+ *
+ * A ledger error names its row by TDD-ID, which survives rows being added or
+ * reordered around it. An error with no TDD-ID keeps its message, with the row
+ * and line numbers taken out, because those shift when unrelated lines move.
+ */
+export function findingKey({ code, message }) {
+  const text = String(message ?? "");
+  const row = /\bTDD-\d+/.exec(text);
+  const subject = row ? row[0] : text.replace(/\brow \d+/g, "row #").replace(/:\d+\b/g, ":#");
+  return `${String(code)} ${subject}`;
+}
+
+/** Every error in a validate report, keyed by file and then by finding. */
+export function findingsByFile(report) {
+  const findings = new Map();
+  for (const file of errorsByFile(report).keys()) {
+    const keys = {};
+    for (const finding of errorsForFile(report, file)) {
+      const key = findingKey(finding);
+      keys[key] = (keys[key] ?? 0) + 1;
+    }
+    findings.set(file, keys);
+  }
+  return findings;
+}
+
+/**
+ * The errors a run reports beyond what the pin names for their file.
+ *
+ * `pinned` is file to finding key to count. A key reported more often than it
+ * is pinned is outside the pin by the difference.
+ */
+export function findingsOutsidePin(findings, pinned) {
+  const outside = [];
+  for (const [file, keys] of findings) {
+    for (const [key, n] of Object.entries(keys)) {
+      const held = pinned[file]?.[key] ?? 0;
+      if (n > held) outside.push({ file, key, n, held });
+    }
+  }
+  return outside;
+}
+
+/** A profile's findings in the order `--pin` writes them, so a re-pin diffs by finding. */
+function sortedFindings(findings) {
+  return Object.fromEntries(
+    [...findings]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([file, keys]) => [
+        file,
+        Object.fromEntries(Object.entries(keys).sort(([a], [b]) => a.localeCompare(b))),
+      ]),
+  );
+}
 
 /**
  * The three ways a run can disagree with its pin.
@@ -111,6 +172,23 @@ function runValidate(profile) {
   if (result.status !== 0) fail(`validate exited ${String(result.status)} before reporting.`);
 }
 
+/** A changed error behind an unchanged count: the case the count ratchet cannot see. */
+function failOnFindingsOutsidePin(report, pinned, profile) {
+  const outside = findingsOutsidePin(findingsByFile(report), pinned);
+  if (outside.length === 0) return;
+  for (const { file, key, n, held } of outside) {
+    console.error(
+      `check-dogfood-backlog: ${file} reports ${key} ${String(n)} time(s) for ${profile}; the pin names it ${String(held)} time(s).`,
+    );
+  }
+  console.error(
+    "\nThe file's count may be unchanged, but these errors are not in the backlog. Fix them.\n" +
+      "If one is a pinned error whose message changed, re-pin with " +
+      `\`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,
+  );
+  process.exit(1);
+}
+
 function main() {
   const profile = readProfile();
   runValidate(profile);
@@ -128,6 +206,7 @@ function main() {
 
   if (process.argv.includes("--pin")) {
     pin.profiles[profile] = Object.fromEntries([...counts].sort(([a], [b]) => a.localeCompare(b)));
+    pin.findings = { ...pin.findings, [profile]: sortedFindings(findingsByFile(report)) };
     writeFileSync(PIN_PATH, `${JSON.stringify(pin, null, 2)}\n`, "utf-8");
     console.log(
       `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(counts.size)} file(s).`,
@@ -169,6 +248,8 @@ function main() {
     );
     process.exit(1);
   }
+
+  failOnFindingsOutsidePin(report, pin.findings?.[profile] ?? {}, profile);
 
   if (improved.length > 0) {
     console.error(
