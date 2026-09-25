@@ -99,7 +99,7 @@ describe.each(RULE_MASTERS)("%s/grilling.md — the endings are a closed set", (
 describe.each(TREES)("%s — the execution stages record their sessions", (tree) => {
   const read = (rel: string): Promise<string> => readFile(path.join(repoRoot, tree, rel), "utf-8");
   const grilling = async (skill: string): Promise<string> =>
-    section(await read(`assistant/skills/${skill}/SKILL.md`), "## Grilling (MANDATORY)");
+    section(await read(`assistant/skills/${skill}/SKILL.md`), "## Grilling");
 
   it("has the primitive's own summaries name the five endings", async () => {
     // A restored summary saying a session ends only on agreement would have an

@@ -133,7 +133,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // and the drift surfaces as three agents behaving differently at the same
     // moment.
     const body = await read(`assistant/skills/${skill}/SKILL.md`);
-    expectPhrase(body, "## Grilling (MANDATORY)");
+    expectPhrase(body, "## Grilling");
     expectPhrase(body, "Article IX of `.qfai/assistant/constitution/constitution.md` owns both");
     expectPhrase(body, "Neither is restated here.");
     // The three obligations, named where an operator reads the skill.

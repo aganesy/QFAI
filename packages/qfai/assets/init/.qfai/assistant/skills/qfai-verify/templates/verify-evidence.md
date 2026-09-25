@@ -32,7 +32,7 @@ Required sections (all of them, in this order):
 
 <!-- One `### /qfai-verify — run started <time>` block per invocation, one row
      per session inside it, written when each session ends. See the skill's
-     `## Grilling (MANDATORY)` section; the open questions go under the
+     `## Grilling` section; the open questions go under the
      table. -->
 
 ### /qfai-verify — run started 2026-01-01T09:02:00.417Z

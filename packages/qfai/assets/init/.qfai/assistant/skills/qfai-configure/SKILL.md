@@ -67,7 +67,7 @@ When unsure, read inputs in this order:
 - P3: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P4: other artifacts (01_Spec.md, contracts, evidence, optional legacy `scenario.feature` / coverage ledgers)
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
@@ -84,7 +84,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - No additional overrides.
 - Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
-### Work Orders Summary (MANDATORY evidence)
+### Work Orders Summary
 
 Use the shared schema.
 
@@ -130,7 +130,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0-
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - Only update `qfai.config.yaml`, `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`, `.qfai/assistant/constitution/quality.md` (gate capabilities only — never the surrounding rules), and `.qfai/evidence/configure-<run-id>.md` unless explicitly asked.
 - You MUST produce the required evidence file: `.qfai/evidence/configure-<run-id>.md`.
@@ -177,7 +177,7 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
 - Tool selection rationale missing.
 - Minimum runnable path missing or unverifiable.
 
-## Evidence (MANDATORY)
+## Evidence
 
 Create and update: `.qfai/evidence/configure-<run-id>.md`
 Use `<run-id>` as a short date stamp (e.g., `2026-01-28`) or a short slug for this run.
@@ -454,7 +454,7 @@ When you declare DONE, include:
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Evidence file exists and is complete.
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).
@@ -497,7 +497,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - brand intent
   - `primarySpecId` (when absent from inputs)
   - a `testFileGlobs` proposal that matches at least one real file (Step 5)
-  - a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)
+  - a resolved tooling choice with a runnable path (Hard Constraints)
     — neither this nor the proposal above has a defensible default, and a guess
     is saved as if it were evidence
 

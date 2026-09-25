@@ -48,7 +48,7 @@ When unsure, read inputs in this order:
 
 Produce a unified 15-file discussion pack plus exploration-first UI sidecars so `/qfai-sdd` and `/qfai-prototyping` can operate without forcing an early visual direction decision.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - Output path is fixed: `.qfai/discussion/discussion-YYYYMMDDhhmmssSSS/`.
 - All 15 mandatory fixed files remain unchanged.
@@ -167,7 +167,7 @@ Reviewer checks must confirm:
 - planning and coverage heuristics are signals, not gates;
 - review findings end with `Status (PASS/REVISE/PENDING)` and Reviewer result is explicit as `PASS` or `REVISE` (`PENDING` marks a gate that could not be run and never counts as `PASS`).
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 

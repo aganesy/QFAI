@@ -92,7 +92,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   the generated Contract → Spec map (`npx qfai report --in` the scoped gate's `validate.spec-<id>.json`, whose path is derived from `output.validateJsonPath` and not from `paths.outDir`; never `--run-validate`, which re-runs the full profile unscoped and advances every spec's scaffold-placeholder counters) **and** merge into it the `Contract-Refs` column of
   `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone, and misses the ones that write the short `API-NNNN` / `DB-NNNN` form its keys never match — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
@@ -191,7 +191,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract **this spec owns** but outside the current slice deferred with `-- x-qfai-status: planned` on a line of its own, never silently uncovered — and every `TC` **whose `Level` routes to an ATDD home** — `L3`/`L4`/`L5`, no `Level`, an unreadable
     spelling, or `system` / `acceptance` — is covered from the directory that `Level` routes to. A **sibling spec's** uncovered `CON-DB` is not that case, and the reviewer must not ask for that edit: `QFAI-ATDD-115` is filed against `.qfai/contracts/**` and survives `--spec`, so it reaches this gate without becoming this run's work — record it as a cross-spec obligation and leave the
-    contract file alone (CRITICAL CONSTRAINTS), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one
+    contract file alone (Hard Constraints), because marking it `planned` defers the owning spec's DB test and hides a real gap. `L1`/`Unit` and `L2`/`Component` owe nothing here (Hard Constraints): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one
     to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` it declares owns a row, whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`,
     and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
@@ -237,7 +237,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0-
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
-## Grilling (MANDATORY)
+## Grilling
 
 Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
@@ -397,7 +397,7 @@ every other takes the griller's recommendation, recorded as an `agents` row.
   reopens a session under the same description. `Session` is `S1`, `S2`, … in
   the order the sessions opened, and it is unique by construction.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - Coverage obligations stay layer-pinned for US, CON-API and CON-DB: tests/e2e/\*\* must cover all required US; tests/api/\*\* all required CON-API; tests/integration/\*\* all required CON-DB (QFAI-ATDD-115 — defer an out-of-slice contract **this spec owns** with `-- x-qfai-status: planned` on a line of its own, never appended after a statement, and never leave it uncovered; a sibling
   spec's uncovered contract is recorded as a cross-spec obligation and its file left alone, because marking it defers that spec's test and hides a real gap). "Required" narrows differently per ID kind — US by surface type (a project-wide opt-in: active only once some spec declares a user-facing surface, project-wide before that), TC by declared Level, CON-API by active-vs-deferred,
@@ -466,7 +466,7 @@ Turn specs/contracts obligations (`US` / `TC` / `CON-API` / `CON-DB`) into runna
 ## Execution Ledger: the rows this skill feeds
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` is `/qfai-implement`'s execution ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`, `Layer = API` and `Layer = Integration` rows are tracked there, but their tests are authored here.** Integration is there because this skill's scope puts it there: `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared `Level`,
-from `tests/integration/**`, and P4 writes those tests. Self-owned, they had `/qfai-implement` demand a fresh RED for a test already green here. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels — CRITICAL CONSTRAINTS above says `L1`/`Unit` and `L2`/`Component` owe nothing here — so this
+from `tests/integration/**`, and P4 writes those tests. Self-owned, they had `/qfai-implement` demand a fresh RED for a test already green here. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels — the Hard Constraints section above says `L1`/`Unit` and `L2`/`Component` owe nothing here — so this
 stage authors no test for that row and requires no annotation for it, while the validator reports the `Layer` / `Level` contradiction as a **warning** only (`TDDLIST_COVERAGE_LAYER_MISMATCH`), so such a ledger passes `--fail-on error` and the row exists today. `qfai-implement/SKILL.md` Non-goals states the same carve-out from the other side and keeps the row owned there: that skill
 writes its test in its own Phase Red and keeps its evidence, anchor, checkpoint and cross-spec entries in `implement-<spec-id>.md`. **Every rule in this file and its references that names the ATDD-owned set excludes it** — this stage enumerates no such row, chooses no branch for it, writes no `## Ledger rows advanced` entry for it and hands it over to nobody. Demanding a branch and a
 handoff for a test this skill is forbidden to write is what left the row refused by both stages and stranded at `todo`; correcting the row's `Layer`, or the TC's `Level`, upstream is the durable fix.
@@ -497,7 +497,7 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component (`/qfai-implem
 ## Mandatory Outputs
 
 1. Test Volume Estimate (signal table with evidence)
-2. **Coverage Depth Matrix**, written to `.qfai/evidence/coverage-depth-<spec-id>.md` (per spec; template and scoring in `references/test-case-depth-checklist.md`). Committed — see CRITICAL CONSTRAINTS.
+2. **Coverage Depth Matrix**, written to `.qfai/evidence/coverage-depth-<spec-id>.md` (per spec; template and scoring in `references/test-case-depth-checklist.md`). Committed — see Hard Constraints.
 3. Coverage obligations checklist (`US` / `TC` / `CON-API` / `CON-DB`), and the implemented tests per layer (E2E/API/Integration)
 4. Reviewer notes (`PASS` or concrete rework list)
 5. Evidence file: `.qfai/evidence/atdd-<spec-id>.md`
@@ -575,7 +575,7 @@ Notes:
 - If blocked/unknown, stop and raise a Decision Record.
 - Do not declare completion when any gate is FAIL; iterate until PASS. A scoped validate gate that exits 1 **only** on residue attributed and recorded per `references/cross-spec-obligations.md` is not a FAIL gate — it is `PASS with cross-spec obligations`, and iterating on it is waiting for a sibling spec that is waiting for this one.
 
-## Evidence (MANDATORY)
+## Evidence
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
@@ -590,7 +590,7 @@ Required sections: the template below is the list. Five of them carry a contract
   session ended against and nothing more, because that address excludes
   `.qfai/evidence/**` and so repeats across two runs over an unchanged source
   tree. The two times order the session against the work. The Reviewer Gate
-  reads this stage's own block (`## Grilling (MANDATORY)`).
+  reads this stage's own block (`## Grilling`).
 - **Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live in that committed file; restating them here would lose them.
 - **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked
   example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
@@ -611,7 +611,7 @@ Template:
 
 <!-- One `### /qfai-atdd — run started <time>` block per invocation, one row
      per session inside it, written when each session ends. See this skill's
-     `## Grilling (MANDATORY)` section; the open questions go under the
+     `## Grilling` section; the open questions go under the
      table. A decision a session adopted is an `agents` row in the Work Orders
      Summary, with why it was taken and any disagreeing position. -->
 
@@ -731,7 +731,7 @@ Include the referenced inputs (instructions/steering and spec delta), the DR-IDs
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Evidence file exists and is complete.
 - [ ] Mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).

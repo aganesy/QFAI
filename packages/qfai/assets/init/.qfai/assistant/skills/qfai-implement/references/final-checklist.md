@@ -14,7 +14,7 @@ pass on work the gate rejects. A box asserts a **terminal** state, not an accura
 "the record is correct" and "the work is finished" are different claims, and only the second one
 releases completion.
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Each item was processed one test at a time with its `TDD-ID` selected and in progress, or inside an item-level parallel dispatch authorized by `SKILL.md#parallelization-policy` (gate item 1).
 - [ ] Red phase: test was written first and confirmed to fail, and `qa-gatekeeper` confirmed the
       failure is **admissible** — an assertion or expected-exception check inside the row's

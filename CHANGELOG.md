@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped skills and agent cards drop `MANDATORY` and `CRITICAL` as
+  emphasis** (#2240). Headings such as `## Evidence (MANDATORY)` and
+  `## Sub-agent Delegation (MANDATORY)` lose the suffix. Each skill's
+  `CRITICAL CONSTRAINTS` section is now `Hard Constraints`. Current models read capitalised emphasis as a reason to act before
+  understanding the instruction. Nothing a validator reads changed: the
+  `[DRIFT-PROTOCOL:MANDATORY]` marker and the `MUST` level stay. The writing
+  standard in `documentation-clarity.md` now also asks for direct statement
+  over metaphor.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

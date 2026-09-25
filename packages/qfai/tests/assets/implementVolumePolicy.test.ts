@@ -436,7 +436,7 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       const skill = unwrap(await read(tree, SKILL));
       expect(section).toContain("### Advancing the queue");
       expect(section).toContain("**Empty -> exit.**");
-      expect(section).toContain('"Report and exit" in CRITICAL CONSTRAINTS applies per ledger');
+      expect(section).toContain('"Report and exit" in Hard Constraints applies per ledger');
       expect(section).toContain("Exit only after the last queued spec");
       // The constraint that used to end the run at the first finished ledger.
       expect(skill).not.toContain('When all items are `done`, report "nothing to do" and exit.');

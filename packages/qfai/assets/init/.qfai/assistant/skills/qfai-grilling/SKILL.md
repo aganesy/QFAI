@@ -286,7 +286,7 @@ does not choose it and does not move the work to another stage: a sketch inside
 the current stage is the usual answer, and reaching for a later stage's artifact
 is that stage's own decision, under its own preconditions.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`. The
 sections below add only what is specific to a session; where they and the

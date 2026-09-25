@@ -141,7 +141,7 @@ describe("TC-0008-0007: Evidence File Contains Required Sections", () => {
   it("SKILL.md mandates evidence file creation", async () => {
     const content = await readFile(SKILL_PATH, "utf-8");
     expect(content).toMatch(/evidence.*atdd-<spec-id>\.md/i);
-    expect(content).toContain("Evidence (MANDATORY)");
+    expect(content).toMatch(/^## Evidence$/m);
   });
 
   it("SKILL.md mandates work orders and reviewer notes in evidence", async () => {

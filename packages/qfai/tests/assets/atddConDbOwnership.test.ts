@@ -67,7 +67,7 @@ describe.each(TREES)("%s", (tree) => {
     // spec's uncovered `CON-DB` reaches a `--spec` run's gate. A reviewer check
     // that accepted `-- x-qfai-status: planned` for "a contract outside the
     // slice" pointed that escape at contracts this stage does not own, which
-    // the CRITICAL CONSTRAINTS cross-spec rule forbids: the deferral would
+    // the Hard Constraints cross-spec rule forbids: the deferral would
     // defer the owning spec's DB test and hide a genuinely uncovered contract.
     const atdd = flat(await read(tree, ATDD));
     const checks = atdd.slice(

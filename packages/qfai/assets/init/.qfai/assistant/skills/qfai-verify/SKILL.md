@@ -77,7 +77,7 @@ The field table, the closed `scope` enum, the conforming example and the rules
 on what must never be written are in `references/verify-output-contract.md`.
 Read it before writing the file.
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
@@ -94,7 +94,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - No additional overrides.
 - Do not simulate roles. Classify the failure per the baseline taxonomy first: `unavailable` stops the stage with a remediation report; `saturated` uses the bounded retry branch and keeps the stage open.
 
-### Work Orders Summary (MANDATORY evidence)
+### Work Orders Summary
 
 Use the shared schema.
 
@@ -196,7 +196,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0-
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`.
 
-## Grilling (MANDATORY)
+## Grilling
 
 Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
 this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
@@ -366,7 +366,7 @@ every other takes the griller's recommendation, recorded as an `agents` row.
   reopens a session under the same description. `Session` is `S1`, `S2`, … in
   the order the sessions opened, and it is unique by construction.
 
-## CRITICAL CONSTRAINTS (Read First)
+## Hard Constraints (Read First)
 
 - Do NOT declare completion without running the defined gates.
 - You MUST produce the required evidence file: `.qfai/evidence/verify-<spec-id>.md`.
@@ -611,7 +611,7 @@ Output this format:
   - assumptions:
   - risks:
 
-## Evidence (MANDATORY)
+## Evidence
 
 Create and update `.qfai/evidence/verify-<spec-id>.md`. Evidence must include:
 
@@ -669,7 +669,7 @@ When you declare DONE, include:
 
 ## FINAL CHECKLIST (Check Last)
 
-- [ ] CRITICAL CONSTRAINTS were followed.
+- [ ] Hard Constraints were followed.
 - [ ] Evidence file exists and is complete.
 - [ ] All mandatory checks were executed and recorded.
 - [ ] No untracked gaps remain (or they are explicitly documented).

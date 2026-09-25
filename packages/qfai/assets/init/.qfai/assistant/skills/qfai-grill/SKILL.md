@@ -82,7 +82,7 @@ When unsure, read inputs in this order:
 - P4: whatever the subject names, as facts to read rather than decisions to
   re-open
 
-## Sub-agent Delegation (MANDATORY)
+## Sub-agent Delegation
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`. The
 primitive's delegation rules apply unchanged: one thing is delegated, reading a
