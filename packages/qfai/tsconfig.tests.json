@@ -237,6 +237,7 @@
     "tests/helpers/repositoryAttribution.ts",
     "tests/helpers/runnerProjects.ts",
     "tests/helpers/reviewPayload.ts",
+    "tests/helpers/routingEval.ts",
     "tests/helpers/saasPackageCertifyFixture.ts",
     "tests/helpers/shippedLaneCommands.ts",
     "tests/helpers/shippedWorkflowFixtures.ts",
