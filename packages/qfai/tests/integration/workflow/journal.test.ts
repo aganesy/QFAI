@@ -42,8 +42,15 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { policyDigestsOf } from "../../../src/core/workflow/observe.js";
-import { readJournal, snapshotOf, writeSnapshot } from "../../../src/core/workflow/persistence.js";
 import {
+  appendRecords,
+  readJournal,
+  snapshotOf,
+  writeSnapshot,
+} from "../../../src/core/workflow/persistence.js";
+import {
+  commitAll,
+  DISCOVERY_PROPOSAL,
   featureRunAt,
   field,
   inbox,
@@ -565,4 +572,86 @@ it("TC-0018-0171 (TDD-0375): Built CLI status while", async () => {
     sequence: field(status.json, "run.sequence"),
     unchanged: (await treeDigest(runDirOf(root, runId))) === before,
   }).toEqual({ ok: true, sequence: field(routed.json, "run.sequence"), unchanged: true });
+});
+
+const BUGFIX_PROPOSAL = {
+  ...DISCOVERY_PROPOSAL,
+  candidateRoute: "bugfix",
+  goal: "Keep the last order line in the export.",
+  expectedBehaviorRefs: [{ kind: "spec-id", ref: "spec-0001" }],
+  affectedSpecIds: ["spec-0001"],
+  proposedWriteScope: ["src/**", "tests/**"],
+  requiredStages: ["diagnose", "verify"],
+};
+
+// A project holding spec-0001 and its ledger, with a bugfix run routed to it and bound to it.
+async function routedBugfixRun() {
+  const root = await minimalProject();
+  const spec = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(path.join(spec, "tdd"), { recursive: true });
+  await writeFile(path.join(spec, "01_Spec.md"), "# spec-0001\n");
+  await writeFile(
+    path.join(spec, "tdd", "test-list.md"),
+    [
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- |",
+      "| TDD-0001 | TC-0001-0001 | Unit | tests/a.test.ts | TC-0001-0001 (TDD-0001) | todo | - | - |",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(path.join(root, "reproduction.md"), "Export an order with three lines.\n");
+  commitAll(root);
+  const { runId } = await routedRun(root, BUGFIX_PROPOSAL);
+  // Where accepting the plan recorded no binding, the spec the proposal names is bound by a
+  // `binding-recorded` event.
+  const runDir = runDirOf(root, runId);
+  const journal = await readJournal(runDir);
+  if (!journal.ok) throw new Error(`the journal of ${runId} is ${journal.fault}`);
+  if (!snapshotOf(journal.records)?.specBinding) {
+    const binding = { slotId: "slot-1", capabilityId: "CAP-0001", specId: "spec-0001" };
+    const recordedAt = new Date().toISOString();
+    const sequence = journal.records.length + 1;
+    const event = { sequence, event: "binding-recorded", operation: "accept", recordedAt, binding };
+    await appendRecords(runDir, journal.lastHash, [event]);
+  }
+  return { root, runId };
+}
+
+it("a bugfix run continues past its diagnose stage, carrying the diagnose receipt and reviewer", async () => {
+  const { root, runId } = await routedBugfixRun();
+  const diagnose = workflow(root, ["next", "--run", runId]);
+  const diagnosis = {
+    verdict: "missing-test",
+    reproductionRef: "reproduction.md",
+    matchedRowIds: ["TDD-0001"],
+  };
+  const review = {
+    role: "qa-gatekeeper",
+    agentInstance: "agent-review-1",
+    verdict: "PASS",
+    reportRef: "reproduction.md",
+  };
+  const accepted = await submit(
+    root,
+    runId,
+    "accept",
+    resultFor(diagnose.json, "diagnose-1", { diagnosis, reviewResults: [review] }),
+  );
+  const next = workflow(root, ["next", "--run", runId]);
+
+  expect({
+    diagnose: field(diagnose.json, "workOrder.stageKind"),
+    accepted: field(accepted.json, "run.state"),
+    next: field(next.json, "workOrder.stageKind"),
+    actorHistory: field(next.json, "workOrder.actorHistory"),
+    priorStageReceiptRefs: field(next.json, "workOrder.priorStageReceiptRefs"),
+  }).toEqual({
+    diagnose: "diagnose",
+    accepted: "ready",
+    next: "sdd_append",
+    actorHistory: [
+      { role: "reviewer", agentInstance: "agent-review-1", stageInstanceId: "diagnose" },
+    ],
+    priorStageReceiptRefs: [{ ref: "results/diagnose-1.json", validity: "unknown" }],
+  });
 });

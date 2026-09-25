@@ -223,6 +223,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   now state the product's rules for the discussion stage: it records the brand
   direction the user chooses and ranks none of the screen explorations, and
   `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
+- **`qfai workflow` keeps what a run's accepted results recorded** (#2465).
+  Every command rebuilds the run from its journal, and five things were lost
+  in that rebuild. So a bugfix run stopped after its diagnose stage, and a work
+  order carried no earlier receipts and no reviewers. The rebuilt run now
+  keeps:
+
+  - the diagnosis from the accepted diagnose result;
+  - each accepted receipt, which the next work order lists in
+    `priorStageReceiptRefs`;
+  - each reviewer of an accepted result, which the next work order lists in
+    `actorHistory`;
+  - one automatic repair per cause for each `needs_repair` result, which the
+    repair budget reads;
+  - one replan for each return to routing for a new plan, which the replan
+    budget reads.
 
 ## [1.12.3] - 2026-09-24
 

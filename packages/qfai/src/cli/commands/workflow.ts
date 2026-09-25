@@ -528,9 +528,11 @@ function extrasOf(
     const reviews = input.result?.reviewResults;
     const reports = accepted.copies.map(({ path: file, digest }) => ({ path: file, digest }));
     const testObservation = input.result?.testObservation;
+    const diagnosis = stageKind === "diagnose" ? input.result?.diagnosis : undefined;
     return {
       ...(stageKind ? { stageKind } : {}),
       ...(testObservation ? { testObservation } : {}),
+      ...(diagnosis ? { diagnosis } : {}),
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(reports.length > 0 ? { reports } : {}),
       dependencies: accepted.dependencies,

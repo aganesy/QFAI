@@ -201,6 +201,8 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   // On an accepted stage result: what its receipt depends on.
   dependencies?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["dependencies"];
   testObservation?: string;
+  // On an accepted diagnose result: the diagnosis it reported.
+  diagnosis?: NonNullable<WorkflowSnapshot["diagnosis"]>;
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
 };
@@ -432,14 +434,63 @@ function foldReplay(snapshot: Snapshot, replay: WorkflowReplay): Snapshot {
   return { ...snapshot, recordedResults: { ...snapshot.recordedResults, [id]: recorded } };
 }
 
+// One more automatic repair for each cause, a finding code at its path, that the request lists.
+function countRepairs(
+  made: NonNullable<Snapshot["repairsByCause"]>,
+  requested: readonly { findingCode: string; path: string }[],
+): NonNullable<Snapshot["repairsByCause"]> {
+  return requested.reduce((counted, { findingCode, path: file }) => {
+    const isCause = (cause: { findingCode: string; path: string }) =>
+      cause.findingCode === findingCode && cause.path === file;
+    const earlier = counted.find(isCause)?.count ?? 0;
+    const others = counted.filter((cause) => !isCause(cause));
+    return [...others, { findingCode, path: file, count: earlier + 1 }];
+  }, made);
+}
+
+// What a stage result leaves for the rest of the run: the diagnosis, the receipt later work
+// builds on, the reviewers the actor history keeps, and each cause it asks to have repaired.
+function foldStageResult(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const completed = ACCEPTED_OUTCOMES.includes(record.outcome ?? "");
+  const receiptRefs = completed && record.resultRef ? [record.resultRef] : [];
+  const reviewers = (record.reviewResults ?? []).map((review) => ({
+    role: "reviewer",
+    agentInstance: review.agentInstance,
+    ...(record.stageInstanceId ? { stageInstanceId: record.stageInstanceId } : {}),
+  }));
+  const repairs = record.repairs ?? [];
+  return {
+    ...snapshot,
+    ...(record.diagnosis ? { diagnosis: record.diagnosis } : {}),
+    ...(receiptRefs.length > 0
+      ? { receiptRefs: [...(snapshot.receiptRefs ?? []), ...receiptRefs] }
+      : {}),
+    ...(reviewers.length > 0
+      ? { actorHistory: [...(snapshot.actorHistory ?? []), ...reviewers] }
+      : {}),
+    ...(repairs.length > 0
+      ? { repairsByCause: countRepairs(snapshot.repairsByCause ?? [], repairs) }
+      : {}),
+  };
+}
+
+// Each event that sends the run back to routing for a new plan is one replan.
+function foldReplan(snapshot: Snapshot): Snapshot {
+  return { ...snapshot, replans: (snapshot.replans ?? 0) + 1 };
+}
+
 const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snapshot> = {
   "work-order-issued": foldIssued,
   "plan-accepted": foldRouted,
   "unsettled-material-input": foldRouted,
   "question-opened": foldQuestion,
   "authorization-recorded": foldAuthorization,
-  "accept-nonfinal-result": foldAccepted,
-  "scope-or-obligation-revision": foldAccepted,
+  "accept-nonfinal-result": (snapshot, record) =>
+    foldStageResult(foldAccepted(snapshot, record), record),
+  "scope-or-obligation-revision": (snapshot, record) =>
+    foldReplan(foldStageResult(foldAccepted(snapshot, record), record)),
+  "required-plan-revision": foldReplan,
+  "answer-changes-scope": foldReplan,
   "binding-recorded": (snapshot, record) =>
     record.binding ? { ...snapshot, specBinding: { specId: record.binding.specId } } : snapshot,
   "unrun-or-unresolved-dependency": (snapshot, record) =>
