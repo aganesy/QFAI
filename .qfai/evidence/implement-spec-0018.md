@@ -65,6 +65,16 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0076 | TC-0018-0058 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0077 | TC-0018-0059 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0078 | TC-0018-0060 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0081 | TC-0018-0063 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0082 | TC-0018-0064 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0083 | TC-0018-0066 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0084 | TC-0018-0067 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0085 | TC-0018-0068 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0086 | TC-0018-0069 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0087 | TC-0018-0069 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0088 | TC-0018-0073 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0089 | TC-0018-0074 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0090 | TC-0018-0076 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
@@ -2100,6 +2110,111 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theScopeNeverWidensByItself.test.ts > TC-0018-0060 (TDD-0078): Issue a work order whose inputs include paths outside the plan's write scope`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 - Note: the fixture's plan names an observed path outside its write scope. Work orders carry no `inputs` yet, so the case holds that the issued `scope.writeAreas` is the plan's write scope and nothing the plan reads.
+
+### TDD-0081
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theMissingTestBranch.test.ts`
+- Selector: `TC-0018-0063 (TDD-0081): A diagnose result missing-test whose appended row's layer is Integration, driven to the last stage`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theMissingTestBranch.test.ts --testNamePattern='TC-0018-0063 \(TDD-0081\): A diagnose result missing-test whose appended row's layer is Integration, driven to the last stage' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0027, whose bugfix drive selects `acceptance` under `acceptance_obligations_unmet` for an `Integration` row.
+- GREEN result: exit 0; `✓ … TC-0018-0063 (TDD-0081)`, 1 passed
+- Production files: none; the test reads `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0082
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theMissingTestBranch.test.ts`
+- Selector: `TC-0018-0064 (TDD-0082): The same with the appended row's layer Unit`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theMissingTestBranch.test.ts --testNamePattern='TC-0018-0064 \(TDD-0082\): The same with the appended row's layer Unit' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/theMissingTestBranch.test.ts:113:6` — `acceptanceNotRun` was `undefined`: the core dropped the acceptance stage and recorded nothing for it.
+- GREEN result: exit 0; `✓ … TC-0018-0064 (TDD-0082)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+- Note: the contract names no event for a stage whose predicate does not hold. `next` records each such stage, when it issues the stage after it, as a `receipt-recorded` event carrying `notRun: { kind: "not_applicable", reason }`, the reason naming the predicate. Marked `SIMPLIFIED` in `decide.ts`.
+
+### TDD-0083
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theAppendedRowCarriesItsReason.test.ts`
+- Selector: `TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-test diagnosis`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAppendedRowCarriesItsReason.test.ts --testNamePattern='TC-0018-0066 \(TDD-0083\): Issue the sdd_append work order after a missing-test diagnosis' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/theAppendedRowCarriesItsReason.test.ts:52:6` — `inputs` was `undefined`.
+- GREEN result: exit 0; `✓ … TC-0018-0066 (TDD-0083)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: the work order's `inputs` entry takes its digest from a new `fileDigests` fact. An input whose digest the facts lack is left out, marked `SIMPLIFIED` in `decide.ts` until the command adapter supplies every digest.
+
+### TDD-0084
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRegressionBranch.test.ts`
+- Selector: `TC-0018-0067 (TDD-0084): A diagnose result regression for a done row`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRegressionBranch.test.ts --testNamePattern='TC-0018-0067 \(TDD-0084\): A diagnose result regression for a done row' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/theRegressionBranch.test.ts:94:6` — no `regression_fix` work order was issued and `digestRecorded` was `false`.
+- GREEN result: exit 0; `✓ … TC-0018-0067 (TDD-0084)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: the predicates `regression_found` and `test_defect_found` now read the diagnosis verdict. A work order bound to a spec carries `ledger: { specId, rowIds, rowSetDigest }` from a new `ledger` fact: the digest covers each row's ID, status and digest; `rowIds` are the diagnosis's matched rows for `regression_fix` and `test_fix`, and the rows not `done` otherwise.
+
+### TDD-0085
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts`
+- Selector: `TC-0018-0068 (TDD-0085): A regression_fix result with the same test's GREEN re-run receipt and an independent review receipt`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts --testNamePattern='TC-0018-0068 \(TDD-0085\): A regression_fix result with the same test's GREEN re-run receipt and an independent review receipt' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0084: the accept path takes a complete regression_fix result and returns the run to `ready` with no ledger event.
+- GREEN result: exit 0; `✓ … TC-0018-0068 (TDD-0085)`, 1 passed
+- Production files: none; the test reads `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0086
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts`
+- Selector: `TC-0018-0069 (TDD-0086): no-rerun-receipt`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts --testNamePattern='TC-0018-0069 \(TDD-0086\): no-rerun-receipt' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(refusalOf(...)).toEqual(refused)` at `tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts:106:56` — `code` was `undefined` and an `accept-nonfinal-result` event was returned.
+- GREEN result: exit 0; `✓ … TC-0018-0069 (TDD-0086)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0087
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts`
+- Selector: `TC-0018-0069 (TDD-0087): no-review-receipt`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts --testNamePattern='TC-0018-0069 \(TDD-0087\): no-review-receipt' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(refusalOf(...)).toEqual(refused)` at `tests/unit/workflow/aRegressionFixNeedsItsReRunAndReview.test.ts:112:57` — `code` was `undefined` and an `accept-nonfinal-result` event was returned.
+- GREEN result: exit 0; `✓ … TC-0018-0069 (TDD-0087)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0088
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aWorkOrderNamesRowsNotTheirStatus.test.ts`
+- Selector: `TC-0018-0073 (TDD-0088): Issue an implement work order bound to a spec`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aWorkOrderNamesRowsNotTheirStatus.test.ts --testNamePattern='TC-0018-0073 \(TDD-0088\): Issue an implement work order bound to a spec' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0084, which added the work order's `ledger` of row IDs and the row-set digest.
+- GREEN result: exit 0; `✓ … TC-0018-0073 (TDD-0088)`, 1 passed
+- Production files: none; the test reads `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0089
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aDifferentExpectationReclassifies.test.ts`
+- Selector: `TC-0018-0074 (TDD-0089): A diagnose result expectation-differs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aDifferentExpectationReclassifies.test.ts --testNamePattern='TC-0018-0074 \(TDD-0089\): A diagnose result expectation-differs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/aDifferentExpectationReclassifies.test.ts:77:6` — the run went to `ready` by `accept-nonfinal-result` and the next call issued the implement work order.
+- GREEN result: exit 0; `✓ … TC-0018-0074 (TDD-0089)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0090
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLighterRouteKeepsEveryObligation.test.ts`
+- Selector: `TC-0018-0076 (TDD-0090): A RED receipt accepted for an unfinished row, then a reclassification from bugfix to bounded-change, then next`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLighterRouteKeepsEveryObligation.test.ts --testNamePattern='TC-0018-0076 \(TDD-0090\): A RED receipt accepted for an unfinished row, then a reclassification from bugfix to bounded-change, then next' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect({...}).toEqual({...})` at `tests/unit/workflow/aLighterRouteKeepsEveryObligation.test.ts:51:6` — `priorStageReceiptRefs` was `undefined`.
+- GREEN result: exit 0; `✓ … TC-0018-0076 (TDD-0090)`, 1 passed
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Note: the snapshot gains `receiptRefs`, every result the run has accepted, which survives a replan. Each work order lists them as `priorStageReceiptRefs`, the validity read from the `receiptValidity` fact and `unknown` where the fact is absent.
 
 ### TDD-0212
 

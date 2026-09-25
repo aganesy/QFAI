@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 import { compileGlob } from "../atdd/scaffoldDialect.js";
@@ -49,6 +50,9 @@ interface WorkflowWorkOrder {
   parentWorkOrderId?: string;
   scope?: { writeAreas: string[] };
   recordAreas?: string[];
+  inputs?: { path: string; digest: string }[];
+  ledger?: { specId: string; rowIds: string[]; rowSetDigest: string };
+  priorStageReceiptRefs?: { ref: string; validity: "valid" | "stale" | "unknown" }[];
 }
 
 interface WorkflowAuthorization {
@@ -104,7 +108,8 @@ type InputRefusalReason =
   | "work-order"
   | "result-id-reused"
   | "write-scope"
-  | "unbound-capability";
+  | "unbound-capability"
+  | "regression-fix-receipt";
 
 interface InputRefusal {
   reason: InputRefusalReason;
@@ -167,6 +172,7 @@ interface WorkflowSnapshot {
   acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
   seamRequest?: WorkflowSeamRequest;
   attempts?: Record<string, number>;
+  receiptRefs?: string[];
   recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
 }
 
@@ -200,6 +206,7 @@ interface WorkflowInput {
     testObservation?: string;
     changedFiles?: { path: string; digest: string }[];
     red?: { testId: string; failureKind: string };
+    regressionFix?: { testId?: string; rerunRef?: string; reviewRef?: string };
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -242,6 +249,8 @@ interface WorkflowFacts {
   contractIds?: string[];
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
   itemReferences?: Record<string, "resolved" | "unresolved">;
+  fileDigests?: Record<string, string>;
+  ledger?: { specId: string; rows: { rowId: string; status: string; digest: string }[] };
 }
 
 type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
@@ -386,6 +395,10 @@ function resultRefusals(
   if (result.testObservation === "expected_red" && result.red?.failureKind !== "assertion") {
     refusals.push({ reason: "red-not-assertion", subject: "red" });
   }
+  const fix = result.regressionFix;
+  if (workOrder.stageKind === "regression_fix" && (!fix?.rerunRef || !fix.reviewRef)) {
+    refusals.push({ reason: "regression-fix-receipt", subject: "regressionFix" });
+  }
   (result.debts ?? []).forEach((debt, index) => {
     if (!debt.resolvingOwner?.trim()) {
       refusals.push({ reason: "debt-owner-missing", subject: `debts[${index}]` });
@@ -518,6 +531,10 @@ function activeStages(
         return diagnosis?.verdict === "missing-test";
       case "acceptance_obligations_unmet":
         return acceptanceObligationsUnmet === true;
+      case "regression_found":
+        return diagnosis?.verdict === "regression";
+      case "test_defect_found":
+        return diagnosis?.verdict === "defective-test";
       default:
         return false;
     }
@@ -592,6 +609,40 @@ function routePlanIsInvalid(
   }
 }
 
+// SIMPLIFIED: an input whose digest the facts do not carry is left out of the work order.
+// Lift when: the command adapter supplies the digest of every file a work order names.
+function diagnosisInputs(
+  stageKind: string,
+  diagnosis: WorkflowSnapshot["diagnosis"],
+  facts: WorkflowFacts,
+): NonNullable<WorkflowWorkOrder["inputs"]> {
+  const digest = diagnosis ? facts.fileDigests?.[diagnosis.reproductionRef] : undefined;
+  if (stageKind !== "sdd_append" || !diagnosis || digest === undefined) return [];
+  return [{ path: diagnosis.reproductionRef, digest }];
+}
+
+// The row set covers each row's ID, status and digest, so a moved status changes it.
+// The work order itself carries row IDs only.
+function ledgerOf(
+  specId: string,
+  stageKind: string,
+  diagnosis: WorkflowSnapshot["diagnosis"],
+  facts: WorkflowFacts,
+): WorkflowWorkOrder["ledger"] {
+  const ledger = facts.ledger;
+  if (ledger?.specId !== specId) return undefined;
+  const rows = [...ledger.rows].sort((left, right) => left.rowId.localeCompare(right.rowId));
+  const rowSetDigest = createHash("sha256")
+    .update(JSON.stringify(rows.map(({ rowId, status, digest }) => [rowId, status, digest])))
+    .digest("hex");
+  const fixesMatchedRows = stageKind === "regression_fix" || stageKind === "test_fix";
+  const rowIds =
+    fixesMatchedRows && diagnosis
+      ? diagnosis.matchedRowIds
+      : rows.filter((row) => row.status !== "done").map((row) => row.rowId);
+  return { specId, rowIds, rowSetDigest };
+}
+
 function refusedInput(run: WorkflowSnapshot["run"], message: string): WorkflowDecision {
   return { verdict: { ok: false, run, error: { code: "invalid-input", message } }, events: [] };
 }
@@ -649,15 +700,42 @@ function blockOnUnrun(
 function issueWorkOrder(
   run: WorkflowSnapshot["run"],
   workOrder: WorkflowWorkOrder,
+  skipped: WorkflowEvent[] = [],
 ): WorkflowDecision {
+  const events = [
+    ...skipped,
+    { type: "work-order-issued", workOrder },
+    { type: "dispatch-work-order" },
+  ];
   return {
     verdict: {
       ok: true,
-      run: { ...run, state: "running", sequence: run.sequence + 2 },
+      run: { ...run, state: "running", sequence: run.sequence + events.length },
       workOrder,
     },
-    events: [{ type: "work-order-issued", workOrder }, { type: "dispatch-work-order" }],
+    events,
   };
+}
+
+// SIMPLIFIED: a stage whose predicate does not hold is recorded as a receipt carrying
+// `not_applicable` and the predicate as its reason, when `next` issues the stage after it.
+// Lift when: the run evidence gains its own record of skipped stages.
+function skippedBefore(
+  plan: NonNullable<WorkflowSnapshot["plan"]>,
+  selected: PlanStages,
+  lastAccepted: string | undefined,
+  issuing: string,
+): WorkflowEvent[] {
+  const ids = plan.stages.map((stage) => stage.stageInstanceId);
+  const from = lastAccepted === undefined ? 0 : ids.indexOf(lastAccepted) + 1;
+  return plan.stages
+    .slice(from, ids.indexOf(issuing))
+    .filter((stage) => !selected.includes(stage))
+    .map((stage) => ({
+      type: "receipt-recorded",
+      stageInstanceId: stage.stageInstanceId,
+      notRun: { kind: "not_applicable", reason: `predicate ${stage.when ?? "none"} does not hold` },
+    }));
 }
 
 function issueSeamOnly(snapshot: WorkflowSnapshot, seam: WorkflowSeamRequest): WorkflowDecision {
@@ -881,6 +959,13 @@ export function decide(
       // Lift when: a work order's scope digest, protected targets, effects or non-goals are read.
       ...(plan.writeScope ? { scope: { writeAreas: plan.writeScope } } : {}),
     };
+    const receiptRefs = snapshot.receiptRefs ?? [];
+    if (receiptRefs.length > 0) {
+      nextWorkOrder.priorStageReceiptRefs = receiptRefs.map((ref) => ({
+        ref,
+        validity: facts.receiptValidity?.[ref] ?? "unknown",
+      }));
+    }
     if (isDirect || isBugfix || isBounded) {
       const specId = snapshot.specBinding?.specId;
       if (!specId || !stage.skill || !stage.operation) {
@@ -894,6 +979,10 @@ export function decide(
         };
       }
       nextWorkOrder.target = { kind: "spec", specId };
+      const inputs = diagnosisInputs(stage.stageKind, snapshot.diagnosis, facts);
+      if (inputs.length > 0) nextWorkOrder.inputs = inputs;
+      const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
+      if (ledger) nextWorkOrder.ledger = ledger;
     } else if (plan.route === "feature" && stage.stageKind !== "sdd" && snapshot.specBinding) {
       nextWorkOrder.target = { kind: "spec", specId: snapshot.specBinding.specId };
     } else if (stage.stageKind === "sdd") {
@@ -925,7 +1014,13 @@ export function decide(
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
-    return issueWorkOrder(run, nextWorkOrder);
+    const skipped = skippedBefore(
+      plan,
+      selectedStages,
+      acceptedStages.at(-1)?.stageInstanceId,
+      stage.stageInstanceId,
+    );
+    return issueWorkOrder(run, nextWorkOrder, skipped);
   }
 
   if (input.operation === "next" && run.state === "running" && workOrder) {
@@ -1026,9 +1121,12 @@ export function decide(
     }
     const endsDiscovery =
       plan.route === "discovery" && acceptedStages.length + 1 === selectedStages.length;
+    const needsReplan =
+      endsDiscovery ||
+      (nextStage.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs");
     const events: WorkflowEvent[] = [
       {
-        type: endsDiscovery ? "scope-or-obligation-revision" : "accept-nonfinal-result",
+        type: needsReplan ? "scope-or-obligation-revision" : "accept-nonfinal-result",
         resultRef: `results/${result.resultId}.json`,
         stageInstanceId: workOrder.stageInstanceId,
         outcome: result.outcome,
@@ -1045,7 +1143,7 @@ export function decide(
         ok: true,
         run: {
           ...run,
-          state: endsDiscovery ? "routing" : "ready",
+          state: needsReplan ? "routing" : "ready",
           sequence: run.sequence + events.length,
         },
       },
