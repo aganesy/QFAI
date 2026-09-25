@@ -14,7 +14,7 @@ A REVISE returns to the owning author. After repair, rerun validation and each r
 
 ## Validation gate
 
-Run `npx qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each affected flow after its artifacts are stable. Require exit 0 and zero errors. Record the command, result, `<paths.outDir>/validate.log`, and the run log in that flow's evidence. The CLI writes the log; shell redirection is unnecessary. A run with no BF records an incomplete stage in the work log and does not claim DONE.
+Run `npx qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each affected flow after its artifacts are stable. Require exit 0 and zero errors. Record the command, result, `<paths.outDir>/validate.log`, and the run log in that flow's evidence. The CLI writes the log; shell redirection is unnecessary. A run with no BF says in its report what the stage waits on, records an `open-questions.md` row for it, and does not claim DONE.
 
 ## Review artifacts
 

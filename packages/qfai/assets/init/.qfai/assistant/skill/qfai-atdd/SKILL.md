@@ -120,8 +120,9 @@ An author cannot certify their own tests. Resolve blocking findings using
 For a failed gate, follow
 `rule/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
-Write a handoff entry naming BF and AC IDs, test paths and selectors, commands
-and outcomes, evidence paths, unresolved findings and implementation work.
+Write a handoff entry in `.qfai/evidence/atdd-BF-NNNN.md` naming BF and AC IDs,
+test paths and selectors, commands and outcomes, evidence paths, unresolved
+findings and implementation work.
 Follow `references/stage-handover.md`. Keep cross-flow findings with their
 owning flow; see `references/cross-spec-obligations.md`.
 

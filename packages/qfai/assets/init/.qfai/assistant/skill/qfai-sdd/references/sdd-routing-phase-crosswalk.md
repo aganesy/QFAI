@@ -15,7 +15,7 @@ Follow the current routing manifest for the exact conditional agent set and revi
 
 For `--contract <CON-ID-or-path>`, scope design to the named contract, its paired contracts, and the existing flows
 whose AC, EX, or BR depend on them. Reconcile those obligations after each contract change. Record the review and gate
-in each affected BF's evidence. If no BF exists, record the incomplete stage in the work log and do not claim DONE. No
-previous triage approval can substitute for approval of a new change-request row.
+in each affected BF's evidence. If no BF exists, say in the report what the stage waits on, record an `open-questions.md`
+row for it, and do not claim DONE. No previous triage approval can substitute for approval of a new change-request row.
 
 The orchestrator integrates delegated work and does not author or self-review it. A REVISE returns to the author of the affected artifact, then re-runs dependent reviewers after the repair. Follow `review-cycle-playbook.md` for the cycle limit and recorded verdicts.

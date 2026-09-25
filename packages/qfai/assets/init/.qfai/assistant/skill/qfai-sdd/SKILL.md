@@ -125,10 +125,10 @@ Run `npx qfai validate --profile sdd --fail-on error --flow BF-NNNN` for each BF
 their owning source and rerun until `error=0`. A worker's flow gate does not include a sibling flow still being edited.
 Complete the routed blocking reviewer cycle and retain the validate log path. Evidence for each affected flow is
 `.qfai/evidence/sdd-BF-NNNN.md`, based on `templates/evidence/sdd-flow.md`, including source, changes, decisions, gate
-result, reviewer results, and remaining risks. When no BF exists yet, record the incomplete stage in the work log and do
-not claim DONE.
+result, reviewer results, and remaining risks. When no BF exists yet, say in the report what the stage waits on, record an
+`open-questions.md` row for it, and do not claim DONE.
 
-A contract-scoped change also gates every existing BF whose obligations depend on that contract, even when the BF file itself is unchanged. If the contract has no owning BF, record the pending ownership in the work log; do not fabricate a flow result.
+A contract-scoped change also gates every existing BF whose obligations depend on that contract, even when the BF file itself is unchanged. If the contract has no owning BF, say so in the report and record the pending ownership as an `open-questions.md` row; do not fabricate a flow result.
 
 ### Reviewer Gate
 

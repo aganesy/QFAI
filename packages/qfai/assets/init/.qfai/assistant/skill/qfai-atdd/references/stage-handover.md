@@ -8,9 +8,9 @@ open across a full-suite checkpoint.
 
 ## Handoff entry
 
-Name the flow, the BF or AC obligation, test file and selector, its annotation,
-the exact command and observed result, test and fixture hashes, and the
-evidence file path. State whether the branch is observed RED, an already
+Write the entry in `.qfai/evidence/atdd-BF-NNNN.md`. Name the flow, the BF or
+AC obligation, test file and selector, its annotation, the exact command and
+observed result, test and fixture hashes, and the evidence file path. State whether the branch is observed RED, an already
 implemented surface with a falsifiability check, or an unresolved gap. Name
 the next production change and any shared artifact another flow reads.
 
