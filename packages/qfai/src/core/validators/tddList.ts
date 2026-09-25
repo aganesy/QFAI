@@ -1489,6 +1489,32 @@ function exactLineField(content: string, field: string, value: string): boolean 
   return values.length === 1 && values[0] === value;
 }
 
+/** The reviewer-response fields that carry the verdict itself. */
+type VerdictField = "Result" | "Reviewed revision" | "Audited evidence hash";
+
+/**
+ * Every value a reviewer response states for one of its verdict fields, as a
+ * plain line or as a list item (`- Result: PASS`).
+ *
+ * Reviewers commonly write the response as a list, and a verdict written that
+ * way is the same verdict. Read at column 0 alone, it would be reported as a
+ * missing PASS, with nothing pointing at the list marker. Both forms count
+ * toward uniqueness, so a `Result: PASS` line beside a `- Result: REVISE` item
+ * is still two verdicts.
+ */
+function verdictFieldValues(response: string, field: VerdictField): string[] {
+  return visibleLineFieldValues(response, field, true);
+}
+
+/**
+ * True when a reviewer response states the verdict field exactly once, in
+ * either form `verdictFieldValues` reads, and states `value`.
+ */
+function exactVerdictField(response: string, field: VerdictField, value: string): boolean {
+  const values = verdictFieldValues(response, field);
+  return values.length === 1 && values[0] === value;
+}
+
 function normalizeAuditArtifact(value: string): string {
   const lines = value
     .replace(/\r\n/g, "\n")
@@ -2238,7 +2264,7 @@ function memberAuditedHashes(
   response: string,
   members: readonly string[],
 ): Map<string, string> | null {
-  const lines = visibleLineFieldValues(response, "Audited evidence hash");
+  const lines = verdictFieldValues(response, "Audited evidence hash");
   if (lines.length !== members.length) return null;
   const hashes = new Map<string, string>();
   for (const line of lines) {
@@ -2366,7 +2392,7 @@ function statesField(content: string, field: string): boolean {
 function everyResponsePasses(responses: ReadonlyArray<string>): boolean {
   return (
     responses.length > 0 &&
-    responses.every((response) => exactLineField(response, "Result", "PASS"))
+    responses.every((response) => exactVerdictField(response, "Result", "PASS"))
   );
 }
 
@@ -2710,8 +2736,8 @@ function stagePackRecordsPass(
   // of them stand — so both the count and every verdict are read, not the first
   // file the listing happened to return.
   if (responses.length !== 1 || !everyResponsePasses(responses)) return false;
-  const revisions = visibleLineFieldValues(response, "Reviewed revision");
-  const auditedHashes = visibleLineFieldValues(response, "Audited evidence hash");
+  const revisions = verdictFieldValues(response, "Reviewed revision");
+  const auditedHashes = verdictFieldValues(response, "Audited evidence hash");
   const revision = revisions[0];
   const auditedHash = auditedHashes[0];
   return (
@@ -3834,7 +3860,7 @@ async function invalidCompletedEvidenceArtifacts(
         recordedRevision,
         context.specsRelative,
       ) ||
-      !exactLineField(response, "Reviewed revision", recordedRevision) ||
+      !exactVerdictField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
       bareSha256(memberAuditedHashes(response, members)?.get(expected.tddId) ?? "") !==
         bareSha256(auditedHash)
@@ -4227,8 +4253,8 @@ function reviewerStatuses(
 ): Map<string, "PASS" | "FAIL"> | null {
   const statuses = new Map<string, "PASS" | "FAIL">();
   for (const { role, content } of packResponseFiles(packFiles, packPath)) {
-    const passes = exactLineField(content, "Result", "PASS");
-    if (!passes && !exactLineField(content, "Result", "REVISE")) return null;
+    const passes = exactVerdictField(content, "Result", "PASS");
+    if (!passes && !exactVerdictField(content, "Result", "REVISE")) return null;
     statuses.set(role, passes && statuses.get(role) !== "FAIL" ? "PASS" : "FAIL");
   }
   return statuses;
@@ -4325,7 +4351,7 @@ function roundPackRecordsSubject(
     return false;
   }
   return allReviewPackResponses(packFiles, packPath).every((response) =>
-    exactLineField(response, "Reviewed revision", revision),
+    exactVerdictField(response, "Reviewed revision", revision),
   );
 }
 
