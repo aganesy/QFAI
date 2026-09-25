@@ -596,7 +596,11 @@ function areasOverlap(leftArea: string, rightArea: string): boolean {
   );
 }
 
-function touchesProtectedSurface(area: string, protectedTargets: readonly string[]): boolean {
+function touchesProtectedSurface(
+  writtenArea: string,
+  protectedTargets: readonly string[],
+): boolean {
+  const area = normalizeArea(writtenArea);
   const prefix = literalPrefix(area);
   return (
     PROTECTED_PREFIXES.some(

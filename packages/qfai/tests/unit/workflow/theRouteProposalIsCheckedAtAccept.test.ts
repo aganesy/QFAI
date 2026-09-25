@@ -268,6 +268,24 @@ it("TC-0018-0012 (TDD-0019): protected-surface", () => {
       protectedTargets: ["./src\\notify//keys.ts/"],
     }),
   ).toEqual(refused({ reason: "protected-surface", subject: "src/notify/**" }));
+
+  const fixedPathSpelledDifferently = [
+    "./.qfai/runs/**",
+    ".qfai\\runs\\**",
+    ".qfai//runs/**",
+    "./.qfai/runs",
+    "./.git/config",
+  ];
+  expect(
+    acceptRouting({
+      ...checkedProposal(),
+      proposedWriteScope: ["./src/notify/**", ...fixedPathSpelledDifferently],
+    }),
+  ).toEqual(
+    refused(
+      ...fixedPathSpelledDifferently.map((subject) => ({ reason: "protected-surface", subject })),
+    ),
+  );
 });
 
 it("TC-0018-0012 (TDD-0020): scope-escape", () => {
