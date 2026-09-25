@@ -6588,6 +6588,78 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0237 (TDD-0454): Built CLI run from start to finish on a temp project`
 - Production files: none beyond TDD-0354
 
+### TDD-0455
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `Error: seam-1: { "ok": false, ... "reasons": [{ "reason": "schema", "subject": "workOrderId" }, ...] }`, thrown by `acceptThenNext` in `tests/e2e/workflowJourney.ts` from `throughAcceptance`: after an acceptance result asking for a seam, `next` issued no seam-only work order, because the journal fold appended that result as an accepted stage and kept no seam request; the declined half passed on its first run, already satisfied by TDD-0260
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done` and `✓ ... > US-0018-0001 (TDD-0455), declined: declining the create question cancels the run with nothing tracked`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`)
+- Design choice: the journeys live under `packages/qfai/tests/e2e/`, one file per story, named `spec0018<Story>E2E.test.ts`. Each runs on a `qfai init` project (`initProject`) and drives the built CLI with scripted stage results, through the helpers `workflowProject.ts` already holds and `tests/e2e/workflowJourney.ts`: accept and next, verify and finish, the fixture's own validate, and a work order's shape. Each journey carries `QFAI:SPEC-0003:US-0003-0029`, and the stage-story variants carry their own story too, as `10_Plan.md` `### Which journey discharges which stage story` assigns. `QFAI:SPEC-0004:US-0004-0040` is not carried: the validator half it names (QFAI-TRIAGE-011, spec-0004 TDD-0068 to TDD-0078 and TDD-0082) does not exist yet, so an annotation would mark a story covered that nothing verifies. Decided between agents.
+- Production fix: the seam round trip did not survive the journal fold. `foldSeam` opens `seamRequest` from an acceptance result that carries one, instead of appending it as an accepted stage. It then closes the request when the seam-only result is accepted, so `next` reissues the acceptance stage at its next attempt. This matches the snapshot fields TDD-0057's design choice names; how the journal replays into them was left to persistence.
+
+### TDD-0458
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018StopForMyDecisionE2E.test.ts`
+- Selector: `US-0018-0004 (TDD-0458)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018StopForMyDecisionE2E.test.ts --testNamePattern='US-0018-0004 \(TDD-0458\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1 on the first run, which failed on the test's own expectation of an absent work order where `next` on a waiting run reports `workOrder: null`; with that corrected the journey passed: already satisfied by TDD-0104 (a material risk opens one question) and TDD-0354 (`stop` cancels at once)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018StopForMyDecisionE2E.test.ts > US-0018-0004 (TDD-0458): a material question waits unanswered, then a stop cancels the run`
+- Production files: none
+
+### TDD-0459
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts`
+- Selector: `US-0018-0005 (TDD-0459)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts --testNamePattern='US-0018-0005 \(TDD-0459\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0327, whose `resume` returns the implement work order from the smallest valid checkpoint
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts > US-0018-0005 (TDD-0459): resume returns the pending ledger row's implement work order and no SDD work order`
+- Production files: none (test-side): `packages/qfai/tests/integration/workflow/receiptRun.ts` exports `writeReceiptFiles`
+
+### TDD-0460
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018AskWithoutStartingE2E.test.ts`
+- Selector: `US-0018-0006 (TDD-0460)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018AskWithoutStartingE2E.test.ts --testNamePattern='US-0018-0006 \(TDD-0460\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0322 and TDD-0328, the core's `status` rows, which read the runtime tree and write nothing
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018AskWithoutStartingE2E.test.ts > US-0018-0006 (TDD-0460): the entry's status call leaves no run and a byte-identical tree`
+- Production files: none
+
+### TDD-0462
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ChooseTheModeE2E.test.ts`
+- Selector: `US-0018-0008 (TDD-0462)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ChooseTheModeE2E.test.ts --testNamePattern='US-0018-0008 \(TDD-0462\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0372, TDD-0373 (`off` and `shadow` write nothing) and TDD-0378 (an invalid mode is refused `fail-closed`)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ChooseTheModeE2E.test.ts > US-0018-0008 (TDD-0462): off and shadow write nothing, and an invalid mode is refused fail-closed`
+- Production files: none
+
+### TDD-0463
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018HostCapabilityE2E.test.ts`
+- Selector: `US-0018-0009 (TDD-0463)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018HostCapabilityE2E.test.ts --testNamePattern='US-0018-0009 \(TDD-0463\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0232 (a capability gap refused at `start`) and TDD-0240 (a failed first delegation blocks)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018HostCapabilityE2E.test.ts > US-0018-0009 (TDD-0463): a capability gap is refused at start, and a failed first delegation blocks`
+- Production files: none
+
+### TDD-0464
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ClaimAHostE2E.test.ts`
+- Selector: `US-0018-0010 (TDD-0464)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ClaimAHostE2E.test.ts --testNamePattern='US-0018-0010 \(TDD-0464\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0428 (the runner's record shape) and TDD-0440 to TDD-0442 (the claim check)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ClaimAHostE2E.test.ts > US-0018-0010 (TDD-0464): an eval record is written, the claim check passes, then fails on a claim with no record`
+- Production files: none
+
 ### TDD-0465
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.

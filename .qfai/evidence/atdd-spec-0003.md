@@ -1272,6 +1272,17 @@ the selector has again been seen to fail.
 - Checkpoint verification revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
 - Checkpoint verification seal: e355f7b07a46e63150a7980e9035766f2e37b4c3dd9a99a056ddc79f7581cc15
 
+### TDD-0125
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by every spec-0018 journey's `qfai init`, which each carries `QFAI:SPEC-0003:US-0003-0029`; this variant asserts the installed `qfai-run` skill, the plans, and the stage skills' entry check pointing at it. The upgrade half of the story is held by spec-0003's own L3 rows (TC-0003-0076 to TC-0003-0088), which stay open.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, handover variant \(spec-0001 TDD-0042; spec-0003 TDD-0125\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by spec-0003's init rows, which install `qfai-run`, the plans and the stage skills' entry check
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125): a result for a work order never issued is refused, and the stage skills' entry check points at the installed qfai-run`
+- Production files: none
+
 ### TDD-0126
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.

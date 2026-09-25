@@ -54,10 +54,15 @@ async function changed(root: string, file: string) {
   };
 }
 
+/** Writes spec-0001's pack, its ledger, a test file and a production file into `root`. */
+export async function writeReceiptFiles(root: string): Promise<void> {
+  for (const [file, text] of Object.entries(FILES)) await write(root, file, text);
+}
+
 /** A minimal project holding spec-0001's pack, its ledger, a test file and a production file. */
 export async function receiptProject(): Promise<string> {
   const root = await minimalProject();
-  for (const [file, text] of Object.entries(FILES)) await write(root, file, text);
+  await writeReceiptFiles(root);
   commitAll(root);
   return root;
 }
