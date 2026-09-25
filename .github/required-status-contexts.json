@@ -55,6 +55,7 @@
         "check-types-future",
         "node-floor",
         "test",
+        "windows-parity",
         "scanner-coverage",
         "build"
       ],
@@ -83,6 +84,7 @@
         "check-types-future": "${{ needs.detect.outputs.full == 'true' }}",
         "node-floor": "${{ needs.detect.outputs.full == 'true' }}",
         "test": "${{ needs.detect.outputs.full == 'true' }}",
+        "windows-parity": "${{ needs.detect.outputs.full == 'true' }}",
         "scanner-coverage": "${{ needs.detect.outputs.full == 'true' }}"
       },
       "dependencyConditionsNote": [
@@ -374,6 +376,7 @@
         "Run future TypeScript compatibility check": "check-types-future",
         "Run the package test suite on the floor (${{ matrix.slice }})": "node-floor",
         "Run tests (${{ matrix.slice }})": "test",
+        "Run the Windows parity suites": "windows-parity",
         "Run scanner coverage gate": "scanner-coverage"
       },
       "gatedVerificationsNote": [
@@ -414,6 +417,7 @@
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
         "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
+        "Run the Windows parity suites": "dc1afe97e4e22c9a",
         "Run scanner coverage gate": "dbb04c7e4d66e944"
       },
       "verificationBodiesNote": [
@@ -472,10 +476,10 @@
         "because the verdict executes and is not one of its own dependencies."
       ],
       "codePathCostPin": {
-        "instances": 22,
-        "timeoutMinutesSum": 290,
-        "installInstances": 20,
-        "buildJobs": ["build", "node-floor", "test"]
+        "instances": 23,
+        "timeoutMinutesSum": 320,
+        "installInstances": 21,
+        "buildJobs": ["build", "node-floor", "test", "windows-parity"]
       },
       "codePathCostPinNote": [
         "What a code-path pull request costs, pinned as four figures recomputed from the workflow tree.",

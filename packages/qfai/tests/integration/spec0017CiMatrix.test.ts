@@ -114,6 +114,7 @@ describe("spec-0017 CI matrix acceptance", () => {
       "test (scripts)",
       "test (unit)",
       "test (validators)",
+      "windows-parity",
     ]);
   });
 
@@ -130,6 +131,7 @@ describe("spec-0017 CI matrix acceptance", () => {
       "node-floor",
       "scanner-coverage",
       "test",
+      "windows-parity",
     ]);
   });
 });

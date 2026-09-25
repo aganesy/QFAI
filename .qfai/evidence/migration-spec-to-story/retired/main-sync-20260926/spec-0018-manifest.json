@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/specs/spec-0018/01_Spec.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/01_Spec.md",
+      "sha256": "59a076708bee177bcc0e274e13d9bb9313e15f2e17501ff5c9b9ca1c3da40335",
+      "bytes": 45715
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/02_User-stories.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/02_User-stories.md",
+      "sha256": "f6f3f0458b1f7651daf5284f4d51268fac46794215c1c5545a4d1a992886899d",
+      "bytes": 6419
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/03_Acceptance-Criteria.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/03_Acceptance-Criteria.md",
+      "sha256": "5bb30a910769e39accc5ba380332d4f6baffc7d994dfc916637e36c3efd3501e",
+      "bytes": 32170
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/04_Business-Rules.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/04_Business-Rules.md",
+      "sha256": "123514291c2c5a60fb04c8d1af8404e6fb213ae538a592b00083fa0c2e4bf52f",
+      "bytes": 101999
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/05_Examples.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/05_Examples.md",
+      "sha256": "ee95aeb6d1cbbe1caba1d38f8a1a5271ddc967d954c5d5496b4d1c1a99bf06b0",
+      "bytes": 117578
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/06_Test-Cases.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/06_Test-Cases.md",
+      "sha256": "dcce927e6092d9f71a906bc615f0601e91d87c163837367935f47d3ed9f08c22",
+      "bytes": 232156
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/07_Decisions.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/07_Decisions.md",
+      "sha256": "70c6a10857cfda2fb117ed80e70479c7323442c3962f3154331a5dbb315e64fc",
+      "bytes": 19054
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/08_Open-questions.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/08_Open-questions.md",
+      "sha256": "8b29b2910f9c2c25e3a8aa5a70c19dfb0e47a95c5bb0a10e14547b643e88e8d7",
+      "bytes": 9033
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/09_delta.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/09_delta.md",
+      "sha256": "1f581263fdeca5c9be110e5b337748eae3cc018dac0a56dd96a1afd2bf949de4",
+      "bytes": 28078
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/10_Plan.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/10_Plan.md",
+      "sha256": "b9f5fbee2315761567920ef911256c3c4671cc230788ca750938d32c6dc3edbf",
+      "bytes": 35453
+    },
+    {
+      "oldPath": ".qfai/specs/spec-0018/tdd/test-list.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/tdd/test-list.md",
+      "sha256": "9d7317cf9ac3749679c2302acf3e60dd53751ee0225a9d605c2cd49f9cc9b3b0",
+      "bytes": 361383
+    }
+  ]
+}

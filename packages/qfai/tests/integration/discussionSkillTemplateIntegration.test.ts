@@ -501,3 +501,20 @@ async function collectMarkdownFiles(dir: string): Promise<string[]> {
   }
   return out;
 }
+
+describe("the screen-contract template names only the user's brand direction", () => {
+  it("ranks no exploration, and every direction it names is the one in 01_Context.md", async () => {
+    const template = await readFile(path.join(uiuxTemplateDir, "40_screen_contracts.md"), "utf-8");
+    expect(template).not.toMatch(/\b(selected|winner|finali[sz]ed?)\b/i);
+    const named = template.split("\n").filter((line) => /direction/i.test(line));
+    expect(named.length).toBeGreaterThan(0);
+    for (const line of named) {
+      expect(line, `a direction other than the user's brand direction: ${line}`).toMatch(
+        /01_Context\.md#Design Direction/,
+      );
+    }
+    expect(template).toContain(
+      "Reference registries (product intent, brand signals, anti-goals): `../04_Sources.md`",
+    );
+  });
+});
