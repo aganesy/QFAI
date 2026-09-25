@@ -104,6 +104,25 @@ interface WorkflowExecutionContext {
   requestDigest: string;
 }
 
+// The worktree real path and branch a run was started in.
+interface WorkflowIdentity {
+  worktree: string;
+  branch: string | null;
+}
+
+type WorkflowPolicyDigests = Pick<
+  WorkflowExecutionContext,
+  "policyDigests" | "manifestDigests" | "planDigests"
+>;
+
+// One input a receipt depends on: a file by its digest, or a glob by the digest of its member
+// list. A `historical_observation` is what the stage observed once, and is never rechecked.
+export interface WorkflowDependency {
+  path: string;
+  digest: string;
+  class: "normative" | "historical_observation" | "current_verification";
+}
+
 interface WorkflowGateReceipt {
   gateId: string;
   verdict: string;
@@ -229,7 +248,12 @@ export interface WorkflowDecision {
           reasons?: InputRefusal[];
         }
       | {
-          code: "stale-sequence" | "no-open-question" | "answer-conflict" | "run-terminal";
+          code:
+            | "stale-sequence"
+            | "no-open-question"
+            | "answer-conflict"
+            | "run-terminal"
+            | "identity-mismatch";
           message: string;
         }
       | { code: "fail-closed"; message: string; cause: FailClosedCause }
@@ -305,8 +329,9 @@ interface WorkflowPlan {
 
 export interface WorkflowSnapshot {
   run: { id: string; state: string; sequence: number };
-  // What `start` fixed for the run. The core reads none of it; the snapshot file holds it.
+  // What `start` fixed for the run. The core reads its policy, manifest and plan digests.
   executionContext?: WorkflowExecutionContext;
+  identity?: WorkflowIdentity;
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
@@ -381,6 +406,8 @@ interface WorkflowAcceptedStage {
   testObservation?: string;
   // Each shared report the result named, as copied under this stage instance.
   reports?: { path: string; digest: string }[];
+  // What the stage's receipt depends on, recorded when it was accepted.
+  dependencies?: WorkflowDependency[];
   gateResults?: WorkflowGateReceipt[];
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
@@ -498,6 +525,9 @@ export interface WorkflowFacts {
   changedRealPaths?: Record<string, string | null>;
   // The run's cumulative changed paths, observed at this write operation.
   observedChangedPaths?: string[];
+  // The worktree and branch this operation runs in, and the watched digests now.
+  identity?: WorkflowIdentity;
+  policyNow?: WorkflowPolicyDigests;
   // Each Change Request record, whether it is approved, and the paths it authorizes.
   changeRequests?: { recordPath: string; approved: boolean; paths: string[] }[];
 }
@@ -709,7 +739,7 @@ function notRunRefusalOf(
   return undefined;
 }
 
-function areaCovers(area: string, filePath: string): boolean {
+export function areaCovers(area: string, filePath: string): boolean {
   return (
     area === filePath ||
     filePath.startsWith(`${area}/`) ||
@@ -1687,17 +1717,17 @@ function completionUnmet(
   });
 }
 
+// Each accepted stage's receipt as the facts class it. A receipt after one that is not valid is
+// invalidated with it, so it is at best `stale`.
 function classedReceipts(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
-  return (snapshot.acceptedStages ?? []).flatMap((stage): WorkflowReceiptClass[] =>
-    stage.receiptRef
-      ? [
-          {
-            ref: stage.receiptRef,
-            validity: facts.receiptValidity?.[stage.receiptRef] ?? "unknown",
-          },
-        ]
-      : [],
-  );
+  let invalidated = false;
+  return (snapshot.acceptedStages ?? []).flatMap((stage): WorkflowReceiptClass[] => {
+    if (!stage.receiptRef) return [];
+    const own = facts.receiptValidity?.[stage.receiptRef] ?? "unknown";
+    const validity = invalidated && own === "valid" ? "stale" : own;
+    invalidated ||= own !== "valid";
+    return [{ ref: stage.receiptRef, validity }];
+  });
 }
 
 function checkpointOf(
@@ -1710,9 +1740,8 @@ function checkpointOf(
 }
 
 // A receipt that is not valid, including one whose dependency cannot be read, reopens its
-// stage: the run restarts at the first accepted stage whose receipt does not hold.
-// SIMPLIFIED: resume revalidates receipts only, not the worktree identity, the journal or digests.
-// Lift when: observers supply the identity and integrity facts resume checks.
+// stage: the run restarts at the first accepted stage whose receipt does not hold. The journal's
+// integrity is checked when the run is read, before any decision.
 function resumeFromCheckpoint(
   snapshot: WorkflowSnapshot,
   facts: WorkflowFacts,
@@ -1821,15 +1850,55 @@ function repairAdjustments(
   return adjustments;
 }
 
-// The fail-closed cause found for this operation: one an observer reported, or a cumulative
-// change that escaped the run change boundary.
-function foundCause(
+// Each watched file whose digest differs from the one fixed at `start`, an added or removed
+// file included.
+function driftedPolicyPaths(snapshot: WorkflowSnapshot, facts: WorkflowFacts): string[] {
+  const fixed = snapshot.executionContext;
+  const now = facts.policyNow;
+  if (!fixed || !now) return [];
+  const kinds = ["policyDigests", "manifestDigests", "planDigests"] as const;
+  return kinds.flatMap((kind) => {
+    const [before, after] = [fixed[kind], now[kind]];
+    const paths = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+    return paths.filter((watched) => before[watched] !== after[watched]).sort();
+  });
+}
+
+function identityChanged(snapshot: WorkflowSnapshot, facts: WorkflowFacts): boolean {
+  const [fixed, now] = [snapshot.identity, facts.identity];
+  return !!fixed && !!now && (fixed.worktree !== now.worktree || fixed.branch !== now.branch);
+}
+
+// A cause observed for this operation: one an observer reported, drifted policy, or a changed
+// branch or worktree.
+function observedCause(
   snapshot: WorkflowSnapshot,
   facts: WorkflowFacts,
 ): { cause: FailClosedCause; subjects: string[] } | undefined {
   if (facts.cause) return { cause: facts.cause, subjects: [] };
+  const drifted = driftedPolicyPaths(snapshot, facts);
+  if (drifted.length > 0) return { cause: "policy-drift", subjects: drifted };
+  return identityChanged(snapshot, facts)
+    ? { cause: "invariant-violation", subjects: [] }
+    : undefined;
+}
+
+// The fail-closed cause found for this operation: an observed one, or a cumulative change that
+// escaped the run change boundary.
+function foundCause(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+): { cause: FailClosedCause; subjects: string[] } | undefined {
+  const observed = observedCause(snapshot, facts);
+  if (observed) return observed;
   const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);
   return escaped.length > 0 ? { cause: "invariant-violation", subjects: escaped } : undefined;
+}
+
+function identityMismatch(run: WorkflowSnapshot["run"]): WorkflowDecision {
+  const message =
+    "This run belongs to another worktree. Resume it from the worktree that started it.";
+  return { verdict: { ok: false, run, error: { code: "identity-mismatch", message } }, events: [] };
 }
 
 function refusedFailClosed(run: WorkflowSnapshot["run"], cause: FailClosedCause) {
@@ -1855,7 +1924,8 @@ function resumeReady(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workflow
 // A change outside the run change boundary that no approved repair admits keeps it blocked.
 function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run } = snapshot;
-  if (facts.cause) return refusedFailClosed(run, facts.cause);
+  const observed = observedCause(snapshot, facts);
+  if (observed) return refusedFailClosed(run, observed.cause);
   const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);
   const adjustments = repairAdjustments(snapshot, escaped, facts);
   if (!adjustments) return refusedFailClosed(run, "invariant-violation");
@@ -1876,13 +1946,15 @@ function resumeRunning(
   workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
 ): WorkflowDecision {
-  if (facts.cause) {
+  const found = foundCause(snapshot, facts);
+  if (found) {
+    const halt: WorkflowHalt = { cause: found.cause, owner: "operator", subjects: found.subjects };
     const events: WorkflowEvent[] = [
       { type: "observed-session-interruption" },
-      { type: "reconciled-with-blocker", cause: facts.cause },
+      { type: "reconciled-with-blocker", cause: found.cause, halt },
     ];
     const run = { ...snapshot.run, state: "blocked", sequence: snapshot.run.sequence + 2 };
-    return { verdict: { ok: true, run }, events };
+    return { verdict: { ok: true, run, halt }, events };
   }
   const checkpoint = resumeFromCheckpoint(snapshot, facts);
   if (checkpoint) return checkpoint;
@@ -1892,7 +1964,9 @@ function resumeRunning(
     { type: "dispatch-work-order" },
   ];
   const run = { ...snapshot.run, sequence: snapshot.run.sequence + events.length };
-  return { verdict: { ok: true, run, workOrder }, events };
+  const receipts = classedReceipts(snapshot, facts);
+  const classed = receipts.length > 0 ? { classedReceipts: receipts } : {};
+  return { verdict: { ok: true, run, workOrder, ...classed }, events };
 }
 
 function decideResume(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
@@ -2274,6 +2348,9 @@ export function decide(
     return { verdict: { ok: false, run, error: { code: "run-terminal", message } }, events: [] };
   }
   if (input.operation === "decision" && input.stop === true) return decideStop(run, input);
+  if (input.operation === "resume" && snapshot.identity && facts.identity) {
+    if (snapshot.identity.worktree !== facts.identity.worktree) return identityMismatch(run);
+  }
   // A cause found where the state machine has no edge to `blocked` refuses the operation;
   // at `finish` it is an unmet condition instead.
   const found = input.operation === "finish" ? undefined : foundCause(snapshot, facts);
@@ -2393,7 +2470,10 @@ export function decide(
       const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
       if (ledger) nextWorkOrder.ledger = ledger;
     } else if (plan.route === "feature" && stage.stageKind !== "sdd" && snapshot.specBinding) {
-      nextWorkOrder.target = { kind: "spec", specId: snapshot.specBinding.specId };
+      const specId = snapshot.specBinding.specId;
+      nextWorkOrder.target = { kind: "spec", specId };
+      const ledger = ledgerOf(specId, stage.stageKind, snapshot.diagnosis, facts);
+      if (ledger) nextWorkOrder.ledger = ledger;
     } else if (stage.stageKind === "sdd") {
       const slotId = approval?.target?.slotId;
       if (!slotId) {

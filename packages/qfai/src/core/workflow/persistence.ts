@@ -190,13 +190,16 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   recordedAt: string;
   from?: string;
   to?: string;
-  // On `run-created`: what the run is judged against at `finish`.
-  start?: Pick<WorkflowSnapshot, "completionTarget" | "baseline">;
+  // On `run-created`: what the run is judged against at `finish`, and the worktree and branch
+  // it was started in.
+  start?: Pick<WorkflowSnapshot, "completionTarget" | "baseline" | "identity">;
   // On an accepted stage result: the stage kind and the reviews the result carried.
   stageKind?: string;
   reviewResults?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reviewResults"];
   // On an accepted stage result: each shared report it named, as copied under the stage.
   reports?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reports"];
+  // On an accepted stage result: what its receipt depends on.
+  dependencies?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["dependencies"];
   testObservation?: string;
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
@@ -389,6 +392,7 @@ function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
     ...(record.reports ? { reports: record.reports } : {}),
+    ...(record.dependencies ? { dependencies: record.dependencies } : {}),
     ...(record.testObservation ? { testObservation: record.testObservation } : {}),
   };
   const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
@@ -419,6 +423,8 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     record.halt ? { ...snapshot, halt: record.halt } : snapshot,
   "missing-capability": (snapshot, record) =>
+    record.halt ? { ...snapshot, halt: record.halt } : snapshot,
+  "reconciled-with-blocker": (snapshot, record) =>
     record.halt ? { ...snapshot, halt: record.halt } : snapshot,
   "retry-scheduled": (snapshot, record) => ({
     ...snapshot,

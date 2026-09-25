@@ -6,6 +6,7 @@ import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { decide, workOrderDocument } from "../../core/workflow/decide.js";
 import type {
   WorkflowDecision,
+  WorkflowDependency,
   WorkflowEvent,
   WorkflowFacts,
   WorkflowInput,
@@ -14,7 +15,11 @@ import type {
 import {
   baselineOf,
   completionFacts,
+  identityOf,
   ledgerFactsOf,
+  policyNowOf,
+  receiptDependenciesOf,
+  receiptValidityOf,
   routingFacts,
   startFacts,
 } from "../../core/workflow/observe.js";
@@ -415,11 +420,13 @@ async function inputOf(
 async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
   const { snapshot } = loaded;
   if (input.operation === "finish") return completionFacts(root, loaded.runDir, snapshot);
-  if (input.operation === "accept" && snapshot.run.state === "routing") {
-    return routingFacts(root, input.result?.proposal);
-  }
   if (input.operation === "decision") return { now: new Date().toISOString() };
-  return stageFacts(root, snapshot, input);
+  const [identity, policyNow] = await Promise.all([identityOf(root), policyNowOf(root)]);
+  const facts =
+    input.operation === "accept" && snapshot.run.state === "routing"
+      ? await routingFacts(root, input.result?.proposal)
+      : await stageFacts(root, snapshot, input);
+  return { ...facts, identity, policyNow };
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
@@ -428,12 +435,19 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
   const { state } = snapshot.run;
   const reads =
     (input.operation === "next" && state === "ready") ||
-    (input.operation === "accept" && state === "running");
+    (input.operation === "accept" && state === "running") ||
+    input.operation === "resume";
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
   const accepting = input.operation === "accept" && state === "running";
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
-  return { ...(ledger ? { ledger } : {}), ...(changedRealPaths ? { changedRealPaths } : {}) };
+  const receiptValidity =
+    input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
+  return {
+    ...(ledger ? { ledger } : {}),
+    ...(changedRealPaths ? { changedRealPaths } : {}),
+    ...(receiptValidity ? { receiptValidity } : {}),
+  };
 }
 
 // Where each submitted changed path really is: a link or a case variant is judged by the file it
@@ -483,12 +497,27 @@ async function acceptedReportCopies(
   return accepted && stage ? reportCopiesOf(root, input.result, stage) : [];
 }
 
+// What the receipt of a stage result the decision accepts depends on; none for anything else.
+async function acceptedDependencies(
+  root: string,
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  decision: WorkflowDecision,
+): Promise<WorkflowDependency[]> {
+  const workOrder = snapshot.outstandingWorkOrder;
+  const accepted = decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
+  if (!accepted || !workOrder || !input.result) return [];
+  const target = workOrder.target;
+  const specId = target?.kind === "spec" ? target.specId : snapshot.specBinding?.specId;
+  return receiptDependenciesOf(root, workOrder, input.result, specId);
+}
+
 // What the journal keeps beside an event that the decision does not carry itself.
 function extrasOf(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
   decision: WorkflowDecision,
-  copies: ReportCopy[],
+  accepted: { copies: ReportCopy[]; dependencies: WorkflowDependency[] },
 ) {
   return (event: WorkflowEvent): Partial<JournalRecord> => {
     if (event.type === "unsettled-material-input" && decision.verdict.plan) {
@@ -497,13 +526,14 @@ function extrasOf(
     if (!ACCEPTED_EVENTS.includes(event.type)) return {};
     const stageKind = snapshot.outstandingWorkOrder?.stageKind;
     const reviews = input.result?.reviewResults;
-    const reports = copies.map(({ path: file, digest }) => ({ path: file, digest }));
+    const reports = accepted.copies.map(({ path: file, digest }) => ({ path: file, digest }));
     const testObservation = input.result?.testObservation;
     return {
       ...(stageKind ? { stageKind } : {}),
       ...(testObservation ? { testObservation } : {}),
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(reports.length > 0 ? { reports } : {}),
+      dependencies: accepted.dependencies,
     };
   };
 }
@@ -517,10 +547,11 @@ async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Pr
   if (decision.events.length > 0) {
     const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
     if (!Array.isArray(copies)) return refuse(snapshot.run, copies);
+    const dependencies = await acceptedDependencies(options.root, snapshot, read.input, decision);
     const records = recordsOf(
       decision,
       { operation: options.operation, before: snapshot.run },
-      extrasOf(snapshot, read.input, decision, copies),
+      extrasOf(snapshot, read.input, decision, { copies, dependencies }),
       replayKey(read.input, decision, read.digest),
     );
     const unwritten = await writeReportCopies(loaded.runDir, copies);
@@ -602,7 +633,11 @@ async function createRun(
   const runsDir = path.join(root, RUNS_DIR);
   const runId = facts.start?.runId ?? "";
   const completionTarget = completionTargetOf(input) ?? "qfai_done";
-  const start = { completionTarget, baseline: await baselineOf(root) };
+  const start = {
+    completionTarget,
+    baseline: await baselineOf(root),
+    identity: await identityOf(root),
+  };
   const runDir = await createRunDir(runsDir, runId);
   const request = { request: input.request, digestKey: facts.start?.digestKey, answers: [] };
   const refused = await writeRecord(

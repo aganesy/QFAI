@@ -7,12 +7,19 @@ import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
-import { uncommittedPaths } from "../gitChanges.js";
+import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
-import type { WorkflowFacts, WorkflowSnapshot } from "./decide.js";
+import { areaCovers } from "./decide.js";
+import type {
+  WorkflowDependency,
+  WorkflowFacts,
+  WorkflowInput,
+  WorkflowSnapshot,
+  WorkflowWorkOrder,
+} from "./decide.js";
 import { isRecord } from "./parse.js";
 import { checkInstalledPlans, loadBuiltInPlans, WORKFLOW_ROUTES } from "./plans.js";
 
@@ -48,19 +55,33 @@ export async function cliEntryDigest(): Promise<string> {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-// What `start` fixes for the run: its ID and key, and the tool and policy it runs under.
-// SIMPLIFIED: fixes no git identity and takes no run change boundary snapshot.
-// Lift when: the resume identity check and the change boundary observers land.
-export async function startFacts(root: string, runId: string): Promise<WorkflowFacts> {
-  const [qfaiVersion, policyDigests, manifestDigests, planDigests, plans] = await Promise.all([
-    resolveToolVersion(),
+// The policy, manifest and plan digests a run is held to.
+export async function policyNowOf(root: string): Promise<NonNullable<WorkflowFacts["policyNow"]>> {
+  const [policyDigests, manifestDigests, planDigests] = await Promise.all([
     policyDigestsOf(root),
     digestsOf(root, [`${ASSISTANT}/manifest/**`]),
     digestsOf(root, [`${ASSISTANT}/process/workflows/**`]),
+  ]);
+  return { policyDigests, manifestDigests, planDigests };
+}
+
+// The worktree real path and the branch checked out there, or `null` outside a branch.
+export async function identityOf(root: string): Promise<NonNullable<WorkflowFacts["identity"]>> {
+  const branch = gitStdout(root, ["rev-parse", "--abbrev-ref", "HEAD"])?.trim();
+  return { worktree: await realpath(root), branch: branch && branch !== "HEAD" ? branch : null };
+}
+
+// What `start` fixes for the run: its ID and key, and the tool and policy it runs under.
+// SIMPLIFIED: takes no run change boundary snapshot.
+// Lift when: the change boundary observers land.
+export async function startFacts(root: string, runId: string): Promise<WorkflowFacts> {
+  const [qfaiVersion, policyNow, plans] = await Promise.all([
+    resolveToolVersion(),
+    policyNowOf(root),
     checkInstalledPlans(root),
   ]);
   const digestKey = randomBytes(32).toString("hex");
-  const start = { runId, qfaiVersion, digestKey, policyDigests, manifestDigests, planDigests };
+  const start = { runId, qfaiVersion, digestKey, ...policyNow };
   return { start, ...(plans.cause ? { cause: plans.cause } : {}) };
 }
 
@@ -195,6 +216,100 @@ export async function ledgerFactsOf(root: string, specId: string) {
       }));
   });
   return { specId, rows };
+}
+
+type Dependency = WorkflowDependency;
+const GLOB = /[*?[{]/;
+
+// A file's digest, or undefined when it cannot be read; a glob's, the digest of its sorted
+// member list, so an added or removed member changes it while no member's bytes do.
+async function dependencyDigest(root: string, dependency: string): Promise<string | undefined> {
+  if (!GLOB.test(dependency)) {
+    const text = await readFile(path.join(root, dependency), "utf8").catch(() => undefined);
+    return text === undefined ? undefined : hashAssistantAssetText(text);
+  }
+  const members = await fg(dependency, { cwd: root, dot: true, onlyFiles: true });
+  return hashAssistantAssetText(members.sort().join("\n"));
+}
+
+// SIMPLIFIED: the obligation fingerprint is the digest of the bound spec's user stories,
+// acceptance criteria, business rules and examples as whole files, not of the items a row cites.
+// Lift when: a receipt names the ledger rows it covers and an item's text can be read on its own.
+async function obligationOf(root: string, specId: string): Promise<Dependency[]> {
+  const { config } = await loadConfig(root);
+  const pack = path.relative(root, path.join(resolvePath(root, config, "specsDir"), specId));
+  const pattern = `${pack.split(path.sep).join("/")}/0[2-5]_*.md`;
+  const digests = await digestsOf(root, [pattern]);
+  return Object.entries(digests).map(([file, digest]) => ({
+    path: file,
+    digest,
+    class: "normative",
+  }));
+}
+
+const OBSERVED_TESTS = ["expected_red", "pass", "fail"];
+
+// What an accepted result's receipt depends on. Every receipt holds its work order's inputs. A
+// result that observed a test also holds the bound spec's obligation, and the files it changed:
+// as the oracle it observed at RED, or as the files a GREEN or verify ran, with the membership of
+// each glob write area covering one of them.
+// SIMPLIFIED: holds no tool, skill, lockfile, lifecycle, contract owner or discussion pack digest,
+// and a changed file that no longer exists is left out.
+// Lift when: a stage's result is shown to depend on one of them, or a stage deletes a file.
+export async function receiptDependenciesOf(
+  root: string,
+  workOrder: WorkflowWorkOrder,
+  result: NonNullable<WorkflowInput["result"]>,
+  specId: string | undefined,
+): Promise<Dependency[]> {
+  const inputs = (workOrder.inputs ?? []).map((input): Dependency => ({
+    ...input,
+    class: "normative",
+  }));
+  if (!OBSERVED_TESTS.includes(result.testObservation ?? "")) return inputs;
+  const ran: Dependency["class"] =
+    result.testObservation === "expected_red" ? "historical_observation" : "current_verification";
+  const changed = (result.changedFiles ?? []).map((each) => each.path);
+  const globs =
+    ran === "current_verification"
+      ? (workOrder.scope?.writeAreas ?? []).filter(
+          (area) => GLOB.test(area) && changed.some((file) => areaCovers(area, file)),
+        )
+      : [];
+  const observed = await Promise.all(
+    [...changed, ...globs].map(async (each) => {
+      const digest = await dependencyDigest(root, each);
+      return digest === undefined ? [] : [{ path: each, digest, class: ran }];
+    }),
+  );
+  const obligation = specId ? await obligationOf(root, specId) : [];
+  return [...inputs, ...obligation, ...observed.flat()];
+}
+
+// A receipt with no dependency record, or one whose dependency cannot be read, is `unknown`; one
+// whose rechecked dependency changed is `stale`. What a stage observed once is never rechecked.
+async function validityOf(root: string, dependencies: readonly Dependency[] | undefined) {
+  if (!dependencies) return "unknown";
+  const checked = dependencies.filter((each) => each.class !== "historical_observation");
+  const now = await Promise.all(checked.map((each) => dependencyDigest(root, each.path)));
+  if (now.includes(undefined)) return "unknown";
+  return now.every((digest, index) => digest === checked[index]?.digest) ? "valid" : "stale";
+}
+
+// Each accepted stage's receipt, classed against the tree now.
+export async function receiptValidityOf(
+  root: string,
+  snapshot: WorkflowSnapshot,
+): Promise<NonNullable<WorkflowFacts["receiptValidity"]>> {
+  const stages = snapshot.acceptedStages ?? [];
+  const classed = await Promise.all(
+    stages.map(async (stage) =>
+      stage.receiptRef
+        ? [[stage.receiptRef, await validityOf(root, stage.dependencies)] as const]
+        : [],
+    ),
+  );
+  return Object.fromEntries(classed.flat());
 }
 
 // This run's copy of the verify report, read from the stage that accepted it. A copy whose bytes
