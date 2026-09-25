@@ -251,7 +251,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose Phase 0 authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Phase 0 refuses to freeze a sample.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose design lock step authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. /qfai-sdd refuses to freeze a sample.",
     ),
   ];
 }
@@ -288,7 +288,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.rootDesignMd",
         undefined,
         "canonical",
-        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose Phase 0 authors it (see the qfai-sdd skill).",
+        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose design lock step authors it (see the qfai-sdd skill).",
       ),
     );
   }
@@ -306,7 +306,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.designMdLock",
         undefined,
         "canonical",
-        "Run /qfai-sdd Phase 0 to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
+        "Run the design lock step of /qfai-sdd to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
       ),
     );
   }
@@ -351,7 +351,7 @@ async function validateRootDesignMdAndLock(
           "designContractReadiness.designMdLock",
           undefined,
           "canonical",
-          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
+          "Re-run the design lock step of /qfai-sdd to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
         ),
       );
     } else if (designMdText !== null) {
@@ -366,7 +366,7 @@ async function validateRootDesignMdAndLock(
             "designContractReadiness.designMdSha",
             undefined,
             "canonical",
-            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
+            "DESIGN.md was edited after the freeze. Re-run the design lock step of /qfai-sdd (or restart prototyping) to refreeze.",
           ),
         );
       }
@@ -729,7 +729,7 @@ async function validatePrototypeHandoff(
           "designContractReadiness.prototypeHandoffField",
           undefined,
           "canonical",
-          "Copy the `designMdSha256` value from `.qfai/contracts/design/DESIGN.md.lock.yaml`.",
+          "Copy the `designMdSha256` value from `design/DESIGN.md.lock.yaml` under `paths.contractsDir`.",
         ),
       );
     } else if (lockSha !== null && lower !== lockSha) {

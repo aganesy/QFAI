@@ -6,8 +6,8 @@
 finalIterIndex: 8
 finalArtifact: ".qfai/prototypes/final/index.html"
 designMdPath: "DESIGN.md"
-designMdSha256: "<hex from .qfai/contracts/design/DESIGN.md.lock.yaml>"
-designSystemMirror: ".qfai/contracts/design/design-system.yaml"
+designMdSha256: "<hex from .qfai/spec/03_contract/design/DESIGN.md.lock.yaml>"
+designSystemMirror: ".qfai/spec/03_contract/design/design-system.yaml"
 procurement:
   procured:
     - screen: "gallery"

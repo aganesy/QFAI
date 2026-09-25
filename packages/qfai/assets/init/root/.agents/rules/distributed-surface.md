@@ -52,7 +52,7 @@ numbers destroys the information.
 ## Where internal IDs are fine
 
 Traceability inside the repository still needs internal IDs. Use them in
-`.qfai/specs/`, `.qfai/contracts/`, `.qfai/discussion/`, `CHANGELOG.md`,
+`.qfai/spec/`, `.qfai/discussion/`, `CHANGELOG.md`,
 developer documentation that is not packaged, commit messages, and pull
 request descriptions. Keep them out of doc comments in shipped source: type
 declarations generated from those comments are usually packaged.

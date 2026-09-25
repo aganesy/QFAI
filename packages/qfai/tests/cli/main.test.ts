@@ -474,7 +474,22 @@ describe("cli usage text", () => {
     const entry = forceEntry(await captureHelp());
 
     expect(entry).not.toContain("それ以外は既存があればスキップ");
-    expect(entry).toContain("adopter-owned assistant/catalog/**");
+    expect(entry).toContain("rule/*.local.md overlays");
+    expect(entry).not.toContain("assistant/catalog");
+  });
+
+  it("names the current assistant layers as the --upgrade-assistant-tree destinations", async () => {
+    const lines = (await captureHelp()).split("\n");
+    const start = lines.findIndex((candidate) =>
+      candidate.trimStart().startsWith("--upgrade-assistant-tree"),
+    );
+    expect(start).toBeGreaterThanOrEqual(0);
+    const entry = [lines[start], lines[start + 1]].join("\n");
+
+    expect(entry).toContain("-> rule/ skill/ agent/ prompt/");
+    for (const retired of ["constitution/", "manifest/", "catalog/", "process/"]) {
+      expect(entry).not.toContain(retired);
+    }
   });
 });
 

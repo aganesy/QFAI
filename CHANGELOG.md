@@ -10,6 +10,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   dedicated test suites. CI and release checks now run seven test slices. An
   older tag with the retired slices uses the whole-suite release gate.
 
+- `qfai init` no longer writes `.qfai/assistant/rule/cli-ux-guidelines.md`. The
+  `--format text` grammar it described is part of the `qfai validate` contract,
+  and the rule that operator-facing messages are English is part of this
+  repository's language rule.
+
 ### Changed
 
 - **Specs move to the story tree.** Projects using the former
@@ -17,6 +22,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai-migration-spec-to-story` skill before adopting this release, or stay on
   QFAI 1.x until migration is complete. Assistant assets use singular
   `agent/`, `prompt/`, `rule/`, and `skill/` directories.
+
+- **The migration guide covers the former migration memos.** The
+  `.qfai/assistant/process/` directory is gone, and `qfai init` writes no
+  migration memo. Migration step 3 moves the memos a 1.x release wrote to
+  `.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`,
+  where nothing reads them. Upgrade notes live in this changelog. The guide also
+  lists the three forms a project upgrading from a release before 1.10.0 meets
+  as errors for the first time: the `playwright-cli` browser wrapper, readers of
+  `.qfai/output/validate.json`, and hand-written per-skill handoff files.
 
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
@@ -42,6 +56,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   passing run instead of reading only the compiler configuration.
 
 ### Fixed
+
+- **Shipped rules and messages name the story-tree locations.** The rules
+  `qfai init` copies into `.agents/rules/` pointed at the removed
+  `.qfai/assistant/catalog/`, `.qfai/assistant/constitution/`, `.qfai/specs/`
+  and `.qfai/contracts/` directories, and at the retired contracts-first order.
+  They now name `.qfai/assistant/rule/` and `.qfai/spec/`. The same fix reaches:
+
+  - the `expected` text of `QFAI-CFG-LINK-001`, which named the retired
+    `prototyping.primarySpecId` key instead of `prototyping.primaryUiContract`;
+  - the `expected` text of `QFAI-UIE-001` and `QFAI-UIE-002`, which now name
+    `<paths.contractsDir>/ui/`;
+  - the fix for `QFAI-LAYOUT-001`, which read as a CLI command and now names
+    the `/qfai-migration-spec-to-story` skill;
+  - the design-lock messages of `qfai prototyping iterate`,
+    `qfai prototyping certify` and the design validators, which sent the
+    operator to a `/qfai-sdd` phase that no longer exists;
+  - the `--force` entry of `qfai --help`, the sample `prototype-handoff.yaml`,
+    the example in the seeded `waivers.yml`, and the sample `DESIGN.md`
+    comment.
+
+- **The prototyping reference check reads the handoff from the configured
+  contracts directory.** It read `prototype-handoff.yaml` only from the former
+  `.qfai/contracts/design/`, so on the story-tree layout it never checked the
+  handoff's `finalArtifact` and `designSystemMirror` paths. It now reads
+  `<paths.contractsDir>/design/prototype-handoff.yaml`.
 
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that

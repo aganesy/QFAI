@@ -487,8 +487,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(floor).toContain("- Unit-level coverage of the failures the code retains.");
     });
 
-    // A sourcing decision is taken at a design stage, and contracts-first
-    // freezes it before any source file exists — so a rule reaching the
+    // A sourcing decision is taken at a design stage, and a contract written
+    // before any source file exists freezes it — so a rule reaching the
     // sourcing rungs only from source reaches them after the answer is fixed.
     it.each(MASTERS)("%s reaches the sourcing rungs at the stage that decides", async (rel) => {
       const text = await readFile(path.join(ROOT, rel), "utf-8");
@@ -648,7 +648,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       for (const neighbour of [
         "documentation-clarity.md",
         "minimal-implementation.md",
-        ".qfai/assistant/catalog/ui-definition-protocol.md",
+        ".qfai/assistant/rule/ui-definition-protocol.md",
       ]) {
         expect(text).toContain(neighbour);
       }
@@ -672,7 +672,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // places an agent is already reading when it is about to write the
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
-      "packages/qfai/assets/init/.qfai/assistant/rule/cli-ux-guidelines.md",
+      ".qfai/spec/03_contract/cli/qfai-validate.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",

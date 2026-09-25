@@ -15,7 +15,8 @@
  *
  * When you translate a message, delete its entry in the same change. Never add
  * an entry: a new operator-facing message must be English
- * (`cli-ux-guidelines.md`, Message Language). A file absent from this list is
+ * (`.agents/rules/repository-language.md`, Operator-facing strings). A file
+ * absent from this list is
  * held at zero, which is what keeps `src/cli/**` and `src/core/doctor.ts`
  * converted.
  *

@@ -127,6 +127,11 @@ handoff's count of 615 are refreshed with the rerun of the migration steps.
 The skill text does not state the log line EX-0001-0187-03 expects, so that
 example needs the behavior as well as the test.
 
+Each item is registered in `.qfai/spec/open-questions.md`: OQ-0064 to OQ-0069
+and OQ-0071 to OQ-0073 in table order, and OQ-0070 for the missing
+EX-0001-0187-03 behavior. The untested obligations among them are part of the
+debt DEC-0738 accepts.
+
 ## Deleted with the REMOVE rows
 
 The two REMOVE rows in `retired/spec-0013/09_delta.md` retire behavior, not

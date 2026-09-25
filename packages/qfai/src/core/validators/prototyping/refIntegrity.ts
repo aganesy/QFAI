@@ -9,11 +9,10 @@ import type { Issue } from "../../types.js";
 import { exists, issue } from "../utils.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
-const HANDOFF_REL = ".qfai/contracts/design/prototype-handoff.yaml";
 
 export async function validatePrototypingArtifactRefIntegrity(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const doc = await readJsonObject(path.join(root, PROTO_JSON_REL));
@@ -90,21 +89,28 @@ export async function validatePrototypingArtifactRefIntegrity(
     }
   }
 
-  const handoff = await readYamlObject(path.join(root, HANDOFF_REL));
+  const handoffPath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "prototype-handoff.yaml",
+  );
+  const handoffRel = path.relative(root, handoffPath).split(path.sep).join("/");
+  const handoff = await readYamlObject(handoffPath);
   if (handoff) {
     await validateArtifactRef(
       root,
       handoff.finalArtifact,
       "prototype-handoff.finalArtifact",
       issues,
-      { required: true, sourcePath: HANDOFF_REL },
+      { required: true, sourcePath: handoffRel },
     );
     await validateArtifactRef(
       root,
       handoff.designSystemMirror,
       "prototype-handoff.designSystemMirror",
       issues,
-      { required: true, sourcePath: HANDOFF_REL },
+      { required: true, sourcePath: handoffRel },
     );
   }
 

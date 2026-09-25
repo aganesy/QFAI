@@ -4,7 +4,7 @@
 
 - Parent: CAP-0015
 
-Requirement provenance: [approved concrete-review change](../../decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
+Requirement provenance: [approved concrete-review change](../../../../evidence/migration-spec-to-story/retired/decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
 
 As a QFAI user, I want optional advisory review that proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale, so that real behavior is covered without numeric targets or demands for more abstract rules.
 

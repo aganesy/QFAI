@@ -73,6 +73,27 @@ spanned three flows now has `scope: global`, as
 corrected AC reference, and step 10 has normalized the managed `.gitignore`
 block before this final pass.
 
+## Step 2 items for a person in the initial run
+
+The initial step 2 reports, `reports/initial-run/step02-dry.txt` and
+`step02-real.txt`, list four superseded records with no migrated successor.
+Step 2 wrote each as a `decisions.md` row at TODO. The final rerun lists none
+because the rows already exist, not because the finding was resolved.
+
+| Record           | Row      | Superseded by                          | Disposition                                                                       |
+| ---------------- | -------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| DR-0010-0002     | DEC-0155 | US-0010-0010 and AC-0010-0008          | Stays TODO. `id-map.json` maps the successors to US-0001-0091 and AC-0001-0091-01 |
+| DR-0010-0003     | DEC-0156 | The same                               | The same                                                                          |
+| DR-0010-0004     | DEC-0157 | The same                               | The same                                                                          |
+| CR-20260820-0008 | DEC-0666 | CR-20260820-0009, migrated as DEC-0667 | Status set to `SUPERSEDED (by DEC-0667)` (DEC-0740)                               |
+
+- The three spec-0010 records were superseded by a story and a criterion. The
+  `decisions.md` Status vocabulary names only a DEC successor, so only the
+  Approach of each row, which quotes the source record, names the successor.
+- The change request did have a migrated successor. Step 2 missed it because
+  it does not read a change request's `Superseded by:` field. The step's own
+  code is unchanged here.
+
 ## Validation boundary
 
 The full validation after removal of the old packs returns exit 1 with
@@ -91,7 +112,8 @@ work-log is gone. One `W-WORKLOG-SCHEMA` warning remains, for the `CHG-007`
 scope of `.qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md`.
 
 The repository dogfood gate tracks this inherited coverage debt through its
-ratchet. This result is not an ATDD PASS.
+ratchet. This result is not an ATDD PASS. The pins now hold 609 errors, 396 for
+AC and 213 for EX, which the user accepted as known debt in DEC-0738.
 
 The final CI result and independent reviewer verdicts remain separate merge
 gates.

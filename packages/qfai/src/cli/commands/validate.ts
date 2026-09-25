@@ -822,8 +822,7 @@ function emitStrictSupersededNotice(failOn: FailOn): void {
 /**
  * Renders the default `--format text` output.
  *
- * The emitted line grammar is documented for users in the shipped
- * `assistant/rule/cli-ux-guidelines.md` (Error Message Format section);
+ * The emitted line grammar is the validate contract's text output grammar;
  * both must be changed together.
  */
 export function emitText(result: ValidationResult, failOn: FailOn): void {
@@ -1280,15 +1279,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
-    "qfai.config.yaml: prototyping.primarySpecId points to a spec ID that does not exist under the configured specs directory.",
+    "qfai.config.yaml: prototyping.primaryUiContract names a CON-UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
     "qfai.config.yaml: prototyping.calibration.packPath points to a directory that does not exist on disk.",
   "QFAI-UIE-001":
-    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
+    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has a screenshot evidence file at `.qfai/evidence/prototyping/screenshots/<screen-id>.png`.",
   "QFAI-UIE-002":
-    "Every declared screen declared in `.qfai/contracts/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
+    "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
   "QFAI-DCON-001":
@@ -1453,7 +1452,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-FLOW-001": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
-    "Run qfai migration-spec-to-story for the old spec pack before validating the story tree.",
+    "Invoke the `/qfai-migration-spec-to-story` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
   "QFAI-SCAN-002":
     "Fix the unreadable test path or reduce the configured test globs so the selected tests can all be scanned.",
   "QFAI-SPACK-102":

@@ -114,9 +114,20 @@ rule or example into a current contract or criterion to clear an exit 3.
 
   With `--fail-on error`, BF-0001 to BF-0003 fail. The errors are inherited
   missing-annotation debt, not an ATDD PASS. Repository-wide,
-  `check-dogfood-backlog.mjs` reports 217 errors for `tdd` and 613 for `full`,
+  `check-dogfood-backlog.mjs` reported 217 errors for `tdd` and 613 for `full`,
   all within the pinned backlog. The pins stop the debt growing; they do not
   pass the gate. The test owner and QA gatekeeper review has not been recorded.
+
+  Status later on 2026-09-25: **accepted as known debt (DEC-0738).** The
+  per-flow counts above are unchanged. On the `feature/v2.0.0` head
+  `99837bc8a`, `check-dogfood-backlog.mjs` reports 213 errors for `tdd` and 609
+  for `full`: 396 criteria and 213 examples. The user accepted
+  them as known debt, which departs from the plan to merge the P2–P8 change
+  with its acceptance and implementation tests. The work is tracked in the
+  repository's issue tracker as "Test the 609 story-tree criteria and examples
+  that CI currently pins". It is done when every obligation has a test in its
+  layer or a `Test exception:` row at DONE, and both pins are at zero. This
+  item stays open until then.
 
 ## Rerun policy
 

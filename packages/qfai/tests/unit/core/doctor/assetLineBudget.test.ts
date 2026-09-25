@@ -445,6 +445,9 @@ describe("doctor assets.lineBudget check", () => {
       // references/ — that would break the loader contract that reads it.
       expect(JSON.stringify(nextActions)).not.toContain("references/");
       expect(JSON.stringify(nextActions)).toContain("within its own layer");
+      // The layers it names are the current assistant tree's, not the retired ones.
+      expect(JSON.stringify(nextActions)).toContain("(rule/, agent/, prompt/)");
+      expect(JSON.stringify(nextActions)).not.toContain("manifest/");
     });
   });
 
