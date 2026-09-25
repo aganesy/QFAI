@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012's traceability ledger is read by the BR/AC integrity check**
+  (#2308). Its first table used a `Requirement` column, so `QFAI-TRACE-002`
+  reported the format and the per-obligation check skipped the spec. The
+  first table now binds each `BR-*` / `AC-*` to one implementation file and
+  its test, including the obligations the intent-driven entry added. The
+  unchanged `--auto-serve` teardown criterion is a planned binding. The dogfood
+  pins for the spec-0012, spec-0014 and spec-0017 ledgers are struck, since
+  each reads zero on `main`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
