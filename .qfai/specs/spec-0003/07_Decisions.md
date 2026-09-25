@@ -17,7 +17,7 @@
 - Context: これらは QFAI が著者のレビュー指針であり、テンプレート修正を導入済みプロジェクトへ届ける経路が存在しなかった
 - Rationale:
   - `--force` なしでは従来どおり create-only なので、ローカル編集が黙って失われることはない
-  - 同関数内の `copilot-instructions.md` / 統合 README は既に `--force` で再生成される。同じ配布物カテゴリの契約を揃える
+  - `.github/copilot-instructions.md`, written by the same function, is already regenerated under `--force`. The two review instructions belong to the same category of shipped file, so they take the same contract
   - 既存エントリが symlink の場合はリンク先ではなくエントリ自体を置換し、祖先 symlink 等でプロジェクト外へ解決する既存エントリは `--force` でも上書きしない（プロジェクト外の破壊を防ぐ）
 - Source: SSOT は `packages/qfai/src/cli/commands/init.ts`（`syncIntegrationWrappers` Step 3.5）
 
@@ -33,10 +33,11 @@
 - Agent symlink は自動 prune 対象外とする（suffix が統合先ごとに異なるため stale 検出が困難）
 - Why: 誤削除リスク回避のため手動削除を要求する
 
-### DR-0003-0005: README.md は通常ファイル維持
+### DR-0003-0005: No README.md in the integration directories
 
-- 統合ディレクトリの README.md は symlink 化せず通常ファイルとして配置する
-- Why: README は統合先ごとに内容が異なるため
+- `qfai init` writes no `README.md` into `.agents/`, `.codex/`, `.claude/agents/` or `.github/agents/`, neither as a symlink nor as a regular file
+- Why: those directories hold skill and agent links. What a directory needs to say belongs where the reader already is: the entry point that sent them there, or the rule master a card cites
+- Supersedes: the earlier decision in this record to keep a `README.md` there as a regular file. `09_delta.md` records the retirement of the story that asked for one
 
 ### DR-0003-0007: `.qfai/review/review-*/` を default gitignore に変更 (v1.7.18)
 

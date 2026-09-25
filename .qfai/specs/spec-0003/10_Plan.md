@@ -19,7 +19,7 @@
 | Function                    | Responsibility                                                               |
 | --------------------------- | ---------------------------------------------------------------------------- |
 | `runInit()`                 | Orchestrator: template copy, git config, symlink sync, prune, report         |
-| `syncIntegrationWrappers()` | README generation, copilot-instructions, instructions distribution, symlinks |
+| `syncIntegrationWrappers()` | Old-wrapper prune, copilot-instructions, instructions distribution, symlinks |
 | `createSkillSymlinks()`     | Directory symlinks for 4 integration dirs                                    |
 | `createAgentSymlinks()`     | File symlinks for .claude/agents/ and .github/agents/                        |
 | `ensureSymlink()`           | Idempotent symlink creation with force/broken link handling                  |
