@@ -561,6 +561,22 @@ below, and no annotation obligation asks for it.
   in-context reviewer gate.
 - `qfai-sdd` should emit a per-item `Test file` value, not a per-spec one.
 
+## Test-suite sizing
+
+Every source change still carries test coverage, and every ledger row still
+has its test case. This section sizes that coverage. It never removes any.
+
+- **Size a new test file like the ones next to it.** Aim for roughly one
+  focused test per stated behaviour.
+- **Choose a process-per-case suite, never inherit one.** A suite that spawns a
+  process for every case is the shape that makes a CI lane expensive. Pick it
+  for the suite in hand, not because the file beside it has it.
+- **A scratch check is not a deliverable.** Verify the work in progress any way
+  you like. Do not turn a scratch check into a permanent test file. Scratch
+  files go where `.agents/rules/temporary-files.md` puts them.
+
+Like the volume policy below, these are review signals. No validator reads them.
+
 ## Volume policy
 
 - Floors and ratios are signals, not completion gates. This is the only

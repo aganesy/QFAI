@@ -525,6 +525,8 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /accessibility/i,
         /SIMPLIFIED:/,
         /Lift when:/,
+        /reported as a\s+follow-up/,
+        /most directly support/,
         /Change Request/i,
       ]) {
         expect(text).toMatch(clause);
