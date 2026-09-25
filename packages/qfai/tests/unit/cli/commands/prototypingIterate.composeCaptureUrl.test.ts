@@ -16,8 +16,9 @@
  *   1. absolute URL passthrough (`http://` / `https://`), with inputs a
  *      join would change or reject;
  *   2. route-relative URL + targetUrl (leading slash);
- *   3. route-relative URL + targetUrl (no leading slash, trailing
- *      slash on base — WHATWG URL semantics);
+ *   3. route-relative URL + targetUrl (no leading slash, resolved
+ *      against the base's directory — WHATWG URL semantics), on bases
+ *      where a join and a concatenation differ;
  *   4. route-relative URL + no targetUrl → `{ ok: false, reason }`
  *      with the operator-facing `--target-url` flag named;
  *   5. undefined screen URL → `targetUrl` (or `null`) fallback;
@@ -44,18 +45,20 @@ describe("composeCaptureUrl — direct unit coverage", () => {
     expect(result).toEqual({ ok: true, url: "http://example.com" });
   });
 
-  it("composes a leading-slash route-relative URL against targetUrl", () => {
-    const result = composeCaptureUrl("/orders/new", "http://localhost:3000");
+  // QFAI:SPEC-0012:TC-0012-0486
+  it("joins a leading-slash route to the origin of --target-url", () => {
+    // Concatenation would give `http://localhost:3000/app//orders/new`.
+    const result = composeCaptureUrl("/orders/new", "http://localhost:3000/app/");
     expect(result).toEqual({ ok: true, url: "http://localhost:3000/orders/new" });
   });
 
-  it("composes a no-leading-slash route-relative URL against a trailing-slash base", () => {
-    // WHATWG URL: without a trailing slash on the base, the last path
-    // segment is replaced. Operator-facing convention for prototype
-    // base URLs uses a trailing slash so `orders/new` appends as a
-    // child segment rather than replacing the existing one.
-    const result = composeCaptureUrl("orders/new", "http://localhost:3000/");
-    expect(result).toEqual({ ok: true, url: "http://localhost:3000/orders/new" });
+  // QFAI:SPEC-0012:TC-0012-0486
+  it("joins a route with no leading slash to the directory of --target-url", () => {
+    // WHATWG URL replaces the last path segment of the base, so a base
+    // naming a directory ends with a slash. Concatenation would give
+    // `http://localhost:3000/app/startorders/new`.
+    const result = composeCaptureUrl("orders/new", "http://localhost:3000/app/start");
+    expect(result).toEqual({ ok: true, url: "http://localhost:3000/app/orders/new" });
   });
 
   it("returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl", () => {
