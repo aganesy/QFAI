@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:route-proposal",
+  "title": "Route proposal",
+  "description": "The proposal a routing result carries: the request kind, the route and what the route needs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requestKind",
+    "candidateRoute",
+    "goal",
+    "expectedBehaviorRefs",
+    "observedRefs",
+    "affectedFlowIds",
+    "riskSignals",
+    "unresolvedQuestions",
+    "newStories",
+    "proposedWriteScope",
+    "protectedTargets",
+    "requiredStages",
+    "rationale"
+  ],
+  "properties": {
+    "requestKind": {
+      "enum": [
+        "change",
+        "read_only",
+        "plan_only",
+        "verify_only",
+        "resume",
+        "cancel",
+        "explicit_stage"
+      ]
+    },
+    "candidateRoute": {
+      "description": "The route, or null for a request kind other than change.",
+      "enum": ["direct", "bugfix", "bounded-change", "feature", "discovery", null]
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expectedBehaviorRefs": {
+      "description": "Normative references.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/normativeReference"
+      }
+    },
+    "observedRefs": {
+      "description": "Observed references, kept apart from the normative ones.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/observedReference"
+      }
+    },
+    "affectedFlowIds": {
+      "description": "Business-flow IDs.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^BF-d{4}$"
+      }
+    },
+    "riskSignals": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "data-loss",
+          "breaking-public-contract",
+          "authorization-loosened",
+          "authorization-restored",
+          "secret-egress",
+          "production-effect",
+          "requirement-dropped",
+          "out-of-scope-work"
+        ]
+      }
+    },
+    "unresolvedQuestions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/question"
+      }
+    },
+    "newStories": {
+      "description": "Each story the plan needs and no existing story represents.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["goal", "covers", "excludes", "evidence", "flowId"],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "covers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "flowId": {
+            "description": "The flow the story joins, or null for a new flow.",
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^BF-d{4}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "proposedWriteScope": {
+      "description": "Project-relative paths or globs.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "protectedTargets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "requiredStages": {
+      "description": "Stage kinds, in plan order.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confidence": {
+      "description": "Advisory only.",
+      "type": "number"
+    }
+  },
+  "$defs": {
+    "normativeReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "enum": ["request", "flow-id", "contract-id", "path"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "observedReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "enum": ["path", "evidence"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionId", "label", "description", "effect"],
+      "properties": {
+        "optionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "$ref": "#/$defs/effect"
+        }
+      }
+    },
+    "effect": {
+      "enum": ["proceed", "replan", "stop"]
+    },
+    "question": {
+      "description": "A question input. A fact question carries no recommendation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": {
+          "enum": ["decision", "fact"]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        },
+        "selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "$ref": "#/$defs/effect"
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "fact"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": ["recommendation"],
+          "properties": {
+            "recommendation": true
+          }
+        }
+      }
+    }
+  }
+}
