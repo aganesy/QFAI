@@ -37,6 +37,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A `done` row whose test case only an annotation carrier names is
+  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
+  lists obligations and declares no test, so no runner selects a case named
+  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
+  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
+  not reported, and neither is an `exception` row. The finding names the row,
+  the case and the carrier. The fix is to annotate the test that discharges the
+  case. Where no test does, the row leaves `done` only through an upstream
+  reset approved by a Change Request. A test scan that passes its file limit or
+  cannot read a file is reported under the same code rather than read as a
+  pass. The 33 existing findings are carried as a backlog in
+  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
+  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
+
 - **A `done` row goes stale only when something its test reached changed**
   (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
   every observation. In an active repository every completed row therefore went
