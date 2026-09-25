@@ -796,8 +796,8 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 - Round 2: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 6 skipped (7). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
-- Refactor verify result: REFACTOR_RESULT
-- Refactor verify revision: REFACTOR_REV
+- Refactor verify result: Test Files 2 passed (2); Tests 15 passed (15). Round 2 changed the test file only, so there was nothing to refactor, and the two capture unit test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: da2438ac0125a4cee3aaf1b110374f511452cf0b
 
 Superseded: the qa-gatekeeper verdict below was given on Round 1, before
 `CR-20260925-0012` added status 400 to the case. It does not cover Round 2, and
