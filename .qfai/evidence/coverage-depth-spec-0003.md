@@ -4,14 +4,17 @@
 
 This matrix scores every active obligation this pack declares: the **27 user stories** of
 `02_User-stories.md` (`US-0003-0001` … `US-0003-0028`, one `## US-0003-NNNN:` heading each) and the
-**58 test cases** of `06_Test-Cases.md` (`TC-0003-0001` … `TC-0003-0058`, one row each in the Test
+**59 test cases** of `06_Test-Cases.md` (`TC-0003-0001` … `TC-0003-0059`, one row each in the Test
 Case Table). `US-0003-0014` is not in the pack: its catalog line and heading are gone, so it owes
 nothing and has no row. No remaining story carries a `- x-qfai-status: planned` line, so all 27 owe an
 acceptance test. Both sets are read from the pack in full, not from the rows of
 `.qfai/specs/spec-0003/tdd/test-list.md`.
 
-The business rule table below carries all **48** `BR-0003-*` rows of the Rule Table in
-`04_Business-Rules.md`. None carries a status retiring it, so all 48 are active and all 48 own a row.
+The business rule table below carries all **49** `BR-0003-*` rows of the Rule Table in
+`04_Business-Rules.md`. None carries a status retiring it, so all 49 are active and all 49 own a row.
+
+`TC-0003-0059` and `BR-0003-0049` were added to the pack by `CR-20260925-0011`. Their two rows were
+read at a later revision than the others; see "The two rows added for the Copilot instructions".
 
 `Status` is a row verdict, not a mark, and is excluded from every total below. The scored cells are
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
@@ -58,7 +61,7 @@ a safety-floor cell is anything but `✅`, or the row's test fixes the opposite 
 `✅` only when every scored cell is `✅` or `n/a`. `⚠️` otherwise. A business-rule row is `❌` when any
 scored cell is `❌` or when its test fixes the opposite of the rule.
 
-**Twenty of the eighty-five matrix obligations are discharged by nothing their pack owns, or by a
+**Twenty of the eighty-six matrix obligations are discharged by nothing their pack owns, or by a
 case about something else.** Five stories have no test at all (`US-0003-0016` … `-0020`). Two
 test cases are coverage placeholders with no test (`TC-0003-0016`, `-0017`). Thirteen test cases
 are answered only by source-text reads of `init.ts` (`TC-0003-0001` … `-0010`, `-0015`, `-0018`,
@@ -109,8 +112,51 @@ The files that carry spec-0003 cases, and what each drives:
 | `tests/integration/shippedWorkflowShapeGate.test.ts` | `TC-0003-0049`, `-0050` | the declared-shape differ over planted copies |
 | `tests/integration/codexAgentWrappers.test.ts` | `TC-0003-0055` | `runInit`, `--force`, `--dry-run` |
 | `tests/integration/shippedWorkflowCheckIndependence.test.ts` | `TC-0003-0056`, `-0057` | the delivered tree; aggregate bodies under bash |
+| `tests/integration/initCopilotLegacyWindow.test.ts` | `TC-0003-0059` | `runInit` into a temp dir; the generated Copilot instructions |
 
 Paths are relative to `packages/qfai/`.
+
+### The two rows added for the Copilot instructions
+
+`TC-0003-0059` and `BR-0003-0049` were read at revision `22afc279e`, from
+`tests/integration/initCopilotLegacyWindow.test.ts` and the `TDD-0094` entry of
+`.qfai/evidence/atdd-spec-0003.md`. The file carries `// QFAI:SPEC-0003:TC-0003-0059` above its one
+`describe`, so all four `it`s answer the test case and no other obligation.
+
+The case runs `runInit` into an empty temporary directory, reads the generated
+`.github/copilot-instructions.md`, and takes the one top-level list item that mentions
+`D-DEPRECATED-PATH`, with its continuation lines joined. Each verify bullet has its own `it`:
+
+| Verify bullet | `it` | What it asserts |
+| --- | --- | --- |
+| 1 | line 40 | the item names both legacy surfaces and says `past its compatibility window` |
+| 2 | line 46 | the item says `` `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error `` |
+| 3 | line 50 | the item names `` `qfai init --upgrade-assistant-tree` `` |
+| 4 | line 54 | the whole file does not match `/read-compatible/i`; the item does not match `/warning/i` |
+
+The `TDD-0094` entry records a RED against the old wording, with bullets 1, 2 and 4 failing, and a
+mutation that deletes the item, with bullets 1 to 3 failing. Every `it` has therefore been seen to
+fail. The negative assertions of bullet 4 are not vacuous: bullets 1 to 3 fail when no item is found.
+
+How each cell of the two rows was scored:
+
+| Coordinate | Mark | Why |
+| --- | --- | --- |
+| `TC-0003-0059` × EP | ✅ | The row declares one input, an empty directory with no flag, and two output partitions: the statements that must appear and the wordings that must not. Both are asserted. |
+| `TC-0003-0059` × NP | ✅ | `Type` is `normal`, and all four verify bullets are asserted. |
+| `TC-0003-0059` × ER | n/a | `AC-0003-0039` and `EX-0003-0052` declare no failure outcome, so the row owns no kept failure. |
+| `TC-0003-0059` × ED | ✅ | The statement is wrapped across three source lines; the item is read with its continuation lines joined, so a phrase split by a line break still matches. Both forbidden words are matched case-insensitively, and `read-compatible` is checked across the whole file. |
+| `TC-0003-0059` × BV | n/a | No ordered or sized domain: the generated text is fixed and the row names no count. |
+| `TC-0003-0059` × SV | n/a | The row plants no input; `buildCopilotInstructions` takes no argument. |
+| `TC-0003-0059` × ST | n/a | One run. A re-run and `--force` are not part of the row's scenario. |
+| `TC-0003-0059` × CO | n/a | No interacting conditions: the generated text does not vary with any option. |
+| `TC-0003-0059` × OS | ✅ | Exact-phrase containment against the product's own output, and every `it` has been seen to fail. |
+| `BR-0003-0049` × Positive | ✅ | The four assertions are the outcome `EX-0003-0052` states, word for word. |
+| `BR-0003-0049` × Negative | n/a | The rule forbids two wordings but has no rejection mechanism, so, like the other prohibitions in this table, it is scored as its positive case. |
+| `BR-0003-0049` × Conditional | n/a | The rule states one outcome. |
+
+`AC-0003-0039` also names `US-0003-0010` and `US-0003-0020` in its `US-Refs`. The annotation binds this
+case to the test case, so it cannot answer either story, and neither story row was rescored.
 
 ### The four cases moved into an integration module
 
@@ -243,36 +289,37 @@ on `US-0003-0023`, `-0024` and `-0026`.
 | TC-0003-0056 | ✅ | ✅ | ❌ | ✅ | n/a | ❌ | n/a | ❌ | ✅ | ⚠️ |
 | TC-0003-0057 | ✅ | ✅ | ❌ | ✅ | n/a | ❌ | n/a | ✅ | ✅ | ⚠️ |
 | TC-0003-0058 | ⚠️ | n/a | ⚠️ | ✅ | n/a | ✅ | n/a | ⚠️ | ⚠️ | ⚠️ |
+| TC-0003-0059 | ✅ | ✅ | n/a | ✅ | n/a | n/a | n/a | n/a | ✅ | ✅ |
 
-Totals across the nine scored depth columns, 765 cells (85 rows × 9): **✅ 195 / ⚠️ 113 / ❌ 150**,
-with `n/a` 307.
+Totals across the nine scored depth columns, 774 cells (86 rows × 9): **✅ 199 / ⚠️ 113 / ❌ 150**,
+with `n/a` 312.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 85 rows, for reading only, is ✅ 9 / ⚠️ 42 / ❌ 34.
+grand total at the end. Its distribution across the 86 rows, for reading only, is ✅ 10 / ⚠️ 42 / ❌ 34.
 
-Per scored depth column, 85 cells each:
+Per scored depth column, 86 cells each:
 
 | Column | ✅ | ⚠️ | ❌ | n/a |
 | --- | --- | --- | --- | --- |
-| Equivalence partitions | 36 | 27 | 22 | 0 |
-| Normal path | 26 | 17 | 19 | 23 |
-| Error path | 10 | 5 | 14 | 56 |
-| Edge cases | 33 | 12 | 22 | 18 |
-| Boundary values | 11 | 9 | 9 | 56 |
-| Special values | 13 | 3 | 12 | 57 |
-| State transitions | 13 | 4 | 13 | 55 |
-| Combinatorial | 15 | 12 | 16 | 42 |
-| Oracle strength | 38 | 24 | 23 | 0 |
+| Equivalence partitions | 37 | 27 | 22 | 0 |
+| Normal path | 27 | 17 | 19 | 23 |
+| Error path | 10 | 5 | 14 | 57 |
+| Edge cases | 34 | 12 | 22 | 18 |
+| Boundary values | 11 | 9 | 9 | 57 |
+| Special values | 13 | 3 | 12 | 58 |
+| State transitions | 13 | 4 | 13 | 56 |
+| Combinatorial | 15 | 12 | 16 | 43 |
+| Oracle strength | 39 | 24 | 23 | 0 |
 
 The shape of that table is the pack's central fact. The `❌` cells in `Normal path` and
-`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-six rows
-have a passing normal path and thirty-eight a strong oracle. `Error path` is `n/a` on 56 rows because
+`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-seven rows
+have a passing normal path and thirty-nine a strong oracle. `Error path` is `n/a` on 57 rows because
 most rows own no kept failure, and twelve of the fourteen `Error path` `❌` cells are on rows with a
 credited case.
 
 ### Business rule coverage
 
-One row per active `BR-0003-*`. All 48 rows of the Rule Table are active, so none is omitted.
+One row per active `BR-0003-*`. All 49 rows of the Rule Table are active, so none is omitted.
 
 `Covering TC` is derived from the `BR-Ref` of the example each test case cites — that is, from
 `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`. `TC-0003-0009` and `TC-0003-0055` cite no
@@ -329,17 +376,18 @@ which the placeholder `TC-0003-0017` is the example route for.
 | BR-0003-0046 | ✅ | n/a | n/a | TC-0003-0052 | ✅ |
 | BR-0003-0047 | ✅ | n/a | ✅ | TC-0003-0056, TC-0003-0057 | ✅ |
 | BR-0003-0048 | ❌ | ⚠️ | ❌ | TC-0003-0058 | ❌ |
+| BR-0003-0049 | ✅ | n/a | n/a | TC-0003-0059 | ✅ |
 
-Totals across the three scored columns, 144 cells: **✅ 43 / ⚠️ 17 / ❌ 26**, with `n/a` 58.
+Totals across the three scored columns, 147 cells: **✅ 44 / ⚠️ 17 / ❌ 26**, with `n/a` 60.
 
-`Status` here is likewise a row verdict and is not counted. Its distribution across the 48 rows is
-✅ 19 / ⚠️ 9 / ❌ 20.
+`Status` here is likewise a row verdict and is not counted. Its distribution across the 49 rows is
+✅ 20 / ⚠️ 9 / ❌ 20.
 
 `Negative case` is scored only where the rule or its example declares a failure outcome — a
 rejection, an exit 1, an error, a refusal, a closed stop. A rule stated as a prohibition with no
 rejection mechanism ("leaves no floating reference", "is never pruned") is scored as its positive
-case, which is why 35 of the 48 rows are `n/a` in that column. `Conditional branches` is scored only
-where the rule states two or more branches with different outcomes; 23 rules state one.
+case, which is why 36 of the 49 rows are `n/a` in that column. `Conditional branches` is scored only
+where the rule states two or more branches with different outcomes; 24 rules state one.
 
 ## Every ❌ cell, named
 
@@ -809,8 +857,8 @@ six above it.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 238 / ⚠️ 130 / ❌ 176**, with `n/a 365`, across all 909 scored cells — 765 matrix depth cells and
-144 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
+**✅ 243 / ⚠️ 130 / ❌ 176**, with `n/a 372`, across all 921 scored cells — 774 matrix depth cells and
+147 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
 Three kinds of work would move the `❌` cells, and they are different in kind:

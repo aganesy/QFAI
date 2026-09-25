@@ -83,6 +83,7 @@ stays the first markdown table in this file):
 | TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name        |
 | TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict       |
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding          |
+| TC-0003-0059 | integration | AC-0003-0039               | EX-0003-0052 | normal   | generated Copilot instructions state the closed legacy window         |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -767,3 +768,19 @@ Verify:
 - an aggregate that no longer binds its dependency's result is rejected and named
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
 - an aggregate whose job shape cannot preserve failure — a second step, or `continue-on-error` set on the job — is rejected as well
+
+## TC-0003-0059: generated Copilot instructions state the closed legacy window
+
+**Level:** integration
+**EX Refs:** EX-0003-0052
+**AC Refs:** AC-0003-0039
+**Type:** normal
+
+Setup: an empty temporary directory.
+Action: run `runInit` into it without a flag, and read `.github/copilot-instructions.md`.
+Verify:
+
+- the file names both legacy surfaces, `.qfai/assistant/steering/` and `.qfai/assistant/instructions/`, and says their compatibility window has closed
+- it says `qfai init` reports the layout on stderr as a `D-DEPRECATED-PATH` error
+- it names the migration command `qfai init --upgrade-assistant-tree`
+- it contains neither `read-compatible` nor a `D-DEPRECATED-PATH` warning
