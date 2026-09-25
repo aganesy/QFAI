@@ -5900,6 +5900,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0179 (TDD-0387): A run in running`
 - Production files: none beyond those of TDD-0318
 
+### TDD-0388
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0182 (TDD-0388): The run edits qfai`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0182 \(TDD-0388\): The run edits qfai' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0387, whose `accept` observer reports a change to `qfai.config.yaml` as `policy-drift` whatever the write scope, as CR-20260925-0014 now has TC-0018-0182 expect
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0182 (TDD-0388): The run edits qfai`
+- Production files: none
+- Change request: CR-20260925-0014 (`Status: approved`) aligned TC-0018-0182 with the contract, `policy-drift` at `accept`; the row carries it in `DR-ID` beside DR-0298.
+
 ### TDD-0389
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6089,6 +6100,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by TDD-0390 to TDD-0399, whose installed-plan check exempts discovery from the verify-path rule
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0407): discovery-ends-routing`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0408
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts`
+- Selector: `TC-0018-0189 (TDD-0408): A temp project with no eval record and READMEs claiming no host`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts --testNamePattern='TC-0018-0189 \(TDD-0408\): A temp project with no eval record and READMEs claiming no host' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1 on the first run, which failed on the test's own read of `mode` from `start`, which the contract places on `status` (`## Modes`); read from `status`, it passed: already satisfied by TDD-0262, since `start` reads neither a README nor an eval record — a README that is a directory and a record that is not JSON change nothing
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts > TC-0018-0189 (TDD-0408): A temp project with no eval record and READMEs claiming no host`
+- Production files: none
 
 ### TDD-0409
 
@@ -6405,6 +6426,69 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0439): reviewer-read-only`
 - Production files: none
+
+### TDD-0440
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0220 \(TDD-0440\): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { …(3) } to deeply equal { claimed: [ [], [] ], …(2) }`, `tests/integration/workflow/readmeClaim.test.ts:73`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+- Design choice (decision D16 of the discussion): both READMEs describe the free-text entry first. The introduction, `## Quick start`, `## Operating model (free-text entry)` and `## Minimal tutorial` each introduce it with the phrase "in your own words" before any `/qfai-*` stage. Direct invocation is the subsection `### Invoking a stage directly (expert path)`. The sequence diagram follows one change: the operator describes it, `qfai-run` drives `start`, `next`, `accept` and `finish`, and the operator answers the one create question. `continue`, `stop` and the three modes are stated. `scripts/check-readme-alignment.mjs` and `scripts/check-mermaid.mjs` pass on both copies.
+- Design choice (decision D17): no eval has been recorded, so neither README declares Claude Code or Codex supported for quality-gated automation. `## Agent integrations` carries `### Supported hosts`, which states the condition and "No host is declared supported in this release." The claim check reads the backticked host ID of each bullet under that subsection, so a release claim is written `` - Claude Code (`claude-code`) ``. A missing subsection is itself a finding.
+- Design choice: nothing written names where an eval record lives. The runner of TDD-0428 writes it, and this check reads it, at `packages/qfai/tests/eval/records/<host>-<version>.json`. A record counts toward the claim only when its `version` equals `packages/qfai/package.json#version` and its release verdict is not `blocked`. The green adapter test AC-0018-0044 also names is not read by this check. Decided between agents.
+
+### TDD-0441
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0221 \(TDD-0441\): A temp copy of the READMEs claiming a host that has no record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ …(2) ] to deeply equal [ …(2) ]`, `tests/integration/workflow/readmeClaim.test.ts:79`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0442
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0222 (TDD-0442): A record for an older package version`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0222 \(TDD-0442\): A record for an older package version' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { older: [ …(2) ], current: [ …(2) ] } to deeply equal { older: [ …(2) ], current: [] }`, `tests/integration/workflow/readmeClaim.test.ts:93`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0222 (TDD-0442): A record for an older package version`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0443
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0226 (TDD-0443): Read both READMEs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0226 \(TDD-0443\): Read both READMEs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { alignment: +0, …(2) } to deeply equal { alignment: +0, …(2) }`, `tests/integration/workflow/readmeClaim.test.ts:114`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0226 (TDD-0443): Read both READMEs`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0444
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0227 (TDD-0444): Read the operating-model sequence diagram and the tutorial of both READMEs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0227 \(TDD-0444\): Read the operating-model sequence diagram and the tutorial of both READMEs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ [ …(9) ], [ …(9) ] ] to deeply equal [ [], [] ]`, `tests/integration/workflow/readmeClaim.test.ts:118`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0227 (TDD-0444): Read the operating-model sequence diagram and the tutorial of both READMEs`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0445
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0228 (TDD-0445): A temp copy with a tutorial step telling the operator to type /qfai-sdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0228 \(TDD-0445\): A temp copy with a tutorial step telling the operator to type /qfai-sdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ [ …(10) ], [ …(10) ] ] to deeply equal [ …(2) ]`, `tests/integration/workflow/readmeClaim.test.ts:127`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0228 (TDD-0445): A temp copy with a tutorial step telling the operator to type /qfai-sdd`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
 
 ### TDD-0446
 

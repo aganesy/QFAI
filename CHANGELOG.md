@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial now start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states when
+  a host is declared supported for quality-gated automation, and declares none
+  in this release, since no routing eval has been recorded.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at

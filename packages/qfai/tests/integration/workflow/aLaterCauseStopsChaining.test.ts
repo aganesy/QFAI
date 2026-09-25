@@ -1,4 +1,5 @@
 // QFAI:SPEC-0018:TC-0018-0179
+// QFAI:SPEC-0018:TC-0018-0182
 
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -6,6 +7,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import {
+  DISCOVERY_PROPOSAL,
   field,
   minimalProject,
   removeProjects,
@@ -55,4 +57,25 @@ it("TC-0018-0179 (TDD-0387): A run in running", async () => {
     untouched: true,
     cleared: ["blocked", "ready"],
   });
+});
+
+it("TC-0018-0182 (TDD-0388): The run edits qfai", async () => {
+  const root = await minimalProject("workflow:\n  mode: active\n");
+  const proposal = {
+    ...DISCOVERY_PROPOSAL,
+    proposedWriteScope: [...DISCOVERY_PROPOSAL.proposedWriteScope, "qfai.config.yaml"],
+  };
+  const { runId, routed } = await routedRun(root, proposal);
+  const issued = workflow(root, ["next", "--run", runId]);
+  const config = path.join(root, "qfai.config.yaml");
+  const edited = "workflow:\n  mode: active\n# edited inside the run\n";
+  await writeFile(config, edited);
+  const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
+
+  expect({
+    routed: field(routed.json, "ok"),
+    state: field(accepted.json, "run.state"),
+    cause: field(accepted.json, "halt.cause"),
+    config: await readFile(config, "utf8"),
+  }).toEqual({ routed: true, state: "blocked", cause: "policy-drift", config: edited });
 });
