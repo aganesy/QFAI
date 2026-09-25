@@ -220,11 +220,13 @@ describe.each(SETTINGS_PATHS)("%s", (rel) => {
         }
       }
     }
-    // Two readers. One prints the named message; the other reads the hook's own
+    // Three readers. One prints the named message. One reads the hook's own
     // input first and prints only for a command that names the forge, which is
-    // what lets a `Bash` matcher exist at all. A third would mean a reminder had
-    // grown logic of its own, which is the thing kept out of this file.
-    expect(readers.size, "a reminder runs one of the two pinned readers").toBe(2);
+    // what lets a `Bash` matcher exist at all. One reads the prompt and stays
+    // silent on a turn the host started rather than the user typed. A fourth
+    // would mean a reminder had grown logic of its own, which is the thing kept
+    // out of this file.
+    expect(readers.size, "a reminder runs one of the three pinned readers").toBe(3);
     for (const reader of readers) {
       expect(reader).toContain("process.argv[1]");
       expect(reader).toContain("process.argv[2]");

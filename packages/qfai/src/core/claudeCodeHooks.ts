@@ -63,15 +63,19 @@ export const GRILLING_PLAN_HOOK_MARKER = "QFAI grilling reminder: plan";
  * the moment a question forms, and that moment is unpredictable. A session-start
  * reminder is gone by the time the context is compacted, which is exactly when a
  * long session starts skipping it.
+ *
+ * Its program reads the prompt out of the hook's input and stays silent when a
+ * line of it opens with a task-notification or wake-up wrapper. Those turns are
+ * automated rather than typed, and no question to the user forms on them. Any
+ * other input, including none, prints the reminder.
  */
 export const STRUCTURED_QUESTION_HOOK_MARKER = "QFAI structured-question reminder";
 
 /**
  * Identity of the group that restates the API-budget rule before a shell command.
  *
- * It is the one entry whose program decides whether to print: it reads the
- * command out of the hook's own input and stays silent unless the command
- * mentions the forge. The matcher alone would fire on every compound command,
+ * Its program decides whether to print: it reads the command out of the hook's
+ * own input and stays silent unless the command mentions the forge. The matcher alone would fire on every compound command,
  * which is the reason the writing rule's hook stays off the shell entirely.
  */
 export const API_BUDGET_HOOK_MARKER = "QFAI api-budget reminder";
@@ -85,8 +89,9 @@ export type ClaudeSettings = Record<string, unknown>;
  * Every hook group an earlier template shipped, as the SHA-256 of
  * `JSON.stringify(group)` read from that template.
  *
- * Those groups carried their message inline, so a project that installed one
- * keeps that release's text for good unless the merge replaces it. A group that
+ * Most of those groups carried their message inline; others ran a program that
+ * has since changed. A project that installed one keeps that release's version
+ * for good unless the merge replaces it. A group that
  * hashes to one of these is text a release wrote and nobody changed, so it takes
  * the template's group of the same identity; any other content under that
  * identity is the project's. A project can skip releases, so every spelling that
@@ -110,6 +115,7 @@ const SUPERSEDED_HOOK_GROUPS: ReadonlySet<string> = new Set([
   "18aefbcf40d6b8f8ea4d9ec1653c071adb11b0ec63830c460204896c00297af3",
   // structured question
   "50b1cbf2727d6fd0ad6561847e11bcb70090aa4dca4f7571ca30add9139617b4",
+  "ace5deb2efa50f5c8dcdfbb595c94073a50a064e7cae46e27a49a1217dbabd0c",
 ]);
 
 export type HookMergeResult =
