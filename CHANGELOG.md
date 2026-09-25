@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`qfai workflow start` says what to do about a missing blocking reviewer**
+  (#2349). A start refused with cause `reviewer-missing` named only the cause.
+  Where the project's `agent-routing.yml` has no entry for a routed skill, the
+  message now says `qfai init --force` adds it. Where the project dropped a
+  reviewer from an entry it declares, the message names that reviewer, its skill
+  and phase, and the manifest file, since `--force` does not restore it.
+  `TC-0018-0176` now checks both messages.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

@@ -82,7 +82,11 @@ export async function startFacts(root: string, runId: string): Promise<WorkflowF
   ]);
   const digestKey = randomBytes(32).toString("hex");
   const start = { runId, qfaiVersion, digestKey, ...policyNow };
-  return { start, ...(plans.cause ? { cause: plans.cause } : {}) };
+  return {
+    start,
+    ...(plans.cause ? { cause: plans.cause } : {}),
+    ...(plans.guidance ? { causeGuidance: plans.guidance } : {}),
+  };
 }
 
 // Validate in process, as the project configures it, with the report files it writes sent to a
