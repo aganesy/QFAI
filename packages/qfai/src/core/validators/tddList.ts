@@ -5648,6 +5648,22 @@ export async function validateTddList(
   config: QfaiConfig,
   options: TddListValidateOptions = {},
 ): Promise<Issue[]> {
+  return runTddList(root, config, options, true);
+}
+
+/**
+ * The walk behind {@link validateTddList}.
+ *
+ * `scanTestTree` is false for a caller that keeps none of the done-row
+ * annotation findings. That check reads every file in the test tree, so a gate
+ * that throws its result away should not pay for it.
+ */
+async function runTddList(
+  root: string,
+  config: QfaiConfig,
+  options: TddListValidateOptions,
+  scanTestTree: boolean,
+): Promise<Issue[]> {
   // Scoped to this run, like every other cache here. The grammars are keyed by
   // spec and layer class, so rows share them freely inside one walk; across
   // walks the map only grows, and in a long-lived process — an editor server
@@ -5679,8 +5695,10 @@ export async function validateTddList(
   // The test tree is read at most once, and only once a ledger holds a `done`
   // row that names a test case.
   let annotationHomes: Promise<TestCaseAnnotationHomes | null> | undefined;
-  const readAnnotationHomes = (): Promise<TestCaseAnnotationHomes | null> =>
-    (annotationHomes ??= collectTestCaseAnnotationHomes(root, config));
+  const readAnnotationHomes = scanTestTree
+    ? (): Promise<TestCaseAnnotationHomes | null> =>
+        (annotationHomes ??= collectTestCaseAnnotationHomes(root, config))
+    : null;
   const gate: BlockedWorklogGate = {
     ...gateFields,
     drainUnreadable: () => {
@@ -6106,7 +6124,9 @@ export async function validateTddListSeedShape(
   config: QfaiConfig,
   options: TddListSeedShapeOptions = {},
 ): Promise<Issue[]> {
-  const issues = await validateTddList(root, config, options);
+  // The done-row annotation check reports only codes outside the seed-shape
+  // set, so its scan of the test tree is skipped rather than filtered out.
+  const issues = await runTddList(root, config, options, false);
   // Which specs have no ledger yet, read off the run's own findings:
   // `TDDLIST_MISSING` is raised on exactly that condition and carries the
   // ledger path every other code in this validator reports against. Deciding
@@ -6130,7 +6150,8 @@ async function validateSpecTddList(
   decisions: DecisionsIndex,
   srcRelDir: string,
   contractsDir: string,
-  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
+  // `null` skips the done-row annotation check and its scan of the test tree.
+  readAnnotationHomes: (() => Promise<TestCaseAnnotationHomes | null>) | null,
 ): Promise<Issue[]> {
   const { recordIds, changeRequests } = decisions;
   // The whole entry, not its directory: Check 8c derives the review-group key
@@ -6594,14 +6615,16 @@ async function validateSpecTddList(
   issues.push(...validateRowsNameATestCase(ledgerRows(), relPath, specNumber));
 
   // A `done` row whose test case only an annotation carrier names.
-  issues.push(
-    ...(await validateCompletedRowsRunATest(ledgerRows(), readAnnotationHomes, {
-      root,
-      relPath,
-      specNumber,
-      knownTcIds,
-    })),
-  );
+  if (readAnnotationHomes !== null) {
+    issues.push(
+      ...(await validateCompletedRowsRunATest(ledgerRows(), readAnnotationHomes, {
+        root,
+        relPath,
+        specNumber,
+        knownTcIds,
+      })),
+    );
+  }
 
   // Check 5d: the sibling rows of a split obligation each name the boundary
   // they own.

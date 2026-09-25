@@ -43,6 +43,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The `sdd` profile's ledger check no longer reads the test tree** (#2254).
+  `validate --profile sdd` checks only the shape of `tdd/test-list.md`, but it
+  still scanned every test file for the check on `done` rows, then discarded
+  that check's findings. It now skips that check. The findings are unchanged,
+  and a scoped run per slice no longer repeats a repository-wide scan.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
