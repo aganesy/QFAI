@@ -57,7 +57,9 @@ export async function resolveToolPackageDir(): Promise<string | null> {
  * segment is a checkout being run directly — the operator named the file and
  * nothing was resolved ambiently — so it is not reported. That also keeps the
  * whole test harness quiet, whose temp roots are outside the source tree by
- * construction.
+ * construction. Nor is a package reached through the project's own
+ * `node_modules` when that directory is a link to somewhere else
+ * ({@link resolvesThroughOwnNodeModules}).
  *
  * **What remains is a path question, not an intent question.** A deliberate
  * global install and a hoisted monorepo dependency both satisfy every condition
@@ -74,7 +76,9 @@ export async function locateToolAgainstProject(
     toRealPath(path.resolve(root)),
     toRealPath(packageDir),
   ]);
-  const outside = classifyToolLocation(realRoot, realPackageDir);
+  const outside =
+    classifyToolLocation(realRoot, realPackageDir) &&
+    !(await resolvesThroughOwnNodeModules(realRoot, realPackageDir));
   return {
     packageDir,
     outside,
@@ -107,7 +111,31 @@ export async function locateToolAgainstProject(
  */
 async function resolvesAgainstDeclaration(root: string, packageDir: string): Promise<boolean> {
   const declaringDir = await findDeclaringDir(root);
-  return declaringDir !== null && classifyAgainstDeclaration(declaringDir, packageDir);
+  return (
+    declaringDir !== null &&
+    classifyAgainstDeclaration(declaringDir, packageDir) &&
+    !(await resolvesThroughOwnNodeModules(declaringDir, packageDir))
+  );
+}
+
+/**
+ * Whether `packageDir` sits under what `<dir>/node_modules` really points at.
+ *
+ * A worktree often links its `node_modules` to the main checkout's rather than
+ * installing a second copy. Node then reports the package at its real path,
+ * outside the worktree, although the worktree's own `node_modules` entry is
+ * what resolved it. That link is a choice the project made, not a parent walk
+ * by `npx`, so the copy behind it counts as the project's own.
+ *
+ * `packageDir` must already be a real path. A `node_modules` that does not
+ * exist resolves to itself and contains nothing outside `dir`.
+ */
+export async function resolvesThroughOwnNodeModules(
+  dir: string,
+  packageDir: string,
+): Promise<boolean> {
+  const ownModules = await toRealPath(path.join(dir, "node_modules"));
+  return !classifyAgainstDeclaration(ownModules, packageDir);
 }
 
 /**

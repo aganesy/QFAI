@@ -43,6 +43,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`QFAI-TOOL-002` no longer fires for a worktree whose `node_modules` links
+  to another checkout's** (#2262). A worktree often links its `node_modules`
+  to the main checkout's instead of installing a second copy. Node reports the
+  running qfai at its real path, outside the worktree, so `validate` reported
+  it as a copy resolved from elsewhere and `--fail-on error` could not pass.
+  A copy reached through the project's own `node_modules` now counts as the
+  project's own, whether or not that directory is a link. A worktree with no
+  `node_modules` of its own, where `npx` finds the enclosing checkout's install
+  by walking parent directories, is still reported.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
