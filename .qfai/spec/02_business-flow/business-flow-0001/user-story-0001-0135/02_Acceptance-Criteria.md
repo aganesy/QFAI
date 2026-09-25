@@ -13,4 +13,12 @@ Scenario: `iterate --auto-serve` opt-in flag with foreign-process protection
   Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
   And when invoked WITH `--auto-serve`, iterate MUST call the server runner once, invoke the teardown it returns at cycle end and on SIGINT, continue when the runner reports a recovered prior owner, and exit 2 reporting the runner's reason when the runner refuses.
   And the default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
+
+# AC-0001-0135-02
+# Parent: US-0001-0135
+Scenario: A failed `--auto-serve` teardown is reported and leaves the exit code alone
+  Given `qfai prototyping iterate --auto-serve` whose server runner returns a teardown that rejects
+  When the cycle ends and iterate invokes that teardown
+  Then iterate prints a line on stdout naming the `--auto-serve` teardown as what failed, with the rejection reason
+  And iterate returns the exit code the cycle would have returned had the teardown resolved
 ```

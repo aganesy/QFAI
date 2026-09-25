@@ -79,6 +79,20 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(gatekeeper).toContain("A syntax error, deleted export");
   });
 
+  it("reads the RED test hash's execute bit where git reads it", async () => {
+    // Windows has no execute bit on disk, so a bit read off the disk hashes a
+    // file git marks executable differently on Windows and POSIX checkouts.
+    const red = (await read("skill/qfai-atdd/references/red-provenance.md")).replace(/\s+/g, " ");
+    expect(red).toContain("`100755` for a file `git add` would record as executable");
+    expect(red).toContain(
+      "Where `core.fileMode` is `false`, as in a repository git created on Windows, take it from the index",
+    );
+    expect(red).toContain("take the owner's execute bit off the disk: a `0654` file is `100644`");
+    expect(red).toContain("Resolve and stage a merge conflict in a manifest file");
+    expect(red).not.toContain("any execute bit set");
+    expect(red).not.toContain("record its hash on the platform that will verify it");
+  });
+
   it("rejects a load error and proves RED came from the selected assertion", async () => {
     const admissibility = await read("skill/qfai-implement/references/red-admissibility.md");
     expect(admissibility).toContain("one example and one test selector");

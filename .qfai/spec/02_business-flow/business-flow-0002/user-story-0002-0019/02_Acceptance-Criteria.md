@@ -23,7 +23,7 @@ Scenario: One slice name resolves on every surface that declares the slice set
   And every CI job that expands over the slice set lists the slices it runs
   When the three surfaces are compared
   Then the runner project set, the per-slice script set and the slice list of every CI job that expands over the slice set are equal
-  And each of those sets holds nine names
+  And each of those sets holds seven names
   And no declared runner project matches zero files
 
 # AC-0002-0019-03

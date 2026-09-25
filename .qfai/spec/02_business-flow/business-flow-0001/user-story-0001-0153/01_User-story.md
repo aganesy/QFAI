@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a QFAI user, I want SDD to validate the latest discussion pack and stop if incomplete or has blocking OQs, so that specs are not built on incomplete requirements.
+As a QFAI user, I want SDD to use an available discussion pack as reference material and stop only when no usable source exists, so that incomplete or contradictory pack material is resolved in SDD-owned artifacts.
 
 ## Legacy Source Scope
 

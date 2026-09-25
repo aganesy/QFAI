@@ -4,6 +4,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Removed
+
+- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
+  dedicated test suites. CI and release checks now run seven test slices. An
+  older tag with the retired slices uses the whole-suite release gate.
+
 ### Changed
 
 - **Specs move to the story tree.** Projects using the former
@@ -37,6 +43,46 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0012 states what `--auto-serve` does when its teardown fails**
+  (#2208). A case once required a failed teardown to be reported, and that
+  clause was lost when the case was rewritten, so the report could be removed
+  with no test failing. `REQ-0012-0062` now states it as the product behaves:
+  iterate prints a line on stdout naming the `--auto-serve` teardown and the
+  reason it failed, and returns the exit code the cycle would otherwise have
+  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
+  it.
+
+- **A `done` row whose test case only an annotation carrier names is
+  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
+  lists obligations and declares no test, so no runner selects a case named
+  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
+  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
+  not reported, and neither is an `exception` row. The finding names the row,
+  the case and the carrier. The fix is to annotate the test that discharges the
+  case. Where no test does, the row leaves `done` only through an upstream
+  reset approved by a Change Request. A test scan that passes its file limit or
+  cannot read a file is reported under the same code rather than read as a
+  pass. The 33 existing findings are carried as a backlog in
+  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
+  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
+
+- **A `done` row goes stale only when something its test reached changed**
+  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
+  every observation. In an active repository every completed row therefore went
+  stale within hours, whatever changed, and full-history validation failed on
+  rows whose test and module had not moved. A `done` row is now measured over
+  its test file, the files its newest `RED test manifest` lists, and the files
+  under `srcDir` those import, directly or transitively. Relative imports are
+  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
+  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
+  installed packages are outside the project. Where an import cannot be
+  followed — an alias no pattern resolves, a computed `import()` or
+  `require()`, a relative path that names no file, or a test file that is not
+  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
+  and the finding says why. The finding now names the covered set it measured.
+  `evidence-revision.md` states the at-rest scope; the in-flight check before
+  submitting still covers the whole source directory.
+
 - **A blocked ledger row whose Change Request is settled is reported**
   (#2015). A `blocked` row that named a Change Request stayed `blocked` after
   the request was decided, and nothing said so. `validate` now warns with
@@ -65,12 +111,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   the skill said never matched, and `validate` refused evidence that was
   complete. The six-digit form is the intended one: the gate recomputes the
   hash on whichever checkout runs it, and every permission bit but the execute
-  bits follows that checkout's umask. The skill now names the three values,
-  says any execute bit selects `100755`, and says to read the mode from the
-  file on disk rather than from git's index. It also says the execute bit does
-  not cross between Windows and POSIX, so a manifest naming an executable file
-  is hashed on the kind of system that recomputes it. The revision manifest
-  keeps its own four digits.
+  bits follows that checkout's umask. The skill now names the three values and
+  says where the execute bit is read from. The revision manifest keeps its own
+  four digits.
+
+- **The RED test hash reads the execute bit where git reads it** (#2257).
+  `validate` took a manifest file's execute bit off the disk. Windows has none,
+  so a file git marks executable hashed as `100644` on a Windows checkout and
+  `100755` on a POSIX one, and evidence recorded on one was refused on the
+  other. The gate now reads the bit the way `git add` does: from the index where
+  `core.fileMode` is `false`, as in a repository git created on Windows, and
+  from the owner's execute bit on disk everywhere else. An execute bit held
+  only by the group or others no longer selects `100755`; git never recorded
+  it either.
+
+  Two kinds of recorded evidence now hash differently, and `validate` refuses
+  them until their `RED test hash` is recorded again: evidence recorded on
+  Windows whose manifest names a file git marks executable, and evidence whose
+  manifest names a file executable by the group or others but not its owner.
+  POSIX checkouts already refused the first kind.
 
 ## [1.12.3] - 2026-09-24
 

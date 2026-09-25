@@ -3,7 +3,7 @@
 ## Criteria
 
 ```gherkin
-Feature: Discussion Markdown-Only Preflight
+Feature: Optional Side Artifact Neutrality
 
 # AC-0001-0156-01
 # Parent: US-0001-0156

@@ -319,8 +319,8 @@ describe("the integration surface is checked for links that did not survive chec
 describe("this repository's own surface", () => {
   it("passes the check it ships", async () => {
     // Dogfooding, and the only place the rule meets a real six-directory
-    // surface with non-qfai neighbours in it (`.agents/skills/pr-fix` is a real
-    // directory; `.claude/agents/README.md` is a real file). A failure here on
+    // surface with non-qfai neighbours in it (`.claude/agents/README.md` is
+    // a real file). A failure here on
     // a contributor's machine is not a false positive — it is the flattened
     // checkout this rule exists to name.
     const repoRoot = path.resolve(
