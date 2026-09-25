@@ -207,6 +207,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
 
+- **This repository no longer tracks generated reports under `.qfai/report/`**
+  (#2356). The directory's own `.gitignore` excludes everything but itself and
+  a README, yet three generated files were tracked:
+  `preflight_summary.md`, `specs-coverage/spec-0012.md` and
+  `validate.spec-0017.json`. `qfai validate` and `qfai sdd preflight` rewrite
+  them, so every local run left a modified tracked file that was easy to
+  commit by accident. The evidence records that named them now mark each name
+  as not a citation of a committed file. The spec-0017 run record the
+  policies keep is read from git history. The package is unchanged.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
