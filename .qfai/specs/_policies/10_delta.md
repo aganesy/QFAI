@@ -967,7 +967,8 @@ The shared records that establish the project-root work-log surface
   contract declares with one, and the justification catalog codes. Recorded in
   spec-0004 as DR-0004-0038 and DR-0004-0039.
 - `.qfai/report/validate.spec-0017.json` stays as the dated record of the run it
-  came from.
+  came from. `qfai validate --spec` rewrites that path, so the repository no
+  longer tracks it; the record is read from commit `2b933d2f3`.
 - The CHG-003 history in this file stays as written.
 
 ## Change Requests

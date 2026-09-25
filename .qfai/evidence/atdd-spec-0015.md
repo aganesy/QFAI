@@ -342,7 +342,7 @@ P8 review, series `.qfai/evidence/atdd-spec-0015.md + <role> + 1`:
 
 Seals of the earlier packs: round 1 `71169c79eefc287c3ceb61f89c1c1e76591e18b7f6bcf2e8208b0ec5573ff3d3`, round 2 `f4d0c9dfa118581339edad1a0fbd2678a18129769f9b6d03617ff52fd7f418a1`, round 2b `a43dc79d8850a72dd021f0eadacbc25a2b112497169221776469ce8d253f5851`.
 
-The dogfood backlog checks behind the pin fix ran with the local review packs moved aside, as a fresh clone has none, and with the regenerated `.qfai/report/**` restored afterwards:
+The dogfood backlog checks behind the pin fix ran with the local review packs moved aside, as a fresh clone has none, and with the regenerated `.qfai/report/**` restored afterwards: <!-- qfai:not-a-citation -->
 
 ```text
 $ node scripts/check-dogfood-backlog.mjs --profile full

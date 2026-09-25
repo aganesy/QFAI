@@ -26,7 +26,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`.qfai/d
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416195444737)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416195444737) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -81,7 +81,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev10 discussion pack (`.qfai/d
 ### Validate Evidence
 
 - **Validate log**: written by the command above, (run-20260417061859640)
-- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
+- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 - **QFAI-COV-201..206**: all 0 ✅
 - **QFAI-ATDD-111/112**: rev10 US/TC registered in e2e/integration traceability ✅
 
@@ -200,7 +200,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`.qfai/di
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416092414328)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416092414328) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -251,12 +251,12 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev9 discussion pack (`.qfai/di
 | `pnpm qfai validate --fail-on error --format github` (2nd) | E_ID_INVALID_FORMAT (spec-0001 in EX path) |
 | `pnpm qfai validate --fail-on error --format github` (3rd) | QFAI-COV-201..206 = 0 |
 | Validate log written | run-20260416210530xxx |
-| `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC (EX-0150..0172 all covered) |
+| `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC (EX-0150..0172 all covered) <!-- qfai:not-a-citation --> |
 
 ### Validate Evidence
 
 - **Validate log**: written by the command above, (3rd run — rev9 completion)
-- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
+- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 - **QFAI-COV-201..206**: all 0 ✅
 - **QFAI-ATDD-111/112**: rev9 US/TC not yet in e2e/integration (SDD phase; implementation phase task)
 
@@ -362,7 +362,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`.qfai/di
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416023323603)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260416023323603) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -406,12 +406,12 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev8 discussion pack (`.qfai/di
 |---------|--------|
 | `pnpm qfai validate --fail-on error --format github` | error=51, warning=85 |
 | Validate log written | run-20260416151852940 |
-| `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC |
+| `.qfai/report/specs-coverage/spec-0012.md` read | All ACs ≥1 TC <!-- qfai:not-a-citation --> |
 
 ### Validate Evidence
 
 - **Validate log**: written by the command above, (run-20260416151852940)
-- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md`
+- **Specs-coverage report**: `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 - **Error delta**: baseline=55 → after rev8 fixes=51 (net -4 rev8-specific errors)
 
 ### Rev8-Specific Errors Fixed
@@ -504,7 +504,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev4 discussion pack content ad
 
 ## Preflight Summary Path
 
-`.qfai/report/preflight_summary.md`
+`.qfai/report/preflight_summary.md` <!-- qfai:not-a-citation -->
 
 ## Open Questions Summary
 
@@ -596,7 +596,7 @@ qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 ## Validate Evidence Paths
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- `.qfai/report/specs-coverage/spec-0012.md` — Coverage density (all rev4 ACs ≥ 3 TCs)
+- `.qfai/report/specs-coverage/spec-0012.md` — Coverage density (all rev4 ACs ≥ 3 TCs) <!-- qfai:not-a-citation -->
 
 ## Review Evidence
 
@@ -617,7 +617,7 @@ qfai validate --fail-on error --format github | tee .qfai/report/validate.log
 ## Unified SDD Quality Gate
 
 - [x] CRITICAL CONSTRAINTS followed
-- [x] `.qfai/report/preflight_summary.md` generated before spec authoring
+- [x] `.qfai/report/preflight_summary.md` generated before spec authoring <!-- qfai:not-a-citation -->
 - [x] Phase order: Contracts-first → Outline → Slice → Plan → Delta
 - [x] `_policies/05_Contracts.md` index aligned (0 items posture noted)
 - [x] Upper-to-lower references not introduced
@@ -698,7 +698,7 @@ WS-7（PR Completion シングルフロー）が新規追加され、OQ-0001〜0
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (.qfai/discussion/discussion-20260415161758193, OQ=0)
+`.qfai/report/preflight_summary.md` (.qfai/discussion/discussion-20260415161758193, OQ=0) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -767,7 +767,7 @@ pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.l
 ### Validate Evidence Paths
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- `.qfai/report/specs-coverage/spec-0012.md`
+- `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 
 ### QFAI-COV Gate Results
 
@@ -822,11 +822,11 @@ spec-0012 (qfai-prototyping) に v1.7.15 rev5 の 6 ワークストリーム（W
 - `discussion-20260415014056471/` (15 files, all present)
 - `.qfai/specs/spec-0012/` (全ファイル)
 - `.qfai/specs/_policies/05_Contracts.md`, `10_delta.md`, `11_Slice-Policy.md`
-- `.qfai/report/preflight_summary.md` (rev5 版に更新済み)
+- `.qfai/report/preflight_summary.md` (rev5 版に更新済み) <!-- qfai:not-a-citation -->
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated for rev5, discussion-20260415014056471, Open OQ=0)
+`.qfai/report/preflight_summary.md` (updated for rev5, discussion-20260415014056471, Open OQ=0) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -860,7 +860,7 @@ spec-0012 (qfai-prototyping) に v1.7.15 rev5 の 6 ワークストリーム（W
 | `.qfai/specs/spec-0012/08_Open-questions.md` | OQ-0002/0004/0006 resolved・OQ-0005 deferred 追記 |
 | `.qfai/specs/spec-0012/09_delta.md` | AD-0012-0036〜0044・RJ-0012-0019〜0023・traceability chain 追加 |
 | `.qfai/specs/spec-0012/10_Plan.md` | v1.7.15 rev5 実装戦略セクション追加 |
-| `.qfai/report/preflight_summary.md` | rev5 版に全面更新 |
+| `.qfai/report/preflight_summary.md` | rev5 版に全面更新 <!-- qfai:not-a-citation --> |
 
 ### Work Orders Summary
 
@@ -886,7 +886,7 @@ pnpm qfai validate --fail-on error --format github | tee .qfai/report/validate.l
 ### Validate Evidence Paths
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- `.qfai/report/specs-coverage/spec-0012.md`
+- `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 
 ### Density Review (QFAI-COV-207 Triage — spec-0012)
 
@@ -950,7 +950,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev7 discussion pack content cl
 
 ## Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated for rev7: .qfai/discussion/discussion-20260415203030886, REQ=18, OQ open=0)
+`.qfai/report/preflight_summary.md` (updated for rev7: .qfai/discussion/discussion-20260415203030886, REQ=18, OQ open=0) <!-- qfai:not-a-citation -->
 
 ## Open Questions Summary
 
@@ -1014,7 +1014,7 @@ Confirmed: 52 errors identical in HEAD (pre-rev7) and working tree. **New errors
 ## Validate Evidence Paths
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- `.qfai/report/specs-coverage/spec-0012.md`
+- `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 - `review-20260416070000000/summary.json`
 
 ## QFAI-COV Gate Results
@@ -1071,7 +1071,7 @@ Update spec-0012 (qfai-prototyping) with v1.7.15 rev11 discussion pack (`.qfai/d
 
 ### Preflight Summary Path
 
-`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260417072340789)
+`.qfai/report/preflight_summary.md` (updated to reference .qfai/discussion/discussion-20260417072340789) <!-- qfai:not-a-citation -->
 
 ### Open Questions Summary
 
@@ -1122,7 +1122,7 @@ npx qfai validate --fail-on error --format github | tee .qfai/report/validate.lo
 ### Validate Evidence
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- Coverage: `.qfai/report/specs-coverage/spec-0012.md`
+- Coverage: `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 
 | Code | Status | Notes |
 |---|---|---|
@@ -1224,7 +1224,7 @@ No new SDD-source-layer regressions attributable to spec-0012 in this session.
 ### Validate Evidence Paths
 
 - Validate log and structured results: written by the command above into the report tree, which is not tracked. The counts recorded in this section are the record.
-- `.qfai/report/specs-coverage/spec-0012.md`
+- `.qfai/report/specs-coverage/spec-0012.md` <!-- qfai:not-a-citation -->
 
 ### Work Orders Summary
 
@@ -1268,7 +1268,7 @@ Apply CHG-002: redefine `/qfai-prototyping` per discussion pack `discussion-2026
 
 ### Preflight summary path
 
-- `.qfai/report/preflight_summary.md` (CHG-002 section dated 2026-05-18).
+- `.qfai/report/preflight_summary.md` (CHG-002 section dated 2026-05-18). <!-- qfai:not-a-citation -->
 - Validate baseline (pre-edit): `error=0 warning=7 info=3 annotations=10/10 failOn=error result=PASS` (run-log `run-20260518132742559`).
 
 ### Triage decisions (Operation + Approver per row)
