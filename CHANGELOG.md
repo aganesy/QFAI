@@ -84,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **`next` continues a run after a stage accepted with debt** (#2466). A stage
+  result accepted as `accepted_with_debt` moves the run to `ready`, but `next`
+  then refused with "The plan is not ready." because it required every
+  accepted stage to be exactly `accepted`. `next` now issues the following
+  plan stage. The debt still counts toward `debt-open` at `finish`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
