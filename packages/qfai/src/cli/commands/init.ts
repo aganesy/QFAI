@@ -61,6 +61,7 @@ import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_RUN_STATE_IGNORE,
   QFAI_GITIGNORE_LEGACY_LINES,
   RETIRED_LINE_SUCCESSORS,
   negationsOutrankLaterIgnores,
@@ -2926,6 +2927,7 @@ export async function ensureRootGitignoreEntries(
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
+    gitignoreLines(managedBlock).includes(QFAI_RUN_STATE_IGNORE) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
     negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
@@ -3163,12 +3165,14 @@ function rebuildManagedBlock(existingBlock: string): string {
     !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
       ? [PROTOTYPING_CONTENTS_IGNORE]
       : [];
+  const runState = present.has(QFAI_RUN_STATE_IGNORE) ? [] : [QFAI_RUN_STATE_IGNORE];
 
   return [
     QFAI_GITIGNORE_MARKER,
     ...kept,
     ...renamed,
     ...reIgnore,
+    ...runState,
     ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
@@ -3228,6 +3232,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
+  // A workflow run's tracked evidence. The nested `*` matches at every depth,
+  // so the directory and everything under it each need a line.
+  "!workflow/",
+  "!workflow/**",
   "!import-lite.md",
   `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
@@ -4301,7 +4309,8 @@ function managedBlockEnd(
     if (line.trim() === "" || line.trimStart().startsWith("#")) {
       break;
     }
-    if (knownLines.has(line)) {
+    // A CRLF checkout ends every line with a carriage return, which the known set lacks.
+    if (knownLines.has(line.trimEnd())) {
       lastKnown = index;
     }
   }

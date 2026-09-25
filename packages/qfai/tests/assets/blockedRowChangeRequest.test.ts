@@ -79,12 +79,22 @@ async function blockedRows(): Promise<BlockedRow[]> {
       // A pack with no ledger has no rows to read.
       continue;
     }
+    // The `Status` column is read by its header: `blocked` is also a workflow
+    // state, so a `Boundary` or `Selector` cell may carry the same word.
+    let statusColumn = -1;
     for (const line of text.split(/\r?\n/)) {
-      if (!line.startsWith("|")) continue;
+      if (!line.startsWith("|")) {
+        statusColumn = -1;
+        continue;
+      }
       const cells = line.split("|").map((cell) => cell.trim());
       const tdd = cells[1] ?? "";
+      if (tdd === "TDD-ID") {
+        statusColumn = cells.indexOf("Status");
+        continue;
+      }
       if (!/^TDD-\d{4}$/.test(tdd)) continue;
-      if (!cells.some((cell) => cell.toLowerCase() === "blocked")) continue;
+      if ((cells[statusColumn] ?? "").toLowerCase() !== "blocked") continue;
       rows.push({ pack, tdd, requests: [...new Set(line.match(CHANGE_REQUEST) ?? [])] });
     }
   }

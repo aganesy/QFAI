@@ -64,6 +64,7 @@ import {
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
   TRIAGE_UPDATE_SUBOPS,
+  requiresApproval,
   type TriageTopLevelOp,
   type TriageUpdateSubOp,
 } from "../sddTriage.js";
@@ -471,13 +472,6 @@ export function validateSpecStatus(
   return issues;
 }
 
-const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
-  "CREATE",
-  "DELETE",
-  "SPLIT",
-  "MERGE",
-  "SUPERSEDE",
-]);
 const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
 
 /**
@@ -1360,11 +1354,14 @@ function validateTriageRows(
       }
       // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
       // bare type assertion.
-      if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
+      if (
+        requiresApproval({ update: subUpper }) &&
+        (approvedCell.length === 0 || approvedCell === "-")
+      ) {
         issues.push(
           issue(
             "QFAI-TRIAGE-005",
-            `Triage UPDATE:REMOVE は Approved By 必須です (${rowLabel})。`,
+            `Triage UPDATE:${subUpper} は Approved By 必須です (${rowLabel})。`,
             "error",
             deltaPath,
             "triage.approval",
@@ -1397,7 +1394,7 @@ function validateTriageRows(
       continue;
     }
 
-    if (APPROVAL_REQUIRED_OPS.has(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
+    if (requiresApproval(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
       issues.push(
         issue(
           "QFAI-TRIAGE-005",

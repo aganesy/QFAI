@@ -455,6 +455,67 @@ failed, 2 passed (7).
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/orchestrated-mode.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-phase-checklists.md`, `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`
 
+### TDD-0044
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
+- Selector: `TC-0013-0038: Stage 1 checks a matching routing-time approval`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalCheck.test.ts --testNamePattern='TC-0013-0038: Stage 1 checks a matching routing-time approval' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /the check passes only when the recor…/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case asserts the check itself (the record exists, matches the row's operation and capability, and is not stale) instead of a contract citation.
+
+### TDD-0045
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
+- Selector: `TC-0013-0039: A failed approval check persists nothing`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/stage1ApprovalStop.test.ts --testNamePattern='TC-0013-0039: A failed approval check persists nothing' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Inside a workflow run Under a QFAI…' to match /an approval is stale when the scope …/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case asserts the three staleness conditions and that the clock alone never makes an approval stale.
+
+### TDD-0048
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
+- Selector: `TC-0013-0042: The triage format carries Authorization-Ref`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/triageAuthorizationRefColumn.test.ts --testNamePattern='TC-0013-0042: The triage format carries Authorization-Ref' --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected '## Triage table format ```markdown ##…' to match /`Authorization-Ref` is optional and …/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md`, `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case asserts the value form `run-<17 digits>/<authorizationId>` instead of a contract citation.
+
+### TDD-0049
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`
+- Selector: `TC-0013-0043: Defect row seeding appends one case and one row`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/defectRowSeeding.test.ts --testNamePattern='TC-0013-0043: Defect row seeding appends one case and one row' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the `### Defect row seeding` text landed with the rows this batch closed before
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case asserts that the row is for behaviour the spec already states and files no Change Request, with no decision ID.
+- The shipped text names the work order by its operation, `defect-row-seeding`; `sdd_append` is the stage kind the core issues it under and does not ship.
+
+### TDD-0053
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
+- Selector: `TC-0013-0047: A work order without a target is refused`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/sdd/workOrderTarget.test.ts --testNamePattern='TC-0013-0047: A work order without a target is refused' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the `## Operations` text landed with the rows this batch closed before
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case dropped its citation clause.
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.

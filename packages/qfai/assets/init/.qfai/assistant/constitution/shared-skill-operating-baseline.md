@@ -186,6 +186,24 @@ delegation work order.
   new-capability slot. The stage works on that target and no other.
 - These statements add to the constitution. They except no article.
 
+## Default Autopilot Policy inside a run
+
+Inside a run, each bucket of a skill's `## Default Autopilot Policy` is
+satisfied by one kind of authorization the run records:
+
+- An `ask-user` item is satisfied only by a `human_decision` that answers it.
+- A `hard-required` input is satisfied by `request_scope` or by the run's
+  binding.
+- An `auto-decide` item needs no authorization.
+- `--auto` satisfies nothing. It answers no `ask-user` item and supplies no
+  `hard-required` input.
+
+A `primarySpecId` that a run's valid binding supplies counts as supplied: the
+work order's target names the spec, so the skill does not ask for it. With no
+binding, `primarySpecId` stays `hard-required`, and
+[User Questions](#user-questions-askuserquestion-protocol) says how it is asked
+for and when its absence stops the run.
+
 ## Delta Rejected Guard (Mandatory)
 
 - Do not reintroduce options marked as rejected in `09_delta.md`.
