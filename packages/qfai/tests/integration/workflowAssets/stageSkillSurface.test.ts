@@ -34,6 +34,7 @@ async function operations(skill: string): Promise<{ header: string; ids: string[
 }
 
 describe("stage skills reachable from a workflow run", () => {
+  // QFAI:AC-0001-0202-04
   // QFAI:EX-0001-0202-07
   it("opens every plan skill's description with its trigger condition", async () => {
     for (const skill of PLAN_SKILLS) {
@@ -49,6 +50,7 @@ describe("stage skills reachable from a workflow run", () => {
     }
   });
 
+  // QFAI:AC-0001-0202-05
   // QFAI:EX-0001-0202-08
   it("keeps one orchestrated-mode reference per plan skill, cited by one SKILL.md line", async () => {
     for (const skill of PLAN_SKILLS) {
@@ -63,6 +65,7 @@ describe("stage skills reachable from a workflow run", () => {
     }
   });
 
+  // QFAI:AC-0001-0202-06
   // QFAI:EX-0001-0202-09
   it("leaves every plan skill model-invocable", async () => {
     for (const skill of PLAN_SKILLS) {
@@ -72,6 +75,7 @@ describe("stage skills reachable from a workflow run", () => {
     }
   });
 
+  // QFAI:AC-0001-0204-02
   // QFAI:EX-0001-0204-02
   it("lists exactly the acceptance operations in the ATDD Operations table", async () => {
     expect(await operations("qfai-atdd")).toEqual({
@@ -80,6 +84,7 @@ describe("stage skills reachable from a workflow run", () => {
     });
   });
 
+  // QFAI:AC-0001-0207-02
   // QFAI:EX-0001-0207-02
   it("lists exactly the implement operations in the implement Operations table", async () => {
     expect(await operations("qfai-implement")).toEqual({
@@ -88,6 +93,7 @@ describe("stage skills reachable from a workflow run", () => {
     });
   });
 
+  // QFAI:AC-0001-0214-04
   // QFAI:EX-0001-0214-04
   it("lists exactly the story-authoring operations in the SDD Operations table", async () => {
     expect(await operations("qfai-sdd")).toEqual({
@@ -96,6 +102,7 @@ describe("stage skills reachable from a workflow run", () => {
     });
   });
 
+  // QFAI:AC-0001-0215-07
   // QFAI:EX-0001-0215-08
   it("lists exactly verify-full in the verify Operations table", async () => {
     expect(await operations("qfai-verify")).toEqual({
@@ -104,6 +111,7 @@ describe("stage skills reachable from a workflow run", () => {
     });
   });
 
+  // QFAI:AC-0001-0206-03
   // QFAI:EX-0001-0206-03
   it("lists exactly the discussion operation in the discussion Operations table", async () => {
     expect(await operations("qfai-discussion")).toEqual({
@@ -112,6 +120,7 @@ describe("stage skills reachable from a workflow run", () => {
     });
   });
 
+  // QFAI:AC-0001-0211-02
   // QFAI:EX-0001-0211-02
   it("lists exactly the prototyping operation in the prototyping Operations table", async () => {
     expect(await operations("qfai-prototyping")).toEqual({

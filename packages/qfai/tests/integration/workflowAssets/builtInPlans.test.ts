@@ -133,6 +133,7 @@ describe("the built-in plans", () => {
     ]);
   });
 
+  // QFAI:AC-0001-0192-05
   // QFAI:EX-0001-0192-13
   it("orders the feature plan story authoring, prototyping, acceptance, implement, verify", async () => {
     const { stages } = await plan("feature");
@@ -146,6 +147,7 @@ describe("the built-in plans", () => {
     expect(stages.at(-1)?.operation).toBe("verify-full");
   });
 
+  // QFAI:AC-0001-0193-01
   // QFAI:EX-0001-0193-13
   it("runs the bugfix plan's implement stage on every missing-test diagnosis", async () => {
     const { stages } = await plan("bugfix");
@@ -181,6 +183,7 @@ describe("the built-in plans", () => {
     }
   });
 
+  // QFAI:AC-0001-0003-02
   // QFAI:EX-0001-0003-02
   it("runs the stage skills in the delivery order and names no qfai-run", async () => {
     for (const route of PLAN_ROUTES) {
@@ -208,6 +211,7 @@ describe("the built-in plans", () => {
     }
   });
 
+  // QFAI:AC-0001-0195-05
   // QFAI:EX-0001-0195-08
   it("names no qfai-grill, and holds a discussion only under full_discussion_needed", async () => {
     for (const route of PLAN_ROUTES) {

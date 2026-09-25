@@ -24,6 +24,7 @@ async function passage(file: string, heading: string): Promise<string> {
 }
 
 describe("the stage-skill entry check", () => {
+  // QFAI:AC-0001-0202-01
   // QFAI:EX-0001-0202-01
   it("hands a request with no name and no work order to qfai-run, editing nothing", async () => {
     const passOn = rowOf(await entryCheck(), "`pass-on`");
@@ -41,6 +42,7 @@ describe("the stage-skill entry check", () => {
     expect(off).toMatch(/no entry check\. behave as when invoked by name/i);
   });
 
+  // QFAI:AC-0001-0202-02
   // QFAI:EX-0001-0202-03
   it("does only the work of a matching work order and says nothing to the operator", async () => {
     const worker = rowOf(await entryCheck(), "`worker`");
@@ -56,6 +58,7 @@ describe("the stage-skill entry check", () => {
     expect(mismatch).toMatch(/edit nothing, and return the refusal to the harness/i);
   });
 
+  // QFAI:AC-0001-0202-03
   // QFAI:EX-0001-0202-05
   // QFAI:EX-0001-0202-06
   it("runs a stage invoked by name standalone and hands a request to go to the end to a run", async () => {
@@ -69,6 +72,7 @@ describe("the stage-skill entry check", () => {
 });
 
 describe("governance inside a run", () => {
+  // QFAI:AC-0001-0004-03
   // QFAI:EX-0001-0004-06
   it("states request authority and the work order's binding, excepting no article", async () => {
     const text = await passage(OPERATING, "### What authorizes a run's work");
@@ -80,6 +84,7 @@ describe("governance inside a run", () => {
     expect(text).toMatch(/these statements add to the constitution\. they except no article/i);
   });
 
+  // QFAI:AC-0001-0004-04
   // QFAI:EX-0001-0004-07
   it("keeps the workflow routes apart from the Change Type", async () => {
     const workflow = flat(await readShipped("rule/workflow.md"));
@@ -88,6 +93,7 @@ describe("governance inside a run", () => {
     expect(workflow).toMatch(/neither selects the other, and a run declares both/i);
   });
 
+  // QFAI:AC-0001-0004-02
   // QFAI:EX-0001-0004-03
   // QFAI:EX-0001-0004-04
   // QFAI:EX-0001-0004-05
@@ -111,6 +117,7 @@ describe("governance inside a run", () => {
     expect(text).toMatch(/outside a run, Stage 0 runs in full at every stage start/i);
   });
 
+  // QFAI:AC-0001-0175-02
   // QFAI:EX-0001-0175-02
   it("maps each autopilot bucket to the authorization that satisfies it, and --auto to none", async () => {
     const text = await passage(OPERATING, "## Default Autopilot Policy inside a run");
@@ -124,6 +131,7 @@ describe("governance inside a run", () => {
     expect(text).toMatch(/`--auto` satisfies nothing/i);
   });
 
+  // QFAI:AC-0001-0175-03
   // QFAI:EX-0001-0175-03
   it("counts the run's flow binding as the supplied flow, and stops a direct call with none", async () => {
     const text = await passage(OPERATING, "## Default Autopilot Policy inside a run");
@@ -133,6 +141,7 @@ describe("governance inside a run", () => {
     expect(text).toMatch(/a direct invocation with no flow it can resolve stops at preflight/i);
   });
 
+  // QFAI:AC-0001-0169-04
   // QFAI:EX-0001-0169-04
   it("carries the actor history and never counts an author as its own reviewer", async () => {
     const text = await passage(DELEGATION, "### Actor history in a run");
@@ -143,6 +152,7 @@ describe("governance inside a run", () => {
     expect(text).toMatch(/no required reviewer is dropped to save tokens/i);
   });
 
+  // QFAI:AC-0001-0169-05
   // QFAI:EX-0001-0169-05
   it("limits grilling in a run to the remaining frontier and invokes no qfai-grill", async () => {
     const text = await passage(DELEGATION, "### Grilling in a run");
@@ -158,6 +168,7 @@ describe("governance inside a run", () => {
     expect(rowOf(remit, "`/qfai-run`")).toMatch(/it writes no artifact/i);
   });
 
+  // QFAI:AC-0001-0002-02
   // QFAI:EX-0001-0002-12
   it("appends no change request for a bugfix that changes no protected file", async () => {
     const drift = flat(await readShipped("rule/drift-protocol.md"));

@@ -17,6 +17,7 @@ async function section(heading: string): Promise<string> {
 }
 
 describe("qfai-implement in a workflow run", () => {
+  // QFAI:AC-0001-0207-01
   // QFAI:EX-0001-0207-01
   it("works only the work order's examples and hands over a request with no work order", async () => {
     const entry = await section("## Entry check");
@@ -26,6 +27,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(entry).toMatch(/then does only that work order's work/i);
   });
 
+  // QFAI:AC-0001-0207-03
   // QFAI:EX-0001-0207-03
   it("takes the flow from the work order's target and asks nothing about it", async () => {
     const text = await section("## The bound flow");
@@ -36,6 +38,7 @@ describe("qfai-implement in a workflow run", () => {
     );
   });
 
+  // QFAI:AC-0001-0207-04
   // QFAI:EX-0001-0207-04
   it("resumes at the checkpoint example and records no progress state of its own", async () => {
     const text = await section("## Resuming a long stage");
@@ -44,6 +47,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/the phase order of `SKILL\.md` is unchanged on resume/i);
   });
 
+  // QFAI:AC-0001-0207-05
   // QFAI:EX-0001-0207-05
   it("selects the next example from its own fresh flow-scoped validate", async () => {
     const text = await section("## The example selection");
@@ -53,6 +57,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/never taken from the snapshot/i);
   });
 
+  // QFAI:AC-0001-0207-06
   // QFAI:EX-0001-0207-06
   it("lands only the minimal seam and leaves the target test failing at its assertion", async () => {
     const text = await section("## `seam-only`");
@@ -76,6 +81,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/a reissued seam-only work order is served as a new attempt/i);
   });
 
+  // QFAI:AC-0001-0208-01
   // QFAI:EX-0001-0208-01
   it("changes no tracked file while diagnosing, and names its record as an artifact", async () => {
     const text = await section("## `diagnose-only`");
@@ -84,6 +90,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/named in `artifactRefs`, not in `changedFiles`/i);
   });
 
+  // QFAI:AC-0001-0208-02
   // QFAI:EX-0001-0208-02
   it("returns exactly one of four verdicts, the matched IDs and a reproduction record", async () => {
     const text = await section("## `diagnose-only`");
@@ -97,6 +104,7 @@ describe("qfai-implement in a workflow run", () => {
     );
   });
 
+  // QFAI:AC-0001-0208-03
   // QFAI:EX-0001-0208-03
   // QFAI:EX-0001-0208-04
   it("raises no change request for a diagnosed missing test, and one for every other scope gap", async () => {
@@ -111,6 +119,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(skill).toMatch(/where none does, `\/qfai-sdd` adds it/i);
   });
 
+  // QFAI:AC-0001-0209-01
   // QFAI:EX-0001-0209-01
   it("fixes a regression in production code only, leaving the example covered", async () => {
     const text = await section("## `regression-fix`");
@@ -121,6 +130,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/no `Change request:` row is appended and no evidence entry is removed/i);
   });
 
+  // QFAI:AC-0001-0209-02
   // QFAI:EX-0001-0209-02
   it("confirms a regression fix by the same test's GREEN re-run, with its receipt", async () => {
     const text = await section("## `regression-fix`");
@@ -131,6 +141,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/recorded in `\.qfai\/evidence\/implement-BF-NNNN\.md`/);
   });
 
+  // QFAI:AC-0001-0210-01
   // QFAI:EX-0001-0210-01
   it("keeps a test fix on the same annotated IDs, with a review and a re-run", async () => {
     const text = await section("## `test-fix`");
@@ -140,6 +151,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/recorded in `\.qfai\/evidence\/implement-BF-NNNN\.md`/);
   });
 
+  // QFAI:AC-0001-0210-02
   // QFAI:EX-0001-0210-02
   it("returns a test fix that changes what is checked as needs_repair for qfai-sdd", async () => {
     const text = await section("## `test-fix`");
@@ -147,6 +159,7 @@ describe("qfai-implement in a workflow run", () => {
     expect(text).toMatch(/with `qfai-sdd` as its `resolvingOwner`/i);
   });
 
+  // QFAI:AC-0001-0210-03
   // QFAI:EX-0001-0210-03
   it("takes a test fix whose first matched ID is an EX, and leaves a BF or an AC", async () => {
     const text = await section("## `test-fix`");
