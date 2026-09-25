@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
 title: QFAI SDD (Story Tree)
-description: "Triage requirements and write policy, business flows, stories, examples, and enforcing contracts."
+description: "Use when invoked by name or handed a QFAI work order. Triages requirements and writes policy, business flows, stories, examples and enforcing contracts."
 argument-hint: "[<BF-ID-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -27,6 +27,8 @@ mode: approval-gated
 ## /qfai-sdd
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 
