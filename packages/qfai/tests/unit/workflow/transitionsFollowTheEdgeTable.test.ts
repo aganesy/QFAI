@@ -70,7 +70,7 @@ function routingProposal(
     goal: "Return 404 for a missing export.",
     expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
     observedRefs: [],
-    affectedSpecIds: [],
+    affectedSpecIds: ["spec-0007"],
     riskSignals: [],
     unresolvedQuestions: [],
     newCapabilities,
@@ -204,7 +204,7 @@ it("TC-0018-0141 (TDD-0163): capture-request", () => {
 it("TC-0018-0141 (TDD-0164): plan-accepted", () => {
   expect(edge(acceptRouting("accepted", routingProposal()))).toEqual({
     state: "ready",
-    events: ["plan-accepted"],
+    events: ["plan-accepted", "binding-recorded"],
   });
 });
 

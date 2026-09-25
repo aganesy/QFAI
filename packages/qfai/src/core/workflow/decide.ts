@@ -38,7 +38,7 @@ export interface WorkflowEvent {
   resultRef?: string;
   stageInstanceId?: string;
   outcome?: string;
-  binding?: WorkflowBinding;
+  binding?: WorkflowBinding | { specId: string };
   plan?: WorkflowPlan;
   notRun?: WorkflowNotRun;
   seamRequest?: { targetTestId: string };
@@ -301,7 +301,8 @@ type ProposalRefusalReason =
   | "protected-surface"
   | "scope-escape"
   | "unresolved-approval"
-  | "stage-set";
+  | "stage-set"
+  | "spec-binding";
 
 interface ProposalRefusal {
   reason: ProposalRefusalReason;
@@ -631,6 +632,18 @@ function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[
   return [...new Set([...omittedAlways, ...omittedVerify, ...unknown])];
 }
 
+// The stages whose work orders bind no spec. Every other stage takes the bound spec as its target.
+const UNTARGETED_STAGES = ["route", "discussion", "maintenance", "verify"];
+
+// A proposal with no new capability binds the one spec it affects, when its plan needs a spec.
+function bindsAffectedSpec(proposal: WorkflowProposal, facts: WorkflowFacts): boolean {
+  const plan = proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
+  return (
+    proposal.newCapabilities.length === 0 &&
+    (plan?.stages ?? []).some((stage) => !UNTARGETED_STAGES.includes(stage.stageKind))
+  );
+}
+
 function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): WorkflowPlan | undefined {
   const builtIn = proposal.candidateRoute ? facts.plans?.[proposal.candidateRoute] : undefined;
   if (!builtIn || !proposal.goal || !Array.isArray(proposal.proposedWriteScope)) return undefined;
@@ -886,6 +899,9 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     const lifecycle = facts.specs?.[specId]?.lifecycle;
     return lifecycle !== undefined && lifecycle !== "active";
   });
+  // SIMPLIFIED: no observer supplies item references, so `broken-reference` fires only on facts
+  // a caller passes in.
+  // Lift when: the contract names where the item references inside a spec or contract are read.
   const brokenReferences = Object.entries(facts.itemReferences ?? {})
     .filter(([, resolution]) => resolution === "unresolved")
     .map(([reference]) => reference);
@@ -902,6 +918,12 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     ...refusalsOf("scope-escape", (proposal.proposedWriteScope ?? []).filter(escapesRoot)),
     ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
     ...refusalsOf("stage-set", stageSetGaps(proposal, facts)),
+    ...refusalsOf(
+      "spec-binding",
+      bindsAffectedSpec(proposal, facts) && (proposal.affectedSpecIds ?? []).length !== 1
+        ? ["affectedSpecIds"]
+        : [],
+    ),
   ];
 }
 
@@ -2665,8 +2687,6 @@ export function decide(
     return blockOnResult(run, result, "missing-capability");
   }
 
-  // SIMPLIFIED: this transition checks path references, capability shape and the built-in plan.
-  // Lift when: remaining proposal checks supply observer facts and plan rules.
   if (
     input.operation !== "accept" ||
     run.state !== "routing" ||
@@ -2743,9 +2763,18 @@ export function decide(
         events: [],
       };
     }
+    const specId = bindsAffectedSpec(proposal, facts) ? proposal.affectedSpecIds?.[0] : undefined;
+    const events: WorkflowEvent[] = [
+      { type: "plan-accepted", plan, settled },
+      ...(specId ? [{ type: "binding-recorded", binding: { specId } }] : []),
+    ];
     return {
-      verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + 1 }, plan },
-      events: [{ type: "plan-accepted", plan, settled }],
+      verdict: {
+        ok: true,
+        run: { ...run, state: "ready", sequence: run.sequence + events.length },
+        plan,
+      },
+      events,
     };
   }
 
