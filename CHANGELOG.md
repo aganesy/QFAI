@@ -12,6 +12,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The research-first protocol governs quotation and name lookups** (#2245).
+  A `best_practices` or `anti_patterns` description is now the analyst's own
+  indirect speech, with any phrase kept from the source marked as a quotation,
+  and the rule carries one worked example. Where a query centers on a name, the
+  name is searched as written, and recognizing it is no reason to skip that.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
