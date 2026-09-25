@@ -4,8 +4,10 @@
 
 The main branch gave the first six IDs below to the optional side artifact
 rules before this pack gave them to the work-log removal chain (DELTA-0001).
-Main keeps them, and the chain moves to the next free IDs (DR-0013-0017).
-Commit messages written before the merge still carry the old IDs.
+`CR-20260913-0012` allocated the test case IDs, and `CR-20260923-0010` gave
+`AC-0013-0028` the same meaning. Main keeps them, and the chain moves to the
+next free IDs. Commit messages written before the merge still carry the old
+IDs.
 
 | Old ID       | New ID       | Subject                                       |
 | ------------ | ------------ | --------------------------------------------- |
@@ -59,8 +61,6 @@ writes nothing beyond the Triage table and the stop report.
   drives this run, and re-deriving the other rows could raise a tier, which
   returns a `done` row to `todo` although this change does not touch it
   (DL-0009).
-- The duplicate headings AC-0013-0008..0010 (`QFAI-ID-002`) predate this
-  change and are left as they are.
 
 ## Update History
 

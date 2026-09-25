@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0001`
+- ID: `CR-20260924-0005`
 - Title: `The out-of-project refusal of init --force has no test case`
 - Raised by: `qfai-atdd`
 - Raised at: `2026-09-24T01:16:59Z`
@@ -11,6 +11,14 @@
 - Approved option: `-`
 - Applied at: `-`
 - Superseded by: `-`
+
+## Identifier
+
+This record was raised as `CR-20260924-0001`. The main branch gives that ID to
+the record retiring two repository skills, so this one is `CR-20260924-0005`.
+Records written before the change keep the old ID: commit messages, and the
+audited `TDD-0068` and `TDD-0070` sections of `.qfai/evidence/atdd-spec-0004.md`,
+whose evidence hashes an edit would break.
 
 ## Context
 

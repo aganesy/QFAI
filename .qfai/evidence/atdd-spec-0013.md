@@ -183,7 +183,7 @@ the Coverage Depth Matrix below.
 The original four rows were already `done`. The three new rows remain `todo`
 until the orchestrator writes their ledger cells after implementation gates.
 TDD-0110 through TDD-0115 became done after the first full CI checkpoint as
-TDD-0044 through TDD-0049. The merge renumbered them (DR-0013-0017), and they
+TDD-0044 through TDD-0049. The merge renumbered them (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"), and they
 are `todo` until they are completed again.
 
 | TDD-ID     | Obligation      | Layer       | RED provenance | Status |
@@ -638,7 +638,7 @@ its revision is a separate stage-wide obligation.
 
 ### TDD-0110
 
-- Renumbered: `TDD-0044` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0044` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0110
 - Layer: Integration
@@ -935,7 +935,7 @@ AssertionError: expected { decision: false, …(1) } to deeply equal { decision:
 
 ### TDD-0112
 
-- Renumbered: `TDD-0046` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0046` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0112
 - Layer: Integration
@@ -1188,7 +1188,7 @@ AssertionError: expected [ '## Work-log entries' ] to deeply equal []
 
 ### TDD-0113
 
-- Renumbered: `TDD-0047` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0047` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0113
 - Layer: Integration
@@ -1430,7 +1430,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 
 ### TDD-0114
 
-- Renumbered: `TDD-0048` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0048` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0114
 - Layer: Integration
@@ -1703,7 +1703,7 @@ AssertionError: expected [ Array(1) ] to deeply equal []
 
 ### TDD-0111
 
-- Renumbered: `TDD-0045` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0045` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0111
 - Layer: Integration
@@ -2092,7 +2092,7 @@ AssertionError: expected [ 'SKILL.md: do not enter Phase 0' ] to deeply equal []
 
 ### TDD-0115
 
-- Renumbered: `TDD-0049` before the merge (DR-0013-0017). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
+- Renumbered: `TDD-0049` before the merge (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"). The rounds below were recorded under the old IDs and test titles, shown here mapped. They are history: the row is `todo` again.
 
 - TDD-ID: TDD-0115
 - Layer: Integration
@@ -2676,7 +2676,7 @@ The three new rows have live P1d falsifiability PASS and focused GREEN. Their
 full checkpoint, review pack and completion verdict remain pending.
 
 TDD-0110 through TDD-0115 held a per-row PASS as TDD-0044 through TDD-0049. The
-renumbering returned them to `todo` (DR-0013-0017), so that verdict is history
+renumbering returned them to `todo` (`.qfai/specs/spec-0013/09_delta.md`, "Renumbering after the merge"), so that verdict is history
 until they are completed again.
 
 ## First full CI checkpoint

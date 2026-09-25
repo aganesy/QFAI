@@ -63,7 +63,7 @@ run is its approved action 2.
   refusal to write outside the project is a safety-floor `⚠️` cell this change
   did not create. The user chose to add its test through a Change Request, and
   spec-0003's ATDD is reported not PASS on that cell until it lands. The
-  Change Request is `CR-20260924-0001`, open.
+  Change Request is `CR-20260924-0005`, open.
 - **Row numbers.** After the merge of main, this change's spec-0003 rows are
   `TDD-0094` … `TDD-0099`. S1's decisions name them by their earlier numbers
   (`TDD-0092` … `TDD-0097`): D7's `TDD-0095` is now `TDD-0097`, and D10's
@@ -3172,7 +3172,7 @@ Recorded per row under `## Ledger rows advanced`.
 - `TDD-0097`'s RED cannot tell whether the plain run or the `--force` run changed the
   directory; the plain run alone does on this tree. The planned Oracle proof, which seeds
   only under `--force`, is what shows the row checks the `--force` run.
-- The `BR-0003-0009` safety-floor cell (S1 D13) is raised as `CR-20260924-0001` (open).
+- The `BR-0003-0009` safety-floor cell (S1 D13) is raised as `CR-20260924-0005` (open).
   spec-0003's ATDD is not PASS on that cell until it lands.
 - Checkpoint departure (user decision, see Decisions made): no full-suite checkpoint runs
   per row. All rows' full-suite checkpoints close together on the final head's CI.

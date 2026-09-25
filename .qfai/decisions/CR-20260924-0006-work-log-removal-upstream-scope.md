@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260924-0002`
+- ID: `CR-20260924-0006`
 - Title: `work-log removal updates its upstream contracts and decisions`
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-24`
@@ -11,6 +11,12 @@
 - Approved option: `1`
 - Applied at: `2026-09-24`
 - Superseded by: `-`
+
+## Identifier
+
+This record was raised as `CR-20260924-0002`. The main branch gives that ID to
+the record splitting the CI acceptance boundaries, so this one is
+`CR-20260924-0006`. Commit messages written before the change keep the old ID.
 
 ## Context
 
