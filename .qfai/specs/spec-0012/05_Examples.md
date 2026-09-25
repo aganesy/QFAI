@@ -654,3 +654,10 @@
 - Given `.qfai/evidence/prototyping/prototyping.json` recording `stopReason: "max-iterations"` and `acceptedIterationIndex: null`,
 - When `qfai prototyping iterate --check-convergence` runs without `--cycle`,
 - Then it reports cycle 9, `stopReason: max-iterations` and `acceptedIterationIndex: null`, prints `Not converged` with the reason, exits 2, and leaves `prototyping.json` byte-for-byte unchanged. The same run against a record of `stopReason: "converged"` and `acceptedIterationIndex: 3` prints `Converged` and exits 0.
+
+## EX-0012-0190: A Teardown That Rejects At Cycle End
+
+- BR-Ref: BR-0012-0068
+- Given a server runner whose teardown rejects with `Error: port 3000 still bound`,
+- When `iterate --auto-serve` completes a cycle that would otherwise exit 0,
+- Then stdout carries `qfai prototyping iterate --auto-serve: teardown failed (Error: port 3000 still bound)`, and iterate exits 0.

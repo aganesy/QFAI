@@ -423,3 +423,9 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - `--check-convergence` MUST read `.qfai/evidence/prototyping/prototyping.json`, and MUST NOT write a file, launch Playwright or start a cycle. It does not require `--target-url`.
 - `--cycle` MAY be omitted under `--check-convergence`, and then defaults to 9. A `--cycle` given is reported back and does not change what is read.
 - Converged means `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer. That state exits 0. Every other state exits 2 and names why: `max-iterations`, `license-verify-fail`, `input-error`, no terminal state yet, a `converged` record with no accepted iteration, or no readable `prototyping.json`.
+
+## BR-0012-0068: a failed `--auto-serve` teardown is reported, not raised
+
+- AC-Refs: AC-0012-0084
+- When the teardown the server runner returns rejects, iterate MUST print `qfai prototyping iterate --auto-serve: teardown failed (<reason>)` on stdout, `<reason>` being the rejection's reason.
+- The rejection MUST NOT change the exit code: iterate returns what the cycle returned.

@@ -338,3 +338,9 @@ is declared.
 - `record:unchecked`, `TDD-0575`, Round 2: the Test 6b rewrite was made inside the `/qfai-implement` run rather than through a `/qfai-atdd` handback, and the round was opened as Round 2 rather than recorded as a test-only replacement. The rewrite moved the predicate to `main.ts:398`, which the same-mutation replacement path does not cover.
 - `record:unchecked`, all thirteen rows of the run, Round 1: the RED gates were taken after the mutations were reverted and the ledger had moved; qa-gatekeeper rebuilt each mutated tree from its recorded address and edit.
 - `record:unchecked`, `TDD-0575`, Round 1 attempt 1: its review pack `review-20260923140010000` was overwritten by the attempt-2 pack of `TDD-0514`, whose name was computed from the same number. The `TDD-0514` pack moved to `review-20260923140030000`, and the `TDD-0575` attempt-1 pack was rebuilt from the same two reviewer responses; its seal changed with the new `created_at`.
+
+Open entries from the reviews of the `/qfai-implement` run started
+2026-09-24T02:32:49.865Z. Each is repaired in place before spec-0012 completion
+is declared.
+
+- `record:unchecked`, `TDD-0577`, Round 1: the row-level `qa-gatekeeper: PASS` line does not name the attempt, round and trees its one attempt covered — the RED gate on the rebuilt mutated tree and the build-phase GREEN at 79af8ad63. That is written only in the `qa-gatekeeper attempts` line. The gate ran after the ledger had already moved to `green` and `refactor`.

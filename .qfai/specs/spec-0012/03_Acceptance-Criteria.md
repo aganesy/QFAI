@@ -575,6 +575,15 @@
 - And every other state, including a missing or unreadable `prototyping.json`, MUST exit 2 and print the reason.
 - And the run MUST write nothing and MUST NOT start a cycle.
 
+## AC-0012-0084: A failed `--auto-serve` teardown is reported and leaves the exit code alone
+
+- US-Refs: US-0012-0126
+- REQ-Refs: REQ-0012-0062
+- Given `qfai prototyping iterate --auto-serve` whose server runner returns a teardown that rejects,
+- When the cycle ends and iterate invokes that teardown,
+- Then iterate MUST print a line on stdout naming the `--auto-serve` teardown as what failed, with the rejection's reason.
+- And iterate MUST return the exit code the cycle would have returned had the teardown resolved.
+
 ## Completion Gate
 
 - `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.

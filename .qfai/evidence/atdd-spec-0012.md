@@ -77,6 +77,8 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
 - `TDD-0571`'s test fails on its own `Promise.race` error, `teardown exceeded 2s budget`, and not on an assertion.
   Its one assertion, `elapsed < 2000`, runs only when the teardown resolves before the race timer, so no mutation can fail it without timing luck.
   `CR-20260923-0014` accepts that error as the statement of the bound.
+- The `TDD-0577` test runs the same cycle twice, with a teardown that resolves and with one that rejects, and compares the exit codes.
+  The case asks for the exit code a resolving teardown gives, so the test measures it rather than assuming it.
 
 ## Work performed (what changed, where)
 
@@ -117,6 +119,10 @@ spec-0012 rev11 で追加された acceptance obligations を runnable ATDD に�
   - The two block (3) tests no longer carry `QFAI:SPEC-0012:TC-0012-0484`.
 - `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
   - Block (4) no longer carries `QFAI:SPEC-0012:TC-0012-0485`.
+- `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`
+  - New file. One case: a rejected `--auto-serve` teardown is reported on stdout and leaves the exit code alone (`TC-0012-0490`, `TDD-0577`).
+- `packages/qfai/tsconfig.tests.json`
+  - Enumerates the new test file.
 
 ## Commands executed + key outputs
 
@@ -204,6 +210,25 @@ Preflight: session opened
 | S2 | adopted | 2026-09-23T22:31:48Z | da96f2d57cf5ee5ffb422dedb2269c27fa7b7143 | 2026-09-23T22:31:49Z | the two mutations the TDD-0514 handover names mask each other when applied together | empty | none in flight | 1 | 0 | 0 |
 | S3 | adopted | 2026-09-23T22:36:51Z | da96f2d57cf5ee5ffb422dedb2269c27fa7b7143 | 2026-09-23T22:37:41Z | the test cases of the unit rows TDD-0516 and TDD-0517 each state several boundaries | empty | none in flight | 2 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-24T01:49:59.342Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260924-0001` fixes the row, its case, its boundary
+and the example value the case uses. The work order put the test in a new file
+rather than in the file the case's `Test file` line names; that line is
+recorded under Gaps / Open risks.
+
+### /qfai-implement — run started 2026-09-24T02:32:49.865Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260924-0001` fixes the row, its case and its
+boundary, the `/qfai-atdd` handover names the predicate and the mutation, and
+`CR-20260924-0002` points the case at the file that holds its test. The named
+line holds the named call at this revision, and nothing surfaced during the run
+that the spec, the change requests or the handover leave open.
+
 ## Ledger rows advanced
 
 This run takes up the rows `CR-20260923-0002` owes, as `CR-20260923-0004`
@@ -213,6 +238,9 @@ every row takes branch 2. The mutations are production code, and
 
 The run started 2026-09-23T08:46:59.499Z adds the three rows `CR-20260923-0008` splits
 `TC-0012-0462` into, on the same branch.
+
+The run started 2026-09-24T01:49:59.342Z adds `TDD-0577`, which `CR-20260924-0001`
+seeds on `TC-0012-0490`, on the same branch.
 
 | TDD-ID | Obligation | Layer | RED provenance | Entry |
 | ------ | ---------- | ----- | -------------- | ----- |
@@ -255,6 +283,7 @@ row's tests fail and to see which other rows fail with them. The runs covered
 the case's Test files and every other file that exercises the same code, listed
 under `## Execution logs`. `/qfai-implement` Phase Red step 3c takes the recorded
 runs.
+| `TDD-0577` | `TC-0012-0490` | Integration | falsifiability | [TDD-0577](#tdd-0577) |
 
 ### TDD-0469
 
@@ -2346,6 +2375,110 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 - Checkpoint verification revision: cd95d9abfa8f0975ac61a3dbd8b9f85ffa83697d
 - Checkpoint verification seal: 60f7209cf2387cb5916af472e9d68f116fa462cc0c9e4138daa2ad3ef90d4422
 
+### TDD-0577
+
+- TDD-ID: TDD-0577
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+- Selector: reports a rejected auto-serve teardown on stdout and keeps the exit code of a resolving teardown
+- TC-ref: TC-0012-0490
+- Branch: falsifiability — `teardownOnce` already catches a rejected teardown and reports it on stdout, and the change request changed no product code, so the case passed on its first run
+- Predicate to break: packages/qfai/src/cli/commands/prototypingIterate.ts:1278, the `catch` in `teardownOnce` — `` warn(`qfai prototyping iterate --auto-serve: teardown failed (${String(cause)})`); ``, the line that reports a rejected teardown
+- Mutation: delete line 1278, leaving the `catch` empty
+- Why it fails: the rejection is still caught, so the teardown is still called once and iterate still returns 0, but stdout carries no `teardown failed` line.
+  `expect(teardownFailureLines(rejected.stdout)).toEqual([...])` fails as an assertion
+- Other rows: every other auto-serve case uses a teardown that resolves, so the `catch` body never runs there. Under the mutation, `prototypingIterate.autoServe.test.ts`, `prototypingIterate.autoServe.sigint.test.ts` and `prototypingIterate.cliAutoServe.test.ts` pass: Test Files 3 passed (3); Tests 24 passed (24)
+- Note: changing `warn(` to `error(` on line 1278 also fails this case at the same assertion, because the line then goes to stderr. It moves the report rather than removing it, so it is not this row's proof
+
+The case runs `runPrototypingIterate` twice with `autoServe: true` and an
+injected runner, each time on a fresh tree: once with a teardown that resolves,
+and once with one that rejects with `Error: port 3000 still bound`, the value
+`EX-0012-0190` uses. Stdout is captured through `tests/helpers/stdout.ts`.
+
+| Clause | Observation |
+| ------ | ----------- |
+| The teardown ran and rejected | `rejected.teardownCalls` is 1 |
+| A line on stdout names the `--auto-serve` teardown and the reason | The only stdout line containing `teardown failed` is `qfai prototyping iterate --auto-serve: teardown failed (Error: port 3000 still bound)`, and the resolving run prints none |
+| The exit code is the one a resolving teardown gives | `rejected.exit` equals `resolved.exit`, and is 0 |
+
+The selector holds no regular-expression metacharacter. The `-t` pattern below
+escapes its `-` as the other entries do.
+
+- First-run command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
+- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed (1)
+- Mutation trial command: the same command, with line 1278 of `packages/qfai/src/cli/commands/prototypingIterate.ts` deleted
+- Mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts:150:51`
+- Restored GREEN command: the same command, after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed (1)
+
+The trial shows the mutation discriminates. It is not the row's falsifiability
+trio: `/qfai-implement` Phase Red step 3c applies the mutation, records the
+`Round 1:` fields and routes `qa-gatekeeper` while it is in the tree.
+
+- RED test hash: 297dba1fdd4ccaf18eb931b2a0d8b6a877da2dcddf0d65c7c56653800e5e248e
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+```
+
+#### Shared-artifact re-verify
+
+None. The test file is new and `tests/helpers/stdout.ts` is read unchanged, so
+no recorded `RED test hash` moves.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/prototypingIterate.ts, `runPrototypingIterate`, the `catch` in `teardownOnce` — the `warn(...)` at line 1278 that reports a rejected teardown on stdout
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts:150:51`
+
+The edit, line 1278 deleted and the `catch` left empty:
+
+```diff
+     } catch (cause) {
+-      warn(`qfai prototyping iterate --auto-serve: teardown failed (${String(cause)})`);
+     }
+```
+
+- Round 1: Falsifiability revision: working-tree+1c8af7d6aaa95b24c0583cd1b607f3192a179fd79c73d01a32ba37c0251cb1f2
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 297dba1fdd4ccaf18eb931b2a0d8b6a877da2dcddf0d65c7c56653800e5e248e
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+```
+
+- Round 1: Revision: 3f1fc99036e3cf19a59c127776299260ac13acff
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "reports a rejected auto\-serve teardown on stdout and keeps the exit code of a resolving teardown"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 3f1fc9903 + the prototypingIterate.ts:1278 deletion; it matches working-tree+1c8af7d6…; the selector fails as an assertion at autoServeTeardownFailure.test.ts:150:51; RED test hash 297dba1f… recomputes; the mutation stays inside teardownOnce; GREEN 1/1 and whole file 1/1 at 79af8ad63. Gate taken after the revert, on the rebuilt tree
+
+- Spec review: PASS
+- Spec reviewed revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- Spec audited evidence hash: 85edfaa56dcea82fda4fea6e806ac1e82a69e3b7c1ecb563e4b3a1e868b1319d
+- Spec review pack: .qfai/review/review-20260925100000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 11ceb0a6ff3bea7936c58b4c04821785e9c8545a4af7282c5538f8babf76f068
+- Code quality review: PASS
+- Code quality reviewed revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- Code quality audited evidence hash: 85edfaa56dcea82fda4fea6e806ac1e82a69e3b7c1ecb563e4b3a1e868b1319d
+- Code quality review pack: .qfai/review/review-20260925100000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 11ceb0a6ff3bea7936c58b4c04821785e9c8545a4af7282c5538f8babf76f068
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
+- Checkpoint verification seal: 93b2f31b78b3abbd921babc281dfb84dd7c1d001f2e2a362309863edc4052abe
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -2368,6 +2501,7 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 | `TC-0012-0485` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts` | D3 | Parses `--auto-serve` on and off, runs iterate with no runner injected on a free port and checks the one listen and the teardown, and bounds the default runner's teardown at 2000 ms. One row per boundary: `TDD-0515`, `TDD-0570`, `TDD-0571`. That iterate calls no runner without the flag is `TDD-0469`'s |
 | `TC-0012-0488` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts` | D3 | Peeks converged, negative-index, `max-iterations`, `license-verify-fail` and missing records, the given and the default cycle, and checks the peek writes nothing. One row per boundary: `TDD-0497`, `TDD-0572` to `TDD-0576` |
 | `US-0012-0143` | E2E | `packages/qfai/tests/e2e/spec0012PrototypingRemediationE2E.test.ts` | D3 | Runs the peek through the CLI entry point without `--cycle` against a `max-iterations` record and a `converged` one, and checks the exit codes, the reported state and that no file changed. `TDD-0567` |
+| `TC-0012-0490` | Integration | `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts` | D3 | Runs `runPrototypingIterate` with an injected runner twice, with a teardown that resolves and with one that rejects, and checks the stdout line naming the `--auto-serve` teardown and the reason, and that the two exit codes match. Ledger row `TDD-0577` |
 
 ## Coverage obligations checklist
 
@@ -2498,6 +2632,27 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.checkConvergence
 | 64 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: TDD-0514 review-fix, no new production behaviour: the `--profile sdd` case for `QFAI-TDDLIST-022`, two unit cases, and refactor verify | #tdd-0514; the attempt-1 `REVISE` of `implementation-reviewer` | the path taken on `Round 1: reviewer verdict (attempt 1)`, a refreshed `Refactor verify`; commit `c505a4bc1`; the row is at `refactor` | PASS |
 | 65 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: TDD-0575 review-fix Round 2: Test 6b through the CLI entry point, falsifiability run on `main.ts:398`, restored GREEN and refactor verify | #tdd-0575; the attempt-1 `REVISE` of `implementation-reviewer` | Round 2; commit `c505a4bc1`; the row is at `refactor` | PASS |
 | 66 | acceptance-test-engineer | acceptance-test-engineer | /qfai-implement: shared-artifact re-verify of the five `done` rows on `prototypingIterate.checkConvergence.test.ts` | #tdd-0575; the entries of `TDD-0497`, `TDD-0572`, `TDD-0573`, `TDD-0574`, `TDD-0576` | `#### Shared-artifact re-verify` under #tdd-0575, one record per row; each fails under its recorded mutation and passes restored | PASS |
+
+### Rows for the run started 2026-09-24T01:49:59.342Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 38 | acceptance-test-engineer | acceptance-test-engineer | Write the `TC-0012-0490` test for `TDD-0577` | CR-20260924-0001, 06_Test-Cases.md `TC-0012-0490`, 05_Examples.md `EX-0012-0190` | `prototypingIterate.autoServeTeardownFailure.test.ts`; `tsconfig.tests.json` | PASS |
+| 39 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0577` on the falsifiability branch | the test file, `prototypingIterate.ts` | #tdd-0577 | PASS |
+| 40 | acceptance-test-engineer | acceptance-test-engineer | Add `TC-0012-0490` to the Coverage Depth Matrix | 06_Test-Cases.md | #coverage-depth-matrix | PASS |
+| 41 | - | n/a | grilling(-@2026-09-24T01:49:59.342Z/none): none | - | - | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-24T02:32:49.865Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 42 | - | n/a | grilling(-@2026-09-24T02:32:49.865Z/none): none | - | - | PASS |
+| 43 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 falsifiability run with line 1278 deleted, then the revert and the restored GREEN | #tdd-0577, `prototypingIterate.ts` | Round 1 | PASS |
+| 44 | backend-engineer | backend-engineer | /qfai-implement: TDD-0577 refactor verify on the committed tree | #tdd-0577 | Refactor verify fields | PASS |
+| 45 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0577 RED phase gate on the rebuilt falsifiability tree | #tdd-0577 | qa-gatekeeper fields | PASS |
+| 46 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0577 completion review, attempt 1 | #tdd-0577 | review-20260925100000000 <!-- qfai:not-a-citation --> | PASS |
+| 47 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0577 code review, attempt 1 | #tdd-0577 | review-20260925100000000 <!-- qfai:not-a-citation --> | PASS |
+| 48 | orchestrator | orchestrator | /qfai-implement: TDD-0577 checkpoint verification, off a checkpoint boundary | #tdd-0577 | Checkpoint verification fields | PASS |
 
 ## Execution logs
 
@@ -2683,6 +2838,37 @@ twelve rows this run hands over, each `todo` while a test carries its case. The
 guard reads the case, not the test, so the annotations this run removed do not
 move it. The rows leave it as `/qfai-implement` advances them.
 
+### Checks for the run started 2026-09-24T01:49:59.342Z
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts -t "<Selector>"
+  TDD-0577   Tests 1 passed (1)
+node scripts/pin-stage-evidence-counts.mjs                               -> already current; nothing to write
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  no finding names TC-0012-0490 or TDD-0577, and no QFAI-ATDD-112 is reported
+node scripts/check-dogfood-backlog.mjs --profile tdd                     -> 956 errors, all within the pinned backlog
+node scripts/check-dogfood-backlog.mjs --profile full                    -> 975 errors, all within the pinned backlog
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json                    -> exit 0
+eslint and prettier --check on the test file and tsconfig.tests.json     -> exit 0
+```
+
+The build ran before `validate`, and `.qfai/report` was restored after each
+run. `tsconfig.tests.json` enumerates the new test file, so the `tsc` run above
+checks it directly.
+
+### Checks for the /qfai-implement run started 2026-09-24T02:32:49.865Z
+
+```text
+pnpm -C packages/qfai build                                              -> exit 0
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --format text
+  no finding names TDD-0577 or TC-0012-0490
+node scripts/check-dogfood-backlog.mjs --profile tdd                     -> 956 errors, all within the pinned backlog
+node scripts/check-dogfood-backlog.mjs --profile full                    -> 975 errors, all within the pinned backlog
+node scripts/pin-stage-evidence-counts.mjs                               -> already current; nothing to write
+```
+
+`.qfai/report` was restored after each run.
+
 ## Gaps / Open risks
 
 - `QFAI-TDDLIST-008` on `TDD-0561` clears when `TDD-0515`'s entry, which holds the re-verify, is a completed, reviewed item.
@@ -2696,6 +2882,7 @@ move it. The rows leave it as `/qfai-implement` advances them.
 - `completion-reviewer` は内容面を PASS としたが、4ファイルがまだ未コミットである点を merge 前の手続き上の注意として指摘した。
 - `TC-0012-0276` の ordering assertion は string index ベースで、実装の大幅な整形変更には比較的弱い。
 - source-inspection 型 ATDD はこの repo の既存パターンに整合するが、runtime behavior を直接実行するテストではないため rationale を残す。
+- Resolved by `CR-20260924-0002`: `TC-0012-0490` named `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts` in its `Test file` line while its test is in `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`. The change request points the line at `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardownFailure.test.ts`, which keeps the `RED test hash` of the four `done` rows whose manifest names the other file.
 
 ## Final status (PASS/FAIL) + who confirmed
 
