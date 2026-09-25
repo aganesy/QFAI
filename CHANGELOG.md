@@ -104,6 +104,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   response was also compared as raw text, so `sha256:<hex>` failed against the
   row's bare hex. It is now compared with the prefix and case removed, as the
   gate's other hash checks already were.
+- **Two `/qfai-implement` references agree with the gate and with the
+  `Layer` split** (#2420). The review-artifact layout asked for the round's
+  ids as a list and also for one `TDD-ID` appearing exactly once in
+  `review_request.md`. It now names the `## TDD IDs` list the gate reads, one
+  `- TDD-NNNN` bullet per id, and the single `TDD-ID:` line the gate accepts
+  in its place. The `plan` phase sent every `test-design-analyst` finding to
+  `implement-<spec-id>.md`. A finding now goes to the evidence file its row's
+  `Layer` owns, so an `E2E`, `API` or `Integration` row's finding goes to
+  `atdd-<spec-id>.md`. A finding about a missing row goes to every evidence
+  file the invocation's rows own.
 - **A ledger row that owes a test case and names none is reported**
   (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
   holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as

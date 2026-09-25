@@ -153,6 +153,31 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     expect(detail).toContain("QFAI-ATDD-111");
   });
 
+  it("records the analyst's findings in the evidence file each row's Layer owns", async () => {
+    // The skill splits evidence by `Layer`: an `E2E`, `API` or `Integration`
+    // row records in `atdd-<spec-id>.md`. Sending every finding to
+    // `implement-<spec-id>.md` named a different file for an invocation whose
+    // rows are all Integration.
+    const reference = rel.replace(/SKILL\.md$/, "references/plan-phase.md");
+    const detail = unwrap(await readFile(path.join(repoRoot, reference), "utf-8"));
+    expect(detail).toContain(
+      "records each finding in the evidence file that owns the row it names, by that row's `Layer`",
+    );
+    expect(detail).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
+    expect(detail).toContain(
+      "A finding that names no row — a missing one — goes in **every evidence file this invocation's rows own**",
+    );
+    expect(detail).toContain(
+      "record in every evidence file this invocation's rows own that the routing predates this contract",
+    );
+    expect(detail).not.toContain("Record the findings in `.qfai/evidence/implement-<spec-id>.md`");
+    // The rule it defers to is the one the skill body states.
+    const body = unwrap(await readFile(path.join(repoRoot, rel), "utf-8"));
+    expect(body).toContain("**every evidence file this invocation's rows own**");
+  });
+
   it("routes around a preserved `failed-agents-only` manifest", async () => {
     // `init --force` keeps `assistant/manifest/**`, so an installed project can
     // take this file without the routing change it documents. The phase has to
