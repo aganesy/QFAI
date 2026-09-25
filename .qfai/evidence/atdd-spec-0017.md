@@ -343,6 +343,19 @@ handover.
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-25T03:01:06.945Z | 0a49a497103316797e59b018f72da1f0a809398f | 2026-09-25T03:02:10.000Z | preflight | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-implement — run started 2026-09-25T03:05:15.811Z
+
+Preflight: session opened
+
+The run takes `TDD-0062` by name from the handover above. The handover fixes
+the row, its selector and the mutation. Two things were open: which round the
+cycle writes into, and when the ledger moves relative to the RED gate, which
+this run does not route.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T03:05:50.000Z | 7937fad2121f5174c479fa1eefcc4cb9f3d494e3 | 2026-09-25T03:06:10.000Z | preflight | empty | none in flight | 2 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 13 tests across 8
@@ -2009,6 +2022,47 @@ packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 
 None. No test file or helper changed, so no recorded `RED test hash` moves.
 
+#### Round 2
+
+The cycle `CR-20260924-0002` opened. Round 1 describes the row before the
+change request split it.
+
+- Round 2: Satisfied-by: .github/workflows/release.yml, the `gate-tests` job's `strategy.matrix.slice` list at line 515 — one of the four sliced jobs `TC-0017-0062` requires to name the runner projects
+- Round 2: Falsifiability command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: release.yml#gate-tests: expected [ 'cli', 'core', 'e2e', …(3) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ]` at `tests/integration/spec0017SliceAlignment.test.ts:19:73`; the received list lacks `scripts`
+
+The edit, line 515 of `.github/workflows/release.yml`:
+
+```diff
+       matrix:
+-        slice: [core, validators, integration, e2e, cli, unit, scripts]
++        slice: [core, validators, integration, e2e, cli, unit]
+```
+
+- Round 2: Falsifiability revision: working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60
+- Round 2: RED failure mode: falsifiability
+- Round 2: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- Round 2: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+The revision above was computed with the mutation in the tree, on top of
+`7937fad2121f5174c479fa1eefcc4cb9f3d494e3`. The mutation was reverted with
+`git checkout -- .github/workflows/release.yml` after the run. The RED gate
+(`qa-gatekeeper`) has not been routed on it yet; it can rebuild the mutated
+tree from that commit and the edit above.
+
+- Round 2: Revision: 7937fad2121f5174c479fa1eefcc4cb9f3d494e3
+- Round 2: GREEN command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after the revert, on the tree at that revision
+
+- Refactor verify command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts (run from `packages/qfai`)
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Run on the committed tree
+- Refactor verify revision: 7937fad2121f5174c479fa1eefcc4cb9f3d494e3
+
 ### TDD-0069
 
 - TDD-ID: TDD-0069
@@ -2314,6 +2368,24 @@ the review-phase gates were not run here and are recorded as `PENDING`.
 | 26 | acceptance-test-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T02:54:38.996Z/agents): write a new handover for this cycle and keep the split run's record verbatim in a fence | #tdd-0062, `qfai-implement` Phase Red step 3b | #tdd-0062; that record names the branch but not the row's selector, prefixes only part of its trio and records no edit, so step 3b could not verify it; deleting it would drop an observation; no position disagreed | PASS |
 | 27 | completion-reviewer | not routed | review: completion gate for this run | #tdd-0062, this block | - | PENDING |
 | 28 | qa-gatekeeper | not routed | review: evidence gate for this run | #tdd-0062, this block | - | PENDING |
+
+### Rows for the /qfai-implement run started 2026-09-25T03:05:15.811Z
+
+The same agent ran this invocation inline. The plan-phase findings are in
+`implement-spec-0017.md`, under the heading for this run. The RED gate and the
+three review-phase gates were not run here.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 29 | delivery-planner | stage3-agent (inline) | plan: confirm the named handover of `TDD-0062` | tdd/test-list.md, #tdd-0062, `.qfai/decisions/CR-*.md` | implement-spec-0017.md, plan phase of this run: the row exists, is not `blocked`, carries no tier that needs a group; order is `TDD-0062` alone; no parallel dispatch | PASS |
+| 30 | test-design-analyst | stage3-agent (inline) | plan: coverage and layer ownership over the spec's whole obligation set | tdd/test-list.md, 06_Test-Cases.md, 02_User-stories.md, `.qfai/contracts/` | implement-spec-0017.md, plan phase of this run: no missing row, no row on an obligation its layer does not own, and the row's selector holds one boundary | PASS |
+| 31 | backend-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T03:05:15.811Z/agents): write the cycle into `Round 2` | #tdd-0062 | #tdd-0062; the split run's record is fenced, so `Round 1` is the highest live round and the next is `Round 2`; no position disagreed | PASS |
+| 32 | backend-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T03:05:15.811Z/agents): move the ledger to `refactor` in this run, in a commit of its own after the observations, before the RED gate has answered | the work order, `qfai-implement` Phase Red step 3c | tdd/test-list.md; the work order routes the RED gate after this run and asks for the row at `refactor`; the separate commit lets the orchestrator drop the move if the gate answers `REVISE`. Disagreeing position: step 3c writes `todo -> red` only on the gate's `PASS`, and the record defects of earlier runs name this ordering | PASS |
+| 33 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` step 3c mutation of `release.yml:515`, revert and restored GREEN | #tdd-0062 | Round 2 | PASS |
+| 34 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` refactor verify over the whole test file on the committed tree | #tdd-0062 | Refactor verify fields | PASS |
+| 35 | qa-gatekeeper | not routed | /qfai-implement: `TDD-0062` RED gate on the rebuilt falsifiability tree, and the build-phase GREEN | #tdd-0062 | - | PENDING |
+| 36 | completion-reviewer | not routed | /qfai-implement: `TDD-0062` completion review | #tdd-0062 | - | PENDING |
+| 37 | implementation-reviewer | not routed | /qfai-implement: `TDD-0062` code review | #tdd-0062 | - | PENDING |
 
 ## Execution logs
 
