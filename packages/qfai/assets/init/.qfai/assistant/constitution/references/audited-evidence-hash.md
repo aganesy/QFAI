@@ -252,6 +252,12 @@ one is absent from the checkout, as on a fresh clone, the gate checks the
 recorded fields and skips the recomputation
 (`../../skills/qfai-implement/references/review-artifact-layout.md`).
 
+**`npx qfai evidence hash` computes the three with the gate's own function.**
+`completion <evidence-file>#<TDD-ID>` prints the value the `Spec` and
+`Code quality` fields record, and `parity` the value the `Prototype parity`
+field records. Record what it prints. It covers the completion subjects
+only: the RED, GREEN and stage subjects are still taken by the four steps.
+
 **A T1 coherent group is one pass and several rows**
 (`../../skills/qfai-implement/references/volume-policy.md`).
 One hash over a representative would leave the other members' evidence free to

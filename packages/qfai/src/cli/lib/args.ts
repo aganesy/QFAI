@@ -190,6 +190,12 @@ export type ParsedArgs = {
     workflowRun?: string;
     /** `--in <path>` for `qfai workflow`: the payload file under `.qfai/runs/`. */
     workflowIn?: string;
+    /** Subcommand for `qfai evidence <hash>`. */
+    evidenceAction?: "hash";
+    /** The value `qfai evidence hash <kind>` prints. */
+    evidenceHashKind?: EvidenceHashKind;
+    /** The targets after the kind: an entry, a pack directory, or manifest paths. */
+    evidenceTargets: string[];
     help: boolean;
     /**
      * `--version` / `-V`: print the resolved tool version to stdout and
@@ -222,6 +228,30 @@ export const WORKFLOW_OPERATIONS = [
 ] as const;
 
 export type WorkflowOperation = (typeof WORKFLOW_OPERATIONS)[number];
+
+/**
+ * The values `qfai evidence hash` computes, each followed by what it reads:
+ * `<evidence-file>#<TDD-ID>` for the entry-scoped three, the pack directory
+ * for `review-pack`, and every manifest path, in order, for `red-test`.
+ */
+export const EVIDENCE_HASH_KINDS = [
+  "completion",
+  "parity",
+  "checkpoint",
+  "review-pack",
+  "red-test",
+] as const;
+
+export type EvidenceHashKind = (typeof EVIDENCE_HASH_KINDS)[number];
+
+/** What each kind takes after it, as the refusal names it. */
+const EVIDENCE_HASH_TARGETS: Readonly<Record<EvidenceHashKind, string>> = {
+  completion: "one <evidence-file>#<TDD-ID>",
+  parity: "one <evidence-file>#<TDD-ID>",
+  checkpoint: "one <evidence-file>#<TDD-ID>",
+  "review-pack": "one review pack directory",
+  "red-test": "one or more manifest paths",
+};
 
 /** Every spelling of the help flag the parser accepts. */
 const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
@@ -265,6 +295,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     validateSpecIds: [],
     reportSpecIds: [],
     sddAssumptions: [],
+    evidenceTargets: [],
     help: false,
     version: false,
     unknownFlags: [],
@@ -458,6 +489,36 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
+    }
+  }
+
+  // `qfai evidence hash <kind> <target>...` pulls the action, the kind and
+  // every target before the flag loop.
+  if (command === "evidence") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      if (candidate === "hash") {
+        options.evidenceAction = candidate;
+      } else {
+        markInvalid(subcommandReason("evidence", candidate));
+      }
+      args.shift();
+      const kindCandidate = args[0];
+      if (options.evidenceAction === "hash" && isSubcommandToken(kindCandidate)) {
+        const kind = EVIDENCE_HASH_KINDS.find((known) => known === kindCandidate);
+        if (kind) {
+          options.evidenceHashKind = kind;
+        } else {
+          markInvalid(
+            `qfai evidence hash: unknown kind "${kindCandidate}". Expected: ${EVIDENCE_HASH_KINDS.join("|")}`,
+          );
+        }
+        args.shift();
+        for (let target = args[0]; isPositionalToken(target); target = args[0]) {
+          options.evidenceTargets.push(target);
+          args.shift();
+        }
+      }
     }
   }
 
@@ -1169,6 +1230,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         if (arg?.startsWith("--")) {
           options.unknownFlags.push(arg);
           markInvalid(`qfai: unknown option: ${arg}`);
+        } else if (command === "evidence" && arg !== undefined) {
+          // A manifest path dropped here would print the hash of a shorter
+          // manifest than the one written, with nothing to say so.
+          markInvalid(`qfai evidence hash: ${arg} follows an option. Put every target before it.`);
         }
         break;
     }
@@ -1206,6 +1271,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid(subcommandReason("sdd", null));
   }
+  if (command === "evidence" && !options.help) {
+    const reason = evidenceHashArgumentsReason(options);
+    if (reason !== null) markInvalid(reason);
+  }
   // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
   // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
   // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
@@ -1225,8 +1294,19 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["handoff", "upgrade"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
+  ["evidence", "hash"],
   ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
+
+/** Why `qfai evidence hash` cannot run with these arguments, or `null`. */
+function evidenceHashArgumentsReason(options: ParsedArgs["options"]): string | null {
+  if (!options.evidenceAction) return subcommandReason("evidence", null);
+  const kind = options.evidenceHashKind;
+  if (!kind) return `qfai evidence hash: name a kind. Expected: ${EVIDENCE_HASH_KINDS.join("|")}`;
+  const count = options.evidenceTargets.length;
+  const fits = kind === "red-test" ? count > 0 : count === 1;
+  return fits ? null : `qfai evidence hash ${kind}: takes ${EVIDENCE_HASH_TARGETS[kind]}.`;
+}
 
 /**
  * サブコマンド欠落 / 不正の診断文を組み立てる。`value === null` は

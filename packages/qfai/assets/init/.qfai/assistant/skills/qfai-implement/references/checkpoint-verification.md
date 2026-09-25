@@ -553,6 +553,8 @@ whitespace from each line, remove leading/trailing blank lines, add one final ne
 lowercase SHA-256 of those bytes. Do not wrap this field-only seal in a file-path manifest record.
 A row recorded before its entry carried `Checkpoint verification revision` is recomputed over the
 latest round's `Revision`, the input it was sealed over.
+`npx qfai evidence hash checkpoint <evidence-file>#<TDD-ID>` prints the seal over the fields the
+entry records, as gate item 12 recomputes it. Record the fields first, then the value it prints.
 **A row between boundaries records the same three fields.** They are unconditional — gate item 12
 recomputes the seal on every row — so a row off a boundary cannot leave them empty and cannot
 invent a full-suite command it never ran. Nothing is re-run there, so

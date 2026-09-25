@@ -4,6 +4,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai evidence hash` prints the hashes the completion gate recomputes**
+  (#2413). It reads its inputs where the gate reads them and hashes them with
+  the gate's own functions, so a recorded value and the gate's recomputation
+  follow one procedure. It is read-only.
+
+  - `completion <evidence-file>#<TDD-ID>`: the `Spec` and `Code quality`
+    audited evidence hash.
+  - `parity <evidence-file>#<TDD-ID>`: the `Prototype parity` audited
+    evidence hash, over the captures the entry names.
+  - `checkpoint <evidence-file>#<TDD-ID>`: the `Checkpoint verification seal`
+    over the fields the entry records.
+  - `review-pack <pack-dir>`: a review pack seal.
+  - `red-test <path>...`: the `RED test hash` over the manifest's paths, in
+    its order.
+
+  A value it cannot compute is refused on stderr with exit 2, and nothing
+  reaches stdout. The references that define each value now cite the command.
+  The working-tree revision and the RED, GREEN and stage subjects have no
+  kind yet.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).

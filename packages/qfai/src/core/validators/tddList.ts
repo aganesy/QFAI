@@ -2137,6 +2137,131 @@ interface ReviewPackFile {
 }
 
 /**
+ * A value `qfai evidence hash` prints, or why there is none to print.
+ *
+ * Each producer below reads its inputs where the completion gate reads them
+ * and hashes them with the gate's own function, so a recorded value and the
+ * gate's recomputation cannot follow two procedures.
+ */
+export type EvidenceHash = { hash: string } | { refused: string };
+
+/** An evidence entry's `### <TDD-ID>` section, read as the completion gate reads it. */
+async function evidenceEntry(
+  root: string,
+  evidenceFile: string,
+  tddId: string,
+): Promise<{ file: string; section: string } | { refused: string }> {
+  const file = safeRepoRelativePath(evidenceFile);
+  if (file === null) return { refused: `${evidenceFile} is not a path inside the project` };
+  const filePath = path.join(root, ...file.split("/"));
+  if (!(await exists(filePath))) return { refused: `${file} does not exist` };
+  const index = markdownEvidenceIndex(await readSafe(filePath));
+  const section = index.sections.get(tddId.toLowerCase());
+  if (section === undefined) return { refused: `${file} has no ### ${tddId} heading` };
+  return { file, section };
+}
+
+/** The ledger column holding the obligation a row's `Layer` selects. */
+function obligationColumnFor(layer: string): string {
+  const normalized = layer.toLowerCase();
+  return normalized === "e2e" ? "US-Refs" : normalized === "api" ? "CON-API-Refs" : "TC-Refs";
+}
+
+/**
+ * The `Audited evidence hash` of a completion subject: the value
+ * `completion-reviewer` and `implementation-reviewer` record, or, with
+ * `withSurfaceArtifacts`, the one `product-surface-reviewer` records over the
+ * captures the entry's `Surface artifacts` manifest names.
+ *
+ * The obligation is read from the row's ledger, as the gate reads it, so the
+ * Coverage Depth Matrix slice is the one the gate takes.
+ */
+export async function completionAuditHash(
+  root: string,
+  specsRoot: string,
+  evidenceFile: string,
+  tddId: string,
+  withSurfaceArtifacts: boolean,
+): Promise<EvidenceHash> {
+  const entry = await evidenceEntry(root, evidenceFile, tddId);
+  if ("refused" in entry) return entry;
+  const specNumber = /-spec-(\d{4})\.md$/i.exec(entry.file)?.[1];
+  if (specNumber === undefined) {
+    return { refused: `${entry.file} is not an evidence file named <owner>-spec-NNNN.md` };
+  }
+  const context = completedEvidenceContext(root, specsRoot);
+  const rows = checkedLedgerRows(await specLedgerTables(context, specNumber));
+  const row = [...rows].find((ref) => cell(ref, "TDD-ID") === tddId);
+  if (row === undefined) return { refused: `the spec-${specNumber} ledger has no ${tddId} row` };
+  const matrixRecord = coverageDepthAuditRecord(
+    specNumber,
+    cell(row, obligationColumnFor(cell(row, "Layer"))),
+    await coverageDepthMatrix(context, specNumber),
+  );
+  let surfaceRecords: string[] = [];
+  if (withSurfaceArtifacts) {
+    const surface = await surfaceArtifactRecords(root, entryOwnFields(entry.section));
+    if (surface.kind === "unusable") {
+      return { refused: `${surface.path} is not a regular file inside the project` };
+    }
+    if (surface.kind === "absent") {
+      return { refused: "a capture the Surface artifacts manifest names is not in this checkout" };
+    }
+    surfaceRecords = surface.records;
+  }
+  return {
+    hash: completedEvidenceAuditHash(
+      entry.file,
+      entry.section,
+      tddId,
+      matrixRecord,
+      surfaceRecords,
+    ),
+  };
+}
+
+/**
+ * The `Checkpoint verification seal` over an entry's checkpoint command, result
+ * and revision: `Checkpoint verification revision` where the entry records one,
+ * and otherwise the last round's `Revision`.
+ */
+export async function checkpointVerificationSeal(
+  root: string,
+  evidenceFile: string,
+  tddId: string,
+): Promise<EvidenceHash> {
+  const entry = await evidenceEntry(root, evidenceFile, tddId);
+  if ("refused" in entry) return entry;
+  const section = entryOwnFields(entry.section);
+  const latestRound = evidenceRoundNumbers(section).at(-1);
+  const revision =
+    rowEvidenceFieldValue(section, "Checkpoint verification revision") ??
+    (latestRound === undefined ? null : roundEvidenceFieldValue(section, latestRound, "Revision"));
+  const command = rowEvidenceFieldValue(section, "Checkpoint verification command");
+  const result = rowEvidenceFieldValue(section, "Checkpoint verification result");
+  if (revision === null || command === null || result === null) {
+    const missing = [
+      ...(revision === null ? ["a revision"] : []),
+      ...(command === null ? ["Checkpoint verification command"] : []),
+      ...(result === null ? ["Checkpoint verification result"] : []),
+    ];
+    return { refused: `${entry.file}#${tddId.toLowerCase()} records no ${missing.join(", ")}` };
+  }
+  return { hash: checkpointEvidenceSeal(revision, command, result) };
+}
+
+/** The seal over a review pack directory, as the completion gate recomputes it. */
+export async function reviewPackSealOf(root: string, packPath: string): Promise<EvidenceHash> {
+  const files = await collectReviewPackFiles(root, packPath);
+  if (files === null) {
+    return {
+      refused: `${packPath} is not a review pack: a directory under .qfai/review/review-<timestamp>/ holding regular files and no links`,
+    };
+  }
+  return { hash: reviewPackSeal(files) };
+}
+
+/**
  * Whether a request's one visible `TDD-ID` line names this row's review: the
  * row's own id once, and the whole review unit and nothing else. The line is a
  * list — one id for a row reviewed alone, every member for a T1 group reviewed
