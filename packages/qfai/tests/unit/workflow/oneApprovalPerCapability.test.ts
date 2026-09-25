@@ -72,14 +72,14 @@ it("TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in o
     .filter((event) => event.type === "question-opened")
     .map((event) => event.question);
   const returned = decision.verdict.questions ?? [];
-  const slots = opened.map((question) => question?.capability.slotId);
+  const slots = opened.map((question) => question?.capability?.slotId);
   const actual = {
     state: decision.verdict.run?.state,
     opened: opened
       .map((question) => ({
         kind: question?.kind,
-        goal: question?.capability.goal,
-        slotId: question?.capability.slotId,
+        goal: question?.capability?.goal,
+        slotId: question?.capability?.slotId,
       }))
       .sort((left, right) => (left.goal ?? "").localeCompare(right.goal ?? "")),
     sameRound:

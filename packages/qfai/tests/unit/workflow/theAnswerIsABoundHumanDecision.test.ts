@@ -118,17 +118,17 @@ it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision use
       recordedAt: "2026-09-24T00:00:00.000Z",
       target: {
         kind: "new_capability",
-        slotId: question.capability.slotId,
+        slotId: question.capability?.slotId,
         capability: {
-          goal: question.capability.goal,
-          covers: question.capability.covers,
-          excludes: question.capability.excludes,
+          goal: question.capability?.goal,
+          covers: question.capability?.covers,
+          excludes: question.capability?.excludes,
         },
       },
     }),
     sddWorkOrder: {
       stageKind: "sdd",
-      target: { kind: "new_capability", slotId: question.capability.slotId },
+      target: { kind: "new_capability", slotId: question.capability?.slotId },
       authorizationRefsMatch: true,
     },
   };
@@ -167,8 +167,8 @@ it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
     workOrder: next.verdict.workOrder ?? null,
     questions: (next.verdict.questions ?? []).map((question) => ({
       kind: question.kind,
-      slotId: question.capability.slotId,
-      goal: question.capability.goal,
+      slotId: question.capability?.slotId,
+      goal: question.capability?.goal,
     })),
     issuedEvents: next.events.filter((event) => event.type === "work-order-issued").length,
   };

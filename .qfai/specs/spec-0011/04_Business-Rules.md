@@ -113,7 +113,7 @@
 - AC-Refs: AC-0011-0020
 
 - When diagnosis finds a missing test on behaviour the spec already states, `/qfai-implement` files no Change Request and adds no ledger row: `/qfai-sdd` appends the row (`_policies/08_Decisions.md` DR-0297).
-- The two scope-gap lines of the skill, in `references/change-request-reset.md` and in `SKILL.md`, state that carve-out and cite DR-0297. Each is edited in place, so `SKILL.md` gains no line from this rule.
+- The two scope-gap lines of the skill, in `references/change-request-reset.md` and in `SKILL.md`, state that carve-out and name `/qfai-sdd` as the skill that appends the row. They cite no decision ID of this repository, which an adopter cannot open. Each is edited in place, so `SKILL.md` gains no line from this rule.
 - The carve-out covers that one case. Every other scope gap still goes through a Change Request.
 
 ## BR-0011-0018: A Regression Fix Leaves the `done` Row `done`

@@ -280,7 +280,7 @@ Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0028
 - Type: normal
 - Level: L3
-- Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, cite CLI-WF `## Authorizations` for the check, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.
+- Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, state that the check passes only when the record exists, matches the row's operation and capability, and is not stale, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.
 - Notes: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`.
 
 ## TC-0013-0039: A failed approval check persists nothing
@@ -289,7 +289,7 @@ Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0029
 - Type: error
 - Level: L3
-- Verify that the Stage 1 text names the three failures (missing, mismatched, stale), states that none of them persists a triage row or asks the operator, and that each returns `awaiting_input` naming the row and the reason. The staleness conditions are cited from CLI-WF and not listed in the skill text.
+- Verify that the Stage 1 text names the three failures (missing, mismatched, stale), states that none of them persists a triage row or asks the operator, and that each returns `awaiting_input` naming the row and the reason. Verify also that the text states when an approval is stale: the scope digest it was given under changed, the approved capability text changed, or a replan widened the scope, and that the clock alone never makes it stale.
 - Notes: `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`.
 
 ## TC-0013-0040: The other approval-required operations keep the question
@@ -316,7 +316,7 @@ Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0032
 - Type: normal
 - Level: L3
-- Verify that `references/sdd-triage.md` documents `Authorization-Ref` as optional, found by its header name and filled on a `CREATE` row only, with no reference on a row of any other operation, cites CLI-VAL `## Triage authorization reference` for its value form rather than restating it, states the `Approved By` copy rule, and keeps a row without the column valid.
+- Verify that `references/sdd-triage.md` documents `Authorization-Ref` as optional, found by its header name and filled on a `CREATE` row only, with no reference on a row of any other operation, states its value form `run-<17 digits>/<authorizationId>`, naming the run and the cited record, states the `Approved By` copy rule, and keeps a row without the column valid.
 - Notes: `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`.
 
 ## TC-0013-0043: Defect row seeding appends one case and one row
@@ -325,7 +325,7 @@ Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0033
 - Type: normal
 - Level: L3
-- Verify that the Phase 2b defect row seeding text in `qfai-sdd` states that an `sdd_append` work order appends exactly one test case and one ledger row, files no Change Request and cites DR-0297, and that the test case's `Notes` give the diagnosed defect and the run ID and no path under `.qfai/runs/`.
+- Verify that the Phase 2b defect row seeding text in `qfai-sdd` states that an `sdd_append` work order appends exactly one test case and one ledger row for behaviour the spec already states and files no Change Request, and that the test case's `Notes` give the diagnosed defect and the run ID and no path under `.qfai/runs/`.
 - Notes: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`.
 
 ## TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence
@@ -361,7 +361,7 @@ Tracked for separate implementation as OQ-0016
 - AC-Refs: AC-0013-0037
 - Type: error
 - Level: L3
-- Verify that the orchestrated-mode reference refuses a work order with no target instead of running the no-argument batch, and that a `new_capability` target's result reports `bindings` for each capability created, citing CLI-WF `### Work order` and `### Stage result`.
+- Verify that the orchestrated-mode reference refuses a work order with no target instead of running the no-argument batch, and that a `new_capability` target's result reports `bindings` for each capability created.
 - Notes: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`.
 
 ## TC-0013-0048: A direct `/qfai-sdd` ends at SDD

@@ -278,7 +278,8 @@ Approval cells copied into a spec's `09_delta.md` are not authorization records.
 
 A checked proposal becomes the run's plan. Its write scope is the
 `request_scope` authorization. `authorization-restored` asks nothing and raises
-the review profile of the run.
+the review profile of the run's `qfai-implement` and `qfai-atdd` work orders to
+`implementation-heavy`, as [Work order](#work-order) states.
 
 ### Work order
 
@@ -321,6 +322,14 @@ order binds. Each is named for that spec, never as a pattern over every spec:
   which is how DR-0297's "AC and BR do not change" is enforced.
 - `recordAreas` lifts no ledger check: a move off `done` and a row added by any
   stage but `sdd_append` are still refused ([Ledger row-set check](#ledger-row-set-check)).
+
+`requiredReviewerRoles` are the `always_required` reviewers of the review profile
+`.qfai/assistant/manifest/agent-routing.yml` gives the executor skill, as
+`.qfai/assistant/manifest/review-profiles.yml` defines it. In a run whose routing
+result carries `authorization-restored`, a work order whose executor is
+`qfai-implement` or `qfai-atdd` takes the `implementation-heavy` profile
+instead: `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer`.
+Every other work order keeps its skill's profile.
 
 An orchestrated `/qfai-sdd` work order always carries a target, so a missing
 target never means every capability. A valid binding satisfies
@@ -397,7 +406,7 @@ Realizes: `discussion-20260923171450572#REQ-0021`,
 | `unbound-capability`       | The result creates a capability or spec that no approved slot is bound to                                                                                                                                                                                                                    |
 | `red-not-assertion`        | `expected_red` with a failure kind other than `assertion`. Such a failure is `unrun` or `blocked`                                                                                                                                                                                            |
 | `seam-passed`              | A seam-only result observes `pass` at its target test                                                                                                                                                                                                                                        |
-| `test-fix-meaning`         | `citedAfter` differs from `citedBefore`. The fix belongs to SDD                                                                                                                                                                                                                              |
+| `test-fix-meaning`         | `citedAfter` differs from `citedBefore`. The fix belongs to `qfai-sdd`, and the run is unchanged. The `test_fix` stage reaches SDD by returning `needs_repair` with a finding whose `resolvingOwner` is `qfai-sdd`                                                                           |
 | `test-fix-receipt`         | A test fix without its review or re-run receipt                                                                                                                                                                                                                                              |
 | `regression-fix-receipt`   | A regression fix without its `regressionFix` re-run or review receipt                                                                                                                                                                                                                        |
 | `blocked-repairable`       | A `blocked` result lists a finding the run can repair: one inside the checked write scope whose `resolvingOwner` is a skill, or one whose `owningSpec` names no spec, or claims another spec while its `path` lies inside the checked write scope. Such a finding is returned `needs_repair` |
@@ -846,6 +855,20 @@ Otherwise it stays `debt-open`, with its `resolvingOwner` as the owner. A debt
 only another spec can resolve therefore keeps the run from completing until that
 spec repairs it.
 
+Every condition has a fixed `owner`. This extends the rule that a blocked run
+names `operator` or the skill that owns the work ([State machine](#state-machine)).
+
+| `condition`                        | `owner`                                                                                                                                                         |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                              |
+| `stage-unaccepted`                 | The skill of the stage with no accepted result, as CLI-WFFILE `### Vocabulary` maps its stage kind; for `test_fix`, the skill the defective row's layer selects |
+| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill of the verify stage                                                                                                                    |
+| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                     |
+| Every other condition              | `operator`                                                                                                                                                      |
+
+A run with no accepted verify stage is reported as `verify-missing` only, never
+also as `stage-unaccepted`.
+
 The two targets:
 
 | Target         | Met when                                | Reported as                                                                          |
@@ -1066,13 +1089,13 @@ Material decision or missing fact. Source: SCR-003. Actor: the operator.
 | `decision-question.round`      | Independent pending questions are put together in one round; a dependent one waits for its answer                                                              |
 | `decision-question.sdd-create` | When SDD Stage 1 finds the CREATE authorization unapproved, mismatched or stale, SDD asks nothing; this screen puts a new `create` question                    |
 
-| State              | Observable                                                                                                                          |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `default`          | The finding in at most two sentences, the options with their effects, the selection count, and the recommendation where permitted   |
-| `loading`          | The answer is being recorded                                                                                                        |
-| `empty`            | Nothing material was found. A bugfix restoring an existing authorization check asks nothing and carries the stronger review profile |
-| `error`            | `decision` refuses the answer. The run stays `awaiting_input`, and the question is put again                                        |
-| `no_question_mode` | The question is not put. The run stays `awaiting_input` or ends `blocked`, and `host:halt-notice` names the open decision           |
+| State              | Observable                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`          | The finding in at most two sentences, the options with their effects, the selection count, and the recommendation where permitted                                                                 |
+| `loading`          | The answer is being recorded                                                                                                                                                                      |
+| `empty`            | Nothing material was found. A bugfix restoring an existing authorization check asks nothing, and its `qfai-implement` and `qfai-atdd` work orders carry the `implementation-heavy` review profile |
+| `error`            | `decision` refuses the answer. The run stays `awaiting_input`, and the question is put again                                                                                                      |
+| `no_question_mode` | The question is not put. The run stays `awaiting_input` or ends `blocked`, and `host:halt-notice` names the open decision                                                                         |
 
 Transitions: `empty` → `default` when a question opens; `default` → `loading` when
 the operator answers; `loading` → `empty` when the effect is `proceed`; `loading` →

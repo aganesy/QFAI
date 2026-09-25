@@ -170,7 +170,7 @@ Scenario: A diagnosed missing test raises no Change Request from implement
   Given diagnosis found a missing test on behaviour the spec already states
   When /qfai-implement handles that scope gap
   Then it files no Change Request and adds no ledger row
-  And the two scope-gap lines of the skill state that carve-out and cite DR-0297
+  And the two scope-gap lines of the skill state that carve-out and name /qfai-sdd as the skill that appends the row
 ```
 
 ## AC-0011-0021: A regression fix leaves the done row done
