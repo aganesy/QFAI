@@ -128,3 +128,7 @@ Applied under option 1.
 - `spec-0003/09_delta.md` records this request.
 - Ledger rows seeded: `spec-0003/TDD-0094` at `todo`. Ledger rows reset: none.
   Ledger rows retired: none.
+- `/qfai-atdd` and `/qfai-implement` took `spec-0003/TDD-0094` to `refactor`
+  (`.qfai/evidence/atdd-spec-0003.md#tdd-0094`), and renamed the `TDD-0038`
+  case, which stays `done`
+  (`.qfai/evidence/implement-spec-0003.md#title-rename-in-the-tdd-0038-describe`).
