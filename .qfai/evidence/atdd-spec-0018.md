@@ -40,6 +40,20 @@ the test fail, then the restored run as its GREEN.
 - Each mutation was reverted before `qa-gatekeeper` was routed. The gatekeeper re-applied each recorded diff and
   matched its tree address to the recorded `Falsifiability revision`, taking `HEAD` as
   `040df779f969c686b4691293753df01714598fce`. The commits after it change only this file, which the address excludes.
+- Each row's first review, by both reviewers, went into a pack whose `review_request.md` wrote the
+  `TDD-ID` as a list item, which the completion gate does not read. Those packs are kept unedited, and the same
+  reviewers re-issued their verdicts, again PASS, into a new pack per row whose request names the row on its own line.
+  The first packs are not a review attempt the entry records: the request, not a verdict, was at fault.
+
+  | TDD-ID | First pack (set aside) | Its seal | Pack the entry records |
+  | ------ | ---------------------- | -------- | ---------------------- |
+  | `TDD-0458` | `review-20260925170933072` | `352a3d717bfdbffa9a34b57117b428b5097e51933c5b4af83c24973c13d55397` | `review-20260925172732240` |
+  | `TDD-0459` | `review-20260925170933435` | `496d31d79a339f87b876a99dd8da94342c9d5830b3c8a6d915184b0798c9d704` | `review-20260925172732706` |
+  | `TDD-0460` | `review-20260925170933799` | `802fa39dcf93656a463abea5fd7bc3149ea131289bf9c793d01569416409b384` | `review-20260925172733168` |
+  | `TDD-0462` | `review-20260925170934185` | `df528455b59cf90ba7521b2e5d12ca96ef71a94039a86907b22c2f0cb74ddae0` | `review-20260925172733757` |
+  | `TDD-0463` | `review-20260925170934552` | `232645fe5990b742ca41edd63c8df0db7e9cf816c1ea269269dc3713bc445236` | `review-20260925172734116` |
+  | `TDD-0464` | `review-20260925170934969` | `e7fef03b1075b698db09ffac4bea4ec34e006ddf131f38ce6a0f6b0be5588343` | `review-20260925172734499` |
+
 - The earlier entries in `implement-spec-0018.md` stay as the record of the
   waived close. The new cycle writes here, the evidence file an `E2E` row owns.
 
@@ -158,6 +172,25 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree eaa8daf3 matches; selector fails :67:6 on routed run `ready`, issuing a work order instead of waiting; hash 33df5982 recomputes; GREEN and file 2/2 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172732240 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 1593031c7661495e9efa819a9a296dd0e013bea7a764a0288a21bbb9883ec0ad
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: 86e2a38aa60028487ef68fa59fff562ad50ddc9e777a4deddf5df90d9ecd2645
+- Spec review pack: .qfai/review/review-20260925172732240 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 1593031c7661495e9efa819a9a296dd0e013bea7a764a0288a21bbb9883ec0ad
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: 86e2a38aa60028487ef68fa59fff562ad50ddc9e777a4deddf5df90d9ecd2645
+- Code quality review pack: .qfai/review/review-20260925172732240 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 1593031c7661495e9efa819a9a296dd0e013bea7a764a0288a21bbb9883ec0ad
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018StopForMyDecisionE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 2 passed (2). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: 8c60f13862ed1c35f4aa476afcbffbdf3a5455919bce3b24bfce467624febcfb
 
 ### TDD-0459
 
@@ -248,6 +281,25 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 5705bf6d matches; selector fails :50:6, `checkpointOf` inverted makes resume reissue `sdd`; hash fb67b16c recomputes; GREEN and file 1/1 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172732706 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: cb365a979dd1c53dce8893ee2cfc24e6a773bc143f1c51ea891a5fb071924f10
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: ac61f76b19a4cc81b9f97e0642b3873a128bb5b9ae68c7d778f1f213d93794c9
+- Spec review pack: .qfai/review/review-20260925172732706 <!-- qfai:not-a-citation -->
+- Spec review pack seal: cb365a979dd1c53dce8893ee2cfc24e6a773bc143f1c51ea891a5fb071924f10
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: ac61f76b19a4cc81b9f97e0642b3873a128bb5b9ae68c7d778f1f213d93794c9
+- Code quality review pack: .qfai/review/review-20260925172732706 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: cb365a979dd1c53dce8893ee2cfc24e6a773bc143f1c51ea891a5fb071924f10
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: eb6767242204a65e2728296319eb785d578ed141fa443e90642f1be47f334711
 
 ### TDD-0460
 
@@ -335,6 +387,25 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 01b73c86 matches; selector fails :39:6, `status` under the lock leaves `.qfai/runs/` (`runs: true`); hash 4dd0ce8c recomputes; GREEN and file 1/1 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172733168 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: f40e18de8528156e281da1821189401ef7c5f1ad915fbaf3042fe48e1b4aa1a2
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: 15ee0fd981515e7a67e30e037117cf7530c53e8eb0ebb8f3e803060c99409b2f
+- Spec review pack: .qfai/review/review-20260925172733168 <!-- qfai:not-a-citation -->
+- Spec review pack seal: f40e18de8528156e281da1821189401ef7c5f1ad915fbaf3042fe48e1b4aa1a2
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: 15ee0fd981515e7a67e30e037117cf7530c53e8eb0ebb8f3e803060c99409b2f
+- Code quality review pack: .qfai/review/review-20260925172733168 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: f40e18de8528156e281da1821189401ef7c5f1ad915fbaf3042fe48e1b4aa1a2
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018AskWithoutStartingE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: 9b1e86f67debbcb354ac40c25771f2dde639b938197cca6498e9f47c2e555163
 
 ### TDD-0462
 
@@ -424,6 +495,25 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 383d6887 matches; selector fails :54:6, off/shadow create a run and write files; hash e958a4d5 recomputes; GREEN and file 1/1 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172733757 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 9524740dcf3cee48d7d2611f4e11dd0bcd68c95be85be2fb59afde03169990b5
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: 2eafdca22a658306f57b57b62beb3bedaa900afe9c6988a7347230ec7fd2aae8
+- Spec review pack: .qfai/review/review-20260925172733757 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 9524740dcf3cee48d7d2611f4e11dd0bcd68c95be85be2fb59afde03169990b5
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: 2eafdca22a658306f57b57b62beb3bedaa900afe9c6988a7347230ec7fd2aae8
+- Code quality review pack: .qfai/review/review-20260925172733757 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 9524740dcf3cee48d7d2611f4e11dd0bcd68c95be85be2fb59afde03169990b5
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ChooseTheModeE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: b4f74811bd3723f8481973b19bedb1941eb86dea39ec805ca793fdcf2147f02b
 
 ### TDD-0463
 
@@ -514,6 +604,25 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt tree 715cc137 matches; selector fails :68:6, halt becomes `delegation-unavailable`, not `unsupported-capability` (EX-0018-0102); hash 4bc1b315 recomputes; GREEN and file 1/1 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172734116 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 918b6f16a5b3d76a1afd94033f5e565b692ff23c2ab304cb37d83888e579b429
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: 36e7c4bb4bb9d3cd0b68eeed00675c6f53e10833a04bc3ad20984292ef0bd49d
+- Spec review pack: .qfai/review/review-20260925172734116 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 918b6f16a5b3d76a1afd94033f5e565b692ff23c2ab304cb37d83888e579b429
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: 36e7c4bb4bb9d3cd0b68eeed00675c6f53e10833a04bc3ad20984292ef0bd49d
+- Code quality review pack: .qfai/review/review-20260925172734116 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 918b6f16a5b3d76a1afd94033f5e565b692ff23c2ab304cb37d83888e579b429
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018HostCapabilityE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: 410ec1d399f818301a7a6bb90138b21896f94dc05e6c92cd3184bcdfb71bf4e4
 
 ### TDD-0464
 
@@ -612,6 +721,25 @@ packages/qfai/tests/helpers/tempTree.ts
 - Refactor verify revision: 040df779f969c686b4691293753df01714598fce
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — mutated tree f080b3f6 matches; selector fails :123:79 with the published README claiming `codex` without a record; hash 04d2096d recomputes; GREEN and file 1/1 at HEAD
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925172734499 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 49dcefabb9e2c2f5e7ad60e7853012c95ab2366dd7d1d41d06e7a863154628a1
+- Spec review: PASS
+- Spec reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Spec audited evidence hash: 53e283fcd127e4b45b5b5432e867fcd21c43cb799b66c28c925f49efc4675890
+- Spec review pack: .qfai/review/review-20260925172734499 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 49dcefabb9e2c2f5e7ad60e7853012c95ab2366dd7d1d41d06e7a863154628a1
+- Code quality review: PASS
+- Code quality reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Code quality audited evidence hash: 53e283fcd127e4b45b5b5432e867fcd21c43cb799b66c28c925f49efc4675890
+- Code quality review pack: .qfai/review/review-20260925172734499 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 49dcefabb9e2c2f5e7ad60e7853012c95ab2366dd7d1d41d06e7a863154628a1
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification command: cwd packages/qfai: NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ClaimAHostE2E.test.ts --reporter=verbose
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
+- Checkpoint verification seal: 1fed3a1e8850d952c44f7783bda1d66098805c9df4cd237ba3cf1ecce75a30cc
 
 ## Work Orders Summary
 
@@ -622,7 +750,38 @@ packages/qfai/tests/helpers/tempTree.ts
 | 3 | acceptance-test-engineer | acceptance-test-engineer#1 | grilling(S1@2026-09-25T16:25:34.799Z/agents): take the TDD-0464 mutation in `packages/qfai/README.md` | #tdd-0464 | #tdd-0464; the claim check is test-side code, so a mutation there would edit a test this stage does not own. No position disagreed | PASS |
 | 4 | backend-engineer | backend-engineer#1 | Red 3c: apply, run and revert each row's mutation; record the GREEN and the refactor-verify run | #tdd-0458 to #tdd-0464 handovers | `#### Round 1` of each row | PASS |
 | 5 | qa-gatekeeper | qa-gatekeeper#1 | red + build gates: re-create each mutated tree, confirm the RED, the hash and the GREEN | #tdd-0458 to #tdd-0464 | `qa-gatekeeper attempts` of each row | PASS |
+| 6 | completion-reviewer | completion-reviewer#1 to #6 | gate item 7: one review per row, then the same verdict into the replacement pack | #tdd-0458 to #tdd-0464 | `Spec review` of each row; record advisories under `## Record defects` | PASS |
+| 7 | implementation-reviewer | implementation-reviewer#1 to #6 | gate item 8: one review per row, then the same verdict into the replacement pack | #tdd-0458 to #tdd-0464 | `Code quality review` of each row; record advisories under `## Record defects` | PASS |
+| 8 | orchestrator | orchestrator | checkpoint verification: the refactor-verify run of each row, off a checkpoint boundary | #tdd-0458 to #tdd-0464 | `Checkpoint verification` of each row | PASS |
+
+## Record defects
+
+Open. Each needs an in-place repair and a record re-attestation by both reviewers before spec-0018 can complete. None holds a row out of `done`.
+
+- `record:unchecked`, `TDD-0458` to `TDD-0463`, Round 1: the test drives the built CLI, and the recorded
+  `Falsifiability command`, `GREEN command` and `Refactor verify command` leave out the rebuild of `packages/qfai/dist`
+  that carried each mutation into it, and the rebuild after the revert. Replayed as written, the falsifiability command passes.
+  Raised by the completion reviewer of `TDD-0458`, `TDD-0462` and `TDD-0463` and the implementation reviewer of `TDD-0458` and `TDD-0459`.
+- `record:evidence-format`, `TDD-0458` to `TDD-0464`: the row-level verdict reads `qa-gatekeeper: PASS`, with the attempt
+  and the tree on a separate `qa-gatekeeper attempts` line instead of on the verdict line, as `round-evidence.md` asks.
+- `record:process-order`, `TDD-0458` to `TDD-0464`: each mutation was reverted before `qa-gatekeeper` was routed, where
+  Red 3c routes the gate on the live mutated tree. The gatekeeper re-created each tree and matched its address.
+
+## Items processed
+
+| TDD-ID | US-Refs | Final status |
+| ------ | ------- | ------------ |
+| `TDD-0458` | `US-0018-0004` | `done` |
+| `TDD-0459` | `US-0018-0005` | `done` |
+| `TDD-0460` | `US-0018-0006` | `done` |
+| `TDD-0462` | `US-0018-0008` | `done` |
+| `TDD-0463` | `US-0018-0009` | `done` |
+| `TDD-0464` | `US-0018-0010` | `done` |
+
+Each row is removed from waiver `WVR-20260925-18`. `TDD-0455` stays at `exception` under `DR-0298` and in the waiver.
 
 ## Final status (PASS/FAIL) + who confirmed
 
-Pending.
+PASS for the six rows: `qa-gatekeeper#1` confirmed each RED and GREEN, and `completion-reviewer` and
+`implementation-reviewer` passed each row in its own pack. The spec-level boundary is not reached: spec-0018 still has
+rows at `todo` and `exception`.
