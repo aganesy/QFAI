@@ -3631,9 +3631,15 @@ Open entries from the completion review of the `/qfai-implement` run started
 2026-09-25T03:05:15.811Z, attempt 1, pack `review-20260925130000000` <!-- qfai:not-a-citation -->.
 Two are repaired in place and say so; the first cannot be.
 
-- `record:unchecked`, `TDD-0062`, Round 2: the ledger moved to `refactor` before the RED gate answered, and the mutation was reverted before the gate saw it. The gate passed later on the tree it rebuilt. Grilling decision S1 of that run records the position that disagreed. Not repairable: the order is history.
+- `record:unchecked`, `TDD-0062`, Round 1: the ledger moved to `refactor` before the RED gate answered, and the mutation was reverted before the gate saw it. The gate passed later on the tree it rebuilt. Grilling decision S1 of that run records the position that disagreed. Not repairable: the order is history.
 - `record:unchecked`, `TDD-0062`, Stage 0: the skeleton re-run was written here, under the plan phase, and not in `skeleton.md`. Repaired: `skeleton.md` now records the re-run under `qfai`.
 - `record:unchecked`, `TDD-0062`: the entry opened with the identity block from before `CR-20260924-0002` (the old test file and selector), which disagreed with the handover below it. Repaired: the block is kept verbatim in a fence under a note, so no field outside the fence names the old identity.
+
+Entries from the completion review of attempt 2, pack `review-20260925130010000` <!-- qfai:not-a-citation -->.
+Both are repaired in place.
+
+- `record:unchecked`, `TDD-0062`, Round 1: the change-request cycle was numbered Round 2, over a Round 1 that held only the hash and manifest of the first handover. That block was no RED/GREEN cycle and no review closed it. Repaired: the block is in the fence with the first handover, and every live field of the change-request cycle, the attempt-1 and attempt-2 review lines included, is prefixed `Round 1:`. This reverses grilling decision S1 of the `/qfai-implement` runs started 2026-09-25T03:05:15.811Z and 2026-09-25T03:32:07.281Z, which wrote the cycle into Round 2.
+- `record:unchecked`, `TDD-0062`, Round 1: the test-only replacement added a second copy of the proof, hash, GREEN, refactor verify and gate fields. Repaired: the superseded copies are in a fence under the "stale — test replaced" note, and each field is live once. `Falsifiability revision` and `RED failure mode` stay live beside `Replacement proof revision`.
 
 ## Plan phase — /qfai-implement run started 2026-09-25T03:05:15.811Z
 

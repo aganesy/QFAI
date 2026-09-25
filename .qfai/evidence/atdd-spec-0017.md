@@ -1930,9 +1930,11 @@ packages/qfai/tests/integration/spec0017MeasurementClaims.test.ts
 ### TDD-0062
 
 The first handover held this row with no branch, before `CR-20260924-0002`
-moved it to another test and selector. That record is kept verbatim in the
-fence below, out of the field grammar. The current identity is the handover
-for the CR-20260924-0002 cycle further down.
+moved it to another test and selector. That record, with the RED test hash
+and manifest it took over the old test file, is kept verbatim in the fence
+below, out of the field grammar. It was not a RED/GREEN cycle and no review
+closed it. The current identity is the handover for the CR-20260924-0002
+cycle further down, and that cycle is this row's Round 1.
 
 ````text
 - TDD-ID: TDD-0062
@@ -1948,7 +1950,6 @@ for the CR-20260924-0002 cycle further down.
   `expect.soft(sorted(matrixSlices(job))).toEqual(projects)` fails as an assertion at `sliceSurfaceAlignment.test.ts:242:10`
 - Other rows: none of the ten. `TDD-0007`, `TDD-0043`, `TDD-0096` and the unannotated floor-lane case "runs one slice per leg" fail in `ownWorkflowTopology.test.ts`. In `workflowHygiene.test.ts` the same cases as under `TDD-0032`'s mutation fail, and `TDD-0095` as well, because the code-path cost pin and the required-context slice list both move
 - Note: the ledger's current `Selector` is the enclosing `describe` title. Passed to `-t` unescaped, its parentheses are read as a regular-expression group, and it selects no test
-````
 
 #### Round 1
 
@@ -1959,6 +1960,7 @@ for the CR-20260924-0002 cycle further down.
 packages/qfai/tests/helpers/runnerProjects.ts
 packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
 ```
+````
 
 #### Handover for the CR-20260924-0002 cycle
 
@@ -2041,8 +2043,13 @@ carries it, and it selects this one case of the file's four.
 
 The trials show the mutations discriminate. They are not the row's
 falsifiability trio: `/qfai-implement` Phase Red step 3c applies the named
-mutation and records the `Round 2:` fields.
+mutation and records the `Round 1:` fields.
 
+The handover's hash and manifest addressed the test before the review-fix
+edit. They are kept verbatim below, out of the field grammar; `Round 1:`
+holds the current pair.
+
+````text
 - RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
 - RED test manifest:
 
@@ -2050,16 +2057,62 @@ mutation and records the `Round 2:` fields.
 packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
 packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 ```
+````
 
 #### Shared-artifact re-verify
 
 None. No test file or helper changed, so no recorded `RED test hash` moves.
 
-#### Round 2
+#### Round 1
 
-The cycle `CR-20260924-0002` opened. Round 1 describes the row before the
-change request split it.
+The cycle `CR-20260924-0002` opened is this row's first RED/GREEN cycle, so it
+is Round 1. The record defects in `implement-spec-0017.md` note that this
+numbering reverses grilling decision S1 of the `/qfai-implement` runs started
+2026-09-25T03:05:15.811Z and 2026-09-25T03:32:07.281Z.
 
+- Round 1: Falsifiability revision: working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60
+- Round 1: RED failure mode: falsifiability
+
+That revision addresses the first proof's mutated tree: `release.yml:515`
+with `, scripts` removed, on top of
+`7937fad2121f5174c479fa1eefcc4cb9f3d494e3`, with the test as it was before the
+review-fix edit. The rest of that proof is kept in the fence under the
+review-fix handback below.
+
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed. Path taken: no new production behaviour — the test was corrected under `/qfai-atdd`, no round was opened, the proof was re-taken under Round 2 and the `Refactor verify` fields refreshed
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
+
+
+#### Review-fix handback — Round 1, attempt 1
+
+The `/qfai-atdd` run started 2026-09-25T03:29:44.936Z changed the test the
+implementation reviewer's attempt-1 `REVISE` names. For each of the four
+sliced jobs, the case now also requires `strategy.matrix` to hold exactly one
+key, `slice`. An `include` or an `exclude` beside it changes the legs that
+run without changing the list the case compares.
+
+The edit is in `spec0017SliceAlignment.test.ts` alone. The shared helper
+`spec0017WorkflowSurfaces.ts` is read unchanged, so no done row's manifest
+moves. The `todo` rows `TDD-0064`, `TDD-0105` and `TDD-0106` read the
+same test file, and their handover hashes now address the file before this
+edit; each is re-taken when its own step 3c runs.
+
+The corrected test passed on its first run, so no RED exists to take and no
+round is opened:
+
+- First-run command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
+- First-run revision: working-tree+6174b897f972999ecc12538b4158e6692d4af7b3849af6d23921273a7e3ffa1f
+
+The Round 1 falsifiability proof ran against the test before this edit:
+stale — test replaced. `/qfai-implement` re-takes it under the same selector
+and writes `Round 1: Replacement proof revision`. The superseded fields — the
+first proof's trio and edit, the hash and manifest over the test before this
+edit, the GREEN, the refactor verify at `7937fad21` and the first gate's lines —
+are kept verbatim in this fence, out of the field grammar:
+
+````text
 - Round 2: Satisfied-by: .github/workflows/release.yml, the `gate-tests` job's `strategy.matrix.slice` list at line 515 — one of the four sliced jobs `TC-0017-0062` requires to name the runner projects
 - Round 2: Falsifiability command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
 - Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: release.yml#gate-tests: expected [ 'cli', 'core', 'e2e', …(3) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ]` at `tests/integration/spec0017SliceAlignment.test.ts:19:73`; the received list lacks `scripts`
@@ -2072,8 +2125,6 @@ The edit, line 515 of `.github/workflows/release.yml`:
 +        slice: [core, validators, integration, e2e, cli, unit]
 ```
 
-- Round 2: Falsifiability revision: working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60
-- Round 2: RED failure mode: falsifiability
 - Round 2: RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
 - Round 2: RED test manifest:
 
@@ -2097,41 +2148,13 @@ tree from that commit and the edit above.
 - Refactor verify revision: 7937fad2121f5174c479fa1eefcc4cb9f3d494e3
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate: falsifiability, rebuilt mutated tree working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60 on 7937fad2121f5174c479fa1eefcc4cb9f3d494e3; build-phase GREEN + oracle proof: reviewed revision 7937fad2121f5174c479fa1eefcc4cb9f3d494e3, re-run at HEAD 3cf22bdec841fe578c28b8ebff7082232d6e1f95)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate: rebuilt working-tree+5f277bbe… with HEAD taken as 7937fad21 matches; mutant release.yml SHA-256 5d3969fd…edb781; assertion at spec0017SliceAlignment.test.ts:19:73 labelled release.yml#gate-tests, row case only, 1 failed | 3 skipped (4); RED test hash 4f6607d4… recomputes. Build-phase GREEN and oracle proof: selector 1 passed | 3 skipped (4), whole file 4/4 at 3cf22bdec. Gate taken after the ledger had moved, on the rebuilt tree
-
-- Round 2: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed. Path taken: no new production behaviour — the test was corrected under `/qfai-atdd`, no round was opened, the proof was re-taken under Round 2 and the `Refactor verify` fields refreshed
-- Round 2: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
-- Round 2: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
-
-#### Review-fix handback — Round 2, attempt 1
-
-The `/qfai-atdd` run started 2026-09-25T03:29:44.936Z changed the test the
-implementation reviewer's attempt-1 `REVISE` names. For each of the four
-sliced jobs, the case now also requires `strategy.matrix` to hold exactly one
-key, `slice`. An `include` or an `exclude` beside it changes the legs that
-run without changing the list the case compares.
-
-The edit is in `spec0017SliceAlignment.test.ts` alone. The shared helper
-`spec0017WorkflowSurfaces.ts` is read unchanged, so no done row's manifest
-moves. The `todo` rows `TDD-0064`, `TDD-0105` and `TDD-0106` read the
-same test file, and their handover hashes now address the file before this
-edit; each is re-taken when its own step 3c runs.
-
-The corrected test passed on its first run, so no RED exists to take and no
-round is opened:
-
-- First-run command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
-- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 3 skipped (4)
-- First-run revision: working-tree+6174b897f972999ecc12538b4158e6692d4af7b3849af6d23921273a7e3ffa1f
-
-The Round 2 falsifiability proof above ran against the test before this edit:
-stale — test replaced. `/qfai-implement` re-takes it under the same selector
-and writes `Round 2: Replacement proof revision`.
+````
 
 Test-only replacement, asked by the implementation reviewer's attempt-1
-`REVISE` on Round 2:
+`REVISE` on Round 1:
 
-- Round 2: RED test hash: b7e91184b52a803982a7063dfbf3b2d5b9caed615b8b946e63602166d61ca838
-- Round 2: RED test manifest:
+- Round 1: RED test hash: b7e91184b52a803982a7063dfbf3b2d5b9caed615b8b946e63602166d61ca838
+- Round 1: RED test manifest:
 
 ```text
 packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
@@ -2140,16 +2163,16 @@ packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 
 The row's `Test file` and `Selector` are unchanged.
 
-#### Re-taken proof — Round 2, after the test replacement
+#### Re-taken proof — Round 1, after the test replacement
 
 The `/qfai-implement` run started 2026-09-25T03:32:07.281Z re-took the proof
 on the corrected test, with the mutation the reviewer named: an `exclude` on
 `gate-tests`. The same mutation on the test before the edit passes the
 selector, 1 passed | 3 skipped (4), which is the gap the `REVISE` names.
 
-- Round 2: Satisfied-by: .github/workflows/release.yml, the `gate-tests` job's `strategy.matrix` at lines 514-515 — a matrix holding the `slice` list and nothing else, so every listed slice runs as a leg
-- Round 2: Falsifiability command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
-- Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: release.yml#gate-tests matrix keys: expected [ 'slice', 'exclude' ] to deeply equal [ 'slice' ]` at `tests/integration/spec0017SliceAlignment.test.ts:28:9`
+- Round 1: Satisfied-by: .github/workflows/release.yml, the `gate-tests` job's `strategy.matrix` at lines 514-515 — a matrix holding the `slice` list and nothing else, so every listed slice runs as a leg
+- Round 1: Falsifiability command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: release.yml#gate-tests matrix keys: expected [ 'slice', 'exclude' ] to deeply equal [ 'slice' ]` at `tests/integration/spec0017SliceAlignment.test.ts:28:9`
 
 The edit, a line added after line 515 of `.github/workflows/release.yml`:
 
@@ -2159,20 +2182,35 @@ The edit, a line added after line 515 of `.github/workflows/release.yml`:
 +        exclude: [{ slice: scripts }]
 ```
 
-- Round 2: Replacement proof revision: working-tree+a0f0b17ac1e677baf8c610fc5c46ed45c6d67779253b59a67c708a7874420e82
+- Round 1: Replacement proof revision: working-tree+a0f0b17ac1e677baf8c610fc5c46ed45c6d67779253b59a67c708a7874420e82
 
 That revision was computed with the mutation in the tree, on top of
 `5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363`, which holds the corrected test.
 The mutation was reverted with `git checkout -- .github/workflows/release.yml`
-after the run. The `qa-gatekeeper` verdicts above were taken on the test
-before the edit; the gate on this proof has not been routed yet, and it can
-rebuild the mutated tree from that commit and the edit above.
+after the run. The first gate's verdict, taken on the test before the edit, is
+in the fence above; qa-gatekeeper#2 judged this proof on the rebuilt tree.
+
+The mutation of the first proof was also re-run on the corrected test, since
+the review-fix rules ask for the same mutation. It is an observation beside
+the proof above, not a second one:
+
+| What | Value |
+| ---- | ----- |
+| Mutation | `release.yml:515` with `, scripts` removed, as in the fenced first proof |
+| Tree | on top of `25f14139d8abe245be51cb4c974efee6550ca45b`, content address `working-tree+2ada6e04e7f03ca8ce90297a2addf23bb36d765386163f1f11c6a8b1efc7a777` with the mutation in place |
+| Command | the row's selector, as in the command above |
+| Result | Test Files 1 failed (1); Tests 1 failed \| 3 skipped (4); `AssertionError: release.yml#gate-tests: expected [ 'cli', 'core', 'e2e', …(3) ] to deeply equal [ 'cli', 'core', 'e2e', …(4) ]` at `tests/integration/spec0017SliceAlignment.test.ts:29:73` |
+| Restored | reverted with `git checkout -- .github/workflows/release.yml`; the selector then passes, 1 passed \| 3 skipped (4) |
+
+The `exclude` mutation is the proof of record because it is the defect the
+`REVISE` names: the check that a slice is dropped from the list passed the
+old test already, and only the matrix-key check fails on an `exclude`.
 
 The GREEN after the revert, on the corrected test:
 
-- Round 2: Revision: 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363
-- Round 2: GREEN command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
-- Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after the revert, on the tree at that revision
+- Round 1: Revision: 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363
+- Round 1: GREEN command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after the revert, on the tree at that revision
 
 The refreshed refactor verify:
 
