@@ -97,3 +97,9 @@
 - GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018StopForMyDecisionE2E.test.ts > US-0018-0004, discussion variant (spec-0010 TDD-0033): the discussion stage gets what is settled and returns the run to routing`
 - Production files: none
 
+## Coverage Depth Matrix
+
+See `.qfai/evidence/coverage-depth-spec-0010.md` (committed).
+Totals: ✅ 7 / ⚠️ 44 / ❌ 23, with 196 not applicable, across 270 scored cells — 234 matrix cells (26 rows × 9 columns) and 36 business rule cells (12 rows × 3 columns).
+The marks are derived from the pack and the TDD ledger by the rules that file states;
+`Status` is a row verdict and is outside every total.
