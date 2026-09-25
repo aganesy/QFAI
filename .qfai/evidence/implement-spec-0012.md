@@ -389,6 +389,15 @@ changed-scope-dependents`.
 | ----------------------------- | ----------------------- | ------- | ------- |
 | `delivery-planner` (blocking) | `stage4-agent (inline)` | PASS    | The seven rows exist, none is blocked, and each names one boundary. `TDD-0516` and `TDD-0578` to `TDD-0581` are T1 and form one group keyed `BR-0012-0066`; `TDD-0517` and `TDD-0582` are T2 and are each reviewed alone. No parallel dispatch: the five T1 rows edit one test file and the two T2 rows another. Order: `TDD-0516`, `TDD-0578`, `TDD-0579`, `TDD-0580`, `TDD-0581`, `TDD-0517`, `TDD-0582` — the group first, in the order `TC-0012-0486` states its boundaries, then the two T2 rows in the order `TC-0012-0487` states them |
 | `test-design-analyst`         | `stage4-agent (inline)` | PASS    | Every clause of `TC-0012-0486` and `TC-0012-0487` maps to exactly one of the seven rows, each `Boundary` is unique within its case, and all seven carry the case in `TC-Refs` under `Layer` `Unit`, which `L1` owns. `node packages/qfai/dist/cli/index.mjs validate --profile tdd` at `f11181534` reports no finding on the seven rows or on either case. The other `todo` rows of the ledger are outside this invocation, which the change request scopes to these seven |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | Transcribed from delivery-planner#1's reply. PASS on all seven rows. One T1 group of five keyed `BR-0012-0066`: `TDD-0516`, `TDD-0578`, `TDD-0579`, `TDD-0580`, `TDD-0581`. `TDD-0517` and `TDD-0582` are T2, each reviewed alone. Serial dispatch, in the order `TDD-0516`, `TDD-0578`, `TDD-0579`, `TDD-0580`, `TDD-0581`, `TDD-0517`, `TDD-0582` |
+| `test-design-analyst`         | `test-design-analyst#2` | PASS    | Transcribed from test-design-analyst#2's reply. Every clause of `TC-0012-0486` and `TC-0012-0487` maps to exactly one row, the boundaries are distinct, and the selectors split the 8 + 7 tests of the two files exactly. The Coverage Depth Matrix rows for `TC-0012-0486`, `TC-0012-0487` and `BR-0012-0066` are confirmed |
+
+The two `stage4-agent (inline)` rows are superseded. One inline agent wrote them
+without dispatching the routed roles, and the attempt-1 completion reviews
+returned REVISE on that ground. The `delivery-planner#1` and
+`test-design-analyst#2` rows were taken after those reviews, and this run stands
+on them. The same holds for the inline grilling decisions below: Work Orders
+rows 11 to 16 carry `delivery-planner#1`'s verdicts on them as griller.
 
 ## Grilling Session
 
@@ -413,6 +422,16 @@ Preflight: session opened
 | 5 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0578` tests join to bases under `/app/`, and its mutation is the concatenation `targetUrl + screenUrl` | `composeCaptureUrl`; `TC-0012-0486`; `EX-0012-0187`; CR-20260925-0010 approved action 3 | #tdd-0578; with the existing bases, joining and concatenating give the same string. `EX-0012-0187` already joins `/` to a base ending `/app/` | PASS |
 | 6 | backend-engineer | stage4-agent (inline) | grilling(S1@2026-09-25T03:38:07.172Z/agents): the `TDD-0517` selector holds the three captured statuses and the two refused ones, and one mutation, the comparison inverted, fails all five | `defaultCaptureScreen`; `TC-0012-0487`; `selector-granularity.md` | #tdd-0517; the five tests are the two sides of the one `status >= 400` predicate. Removing the branch would leave the three captured statuses passing | PASS |
 | 7 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: RED phase gate on the seven rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0516, #tdd-0578, #tdd-0579, #tdd-0580, #tdd-0581, #tdd-0517, #tdd-0582 | qa-gatekeeper fields | PASS |
+| 8 | test-design-analyst | test-design-analyst#1 | Coverage Depth Matrix: add `TC-0012-0486`, `TC-0012-0487` and `BR-0012-0066` | atdd-spec-0012.md; 06_Test-Cases.md `TC-0012-0486`, `TC-0012-0487` | atdd-spec-0012.md rows for the three IDs, commit `05095be04`; recorded from that commit, which had no Work Orders row. It scored `TC-0012-0487` D2 with status 400 untested, which `CR-20260925-0012` answered | PASS |
+| 9 | delivery-planner | delivery-planner#1 | /qfai-implement plan, taken late: tiers, the T1 group, dispatch and order of the seven rows of CR-20260925-0010 | test-list.md; CR-20260925-0010; `volume-policy.md` | #plan-phase; transcribed from delivery-planner#1's reply; supersedes row 1 | PASS |
+| 10 | test-design-analyst | test-design-analyst#2 | /qfai-implement plan, taken late: coverage and layer check of the seven rows against TC-0012-0486 and TC-0012-0487, and the matrix rows | test-list.md; 06_Test-Cases.md; atdd-spec-0012.md Coverage Depth Matrix | #plan-phase; transcribed from test-design-analyst#2's reply; supersedes row 2 | PASS |
+| 11 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T03:38:07.172Z, decision of row 3 (`Satisfied-by` names `TDD-0514`): ADOPT with a wording fix | row 3; 16_Traceability-ledger.md `TDD-0514` | transcribed from delivery-planner#1's reply; each `Satisfied-by` names the `TDD-0514` binding and the commit the code landed in, `1f27785dc` or `a4d5a417b`, rather than "whose cycle wrote". Applied by row 17 | PASS |
+| 12 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T03:38:07.172Z, decision of row 4 (`TDD-0516` inputs): ADOPT | row 4; #tdd-0516 | transcribed from delivery-planner#1's reply | PASS |
+| 13 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T03:38:07.172Z, decision of row 5 (`TDD-0578` bases and concatenation mutation): ADOPT | row 5; #tdd-0578 | transcribed from delivery-planner#1's reply | PASS |
+| 14 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T03:38:07.172Z, decision of row 6 (`TDD-0517` one inverted comparison over every entry): ADOPT | row 6; #tdd-0517 | transcribed from delivery-planner#1's reply | PASS |
+| 15 | delivery-planner | delivery-planner#1 | `TDD-0582` after its attempt-1 REVISE: refresh the refactor verify only | #tdd-0582; review-20260925150002000 | transcribed from delivery-planner#1's reply; no round is opened and the qa-gatekeeper verdict is not re-taken | PASS |
+| 16 | delivery-planner | delivery-planner#1 | `TDD-0580`: whether the `:1797` mutation from qa-gatekeeper#1's advisory is owed | #tdd-0580 | transcribed from delivery-planner#1's reply; the recorded proof stands and the `:1797` mutation is not owed | PASS |
+| 17 | backend-engineer | backend-engineer#2 | apply row 11's wording fix to the seven `Satisfied-by` lines | row 11; `git show --stat 1f27785dc`, `git show --stat a4d5a417b` | each `Satisfied-by` in #tdd-0516, #tdd-0578, #tdd-0579, #tdd-0580, #tdd-0581, #tdd-0517 and #tdd-0582; both commits exist and are ancestors of HEAD. `1f27785dc` adds `composeCaptureUrl` to `prototypingIterate.ts` with the fallback, passthrough, missing-base and join branches and the `catch`; `a4d5a417b` adds the `response === null` and `status >= 400` refusals to `defaultCaptureScreen.ts` | PASS |
 
 ## Items processed
 
@@ -451,7 +470,7 @@ where a base is set and the screen URL still wins.
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `/^https?:\/\//i.test(screenUrl)` branch that returns an absolute URL as written
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers `composeCaptureUrl`; the code landed in `1f27785dc`: packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `/^https?:\/\//i.test(screenUrl)` branch that returns an absolute URL as written
 - Round 1: Falsifiability command:
 
 ```text
@@ -519,7 +538,7 @@ new bases make the two differ:
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `new URL(screenUrl, targetUrl)` join inside the `try`
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers `composeCaptureUrl`; the code landed in `1f27785dc`: packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `new URL(screenUrl, targetUrl)` join inside the `try`
 - Round 1: Falsifiability command:
 
 ```text
@@ -574,7 +593,7 @@ Boundary `no-screen-url-falls-back-to-target-url`, tier T1, review group
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `screenUrl === undefined` branch that returns `targetUrl ?? null`
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers `composeCaptureUrl`; the code landed in `1f27785dc`: packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `screenUrl === undefined` branch that returns `targetUrl ?? null`
 - Round 1: Falsifiability command:
 
 ```text
@@ -629,7 +648,7 @@ group `BR-0012-0066`. The test is unchanged apart from the case's annotation.
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `targetUrl === undefined` branch that rejects a route-relative URL with a reason naming `--target-url`
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers `composeCaptureUrl`; the code landed in `1f27785dc`: packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `targetUrl === undefined` branch that rejects a route-relative URL with a reason naming `--target-url`
 - Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl"
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8). The case fails on `AssertionError: expected 'has unparseable URL composition (scre…' to match /route-relative URL/` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:76:27`. The route reaches `new URL("/orders/new", undefined)`, which throws, and the `catch` answers with its own reason
 
@@ -672,7 +691,7 @@ The test is unchanged apart from the case's annotation.
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired `--capture` and wrote packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `catch` around `new URL(...)` that rejects the pair with a reason naming `--target-url`
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers `composeCaptureUrl`; the code landed in `1f27785dc`: packages/qfai/src/cli/commands/prototypingIterate.ts, `composeCaptureUrl`, the `catch` around `new URL(...)` that rejects the pair with a reason naming `--target-url`
 - Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when URL composition throws"
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 7 skipped (8). The case fails on `AssertionError: expected true to be false // Object.is equality` at `tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts:103:23`
 
@@ -713,8 +732,15 @@ The edit, the `catch` answering `ok: true`:
 Boundary `status-400-or-above-rejected`, tier T2, reviewed alone. The six
 tests are the two sides of one predicate, `status >= 400`: 200, 204 and 399 are
 captured, and 400, 404 and 500 are refused with the status in the reason and no
-screenshot. Round 1 held the first five; Round 2 adds 400.
+screenshot. Round 1 is the cycle on that six-status case.
 
+Record from before `CR-20260925-0012`, kept verbatim. It is a complete
+RED/GREEN cycle on the five-status case, on the falsifiability path, and
+qa-gatekeeper#1 gave it PASS; its two lines are inside the fence. The approved
+reset added status 400 to the case and withdrew that cycle's obligation, so it
+no longer answers for the row and is not part of Round 1 below.
+
+````text
 #### Round 1
 
 - Round 1: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `status >= 400` refusal
@@ -755,17 +781,20 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 
 - Round 1: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
 
-#### Round 2
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+f92f4da3797a42130188cd2664118d741cf0612d094965e4d7c1eb9f69ca442e at HEAD 22b107140; GREEN + oracle proof at 15667dd87)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 22b107140 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+f92f4da3…; the five entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :143:23 and :157:23; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside status >= 400; advisory: status 400 itself is untested; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
+````
+
+#### Round 1
 
 `CR-20260925-0012` added status 400 to `TC-0012-0487`'s refused statuses and
 returned the row from `refactor` to `todo`. The case's obligation moved, so this
-is a fresh round on the row's own boundary, not a test-only replacement. Round 1
-above is kept as the record of the five-status case. The new test is
-`REJECTS a 400 response, the first status of the rejection boundary`, and it
-passed on its first run.
+is a fresh cycle on the row's own boundary, not a test-only replacement. The new
+test is `REJECTS a 400 response, the first status of the rejection boundary`,
+and it passed on its first run.
 
-- Round 2: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `status >= 400` refusal
-- Round 2: Falsifiability command:
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers the default Playwright capture runner; the code landed in `a4d5a417b`: packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `status >= 400` refusal
+- Round 1: Falsifiability command:
 
 ```text
 pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
@@ -776,7 +805,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 400 response, the first status of the rejection boundary"
 ```
 
-- Round 2: Falsifiability result: One run per entry, all against the tree below, each Test Files 1 failed (1); Tests 1 failed | 6 skipped (7). Entry 1 (200) fails on `AssertionError: expected false to be true // Object.is equality` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:79:23`. Entry 2 (404) fails on `AssertionError: expected true to be false // Object.is equality` at `:96:23`. Entry 3 (500) fails on the same at `:112:23`. Entry 4 (204) fails on `AssertionError: expected false to be true // Object.is equality` at `:160:23`. Entry 5 (399) fails on the same at `:174:23`. Entry 6 (400) fails on `AssertionError: expected true to be false // Object.is equality` at `:128:23`
+- Round 1: Falsifiability result: One run per entry, all against the tree below, each Test Files 1 failed (1); Tests 1 failed | 6 skipped (7). Entry 1 (200) fails on `AssertionError: expected false to be true // Object.is equality` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:79:23`. Entry 2 (404) fails on `AssertionError: expected true to be false // Object.is equality` at `:96:23`. Entry 3 (500) fails on the same at `:112:23`. Entry 4 (204) fails on `AssertionError: expected false to be true // Object.is equality` at `:160:23`. Entry 5 (399) fails on the same at `:174:23`. Entry 6 (400) fails on `AssertionError: expected true to be false // Object.is equality` at `:128:23`
 
 The edit, the comparison inverted. It is the one mutation that fails every
 entry on one tree:
@@ -789,8 +818,8 @@ entry on one tree:
        return {
 ```
 
-- Round 2: Falsifiability revision: working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284
-- Round 2: RED failure mode: falsifiability
+- Round 1: Falsifiability revision: working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284
+- Round 1: RED failure mode: falsifiability
 
 The boundary itself, run separately and not the proof: `status >= 400` changed
 to `status > 400` at the same line, the six commands above run against it, then
@@ -799,10 +828,10 @@ reverted. Only entry 6 fails, on
 `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:128:23`.
 Entries 1 to 5 each pass: Tests 1 passed | 6 skipped (7). The mutated tree was
 `working-tree+cfcd384371ef81cc52c1f2f0e6e180c32884a4397b6e7d77ad342696a80f9685`.
-Round 1 had no test that failed on this edit.
+The five-status tests in the fenced record had no test that failed on this edit.
 
-- Round 2: Revision: f5b43cae0d6ef08b987b5ece3c681b9da0ddbfdb
-- Round 2: GREEN command:
+- Round 1: Revision: f5b43cae0d6ef08b987b5ece3c681b9da0ddbfdb
+- Round 1: GREEN command:
 
 ```text
 pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "ACCEPTS a 200 OK response and writes PNG/HTML"
@@ -813,7 +842,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a 400 response, the first status of the rejection boundary"
 ```
 
-- Round 2: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 6 skipped (7). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
+- Round 1: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 6 skipped (7). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 15 passed (15). Round 2 changed the test file only, so there was nothing to refactor, and the two capture unit test files are the relevant suite. Run on the tree the reviews read
@@ -821,18 +850,14 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 2 — falsifiability RED gate on the rebuilt mutated tree working-tree+972b0fa5e9d7b0ae0ada3a8f48f2af392174648875c463a016c1278ad2f99284 at HEAD f5b43cae0; GREEN + oracle proof at 0b7f820e7)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS on Round 1 (superseded by CR-20260925-0012, fenced above); qa-gatekeeper#2 PASS on Round 2 — rebuilt f5b43cae0 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+972b0fa5…; the six entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :160:23, :174:23 and :128:23; each -t selects one test; the edit stays inside status >= 400; the status > 400 run matches working-tree+cfcd3843… and fails only the 400 entry at :128:23; GREEN 1/1 per entry and both files 15/15 at 0b7f820e7. Gate taken after the revert, on the rebuilt tree
 
-Superseded: the qa-gatekeeper verdict below was given on Round 1, before
-`CR-20260925-0012` added status 400 to the case. It does not cover Round 2, and
-the gate is taken again on the Round 2 proof.
+The two lines above record qa-gatekeeper#2's verdict, given when this round was
+numbered Round 2. In them, `Round 1` is the fenced record from before
+`CR-20260925-0012` and `Round 2` is this Round 1. The round's content did not
+change with the number; the verdict's re-issue on the renumbered block is owed.
 
-```text
-- qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — falsifiability RED gate on the rebuilt mutated tree working-tree+f92f4da3797a42130188cd2664118d741cf0612d094965e4d7c1eb9f69ca442e at HEAD 22b107140; GREEN + oracle proof at 15667dd87)
-- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — rebuilt 22b107140 + the defaultCaptureScreen.ts:122 inversion; it matches working-tree+f92f4da3…; the five entries, each run separately, fail as assertions at :79:23, :96:23, :112:23, :143:23 and :157:23; each -t selects one test; no RED test hash is owed on a Unit row; the edit stays inside status >= 400; advisory: status 400 itself is untested; GREEN 1/1 per entry and both files 14/14 at 15667dd87. Gate taken after the revert, on the rebuilt tree
-```
-
-- Round 2: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
-- Round 2: Review pack (attempt 1): .qfai/review/review-20260925150001000 <!-- qfai:not-a-citation -->
-- Round 2: Review pack seal (attempt 1): bbc2d0754efb091f2dc42e136e782407cfef444698a99d65a3f2848dd3d00a9b
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the plan gate, the grilling and the authoring were simulated by one inline agent, not delegated; the rows go back for the routed roles to redo them
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925150001000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): bbc2d0754efb091f2dc42e136e782407cfef444698a99d65a3f2848dd3d00a9b
 
 ### TDD-0582
 
@@ -847,7 +872,7 @@ apart from the case's annotation.
 
 #### Round 1
 
-- Round 1: Satisfied-by: TDD-0514, whose cycle wired the default capture runner and wrote packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `response === null` refusal
+- Round 1: Satisfied-by: TDD-0514, whose binding in `16_Traceability-ledger.md` covers the default Playwright capture runner; the code landed in `a4d5a417b`: packages/qfai/src/core/prototyping/defaultCaptureScreen.ts, `defaultCaptureScreen`, the `response === null` refusal
 - Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a null response \(no navigation occurred\)"
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 5 skipped (6). The case fails on `AssertionError: expected 'screen nullresp capture failed (TypeE…' to match /no response/` at `tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts:129:27`. The runner reads `status()` from the missing response, and its outer `catch` reports the `TypeError` instead
 
@@ -909,9 +934,10 @@ checkpoint are still owed.
 # /qfai-implement — run started 2026-09-25T04:31:18.389Z
 
 `TDD-0517` alone. `CR-20260925-0012` added status 400 to `TC-0012-0487`'s
-refused statuses, and this run takes the row through Round 2 in its entry above,
-`#tdd-0517`. The run stops the row at `refactor`; the `qa-gatekeeper` turn on
-the Round 2 proof and the reviews follow it.
+refused statuses, and this run takes the row through Round 1 on the six-status
+case in its entry above, `#tdd-0517`, where the cycle on the five-status case is
+fenced as the record from before that change request. The run stops the row at
+`refactor`; the `qa-gatekeeper` turn on the proof and the reviews follow it.
 
 ## Preflight
 
@@ -937,6 +963,15 @@ Taken at `5db65cfd6`, after the preflight and before the row moved.
 | ----------------------------- | ----------------------- | ------- | ------- |
 | `delivery-planner` (blocking) | `stage4-agent (inline)` | PASS    | One row, `TDD-0517`, T2 and reviewed alone. No dispatch and no order to choose. Its boundary is unchanged; the widened case adds a sixth entry to its selector |
 | `test-design-analyst`         | `stage4-agent (inline)` | PASS    | `TC-0012-0487` now names 400, 404 and 500 as refused, and every clause maps to `TDD-0517` or `TDD-0582`. The status-400 test closes the boundary-values gap the Coverage Depth Matrix recorded for the case |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | Transcribed from delivery-planner#1's reply. PASS on the ledger after the reset `2fcc3f9ef`. `TDD-0517` is T2 and reviewed alone |
+| `test-design-analyst`         | `test-design-analyst#2` | PASS    | Transcribed from test-design-analyst#2's reply. Every clause of `TC-0012-0487` maps to exactly one row, the boundaries are distinct, and the selectors split the 7 tests of the file exactly. The matrix rows for `TC-0012-0487` and `BR-0012-0066` are confirmed, including the rescore the inline agent made in `da2438ac0` |
+
+The two `stage4-agent (inline)` rows are superseded, for the reason the run
+started 2026-09-25T03:38:07.172Z states. The `delivery-planner#1` and
+`test-design-analyst#2` rows were taken after the attempt-1 reviews, and this
+run stands on them. Work Orders rows 10 to 12 carry `delivery-planner#1`'s
+verdicts as griller on the inline grilling decisions. The block those decisions
+call Round 2 is Round 1 since row 13.
 
 ## Grilling Session
 
@@ -962,6 +997,12 @@ Preflight: session opened
 | 5 | backend-engineer | stage4-agent (inline) | grilling(S2@2026-09-25T04:31:18.389Z/agents): the Round 2 proof is the inverted comparison over all six entries; the `status > 400` run is recorded beside it | `SKILL.md` Red 3c; `selector-granularity.md`; the two mutation runs | #tdd-0517 Round 2; one tree must fail every entry, and `status > 400` fails only the 400 entry. The boundary run stays in the entry because it is the run the new test exists to fail | PASS |
 | 6 | test-design-analyst | stage4-agent (inline) | Coverage Depth Matrix: score the status-400 boundary on TC-0012-0487 and BR-0012-0066 | atdd-spec-0012.md; #tdd-0517 Round 2 | atdd-spec-0012.md `TC-0012-0487`, `BR-0012-0066` rows | PASS |
 | 7 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0517 Round 2 RED phase gate on the rebuilt falsifiability tree, and the build-phase GREEN | #tdd-0517 Round 2 | qa-gatekeeper fields | PASS |
+| 8 | delivery-planner | delivery-planner#1 | /qfai-implement plan, taken late: confirm TDD-0517 after the CR-20260925-0012 reset | test-list.md after `2fcc3f9ef`; CR-20260925-0012 | #plan-phase-1; transcribed from delivery-planner#1's reply; supersedes row 1 | PASS |
+| 9 | test-design-analyst | test-design-analyst#2 | /qfai-implement plan, taken late: coverage check of TC-0012-0487 after it names status 400, and the matrix rescore | test-list.md; 06_Test-Cases.md; atdd-spec-0012.md Coverage Depth Matrix | #plan-phase-1; transcribed from test-design-analyst#2's reply; supersedes row 2 and confirms row 6's rescore in `da2438ac0` | PASS |
+| 10 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T04:31:18.389Z, decision of row 3 (the row takes Round 2): REJECT | row 3; `round-evidence.md`; #tdd-0517 | transcribed from delivery-planner#1's reply; fence the pre-reset cycle as the record from before `CR-20260925-0012` and number the new cycle Round 1. Applied by row 13 | REVISE |
+| 11 | delivery-planner | delivery-planner#1 | griller verdict on S1@2026-09-25T04:31:18.389Z, decision of row 4 (qa-gatekeeper#1 lines fenced as superseded): ADOPT, with the fence merged into the pre-change-request fence | row 4; #tdd-0517 | transcribed from delivery-planner#1's reply. Applied by row 13 | PASS |
+| 12 | delivery-planner | delivery-planner#1 | griller verdict on S2@2026-09-25T04:31:18.389Z, decision of row 5 (the inverted comparison is the proof; the `status > 400` run sits beside it): ADOPT | row 5; #tdd-0517 | transcribed from delivery-planner#1's reply | PASS |
+| 13 | backend-engineer | backend-engineer#2 | apply rows 10 and 11 to #tdd-0517 | rows 10 and 11; #tdd-0517 | #tdd-0517; the pre-reset `#### Round 1` and qa-gatekeeper#1's two lines are one fence under a note, and every live `Round 2:` field, the attempt-1 verdict and pack lines included, is now `Round 1:`. qa-gatekeeper#2's verdict names Round 2, so its re-issue on the renumbered block is owed | PASS |
 
 ## Test results summary
 
