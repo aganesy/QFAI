@@ -31,7 +31,12 @@ describe("qfai-verify in a workflow run", () => {
       .split("\n")
       .filter((line) => line.startsWith("|"))
       .slice(2)
-      .map((line) => [...line.matchAll(/`([^`]+)`/g)].map((m) => m[1]));
-    expect(Object.fromEntries(rows.map(([kind, owner]) => [kind, owner]))).toEqual(OWNERS);
+      .map((line) =>
+        line
+          .split("|")
+          .slice(1, -1)
+          .map((cell) => /^`([^`]+)`$/.exec(cell.trim())?.[1] ?? `<${cell.trim()}>`),
+      );
+    expect(rows).toEqual(Object.entries(OWNERS));
   });
 });

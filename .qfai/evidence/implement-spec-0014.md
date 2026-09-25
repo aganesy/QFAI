@@ -127,6 +127,49 @@ narrower assertion would fix that disagreement into the record.
 `TDD-0028` and `TDD-0029` share this pack and sit at `exception`, so they carry
 no completed-evidence obligation and are not recorded here.
 
+## /qfai-implement run started 2026-09-25T13:42:05.888Z
+
+Rows `TDD-0042` to `TDD-0048` and `TDD-0050`, reopened `exception` -> `todo`
+to take the reviews their closure waived. They are `Integration` rows, so their
+row-level evidence is in `.qfai/evidence/atdd-spec-0014.md`, under each row's
+own heading.
+
+### Plan phase
+
+| Role                          | Instance                | Verdict | Summary                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `delivery-planner` (blocking) | `delivery-planner#1`    | PASS    | The eight rows are at `todo` with no blocker, and no approved Change Request resets one. All eight are T2, so each is reviewed alone. Parallel dispatch is denied: seven rows share `orchestrated-mode.md`. Order: `TDD-0042` to `TDD-0048`, then `TDD-0050`. No row is a checkpoint boundary, so each is gated on its narrow suite |
+| `test-design-analyst`         | `test-design-analyst#2` | PASS    | Each row's `Layer` owns its `L3` test case, and each `Selector` names exactly one case. Every test case and user story of spec-0014 has a ledger row                                                                                                                                                                     |
+
+Findings the plan phase hands on, none of which blocks these rows:
+
+- The Coverage Depth Matrix lists five spec gaps for `/qfai-sdd` against
+  `BR-0014-0026` to `BR-0014-0033` and their examples (its findings 7 to 11).
+- The separator rows of the ledger's first two tables have 8 cells against
+  15-column headers.
+
+### Record defects
+
+Entries from the reviews of the run started 2026-09-25T13:42:05.888Z.
+
+- Repaired: the ledger held the eight rows at `todo` while their entries
+  recorded the gatekeeper PASS, the GREEN and the refactor verify. The rows
+  were then stepped through `red`, `green` and `refactor`, one edge per commit,
+  before any review verdict was recorded in their entries.
+- Open: `TDD-0045`'s handover field `Why it fails` still says the test reads
+  "every quoted upper-case value". Since round 2 it reads every double-quoted
+  value. Editing it moves the row's audited hash, so it is repaired with a
+  record re-attestation.
+- Open: the round-1 row-level `qa-gatekeeper` lines of `TDD-0042`, `TDD-0043`,
+  `TDD-0044`, `TDD-0047`, `TDD-0048` and `TDD-0050` put the attempts on a
+  second line instead of the one-line form `round-evidence.md` gives.
+- Open: the rework of `TDD-0045` and `TDD-0046` changed only the acceptance
+  test and opened `Round 2`. `review-fix-rounds.md` describes a test-only
+  replacement without a new round for that case. Round 2 carries every field
+  the gate reads, and the reviewers accepted it.
+
 ## Final status
 
-No row is recorded. Both `unit` rows are listed above rather than claimed.
+No `unit` row is recorded. Both are listed above rather than claimed. The
+`Integration` rows of the run started 2026-09-25T13:42:05.888Z are recorded in
+`.qfai/evidence/atdd-spec-0014.md`.

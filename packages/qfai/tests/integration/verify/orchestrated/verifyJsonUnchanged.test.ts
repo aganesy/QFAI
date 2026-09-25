@@ -37,7 +37,7 @@ describe("qfai-verify in a workflow run", () => {
     ]);
     // The field table's own `status` row: the prose after it also names a value it rules out.
     const statusLine = text.split("\n").find((line) => line.startsWith("| `status`")) ?? "";
-    expect([...new Set([...statusLine.matchAll(/"([A-Z]+)"/g)].map((m) => m[1]))]).toEqual([
+    expect([...new Set([...statusLine.matchAll(/"([^"]+)"/g)].map((m) => m[1]))]).toEqual([
       "PASS",
       "FAIL",
     ]);

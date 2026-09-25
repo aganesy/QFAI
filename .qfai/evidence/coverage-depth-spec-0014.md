@@ -2,31 +2,31 @@
 
 ## Scope
 
-This matrix scores fourteen obligations: the five user stories of `02_User-stories.md` —
-`US-0014-0013`, `-0014`, `-0018`, `-0019` and `-0020` — and the nine test cases of
-`06_Test-Cases.md` — `TC-0014-0009`, `-0018`, `-0019`, `-0028`, `-0029`, `-0033`, `-0034`, `-0035`
-and `-0036`. Both obligation sets are read from their own file in full, not from the rows of
-`.qfai/specs/spec-0014/tdd/test-list.md`: this ledger holds no row for any story, and a `TC-*`
-whose row had been dropped would be invisible to a reading that starts from it.
+This matrix scores twenty-three obligations: the six user stories of `02_User-stories.md` —
+`US-0014-0013`, `-0014`, `-0018`, `-0019`, `-0020` and `-0021` — and the seventeen test cases of
+`06_Test-Cases.md` — `TC-0014-0009`, `-0018`, `-0019`, `-0028`, `-0029`, `-0033`, `-0034`, `-0035`,
+`-0036`, and `-0037` to `-0044`. Both obligation sets are read from their own file in full, not from
+the rows of `.qfai/specs/spec-0014/tdd/test-list.md`: a `TC-*` whose row had been dropped would be
+invisible to a reading that starts from it.
 
-**The absent story rows are an upstream gap, not the expected shape.** `/qfai-sdd` Phase 2b seeds
-one `Layer = E2E` row per active `US-*`, with the obligation in `US-Refs`. All five stories are
-active, this ledger has no E2E row and no `US-Refs` column to put one in, so five acceptance
-lifecycles are invisible to the execution ledger. The repair is a `/qfai-sdd` rerun that reseeds
-the ledger and migrates the column — row identity and table shape are Phase 2b's to write, and
-neither this matrix nor `/qfai-implement` may add them.
+**Every story has an E2E row, and none has a test.** The ledger carries one `Layer = E2E` row per
+active `US-*`, with the story in `US-Refs`: `TDD-0037` to `TDD-0041` for the five earlier stories
+and `TDD-0049` for `US-0014-0021`. All six are `todo` with no `Test file`, so no story's acceptance
+lifecycle has started. `TDD-0049` waits on `spec-0018`, whose scripted run through this stage is the
+journey it will annotate.
 
-All five user stories are active. A story deferred out of the slice carries an
+All six user stories are active. A story deferred out of the slice carries an
 `- x-qfai-status: planned` meta line inside its own `US-*` block; no block in `02_User-stories.md`
 carries one, and the string occurs nowhere under `.qfai/specs/spec-0014/`.
 
-Four of the nine test-case rows are `Level: unit` (`-0028`, `-0029`, `-0033`, `-0034`) and five are
-`Level: integration`; the split matters and is stated under "Annotation coverage" below. The
-business rule table carries all seven `BR-0014-*` headings of `04_Business-Rules.md` — `-0001` …
-`-0006` and `-0025`. None carries a status retiring it, so all seven are active and all seven own a
-row.
+Four of the seventeen test-case rows are `Level: unit` (`-0028`, `-0029`, `-0033`, `-0034`) and
+thirteen are integration: five `Level: integration` and eight `Level: L3` (`-0037` to `-0044`),
+which `catalog/test-layers.md` reads as the same layer. The split matters and is stated under
+"Annotation coverage" below. The business rule table carries all fifteen `BR-0014-*` headings of
+`04_Business-Rules.md` — `-0001` … `-0006`, `-0025`, and `-0026` … `-0033`. None carries a status
+retiring it, so all fifteen are active and all fifteen own a row.
 
-**Four obligations are undischarged, and in only one of them is a missing test the whole reason.**
+**Five obligations are undischarged.**
 `US-0014-0018` names verify depending on the contract-first validate gates, and its only cases are
 four incidental ones in `reviewArtifactsProfileWiring.test.ts` that exercise the profile without
 distinguishing the completion flow the story declares. `TC-0014-0028` and `TC-0014-0029` name a
@@ -40,6 +40,11 @@ change as well — the configured root has to reach the suites — and the `US-*
 live pack does not record. With those in place, `US-0014-0018` needs a case that drives the
 completion flow and observes the gate refusing it, which nothing does today. The other three need
 the product or the spec to move first.
+
+`US-0014-0021` is the fifth. Each of its seven criteria is stated in the shipped `qfai-verify` skill
+and pinned by a passing case, and its own acceptance test does not exist: the E2E row `TDD-0049` has
+no test file, and the ATDD scan reports the story missing. See "The eight rows added for the verify
+stage" below.
 
 **`TC-0014-0009` is discharged in part.** One case feeds a `REVISE` verdict to verify's binding
 gate and requires the error that fails it. The gate for the reviewers that `/qfai-verify` routes is read
@@ -73,7 +78,7 @@ by no test.
   `uiEvidenceArtifacts.test.ts` require a project carrying only the legacy layout to produce zero
   issues. See Findings 4.
 
-`TC-0014-0028` and `TC-0014-0029` carry 18 of the matrix's 58 `❌` depth cells between them, and
+`TC-0014-0028` and `TC-0014-0029` carry 18 of the matrix's 70 `❌` depth cells between them, and
 `TC-0014-0009` three more.
 
 The rest of the pack ranges widely. `TC-0014-0036` is the strongest work here: sixteen passing cases
@@ -85,9 +90,15 @@ enforced by a strong suite that no live chain binds to it.
 single well-oracled case with no boundary or error direction, and `US-0014-0018` has one incidental
 gate and no case on the claim that distinguishes it.
 
-Section "Every `❌` cell, named" enumerates all 71 of them — 64 scored, 7 in the non-scored `Status`
+The eight verify-stage rows, `TC-0014-0037` to `-0044`, are narrow by construction: each reads one
+shipped skill file and asserts what it states. `TC-0014-0040` and `TC-0014-0043` pin a closed set
+exactly and leave nothing open. The other six each leave open an edge, a combination or a partition
+their criteria raise, and each asserts at least one sentence by a pattern that an exception appended
+after it would not break.
+
+Section "Every `❌` cell, named" enumerates all 84 of them — 76 scored, 8 in the non-scored `Status`
 columns — so that "one justification per `❌`" is checkable rather than asserted, and section
-"Every `⚠️` cell, named" does the same for all 80 partial scores, 66 of which are scored cells the
+"Every `⚠️` cell, named" does the same for all 113 partial scores, 87 of which are scored cells the
 PASS criterion also requires a rationale for.
 
 ## What was measured, and how
@@ -194,6 +205,10 @@ obligation on L3 only, and the summary agrees: `TC-0014-0028`, `-0029`, `-0033` 
 under `excludedUnitComponentTc`, not under `missing`. Their scores below reflect their tests, and
 no cell is marked down for a missing annotation they do not owe.
 
+That report was read at revision `d8aaf60c0bbe270b0e3f443dfca9cc28614bda10`. At the revision the
+verify-stage rows were scored, the scan reads the package suite, and it neither caps those rows nor
+lists them as missing; see "The eight rows added for the verify stage".
+
 ### Skipped tests
 
 `QFAI-TEST-003` is error-severity and the spec-scoped gate recorded in `atdd-spec-0014.md` exits
@@ -263,6 +278,85 @@ five.
 | US-0014-0018 | 4 in `reviewArtifactsProfileWiring.test.ts`                                    | none                            |
 | US-0014-0019 | 1 in `verifySemanticsSpec0014.test.ts`                                         | none                            |
 | US-0014-0020 | 18 across `prototypingCertify.saasPackage.test.ts` and `…upgradeScope.test.ts` | 2, both skipped                 |
+| US-0014-0021 | 8 in `tests/integration/verify/orchestrated/`, one per test case               | none                            |
+
+`US-0014-0021` differs in one respect: its criteria record the link. Each of `AC-0014-0023` to
+`-0029` carries `US-Refs: US-0014-0021`, so its eight cases reach it through a chain the pack writes
+down rather than by subject. No cell in its row reaches `✅` either. Every case reads what the skill
+states, and none runs verify as a stage of a run, which is what the story asks for.
+
+### The eight rows added for the verify stage
+
+`TC-0014-0037` to `TC-0014-0044`, their rules `BR-0014-0026` to `BR-0014-0033`, and `US-0014-0021`
+were scored at revision `6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1`, after
+`pnpm -C packages/qfai build`. The fourteen matrix rows and seven rule rows scored at `d8aaf60…`
+keep their scores and are not rescored here.
+
+```text
+pnpm -C packages/qfai exec vitest run --reporter=verbose tests/integration/verify/orchestrated
+```
+
+The run reports `Test Files 8 passed (8)` and `Tests 8 passed (8)`, exit 0. Each file holds one
+case, annotated with its test case and selected by the ledger row's `Selector`:
+
+| File                          | Test case    | Ledger row | Reads                                                      | Result   |
+| ----------------------------- | ------------ | ---------- | ---------------------------------------------------------- | -------- |
+| `stageResultReceipts.test.ts` | TC-0014-0037 | TDD-0042   | `orchestrated-mode.md`, `## The stage result`              | 1 passed |
+| `foreignReport.test.ts`       | TC-0014-0038 | TDD-0043   | `orchestrated-mode.md`, `## The stage result`              | 1 passed |
+| `unrunGate.test.ts`           | TC-0014-0039 | TDD-0044   | `orchestrated-mode.md`, `## The stage result`              | 1 passed |
+| `verifyJsonUnchanged.test.ts` | TC-0014-0040 | TDD-0045   | `verify-output-contract.md`, whole file                    | 1 passed |
+| `repairRouting.test.ts`       | TC-0014-0041 | TDD-0046   | `orchestrated-mode.md`, `## Findings verify did not cause` | 1 passed |
+| `stageSkillHandover.test.ts`  | TC-0014-0042 | TDD-0047   | `orchestrated-mode.md`, `## Entry check`; `SKILL.md`       | 1 passed |
+| `operationsTable.test.ts`     | TC-0014-0043 | TDD-0048   | `orchestrated-mode.md`, `## Operations`                    | 1 passed |
+| `missingEnvironment.test.ts`  | TC-0014-0044 | TDD-0050   | `orchestrated-mode.md`, `## A missing environment`         | 1 passed |
+
+All eight files sit under `packages/qfai/tests/integration/verify/orchestrated/`, and every file they
+read under `packages/qfai/assets/init/.qfai/assistant/skills/qfai-verify/`.
+
+**What these rows score.** Each test case's `Steps` read a skill file, and its `Expected` is what
+the file states. That statement is the obligation the row scores. The behaviour the criteria
+describe — a verify stage returning a result inside a run — is carried out by an agent following
+that text, and no case here observes it. The rows' `Notes` give the executable halves to the
+workflow core, and the story's run-level journey belongs to `TDD-0049`.
+
+The chain each row reaches decides which categories it owes, and `n/a` marks a category the chain
+does not raise. The fourteen earlier rows carry no `n/a` in the matrix. The nine rows added here
+carry 36, all on the eight test-case rows:
+
+| Column              | `n/a` on                                    | Why the category is absent                                                                                                                              |
+| ------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Normal path`       | `-0038`, `-0039`, `-0044`                   | Each declares `Type: error`; `TC-0014-0037` carries the normal return they diverge from                                                                 |
+| `Error path`        | `-0037`, `-0040`, `-0042`, `-0043`          | Their criterion, rule and example name no failure. A prohibition such as "gains no field" is a clause of the statement and is scored as its normal path |
+| `Edge cases`        | `-0040`, `-0042`, `-0043`                   | Each statement is a closed list or a count, with no edge left open                                                                                      |
+| `Boundary values`   | all but `-0042`                             | No numeric, date, length or ordered domain. The closed sets of `-0040`, `-0041` and `-0043` are memberships, scored under `Equivalence partitions`      |
+| `Special values`    | all but `-0038`                             | No input the chain names admits an absent or empty value the spec leaves undecided                                                                      |
+| `State transitions` | all but `-0044`                             | Only `BR-0014-0033` names a state. Moving a run between states is the workflow core's `finish` and `resume`                                             |
+| `Combinatorial`     | `-0037`, `-0038`, `-0040`, `-0042`, `-0043` | The row's clauses are independent, and no two conditions its chain names meet                                                                           |
+
+Two ownership notes apply:
+
+- The mismatched work order that `TC-0014-0042`'s `Notes` leave to the shared stage-skill rule is
+  declared by no criterion of this spec, so it is not a failure these rows keep.
+- `TC-0014-0041` owns the missing-environment failure through `AC-0014-0027`. The pack puts its case
+  in `TC-0014-0044`, which reaches the same criterion, and the row's `Error path` is credited to that
+  case.
+
+**One sentence is read by no case.** `orchestrated-mode.md` says `verify.json` "is unchanged inside
+a run: its fields and values are `references/verify-output-contract.md`'s, and the run's values stay
+in the stage result." Deleting it reddens nothing. `TC-0014-0040` pins the contract the sentence
+points at, so no cell turns on it.
+
+**The ATDD scan at this revision.** `node packages/qfai/dist/cli/index.mjs validate --profile atdd`
+exits 1. Its summary records `scan.matchedFileCount: 329`, with `packages/*/tests/**/*.test.ts`
+among the globs, so it reads the package suite. For this spec it reports:
+
+- none of `TC-0014-0037` to `-0044` as missing or carrier-only — each annotation resolves to its
+  file above;
+- `US-0014-0021` under `missing`, with `QFAI-ATDD-111` at error: no E2E test references the story;
+- only `US-0014-0013`, `-0014`, `-0018` and `-0019` under `coveredByCarrierOnly`.
+
+So the carrier-only cap does not apply to the eight rows. Whether it still holds for the rows
+scored at `d8aaf60…` is for their rescoring to settle; see Findings 12.
 
 ## The matrix
 
@@ -273,6 +367,7 @@ five.
 | US-0014-0018 | ⚠️                     | ❌          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ❌     |
 | US-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | US-0014-0020 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ⚠️              | ⚠️             | ⚠️                | ⚠️            | ⚠️              | ⚠️     |
+| US-0014-0021 | ⚠️                     | ⚠️          | ⚠️         | ❌         | ⚠️              | ❌             | ⚠️                | ❌            | ⚠️              | ❌     |
 | TC-0014-0009 | ⚠️                     | ⚠️          | ⚠️         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0018 | ⚠️                     | ✅          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
 | TC-0014-0019 | ❌                     | ⚠️          | ⚠️         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
@@ -282,27 +377,39 @@ five.
 | TC-0014-0034 | ⚠️                     | ✅          | ❌         | ⚠️         | ❌              | ❌             | ✅                | ⚠️            | ✅              | ⚠️     |
 | TC-0014-0035 | ⚠️                     | ⚠️          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ⚠️              | ⚠️     |
 | TC-0014-0036 | ✅                     | ⚠️          | ✅         | ✅         | ⚠️              | ⚠️             | ✅                | ✅            | ⚠️              | ⚠️     |
+| TC-0014-0037 | ✅                     | ✅          | n/a        | ❌         | n/a             | n/a            | n/a               | n/a           | ⚠️              | ⚠️     |
+| TC-0014-0038 | ✅                     | n/a         | ✅         | ❌         | n/a             | ❌             | n/a               | n/a           | ⚠️              | ⚠️     |
+| TC-0014-0039 | ✅                     | n/a         | ⚠️         | ❌         | n/a             | n/a            | n/a               | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0040 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | n/a           | ✅              | ✅     |
+| TC-0014-0041 | ✅                     | ✅          | ✅         | ❌         | n/a             | n/a            | n/a               | ❌            | ⚠️              | ⚠️     |
+| TC-0014-0042 | ⚠️                     | ✅          | n/a        | n/a        | ✅              | n/a            | n/a               | n/a           | ⚠️              | ⚠️     |
+| TC-0014-0043 | ✅                     | ✅          | n/a        | n/a        | n/a             | n/a            | n/a               | n/a           | ✅              | ✅     |
+| TC-0014-0044 | ✅                     | n/a         | ✅         | ❌         | n/a             | n/a            | ✅                | ❌            | ⚠️              | ⚠️     |
 
-14 rows × the 9 depth columns = **126 scored cells: ✅ 9 / ⚠️ 59 / ❌ 58**.
+23 rows × the 9 depth columns = **207 scored cells: ✅ 28 / ⚠️ 73 / ❌ 70, with `n/a` 36**.
 
 `Status` is the row verdict, not a mark, so it is outside the scored population. For reference, its
-14 cells read **✅ 0 / ⚠️ 10 / ❌ 4**.
+23 cells read **✅ 2 / ⚠️ 16 / ❌ 5**.
 
-No user-story row carries a `✅` in any column, because the pack binds no running case to any of
-the five stories — the cases named above are attributed by subject, which holds a cell at `⚠️` and
-never lifts it. The crediting rule is stated above and the evidence behind each capped cell is
-named in "Every `⚠️` cell, named".
+No user-story row carries a `✅` in any column. The pack binds no running case to any of the five
+earlier stories — the cases named above are attributed by subject, which holds a cell at `⚠️` and
+never lifts it. `US-0014-0021`'s cases are reached through its criteria, and each reads what the
+skill states rather than running the stage the story names. The crediting rule is stated above and
+the evidence behind each capped cell is named in "Every `⚠️` cell, named".
 
-No row reaches `Status = ✅`. The five integration test-case rows and all five user-story rows are
-capped by the carrier-only condition described above. The four unit rows are not capped by it;
-`TC-0014-0034` is held at `⚠️` on its own merits, `TC-0014-0033` is `❌` because the clause that
-decides its criterion is contradicted by the product, and `TC-0014-0028` and `TC-0014-0029` have no
-test.
+Two rows reach `Status = ✅`: `TC-0014-0040` and `TC-0014-0043`. Each pins a closed set exactly and
+leaves open no category its chain raises. Of the rest, the five integration test-case rows and the
+five user-story rows scored at `d8aaf60…` are capped by the carrier-only condition described above.
+The four unit rows are not capped by it; `TC-0014-0034` is held at `⚠️` on its own merits,
+`TC-0014-0033` is `❌` because the clause that decides its criterion is contradicted by the product,
+and `TC-0014-0028` and `TC-0014-0029` have no test. The six other verify-stage test-case rows are
+held at `⚠️` by their own cells, and `US-0014-0021` is `❌` because its acceptance test does not
+exist.
 
 ### Business rule coverage
 
-One row per active `BR-0014-*`. All seven headings in `04_Business-Rules.md` are active, so none is
-omitted. `Covering TC` is derived from each rule's `AC-Refs` and from the `BR-Ref` of the examples
+One row per active `BR-0014-*`. All fifteen headings in `04_Business-Rules.md` are active, so none
+is omitted. `Covering TC` is derived from each rule's `AC-Refs` and from the `BR-Ref` of the examples
 the test cases cite, not from the rule's number.
 
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                  | Status |
@@ -314,26 +421,45 @@ the test cases cite, not from the rule's number.
 | BR-0014-0005 | ✅            | ✅            | ⚠️                   | TC-0014-0033                 | ⚠️     |
 | BR-0014-0006 | ✅            | ⚠️            | ⚠️                   | TC-0014-0034                 | ⚠️     |
 | BR-0014-0025 | ⚠️            | ✅            | ✅                   | TC-0014-0035, TC-0014-0036   | ⚠️     |
+| BR-0014-0026 | ✅            | ⚠️            | n/a                  | TC-0014-0037                 | ⚠️     |
+| BR-0014-0027 | ⚠️            | ✅            | n/a                  | TC-0014-0038                 | ⚠️     |
+| BR-0014-0028 | ✅            | ⚠️            | ⚠️                   | TC-0014-0039                 | ⚠️     |
+| BR-0014-0029 | ✅            | ✅            | n/a                  | TC-0014-0040                 | ✅     |
+| BR-0014-0030 | ✅            | ✅            | ⚠️                   | TC-0014-0041                 | ⚠️     |
+| BR-0014-0031 | ✅            | ✅            | ⚠️                   | TC-0014-0042                 | ⚠️     |
+| BR-0014-0032 | ✅            | ✅            | n/a                  | TC-0014-0043                 | ✅     |
+| BR-0014-0033 | ✅            | ✅            | ⚠️                   | TC-0014-0044                 | ⚠️     |
 
-7 rows × the 3 scored columns — `Positive case`, `Negative case`, `Conditional branches` — =
-**21 scored cells: ✅ 5 / ⚠️ 7 / ❌ 6, with `n/a` 3**. `Covering TC` holds identifiers and `Status`
-holds the row verdict, so neither is scored; the 7 `Status` cells read **✅ 0 / ⚠️ 4 / ❌ 3**.
+15 rows × the 3 scored columns — `Positive case`, `Negative case`, `Conditional branches` — =
+**45 scored cells: ✅ 18 / ⚠️ 14 / ❌ 6, with `n/a` 7**. `Covering TC` holds identifiers and
+`Status` holds the row verdict, so neither is scored; the 15 `Status` cells read
+**✅ 2 / ⚠️ 10 / ❌ 3**.
 
-`n/a` is used three times, for `BR-0014-0001`, `-0002` and `-0003`, each of which states its rule
-unconditionally — "always full-scan", "is part of the completion gate", "remains the source" — so
-there is no branch to cover. It is not used anywhere an obligation exists and is unmet.
+`n/a` is used seven times, always in `Conditional branches`, for rules stated unconditionally, so
+there is no branch to cover:
+
+- `BR-0014-0001`, `-0002` and `-0003` — "always full-scan", "is part of the completion gate",
+  "remains the source";
+- `BR-0014-0026`, `-0027`, `-0029` and `-0032` — "names the `verify.json` the stage wrote", "never
+  names", "gains no field", "lists exactly".
+
+It is not used anywhere an obligation exists and is unmet.
+
+For the eight rules added for the verify stage, `Negative case` scores the prohibition or closed
+set the rule states — "never", "no", "only", "exactly" — against the case that would redden when it
+is broken. Each of the eight states one, so none is `n/a`.
 
 ### Both tables together
 
-The scored population is 147 cells: 126 matrix depth cells plus 21 business rule cells.
+The scored population is 252 cells: 207 matrix depth cells plus 45 business rule cells.
 
 | Mark | Matrix depth | Business rule | Scored total |
 | ---- | ------------ | ------------- | ------------ |
-| ✅   | 9            | 5             | 14           |
-| ⚠️   | 59           | 7             | 66           |
-| ❌   | 58           | 6             | 64           |
-| n/a  | 0            | 3             | 3            |
-| Sum  | 126          | 21            | 147          |
+| ✅   | 28           | 18            | 46           |
+| ⚠️   | 73           | 14            | 87           |
+| ❌   | 70           | 6             | 76           |
+| n/a  | 36           | 7             | 43           |
+| Sum  | 207          | 45            | 252          |
 
 ### The `DR-0274` citation both certify rows carry
 
@@ -353,8 +479,8 @@ the gap stands open against the rows.
 
 ## Every ❌ cell, named
 
-The matrix carries 58 `❌` depth cells plus 4 in `Status`; the business rule table carries 6 in its
-scored columns plus 3 in its `Status` column — 71 in all, of which 64 are scored. Each is named
+The matrix carries 70 `❌` depth cells plus 5 in `Status`; the business rule table carries 6 in its
+scored columns plus 3 in its `Status` column — 84 in all, of which 76 are scored. Each is named
 below with its own reason. A row's `Status` is `❌` when the obligation is not discharged at the
 depth the row describes; that verdict is stated once per row and is not repeated per cell.
 
@@ -470,6 +596,28 @@ annotated to the two test cases. The only case bound to the story is in
 `spec0014SaasPackageCertifyE2E.test.ts` and does not run, so no cell reaches `✅` however wide the
 subject coverage is. This row has **no `❌` cell** in any column; all nine depth cells and its
 `Status` are `⚠️` and are stated below.
+
+### US-0014-0021 — verify as the final stage of a run
+
+The story's seven criteria, `AC-0014-0023` to `-0029`, each carry `US-Refs: US-0014-0021`, and the
+eight passing cases of `TC-0014-0037` to `-0044` pin what the shipped `qfai-verify` skill states
+about each. None runs verify as a stage of a run. The story's acceptance case is the E2E row
+`TDD-0049`, which is `todo` with no test file and waits on `spec-0018`. This row has **three `❌`
+depth cells** and `Status = ❌`.
+
+- **Edge cases** — every edge the test-case rows below leave open is open for the story: a reviewer
+  who authored another stage's artifact (`TC-0014-0037`), the canonical `verify.json` still holding a
+  previous run's file (`TC-0014-0038`), a gate that started and did not finish (`TC-0014-0039`), a
+  finding of no listed repair kind (`TC-0014-0041`), and an environment that is present but fails
+  (`TC-0014-0044`).
+- **Special values** — a foreign `verify.json` with no `specId`, which the output contract makes
+  optional, is classified by no statement (`TC-0014-0038`).
+- **Combinatorial** — three crosses the criteria create are stated nowhere: a missing environment
+  beside a repairable finding, a gate that did not run because its environment is missing, and a
+  passing gate beside one that did not run. See Findings 8 and 9.
+- **Status** — the story's own acceptance test does not exist, and the ATDD scan reports the story
+  under `missing` with `QFAI-ATDD-111`. Each criterion is stated and pinned, so what is missing is
+  the journey, not the rules.
 
 ### TC-0014-0009 — REVISE review artifact blocks completion
 
@@ -686,6 +834,116 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 `prototypingCertify.upgradeScope.test.ts`. This row has **no `❌` cell** in any column. Its four
 `⚠️` depth cells and its `⚠️` `Status` are stated below.
 
+### TC-0014-0037 — the stage result names this run's verify.json and its independent review
+
+Ledger row `TDD-0042`. One passing case in `stageResultReceipts.test.ts` reads `## The stage result`
+of `orchestrated-mode.md` and requires three sentences: the stage writes this run's
+`.qfai/report/verify.json` and names it in `artifactRefs`, the qa-gatekeeper verdict is a
+`reviewResults` entry from a reviewer independent of the authors, and the stage's own `gateResults`
+are information only. This row has **one `❌` depth cell** and no `❌` in `Status`.
+
+- **Edge cases** — the independence clause has an edge that the spec answers two ways.
+  `EX-0014-0030` requires a reviewer instance "that authored nothing in the run".
+  `AC-0014-0023`, `BR-0014-0026` and the row's `Expected` say "independent of the authors", and the
+  reference says "independent of the authors of what it reviews". A reviewer that authored another
+  stage's artifact in the same run satisfies the reference and fails the example. The case's pattern
+  stops at "independent of the authors", so it cannot tell the two readings apart, and no case
+  constructs that reviewer. See Findings 7.
+
+### TC-0014-0038 — a report from elsewhere is never offered as this run's
+
+Ledger row `TDD-0043`, `Type: error`. One passing case in `foreignReport.test.ts` requires the
+sentence stating that a `verify.json` written by another run, for another spec or kept in a shared
+location is never named as this stage's report. This row has **two `❌` depth cells** and no `❌` in
+`Status`.
+
+- **Edge cases** — the stage writes `.qfai/report/verify.json`, one path that every run of the
+  project shares, and at the start of a stage that path may hold a file a previous run wrote. The
+  statement forbids naming a file "kept in a shared location" and requires naming the file the stage
+  wrote at that path. It does not say how the stage tells the two apart, and the row's `Notes` leave
+  the per-stage copy to the workflow core. No case addresses a stale file at the canonical path. See
+  Findings 11.
+- **Special values** — `specId` is optional in `verify-output-contract.md`. A foreign `verify.json`
+  with no `specId` cannot be classified as "for another spec" under the statement, and no case
+  supplies one. See Findings 11.
+
+### TC-0014-0039 — a gate that did not run is reported unrun
+
+Ledger row `TDD-0044`, `Type: error`. One passing case in `unrunGate.test.ts` requires two
+sentences: `outcome` and `testObservation` are reported apart, and a required gate that did not run
+is reported `unrun`, never as a pass. This row has **two `❌` depth cells** and no `❌` in `Status`.
+
+- **Edge cases** — "did not run" has an edge: a required gate that started and stopped before it
+  finished. Whether it is reported `unrun` or as a failure is stated nowhere, and no case addresses
+  it.
+- **Combinatorial** — `EX-0014-0032`'s gate could not start "because the browser the harness needs
+  is not installed". Under `BR-0014-0033` that is a missing environment: `EX-0014-0037` describes the
+  same event with a database container, and returns the stage `blocked`. The statements of this row
+  and of `TC-0014-0044` are each pinned, and nothing states that the one event is reported both ways
+  — the gate `unrun` and the stage `blocked`. The example's other cross, a passing gate beside the
+  unrun one, is covered only in part; see this row's `Error path` under "Every `⚠️` cell, named". See
+  Findings 9.
+
+### TC-0014-0040 — verify.json keeps its fields and values
+
+Ledger row `TDD-0045`. One passing case reads `verify-output-contract.md` and requires four things:
+the field table's first column is exactly `status`, `scope`, `specId`, `recordedAt`, `summary`,
+`gates`; the double-quoted values in the `status` row, whatever characters they hold, are exactly
+`PASS` and `FAIL`; the `scope` table's first column is exactly `prototyping`, `atdd`, `full`; and
+the file names neither `outcome` nor `testObservation`. Adding a field row or a scope row reddens
+it, and so does adding a status value written the way the row writes its values, in double quotes:
+`"WARN"`, `"needs_repair"`, `"blocked"` and `"PASS2"` alike. This row has **no
+`❌` or `⚠️` cell**; its six `n/a` cells are explained under "The eight rows added for the verify
+stage", and its `Status` is `✅`.
+
+### TC-0014-0041 — verify sends each finding to its owner
+
+Ledger row `TDD-0046`. One passing case reads `## Findings verify did not cause`. It requires the
+sentence that verify edits no artifact another owner holds and the sentence that routes a finding
+through `needs_repair`, `debts` and `resolvingOwner`. It compares the table's body rows, in order,
+with three literal pairs: `spec gap` to `qfai-sdd`, `acceptance-test defect` to `qfai-atdd` and
+`implementation defect` to `qfai-implement`, each cell exactly one backticked token. A fourth row,
+whichever of its cells are backticked, reddens it, as do a second owner in one cell, a duplicated
+kind and a changed owner. This row has **two `❌` depth cells** and no `❌` in `Status`.
+
+- **Edge cases** — the repair kinds are closed at three, and a finding verify did not cause may fit
+  none of them — a defect in a contract, or in the verify skill itself — or fit two. Neither the
+  statement nor `BR-0014-0030` says where such a finding goes. See Findings 10.
+- **Combinatorial** — `AC-0014-0027` puts a repairable finding and a missing environment in one
+  scenario, and each is pinned on its own: `needs_repair` here, `blocked` in `TC-0014-0044`. Which
+  outcome the stage returns when both occur, and whether the finding's debt is still listed, is
+  stated nowhere. See Findings 9.
+
+### TC-0014-0042 — the verify stage follows the stage-skill handover
+
+Ledger row `TDD-0047`. One passing case reads `## Entry check` and requires three sentences: in mode
+`active` a request with no work order and no name goes to `qfai-run` with nothing edited, a worker
+checks the run, stage instance and work-order IDs, and it does only that work order's work. It also
+requires exactly one line of `SKILL.md` to cite `references/orchestrated-mode.md`. This row has **no
+`❌` cell**. Its two `⚠️` depth cells and its `⚠️` `Status` are stated below.
+
+### TC-0014-0043 — the Operations table lists exactly verify-full
+
+Ledger row `TDD-0048`. One passing case reads the Operations table the way the workflow file contract
+defines it: the heading must be exactly `## Operations`, the first column must be headed
+`Operation`, and its backticked IDs must equal `["verify-full"]`. Renaming the heading, adding an
+operation or dropping the backticks reddens it. The set is held literally in the test, as the row's
+`Expected` asks; whether it matches the plan vocabulary `AC-0014-0029` names is the workflow core's
+test, by the row's `Notes`. This row has **no `❌` or `⚠️` cell**, and its `Status` is `✅`.
+
+### TC-0014-0044 — a missing environment blocks the stage
+
+Ledger row `TDD-0050`, `Type: error`. One passing case reads `## A missing environment` and requires
+two sentences: a gate whose environment is missing returns the stage `blocked`, with the blocker
+`stage-blocked` and `operator` as the one who clears it, and no debt is listed for it. This row has
+**two `❌` depth cells** and no `❌` in `Status`.
+
+- **Edge cases** — the condition is an environment that is missing. An environment that is present
+  and fails — a container that starts and then exits — is its edge. Whether that blocks the stage or
+  becomes an implementation defect routed to `qfai-implement` is stated nowhere.
+- **Combinatorial** — the two crosses named under `TC-0014-0039` and `TC-0014-0041`: this failure
+  beside a repairable finding, and this failure reported as a gate that did not run. See Findings 9.
+
 ### The six ❌ cells of the business rule table
 
 - **BR-0014-0001 × Positive case** — the rule states that verify is always full-scan. Nothing
@@ -736,8 +994,8 @@ leaves both markers undefined. This row has **six `❌` depth cells** and no `�
 
 ## Every ⚠️ cell, named
 
-59 depth cells and 10 `Status` cells in the matrix, and 7 scored cells and 4 `Status` cells in the
-business rule table, are `⚠️` — 80 in all, of which 66 are scored. The PASS criterion requires a
+73 depth cells and 16 `Status` cells in the matrix, and 14 scored cells and 10 `Status` cells in
+the business rule table, are `⚠️` — 113 in all, of which 87 are scored. The PASS criterion requires a
 documented rationale for each, so each is named here.
 
 ### Matrix depth cells
@@ -1052,6 +1310,59 @@ documented rationale for each, so each is named here.
   than default to success: a parseable but empty `{}` canonical signal, with a comment naming the
   fail-open it exists to prevent. Not supplied: an unparseable non-JSON signal, a zero-byte file, a
   `counts.error` that is present but non-numeric, and a `null` body.
+- **US-0014-0021 × Equivalence partitions** — the partitions the story's criteria name are each
+  stated and pinned by a case: a clean return, a foreign report, a gate that did not run, three
+  repair kinds, a missing environment, and a request with no work order. Held at `⚠️` because no
+  case runs the stage over any of them, and because the named request in mode `active` has no case
+  (see `TC-0014-0042` below).
+- **US-0014-0021 × Normal path** — the story's normal return, `EX-0014-0030`, is stated and pinned by
+  `TC-0014-0037`. The story's direction is verify running the final gates as a stage of a run, and
+  no case does that: `TDD-0049` has no test file.
+- **US-0014-0021 × Error path** — the three failures the criteria keep — a foreign report, a gate
+  that did not run and a missing environment — are each stated and pinned by `TC-0014-0038`, `-0039`
+  and `-0044`. None is observed in a run, and `EX-0014-0032`'s consequence for `verify.json` is
+  stated nowhere (see `TC-0014-0039` below).
+- **US-0014-0021 × Boundary values** — the one count in the story's criteria, `SKILL.md` citing the
+  reference on exactly one line, is pinned by `TC-0014-0042`. Held at `⚠️` because it is a property
+  of the skill file, not of a run.
+- **US-0014-0021 × State transitions** — the `blocked` state, its blocker and who clears it are
+  stated and pinned by `TC-0014-0044`. No case observes a stage entering it, and leaving it is the
+  workflow core's `resume`.
+- **US-0014-0021 × Oracle strength** — the set comparisons of `TC-0014-0040`, `-0041` and `-0043`
+  and the one-line count of `TC-0014-0042` redden on any added member. Six cases also assert a
+  sentence by a pattern that leaves part of it unread, so a change to that part stays green, as the
+  rows below name. No case observes a run.
+- **TC-0014-0037 × Oracle strength** — deleting any of the three sentences reddens the case. The
+  pattern for the third stops at "information only", and the clause after it, "the run decides no
+  gate from them", is not read: rewriting it to "the run decides every gate from them" leaves the
+  case green.
+- **TC-0014-0038 × Oracle strength** — dropping one of the three sources from the sentence reddens
+  the case. The pattern ends at "this stage's report", so an exception appended before the full stop
+  — ", unless it is newer than this run's" — leaves it green.
+- **TC-0014-0039 × Error path** — the report of a gate that did not run is pinned. `EX-0014-0032`
+  also requires that `verify.json` does not record `status: "PASS"`, and neither the row's
+  `Expected` nor the shipped text states it. The output contract says `PASS` means every gate in
+  scope passed, which leaves a reader to infer that a gate that did not run is not a pass of the
+  run. See Findings 8.
+- **TC-0014-0039 × Oracle strength** — deleting either sentence reddens the case. The second pattern
+  ends at "never as a pass", so ", unless every other gate passed" appended after it leaves the case
+  green.
+- **TC-0014-0041 × Oracle strength** — the table is compared row by row with the three literal pairs,
+  each cell exactly one backticked token, which meets the row's own demand: a fourth row whatever its
+  backticks, a second owner in one cell, a duplicated kind or a changed owner reddens it. The
+  prohibition is a pattern that ends at "another
+  owner holds", so ", except a test it can fix in place" appended after it leaves the case green.
+- **TC-0014-0042 × Equivalence partitions** — two partitions of the request are pinned: in mode
+  `active`, a request with no work order and no name, and a worker holding a work order. Two more
+  are left to the shared baseline the reference cites and this case does not read: a request that
+  names the skill without a work order, and a mode other than `active`.
+- **TC-0014-0042 × Oracle strength** — the one-line count reddens at zero and at two lines. The
+  worker pattern ends at "does only that work order's work", so ", and any open debt it finds"
+  appended after it leaves the case green.
+- **TC-0014-0044 × Oracle strength** — deleting either sentence reddens the case. The shipped
+  sentence reads "No debt is listed for it, and no repair is routed", and only its first half is
+  asserted: rewriting the second to "but a repair is routed to `qfai-implement`" leaves the case
+  green.
 
 ### Matrix Status cells
 
@@ -1107,6 +1418,24 @@ documented rationale for each, so each is named here.
   the successful-upgrade direction's mutation leaving one of the file's acceptance cases green:
   `prefers the canonical path when BOTH canonical and legacy signals exist` reads no field of the
   sealed certificate, so an upgrade that silently left it scope-limited would still pass there.
+- **TC-0014-0037 × Status** — the three sentences the row's `Expected` names are stated and pinned.
+  It is capped at `⚠️` by the reviewer-independence edge the spec answers two ways, and by the
+  unread clause that makes the third sentence true.
+- **TC-0014-0038 × Status** — the prohibition is stated and pinned for all three sources. It is
+  capped at `⚠️` because the statement does not say how a stage tells its own report from a stale
+  one at the same path, or how it classifies a report with no `specId`.
+- **TC-0014-0039 × Status** — both sentences are stated and pinned. It is capped at `⚠️` because
+  `EX-0014-0032`'s consequence for `verify.json` is stated nowhere, and because a gate that did not
+  run for want of an environment is not tied to the `blocked` outcome.
+- **TC-0014-0041 × Status** — the routing table is pinned exactly, row by row and cell by cell, which
+  is the strongest oracle among these rows. It is capped at `⚠️` because a finding of no listed kind has no route, and a
+  repairable finding beside a missing environment has no stated outcome.
+- **TC-0014-0042 × Status** — the handover and the one-line citation are stated and pinned. It is
+  capped at `⚠️` because two partitions of the request are left to a baseline the case does not
+  read, and because the worker pattern survives an appended exception.
+- **TC-0014-0044 × Status** — the `blocked` outcome, its blocker and who clears it are stated and
+  pinned. It is capped at `⚠️` because a present but failing environment has no stated outcome, the
+  two crosses named above are stated nowhere, and "no repair is routed" is not asserted.
 
 ### Business rule table
 
@@ -1153,6 +1482,32 @@ documented rationale for each, so each is named here.
   saas-package` delivery mode to be documented in `/qfai-prototyping` SKILL.md as a SaaS-tenant
   delivery mode. It has no case, and the artifact it names contains no occurrence of `saas-package`,
   `SaaS` or `--upgrade-scope`. See Findings 3.
+- **BR-0014-0026 × Negative case** — the rule's prohibition, that the stage's own gate results are
+  never the gate decision, is pinned as "own `gateResults` are information only". The clause that
+  says so outright, "the run decides no gate from them", is not read, and reversing it leaves
+  `TC-0014-0037` green.
+- **BR-0014-0027 × Positive case** — the rule's positive direction is the one `EX-0014-0031` ends
+  on: with a foreign report present, the stage names its own. `TC-0014-0038` asserts only the
+  prohibition. The own-report sentence is pinned by `TC-0014-0037`, whose chain does not reach this
+  rule.
+- **BR-0014-0028 × Negative case** — a gate that did not run is required to be reported `unrun`,
+  never as a pass. The rest of the negative in `EX-0014-0032`, that `verify.json` then does not
+  record `PASS`, is stated nowhere. See Findings 8.
+- **BR-0014-0028 × Conditional branches** — the rule turns on whether a gate ran. The did-not-run
+  branch is pinned. Two branches next to it are stated nowhere: a gate that started and did not
+  finish, and a gate that did not run because its environment is missing, which `BR-0014-0033`
+  sends to `blocked`.
+- **BR-0014-0030 × Conditional branches** — the owner follows from the kind of finding. Each of the
+  three kinds is pinned to its owner, and the branch the rule itself names — a missing environment is
+  not a repair kind — is pinned by `TC-0014-0044`. A finding of no listed kind has no branch. See
+  Findings 10.
+- **BR-0014-0031 × Conditional branches** — the rule applies in mode `active`. Both branches within
+  that mode are pinned: no work order and no name, and a worker holding one. A request that names the
+  skill without a work order, and a mode other than `active`, are left to the shared baseline, which
+  the case does not read.
+- **BR-0014-0033 × Conditional branches** — the rule applies when a gate cannot run because its
+  environment is missing, and that branch is pinned. Two branches next to it are stated nowhere: a
+  gate that cannot run for another reason, and an environment that is present but fails.
 
 ### Business rule Status cells
 
@@ -1177,11 +1532,27 @@ documented rationale for each, so each is named here.
   the function rather than the command line, which both test cases name. It is capped at `⚠️`
   by the undocumented fourth clause, and by the "MUST NOT claim full DONE" clause being carried by a
   tautological assertion rather than by a check over the certificate's other fields.
+- **BR-0014-0026 × Status** — the rule is stated in the shipped skill and pinned. It is capped at
+  `⚠️` by the unread clause named under its negative case.
+- **BR-0014-0027 × Status** — the prohibition is pinned for all three sources. It is capped at `⚠️`
+  because its positive direction rests on another rule's case, and because the stage's own report
+  and a stale one at the same path are not told apart.
+- **BR-0014-0028 × Status** — the report of a gate that did not run is pinned. It is capped at `⚠️`
+  because its consequence for `verify.json` and two neighbouring branches are stated nowhere.
+- **BR-0014-0030 × Status** — the routing is pinned exactly. It is capped at `⚠️` because a finding
+  of no listed kind has no route.
+- **BR-0014-0031 × Status** — the handover within mode `active` is pinned. It is capped at `⚠️`
+  because the named request and the inactive mode are left to a baseline no case here reads.
+- **BR-0014-0033 × Status** — the `blocked` outcome and the empty debt list are pinned. It is capped
+  at `⚠️` because a failing environment and a gate that cannot run for another reason have no
+  stated branch, and because the rule does not say how it combines with `BR-0014-0028` and
+  `BR-0014-0030`. See Findings 9.
 
 ## Findings
 
-Six things were found while producing this matrix that the reviewing stage should act on. None of
-them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
+Twelve things were found while producing this matrix that the reviewing stage should act on. None
+of them is repaired here; this artifact scores coverage and does not edit tests, ledgers or specs.
+Findings 7 to 11 are spec gaps for `/qfai-sdd`.
 
 1. **`TC-0014-0009`'s reviewer gate is implemented in a shipped skill and observed by no test.**
    `AC-0014-0002` reads "Verify inspects reviewer artifacts and blocks on `REVISE`". `/qfai-verify`
@@ -1293,24 +1664,67 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    AC-0014-0014 → BR-0014-0015 → EX-0014-0015 → TC-0014-0009`, whose four upstream ids the pack does
    not carry. The test currently annotated to the row implements the second chain's subject, which
    is why its annotation resolves against work that discharges nothing of the first.
+7. **The reviewer's independence is stated two ways.** `EX-0014-0030` requires the qa-gatekeeper
+   verdict to come from "a reviewer instance that authored nothing in the run". `AC-0014-0023`,
+   `BR-0014-0026` and `TC-0014-0037`'s `Expected` say "independent of the authors", and the shipped
+   reference says "independent of the authors of what it reviews". A reviewer that authored another
+   stage's artifact in the same run meets the second and fails the first. The spec has to pick one;
+   the reference and the test follow it.
+8. **A gate that did not run has a consequence only the example states.** `EX-0014-0032` requires
+   that `verify.json` does not record `status: "PASS"` when a required gate did not run.
+   `BR-0014-0028` and `TC-0014-0039`'s `Expected` omit it, and the shipped text does not state it:
+   the output contract says `PASS` means every gate in scope passed, and leaves the reader to infer
+   the rest. Either the rule and the test case carry the clause, or the example drops it.
+9. **A missing environment falls under two rules, and nothing joins them.** `EX-0014-0032`'s gate
+   could not start because a browser is not installed; `EX-0014-0037`'s because a database container
+   is absent. Both are missing environments, and only the second returns the stage `blocked`:
+   `BR-0014-0028` makes the first gate `unrun` and says nothing of the outcome. `AC-0014-0027` also
+   puts a missing environment beside repairable findings in one scenario, and no rule says whether
+   the stage then returns `blocked` or `needs_repair`, or whether the findings' debts are still
+   listed. The spec should state how `BR-0014-0028`, `-0030` and `-0033` combine.
+10. **The repair kinds are closed with no rule for a finding outside them.** `BR-0014-0030` names
+    three kinds and three owners. A finding verify did not cause may fit none — a contract defect, a
+    defect in the verify skill itself — or fit two, and neither the rule nor the reference says what
+    the stage returns for it.
+11. **The foreign-report rule does not say how the stage tells its own report from a stale one.**
+    The stage writes `.qfai/report/verify.json`, a path every run shares, and `BR-0014-0027` forbids
+    naming a file kept in a shared location. The rule does not say how a file at that path left by an
+    earlier run is told apart from the one this stage wrote. `TC-0014-0038`'s `Notes` give the
+    per-stage copy to the workflow core, so the spec should either state the rule or name that owner
+    as a cross-spec obligation. The rule also leaves unclassified a `verify.json` with no `specId`,
+    which the output contract makes optional.
+12. **The ATDD scan now reads the package suite.** At revision
+    `6b24fbe99f4746daaeef5a45191d9ee3b22fe5b1` `qfai validate --profile atdd` matches 329 files,
+    among them `packages/*/tests/**/*.test.ts`. It reports `US-0014-0021` under `missing` with
+    `QFAI-ATDD-111`, because its E2E row `TDD-0049` has no test until `spec-0018` ships its scripted
+    run. It lists only `US-0014-0013`, `-0014`, `-0018` and `-0019` under `coveredByCarrierOnly`.
+    "Annotation coverage" and the caps it places on the rows scored at `d8aaf60…` describe that
+    earlier revision. Those rows are not rescored here, and their rescoring should start from this
+    report.
 
 ## Follow-up this matrix does not discharge
 
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 14 / ⚠️ 66 / ❌ 64**, with `n/a` 3, across all 147 scored cells — 126 matrix depth cells (14
-rows × 9 columns) and 21 business rule cells (7 rows × 3 columns). The `Status` columns of both
+**✅ 46 / ⚠️ 87 / ❌ 76**, with `n/a` 43, across all 252 scored cells — 207 matrix depth cells (23
+rows × 9 columns) and 45 business rule cells (15 rows × 3 columns). The `Status` columns of both
 tables hold row verdicts rather than marks and are outside that population; for reference the
-matrix's 14 read `⚠️ 10 / ❌ 4` and the business rule table's 7 read `⚠️ 4 / ❌ 3`.
+matrix's 23 read `✅ 2 / ⚠️ 16 / ❌ 5` and the business rule table's 15 read `✅ 2 / ⚠️ 10 / ❌ 3`.
 
-Four obligations are stuck, and they need three kinds of work. `US-0014-0018` needs a case that
+Five obligations are stuck, and they need four kinds of work. `US-0014-0021` needs its E2E
+acceptance test, which `TDD-0049` holds and which waits on `spec-0018`'s scripted run through this
+stage. `US-0014-0018` needs a case that
 drives the completion flow and observes the contract-first gate refusing it: the behaviour is there
 and only the coverage is missing. `TC-0014-0028` and `TC-0014-0029` name a validator slice that
 does not exist, and `01_Spec.md` REQ-0028 already makes their obligation conditional on its
 existence. `TC-0014-0033` states a layout rule the product contradicts, and a Change Request has to
 settle which side is current before any case can discharge it. Until each is addressed, the honest
-verdict for all four is the one recorded above.
+verdict for all five is the one recorded above.
+
+Six of the verify-stage test-case rows are held at `⚠️` by gaps the spec has to close first:
+Findings 7 to 11 name them for `/qfai-sdd`. Once the spec answers them, each needs a sentence in the
+shipped reference and a pattern that reads the whole of that sentence.
 
 `TC-0014-0009` is discharged in part and needs a test over the shipped skill's reviewer gate: a
 `REVISE` render critique already fails verify's binding gate under a case, and nothing reads the
