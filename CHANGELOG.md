@@ -15,6 +15,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   and the rule that operator-facing messages are English is part of this
   repository's language rule.
 
+- The distributed-surface guards no longer exempt the version in a migration
+  memo's file name. `qfai init` writes no migration memo, so a name such as
+  `.qfai/assistant/process/migrations/v1.4.27-notes.md` in the package is now
+  reported as a version marker, like any other file name.
+
 ### Changed
 
 - **Specs move to the story tree.** Projects using the former
