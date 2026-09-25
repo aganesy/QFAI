@@ -1599,6 +1599,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "qfai.config.yaml sets no key that has been retired. A retired key is still parsed so an existing config keeps loading, but nothing reads it, so leaving it in place misreports the gate the tool actually runs.",
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
+  "QFAI-TRACE-002":
+    "A layered spec may omit its optional traceability ledger. If present, the ledger is a readable regular Markdown file whose first table has at least three columns, including `Implementation File`.",
+  "QFAI-TRACE-003":
+    "The configured base and merge-base resolve, and changed layered specs and their BR/AC can be inspected against that history. An intentionally removed spec is identified for review.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
   E_LEDGER_MISSING_COLUMN:
     "Traceability Ledger has all required columns: trace_id,obj_id,init_id,cap_id,flow_id,us_id,ac_id,ex_ids,tc_ids.",
@@ -1947,6 +1951,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "No two rows of one test case claim the same boundary: the rows of a split are identified by the (`TC-Refs`, `Boundary`) pair, and a repeated slug leaves one boundary covered by nothing.",
   "QFAI-TDDLIST-019":
     "A `done` row whose evidence entry declares its original run's output unretained is exempt from the reviewer-pack and seal fields, and says so here: `done` is read as reviewed, so a row whose review cannot be verified from artifacts stays visible rather than passing as one that carries them.",
+  "QFAI-TDDLIST-022":
+    "Every ledger row names a test case in `TC-Refs`, except an `E2E` or `API` row and an `Integration` row carrying a `CON-DB-*` contract, which record their obligation in another column. The row then traces to the case it discharges rather than passing every check on that column by holding nothing those checks read.",
+  "QFAI-TDDLIST-023":
+    "No `done` row rests on an annotation carrier alone: where a carrier names one of the row's test cases, a test file annotates one of them, so the row's completion rests on a test a runner selects rather than on a document that only lists the case. A test scan with a gap is reported rather than read as a pass.",
   // The assistant-tree provenance family. Every governed file under
   // `constitution/` and `catalog/` is either byte-identical to the installed
   // release or an explicitly recorded local overlay; the four classifications
@@ -1997,6 +2005,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // needs to be told the expectation is about the surface, not about any spec.
   "QFAI-TDDLIST-016":
     "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
+  // Pairs the ledger with `.qfai/decisions/`, so the expected state names the
+  // record a blocked row waits on as well as the row.
+  "QFAI-TDDLIST-021":
+    "No `Status=blocked` row waits only on Change Requests that are already settled: a row whose `Blocked-By` cell (or, with no blocker there, its `Evidence` cell) names only `CR-*` records that are `rejected`, `superseded`, or `approved` with `Applied at` filled has been released through `/qfai-implement`.",
   "QFAI-RESEARCH-015":
     "Every `source_id` in the Research Summary resolves to an `id` in the same `sources[]` list.",
   "QFAI-RESEARCH-016":
@@ -2025,6 +2037,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
   "QFAI-CFG-001":
     "Delete the named key from qfai.config.yaml. It changes no behaviour, so removing it is not a settings change — every validator already runs as if it were absent.",
+  "QFAI-TRACE-002":
+    "An omitted optional ledger needs no action. If the spec has opted in, replace a non-file or unreadable ledger with a readable Markdown file shaped like the shipped 16_Traceability-ledger.md template.",
+  "QFAI-TRACE-003":
+    "Fetch the configured base ref or set the top-level `baseBranch` key, correct `paths.specsDir` if it points away from the specs, and restore unreadable BR/AC files. For an intentionally removed spec, review its former implementation links; otherwise restore its layered files.",
   "QFAI-BPAP-001":
     "Restore read access to the file, or delete it if it is no longer part of the rule set.",
   "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",

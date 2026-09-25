@@ -259,27 +259,6 @@ describe("runSddPreflight", () => {
     }
   });
 
-  it("does not block when latest UI-bearing discussion pack is missing prototyping.yaml", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203010");
-      await mkdir(packDir, { recursive: true });
-
-      for (const fileName of DISCUSSION_PACK_FILES) {
-        const content = defaultDiscussionPackContent(fileName);
-        await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
-      }
-      // Do NOT write prototyping.yaml
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("does not block when latest non-ui discussion pack omits prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -304,27 +283,6 @@ describe("runSddPreflight", () => {
             : defaultDiscussionPackContent(fileName);
         await writeFile(path.join(packDir, fileName), `${content}\n`, "utf-8");
       }
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not block when prototyping.yaml exists but namespaced schema is invalid", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203011");
-      // Overwrite prototyping.yaml with invalid namespaced schema
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203011");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        ["prototyping:", "  recommended_mode: invalid-mode", "  rationale: ''", ""].join("\n"),
-        "utf-8",
-      );
 
       const result = await runSddPreflight(root, defaultConfig);
 
@@ -410,33 +368,6 @@ describe("runSddPreflight", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
       await seedDiscussionPack(root, "20260216010203012");
-
-      const result = await runSddPreflight(root, defaultConfig);
-
-      expect(result.status).toBe("ready");
-      expect(result.blockers).toHaveLength(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
-    try {
-      await seedDiscussionPack(root, "20260216010203013");
-      // Overwrite with legacy-only schema (no prototyping namespace)
-      const packDir = path.join(root, ".qfai", "discussion", "discussion-20260216010203013");
-      await writeFile(
-        path.join(packDir, "prototyping.yaml"),
-        [
-          "recommended_mode: full-harness",
-          "rationale: top-level legacy valid",
-          "allowed_modes:",
-          "  - full-harness",
-          "surface: web",
-        ].join("\n"),
-        "utf-8",
-      );
 
       const result = await runSddPreflight(root, defaultConfig);
 

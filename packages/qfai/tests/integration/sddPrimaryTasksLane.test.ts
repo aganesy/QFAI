@@ -182,13 +182,6 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
   });
 
   it("stops the /qfai-prototyping preflight on the screen with no primary task", async () => {
-    // The obligation names the stage refusing to start as well as the lane
-    // failing. Run where every other check passes, the command exits 0 on a
-    // populated contract, so the non-zero exit on the empty one is this check.
-    const populated = await prototypingPreflight(PASSING_UI_CONTRACT);
-    expect(populated.errors).toEqual([]);
-    expect(populated.exitCode ?? 0).toBe(0);
-
     const empty = await prototypingPreflight(
       PASSING_UI_CONTRACT.replace(
         ["    primary_tasks:", "      - Browse the surface"].join(String.fromCharCode(10)),
@@ -202,14 +195,17 @@ describe("TC-0013-0026: QFAI-AUD-001 aligned lane fails when primary_tasks is em
 });
 
 describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is non-empty", () => {
-  it("returns zero QFAI-AUD-001 error issues when every screen has >=1 primary_task", async () => {
+  it("returns zero QFAI-AUD-001 issues when every screen has >=1 primary_task", async () => {
     await withWorkspace({ uiContract: uiContractWithPopulatedPrimaryTasks() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);
-      const audit001Errors = issues.filter(
-        (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
-      );
-      expect(audit001Errors).toEqual([]);
+      expect(issues.filter((issue) => issue.code === "QFAI-AUD-001")).toEqual([]);
     });
+  });
+
+  it("proceeds through prototyping preflight when tasks are present", async () => {
+    const populated = await prototypingPreflight(PASSING_UI_CONTRACT);
+    expect(populated.errors).toEqual([]);
+    expect(populated.exitCode ?? 0).toBe(0);
   });
 
   // 2-stage emission: legacy UI contracts that pre-date the primary_tasks
@@ -230,16 +226,6 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
       const message = blocked?.message ?? "";
       expect(message).toMatch(/legacy/i);
       expect(message).toMatch(/1\.10\.0/);
-    });
-  });
-
-  it("authored-but-empty primary_tasks remains severity=error (intentional violation)", async () => {
-    await withWorkspace({ uiContract: uiContractWithEmptyPrimaryTasks() }, async (root) => {
-      const issues = await validateDesignAudit(root, defaultConfig);
-      const audit001Errors = issues.filter(
-        (issue) => issue.code === "QFAI-AUD-001" && issue.severity === "error",
-      );
-      expect(audit001Errors.length).toBeGreaterThan(0);
     });
   });
 });

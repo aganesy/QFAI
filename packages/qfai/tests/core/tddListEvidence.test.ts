@@ -469,9 +469,10 @@ async function materializeEvidence(
   const metadata = await lstat(testPath);
   const testBlob = digest(await readFile(testPath));
   // Git's mode, mirroring `artifactRecord`: the raw permission bits made the
-  // record depend on the writing machine's umask.
+  // record depend on the writing machine's umask. No fixture here marks a file
+  // executable in git's index, so the owner's bit on disk is the answer.
   const redHash = digest(
-    `${TEST_FILE}\0file\0${(metadata.mode & 0o111) === 0 ? "100644" : "100755"}\0${testBlob}`,
+    `${TEST_FILE}\0file\0${(metadata.mode & 0o100) === 0 ? "100644" : "100755"}\0${testBlob}`,
   );
   let content = rawContent.replaceAll("{{RED_TEST_HASH}}", redHash);
   const matrixRecord = coverageDepthRecord(options.coverageDepthMatrix, options.obligationValue);
@@ -1544,6 +1545,54 @@ describe("QFAI-TDDLIST-008", () => {
       );
       expect(reported[0]?.message).toContain(DEFAULT_REVISION);
       expect(reported[0]?.rule).toBe("tddList.evidenceRevisionUnresolved");
+    });
+  });
+
+  it("measures a done row over what its test imports, not all of srcDir", async () => {
+    // The wiring row for the at-rest scope. Over all of `src`, a change to a
+    // module the test never imports staled every completed row, so in an active
+    // repository `done` could not be held.
+    await withProject(async (root) => {
+      const testBody = 'import { used } from "../../src/used.js";\nit("sample", () => used);\n';
+      await repoWithRevision(root);
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await mkdir(path.join(root, "tests", "unit"), { recursive: true });
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 1;\n");
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 1;\n");
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "observed");
+      const observed = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf-8",
+      }).trim();
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replaceAll(
+            DEFAULT_REVISION,
+            observed,
+          ),
+        },
+        { revision: observed },
+      );
+      // The seed writes a placeholder test; put back the one the observation ran.
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "record the row");
+
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 2;\n");
+      commitAll(root, "change a module the test does not import");
+      const stale = (issues: Awaited<ReturnType<typeof validateTddList>>) =>
+        issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(stale(await validateTddList(root, defaultConfig))).toEqual([]);
+
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 2;\n");
+      commitAll(root, "change the module the test imports");
+      const reported = stale(await validateTddList(root, defaultConfig));
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.message).toContain("src/used.ts");
+      expect(reported[0]?.message).not.toContain("src/unrelated.ts");
     });
   });
 
@@ -4186,10 +4235,14 @@ ${packPair(1).join("\n")}
             `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
             `- Prototype parity audited evidence hash: ${"a".repeat(64)}`,
             "- Prototype parity review pack: .qfai/review/review-20260811000000003",
+            `- Prototype parity record re-attestation: sha256:${"b".repeat(64)}`,
           ]),
         );
         expect(issue?.message).toContain("no Prototype parity audited evidence hash on an n/a");
         expect(issue?.message).toContain("no Prototype parity review pack on an n/a");
+        // A re-attestation supersedes a verdict, and an `n/a` row has none to
+        // supersede: it is provenance for a review that did not happen.
+        expect(issue?.message).toContain("no Prototype parity record re-attestation on an n/a");
       });
     });
     it("refuses a second Surface artifacts field", async () => {
@@ -4353,7 +4406,7 @@ ${packPair(1).join("\n")}
   // A record repair edits bytes inside the audited subject after both reviews
   // passed, so the hashes they recorded stop recomputing. The contract answers
   // that with a re-attestation written as a pack of its own, and the gate has
-  // to compare the verdicts against it.
+  // to compare each verdict against the re-attestation that supersedes it.
   describe("Record re-attestation", () => {
     const EVIDENCE_FILE = ".qfai/evidence/implement-spec-0001.md";
     const REATTESTATION_PACK = ".qfai/review/review-20260811000000009";
@@ -4362,44 +4415,105 @@ ${packPair(1).join("\n")}
     const REPAIRED_PROOF =
       "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result string\n";
     const UNSEALED = `sha256:${"c".repeat(64)}`;
+    const CAPTURE = ".qfai/evidence/prototyping/screen.png";
+    const CAPTURE_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const FENCE = "`".repeat(3);
+    const FIELD_VERDICTS = ["Spec", "Code quality"] as const;
+
+    /**
+     * The subjects a repaired entry's verdicts recompute.
+     *
+     * `Spec` and `Code quality` read the entry's fields; `Prototype parity`
+     * reads those plus a record per capture the `Surface artifacts` manifest
+     * names. On a UI-affecting row the two values differ by construction, so
+     * one hash cannot re-attest every verdict.
+     */
+    interface RepairedSubjects {
+      field: string;
+      parity: string;
+    }
+
+    /** A UI-affecting entry: a parity verdict, and the manifest it reads. */
+    function parityEntry(): string {
+      return completeEntry("Unit")
+        .replace(
+          "- qa-gatekeeper: PASS",
+          [
+            "- Surface artifacts:",
+            "",
+            `${FENCE}text`,
+            CAPTURE,
+            FENCE,
+            "",
+            "- qa-gatekeeper: PASS",
+          ].join("\n"),
+        )
+        .replace(
+          "- Checkpoint verification command: npm test",
+          [
+            "- Prototype parity: PASS (clause 1)",
+            `- Prototype parity reviewed revision: ${DEFAULT_REVISION}`,
+            "- Prototype parity audited evidence hash: {{PARITY_AUDIT_HASH}}",
+            "- Prototype parity review pack: .qfai/review/review-20260811000000001",
+            "- Prototype parity review pack seal: {{PARITY_PACK_SEAL}}",
+            "- Checkpoint verification command: npm test",
+          ].join("\n"),
+        );
+    }
 
     /**
      * Seeds a completed entry, repairs its Oracle proof after the reviews, and
-     * appends `fields(repairedHash, seal)` after the verdicts. `pack: "present"`
+     * appends `fields(subjects, seal)` after the verdicts. `pack: "present"`
      * writes the re-attestation pack, and `seal` is then its real seal.
      */
     async function repairedIssues(
       root: string,
-      fields: (repairedHash: string, seal: string) => string,
-      pack: "present" | "absent" = "absent",
+      fields: (subjects: RepairedSubjects, seal: string) => string,
+      options: { pack?: "present" | "absent"; uiAffecting?: boolean } = {},
     ): Promise<Array<{ code: string; message: string }>> {
-      await seedProject(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), [], {
-        [EVIDENCE_FILE]: completeEntry("Unit"),
-      });
+      const uiAffecting = options.uiAffecting === true;
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        { [EVIDENCE_FILE]: uiAffecting ? parityEntry() : completeEntry("Unit") },
+        uiAffecting ? { surfaceArtifacts: { [CAPTURE]: CAPTURE_BYTES } } : {},
+      );
       const evidencePath = path.join(root, EVIDENCE_FILE);
       const original = await readFile(evidencePath, "utf8");
       expect(original, "the fixture carries the field the repair edits").toContain(ORIGINAL_PROOF);
       const repaired = original.replace(ORIGINAL_PROOF, REPAIRED_PROOF);
-      const repairedHash = phaseAuditHash(EVIDENCE_FILE, repaired);
+      const subjects: RepairedSubjects = {
+        field: phaseAuditHash(EVIDENCE_FILE, repaired),
+        parity: phaseAuditHash(EVIDENCE_FILE, repaired, "TDD-0001", null, [
+          surfaceRecord(CAPTURE, CAPTURE_BYTES),
+        ]),
+      };
       let seal = UNSEALED;
-      if (pack === "present") {
+      if (options.pack === "present") {
         await writeRoundPack(root, REATTESTATION_PACK, "TDD-ID: TDD-0001\n", {
-          "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${repairedHash}\n`,
+          "completion-reviewer": `Result: PASS\nReviewed revision: ${DEFAULT_REVISION}\nAudited evidence hash: ${subjects.field}\n`,
         });
         seal = `sha256:${await packSeal(root, REATTESTATION_PACK)}`;
       }
-      await writeFile(evidencePath, `${repaired}${fields(repairedHash, seal)}`, "utf8");
+      await writeFile(evidencePath, `${repaired}${fields(subjects, seal)}`, "utf8");
       const issues = await validateTddList(root, defaultConfig);
       return issues.map((issue) => ({ code: issue.code, message: issue.message }));
     }
 
-    function reattestation(hash: string, seal: string): string {
+    /** The three fields one verdict's re-attestation owes. */
+    function reattestation(prefix: string, hash: string, seal: string): string {
       return [
-        `- Record re-attestation: sha256:${hash}`,
-        `- Record re-attestation pack: ${REATTESTATION_PACK}`,
-        `- Record re-attestation pack seal: ${seal}`,
+        `- ${prefix} record re-attestation: sha256:${hash}`,
+        `- ${prefix} record re-attestation pack: ${REATTESTATION_PACK}`,
+        `- ${prefix} record re-attestation pack seal: ${seal}`,
         "",
       ].join("\n");
+    }
+
+    /** A re-attestation for each verdict whose subject is the entry's fields. */
+    function fieldReattestations(subjects: RepairedSubjects, seal: string): string {
+      return FIELD_VERDICTS.map((prefix) => reattestation(prefix, subjects.field, seal)).join("");
     }
 
     function unresolved(issues: Array<{ code: string; message: string }>): string | undefined {
@@ -4408,8 +4522,35 @@ ${packPair(1).join("\n")}
 
     it("accepts a repaired record re-attested over its new bytes", async () => {
       await withProject(async (root) => {
-        const issues = await repairedIssues(root, reattestation, "present");
+        const issues = await repairedIssues(root, fieldReattestations, { pack: "present" });
         expect(unresolved(issues)).toBeUndefined();
+      });
+    });
+
+    // The parity subject takes the captures as well, so it never recomputes to
+    // the value the other two verdicts read. A repaired UI-affecting row is
+    // completable only where that verdict can carry a re-attestation of its own.
+    it("accepts a repaired UI-affecting row whose parity verdict re-attests its own subject", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(
+          root,
+          (subjects, seal) =>
+            `${fieldReattestations(subjects, seal)}${reattestation("Prototype parity", subjects.parity, seal)}`,
+          { pack: "present", uiAffecting: true },
+        );
+        expect(unresolved(issues)).toBeUndefined();
+      });
+    });
+
+    it("rejects a repaired UI-affecting row whose parity verdict is left on the field subject", async () => {
+      await withProject(async (root) => {
+        const issues = await repairedIssues(
+          root,
+          (subjects, seal) =>
+            `${fieldReattestations(subjects, seal)}${reattestation("Prototype parity", subjects.field, seal)}`,
+          { pack: "present", uiAffecting: true },
+        );
+        expect(unresolved(issues)).toContain("Prototype parity audited evidence hash matching");
       });
     });
 
@@ -4422,26 +4563,41 @@ ${packPair(1).join("\n")}
 
     it("rejects a re-attestation naming a hash the repaired record does not have", async () => {
       await withProject(async (root) => {
-        const issues = await repairedIssues(root, (_hash, seal) =>
-          reattestation("d".repeat(64), seal),
+        const issues = await repairedIssues(root, (_subjects, seal) =>
+          FIELD_VERDICTS.map((prefix) => reattestation(prefix, "d".repeat(64), seal)).join(""),
         );
         expect(unresolved(issues)).toContain("Spec audited evidence hash matching");
       });
     });
 
+    // A verdict reads the re-attestation that names it. Were the fields read as
+    // a set, re-attesting one verdict would clear every other verdict with it.
+    for (const attested of FIELD_VERDICTS) {
+      const unattested = FIELD_VERDICTS.find((prefix) => prefix !== attested) ?? attested;
+      it(`leaves ${unattested} unattested when only ${attested} carries a re-attestation`, async () => {
+        await withProject(async (root) => {
+          const issues = await repairedIssues(root, (subjects, seal) =>
+            reattestation(attested, subjects.field, seal),
+          );
+          expect(unresolved(issues)).toContain(`${unattested} audited evidence hash matching`);
+          expect(unresolved(issues)).not.toContain(`${attested} audited evidence hash matching`);
+        });
+      });
+    }
+
     for (const [label, field] of [
-      ["pack", "- Record re-attestation pack: "],
-      ["pack seal", "- Record re-attestation pack seal: "],
+      ["pack", "- Spec record re-attestation pack: "],
+      ["pack seal", "- Spec record re-attestation pack seal: "],
     ] as const) {
       it(`rejects a re-attestation recorded without its ${label}`, async () => {
         await withProject(async (root) => {
-          const issues = await repairedIssues(root, (hash, seal) =>
-            reattestation(hash, seal)
+          const issues = await repairedIssues(root, (subjects, seal) =>
+            fieldReattestations(subjects, seal)
               .split("\n")
               .filter((line) => !line.startsWith(field))
               .join("\n"),
           );
-          expect(unresolved(issues)).toMatch(new RegExp(`Record re-attestation ${label}[,.]`));
+          expect(unresolved(issues)).toMatch(new RegExp(`Spec record re-attestation ${label}[,.]`));
         });
       });
     }
@@ -4450,11 +4606,11 @@ ${packPair(1).join("\n")}
       await withProject(async (root) => {
         const issues = await repairedIssues(
           root,
-          (hash) => reattestation(hash, UNSEALED),
-          "present",
+          (subjects) => fieldReattestations(subjects, UNSEALED),
+          { pack: "present" },
         );
         expect(unresolved(issues)).toContain(
-          "Record re-attestation pack seal matching pack contents",
+          "Spec record re-attestation pack seal matching pack contents",
         );
       });
     });
@@ -4565,6 +4721,194 @@ ${packPair(1).join("\n")}
     });
   });
 
+  // `red-provenance.md` spells `mode` in six digits, like git's tree mode. The
+  // revision manifest's four octal digits are the other spelling an author
+  // following the skill could reach for, and the gate must refuse it rather
+  // than accept both:
+  // the permission bits beyond the execute bit follow the checkout's umask.
+  for (const [label, form, accepted] of [
+    ["the six-digit form", "tree", true],
+    ["the revision manifest's four octal digits", "octal", false],
+  ] as const) {
+    it(`${accepted ? "accepts" : "refuses"} a RED test hash whose mode is ${label}`, async () => {
+      await withProject(async (root) => {
+        const pointer =
+          "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+        const testPath = path.join(root, TEST_FILE);
+        await mkdir(path.dirname(testPath), { recursive: true });
+        await writeFile(testPath, "// test\n", "utf-8");
+        const mode =
+          form === "tree"
+            ? "100644"
+            : ((await lstat(testPath)).mode & 0o7777).toString(8).padStart(4, "0");
+        const record = `${TEST_FILE}\0file\0${mode}\0${digest(await readFile(testPath))}`;
+        const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", digest(record));
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        );
+        const refused = issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        );
+        expect(refused).toBe(!accepted);
+      });
+    });
+  }
+
+  // Where `core.fileMode` is false — a Windows repository — the execute bit
+  // comes from git's index, which a checkout on any system reads the same way.
+  // The file on disk carries no execute bit here on every platform, so a gate
+  // reading the disk would take `100644` and refuse the index's `100755`.
+  for (const [spelling, accepted] of [
+    ["100755", true],
+    ["100644", false],
+  ] as const) {
+    it(`${accepted ? "accepts" : "refuses"} ${spelling} for a file the index marks executable where core.fileMode is false`, async () => {
+      await withProject(async (root) => {
+        const pointer =
+          "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+        const testPath = path.join(root, TEST_FILE);
+        await mkdir(path.dirname(testPath), { recursive: true });
+        await writeFile(testPath, "// test\n", "utf-8");
+        await chmod(testPath, 0o644);
+        const git = (...args: string[]): void => {
+          execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+        };
+        git("init");
+        git("config", "core.fileMode", "false");
+        git("add", TEST_FILE);
+        git("update-index", "--chmod=+x", TEST_FILE);
+        const record = `${TEST_FILE}\0file\0${spelling}\0${digest(await readFile(testPath))}`;
+        const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", digest(record));
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        );
+        const refused = issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        );
+        expect(refused).toBe(!accepted);
+      });
+    });
+  }
+
+  it("reads the disk outside a repository even when global core.fileMode is false", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const previousGlobalConfig = process.env.GIT_CONFIG_GLOBAL;
+      const globalConfig = path.join(root, "global.gitconfig");
+      await writeFile(globalConfig, "[core]\n\tfileMode = false\n");
+      process.env.GIT_CONFIG_GLOBAL = globalConfig;
+      try {
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+        );
+        expect(
+          issues.some(
+            ({ code, message }) =>
+              code === "QFAI-TDDLIST-008" &&
+              (message.includes("valid RED test manifest") ||
+                message.includes("RED test hash matching its manifest")),
+          ),
+        ).toBe(false);
+      } finally {
+        if (previousGlobalConfig === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+        else process.env.GIT_CONFIG_GLOBAL = previousGlobalConfig;
+      }
+    });
+  });
+
+  it("rejects an unmerged manifest path instead of choosing a conflict stage's mode", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      await runIssuesOn(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": completeEntry("Integration") },
+      );
+      const git = (...args: string[]): Buffer =>
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "ignore"] });
+      git("init");
+      git("config", "core.fileMode", "false");
+      const oid = git("hash-object", "-w", TEST_FILE).toString().trim();
+      execFileSync("git", ["update-index", "--index-info"], {
+        cwd: root,
+        input: `100644 ${oid} 2\t${TEST_FILE}\n100755 ${oid} 3\t${TEST_FILE}\n`,
+        stdio: ["pipe", "ignore", "ignore"],
+      });
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("reads executable index modes when a manifest exceeds the Windows argument limit", async () => {
+    await withProject(async (root) => {
+      const pointer =
+        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
+      const evidencePath = ".qfai/evidence/atdd-spec-0001.md";
+      const extraPaths = Array.from(
+        { length: 240 },
+        (_, index) => `tests/unit/${String(index).padStart(3, "0")}-${"a".repeat(140)}.test.ts`,
+      );
+      const paths = [...extraPaths, TEST_FILE].sort((left, right) =>
+        Buffer.from(left).compare(Buffer.from(right)),
+      );
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        extraPaths,
+        { [evidencePath]: completeEntry("Integration") },
+      );
+      const git = (...args: string[]): void => {
+        execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+      };
+      git("init");
+      git("config", "core.fileMode", "false");
+      git("add", "-A");
+      git("update-index", "--chmod=+x", TEST_FILE);
+      const blob = digest("// test\n");
+      const hash = digest(
+        paths
+          .map((entry) => `${entry}\0file\0${entry === TEST_FILE ? "100755" : "100644"}\0${blob}`)
+          .join("\n"),
+      );
+      const file = path.join(root, evidencePath);
+      const evidence = (await readFile(file, "utf-8"))
+        .replace(/^- Round 1: RED test hash:.*$/m, `- Round 1: RED test hash: ${hash}`)
+        .replace(
+          "- Round 1: RED test manifest: tests/unit/sample.test.ts",
+          ["- Round 1: RED test manifest:", "", "~~~text", ...paths, "~~~"].join("\n"),
+        );
+      await writeFile(file, evidence);
+      const issues = await validateTddList(root, defaultConfig);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("valid RED test manifest"),
+        ),
+      ).toBe(false);
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "QFAI-TDDLIST-008" && message.includes("RED test hash matching its manifest"),
+        ),
+      ).toBe(false);
+    });
+  });
+
   it("validates the current manifest without rehashing an earlier round against later bytes", async () => {
     await withProject(async (root) => {
       const pointer =
@@ -4646,13 +4990,21 @@ ${packPair(1).join("\n")}
    * the committed provenance is what carries the entry there.
    */
   function editingEntry(
-    options: { proofResult?: string; auditHash?: string; specVerdict?: string } = {},
+    options: {
+      proofResult?: string;
+      auditHash?: string;
+      specVerdict?: string;
+      reverifyRevision?: string;
+    } = {},
   ): string {
     const record = `#### Shared-artifact re-verify
 
 ##### spec-0001/TDD-0001
 
-${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")}
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed").replace(
+  DEFAULT_REVISION,
+  options.reverifyRevision ?? DEFAULT_REVISION,
+)}
 
 - Spec review: ${options.specVerdict ?? "PASS"}`;
     return completeEntry("Integration")
@@ -4743,13 +5095,16 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
     ["a group-writable umask", 0o664],
     ["a read-only checkout", 0o444],
     ["the Windows-shaped mode", 0o666],
+    // Git records the owner's execute bit alone, so a bit only the group and
+    // others hold is one more permission bit that does not travel.
+    ["an execute bit only the group and others hold", 0o655],
   ] as const) {
     it(`recomputes the RED test hash under ${label}`, async () => {
       await withProject(async (root) => {
         await seedProject(root, reverifyLedger(), [], {
           ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
         });
-        // Only the permission bits move: same bytes, same executable bit.
+        // Only the permission bits move: same bytes, same owner execute bit.
         await chmod(path.join(root, TEST_FILE), mode);
         const issues = (await validateTddList(root, defaultConfig)).map((i) => ({
           code: i.code,
@@ -4821,6 +5176,90 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         ),
       });
       expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  // The record's `Revision` is the tree the re-verify ran on, so a consumer's
+  // staleness interval starts there. The consumer's own observation predates
+  // the edit the record covers, so an interval from it would always report
+  // that edit, and a re-verified row could never clear `QFAI-TDDLIST-009`.
+  describe("staleness after a shared-artifact re-verify", () => {
+    /**
+     * A repository where the consumer observed an empty tree, a later commit
+     * wrote the shared test file as `sharedContent`, and the re-verify record
+     * names that commit. The seed then writes the test file's final content
+     * and is committed, so a `sharedContent` other than the seed's is a further
+     * change after the record's revision.
+     */
+    async function reverifiedProject(
+      root: string,
+      options: { sharedContent: string; withRecord: boolean },
+    ): Promise<Array<{ code: string; message: string }>> {
+      const observed = await repoWithRevision(root);
+      await mkdir(path.dirname(path.join(root, TEST_FILE)), { recursive: true });
+      await writeFile(path.join(root, TEST_FILE), options.sharedContent, "utf-8");
+      commitAll(root, "edit the shared test file");
+      const reverified = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf-8",
+      }).trim();
+      const evidence = options.withRecord
+        ? staleConsumerEntry().concat(editingEntry({ reverifyRevision: reverified }))
+        : completeEntry("Integration");
+      await seedProject(
+        root,
+        options.withRecord
+          ? reverifyLedger()
+          : ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        [],
+        { ".qfai/evidence/atdd-spec-0001.md": evidence.replaceAll(DEFAULT_REVISION, observed) },
+        { revision: observed },
+      );
+      commitAll(root, "seed the evidence");
+      return (await validateTddList(root, defaultConfig)).map((i) => ({
+        code: i.code,
+        message: i.message,
+      }));
+    }
+
+    const consumerStale = (issues: Array<{ code: string; message: string }>) =>
+      issues.filter(
+        ({ code, message }) =>
+          code === "QFAI-TDDLIST-009" &&
+          message.includes("TDD-0001 (") &&
+          message.includes(TEST_FILE),
+      );
+
+    it("reads the consumer's interval from the re-verify record's Revision", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// test\n",
+          withRecord: true,
+        });
+        expect(redHashInvalid(issues), "the record is current").toBe(false);
+        expect(consumerStale(issues)).toEqual([]);
+      });
+    });
+
+    it("still reports a change made after the re-verify record's Revision", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// before the further edit\n",
+          withRecord: true,
+        });
+        expect(redHashInvalid(issues), "the record is current").toBe(false);
+        expect(consumerStale(issues)).toHaveLength(1);
+      });
+    });
+
+    it("still reports a row that no re-verify record covers", async () => {
+      await withProject(async (root) => {
+        const issues = await reverifiedProject(root, {
+          sharedContent: "// test\n",
+          withRecord: false,
+        });
+        expect(consumerStale(issues)).toHaveLength(1);
+      });
     });
   });
 

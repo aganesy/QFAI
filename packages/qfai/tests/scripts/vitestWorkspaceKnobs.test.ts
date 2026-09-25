@@ -16,11 +16,10 @@
  * ## Why the set is asserted at TWO sites
  *
  * The first draft of this row asserted all six knobs on every project, and the
- * implementation that satisfied it was inert. The runner scopes three of these options to
- * the root: `ProjectConfig` is `Omit<UserConfig, NonProjectOptions | …>` and
- * `NonProjectOptions` names `maxWorkers`, `minWorkers` and `fileParallelism`. Its
- * `poolOptions.forks` is narrowed to `singleFork | isolate`, so `maxForks` is not a
- * project-level escape hatch either.
+ * implementation that satisfied it was inert. Three of the six bound the run as a whole —
+ * `maxWorkers`, `minWorkers` and `fileParallelism` — and a project inherits what the root
+ * declares, so repeating them per project puts one measured value in nine places where
+ * eight can drift from the ninth with nothing failing.
  *
  * That draft passed every gate, and nothing warned. No compiler was going to catch it:
  * `tsc`'s include is `src/**`, so none of the three runner config files is compiled —
@@ -129,11 +128,10 @@ const DECLARED_WORKERS = Math.min(DECLARED_START, availableParallelism());
 const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
 
 /**
- * The options this runner refuses to scope to a project.
+ * The axes that bound the run as a whole, and are therefore declared once at the root.
  *
- * Literals rather than a read of the runner's type, which is not available at runtime.
- * Kept to the three that bear on parallelism; the full `NonProjectOptions` list is longer
- * and most of it has nothing to do with this row.
+ * A project inherits them, so a second declaration per project changes nothing and can
+ * drift from the one the run uses.
  */
 const ROOT_ONLY = ["maxWorkers", "minWorkers", "fileParallelism"] as const;
 
@@ -210,7 +208,7 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
 
     const PROJECT_KNOBS = [
       { key: "pool", kind: "name", want: "a pool name" },
-      { key: "poolOptions", kind: "block", want: "a non-empty pool options block" },
+      { key: "isolate", kind: "flag", want: "an explicit isolation boolean" },
       { key: "maxConcurrency", kind: "count", want: "a positive within-file concurrency" },
       { key: "hookTimeout", kind: "count", want: "a positive hook timeout" },
       { key: "testTimeout", kind: "count", want: "a positive test timeout" },
@@ -239,31 +237,26 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
       .soft(missing, "every knob must be declared, not inherited from the runner's defaults")
       .toEqual([]);
 
-    // The pool options must name the pool they configure, otherwise the block is
-    // decoration: the runner reads `poolOptions.<pool>` and ignores the rest.
+    // A pool block is decoration. The runner takes what it once read from
+    // `poolOptions.<pool>` as an ordinary option, so a block here configures nothing while
+    // reading exactly like configuration.
     const orphaned = projects
-      .filter((project) => {
-        const pool = project["pool"];
-        const options = project["poolOptions"];
-        return typeof pool === "string" && isRecord(options) && !(pool in options);
-      })
-      .map(
-        (project) => `${nameOf(project)}: poolOptions has no \`${String(project["pool"])}\` key`,
-      );
+      .filter((project) => project["poolOptions"] !== undefined)
+      .map((project) => `${nameOf(project)}: poolOptions is read by nothing`);
     expect
-      .soft(orphaned, "pool options that do not name the declared pool are read by nothing")
+      .soft(orphaned, "the runner takes every former pool option directly, not inside a block")
       .toEqual([]);
 
-    // The claim the first draft could not make. A root-only option declared on a project
-    // is silently ignored, so it reads as configuration and behaves as a comment. This
-    // row shipped that defect once; the guard is what stops it recurring.
+    // The claim the first draft could not make. An axis that bounds the whole run has one
+    // declaration site, and a copy on a project is a second number the run does not use.
+    // This row shipped that defect once; the guard is what stops it recurring.
     const inert = projects.flatMap((project) =>
       ROOT_ONLY.filter((key) => project[key] !== undefined).map(
-        (key) => `${nameOf(project)}: ${key} is root-only and is ignored here`,
+        (key) => `${nameOf(project)}: ${key} is declared at the root, not here`,
       ),
     );
     expect
-      .soft(inert, "a root-only option declared on a project is a declaration nothing reads")
+      .soft(inert, "an axis that bounds the whole run is declared once, at the root")
       .toEqual([]);
   });
 });
@@ -989,7 +982,7 @@ describe("the floor lane bounds its forks by the runner it is on", () => {
    * The override is per leg, not per lane. The oversubscription is the declared
    * ceiling measured against the runner's cores, and every leg gets its own runner
    * with the same four, so a leg carries the same 2.5x over fewer tests. One step
-   * states the count for all nine legs, which is why this row insists on exactly
+   * states the count for all seven legs, which is why this row insists on exactly
    * one such step rather than tolerating a second that omits it.
    */
   const floorLaneRun = (): string => {

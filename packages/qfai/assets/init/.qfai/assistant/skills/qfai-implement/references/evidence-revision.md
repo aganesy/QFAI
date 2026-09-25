@@ -472,8 +472,9 @@ latest — a recomputation that stops at one pair is the same hole with a
 value stored beside it.
 
 **A record re-attestation seals its own pack the same way**, under
-`Record re-attestation pack` and `Record re-attestation pack seal` — it is
-not a round, so it takes no `Round N:` prefix
+`<prefix> record re-attestation pack` and `<prefix> record re-attestation pack
+seal` — the prefix is the verdict it supersedes, and it is not a round, so it
+takes no `Round N:` prefix
 (`.qfai/assistant/constitution/drift-protocol.md#the-record-defect-queue`).
 The pack holding the verdict it supersedes is never edited to restamp a hash:
 that would break the seal already recorded over it, which is the one thing
@@ -722,6 +723,30 @@ Consequences:
   A non-empty result means re-take before submitting. The wrong baseline is the
   reading that produces a stale field, and it produces one that looks exactly
   like a fresh one.
+
+- **A `done` row is measured over what its test reached, not over all of
+  `src`.** While a row is in flight the code under test is still being written,
+  so the whole source directory is covered. Once the row is done, the validator
+  measures the same interval over a narrower set:
+  - the row's test file;
+  - the files its newest `RED test manifest` lists, where it has one;
+  - every file under the source directory that those files import, directly or
+    through other imports.
+
+  Whether a change was unrelated is then computed from the imports rather than
+  judged. The validator follows relative imports, and path aliases through the
+  `compilerOptions.paths` and `baseUrl` of the root `tsconfig.json` (or
+  `jsconfig.json`), including a config it extends by relative path. Built-ins
+  and installed packages are outside the project. It measures over the whole
+  source directory instead, and says why in the finding, when it cannot follow
+  an import:
+  - an alias no pattern resolves;
+  - a computed `import()` or `require()`;
+  - a relative path that names no file;
+  - a test file that is not JavaScript or TypeScript.
+
+  A setup file the test runner loads by configuration is not in the reached
+  set.
 
 - **A clone that does not hold the revision cannot answer this at all.** The diff
   above fails on an unreachable commit, which is not the same as returning

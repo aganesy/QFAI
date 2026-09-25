@@ -508,9 +508,12 @@
 ## EX-0012-0169: `iterate --auto-serve` Refuses to Kill Foreign Process
 
 - BR-Ref: BR-0012-0048
-- Given port 3000 occupied by a process whose owning command is `node /home/user/myapp/server.js` (not a prior iterate),
+- Given a server runner that refuses because port 3000 is owned by `node /home/user/myapp/server.js` (PID 12345),
 - When `iterate --auto-serve` starts,
-- Then iterate detects the foreign owner, refuses to kill it, reports `PID=12345 owning command=node /home/user/myapp/server.js`, and exits with input-error status. A second test on a port owned by a prior iterate force-kills the prior owner cleanly via `tree-kill` / `taskkill /F /T`. NFR-0106 enforced.
+- Then iterate leaves the owner alone, prints the runner's reason naming PID 12345 and that command on stderr, and exits 2. NFR-0106 enforced.
+- Given port 3000 held by another process, and no server runner injected,
+- When `iterate --auto-serve --target-url http://localhost:3000/` starts,
+- Then the default runner does not touch the owner or pick another port, and iterate exits 2 with a reason naming port 3000.
 
 ## EX-0012-0170: `prototyping.json` Passes validate Without Orchestrator Post-Processing
 
@@ -630,6 +633,34 @@
 - Given an existing non-empty `iter-00/<spec-id>/home.review.json` (2048 bytes),
 - When `qfai prototyping iterate --cycle 0 --force` moves it into `iter-00.backup-<ISO>/` before clearing,
 - Then `.qfai/evidence/prototyping/mutation-log.jsonl` gains a line `{"ts":"2026-05-27T...","caller":"iterate","path":"iter-00/<spec-id>/home.review.json","action":"move","priorSize":2048,"newSize":0}` for that file; the log is git-ignored. A reviewer who finds a code path overwriting `iter-03/<spec-id>/settings.review.json` without calling the mutation-log writer surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (error).
+
+## EX-0012-0187: Capture URL Composed From A Route And `--target-url` (REQ-0012-0075)
+
+- BR-Ref: BR-0012-0066
+- Given `screens[]` declaring `home` at `/`, `settings` at `settings` and `docs` at `https://docs.example.com/start`, and `--target-url http://localhost:5173/app/`,
+- When `qfai prototyping iterate --capture` composes each capture URL,
+- Then `home` opens `http://localhost:5173/`, `settings` opens `http://localhost:5173/app/settings`, and `docs` opens `https://docs.example.com/start` unchanged. A cycle-1 run with `--capture` and no `--target-url` stops at `home` with a reason naming `home` and `--target-url`, and exits 2.
+
+## EX-0012-0188: A Screen Answering HTTP 404 Is Not Captured (REQ-0012-0075)
+
+- BR-Ref: BR-0012-0066
+- Given the default capture runner opening `http://localhost/missing` for screen `missing`, and the server answering 404,
+- When the runner captures `missing`,
+- Then the capture fails with a reason naming `HTTP 404`, and no screenshot is taken. A 204 answer is captured, and a navigation that returns no response fails with `no response`.
+
+## EX-0012-0189: Peeking A Loop That Stopped On The Cycle Budget (REQ-0012-0078)
+
+- BR-Ref: BR-0012-0067
+- Given `.qfai/evidence/prototyping/prototyping.json` recording `stopReason: "max-iterations"` and `acceptedIterationIndex: null`,
+- When `qfai prototyping iterate --check-convergence` runs without `--cycle`,
+- Then it reports cycle 9, `stopReason: max-iterations` and `acceptedIterationIndex: null`, prints `Not converged` with the reason, exits 2, and leaves `prototyping.json` byte-for-byte unchanged. The same run against a record of `stopReason: "converged"` and `acceptedIterationIndex: 3` prints `Converged` and exits 0.
+
+## EX-0012-0190: A Teardown That Rejects At Cycle End
+
+- BR-Ref: BR-0012-0068
+- Given a server runner whose teardown rejects with `Error: port 3000 still bound`,
+- When `iterate --auto-serve` completes a cycle that would otherwise exit 0,
+- Then stdout carries `qfai prototyping iterate --auto-serve: teardown failed (Error: port 3000 still bound)`, and iterate exits 0.
 
 ## EX-0012-0192: Entry Check of `/qfai-prototyping` Under a Run
 

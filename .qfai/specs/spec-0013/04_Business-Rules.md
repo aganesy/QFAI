@@ -149,11 +149,11 @@
 - The structured shape is **all-required, closed** (DR-0268): all three of `id`, `label`, `acceptance` MUST be present and no additional properties are allowed. A structured item missing any field, or carrying extra keys (e.g. speculative `priority` / `owner`), MUST be rejected.
 - String-only items MUST continue to PASS during the window; the structured form makes a task testable (the `acceptance` field anchors downstream atdd scaffolding).
 
-## BR-0013-0021: Optional side artifacts do not decide preflight readiness
+## BR-0013-0021: Optional Side Artifact Neutrality
 
-- AC-Refs: AC-0013-0042
+- AC-Refs: AC-0013-0028
 
-- With a usable discussion pack, SDD preflight MUST keep the same readiness result whether an optional side artifact is present, absent, malformed, or in a legacy format. Optional artifact state alone adds no blocker.
+- SDD preflight readiness MUST NOT depend on whether an optional discussion side artifact is present, absent, malformed, or in a legacy format.
 
 ## BR-0013-0022: Stage 1 checks the routing-time approval instead of asking
 

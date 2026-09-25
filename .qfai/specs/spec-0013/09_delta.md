@@ -174,7 +174,7 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
   missing-test row without a Change Request; and the skill gains its
   orchestrated mode. Contract-backed rules cite CLI-WF, CLI-WFFILE and CLI-VAL
   and copy none of their fields.
-- Items appended: US-0013-0015..US-0013-0017; AC-0013-0043..AC-0013-0041;
+- Items appended: US-0013-0015..US-0013-0017; AC-0013-0043 and AC-0013-0029..AC-0013-0041;
   BR-0013-0022..BR-0013-0035. The examples start at EX-0013-0022 and the test
   cases at TC-0013-0038. No existing item changes: US-0013-0004 and
   BR-0013-0007, the standalone no-argument batch, stand as written.
@@ -259,14 +259,25 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                      | Mode      | Approved by | Applied at           |
-| ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
-| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
-| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
-| CR-20260913-0012 | `spec-0013/01..06`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`                    | re-derive | user        | 2026-09-24T19:55:40Z |
-| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0013/05_Examples.md`, `06_Test-Cases.md` | re-derive | user        | 2026-09-25T02:36:35Z |
-| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T03:00:14Z |
-| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-25T03:23:20Z |
+| CR ID            | Upstream artifact                                                                                                                                                         | Mode         | Approved by                                                    | Applied at           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
+| CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260925-0008 | `spec-0013/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                          | re-derive    | claude-code (the user's standing instruction for this session) | 2026-09-25T01:55:00Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                    | re-derive    | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                    | re-derive    | user                                                           | 2026-09-24T19:00:08Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0013/05_Examples.md`, `06_Test-Cases.md`                                                                                    | re-derive    | user                                                           | 2026-09-25T02:36:35Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                    | re-derive    | user                                                           | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                    | re-derive    | user                                                           | 2026-09-25T03:23:20Z |
+
+### CR-20260913-0009: Ledger boundary repair
+
+The existing 15-column ledger already had E2E placeholders for thirteen stories. Re-derivation adds the missing Integration cases and separates independently observable outcomes. Prior completed or exception evidence remains as history; the affected rows return to `todo` because their test identity changed. `US-0013-0003` now agrees with its usable-source acceptance criterion.
+
+### CR-20260913-0012: Acceptance criterion ID repair
+
+The original `AC-0013-0008` to `AC-0013-0010` headings retain their IDs. The contradicted markdown readiness and design normalization duplicates are removed. Optional side-artifact neutrality moves to `AC-0013-0028` with `BR-0013-0021`, `EX-0013-0021`, and `TC-0013-0036` to `TC-0013-0037`. The historical references above remain a record of past source text and do not reintroduce those obligations.
 
 ## Merge reconciliation (2026-09-25)
 
@@ -278,3 +289,20 @@ Request applies.
 - The intent-driven criterion `AC-0013-0028` became `AC-0013-0043`.
 - `TDD-0044`..`TDD-0062` became `TDD-0112`..`TDD-0130`.
 - Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+
+Both lines of work also applied the same approved option of `CR-20260913-0012`.
+`origin/main`'s application stands: `AC-0013-0028`, `BR-0013-0021`, `EX-0013-0021`,
+`TC-0013-0036`, `TC-0013-0037` and rows `TDD-0081` to `TDD-0083`. The intent-driven
+application is withdrawn:
+
+- `AC-0013-0042` is removed from `03_Acceptance-Criteria.md`, and its ID stays reserved.
+  `AC-0013-0028` states the same criterion.
+- `spec-0013/TDD-0129` and `spec-0013/TDD-0130` are deleted and tombstoned in
+  `tdd/test-list.md`. Their Evidence cells, verbatim, were
+  `` RED:n-a GREEN:pass TIER:T2 -> `.qfai/evidence/atdd-spec-0013.md#tdd-0129` `` and
+  `` RED:n-a GREEN:pass TIER:T2 -> `.qfai/evidence/atdd-spec-0013.md#tdd-0130` ``,
+  each retired at Status = exception.
+- Their test file, `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`,
+  is deleted. Two of its checks were missing from the test of `TDD-0081` to `TDD-0083`,
+  `packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts`, and moved there:
+  the command's exit code and JSON report, and the same verdict with a valid artifact present.

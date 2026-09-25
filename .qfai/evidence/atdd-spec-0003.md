@@ -33,6 +33,10 @@ run is its approved action 2.
   its own copy of the aggregate, so no change to a shipped file can fail it. The code
   the case exercises is the check in `aggregateFailureViolations`, and that is where
   the discriminating mutation sits.
+- **`TDD-0001`'s test is the row's own integration case, rewritten.** The two tests
+  `CR-20260923-0011` names assert the clause, but neither sits in
+  `tests/integration/**`, where `TC-0003-0001`'s `Level` routes it. The reasoning is
+  in the `TDD-0001` entry.
 
 ## Grilling Session
 
@@ -53,6 +57,37 @@ Preflight: confidence high
 | S1 | adopted | 2026-09-23T03:53:00Z | working-tree+0c16e336d92d65224ec37609bd8d897cbb70d42c505d6c0d0adf6c102605203f | 2026-09-23T03:53:07Z | a falsifiability predicate that lives in the row's own Test file, which step 3c assumes is production code | empty | none in flight | 1 | 0 | 0 |
 | S2 | adopted | 2026-09-23T04:08:10Z | 6368454b0f56a50611aa309f82eb80e8cc35b758 | 2026-09-23T04:08:20Z | how to answer the code quality REVISE on the two-consumer workflow-tree helper | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-atdd — run started 2026-09-23T08:28:13.966Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260923-0007` fixes the row, the verify bullet it covers,
+the test file and the two job shapes, and nothing surfaced during the run that the
+spec or the change request leaves open.
+
+
+### /qfai-implement — run started 2026-09-23T08:31:57.000Z
+
+Preflight: confidence high
+
+No session was opened: `CR-20260923-0007` settles every decision this row needs.
+
+### /qfai-atdd — run started 2026-09-23T11:24:46.722Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:27:41Z | working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f | 2026-09-23T11:28:00Z | neither test the change request names for TDD-0001 sits in the directory TC-0003-0001's Level routes to | empty | none in flight | 1 | 0 | 0 |
+
+### /qfai-implement — run started 2026-09-23T11:42:45.972Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-23T11:44:45Z | 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209 | 2026-09-23T11:44:51Z | TDD-0037 is done under a replaced test, and the one exit from done, the upstream reset, is refused for a row the approving CR's actions do not name | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - New `packages/qfai/tests/integration/shippedWorkflowCheckIndependence.test.ts`: the
@@ -64,6 +99,16 @@ Preflight: confidence high
 - `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`: the three
   `TC-0003-0058` cases annotated `QFAI:SPEC-0003:TC-0003-0058`.
 - `packages/qfai/tsconfig.tests.json`: the new file listed.
+- `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`: a new
+  `TDD-0093` `it.each` in the `TC-0003-0058` describe, annotated
+  `QFAI:SPEC-0003:TC-0003-0058`, with one case per job shape of verify bullet 5.
+  `CR-20260923-0007` asked for it.
+- `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts`: the `TDD-0037`
+  describe and its count case renamed to the counts the case asserts. No assertion
+  changed. `CR-20260923-0011` asked for it.
+- `packages/qfai/tests/integration/initSpec0003.test.ts`: the `TC-0003-0001` case
+  now runs init into an empty directory and asserts all three verify bullets, for the
+  `TDD-0001` row that `CR-20260923-0011` reset.
 
 ## Commands executed + key outputs
 
@@ -72,6 +117,30 @@ pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowCheckInde
   Test Files 3 passed (3); Tests 66 passed (66)
 npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
 ```
+
+For `TDD-0093`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts
+  Test Files 1 passed (1); Tests 23 passed (23)
+pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+  Test Files 1 passed (1); Tests 2 passed | 21 skipped (23)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
+```
+
+The re-verify runs of `TDD-0062`, `TDD-0063` and `TDD-0092` are in the `TDD-0093`
+entry.
+
+For `TDD-0001` and `TDD-0037`:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts tests/integration/shippedWorkflowInertness.test.ts
+  Test Files 2 passed (2); Tests 30 passed (30)
+npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
+npx eslint packages/qfai/tests/integration/initSpec0003.test.ts packages/qfai/tests/integration/shippedWorkflowInertness.test.ts --max-warnings 0   -> exit 0
+```
+
+The selector, mutation and re-verify runs are in each row's entry.
 
 ## Test volume estimate
 
@@ -97,6 +166,9 @@ npx tsc --noEmit -p packages/qfai/tsconfig.tests.json   -> exit 0
 | `TDD-0062` | `TC-0003-0058` | Integration | falsifiability | [TDD-0062](#tdd-0062) |
 | `TDD-0063` | `TC-0003-0058` | Integration | falsifiability | [TDD-0063](#tdd-0063) |
 | `TDD-0092` | `TC-0003-0058` | Integration | falsifiability | [TDD-0092](#tdd-0092) |
+| `TDD-0093` | `TC-0003-0058` | Integration | falsifiability | [TDD-0093](#tdd-0093) |
+| `TDD-0001` | `TC-0003-0001` | Integration | falsifiability | [TDD-0001](#tdd-0001) |
+| `TDD-0037` | `TC-0003-0037` | Integration | falsifiability, test-only replacement | [TDD-0037](#tdd-0037) |
 
 ### TDD-0058
 
@@ -581,6 +653,394 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - Checkpoint verification revision: 6368454b0f56a50611aa309f82eb80e8cc35b758
 - Checkpoint verification seal: ecd5b72e49e725620486d0370fe1c18deab941ccc61d2159b62402b80904256f
 
+### TDD-0093
+
+- TDD-ID: TDD-0093
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+- Selector: TC-0003-0058 (TDD-0093): rejects an aggregate job whose shape cannot preserve failure
+- TC-ref: TC-0003-0058
+- Branch: falsifiability — the check this case exercises already rejects both job shapes, so the test passes on its first run and no natural RED can be observed
+- Predicate to break: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts, `aggregateFailureViolations`, the job-shape clauses of the result-only aggregate check — `job.steps.length !== 1` and `job.job["continue-on-error"] !== undefined`; the test plants each unpreservable job shape itself, so no shipped file can make it fail
+- Mutation: delete the clause `job.job["continue-on-error"] !== undefined ||` (line 221)
+
+That mutation fails the `continue-on-error set on the job` case. The second
+mutation, deleting `job.steps.length !== 1 ||` (line 214), fails the
+`a second step that does work of its own` case. Each leaves the other case
+passing, because the other clause still rejects it.
+
+The selector contains `(` and `)`. Escape both when passing it to vitest `-t`.
+
+#### Shared-artifact re-verify
+
+The new case is in the Test file of the three rows below, so it moves their
+`RED test hash`. Each row's selector was re-run against the edited file at the
+revision given, and each passed. The mutation proofs are handed to
+`/qfai-implement` as a mutation-only request.
+
+##### spec-0003/TDD-0062
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: TC-0003-0058 (TDD-0062): rejects a planted green aggregate while accepting its unmodified body
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body", with `packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml:611` changed from `exit 1` to `exit 0`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on `AssertionError: expected [ …(6) ] to deeply equal []` at `tests/integration/shippedWorkflowPortability.test.ts:269:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0062\): rejects a planted green aggregate while accepting its unmodified body", after `git checkout -- packages/qfai/assets/init/root/.github/workflows/qfai-docs.yml`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
+##### spec-0003/TDD-0063
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: TC-0003-0058 (TDD-0063): rejects a result binding removed from the shipped aggregate
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate", with `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts:230` changed from `if (!Object.values(bindings).includes(value)) {` to `if (false) {`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 1 failed | 22 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:285:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0063\): rejects a result binding removed from the shipped aggregate", after `git checkout -- packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 22 skipped (23)
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
+##### spec-0003/TDD-0092
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 97e6fd6f69f77bd4f04144d9d85d8630b3730717
+- Selector: rejects an aggregate step that cannot preserve failure
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 7 passed | 16 skipped (23)
+- Proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure", with `packages/qfai/tests/integration/shippedWorkflowPortability.test.ts:225` changed from `return [`${site} survives a failed install but is not a result-only aggregate`];` to `return [];`
+- Proof result: FAIL — Test Files 1 failed (1); Tests 7 failed | 16 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:304:63`
+- Restored GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "rejects an aggregate step that cannot preserve failure", after `git checkout -- packages/qfai/tests/integration/shippedWorkflowPortability.test.ts`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 7 passed | 16 skipped (23)
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+
+#### Round 1
+
+An earlier run of this gate, superseded:
+
+- Command: the same command, with only line 221 (`job.job["continue-on-error"] !== undefined ||`) replaced by an empty line
+- Result: Test Files 1 failed (1); Tests 1 failed | 1 passed | 21 skipped (23). The row's case fails on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:328:65`; the second-step case passed
+- Verdict: qa-gatekeeper#1 REVISE — the second-step case had no run showing it fails, so the proof now removes both job-shape clauses in one edit
+
+- Round 1: Satisfied-by: packages/qfai/tests/integration/shippedWorkflowPortability.test.ts, `aggregateFailureViolations`, the job-shape clauses of the result-only aggregate check — `job.steps.length !== 1` and `job.job["continue-on-error"] !== undefined`; the test plants each job shape itself, so no shipped file can make it fail
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 2 failed | 21 skipped (23). Both cases fail on `AssertionError: expected [] to deeply equal [ Array(1) ]` at `tests/integration/shippedWorkflowPortability.test.ts:328:65`: `a second step that does work of its own` and `continue-on-error set on the job`
+
+The edit:
+
+```diff
+-    job.steps.length !== 1 ||
++
+-    job.job["continue-on-error"] !== undefined ||
++
+```
+
+- Round 1: Falsifiability revision: working-tree+7ec5e5259f299517c369d9c15d0142af4d1bc0a620e4b360b50300fefdbd6cd1
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 7e167bba8c93e3d22ead8847a72628e0785aa6b43c994e142e2d2ecf396c7bc2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
+```
+
+- Round 1: Revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts -t "TC-0003-0058 \(TDD-0093\): rejects an aggregate job whose shape cannot preserve failure"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 2 passed | 21 skipped (23)
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 23 passed (23). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate: the second-step case had no run showing it fails; qa-gatekeeper#2 PASS, RED phase gate on the two-clause mutation run and the three shared-artifact re-verify subsections, reviewed revision working-tree+7ec5e5259f299517c369d9c15d0142af4d1bc0a620e4b360b50300fefdbd6cd1; qa-gatekeeper#3 PASS, build-phase GREEN + oracle proof, reviewed revision e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+
+- Spec review: PASS
+- Spec reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Spec audited evidence hash: b3b911c58f50d7ba0c2fb6432904658d7048d4a476b523619c81bf7908643db5
+- Spec review pack: .qfai/review/review-20260923080017000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: b20406bd395435082a5599f8ba88d4cd081e865df5f2bdd7d3b6020cb96c240e
+- Code quality review: PASS
+- Code quality reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Code quality audited evidence hash: b3b911c58f50d7ba0c2fb6432904658d7048d4a476b523619c81bf7908643db5
+- Code quality review pack: .qfai/review/review-20260923080017000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: b20406bd395435082a5599f8ba88d4cd081e865df5f2bdd7d3b6020cb96c240e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4da9886fe30f7ae41827a6f5ac26c9a443ac851
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowPortability.test.ts --reporter=verbose && pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — step 1, the Test file: Test Files 1 passed (1); Tests 23 passed (23), naming both TDD-0093 cases as passed. Step 2, the full suite: Test Files 771 passed | 3 skipped (774); Tests 14555 passed | 82 skipped (14637), exit 0. The worker count and per-test timeout are raised because two slow suites time out at the default under a full parallel run on this host
+- Checkpoint verification revision: b20dbe4bc5c90581a030cdda8656107b85415a2c
+- Checkpoint verification seal: de5d644d1a9f3d0f6fdaf6d29e977a36a542e4d23303e0df85ae3006efd73032
+
+### TDD-0001
+
+- TDD-ID: TDD-0001
+- Layer: integration
+- Test file: packages/qfai/tests/integration/initSpec0003.test.ts
+- Selector: TC-0003-0001: Empty directory initialization
+- TC-ref: TC-0003-0001
+- Branch: falsifiability — init already writes no artifact directory, so the case passes on its first run and no natural RED can be observed
+- Predicate to break: packages/qfai/src/cli/commands/init.ts:509, `copyTemplateTree(qfaiAssets, destQfai, …)` — it writes under `.qfai/` what `packages/qfai/assets/init/.qfai/` ships, and that tree holds `assistant/` and `waivers.yml` and no artifact directory
+- Mutation: add an empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep`
+- Why it fails: init copies the new `specs/` directory into `.qfai/`, and the bullet 1 assertion at line 75 finds `specs` among the six artifact directories
+- Other rows: the same mutation fails `tests/e2e/initE2E.test.ts` "creates .qfai/ with assistant assets and no artifact scaffold", the test `TDD-0069` (`US-0003-0001`, `todo`) is expected to take, and `tests/cli/init.test.ts` "does not create artifact scaffold outside assistant assets", which no ledger row names. Both were run under the mutation and failed on an assertion. `TDD-0002` to `TDD-0015` share the Test file and are `exception`; `TDD-0025` shares it and is `done` (see the re-verify below)
+
+The case replaces the backfill test that only read `init.ts` for the string
+`runInit`. It runs `runInit` into an empty temporary directory and asserts all
+three verify bullets of `TC-0003-0001`. No other ledger row cites the case.
+
+| Verify bullet | Assertion | Line |
+| ------------- | --------- | ---- |
+| 1 | `.qfai/assistant/` is a directory, and none of `specs`, `contracts`, `discussion`, `evidence`, `review` and `report` exists under `.qfai/` | 70, 75 |
+| 2 | `qfai.config.yaml` is a file | 78 |
+| 3 | every `qfai-*` skill directory under `.qfai/assistant/skills/` is a symlink in each of `.claude/skills`, `.agents/skills`, `.codex/skills` and `.github/skills`, and its target ends in `.qfai/assistant/skills/<skill>`; a guard first requires at least one such skill | 87, 98 |
+
+Bullet 3 is checked the way `tests/cli/init.test.ts` "creates template additions
+with symlinks" checks one skill: `lstat` reports a symbolic link and `readlink`
+names the canonical directory. That file's two helpers are local to it, so the
+check is written inline. It requires a real symlink on every platform, as that
+test does: init has no fallback for a link it cannot create, and on Windows
+without Developer Mode it stops with an error instead.
+
+The describe title is unchanged, so the ledger's `Test file` and `Selector`
+already name the case. The mutation below breaks bullet 1, the obligation the
+change request moved, and it stays the row's predicate.
+
+The two tests the change request names assert the same clause and cannot be this
+row's test. `TC-0003-0001` declares `Level: integration`, so its home is
+`tests/integration/**`. `initE2E.test.ts` is under `tests/e2e/**`, where
+`QFAI-ATDD-122` refuses a `TC-0003-0001` annotation and the row's `integration`
+Layer would not match the path. `tests/cli/init.test.ts` is in no layer directory,
+and it asserts only that no file is written under the six directories. The Layer
+is right for the Test file. The file's header already carries
+`// QFAI:SPEC-0003:TC-0003-0001` (line 11), so no annotation was added.
+
+- First-run command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- First-run result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Mutation trial command: the same command, with the empty file `packages/qfai/assets/init/.qfai/specs/.gitkeep` added
+- Mutation trial result: FAIL — Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:75:72`
+- Mutation trial revision: working-tree+9ba92159e7f398085ba887d31a27152e3353cb5b9f171bea46d6793ab3716d2f
+- Restored GREEN command: the same command, after `rm -rf packages/qfai/assets/init/.qfai/specs`
+- Restored GREEN result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Test file command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Test file result: PASS — Test Files 1 passed (1); Tests 24 passed (24)
+- Test file revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
+
+The trial shows the mutation discriminates. It is not the row's falsifiability
+trio: `/qfai-implement` Phase Red step 3c applies the mutation, records the
+`Round 1:` fields and routes `qa-gatekeeper` while it is in the tree.
+
+- RED test hash: 5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+#### Shared-artifact re-verify
+
+No RED test manifest in any evidence file names
+`packages/qfai/tests/integration/initSpec0003.test.ts`, so no recorded hash moves and
+no `spec-NNNN/TDD-NNNN` subsection is owed. The one other `done` row whose Test file
+this is, `spec-0003/TDD-0025`, carries no manifest and no recorded mutation, and its
+describe is unchanged. Its selector was re-run against the edited file:
+
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0025: assistantPaths.ts SSOT module"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 1 passed | 23 skipped (24)
+- Re-verify revision: working-tree+7e98884c7e3c2ab9aa28703507d9661672229d1a78219c693a823672c1bb78b0
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/src/cli/commands/init.ts, `runInit`, `copyTemplateTree(qfaiAssets, destQfai, …)` at line 509 — it writes under `.qfai/` exactly the tree `packages/qfai/assets/init/.qfai/` ships, which holds `assistant/` and `waivers.yml` and no artifact directory
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []` at `tests/integration/initSpec0003.test.ts:75:72`
+
+The edit, an empty file added to the shipped tree:
+
+```diff
+diff --git a/packages/qfai/assets/init/.qfai/specs/.gitkeep b/packages/qfai/assets/init/.qfai/specs/.gitkeep
+new file mode 100644
+index 000000000..e69de29bb
+```
+
+- Round 1: Falsifiability revision: working-tree+66d3dc33e57a53cc76dcc281e6545ef8d68d826d2555de7de7dd3a97f8ee6fbc
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 5944d673da0c6056d3cb765a2a2bb103efe8ab8595e2f0b3d11715a7bb56ecb3
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+- Round 1: Revision: 0d2064bd1dd3e976ae8e39ea31b9c04f6e180209
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts -t "TC-0003-0001: Empty directory initialization"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `rm -rf packages/qfai/assets/init/.qfai/specs`, which leaves the shipped tree as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite. Re-run on the tree the reviews read
+- Refactor verify revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the rebuilt falsifiability run (specs/.gitkeep, bullet 1 assertion at :75:72), reviewed revision working-tree+66d3dc33e57a53cc76dcc281e6545ef8d68d826d2555de7de7dd3a97f8ee6fbc; build-phase GREEN + oracle proof, reviewed revision e4e818d9bd641e56c55f4d074280a636687f008b
+
+- Spec review: PASS
+- Spec reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Spec audited evidence hash: c9e4fa914bfecb2b1c0ec1abebbfc19acb167e656ef5c45077a0af023afa4076
+- Spec review pack: .qfai/review/review-20260923130000000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 888b53a0d9cfa5c89fd4ea9ac62938512b5980f0b823e07af34320a79ada6dc5
+- Code quality review: PASS
+- Code quality reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Code quality audited evidence hash: c9e4fa914bfecb2b1c0ec1abebbfc19acb167e656ef5c45077a0af023afa4076
+- Code quality review pack: .qfai/review/review-20260923130000000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 888b53a0d9cfa5c89fd4ea9ac62938512b5980f0b823e07af34320a79ada6dc5
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/initSpec0003.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification seal: fa5e87e093c231ba3b1b8725963c7774c8321994ac37406340a3650286aeacb4
+
+### TDD-0037
+
+- TDD-ID: TDD-0037
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+- Selector: TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references
+- TC-ref: TC-0003-0037
+- Branch: falsifiability — recorded where the row closed, `.qfai/evidence/implement-spec-0003.md#tdd-0037`. This entry records a test-only replacement and changes no branch
+
+`CR-20260923-0011` asked for the row's test names to state the counts the case
+asserts. Two title strings changed and no assertion did:
+
+| Title | Before | After |
+| ----- | ------ | ----- |
+| `describe`, line 360 | `TC-0003-0037 (TDD-0037): two installing job declarations, four and three executing instances, zero secret references` | `TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references` |
+| `it`, line 469 | `the init-written jobs that install dependencies are exactly the docs and validate lanes, four instances on a pull request and three on a push` | `the init-written jobs that install dependencies are exactly the docs, test and validate lanes, nine instances on a pull request and eight on a push` |
+
+The `Selector` above names the renamed describe, which holds the row's three cases
+and nothing else. The ledger still holds the old describe title. `/qfai-implement`
+writes the value above to the ledger and to its own entry's copy; until it does,
+`TDDLIST_SELECTOR_UNRESOLVED` is reported on row 37. No other ledger row's
+`Selector` named either old title.
+
+- Selector run command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Selector run result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
+- Selector run revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
+- Proof to re-take: the two mutations the earlier entry names — a `secrets.QFAI_LEAKED` reference planted in the verdict step's `env:` of `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`, and a `run: npm ci` step appended to its `detection` job
+
+#### Shared-artifact re-verify
+
+No RED test manifest in `.qfai/evidence/atdd-spec-0003.md`, or in any other evidence
+file, names `packages/qfai/tests/integration/shippedWorkflowInertness.test.ts`, so no
+recorded hash moves and no `spec-NNNN/TDD-NNNN` subsection is owed. The one other
+`done` row whose Test file this is, `spec-0003/TDD-0036`, has its evidence at
+`.qfai/evidence/implement-spec-0003.md#tdd-0036`, which records no manifest. Its
+describe is byte-identical after the rename, and its selector was re-run:
+
+- Re-verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0036 \(TDD-0036\): no declared layer script means zero executing test lanes"
+- Re-verify result: PASS — Test Files 1 passed (1); Tests 3 passed | 3 skipped (6)
+- Re-verify revision: working-tree+b6717d99336497714758bb9eafe114d2ddc4f4c194e332da052432f02b99161f
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/root/.github/workflows/, every workflow file init writes — none carries a `secrets` reference, a secret declaration or `secrets: inherit`, and only `qfai-docs.yml#checks`, `qfai-tests.yml#tests` and `qfai-validate.yml#validate` install dependencies. The lanes were built by TDD-0035, TDD-0038 to TDD-0040, TDD-0027 and TDD-0055; the zero-secret property has held since the set shipped
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 2 passed | 3 skipped (6). The secret case fails on `AssertionError: expected [ Array(1) ] to deeply equal []` at `tests/integration/shippedWorkflowInertness.test.ts:549:24`, naming `qfai-tests.yml:677: secret context reference`
+
+The edit, a secret reference planted in the verdict step's `env:` of `packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`:
+
+```diff
+           QFAI_SELECTED: ${{ needs.detection.outputs.selected }}
++          QFAI_LEAKED: ${{ secrets.QFAI_LEAKED }}
+```
+
+- Round 1: Falsifiability revision: working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 30ebc3cb08f888b4c46df68667a8b4c82e538837b44ed2d96193fb60a897e236
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/shippedWorkflowFixtures.ts
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/shippedWorkflowInertness.test.ts
+```
+
+The earlier entry records no `RED test hash`, so none is overwritten. Over the same
+manifest the file hashed to
+`64780749016ea65cecf5f8e5ccb7233deb631be8257daf9f9680091f63b67450` before the rename.
+
+- Round 1: RED test replacement: test-only replacement — CR-20260923-0011 asked for the describe and the count case to be renamed; the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 is stale — test replaced, and /qfai-implement re-takes it under the corrected test
+- Round 1: Replacement proof revision: working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b
+- Round 1: Replacement proof command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: Replacement proof result: Test Files 1 failed (1); Tests 1 failed | 2 passed | 3 skipped (6). The planted secret the proof at .qfai/evidence/implement-spec-0003.md#tdd-0037 names, re-run under the renamed test, fails the secret case on `AssertionError: expected [ Array(1) ] to deeply equal []` at `tests/integration/shippedWorkflowInertness.test.ts:549:24`. Over the whole test file the same edit fails that case alone: Tests 1 failed | 5 passed (6)
+
+A second mutation, the one the earlier entry ran beyond the proof, exercises the other two cases. It is not the row's proof:
+
+- Command: the same command, with a `run: npm ci` step appended to the `detection` job of the same file
+- Result: Test Files 1 failed (1); Tests 2 failed | 1 passed | 3 skipped (6). The count case fails on `AssertionError: expected [ …(4) ] to deeply equal [ …(3) ]` at `tests/integration/shippedWorkflowInertness.test.ts:499:68`, with `detection` as the extra entry, and the detection case fails on `AssertionError: expected [ Array(1) ] to deeply equal []` at `:574:24`, naming `detection job installs dependencies`
+- Revision: working-tree+ceced760cb9f30ce532c18e001c8b48dbbc5cc5ab4806957a499b90b2fbd4e07
+
+```diff
+           echo "qfai tests: lanes to run ${selected}"
++      - name: Install dependencies
++        run: npm ci
+   tests:
+```
+
+- Round 1: Revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts -t "TC-0003-0037 \(TDD-0037\): three installing job declarations, nine and eight executing instances, zero secret references"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 3 passed | 3 skipped (6). Run after `git checkout -- packages/qfai/assets/init/root/.github/workflows/qfai-tests.yml`, which restored the file after each mutation
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowInertness.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 6 passed (6). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the rebuilt falsifiability run (planted secrets.QFAI_LEAKED in the verdict step, secret case at :549:24) and the TDD-0036 shared-artifact re-verify, reviewed revision working-tree+27a64a572f3b9dde75c9f714c23c1cfd41db2d7888b293654d82671f282d412b; build-phase GREEN + oracle proof, reviewed revision e4e818d9bd641e56c55f4d074280a636687f008b
+
+- Spec review: PASS
+- Spec reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Spec audited evidence hash: b1eedd2b472ea8a6c5b8e3814205694077a4c345f1bf07c83309f858d1ae9af1
+- Spec review pack: .qfai/review/review-20260923130001000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 19c315faa2751606c83ee1e5e877c1053aff72c126ce80e3fa0e3d16ea95ce1e
+- Code quality review: PASS
+- Code quality reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Code quality audited evidence hash: b1eedd2b472ea8a6c5b8e3814205694077a4c345f1bf07c83309f858d1ae9af1
+- Code quality review pack: .qfai/review/review-20260923130001000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 19c315faa2751606c83ee1e5e877c1053aff72c126ce80e3fa0e3d16ea95ce1e
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run --maxWorkers=7 --testTimeout=600000
+- Checkpoint verification result: PASS — the last row of this run, so the full suite ran: Test Files 771 passed | 3 skipped (774); Tests 14565 passed | 82 skipped (14647)
+- Checkpoint verification revision: e4e818d9bd641e56c55f4d074280a636687f008b
+- Checkpoint verification seal: 645095fba21747e6dc9b7be0b1a48e5dd514dd440649e88e89a443576ba712a4
+
 ### TDD-0094
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -868,6 +1328,38 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 29 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
 | 30 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0058 to TDD-0061, attempt 2 | #tdd-0058 … #tdd-0061 | one response per row in that row's attempt-2 review pack | PASS |
 | 31 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0061, the row's Test file and the full suite | #tdd-0061 | Checkpoint verification fields | PASS |
+| 32 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0093 case for TC-0003-0058 verify bullet 5 and hand the row over on the falsifiability path | CR-20260923-0007 | packages/qfai/tests/integration/shippedWorkflowPortability.test.ts; #tdd-0093 | PASS |
+| 33 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0062, TDD-0063 and TDD-0092 under the edited Test file | #tdd-0062, #tdd-0063, #tdd-0092 | #tdd-0093 Shared-artifact re-verify; each selector passes | PASS |
+| 34 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: mutation-only request to /qfai-implement for the proofs of TDD-0062, TDD-0063 and TDD-0092, and the falsifiability run of TDD-0093 | #tdd-0093 | the Proof and Restored GREEN fields of #tdd-0093 and its Round 1 block, filled by the /qfai-implement run | PASS |
+| 35 | - | n/a | grilling(-@2026-09-23T08:31:57.000Z/none): none | - | - | PASS |
+| 36 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: shared-artifact proofs of TDD-0062, TDD-0063 and TDD-0092 under the edited test file | #tdd-0093 | the three re-verify subsections | PASS |
+| 37 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the falsifiability mutation run | #tdd-0093 | the second-step case had no run showing it fails | REVISE |
+| 38 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 RED phase gate on the two-clause mutation run | #tdd-0093 | Round 1 | PASS |
+| 39 | qa-gatekeeper | qa-gatekeeper | /qfai-implement: TDD-0093 build-phase GREEN + oracle proof | #tdd-0093 | Round 1 | PASS |
+| 40 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
+| 41 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0093, attempt 1 | #tdd-0093 | one response in the row's pack | PASS |
+| 42 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0093, its Test file and the full suite | #tdd-0093 | Checkpoint verification fields | PASS |
+| 43 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: rename the TDD-0037 describe and count case to the counts the case asserts, record the new RED test hash and mark the proof stale | CR-20260923-0011 | packages/qfai/tests/integration/shippedWorkflowInertness.test.ts; #tdd-0037 | PASS |
+| 44 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify under the renamed titles | #tdd-0037 | #tdd-0037 Shared-artifact re-verify: no RED test manifest names the file; the TDD-0036 selector passes | PASS |
+| 45 | acceptance-test-engineer | acceptance-test-engineer | grilling(S1@2026-09-23T11:24:46.722Z/agents): TDD-0001's test is the row's own case in tests/integration/initSpec0003.test.ts, rewritten to run init and assert the clause, not either test CR-20260923-0011 names | CR-20260923-0011; 06_Test-Cases.md TC-0003-0001; .qfai/assistant/catalog/test-layers.md | #tdd-0001; TC-0003-0001 declares Level integration, so its home is tests/integration/**, where initE2E.test.ts is not and where QFAI-ATDD-122 keeps its annotation out of tests/e2e/**; tests/cli/init.test.ts is in no layer directory and asserts only that no file is written. Disagreeing position: the work order asked for one of the two named tests to be picked | PASS |
+| 46 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: write the TDD-0001 case and hand the row over on the falsifiability path, with a reverted trial of the mutation | CR-20260923-0011 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
+| 47 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: shared-artifact re-verify of TDD-0025 under the edited Test file | #tdd-0001 | #tdd-0001 Shared-artifact re-verify; the selector passes | PASS |
+| 48 | completion-reviewer | - | /qfai-atdd: completion review of TDD-0001 and TDD-0037 | #tdd-0001, #tdd-0037 | not run in this invocation; the /qfai-implement run took it at row 61 | PASS |
+| 49 | acceptance-test-engineer | acceptance-test-engineer | /qfai-atdd: add the TC-0003-0001 verify bullet 3 assertion to the TDD-0001 case, re-take the mutation trial and the RED test hash | #tdd-0001 | packages/qfai/tests/integration/initSpec0003.test.ts; #tdd-0001 | PASS |
+| 50 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 falsifiability run with an empty `specs/.gitkeep` added to the shipped `.qfai/` tree | #tdd-0001 | #tdd-0001 Round 1 falsifiability fields | PASS |
+| 51 | backend-engineer | backend-engineer | /qfai-implement: TDD-0001 restored GREEN and whole-file Refactor verify | #tdd-0001 | #tdd-0001 Round 1 GREEN and Refactor verify fields | PASS |
+| 52 | backend-engineer | backend-engineer | grilling(S1@2026-09-23T11:42:45.972Z/agents): TDD-0037 stays at done, and re-taking its proof waits for a Change Request that names the row | execution-ledger.md allowed transitions; change-request-reset.md; CR-20260923-0011 approved action 2 | done leaves only by the upstream reset, which change-request-reset.md refuses for a row the CR's approved actions do not name, and CR-20260923-0011 names TDD-0001 and says no other row. Disagreeing position: the work order asked to bring the row to refactor | PASS |
+| 53 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 Selector copied from the handback into the ledger | #tdd-0037; CR-20260923-0011 | test-list.md row 37 Selector, which CR-20260923-0011 says follows the rename | PASS |
+| 54 | orchestrator | orchestrator | /qfai-implement: raise CR-20260923-0013 so TDD-0037 is reset and its proof re-taken on the renamed test; this replaces the outcome of row 52 | #tdd-0037; change-request-reset.md | CR-20260923-0013; test-list.md row 37 at todo with the record in DR-ID | PASS |
+| 55 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 falsifiability run with a secret reference planted in the shipped `qfai-tests.yml`, and a second run with an install step on its detection job | #tdd-0037 | #tdd-0037 Round 1 falsifiability fields | PASS |
+| 56 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0001 RED phase gate on the falsifiability mutation run | #tdd-0001 | #tdd-0001 Round 1 | PASS |
+| 57 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0037 RED phase gate on the falsifiability mutation run and the TDD-0036 re-verify | #tdd-0037 | #tdd-0037 Round 1 | PASS |
+| 58 | backend-engineer | backend-engineer | /qfai-implement: TDD-0037 restored GREEN and whole-file Refactor verify, and the TDD-0001 Refactor verify re-run on the reviewed tree | #tdd-0001, #tdd-0037 | the GREEN and Refactor verify fields of both entries | PASS |
+| 59 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0001 build-phase GREEN + oracle proof | #tdd-0001 | #tdd-0001 Round 1 | PASS |
+| 60 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0037 build-phase GREEN + oracle proof | #tdd-0037 | #tdd-0037 Round 1 | PASS |
+| 61 | completion-reviewer | completion-reviewer | /qfai-implement: completion review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack; its record advisories are queued in implement-spec-0003.md `## Record defects` | PASS |
+| 62 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack | PASS |
+| 63 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0001 on its Test file and of TDD-0037 on the full suite | #tdd-0001, #tdd-0037 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
@@ -888,14 +1380,28 @@ Recorded per row under `## Ledger rows advanced`.
 - The step runner, job reader and delivered tree are copied into several shipped-workflow
   test files, including the two this run touched. Extracting them edits test files other
   specs' completed rows name, so it is a separate change.
-- Two clauses of the result-only aggregate check in `shippedWorkflowPortability.test.ts`,
-  a second step and a job-level `continue-on-error`, have no case that fails when the
-  clause is removed. `TDD-0092` pins the step-level clauses only.
+- The `TDD-0093` entry's `Mutation:` line names the single-clause edit its handover
+  planned. The run it closed on removes both job-shape clauses, and Round 1 records both
+  runs.
+- The `TDD-0001` case asserts all three verify bullets of `TC-0003-0001`. Its one
+  mutation breaks bullet 1; no mutation has been run against the bullet 2 and bullet 3
+  assertions.
+- No mutation has shown the `TDD-0037` count case's nine and eight instance counts
+  fail. The planted secret fails the secret case, and the install step on the
+  detection job fails the declaration list and the detection case.
+- The `TDD-0037` entry's `Branch:` line, its paragraph on the ledger's `Selector` and
+  its Round 1 `RED test replacement` and `Replacement proof` fields describe the row
+  as it was before `CR-20260923-0013` reset it. The repair is queued in
+  `.qfai/evidence/implement-spec-0003.md` under `## Record defects`.
+- The comments inside the `TDD-0037` count case still speak of four and three installs.
+  Only the titles were in scope.
 
 ## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 
 FAIL — the pack's other ATDD-owned rows are still owed, as the matrix records.
 
-The seven rows this run took up are `done`. `/qfai-implement` took each through the
+The ten rows these runs took up are `done`: `TDD-0058` to `TDD-0063`, `TDD-0092`,
+`TDD-0093`, `TDD-0001` and `TDD-0037`. `/qfai-implement` took each through the
 falsifiability path, and `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` passed each one. `TDD-0061` closed on the full suite.
+`implementation-reviewer` passed each one. `TDD-0061`, `TDD-0093` and `TDD-0037`
+closed on the full suite.

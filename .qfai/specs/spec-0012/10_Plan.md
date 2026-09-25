@@ -101,7 +101,7 @@ rule.
 | `L3`  | `SKILL.md` cites `references/orchestrated-mode.md` with one line, and the reference cites the shared entry check                                              | `prototypingEntryCheckSpec0012.test.ts`                     | TC-0012-0491               |
 | `L3`  | The Operations table lists exactly `existing-runtime-contract`                                                                                                | `prototypingOperationsSpec0012.test.ts`                     | TC-0012-0492               |
 | `L3`  | Under a work order the skill works on its target spec only and creates no contract; the non-UI stop                                                           | `prototypingWorkOrderScopeSpec0012.test.ts`                 | TC-0012-0493, TC-0012-0494 |
-| E2E   | The prototype stage of a `feature` run, through the prototype variant that spec-0018 `10_Plan.md` `### Which journey discharges which stage story` maps to it | The spec-0018 journey's module, annotated with US-0012-0144 | US-0012-0144 (TDD-0566)    |
+| E2E   | The prototype stage of a `feature` run, through the prototype variant that spec-0018 `10_Plan.md` `### Which journey discharges which stage story` maps to it | The spec-0018 journey's module, annotated with US-0012-0144 | US-0012-0144 (TDD-0582)    |
 
 **Cases that stand alone, and the kept failure.**
 
@@ -133,8 +133,8 @@ prototype variant waits on them, and the E2E row closes at tier 5.
 | The eight pinned `QFAI-TDDLIST-017` groups, and the 415 `tdd` errors of `tdd/test-list.md` | Pinned rows this change does not repair; the new rows add to neither | A later change                                                                                                      |
 | `QFAI-ATDD-131` on this spec, pinned at 1 under `full`                                     | The spec has no Coverage Depth Matrix                                | ATDD writes the first one, and that push re-pins with `node scripts/check-dogfood-backlog.mjs --profile full --pin` |
 
-TDD-0561 stays unused: an approved Change Request that is not yet applied
-reserves it.
+TDD-0561 is the row `CR-20260923-0002` seeded for `TC-0012-0489` when it was
+applied.
 
 ## v1.9.2 Second-Wave maintenance steps (How-only)
 

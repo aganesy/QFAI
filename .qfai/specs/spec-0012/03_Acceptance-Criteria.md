@@ -352,7 +352,7 @@
 ## AC-0012-0059: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
 
 - US-Refs: US-0012-0125
-- REQ-Refs: REQ-0012-0061
+- REQ-Refs: REQ-0012-0061, REQ-0012-0075
 - Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
 - When the loop runs,
 - Then no PNG / HTML artifacts MUST be written (the existing DR-0012-0029 no-capture posture is preserved; amendment pinned by `DR-0012-0031`).
@@ -362,17 +362,17 @@
 ## AC-0012-0060: `iterate --auto-serve` opt-in flag with foreign-process protection
 
 - US-Refs: US-0012-0126
-- REQ-Refs: REQ-0012-0062
+- REQ-Refs: REQ-0012-0062, REQ-0012-0076
 - Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
 - When the loop runs,
 - Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
-- And when invoked WITH `--auto-serve`, iterate MUST spawn a local server, tear down via `tree-kill` (Linux/macOS) or `taskkill /F /T` (Windows), recover from a stale prior-iterate port owner by force-kill, and MUST refuse to kill foreign processes (reports PID + owning command instead).
-- And SIGINT MUST trigger graceful teardown with explicit async error handling on the kill path.
+- And when invoked WITH `--auto-serve`, iterate MUST call the server runner once, invoke the teardown it returns at cycle end and on SIGINT, continue when the runner reports a recovered prior owner, and exit 2 reporting the runner's reason when the runner refuses.
+- And the default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
 
 ## AC-0012-0061: `prototyping.json` validate-conformant emit
 
 - US-Refs: US-0012-0127
-- REQ-Refs: REQ-0012-0063
+- REQ-Refs: REQ-0012-0063, REQ-0012-0077
 - Given a converged `iterate` invocation,
 - When `iterate` writes `prototyping.json`,
 - Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
@@ -564,6 +564,25 @@
 - Given a prototyping evidence tree holding `screenshots/` or `html/` from a previous loop,
 - When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,
 - Then both directories MUST be moved into `aggregate.backup-<ISO>/` before any iteration directory is cleared, each moved file MUST appear in `mutation-log.jsonl`, and the backups MUST be left out of the completion certificate's evidence digests and of its freshness scan.
+
+## AC-0012-0083: `iterate --check-convergence` reports the recorded loop state read-only (REQ-0012-0078)
+
+- US-Refs: US-0012-0143
+- REQ-Refs: REQ-0012-0078
+- Given a prototyping evidence tree whose `prototyping.json` records a loop state,
+- When `qfai prototyping iterate --check-convergence` runs, with or without `--cycle`,
+- Then it MUST print `stopReason`, `acceptedIterationIndex` and the number of recorded iterations, and exit 0 only when `stopReason` is `converged` and `acceptedIterationIndex` is a non-negative integer.
+- And every other state, including a missing or unreadable `prototyping.json`, MUST exit 2 and print the reason.
+- And the run MUST write nothing and MUST NOT start a cycle.
+
+## AC-0012-0084: A failed `--auto-serve` teardown is reported and leaves the exit code alone
+
+- US-Refs: US-0012-0126
+- REQ-Refs: REQ-0012-0062
+- Given `qfai prototyping iterate --auto-serve` whose server runner returns a teardown that rejects,
+- When the cycle ends and iterate invokes that teardown,
+- Then iterate MUST print a line on stdout naming the `--auto-serve` teardown as what failed, with the rejection's reason.
+- And iterate MUST return the exit code the cycle would have returned had the teardown resolved.
 
 ## AC-0012-0176: The prototyping skill hands over or works its order
 

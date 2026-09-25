@@ -9,7 +9,7 @@
 - US-0013-0005: Required Edge Enforcement
 - US-0013-0006: Validate Gate Integration
 - US-0013-0007: Delta Phase with Rejected Guardrails
-- US-0013-0008: Optional Side Artifacts Do Not Block Preflight
+- US-0013-0008: Optional Side Artifact Neutrality
 - US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 - US-0013-0010: Active Design Contract Surface Reduction
 - US-0013-0011: UI contract `primary_tasks` slot per screen
@@ -30,7 +30,7 @@ As a QFAI user, I want contracts created/updated before spec slices, so that spe
 
 ## US-0013-0003: Discussion-Pack Preflight
 
-As a QFAI user, I want SDD to validate the latest discussion pack and stop if incomplete or has blocking OQs, so that specs are not built on incomplete requirements.
+As a QFAI user, I want SDD to use an available discussion pack as reference material and stop only when no usable source exists, so that incomplete or contradictory pack material is resolved in SDD-owned artifacts.
 
 ## US-0013-0004: Batch Mode Processing
 
@@ -48,9 +48,9 @@ As a QFAI user, I want `qfai validate --fail-on error` to pass with error=0 befo
 
 As a QFAI user, I want `09_delta.md` to include adoption/rejection rationale with DO NOT and Temptation sections, so that rejected options are guarded against reintroduction.
 
-## US-0013-0008: Optional Side Artifacts Do Not Block Preflight
+## US-0013-0008: Optional Side Artifact Neutrality
 
-As a QFAI user, I want absent, malformed, or legacy optional side artifacts to leave SDD preflight ready when the discussion pack is usable, so that optional files do not prevent spec generation.
+As a QFAI user, I want optional discussion side artifacts to leave SDD preflight readiness unchanged, so that their absence or legacy format does not prevent spec generation.
 
 ## US-0013-0009: DESIGN.md sha256 Lock at Phase 0
 

@@ -238,14 +238,18 @@ observable:
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                          | Mode      | Approved by                                                    | Applied at           |
-| ---------------- | ------------------------------------------------------------------------------------------ | --------- | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
-| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-24T18:26:35Z |
-| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-24T19:00:08Z |
-| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T02:36:35Z |
-| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                     | re-derive | user                                                           | 2026-09-25T03:00:14Z |
-| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`     | re-derive | user                                                           | 2026-09-25T03:23:20Z |
+| CR ID            | Upstream artifact                                                                                                                       | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                              | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
+| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
+| CR-20260923-0011 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`     | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:15:07Z |
+| CR-20260923-0013 | `spec-0003/tdd/test-list.md`                                                                                                            | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:52:00Z |
+| CR-20260924-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                  | re-derive | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                  | re-derive | user                                                           | 2026-09-24T19:00:08Z |
+| CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                  | re-derive | user                                                           | 2026-09-25T02:36:35Z |
+| CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                  | re-derive | user                                                           | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                  | re-derive | user                                                           | 2026-09-25T03:23:20Z |
 
 ## Triage (2026-09-15)
 

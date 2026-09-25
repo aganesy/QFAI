@@ -329,7 +329,7 @@ describe("reviewer finding provenance", () => {
     // The artifact and its seal exist as named fields, so a validator has
     // something to recompute rather than an untraceable edit.
     for (const doc of [drift, classification, recordContract, revision]) {
-      expect(doc).toContain("Record re-attestation pack seal");
+      expect(doc.replace(/\s+/g, " ")).toMatch(/record re-attestation pack seal/i);
     }
     // The gate recomputes the superseding hash and both seals.
     // The rule moved out of the gate line into the reference, so the assertions
@@ -356,6 +356,36 @@ describe("reviewer finding provenance", () => {
     for (const doc of [drift, classification, revision]) {
       expect(doc).toMatch(/not a `Round N:` pack|no `Round N:` prefix/);
     }
+  });
+
+  it("records a re-attestation per verdict, not per entry", async () => {
+    // A `Prototype parity` verdict hashes the captures its `Surface artifacts`
+    // manifest names beside the entry's fields, so on a UI-affecting row its
+    // subject never recomputes to the value the other two verdicts read. One
+    // hash beside the entry could re-attest only one of the two subjects, which
+    // left a repaired UI-affecting row with no field to carry the other.
+    const [drift, classification, recordContract, skill] = await Promise.all([
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+      readFile(RECORD_CONTRACT, "utf-8"),
+      readFile(IMPLEMENT_SKILL, "utf-8"),
+    ]);
+    // The entry-wide field is gone from every document that names the shape.
+    for (const doc of [drift, classification, recordContract, skill]) {
+      expect(doc.replace(/\s+/g, " ")).not.toContain("`Record re-attestation`");
+    }
+    // Each document that names a field names it under a verdict's prefix.
+    for (const doc of [classification, recordContract, skill]) {
+      expect(doc.replace(/\s+/g, " ")).toContain("`<prefix> record re-attestation`");
+    }
+    // The constitution names the three the gate reads, so the prefix is not
+    // left to a reader to guess.
+    const flatDrift = drift.replace(/\s+/g, " ");
+    for (const prefix of ["Spec", "Code quality", "Prototype parity"]) {
+      expect(flatDrift).toContain(`\`${prefix} record re-attestation\``);
+    }
+    // And why there is one per verdict rather than one per entry.
+    expect(flatDrift).toContain("one hash cannot answer for two subjects");
   });
 
   it("withholds the record class from every stage with no drain, not just web-research", async () => {
