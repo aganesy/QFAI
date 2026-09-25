@@ -140,6 +140,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
   });
 });
 
+// QFAI:AC-0003-0006-02
 describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1.10.0", () => {
   it("emits an error finding whose body literally contains `sunset: 1.10.0`", async () => {
     const root = await newTempDir("tc14");
@@ -167,6 +168,7 @@ describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1
   });
 });
 
+// QFAI:AC-0003-0006-02
 describe("TC-0006-0015: full failure surfaces `npm i -D playwright` install hint", () => {
   it("emits an error finding whose message contains the install hint", async () => {
     const root = await newTempDir("tc15");
@@ -206,6 +208,7 @@ describe("TC-0006-0016: fresh init + playwright install yields zero error lines"
   });
 });
 
+// QFAI:AC-0003-0007-01
 describe("TC-0006-0017: skills.integrity defaults to warning, --fail-on error still exits 0", () => {
   it("skills drift surfaces as warning and runDoctor --fail-on error exits 0 (skills-only signal)", async () => {
     const root = await newTempDir("tc17");
@@ -233,6 +236,7 @@ describe("TC-0006-0017: skills.integrity defaults to warning, --fail-on error st
   });
 });
 
+// QFAI:AC-0003-0007-02
 describe("TC-0006-0018: doctor summary 2-group split routes skills.integrity to advisory group", () => {
   it("text summary emits both group headers and skills.integrity appears below the advisory header", async () => {
     const root = await newTempDir("tc18");

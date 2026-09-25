@@ -203,6 +203,7 @@ const COMMAND_TOKENS: RegExp[] = [
   new RegExp(`(?<![\\\\/@.\\w-])(?:${CLI_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
+// QFAI:AC-0003-0011-03
 describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and no command token", () => {
   it("names the packaged copy as the source of the manual replacement, and names no command token", async () => {
     const dir = await pool.seedAdopterTree();

@@ -103,6 +103,7 @@ function sortedDetailsKeys(details: Record<string, unknown> | undefined): string
   return details === undefined ? undefined : Object.keys(details).sort();
 }
 
+// QFAI:AC-0003-0011-06
 describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", () => {
   it("carries workflowsDir, modified, declined and packagedDir while staying an info advisory", async () => {
     const dir = await pool.seedAdopterTree();
@@ -198,6 +199,7 @@ describe("TC-0006-0034 (TDD-0036): details lists declined alongside modified", (
   });
 });
 
+// QFAI:AC-0003-0011-06
 describe("TC-0006-0035 (TDD-0037): a declined-only tree emits no drift finding", () => {
   it("reports severity ok with no drift finding and no declined key in the payload", async () => {
     const dir = await pool.seedAdopterTree();

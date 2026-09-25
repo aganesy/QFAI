@@ -84,6 +84,29 @@ describe("BF-0003 doctor acceptance", () => {
     });
   });
 
+  // QFAI:AC-0003-0004-01
+  // QFAI:EX-0003-0004-01
+  it("warns about a configured legacy prompts directory and names the replacement", async () => {
+    await withWorkspace(async (root) => {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  promptsDir: .qfai/assistant/legacy-prompts\n",
+      );
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const legacy = check(data, "paths.promptsDirDeprecated");
+      expect(legacy).toMatchObject({
+        severity: "warning",
+        details: { path: ".qfai/assistant/legacy-prompts", configured: true },
+      });
+      expect(legacy?.message).toContain("migrate to skillsDir");
+
+      const output = await captureStdout(async () => {
+        await runDoctor({ root, rootExplicit: true, format: "text", failOn: "error" });
+      });
+      expect(output).toMatch(/\[warning\] paths\.promptsDirDeprecated:/u);
+    });
+  });
+
   // QFAI:AC-0003-0005-01
   // QFAI:AC-0003-0005-02
   it("emits machine-readable diagnosis and writes the same result to --out", async () => {

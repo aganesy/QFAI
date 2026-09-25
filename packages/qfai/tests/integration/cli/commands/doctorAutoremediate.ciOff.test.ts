@@ -46,6 +46,7 @@ async function fileExists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:AC-0003-0009-02
 describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   it("CI=true short-circuits with 'autoremediate disabled in CI'", async () => {
     const root = await newTempDir("ci");

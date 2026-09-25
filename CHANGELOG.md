@@ -43,6 +43,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `code: message` under the refusal. GitHub caps the annotations a run shows,
   so the findings that changed the count were often not visible anywhere.
 
+- **Fifteen of the seventeen untested doctor criteria now name their tests**
+  (#2367). Most already had integration tests that prove them, which carried
+  only the example IDs. They now carry the criterion IDs as well. The legacy
+  prompts-directory warning gets a new integration test, because its only test
+  searched the source text for a word. The dogfooding backlog falls from 609 to
+  594, and its pinned digests are resealed. Two playwright-probe criteria stay
+  open, because their text no longer matches what `doctor` does.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at

@@ -47,6 +47,7 @@ async function exists(target: string): Promise<boolean> {
   }
 }
 
+// QFAI:AC-0003-0008-01
 describe("doctor --clean archives TTL-expired review packs", () => {
   it("moves a 26-day-old pack into _archive/ and leaves TTL-in pack", async () => {
     const root = await newTempDir("archive");

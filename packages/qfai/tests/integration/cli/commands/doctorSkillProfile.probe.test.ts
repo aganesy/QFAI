@@ -50,6 +50,7 @@ async function seedManifest(root: string, skill: string, deps: string[]): Promis
   );
 }
 
+// QFAI:AC-0003-0010-01
 describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
   it("missing dep reported with install command", async () => {
     const root = await newTempDir("missing");
@@ -159,6 +160,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     expect(finding.message).toMatch(/manifest\.json/u);
   });
 
+  // QFAI:AC-0003-0010-02
   it("stays [ok] — and names the manifest — when a manifest declares zero deps", async () => {
     const root = await newTempDir("zero-deps");
     await seedManifest(root, "qfai-prototyping", []);

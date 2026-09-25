@@ -64,6 +64,7 @@ function sortedDetailsKeys(details: Record<string, unknown> | undefined): string
   return details === undefined ? undefined : Object.keys(details).sort();
 }
 
+// QFAI:AC-0003-0011-01
 describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a workflows.integrity info advisory naming the stale path", () => {
   it("reports the hand-edited workflow as an info advisory naming its adopter-relative path", async () => {
     const dir = await pool.seedAdopterTree();
@@ -246,6 +247,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
   });
 });
 
+// QFAI:AC-0003-0011-01
 describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports severity ok and emits no drift finding", () => {
   it("registers exactly one ok-severity workflows.integrity check carrying no drift payload", async () => {
     // The TC's Setup is 「TC-0006-0027 の手編集を戻し」, so the edit is applied
