@@ -203,6 +203,25 @@ an existence observation can be refused without guessing from its spelling.
 
 ## Resolution
 
-The user selected Option 1: each reference is a tagged entry that keeps its kind and value together. The approval timestamp above records when the answer was entered; the answer's original timestamp is unavailable. After CR2 and CR3, `/qfai-sdd --contract .qfai/contracts/cli/qfai-workflow.md`, `/qfai-sdd --contract .qfai/contracts/cli/workflow-files.schema.md`, and `/qfai-sdd spec-0018` ran in `re-derive` mode. Both contracts require exact `{ kind, ref }` entries. The closed kinds are `request`, `spec-id`, `contract-id`, `path` and `evidence`; normative references allow the first four, and observed references allow `path` and `evidence`. The latter two require a current project-relative path-existence fact. A false or missing fact yields `unknown-path`; a bare legacy string fails `invalid-input` / `schema`. The SDD owner added `EX-0018-0155`, `TC-0018-0269` and `TDD-0528/0529` to cover the legacy shape in both arrays.
+The user selected Option 1: each reference is a tagged entry that keeps its kind
+and value together. The approval timestamp above records when the answer was
+entered; the answer's original timestamp is unavailable. After CR2 and CR3,
+`/qfai-sdd --contract .qfai/contracts/cli/qfai-workflow.md`, `/qfai-sdd
+--contract .qfai/contracts/cli/workflow-files.schema.md`, and `/qfai-sdd
+spec-0018` ran in `re-derive` mode. Both contracts require exact `{ kind, ref }`
+entries. The closed kinds are `request`, `spec-id`, `contract-id`, `path` and
+`evidence`; normative references allow the first four, and observed references
+allow `path` and `evidence`. The latter two require a current project-relative
+path-existence fact. A false or missing fact yields `unknown-path`; a bare
+legacy string fails `invalid-input` / `schema`. The SDD owner added
+`EX-0018-0155`, `TC-0018-0269` and `TDD-0528/0529` to cover the legacy shape in
+both arrays.
 
-The ledger sweep released 48 CR4-blocked rows to `todo`. It reset `TDD-0015` from `review-fix` to `todo`, and tagged `TDD-0015`, `TDD-0016` and `TDD-0025` with this CR in `DR-ID` because their observable reference obligations changed. No row was retired. `TDD-0001` and `TDD-0004` remain `done` with prior evidence; shared-file re-verification and the implementation of tagged producer, parser, schema, fixtures and skill text remain downstream work. The CR3 release of `TDD-0014` was parked under CR4 before this rerun and released with the other blocked rows.
+The ledger sweep released 48 CR4-blocked rows to `todo`. It reset `TDD-0015`
+from `review-fix` to `todo`, and tagged `TDD-0015`, `TDD-0016` and `TDD-0025`
+with this CR in `DR-ID` because their observable reference obligations changed.
+No row was retired. `TDD-0001` and `TDD-0004` remain `done` with prior evidence;
+shared-file re-verification and the implementation of tagged producer, parser,
+schema, fixtures and skill text remain downstream work. The CR3 release of
+`TDD-0014` was parked under CR4 before this rerun and released with the other
+blocked rows.

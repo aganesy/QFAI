@@ -219,7 +219,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.
+  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`)
+  may include `prototyping.yaml` as an optional recommendation artifact;
+  cli-only packs omit it, and non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard
   (missing/incomplete/blocking OQ causes stop + next action guidance).
   After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies
