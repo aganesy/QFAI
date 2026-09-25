@@ -194,6 +194,57 @@ describe("brand catalog step anchor", () => {
     expect(matrix).toMatch(/Exploration directions are carried unranked/);
   });
 
+  it("names the generated-design patterns, and no archetype prescribes one", async () => {
+    // A general "avoid the generic look" instruction swaps one default for
+    // another; only a named pattern can be checked. The catalog is what the
+    // DESIGN.md author reads, so the list lives there, and the review bundle
+    // points at it by section name so a reviewer can fail a prototype on a row.
+    const catalog = await readFile(catalogPath, "utf-8");
+    const section = catalog.slice(catalog.indexOf("## Patterns that mark a design as generated"));
+    expect(section.startsWith("## Patterns that mark a design as generated")).toBe(true);
+    for (const cluster of [
+      "Warm editorial",
+      "Dark with one accent",
+      "Broadsheet",
+      "SaaS card kit",
+      "Template chrome",
+    ]) {
+      expect(section, cluster).toContain(`| ${cluster} `);
+    }
+    for (const pattern of ["all-caps eyebrow", "middle-dot meta", "monospace data labels", "→"]) {
+      expect(section, pattern).toContain(pattern);
+    }
+    // The boundary with the conventional-pattern rule is written down.
+    expect(section).toContain("interface-clarity.md");
+
+    // The two archetypes that used to prescribe a pattern from the list.
+    const typographyOf = (archetype: string): string => {
+      const start = catalog.indexOf(`## Archetype: ${archetype}`);
+      const block = catalog.slice(start, catalog.indexOf("\n## ", start + 1));
+      return block.split("\n").find((line) => line.includes("- typography:")) ?? "";
+    };
+    expect(typographyOf("Tech")).not.toMatch(/uppercase labels/i);
+    expect(typographyOf("Tech")).not.toMatch(/^\s*- typography: Monospace or/);
+    expect(typographyOf("Minimal")).not.toMatch(/geometric or humanist/i);
+
+    // Every archetype names families, and none of them is a default family.
+    const candidates = catalog
+      .split("\n")
+      .filter((line) => line.startsWith("- typeface_candidates:"));
+    expect(candidates).toHaveLength(8);
+    for (const line of candidates) {
+      expect(line).not.toMatch(/\b(Inter|Roboto|Open Sans|Lato)\b/);
+    }
+
+    const bundle = await readFile(
+      path.join(discussionSkillDir, "templates", "uiux", "50_review_input_bundle.md"),
+      "utf-8",
+    );
+    expect(bundle).not.toMatch(/AI slop/i);
+    expect(bundle).toMatch(/"Patterns that mark a design as\s+generated"/);
+    expect(bundle).toContain("design-md-brand-catalog.md");
+  });
+
   it("keeps the tie-break decidable from the inputs the selection actually has", async () => {
     // "highest visual-theme weight wins" named a number the catalog does not
     // publish for any archetype, and nothing in the authoring reference or the

@@ -20,7 +20,9 @@ those two rows `n-a: cli-only pack` rather than leaving the bundle incomplete â€
 ## Trend-derived review focus
 
 - Required references are all present and complete.
-- Stale / overused AI slop patterns are explicitly avoided.
+- Neither root `DESIGN.md` nor the prototype shows a pattern from "Patterns that mark a design as
+  generated" in `qfai-sdd/references/design-md-brand-catalog.md`, unless the recorded brand
+  direction asks for it. Name the pattern when failing this item.
 - Reference research is translated into local design decisions in the `04_Sources.md` registries (visual-prototyping surfaces) and on screen contracts (every UI-bearing surface). A cli-only pack records no brand direction: the screen contracts carry the whole translation.
 - Iteration handling follows the one-lineage rule in `qfai-prototyping/SKILL.md`: no parallel
   candidates and no best-of-history â€” the latest iteration is the accepted one. A middle iteration
