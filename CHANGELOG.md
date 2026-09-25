@@ -84,6 +84,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A workflow fact question can offer its candidates as a choice** (#2346).
+  The route-proposal schema allowed `options` on a `fact` question, but the
+  workflow core refused one that carried them. A fact question now offers
+  options with a `selection` where its candidates can be listed, and is
+  answered by option IDs. It still carries no `recommendation`, and `effect`
+  stays on a fact asked as a plain value.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

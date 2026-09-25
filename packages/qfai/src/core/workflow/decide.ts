@@ -2127,6 +2127,11 @@ function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecisi
   return { verdict: { ok: true, run }, events };
 }
 
+// A fact offering no options is answered with a value; every other question with options.
+function isValueRequest(question: WorkflowQuestion) {
+  return question.kind === "fact" && question.options.length === 0;
+}
+
 function valueAnswer(question: WorkflowQuestion, value: string | undefined, key?: string) {
   const valueDigest = valueDigestOf(value, key);
   if (!valueDigest || !question.effect) return undefined;
@@ -2162,7 +2167,7 @@ function answerOf(
   input: WorkflowInput,
   key: string | undefined,
 ): Pick<WorkflowAuthorization, "answer" | "effect"> | "option" | undefined {
-  if (question.kind === "fact") return valueAnswer(question, input.answer?.value, key);
+  if (isValueRequest(question)) return valueAnswer(question, input.answer?.value, key);
   const chosen = chosenOptions(question, input.answer?.optionIds ?? []);
   if (!chosen) return "option";
   const effect = EFFECT_STRENGTH.find((candidate) =>
@@ -2181,12 +2186,11 @@ function settledWith(
   const settled = snapshot.settled;
   if (!settled) return undefined;
   const optionIds = input.answer?.optionIds ?? [];
-  const chosen =
-    question.kind === "fact"
-      ? (input.answer?.value ?? "").normalize("NFC").trim()
-      : question.options
-          .filter((option) => optionIds.includes(option.optionId))
-          .map((option) => option.label);
+  const chosen = isValueRequest(question)
+    ? (input.answer?.value ?? "").normalize("NFC").trim()
+    : question.options
+        .filter((option) => optionIds.includes(option.optionId))
+        .map((option) => option.label);
   const answer = { questionId: question.questionId, text: question.text, chosen };
   return { ...settled, answers: [...settled.answers, answer] };
 }
