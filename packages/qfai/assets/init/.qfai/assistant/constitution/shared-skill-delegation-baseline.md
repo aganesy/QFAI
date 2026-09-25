@@ -272,6 +272,8 @@ Constraints:
   STOP + Change Request + owner rerun per .qfai/assistant/constitution/drift-protocol.md
 Output format:
 - <headings / bullet schema>
+Time budget: none | <seconds>   # advisory: nothing stops at it. See .qfai/assistant/catalog/stage-cost.md
+Elapsed line: end every message with `elapsed <seconds>s / <budget>s`, or `elapsed <seconds>s` when the budget is none
 Acceptance bar: <accept when ...> | <rework when ...>   # never `PASS`/`REVISE`: that is the reviewer's vocabulary and the completion gate matches on it, so a doer told to report in it emits a verdict on its own work
 ```
 

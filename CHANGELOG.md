@@ -4,6 +4,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A catalog document records what a stage costs and which lever changes
+  it** (#2238). `catalog/stage-cost.md` maps every role to the host's default
+  reasoning depth until a measurement chooses another, and records two costs:
+  a high level on a long deliverable, and whole-file rewrites for small
+  changes. The work order template gains an advisory time budget and an
+  elapsed line the agent ends each message with. Neither is a cap.
+
 ### Removed
 
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
