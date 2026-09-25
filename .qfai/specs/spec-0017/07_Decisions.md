@@ -972,10 +972,52 @@ file, so an entry here is what makes that citation checkable.
   setting to match it is OQ-0017-0002, a repository-settings action no agent
   takes. Until that lands, the Windows job gates merges exactly as far as `lint`
   and `test` do.
-- Measurement: the change that adds the job appends here the trial run's
-  per-suite counts and timings, the `timeout-minutes` it sets from them, and the
-  code-path pin's before-and-after figures (BR-0017-0030, BR-0017-0067). This
-  record makes no cost claim before those numbers exist.
+- Measurement, per suite: the first run on the default branch,
+  [run 36134496895](https://github.com/aganesy/QFAI/actions/runs/36134496895),
+  at `b5d357c1` on 2026-09-25. One vitest process ran 146 files and 1,329 tests
+  (1,311 passed, 18 skipped, none failed) in 427.3 s of wall clock. Time is the
+  sum of each file's own duration as vitest reports it. The files run in
+  parallel, so the column sums to 1,591.2 s, well above the wall clock.
+
+  | Suite-list entry                                  | Files | Tests | Skipped | Summed file time | Slowest file                                |
+  | ------------------------------------------------- | ----- | ----- | ------- | ---------------- | ------------------------------------------- |
+  | `tests/unit/workflow/`                            | 75    | 311   | 0       | 0.8 s            | 0.03 s                                      |
+  | `tests/integration/workflow/`                     | 35    | 209   | 0       | 476.7 s          | 124.6 s, `journal.test.ts`                  |
+  | `tests/cli/init`                                  | 18    | 630   | 11      | 954.1 s          | 394.4 s, `initAgentEntryPointRules.test.ts` |
+  | `tests/integration/init/`                         | 13    | 31    | 0       | 112.8 s          | 25.4 s, `conflictReport.test.ts`            |
+  | `tests/core/assistantAssetProvenance.test.ts`     | 1     | 58    | 7       | 22.0 s           | —                                           |
+  | `tests/unit/shared/provenanceLockConfirm.test.ts` | 1     | 4     | 0       | 21.8 s           | —                                           |
+  | `tests/core/gitignoreGovernanceRecords.test.ts`   | 1     | 20    | 0       | 2.9 s            | —                                           |
+  | `tests/core/gitignoreMatcher.test.ts`             | 1     | 60    | 0       | 0.03 s           | —                                           |
+  | `tests/validators/assistantTreeMigration.test.ts` | 1     | 6     | 0       | 0.04 s           | —                                           |
+
+  One file sets the wall clock: `tests/cli/initAgentEntryPointRules.test.ts`
+  runs for 394.4 s of the 427.3 s.
+
+- Measurement, the distribution: the jobs API reports the job on 20 runs from
+  2026-09-25, every one `success`. Three are on the pull request that added the
+  job, one is the default-branch run above, and sixteen are on later pull
+  requests. Their trees differ, so the figures describe the job rather than one
+  revision.
+
+  | Span                          | Min   | Median | Max   |
+  | ----------------------------- | ----- | ------ | ----- |
+  | The job, start to finish      | 317 s | 531 s  | 582 s |
+  | The setup action, the install | 34 s  | 42 s   | 71 s  |
+  | The build                     | 9 s   | 13.5 s | 16 s  |
+  | The test step                 | 263 s | 447 s  | 506 s |
+
+- Measurement, the timeout: `timeout-minutes` is twice the slowest job
+  measured, rounded up to the next five minutes. Twice 582 s is 1,164 s, or
+  19.4 minutes, so the job declares **20**, down from an unmeasured 30. The
+  factor of two covers runner variance, which is already wide: the test step
+  alone spans 263 s to 506 s across these runs.
+- Measurement, the code-path pin (BR-0017-0030, BR-0017-0067): adding the job
+  moved it from 22 instances, 290 declared minutes and 20 installs to 23, 320
+  and 21. Setting the timeout from the measurement moves the declared minutes
+  from 320 to 310. The instance, install and build-job figures do not change.
+  These are declared ceilings, and this record makes no claim that the cost is
+  acceptable.
 - Rejected: a recorded manual Windows run before each release
   - DO NOT: rely on a manual run to find a Windows regression. Temptation: it costs
     no runner minutes, but the regression then ships from the pull request that

@@ -636,7 +636,11 @@ jobs:
     permissions:
       contents: read
     runs-on: windows-latest
-    timeout-minutes: 30
+    # Twice the slowest of twenty measured runs (582 s), rounded up to the next
+    # five minutes. The runs are recorded with DR-0017-0024.
+    # SHIPPED-CI: not-applicable
+    # Because: the shipped set has no Windows job, so there is no ceiling there for this measurement to set.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
