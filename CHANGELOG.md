@@ -54,6 +54,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
   the tool does not write.
 
+- **Source comments in `qfai init` describe what it does** (#2276). Two
+  comments still said the wrapper step writes a README, which it no longer
+  does, and one called the legacy-layout error a warning. They now name the
+  step's actual work and the `D-DEPRECATED-PATH` error on stderr. No behaviour
+  changes.
+
 - **A review pack's request may list its `TDD-ID`s under a heading, and a
   response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
   round's ids only from one `TDD-ID:` line, so a `review_request.md` naming

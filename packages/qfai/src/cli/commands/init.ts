@@ -550,7 +550,8 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
-  // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
+  // Prune retired wrappers, write the Copilot instruction files, link skills
+  // and agents into each tool's directory, and write the Codex agent profiles.
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
@@ -721,9 +722,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
-  // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
-  // the report summary so the warning stays at the bottom of the
-  // terminal output and is not buried by the skipped-paths list.
+  // A legacy steering/ or instructions/ tree is reported as a
+  // D-DEPRECATED-PATH error on stderr. Emitted AFTER the report summary so
+  // it stays at the bottom of the terminal output and is not buried by the
+  // skipped-paths list.
   // Skip when the user is currently running
   // --upgrade-assistant-tree (the helper will move the directory
   // itself); skip on dry-run; skip when no legacy dir exists.
@@ -5045,8 +5047,6 @@ async function createAgentSymlinks(
   const skipped: string[] = [];
 
   for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
-    // Write README as regular file (already handled in syncIntegrationWrappers)
-
     for (const agentName of agents) {
       const linkPath = path.join(destRoot, dir, `${agentName}${suffix}`);
       const target = path.relative(
