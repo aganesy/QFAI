@@ -296,6 +296,7 @@ async function installedPlanRefusals(root: string, route: WorkflowRoute): Promis
 
 const SKILLS_DIR = path.join(".qfai", "assistant", "skills");
 const ROUTING_MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
+const PROFILES_MANIFEST = path.join(".qfai", "assistant", "manifest", "review-profiles.yml");
 
 // Every (skill, operation) pair the built-in plans use, with the first route using the skill.
 async function planPairs(): Promise<
@@ -425,6 +426,28 @@ async function reviewerRefusals(root: string, skills: Map<string, { route: Workf
     }
   }
   return refusals;
+}
+
+// The always-required reviewers of the review profile the project's routing manifest gives each
+// skill, as the project's review-profiles manifest defines it. A skill with no profile, or with a
+// profile that manifest does not define, has none.
+export async function reviewerRolesOf(root: string): Promise<Record<string, string[]>> {
+  const [routingText, profilesText] = await Promise.all([
+    readIfPresent(path.join(root, ROUTING_MANIFEST)),
+    readIfPresent(path.join(root, PROFILES_MANIFEST)),
+  ]);
+  const routing = routingText === undefined ? undefined : documentOf(routingText);
+  const profiles = profilesText === undefined ? undefined : documentOf(profilesText);
+  const defined = isRecord(profiles) && isRecord(profiles.profiles) ? profiles.profiles : {};
+  const entries = isRecord(routing) && Array.isArray(routing.routing) ? routing.routing : [];
+  const roles: Record<string, string[]> = {};
+  for (const entry of entries) {
+    if (!isRecord(entry) || typeof entry.skill !== "string") continue;
+    const name = entry.review_profile;
+    const profile = typeof name === "string" ? defined[name] : undefined;
+    if (isRecord(profile)) roles[entry.skill] = stringList(profile.always_required) ?? [];
+  }
+  return roles;
 }
 
 // Trigger (b) over the installed plans and the skills they name, then trigger (c) over the

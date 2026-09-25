@@ -47,6 +47,7 @@ import {
   writeTracked,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
+import { reviewerRolesOf } from "../../core/workflow/plans.js";
 import { resolveToolVersion } from "../../core/version.js";
 import type { WorkflowOperation } from "../lib/args.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -430,21 +431,23 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
+// accepted, so the row set can be compared; the reviewer roles of every skill, read when a work
+// order is issued; and at `accept`, where each changed path really is.
 async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { state } = snapshot.run;
+  const issues = input.operation === "next" && state === "ready";
   const reads =
-    (input.operation === "next" && state === "ready") ||
-    (input.operation === "accept" && state === "running") ||
-    input.operation === "resume";
+    issues || (input.operation === "accept" && state === "running") || input.operation === "resume";
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
+  const reviewerRoles = issues ? await reviewerRolesOf(root) : undefined;
   const accepting = input.operation === "accept" && state === "running";
   const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
   const receiptValidity =
     input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
   return {
     ...(ledger ? { ledger } : {}),
+    ...(reviewerRoles ? { reviewerRoles } : {}),
     ...(changedRealPaths ? { changedRealPaths } : {}),
     ...(receiptValidity ? { receiptValidity } : {}),
   };
