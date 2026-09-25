@@ -12,7 +12,7 @@ The skill serves exactly these operations. A work order naming any other is refu
 
 ## Work order scope
 
-- The skill works only on the spec the work order's `target` names. It settles
+- The skill works on the spec the work order's `target` names. It settles
   the one visual decision the plan needs within the existing `DESIGN.md` and
   contracts, and creates no contract.
 - When the target spec is not UI-bearing, the skill writes no `DESIGN.md`, no
