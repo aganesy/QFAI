@@ -132,6 +132,17 @@
   said every work order carries a target: BR-0018-0004 requires one on the SDD
   work order only. No ledger row changes.
 
+- Change ID: DELTA-0011
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0014 option 1. CLI-WF `## Fail-closed` finds `policy-drift`
+  at write operations, including for an edit inside the run's write scope.
+  TC-0018-0182 now expects `policy-drift` at `accept`, with the run moving from
+  `running` to `blocked` and `qfai.config.yaml` untouched. EX-0018-0097 and
+  AC-0018-0039 are unchanged. IDs are unchanged. TDD-0388 stays at todo; this
+  CR goes in its DR-ID.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -604,6 +615,7 @@ through `finish`, so its example ends that way.
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`                                   | re-derive | user        | 2026-09-25T03:23:20Z |
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/06_Test-Cases.md`                                                                         | re-derive | user        | 2026-09-25T06:04:36Z |
 | CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                       | re-derive | user        | 2026-09-25T07:34:27Z |
+| CR-20260925-0014 | `spec-0018/06_Test-Cases.md`                                                                                                                 | re-derive | user        | 2026-09-25T08:17:46Z |
 
 ## Merge reconciliation (2026-09-25)
 
