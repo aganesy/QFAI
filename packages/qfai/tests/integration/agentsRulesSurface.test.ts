@@ -1218,6 +1218,17 @@ describe("a no-question run opens every node, on every surface that says so", ()
 });
 
 describe("this repository's pull-request description", () => {
+  it("starts from an English template in the shape pull requests use", async () => {
+    const template = await readFile(path.join(ROOT, ".github/PULL_REQUEST_TEMPLATE.md"), "utf-8");
+    expect(template).not.toMatch(/[぀-ヿ一-鿿]/);
+    expect(template.match(/^## .+$/gm)).toEqual([
+      "## Summary",
+      "## Test plan",
+      "## What this change made unnecessary",
+      "## Adoption bar",
+    ]);
+  });
+
   it("keeps the operative adoption bar in the existing policy and template", async () => {
     const policy = await readFile(path.join(ROOT, "REVIEW.md"), "utf-8");
     const section = policy.split(/^## A pull request that adds a rule, skill or gate\r?\n/m)[1];
