@@ -168,8 +168,8 @@ Scenario: A defective test is fixed with ledger status untouched
 Scenario: A test fix that changes the expectation goes back to SDD
   Given a test_fix result whose cited AC or BR differs before and after the fix
   When the result is submitted
-  Then accept refuses it
-  And the run issues an SDD work order instead
+  Then accept refuses it, naming qfai-sdd as the owner of the fix
+  And the run is unchanged
 
 # AC-0018-0018: A test fix without its review or re-run is refused
 # Parent: US-0018-0003
@@ -187,7 +187,7 @@ Scenario: A material risk stops routing for the operator
   Given a request that would lose data, break a public contract, loosen an authorization boundary, send a secret outside, affect production, or drop or add scope
   When routing checks the proposal
   Then the run ends routing in awaiting_input with the decision named
-  And a bugfix that restores an existing authorization check asks nothing and takes the stronger review
+  And a bugfix that restores an existing authorization check asks nothing, and its qfai-implement and qfai-atdd work orders take the implementation-heavy review profile
 
 # AC-0018-0020: No external effect is implied by the entry
 # Parent: US-0018-0004

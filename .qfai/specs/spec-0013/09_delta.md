@@ -265,3 +265,4 @@ Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` 
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
 | CR-20260913-0012 | `spec-0013/01..06`, `09_delta.md`, `10_Plan.md`, `tdd/test-list.md`                    | re-derive | user        | 2026-09-24T19:55:40Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0013/05_Examples.md`, `06_Test-Cases.md` | re-derive | user        | 2026-09-25T02:36:35Z |
+| CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-25T03:00:14Z |

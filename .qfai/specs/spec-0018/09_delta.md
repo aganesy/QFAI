@@ -78,6 +78,25 @@
   IDs are unchanged. TDD-0035 and TDD-0055 stay at todo; this CR goes in
   their DR-ID.
 
+- Change ID: DELTA-0007
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs, @test
+- Summary: CR-20260925-0008.
+  - Part A, option 1: a refusal changes no state, so a `test-fix-meaning`
+    refusal cannot issue the next work order. TC-0018-0081, EX-0018-0049,
+    AC-0018-0017 and BR-0018-0049 expect the refusal to name `qfai-sdd` as the
+    owner of the fix and the run to be unchanged. The `test_fix` stage reaches
+    SDD by returning `needs_repair` with that finding owned by `qfai-sdd`.
+  - Part B, option 2: CLI-WF `### Work order` derives `requiredReviewerRoles`
+    from the executor skill's review profile. `authorization-restored` gives
+    `qfai-implement` and `qfai-atdd` work orders `implementation-heavy`.
+    TC-0018-0085, EX-0018-0052, BR-0018-0052 and AC-0018-0019 name it in place
+    of "the stronger review profile".
+
+  IDs are unchanged. TDD-0100 and TDD-0111 stay at todo; this CR goes in their
+  DR-ID.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -546,3 +565,4 @@ through `finish`, so its example ends that way.
 | CR-20260925-0003 | `spec-0018/tdd/test-list.md`                                                                                                                 | re-derive | user        | 2026-09-24T18:36:12Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user        | 2026-09-24T19:00:08Z |
 | CR-20260925-0006 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/05_Examples.md`, `06_Test-Cases.md`                                                       | re-derive | user        | 2026-09-25T02:36:35Z |
+| CR-20260925-0008 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/03..06`                                                                                   | re-derive | user        | 2026-09-25T03:00:14Z |
