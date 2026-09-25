@@ -60,10 +60,10 @@ named line holds the named text at this revision.
 
 ## Commands executed + key outputs
 
-| Command                                                                                                                         | Result                                          |
-| ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Command                                                                                                                              | Result                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | `cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts` | Test Files 1 passed (1); Tests 4 passed (4) |
-| Each row's selector under its mutation                                                                                          | Recorded in the row's `Round 1`                 |
+| Each row's selector under its mutation                                                                                               | Recorded in the row's `Round 1`             |
 
 ## Test volume estimate
 
@@ -133,6 +133,12 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts -t "TC-0004-0080: An edited plan is reported as a differing governed file"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after `git checkout -- packages/qfai/src/core/assistantAssetProvenance.ts`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+b18458ea82b5f590c7c54c08d16a36fdd038149938536a5db93231dcb843127b, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:37:81; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
+
 ### TDD-0084
 
 - TDD-ID: TDD-0084
@@ -141,7 +147,7 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Selector: TC-0004-0081: A deleted plans layer is reported once, against the layer
 - TC-ref: TC-0004-0081
 - Branch: falsifiability — the missing-layer check already reads each recorded layer through `governedLayerOf`, so the case passed on its first run
-- Predicate to break: packages/qfai/src/core/validators/assistantAssets.ts:617, `validateAssistantAssets` — `const layer = governedLayerOf(key);`, which maps each lock key to its governed layer, so a recorded `process/workflows/*.yml` marks `process/workflows` as a layer the project once had
+- Predicate to break: packages/qfai/src/core/validators/assistantAssets.ts:617, `validateAssistantAssetProvenance` (called from `validateAssistantAssets`) — `const layer = governedLayerOf(key);`, which maps each lock key to its governed layer, so a recorded `process/workflows/*.yml` marks `process/workflows` as a layer the project once had
 - Mutation: `const layer = governedLayerOf(key);` to `const layer = key.split("/")[0] ?? null;`
 - Why it fails: the first path segment records the layer as `process`, which never equals `process/workflows`, so no missing-layer finding is raised. The per-file loop then skips each missing plan because its layer is absent, and nothing is reported
 - Type check: the value is still `string | null`; `tsc --noEmit -p packages/qfai/tsconfig.json` exits 0 on the mutated tree
@@ -151,7 +157,7 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 
 #### Round 1
 
-- Round 1: Satisfied-by: packages/qfai/src/core/validators/assistantAssets.ts, `validateAssistantAssets` — the recorded-layer read through `governedLayerOf`, which raises one `QFAI-ASSETS-007` per recorded layer the tree no longer has
+- Round 1: Satisfied-by: packages/qfai/src/core/validators/assistantAssets.ts, `validateAssistantAssetProvenance` — the recorded-layer read through `governedLayerOf`, which raises one `QFAI-ASSETS-007` per recorded layer the tree no longer has
 - Round 1: Falsifiability command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts -t "TC-0004-0081: A deleted plans layer is reported once, against the layer"
 - Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: expected [] to deeply equal [ [ 'QFAI-ASSETS-007', …(1) ] ]` at `tests/integration/validators/workflowPlanProvenance.test.ts:48:65`
 
@@ -174,6 +180,12 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Round 1: Revision: 2facbb04e2e0898946280327267f46ce1299aab7
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts -t "TC-0004-0081: A deleted plans layer is reported once, against the layer"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after `git checkout -- packages/qfai/src/core/validators/assistantAssets.ts`, which restores the file as it is at that revision
+
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE — RED phase gate: `Predicate to break` and `Satisfied-by` named `validateAssistantAssets`, while the mutated line sits in `validateAssistantAssetProvenance`; every recorded value reproduced (working-tree+925efd1f8c3f19aaf690b79c9b28ce516599d7d11bf21dd5c7019e0186c36948 with HEAD taken as 2facbb04e, AssertionError at workflowPlanProvenance.test.ts:48:65, RED test hash recomputes); qa-gatekeeper#2 PASS — RED phase gate attempt 2, after both fields were corrected; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
 
 ### TDD-0085
 
@@ -217,6 +229,12 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts -t "TC-0004-0082: Nothing under process/migrations is reported"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after `git checkout -- packages/qfai/src/core/assistantAssetProvenance.ts`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+65c64dc7c446d67f50477988bbcdb225ab4d766ad7fe5aa82be115f2dbf144b4, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:61:68; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
+
 ### TDD-0086
 
 - TDD-ID: TDD-0086
@@ -259,6 +277,12 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Round 1: GREEN command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts -t "TC-0004-0083: A fresh init tree has no finding under process/workflows"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after `git checkout -- packages/qfai/src/core/assistantAssetProvenance.ts`, which restores the file as it is at that revision
 
+- Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+f29c69a51f4003256f0cb36e30e084030676dd3754560c3fe13a7e2a9415defb, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:67:67; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0004.md` (committed). Totals: ✅ 132 / ⚠️ 43 / ❌ 196.
@@ -269,13 +293,16 @@ applicable. `Status` is a row verdict and is outside every total.
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent)         | Agent instance             | Task title                                                                                       | Input (refs)                                              | Output (refs)                     | Status (PASS/REVISE/PENDING) |
-| ---- | ------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | --------------------------------- | ---------------------------- |
-| 1    | test-design-analyst      | test-design-analyst#1      | /qfai-atdd coverage: score every obligation of spec-0004 and write the matrix                     | 02_User-stories.md, 04_Business-Rules.md, 06_Test-Cases.md | coverage-depth-spec-0004.md       | REVISE                       |
-| 2    | acceptance-test-engineer | acceptance-test-engineer#1 | Hand over `TDD-0083` to `TDD-0086` on the falsifiability branch                                  | the test file, `assistantAssetProvenance.ts`, `assistantAssets.ts` | #tdd-0083 to #tdd-0086            | PASS                         |
-| 3    | -                        | n/a                        | grilling(-@2026-09-25T10:19:31.967Z/none): none                                                  | -                                                         | -                                 | PASS                         |
-| 4    | -                        | n/a                        | grilling(-@2026-09-25T10:21:29.000Z/none): none                                                  | -                                                         | -                                 | PASS                         |
-| 5    | backend-engineer         | backend-engineer#1         | /qfai-implement: falsifiability runs for `TDD-0083` to `TDD-0086`, each reverted to its GREEN     | #tdd-0083 to #tdd-0086                                    | Round 1                           | PASS                         |
+| Step | Role (sub-agent)         | Agent instance             | Task title                                                                                                            | Input (refs)                                                       | Output (refs)               | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------- | ---------------------------- |
+| 1    | test-design-analyst      | test-design-analyst#1      | /qfai-atdd coverage: score every obligation of spec-0004 and write the matrix                                         | 02_User-stories.md, 04_Business-Rules.md, 06_Test-Cases.md         | coverage-depth-spec-0004.md | REVISE                       |
+| 2    | acceptance-test-engineer | acceptance-test-engineer#1 | Hand over `TDD-0083` to `TDD-0086` on the falsifiability branch                                                       | the test file, `assistantAssetProvenance.ts`, `assistantAssets.ts` | #tdd-0083 to #tdd-0086      | PASS                         |
+| 3    | -                        | n/a                        | grilling(-@2026-09-25T10:19:31.967Z/none): none                                                                       | -                                                                  | -                           | PASS                         |
+| 4    | -                        | n/a                        | grilling(-@2026-09-25T10:21:29.000Z/none): none                                                                       | -                                                                  | -                           | PASS                         |
+| 5    | backend-engineer         | backend-engineer#1         | /qfai-implement: falsifiability runs for `TDD-0083` to `TDD-0086`, each reverted to its GREEN                         | #tdd-0083 to #tdd-0086                                             | Round 1                     | PASS                         |
+| 6    | backend-engineer         | backend-engineer#1         | /qfai-implement: refactor verify for `TDD-0083` to `TDD-0086` on the committed tree                                   | #tdd-0083 to #tdd-0086                                             | Refactor verify fields      | PASS                         |
+| 7    | qa-gatekeeper            | qa-gatekeeper#1            | /qfai-implement: RED phase gate on each rebuilt mutated tree, and the build-phase GREEN, for `TDD-0083` to `TDD-0086` | #tdd-0083 to #tdd-0086                                             | qa-gatekeeper fields        | REVISE                       |
+| 8    | qa-gatekeeper            | qa-gatekeeper#2            | /qfai-implement: `TDD-0084` RED phase gate, attempt 2                                                                 | #tdd-0084                                                          | qa-gatekeeper fields        | PASS                         |
 
 The coverage REVISE names one gap, and it is outside these four rows: see
 `## Gaps / Open risks`.
