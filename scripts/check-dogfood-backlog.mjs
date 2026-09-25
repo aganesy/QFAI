@@ -31,6 +31,14 @@
  * taken by the next regression. `--pin` rewrites the profile's entry from a
  * live run.
  *
+ * A pin describes the tree, so a finding whose severity follows the branch's
+ * diff against the base is never counted in it. The traceability codes report
+ * `error` only while a spec's BR/AC files differ from the base, and a warning
+ * otherwise: a count pinned by the pull request that edited them reads 0 on
+ * every pull request after it merges, and the ratchet then fails work that
+ * never touched that spec. Those errors fail the lane outright instead, in the
+ * pull request whose diff produces them, and `--pin` does not record them.
+ *
  * Findings print as GitHub annotations, so each lane's output is unchanged
  * from the raw `validate` call this replaces.
  *
@@ -65,11 +73,24 @@ export function compareAgainstPin(counts, pinned) {
   };
 }
 
-/** Every error in a validate report, counted by the file it names. */
+/**
+ * Codes whose severity, or whose presence, depends on the diff against the base
+ * branch rather than on the tree alone.
+ */
+export const DIFF_DEPENDENT_CODES = new Set(["QFAI-TRACE-001", "QFAI-TRACE-002", "QFAI-TRACE-003"]);
+
+/** Errors the pin may not hold, because the next branch would read them differently. */
+export function diffDependentErrors(report) {
+  return (report.issues ?? [])
+    .filter((issue) => issue.severity === "error" && DIFF_DEPENDENT_CODES.has(issue.code))
+    .map(({ code, file, message }) => ({ code, file: file ?? "(no file)", message }));
+}
+
+/** Every error in a validate report the pin may hold, counted by the file it names. */
 export function errorsByFile(report) {
   const counts = new Map();
   for (const issue of report.issues ?? []) {
-    if (issue.severity !== "error") continue;
+    if (issue.severity !== "error" || DIFF_DEPENDENT_CODES.has(issue.code)) continue;
     const file = issue.file ?? "(no file)";
     counts.set(file, (counts.get(file) ?? 0) + 1);
   }
@@ -79,8 +100,19 @@ export function errorsByFile(report) {
 /** Name the findings behind a changed file count when annotations are capped. */
 export function errorsForFile(report, file) {
   return (report.issues ?? [])
-    .filter((issue) => issue.severity === "error" && (issue.file ?? "(no file)") === file)
+    .filter(
+      (issue) =>
+        issue.severity === "error" &&
+        !DIFF_DEPENDENT_CODES.has(issue.code) &&
+        (issue.file ?? "(no file)") === file,
+    )
     .map(({ code, message }) => ({ code, message }));
+}
+
+function reportDiffDependent(errors) {
+  for (const { code, file, message } of errors) {
+    console.error(`  ${file}: ${String(code)}: ${String(message)}`);
+  }
 }
 
 function fail(message) {
@@ -125,6 +157,7 @@ function main() {
   const counts = errorsByFile(report);
   const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
   const pin = JSON.parse(readFileSync(PIN_PATH, "utf-8"));
+  const diffDependent = diffDependentErrors(report);
 
   if (process.argv.includes("--pin")) {
     pin.profiles[profile] = Object.fromEntries([...counts].sort(([a], [b]) => a.localeCompare(b)));
@@ -132,6 +165,12 @@ function main() {
     console.log(
       `check-dogfood-backlog: pinned ${profile} at ${String(total)} error(s) across ${String(counts.size)} file(s).`,
     );
+    if (diffDependent.length > 0) {
+      console.error(
+        `check-dogfood-backlog: ${String(diffDependent.length)} error(s) depend on this branch's diff and were not pinned. The lane still fails on them:`,
+      );
+      reportDiffDependent(diffDependent);
+    }
     return;
   }
 
@@ -162,7 +201,13 @@ function main() {
       console.error(`  ${String(code)}: ${String(message)}`);
     }
   }
-  if (unpinned.length > 0 || over.length > 0) {
+  if (diffDependent.length > 0) {
+    console.error(
+      `check-dogfood-backlog: ${profile} reports ${String(diffDependent.length)} error(s) that depend on this branch's diff, which no pin holds:`,
+    );
+    reportDiffDependent(diffDependent);
+  }
+  if (unpinned.length > 0 || over.length > 0 || diffDependent.length > 0) {
     console.error(
       "\nA waiver cannot clear these: the rules are errors, and `QFAI-WAIVER-002` refuses a waiver on one.\n" +
         `Fix the rows the findings name, then re-pin with \`node scripts/check-dogfood-backlog.mjs --profile ${profile} --pin\`.`,

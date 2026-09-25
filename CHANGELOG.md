@@ -43,6 +43,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A dogfooding pin no longer depends on the diff of the pull request that
+  took it** (#2352). The traceability codes `QFAI-TRACE-001` to `003` report
+  `error` only while a spec's BR/AC files differ from the base branch. A pull
+  request that edited them pinned the error, and every later pull request then
+  read 0 and failed the ratchet on work that never touched that spec. The
+  backlog guard now leaves those codes out of the counts it compares and pins,
+  and fails the lane on any of them in the pull request that produces them.
+  No count in `scripts/dogfood-backlog.json` moves.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

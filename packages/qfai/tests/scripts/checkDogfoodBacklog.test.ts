@@ -28,6 +28,9 @@ type Guard = {
     over: Array<[string, number]>;
     improved: Array<[string, number]>;
   };
+  diffDependentErrors: (report: {
+    issues?: Array<{ code?: string; file?: string; message?: string; severity: string }>;
+  }) => Array<{ code?: string; file: string; message?: string }>;
   errorsByFile: (report: unknown) => Map<string, number>;
   errorsForFile: (
     report: {
@@ -49,7 +52,7 @@ async function load(): Promise<Guard> {
 const LEDGER = ".qfai/specs/spec-0002/tdd/test-list.md";
 const CLEAN = ".qfai/specs/spec-0001/tdd/test-list.md";
 
-function report(...issues: Array<{ file?: string; severity: string }>): unknown {
+function report(...issues: Array<{ code?: string; file?: string; severity: string }>): unknown {
   return { issues };
 }
 
@@ -82,6 +85,46 @@ describe("errorsByFile", () => {
     const { errorsByFile } = await load();
 
     expect([...errorsByFile({})]).toEqual([]);
+  });
+});
+
+describe("diff-dependent findings", () => {
+  // A traceability error exists only while the spec's BR/AC files differ from
+  // the base. Pinned, it reads 0 on every later branch and fails the ratchet
+  // there, on work that never touched that spec.
+  const SPEC_LEDGER = ".qfai/specs/spec-0012/16_Traceability-ledger.md";
+
+  it("leaves every traceability code out of the count a pin records", async () => {
+    const { errorsByFile } = await load();
+
+    const counts = errorsByFile(
+      report(
+        { code: "QFAI-TRACE-001", file: SPEC_LEDGER, severity: "error" },
+        { code: "QFAI-TRACE-002", file: SPEC_LEDGER, severity: "error" },
+        { code: "QFAI-TRACE-003", severity: "error" },
+        { code: "QFAI-TDDLIST-009", file: LEDGER, severity: "error" },
+      ),
+    );
+
+    expect([...counts]).toEqual([[LEDGER, 1]]);
+  });
+
+  it("returns those errors separately, so the lane still fails on them", async () => {
+    const { diffDependentErrors } = await load();
+
+    const errors = diffDependentErrors({
+      issues: [
+        { code: "QFAI-TRACE-002", file: SPEC_LEDGER, severity: "error", message: "format" },
+        { code: "QFAI-TRACE-002", file: SPEC_LEDGER, severity: "warning", message: "format" },
+        { code: "QFAI-TRACE-003", severity: "error", message: "no diff" },
+        { code: "QFAI-TDDLIST-009", file: LEDGER, severity: "error", message: "row" },
+      ],
+    });
+
+    expect(errors).toEqual([
+      { code: "QFAI-TRACE-002", file: SPEC_LEDGER, message: "format" },
+      { code: "QFAI-TRACE-003", file: "(no file)", message: "no diff" },
+    ]);
   });
 });
 
