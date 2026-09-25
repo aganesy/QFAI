@@ -7,9 +7,9 @@
 - Class: `defect`
 - Status: `approved`
 - Approved by: `claude-code` — under the user's standing instruction to process every issue of this session with its own judgment; NOT a user decision on these options
-- Approved at: `2026-09-25T03:37:00Z`
+- Approved at: `2026-09-25T03:36:30Z`
 - Approved option: `1`
-- Applied at: `2026-09-25T03:40:00Z` — see Resolution
+- Applied at: `2026-09-25T03:37:10Z` — see Resolution
 - Superseded by: `-`
 
 ## Context
