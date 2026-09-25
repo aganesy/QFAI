@@ -4,15 +4,29 @@
 
 The accepted four-flow scope is in the discussion pack's `05_Scope.md` and
 OQ-0020. `plan.yaml` places the 241 active stories in BF-0001 through BF-0004;
-`id-map.json` fixes the old-to-new IDs. The source inventory and disposition
-records in `p7-mapping-reconciliation.md`, `criterion-disposition.md`,
-`example-disposition.md`, `retired-rule-disposition.md`, and
-`step04-ex-provenance.csv` account for removed or rewritten obligations.
+`id-map.json` fixes the old-to-new IDs as step 4 wrote them. The source
+inventory and disposition records in `p7-mapping-reconciliation.md`,
+`criterion-disposition.md`, `example-disposition.md`,
+`retired-rule-disposition.md`, and `step04-ex-provenance.csv` account for
+removed or rewritten obligations.
 The retired source is preserved under `retired/`. The pre-cutover SDD batch
 verdicts and their old pack evidence are preserved in `.qfai/evidence/` and
 `retired/spec-*/`. The new tree's four flows are the destinations of those
 approved obligations. Step 4's unplaced active examples were resolved in the
 new tree; `step04-step07-manual-resolution.md` records their provenance.
+
+The tree holds more obligations than the ID map targets. Each one written after
+step 4 is listed with its decision row or migration record in
+`post-step4-obligations.md`.
+
+| Kind | In the tree | `id-map.json` targets | Written after step 4 |
+| ---- | ----------- | --------------------- | -------------------- |
+| AC   | 465         | 447                   | 18                   |
+| EX   | 730         | 636                   | 97                   |
+| BR   | 526         | 514                   | 12                   |
+
+Three EX targets are no longer in the tree: DEC-0719 removed EX-0001-0069-01
+and EX-0001-0069-02, and DEC-0730 removed EX-0003-0013-05.
 
 ## Execution reports
 

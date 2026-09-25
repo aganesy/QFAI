@@ -4,18 +4,20 @@ Step 4 fixed `plan.yaml` and `id-map.json`. These files retain the planned
 destinations below. The current contract rules were placed through SDD under
 the single owner that states their behavior. The migration owner and delivery
 owner accepted the corrected destinations after comparing the archived rule
-text, current story examples and contract index. The old rule sections may be
-removed only after archive SHA-256 and new BR-to-EX references match
-`tmp/p7-region-a-br-audit.csv`.
+text, current story examples and contract index. `region-a-br-audit.csv`
+records, for the ten owner A rules, the archive SHA-256 and line, the removal
+of the old section, and the new BR-to-EX references. It is the 2026-09-24
+working audit, retained unchanged. The old rule sections were removed with the
+old packs at cutover.
 
-| Old rule | New rule | Planned destination | Accepted destination | Reason | New example |
-| --- | --- | --- | --- | --- | --- |
-| BR-0004-0029 | BR-0127 | `cli/qfai-validate.md` | `cli/qfai-prototyping.md` | `qfai prototyping certify` consumes the profile-specific validation pointer; its command contract owns certification. | EX-0001-0049-03, EX-0001-0049-04 |
-| BR-0008-0003 | BR-0212 | `cli/qfai-validate.md` | `cli/delivery-workflow.md` | Test volume guides ATDD planning; BF and AC coverage is the delivery completion gate. | EX-0001-0069-03 |
-| BR-0008-0004 | BR-0213 | `cli/assistant-routing.md` | `cli/delivery-workflow.md` | ATDD implementation and independent reviewer approval are a delivery handoff. | EX-0001-0073-03 |
-| BR-0012-0029 | BR-0269 | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md` | The ten-cycle budget is a shared core, validation and skill rule. | EX-0001-0127-01, EX-0001-0127-02, EX-0001-0127-03, EX-0001-0127-04 |
-| BR-0012-0036 | BR-0276 | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md` | `certify` consumes the frozen UI contract scope and accepted review payloads. | EX-0001-0124-04 |
-| BR-0012-0040 | BR-0280 | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md` | Cycle-0 frozen UI contract and license data is shared by iteration, certification and license validation. | EX-0001-0125-05, EX-0001-0126-01 |
+| Old rule     | New rule | Planned destination               | Accepted destination       | Reason                                                                                                                | New example                                                        |
+| ------------ | -------- | --------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| BR-0004-0029 | BR-0127  | `cli/qfai-validate.md`            | `cli/qfai-prototyping.md`  | `qfai prototyping certify` consumes the profile-specific validation pointer; its command contract owns certification. | EX-0001-0049-03, EX-0001-0049-04                                   |
+| BR-0008-0003 | BR-0212  | `cli/qfai-validate.md`            | `cli/delivery-workflow.md` | Test volume guides ATDD planning; BF and AC coverage is the delivery completion gate.                                 | EX-0001-0069-03                                                    |
+| BR-0008-0004 | BR-0213  | `cli/assistant-routing.md`        | `cli/delivery-workflow.md` | ATDD implementation and independent reviewer approval are a delivery handoff.                                         | EX-0001-0073-03                                                    |
+| BR-0012-0029 | BR-0269  | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md`  | The ten-cycle budget is a shared core, validation and skill rule.                                                     | EX-0001-0127-01, EX-0001-0127-02, EX-0001-0127-03, EX-0001-0127-04 |
+| BR-0012-0036 | BR-0276  | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md`  | `certify` consumes the frozen UI contract scope and accepted review payloads.                                         | EX-0001-0124-04                                                    |
+| BR-0012-0040 | BR-0280  | `cli/qfai-prototyping-iterate.md` | `cli/qfai-prototyping.md`  | Cycle-0 frozen UI contract and license data is shared by iteration, certification and license validation.             | EX-0001-0125-05, EX-0001-0126-01                                   |
 
 Both accepted contract files have exactly one entry in
 `03_contract/contracts.md`. Each new BR occurs once in the CLI contract tree,

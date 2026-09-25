@@ -31,6 +31,14 @@
    old slice-policy headings. Step 4, 5, 6 and 7
    must account for all of them before this repository's dry run starts.
 
+   Status on 2026-09-25:
+
+   | Item                       | Status             | Evidence                                                                                                                                                                                                                                                                                    |
+   | -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | DSC-003                    | Met                | `spec0018MigrationJourneyE2E.test.ts` "reports test obligations after a complete validation, with no layout or chain error" and `bf0004MigrationCutoverE2E.test.ts` "retires the old reader and leaves no story or contract migration errors". CI concluded `success` on commit `d4e03350a` |
+   | DSC-004                    | Met                | "previews every write and leaves a second pass byte-identical" and "previews and applies ten ordered steps, then reruns without changing a file", in the same two files and CI run. On this repository, every step in `reports/final-rerun/exit-codes.csv` reports no operations            |
+   | P5 independent reviewer GO | Open: not recorded | No GO for the migration implementation is under `.qfai/evidence/` or `.qfai/review/`, or in this branch's commit messages. The seven packs under `.qfai/review/` review the discussion pack and the SDD batch only                                                                          |
+
 ## Ordered work
 
 | Phase | Steps and owner | Exit check |
@@ -91,6 +99,24 @@ rule or example into a current contract or criterion to clear an exit 3.
   gate accepts no newly missing test obligation. A flow-scoped PASS does not
   prove the other flows. The test owner and QA gatekeeper review the observed
   RED/GREEN or falsifiability evidence; this migration plan does not edit tests.
+
+  Status on 2026-09-25: **open.** Each flow was run with `--fail-on never` on
+  the CLI built from the current source. Every error is `QFAI-STORY-006`: an AC
+  with no integration or API test annotation. No flow reports a missing BF
+  annotation.
+
+  | Flow    | Errors | Warnings |
+  | ------- | ------ | -------- |
+  | BF-0001 | 331    | 0        |
+  | BF-0002 | 48     | 0        |
+  | BF-0003 | 17     | 0        |
+  | BF-0004 | 0      | 0        |
+
+  With `--fail-on error`, BF-0001 to BF-0003 fail. The errors are inherited
+  missing-annotation debt, not an ATDD PASS. Repository-wide,
+  `check-dogfood-backlog.mjs` reports 217 errors for `tdd` and 613 for `full`,
+  all within the pinned backlog. The pins stop the debt growing; they do not
+  pass the gate. The test owner and QA gatekeeper review has not been recorded.
 
 ## Rerun policy
 

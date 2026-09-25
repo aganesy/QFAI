@@ -169,4 +169,9 @@ capture rules have approved P7 REMOVE rows and must not reappear in contracts.
 6. After step 10, `qfai validate` reports no layout or chain errors and all
    test obligations. The full repository CI gate passes on the cutover commit.
 
-No migration step has been run for this repository as of this record.
+No migration step had been run for this repository when this record was
+written. All ten steps have since run on it, each as a dry run, a real run and
+a rerun. `reports/initial-run/` keeps the first cutover. `reports/final-rerun/`
+holds the rerun on the final tree, in which every invocation reports no
+operations. Steps 5 and 8 exit 3 because they list items for a person; the
+rest exit 0 (`reports/final-rerun/exit-codes.csv`).
