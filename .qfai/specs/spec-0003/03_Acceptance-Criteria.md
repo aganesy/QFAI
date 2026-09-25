@@ -192,6 +192,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0036 | declined name の copy 前除外                                | REQ-0030   | P1       |
 | AC-0003-0037 | Codex agent profile 生成                                    | REQ-0009   | P1       |
 | AC-0003-0038 | Independent shipped checks and a complete aggregate verdict | REQ-0026   | P1       |
+| AC-0003-0039 | Copilot instructions state the closed legacy window         | REQ-0023   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -340,3 +341,11 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given the workflow set `qfai init` delivers into a fresh adopter project
 - When the delivered document and validation workflows are evaluated statically for a pull request and for a push, and each aggregate job's body is evaluated against every result its dependency can conclude with
 - Then the independent checks of each file are declared as matrix legs of one job carrying `fail-fast: false`, so a failing leg cancels no other leg. Each checker command and each validation profile is unchanged and appears in exactly one leg, and the drift profile is selected on pull requests only. Each file's existing external check name belongs to a job that runs whatever its dependency concluded and succeeds only when that dependency's rolled-up result is `success`; a failed, cancelled, skipped or missing result fails it
+
+## AC-0003-0039: Copilot instructions state the closed legacy window
+
+- US-Refs: US-0003-0010, US-0003-0020
+- Given an empty project directory
+- When `qfai init` runs
+- Then the `.github/copilot-instructions.md` it writes says the legacy `.qfai/assistant/steering/` and `.qfai/assistant/instructions/` layout is past its compatibility window and that `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error, and names `qfai init --upgrade-assistant-tree`
+- And it neither calls the legacy layout read-compatible nor calls the finding a warning

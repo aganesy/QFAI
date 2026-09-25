@@ -299,6 +299,7 @@ async function writeRoundPack(
 interface EvidenceOptions {
   requestOnlyPassRole?: string;
   reviewRequestTddId?: string;
+  reviewRequestText?: string;
   /**
    * The `Audited evidence hash` lines each review pack response carries, given
    * the row's own hash. Omitted, a response carries the one bare line of a row
@@ -509,7 +510,9 @@ async function materializeEvidence(
   await mkdir(packDir, { recursive: true });
   const responseDir = path.join(packDir, options.responseDirectory ?? "");
   await mkdir(responseDir, { recursive: true });
-  const request = [`TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`];
+  const request = [
+    options.reviewRequestText ?? `TDD-ID: ${options.reviewRequestTddId ?? "TDD-0001"}\n`,
+  ];
   for (const [role, packAuditHash] of reviews) {
     const hashLines =
       options.auditedHashLines?.(packAuditHash) ?? `Audited evidence hash: ${packAuditHash}\n`;
@@ -1545,6 +1548,54 @@ describe("QFAI-TDDLIST-008", () => {
       );
       expect(reported[0]?.message).toContain(DEFAULT_REVISION);
       expect(reported[0]?.rule).toBe("tddList.evidenceRevisionUnresolved");
+    });
+  });
+
+  it("measures a done row over what its test imports, not all of srcDir", async () => {
+    // The wiring row for the at-rest scope. Over all of `src`, a change to a
+    // module the test never imports staled every completed row, so in an active
+    // repository `done` could not be held.
+    await withProject(async (root) => {
+      const testBody = 'import { used } from "../../src/used.js";\nit("sample", () => used);\n';
+      await repoWithRevision(root);
+      await mkdir(path.join(root, "src"), { recursive: true });
+      await mkdir(path.join(root, "tests", "unit"), { recursive: true });
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 1;\n");
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 1;\n");
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "observed");
+      const observed = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: root,
+        encoding: "utf-8",
+      }).trim();
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replaceAll(
+            DEFAULT_REVISION,
+            observed,
+          ),
+        },
+        { revision: observed },
+      );
+      // The seed writes a placeholder test; put back the one the observation ran.
+      await writeFile(path.join(root, TEST_FILE), testBody);
+      commitAll(root, "record the row");
+
+      await writeFile(path.join(root, "src", "unrelated.ts"), "export const other = 2;\n");
+      commitAll(root, "change a module the test does not import");
+      const stale = (issues: Awaited<ReturnType<typeof validateTddList>>) =>
+        issues.filter((i) => i.code === "QFAI-TDDLIST-009");
+      expect(stale(await validateTddList(root, defaultConfig))).toEqual([]);
+
+      await writeFile(path.join(root, "src", "used.ts"), "export const used = 2;\n");
+      commitAll(root, "change the module the test imports");
+      const reported = stale(await validateTddList(root, defaultConfig));
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.message).toContain("src/used.ts");
+      expect(reported[0]?.message).not.toContain("src/unrelated.ts");
     });
   });
 
@@ -3568,6 +3619,30 @@ ${packPair(1).join("\n")}
       expect(issues.map((issue) => issue.message).join("\n")).toContain(
         "Spec review pack carrying request, summary, and named reviewer PASS provenance",
       );
+    });
+  });
+
+  it("accepts the documented TDD IDs list in a review request", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { reviewRequestText: "# Review Request\n\n## TDD IDs\n\n- TDD-0001\n" },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  it("matches a review response's sha256-prefixed hash to the row's bare hash", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { auditedHashLines: (hash) => `Audited evidence hash: sha256:${hash}\n` },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
     });
   });
 

@@ -44,6 +44,78 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The generated Copilot instructions describe the legacy layout as the
+  tool treats it** (#2214). The `.github/copilot-instructions.md` that
+  `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
+  read-compatible and `D-DEPRECATED-PATH` a warning. The compatibility window
+  has closed, and `qfai init` reports the layout on stderr as an error. The
+  line now says so, names `.qfai/assistant/instructions/` as well, and still
+  names `qfai init --upgrade-assistant-tree`. A file that already exists is
+  rewritten only by `qfai init --force`. A new case, `TC-0003-0059`, and a
+  ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
+  the tool does not write.
+
+- **A review pack's request may list its `TDD-ID`s under a heading, and a
+  response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
+  round's ids only from one `TDD-ID:` line, so a `review_request.md` naming
+  them as a `## TDD IDs` bullet list was refused although the review-artifact
+  layout asks for a list. The heading must appear once, and every item under
+  it must be one `TDD-NNNN` id. The per-id `Audited evidence hash` in a
+  response was also compared as raw text, so `sha256:<hex>` failed against the
+  row's bare hex. It is now compared with the prefix and case removed, as the
+  gate's other hash checks already were.
+- **A ledger row that owes a test case and names none is reported**
+  (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
+  holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
+  `REQ-0012-0075 (REQ-0109 follow-up)`. The other checks on the column read
+  only the ids it holds, so such a row passed them all. Every row is read
+  except `E2E` and `API` rows and an `Integration` row carrying a `CON-DB-*`
+  contract, which record their obligation in another column.
+  The seven spec-0012 rows it reported now name a case or are retired:
+  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
+  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
+  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
+
+- **spec-0012 states what `--auto-serve` does when its teardown fails**
+  (#2208). A case once required a failed teardown to be reported, and that
+  clause was lost when the case was rewritten, so the report could be removed
+  with no test failing. `REQ-0012-0062` now states it as the product behaves:
+  iterate prints a line on stdout naming the `--auto-serve` teardown and the
+  reason it failed, and returns the exit code the cycle would otherwise have
+  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
+  it.
+
+- **A `done` row whose test case only an annotation carrier names is
+  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
+  lists obligations and declares no test, so no runner selects a case named
+  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
+  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
+  not reported, and neither is an `exception` row. The finding names the row,
+  the case and the carrier. The fix is to annotate the test that discharges the
+  case. Where no test does, the row leaves `done` only through an upstream
+  reset approved by a Change Request. A test scan that passes its file limit or
+  cannot read a file is reported under the same code rather than read as a
+  pass. The 33 existing findings are carried as a backlog in
+  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
+  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
+
+- **A `done` row goes stale only when something its test reached changed**
+  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
+  every observation. In an active repository every completed row therefore went
+  stale within hours, whatever changed, and full-history validation failed on
+  rows whose test and module had not moved. A `done` row is now measured over
+  its test file, the files its newest `RED test manifest` lists, and the files
+  under `srcDir` those import, directly or transitively. Relative imports are
+  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
+  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
+  installed packages are outside the project. Where an import cannot be
+  followed — an alias no pattern resolves, a computed `import()` or
+  `require()`, a relative path that names no file, or a test file that is not
+  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
+  and the finding says why. The finding now names the covered set it measured.
+  `evidence-revision.md` states the at-rest scope; the in-flight check before
+  submitting still covers the whole source directory.
+
 - **A blocked ledger row whose Change Request is settled is reported**
   (#2015). A `blocked` row that named a Change Request stayed `blocked` after
   the request was decided, and nothing said so. `validate` now warns with
@@ -91,6 +163,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   Windows whose manifest names a file git marks executable, and evidence whose
   manifest names a file executable by the group or others but not its owner.
   POSIX checkouts already refused the first kind.
+
+- **A BR or AC heading is read with or without a title after a colon.** The
+  check that compares a spec's rules and criteria with their merge-base copy
+  accepted `## AC-0001: Title` but not `## AC-0001`, nor the `# AC-0001` comment
+  the shipped template opens each Gherkin scenario with. A file written only in
+  those shapes therefore held no obligations. Editing it raised
+  `QFAI-TRACE-003` ("could not be compared") instead of `QFAI-TRACE-001` for
+  the criterion that changed. Both shapes are read now. A `# AC-0001` comment
+  inside a `## AC-0001` section still counts as part of that criterion, not as
+  a second copy of it. Only a spec whose rules or criteria changed on the
+  branch is affected. No count in `scripts/dogfood-backlog.json` moves.
 
 ## [1.12.3] - 2026-09-24
 

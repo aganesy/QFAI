@@ -4683,9 +4683,51 @@ completion is declared.
 
 - `record:unchecked`, `TDD-0037`, Round 1: the entry's `Branch:` line says it records a test-only replacement and changes no branch, and a paragraph says the ledger still holds the old describe title. After `CR-20260923-0013` the entry carries the row's own falsifiability proof, and the ledger holds the renamed title.
 - `record:unchecked`, `TDD-0037`, Round 1: the round carries `RED test replacement` / `Replacement proof` fields, which `round-evidence.md` reserves for a `REVISE` that replaced the test. The proof was re-taken because a change request reset the row.
-- `record:QFAI-TDDLIST-008`, `TDD-0094`, Round 1: the TC reference, RED result, Oracle proof and selector notes did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `e20a5cf87e4e23a3793530f8c052f905108dabe7aaf784deec52a57e6d032b43`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0094` (the withdrawn row, which never merged under that ID), Round 1: the TC reference, RED result, Oracle proof and selector notes did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `e20a5cf87e4e23a3793530f8c052f905108dabe7aaf784deec52a57e6d032b43`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0095`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `0998eb9914dc405479f4f8d5ef1f9972f6c6867e78ebc30fcbf717d469f41c83`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0096`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `29a1f5840b58535ee39390887cff1e54613e6542cafd7c4302566aaa9a120c33`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0097`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `29e57295c3119a161f2fa13b75ec81e53053d3dd78bcde2f30caf0f7396e3352`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0098`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `fc7314fcc7737bab612ed72e8ad52a04d4d3ee7513b2e9ceb504a490a695ea74`; the original sealed review remains historical.
 - `record:QFAI-TDDLIST-008`, `TDD-0099`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `d9205a74c005ef11d28e92a992119f148283bfc4c01de898bebe014a608ed3d4`; the original sealed review remains historical.
+
+Open entries from the reviews of `TDD-0094` in the `/qfai-implement` run started
+2026-09-25T03:24:00.000Z. Each is repaired in place before spec-0003 completion
+is declared.
+
+- `record:stale-final-status`, `atdd-spec-0003.md`: `## Gaps / Open risks` and `## Final status` say `TDD-0094` stands at `review-fix` with its build-phase gate owed.
+- `record:unrecorded-provenance`, `TDD-0094`: no Work Orders row records `test-design-analyst#1` scoring `TC-0003-0059` and `BR-0003-0049`; row 73 does not say `qa-gatekeeper#1` was superseded by rows 78 and 82; rows 77 and 79 do not say the routed roles adopted the test and fix text the general-purpose sub-agent wrote.
+- `record:unrecorded-provenance`, the `TDD-0038` title rename, the repository `.github/copilot-instructions.md` edit and the `CHANGELOG.md` entry are recorded in no Work Orders row.
+- `record:timestamp-order`, `CR-20260925-0011`: its `Applied at` postdates the first commit that carries it, and the two run starts are whole minutes.
+
+## Title rename in the TDD-0038 describe
+
+`CR-20260925-0011` asked for the fourth case of the `TDD-0038` describe to be
+renamed to what it asserts. The case sanctions and requires three full-history
+requests, and its title named one. Commit
+2935e8900b06d0f45d397f155df162918fbba07a changed that title string and nothing
+else in `packages/qfai/tests/integration/shippedWorkflowDetection.test.ts`.
+
+| Title | Before                                                                                 | After                                                                                                                                         |
+| ----- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `it`  | `the full-history request appears on the detection job only, across the whole shipped set` | `full history is requested only by the detection and document scope jobs, and by the validation job on a pull request, across the whole shipped set` |
+
+The row stays `done`, and its `Selector`, `Evidence` and entry are unchanged:
+
+- The `Selector` names the describe, `TC-0003-0038 (TDD-0038): docs-only diff
+  selects the minimal lane set, source diff selects the full one`, which still
+  holds the same four cases, so the ledger cell already follows the rename.
+- No assertion changed. The row's recorded proof mutates the docs-only branch of
+  the shipped detection shell and fails the first case, whose title and body are
+  unchanged.
+- No `RED test manifest` in any evidence file names the test file, so no recorded
+  hash moves.
+- The test file is in no other spec's ledger. `TDD-0039` and `TDD-0040` share it
+  and are `done`, and their describes are byte-identical.
+
+Each selector sharing the file was re-run against the renamed test, at revision
+2935e8900b06d0f45d397f155df162918fbba07a:
+
+- `spec-0003/TDD-0038`: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowDetection.test.ts -t "TC-0003-0038 \(TDD-0038\): docs-only diff selects the minimal lane set, source diff selects the full one" — PASS, Test Files 1 passed (1); Tests 4 passed | 14 skipped (18)
+- `spec-0003/TDD-0039`: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowDetection.test.ts -t "TC-0003-0039 \(TDD-0039\): shallow clone and unreachable base ref fail open with a warning annotation" — PASS, Test Files 1 passed (1); Tests 3 passed | 15 skipped (18)
+- `spec-0003/TDD-0040`: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowDetection.test.ts -t "TC-0003-0040 \(TDD-0040\): verdict exits 0 on an empty matrix and carries an empty permission map" — PASS, Test Files 1 passed (1); Tests 3 passed | 15 skipped (18)
+- The whole file: pnpm -C packages/qfai exec vitest run tests/integration/shippedWorkflowDetection.test.ts — PASS, Test Files 1 passed (1); Tests 18 passed (18)

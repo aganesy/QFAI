@@ -787,6 +787,20 @@ carry no README, which is what this change specifies.
   REQ-0018 only. `qfai init` still seeds nothing under `.qfai/steering/`; no
   test asserts it.
 
+- Change ID: DELTA-0004
+- Date: 2026-09-25
+- Primary: Traceability
+- Tags: @test
+- Summary: The withdrawn AC-0003-0039, BR-0003-0049, EX-0003-0052,
+  TC-0003-0059 and ledger row TDD-0094 of DELTA-0002 and DELTA-0003 never
+  merged under those IDs. Main assigned all five, under `CR-20260925-0011`,
+  to the closed-legacy-window statement in the generated Copilot text, so the
+  IDs are main's and TDD-0094 carries no tombstone. The other withdrawn IDs,
+  BR-0003-0050, EX-0003-0053..0054, TC-0003-0060..0061 and TDD-0095..0099,
+  stay withdrawn. A decision or evidence record written before the merge that
+  names one of the five IDs means the withdrawn item; the evidence sections are
+  headed `Withdrawn TDD-0094 (never merged)`.
+
 ## Migration Record
 
 This spec consolidates the following archived specs:
@@ -1010,6 +1024,7 @@ observable:
 | CR-20260923-0011 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                          | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:15:07Z |
 | CR-20260923-0013 | `spec-0003/tdd/test-list.md`                                                                                                                                                                 | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:52:00Z |
 | CR-20260925-0010 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user (Claude Code structured question)                         | -                    |
+| CR-20260925-0011 | `spec-0003/03_Acceptance-Criteria.md` to `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md`                                                                                                 | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-25T03:40:00Z |
 
 ## Triage (2026-09-15)
 

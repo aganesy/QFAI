@@ -49,6 +49,18 @@ IDs.
   EX and TC, and ledger rows TDD-0110..TDD-0115 are removed and tombstoned.
   The skill text they tested stays.
 
+- Change ID: DELTA-0003
+- Date: 2026-09-25
+- Primary: Traceability
+- Tags: @test
+- Summary: The withdrawn ledger rows TDD-0110 and TDD-0111 of DELTA-0002 never
+  merged under those IDs. Main assigned both, under `CR-20260925-0008`, to
+  two `TC-0013-0010` cases, so the IDs are main's and carry no tombstone.
+  TDD-0112..TDD-0115 stay tombstoned. A record written before the merge that
+  names TDD-0110 or TDD-0111 for the record-homes or approval-stop boundary
+  means the withdrawn row; its evidence sections are headed
+  `Withdrawn TDD-0110 (never merged)` and `Withdrawn TDD-0111 (never merged)`.
+
 ## Triage (2026-09-25, CR-20260925-0010)
 
 The record-homes and approval-stop obligations, whose tests only checked the
@@ -782,6 +794,7 @@ Rows owned by this spec.
 | CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
 | CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
 | CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260925-0008 | `spec-0013/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                          | re-derive    | claude-code (the user's standing instruction for this session) | 2026-09-25T01:55:00Z |
 | CR-20260925-0010 | `spec-0013/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md`    | re-derive    | user (Claude Code structured question)                         | -                    |
 
 ### CR-20260913-0009: Ledger boundary repair

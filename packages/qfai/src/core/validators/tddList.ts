@@ -9,6 +9,11 @@ import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { ChangedSince } from "../gitChanges.js";
 import { changedFilesSince, gitStdout } from "../gitChanges.js";
+import {
+  observationReach,
+  type ObservationReach,
+  type ObservationReachCache,
+} from "../observationReach.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { isSpecInScope, type SpecScope } from "../specScope.js";
 import {
@@ -45,6 +50,7 @@ import {
   resolveDeclaredTcId,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
+  TDD_DONE_STATUSES,
   TDD_LEDGER_REQUIRED_COLUMNS,
   UNIT_COMPONENT_LAYERS,
   NON_COVERAGE_LAYERS,
@@ -52,6 +58,13 @@ import {
 // The coverage-target TC set `qfai report` also reads, so the gate and the
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
+// The acceptance scan's own reading of an annotation, and of a file that
+// declares no test, so this validator and `QFAI-ATDD-119` call the same file a
+// carrier.
+import {
+  collectTestCaseAnnotationHomes,
+  type TestCaseAnnotationHomes,
+} from "../atddTraceability.js";
 import type { Issue } from "../types.js";
 import { UiAffectingClauses } from "../uiAffectingClauses.js";
 // The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
@@ -2030,12 +2043,17 @@ async function artifactRecord(
   return `${safePath}\0${kind}\0${mode}\0${sha256(bytes)}`;
 }
 
-export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
-  const paths = manifest
+/** The paths a `RED test manifest` value lists, one per line. */
+function redTestManifestPaths(manifest: string): string[] {
+  return manifest
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim().replace(/^[-*]\s+/, ""))
     .filter((line) => line.length > 0);
+}
+
+export async function redTestManifestHash(root: string, manifest: string): Promise<string | null> {
+  const paths = redTestManifestPaths(manifest);
   if (
     paths.length === 0 ||
     new Set(paths).size !== paths.length ||
@@ -2149,13 +2167,29 @@ function requestNamesReviewUnit(
 }
 
 /**
- * The ids a request's one visible `TDD-ID` line lists, in order, or `null` when
- * the request states that line other than once or lists nothing on it.
+ * The ids a request names in one visible `TDD-ID` line or the documented
+ * `## TDD IDs` list. Both forms must name the whole review unit exactly once.
  */
 function requestedTddIds(request: string): string[] | null {
   const values = visibleLineFieldValues(request, "TDD-ID");
-  if (values.length !== 1) return null;
-  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  if (values.length > 1) return null;
+  if (values.length === 1) {
+    const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+    return members.length === 0 ? null : members;
+  }
+  const lines = maskEvidenceRegions(request.replace(/\r\n/g, "\n")).split("\n");
+  const headings = lines.flatMap((line, index) =>
+    /^#{1,6}\s+TDD IDs\s*$/i.test(line.trim()) ? [index] : [],
+  );
+  if (headings.length !== 1) return null;
+  const members: string[] = [];
+  for (const line of lines.slice((headings[0] ?? 0) + 1)) {
+    if (/^\s*#{1,6}\s+/.test(line)) break;
+    if (line.trim().length === 0) continue;
+    const member = /^\s*[-*]\s+(TDD-\d{4})\s*$/i.exec(line)?.[1];
+    if (member === undefined) return null;
+    members.push(member);
+  }
   return members.length === 0 ? null : members;
 }
 
@@ -3689,11 +3723,7 @@ async function invalidCompletedEvidenceArtifacts(
       const manifest = roundEvidenceFieldValue(section, round, "RED test manifest");
       const recorded = roundEvidenceFieldValue(section, round, "RED test hash");
       if (manifest !== null && recorded !== null && SHA256_VALUE.test(recorded)) {
-        const manifestPaths = manifest
-          .replace(/\r\n/g, "\n")
-          .split("\n")
-          .map((line) => line.trim().replace(/^[-*]\s+/, ""))
-          .filter((line) => line.length > 0);
+        const manifestPaths = redTestManifestPaths(manifest);
         const computed = await redTestManifestHash(root, manifest);
         if (!manifestPaths.includes(expected.testFile) || computed === null) {
           invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
@@ -3806,7 +3836,8 @@ async function invalidCompletedEvidenceArtifacts(
       ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      memberAuditedHashes(response, members)?.get(expected.tddId) !== auditedHash
+      bareSha256(memberAuditedHashes(response, members)?.get(expected.tddId) ?? "") !==
+        bareSha256(auditedHash)
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
@@ -4320,7 +4351,8 @@ function roundPackRecordsClosing(
       answered.length !== 1 ||
       verdict.revision === null ||
       revision !== verdict.revision ||
-      memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) !== verdict.hash
+      bareSha256(memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) ?? "") !==
+        bareSha256(verdict.hash)
     ) {
       return false;
     }
@@ -5016,6 +5048,32 @@ export const EVIDENCE_BACKFILLED_CODE = "QFAI-TDDLIST-019";
 export const OBLIGATION_COLUMN_ABSENT_CODE = "QFAI-TDDLIST-020";
 
 /**
+ * Finding code for a ledger row that owes a test case and whose `TC-Refs`
+ * names none.
+ *
+ * Every other check on the column reads the ids the cell holds. A cell holding
+ * `-`, `n/a` or a requirement id gives them nothing to disagree with, so the
+ * row passes all of them while tracing to no test case.
+ *
+ * The shape of the cell decides, not whether it is empty: `REQ-… (follow-up)`
+ * fills the column and reads as a reference.
+ */
+export const TC_REFS_NAME_NO_TEST_CASE_CODE = "QFAI-TDDLIST-022";
+
+const CON_DB_TOKEN = /^CON-DB-\d+$/;
+
+/**
+ * Finding code for a `done` row whose test case only an annotation carrier
+ * names.
+ *
+ * A carrier lists obligations and declares no test, so no runner selects a
+ * case named only there. The acceptance gate is satisfied by the annotation it
+ * reads, and `QFAI-ATDD-119` reports the obligation at `info`. The row adds a
+ * claim that work was done, which is why it is an error here.
+ */
+export const COMPLETED_ROW_CARRIER_ONLY_CODE = "QFAI-TDDLIST-023";
+
+/**
  * `Revision` names a tree that files the observation covered have moved past.
  *
  * `evidence-revision.md#what-makes-evidence-stale` defines staleness
@@ -5441,6 +5499,12 @@ export async function validateTddList(
   const changeRequests = buildChangeRequestLookup(root, recordNames);
   const issues: Issue[] = [];
 
+  // The test tree is read at most once, and only once a ledger holds a `done`
+  // row that names a test case.
+  let annotationHomes: Promise<TestCaseAnnotationHomes | null> | undefined;
+  const readAnnotationHomes = (): Promise<TestCaseAnnotationHomes | null> =>
+    (annotationHomes ??= collectTestCaseAnnotationHomes(root, config));
+
   for (const entry of entries) {
     if (!isSpecInScope(entry.specNumber, options.specScope)) continue;
     // The whole entry, not `dir` + `specNumber`: Check 8c derives the
@@ -5453,6 +5517,7 @@ export async function validateTddList(
       { recordIds, changeRequests },
       srcRelDir,
       config.paths.contractsDir,
+      readAnnotationHomes,
     );
     issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
@@ -5563,6 +5628,12 @@ const REVISION_AT_REST_STATUSES = new Set(["refactor", "done", "review-fix"]);
  * is shallow — telling them apart needs a signal this check does not have — and
  * the rule still cannot run in a lane that blocks a merge until the checkout
  * there carries the history the revisions name.
+ *
+ * `reach` narrows what the observation covered. Without it the covered files
+ * are the test file and all of `srcDir`, which is the question to ask while a
+ * row is in flight: the code under test is still being written. A row at rest
+ * passes the files its test reached (`observationReach`), so a change its test
+ * never imports does not stale it.
  */
 export function staleEvidenceFiles(
   root: string,
@@ -5570,6 +5641,7 @@ export function staleEvidenceFiles(
   section: string,
   testFile: string,
   cache: Map<string, ChangedSince> = new Map(),
+  reach: ReadonlySet<string> | null = null,
 ): readonly string[] | null {
   const changes = coveredChangesSince(
     root,
@@ -5577,12 +5649,14 @@ export function staleEvidenceFiles(
     observationRevision(section),
     testFile,
     cache,
+    reach,
   );
   return changes.kind === "stale" ? changes.files : null;
 }
 
 /**
- * What moved under the test file and `srcDir` since `revision`.
+ * What moved under the covered files since `revision`: `reach` where given,
+ * otherwise the test file and `srcDir`.
  *
  * `unchecked` is kept apart from `current`: a revision that names no commit
  * this clone holds, or no commit at all, says nothing about the tree. A caller
@@ -5597,6 +5671,7 @@ function coveredChangesSince(
   revision: string | null,
   testFile: string,
   cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
 ): CoveredChanges {
   // The shape test is a COST guard, not a correctness one, and no row can
   // distinguish it: without it a `working-tree+<hash>` reaches
@@ -5626,8 +5701,10 @@ function coveredChangesSince(
   if (changed.kind === "unchanged") return { kind: "current" };
 
   const prefix = srcRelDir.length > 0 ? `${srcRelDir}/` : null;
-  const covered = changed.files.filter(
-    (file) => file === testFile || (prefix !== null && file.startsWith(prefix)),
+  const covered = changed.files.filter((file) =>
+    reach !== null
+      ? reach.has(file)
+      : file === testFile || (prefix !== null && file.startsWith(prefix)),
   );
   return covered.length > 0 ? { kind: "stale", files: covered } : { kind: "current" };
 }
@@ -5662,9 +5739,10 @@ async function staleSinceNewestObservation(
   entry: ResolvedCompletedEntry | null,
   testFile: string,
   cache: Map<string, ChangedSince>,
+  reach: ReadonlySet<string> | null,
 ): Promise<readonly string[] | null> {
   if (entry === null) return null;
-  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache);
+  const stale = staleEvidenceFiles(context.root, srcRelDir, entry.section, testFile, cache, reach);
   if (stale === null) return null;
   const revisions = currentSharedArtifactReverifyRevisions(
     context,
@@ -5672,10 +5750,31 @@ async function staleSinceNewestObservation(
     entry.expectation,
   );
   for await (const revision of revisions) {
-    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache);
+    const since = coveredChangesSince(context.root, srcRelDir, revision, testFile, cache, reach);
     if (since.kind === "current") return null;
   }
   return stale;
+}
+
+/**
+ * What a row at rest observed: its test file, the other test inputs its newest
+ * `RED test manifest` names, and what those reach under `srcDir`.
+ */
+async function atRestReach(
+  root: string,
+  srcRelDir: string,
+  entry: ResolvedCompletedEntry,
+  testFile: string,
+  cache: ObservationReachCache,
+): Promise<ObservationReach> {
+  const fields = entryOwnFields(entry.section);
+  const manifest =
+    [...evidenceRoundNumbers(fields)]
+      .reverse()
+      .map((round) => roundEvidenceFieldValue(fields, round, "RED test manifest"))
+      .find((value) => value !== null) ?? rowEvidenceFieldValue(fields, "RED test manifest");
+  const manifestPaths = manifest === null ? [] : redTestManifestPaths(manifest);
+  return observationReach(root, srcRelDir, testFile, manifestPaths, cache);
 }
 
 /**
@@ -5721,6 +5820,9 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // The columns themselves are Phase 2b's to write, so a ledger that predates
   // them is that phase's to migrate, and its gate is where the gap is heard.
   "QFAI-TDDLIST-020",
+  // `TC-Refs` is Phase 2b's cell, so a row it seeded with no test case there
+  // is seed damage, and the reader may not re-point the obligation.
+  TC_REFS_NAME_NO_TEST_CASE_CODE,
   // The remaining three read cells the same phase authors, and were missing
   // for no reason the ownership split supports:
   //
@@ -5841,6 +5943,7 @@ async function validateSpecTddList(
   decisions: DecisionsIndex,
   srcRelDir: string,
   contractsDir: string,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
 ): Promise<Issue[]> {
   const { recordIds, changeRequests } = decisions;
   // The whole entry, not its directory: Check 8c derives the review-group key
@@ -6299,6 +6402,19 @@ async function validateSpecTddList(
       ),
     );
   }
+
+  // A row that owes a test case and names none.
+  issues.push(...validateRowsNameATestCase(ledgerRows(), relPath, specNumber));
+
+  // A `done` row whose test case only an annotation carrier names.
+  issues.push(
+    ...(await validateCompletedRowsRunATest(ledgerRows(), readAnnotationHomes, {
+      root,
+      relPath,
+      specNumber,
+      knownTcIds,
+    })),
+  );
 
   // Check 5d: the sibling rows of a split obligation each name the boundary
   // they own.
@@ -6947,6 +7063,8 @@ async function validateSpecTddList(
   // it. Scoped to this run rather than to the module: a cache that outlived a
   // run would answer a later one from an earlier tree.
   const revisionDiffCache = new Map<string, ChangedSince>();
+  // Each file's imports are read once, however many rows' tests reach it.
+  const reachCache: ObservationReachCache = { imports: new Map() };
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -7183,24 +7301,37 @@ async function validateSpecTddList(
     }
 
     if (anchorFailure.length === 0) {
+      const testFile = cell(ref, "Test file");
+      const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+      const reach =
+        atRest && lastResolved !== null
+          ? await atRestReach(root, srcRelDir, lastResolved, testFile, reachCache)
+          : null;
       const staleFiles = await staleSinceNewestObservation(
         evidenceContext,
         srcRelDir,
         lastResolved,
-        cell(ref, "Test file"),
+        testFile,
         revisionDiffCache,
+        reach?.kind === "reach" ? reach.files : null,
       );
       if (staleFiles !== null) {
         const revision = observationRevision(lastResolved?.section ?? "") ?? "";
         const shown = staleFiles.slice(0, 5);
         const more =
           staleFiles.length > shown.length ? ` (+${staleFiles.length - shown.length})` : "";
-        const atRest = REVISION_AT_REST_STATUSES.has(status.toLowerCase());
+        const scope =
+          reach === null
+            ? `the test file and all of \`${srcRelDir}\``
+            : reach.kind === "reach"
+              ? `the test file, the test inputs its record names, and what they import under \`${srcRelDir}\``
+              : `the test file and all of \`${srcRelDir}\`, because ${reach.reason}`;
         issues.push(
           issue(
             EVIDENCE_REVISION_STALE_CODE,
             `spec-${specNumber} ${rowLabel}: the observation names Revision \`${revision}\`, and ` +
               `${staleFiles.length} file(s) it covered have changed since: ${shown.join(", ")}${more}. ` +
+              `Covered: ${scope}. ` +
               `Status=${status}${atRest ? " (at rest — this row is making a claim)" : ""}. ` +
               "A stale Revision looks exactly like a fresh one — every command in the record is " +
               "real and nothing contradicts anything else — which is why it is computed rather " +
@@ -7212,9 +7343,9 @@ async function validateSpecTddList(
             "canonical",
             "Re-take the observation and record the revision it was taken at. The interval is " +
               "from the revision the observation NAMES to now — " +
-              "`git diff --name-only <revision>..HEAD -- <test file> <srcDir>` — not from your " +
-              "last commit, which is a different and much weaker question " +
-              "(`references/evidence-revision.md#what-makes-evidence-stale`).",
+              "`git diff --name-only <revision>..HEAD -- <covered files>`, over the files named " +
+              "as covered above — not from your last commit, which is a different and much " +
+              "weaker question (`references/evidence-revision.md#what-makes-evidence-stale`).",
           ),
         );
       }
@@ -7607,4 +7738,176 @@ function validateObligationColumn(
     );
   }
   return issues;
+}
+
+/**
+ * Whether the row records its obligation in a column other than `TC-Refs`, as
+ * its `Layer` allows.
+ *
+ * `E2E` and `API` rows may not carry a `TC-*` at all; their own columns are
+ * checked by {@link validateObligationColumn}. An `Integration` row seeded from
+ * a `CON-DB-*` contract carries that contract instead of a test case. The token
+ * is accepted in `TC-Refs` as well, because the shipped ledger header has no
+ * `CON-DB-Refs` column and the reference tells a reader to take a non-`TC-*`
+ * token in `TC-Refs` as the obligation its `Layer` names.
+ */
+function recordsObligationElsewhere(ref: LedgerRowRef): boolean {
+  const layer = cell(ref, "Layer").toLowerCase();
+  if (TC_FORBIDDEN_LAYERS.has(layer)) return true;
+  if (layer !== "integration") return false;
+  return [cell(ref, "CON-DB-Refs"), cell(ref, "TC-Refs")].some((value) =>
+    splitTcRefs(value).some((token) => CON_DB_TOKEN.test(token.toUpperCase())),
+  );
+}
+
+/**
+ * Reports every row that owes a test case and whose `TC-Refs` names none.
+ *
+ * Every status is read. A `todo` row seeded without a test case is the same
+ * defect as a `done` one, and one found before the work starts is cheaper to
+ * repair. A retired spec's findings are demoted by the caller.
+ */
+function validateRowsNameATestCase(
+  rows: Iterable<LedgerRowRef>,
+  relPath: string,
+  specNumber: string,
+): Issue[] {
+  const issues: Issue[] = [];
+  for (const ref of rows) {
+    const tcRefs = cell(ref, "TC-Refs");
+    if (splitTcRefs(tcRefs).some(isWellFormedTcRef)) continue;
+    if (recordsObligationElsewhere(ref)) continue;
+    const id = cell(ref, "TDD-ID");
+    const held = tcRefs.length === 0 ? "an empty TC-Refs" : `TC-Refs "${tcRefs}"`;
+    issues.push(
+      issue(
+        TC_REFS_NAME_NO_TEST_CASE_CODE,
+        `${id} in tdd/test-list.md for spec-${specNumber} (${ref.label}) holds ${held}, which names no test case. The checks on TC-Refs read the TC-* ids the cell holds, so this row is traced by none of them`,
+        "error",
+        relPath,
+        "tddList.tcRefsNameTestCase",
+        [id],
+        "change",
+        `Through /qfai-sdd, which owns TC-Refs: name the ${TEST_CASES_FILE_NAME} test case this row discharges, or retire the row.`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** Where a finding from {@link validateCompletedRowsRunATest} is filed. */
+type CarrierOnlyContext = {
+  root: string;
+  relPath: string;
+  specNumber: string;
+  /** The cases `06_Test-Cases.md` declares, which a decomposed token resolves to. */
+  knownTcIds: ReadonlySet<string>;
+};
+
+/**
+ * The `TC-*` tokens of a `done` row whose `Layer` owns `TC-Refs`, upper-cased
+ * and once each, with the ids an annotation for each may carry: the token, and
+ * for a decomposed `TC-NNNN-NNNN` the declared case it resolves to. Empty for
+ * any other row.
+ */
+function completedRowTestCases(
+  ref: LedgerRowRef,
+  knownTcIds: ReadonlySet<string>,
+): Map<string, string[]> {
+  const testCases = new Map<string, string[]>();
+  if (!TDD_DONE_STATUSES.has(cell(ref, "Status").toLowerCase())) return testCases;
+  if (!isCoverageBearingRow(ref.scan, ref.row)) return testCases;
+  for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
+    const normalized = token.toUpperCase();
+    if (!isWellFormedTcRef(normalized)) continue;
+    const declared = resolveDeclaredTcId(normalized, knownTcIds);
+    testCases.set(normalized, [...new Set([normalized, declared ?? normalized])]);
+  }
+  return testCases;
+}
+
+/**
+ * Reports each test case of a `done` row that only an annotation carrier names.
+ *
+ * A row with a test for any of its cases is left alone. Its other cases are
+ * then the acceptance gate's to report, and the row's claim rests on a test.
+ * A case no file names at all is not reported here: no carrier then stands in
+ * for a test.
+ *
+ * A scan that could not read every test file is reported once per ledger
+ * rather than read as a pass.
+ *
+ * `done` alone: an `exception` row parks the obligation under a decision
+ * record and claims no test. A retired spec's findings are demoted by the
+ * caller.
+ */
+async function validateCompletedRowsRunATest(
+  rows: Iterable<LedgerRowRef>,
+  readAnnotationHomes: () => Promise<TestCaseAnnotationHomes | null>,
+  context: CarrierOnlyContext,
+): Promise<Issue[]> {
+  const candidates = [...rows]
+    .map((ref) => ({ ref, testCases: completedRowTestCases(ref, context.knownTcIds) }))
+    .filter(({ testCases }) => testCases.size > 0);
+  if (candidates.length === 0) return [];
+  const homes = await readAnnotationHomes();
+  if (homes === null) {
+    return [
+      annotationScanIncompleteIssue(
+        candidates.map(({ ref }) => ref),
+        context,
+      ),
+    ];
+  }
+  const tests = homes.tests.get(context.specNumber);
+  const carriers = homes.carriers.get(context.specNumber);
+  const issues: Issue[] = [];
+  for (const { ref, testCases } of candidates) {
+    const aliases = [...testCases.values()].flat();
+    if (aliases.some((alias) => tests?.has(alias) === true)) continue;
+    for (const [testCase, ids] of testCases) {
+      const named = new Set(ids.flatMap((id) => [...(carriers?.get(id) ?? [])]));
+      if (named.size === 0) continue;
+      issues.push(carrierOnlyIssue(ref, testCase, named, context));
+    }
+  }
+  return issues;
+}
+
+function carrierOnlyIssue(
+  ref: LedgerRowRef,
+  testCase: string,
+  carriers: ReadonlySet<string>,
+  context: CarrierOnlyContext,
+): Issue {
+  const id = cell(ref, "TDD-ID");
+  const files = [...carriers].map((file) => toRelPath(context.root, file)).sort();
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${id} in tdd/test-list.md for spec-${context.specNumber} (${ref.label}) is done, but ${testCase} is named only by ${files.join(", ")}, which declares no test. No runner selects the case, so the row's completion rests on a list of obligations`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    [id, testCase, ...files],
+    "change",
+    `Annotate the test that discharges ${testCase} with QFAI:SPEC-${context.specNumber}:${testCase}. If no test discharges it, the row leaves done only through an upstream reset: approve a Change Request, record its CR-* in DR-ID and move the row to todo, then rerun /qfai-implement.`,
+  );
+}
+
+/** The ledger's `done` rows could not be checked, because the test scan has a gap. */
+function annotationScanIncompleteIssue(
+  rows: readonly LedgerRowRef[],
+  context: CarrierOnlyContext,
+): Issue {
+  const ids = rows.map((ref) => cell(ref, "TDD-ID"));
+  return issue(
+    COMPLETED_ROW_CARRIER_ONLY_CODE,
+    `${ids.length} done row(s) in tdd/test-list.md for spec-${context.specNumber} were not checked for a test: the test scan passed its file limit, or could not read a pattern or a file, so a test that annotates their cases may sit in the part it missed`,
+    "error",
+    context.relPath,
+    "tddList.completedRowRunsATest",
+    ids,
+    "change",
+    "Narrow validation.traceability.testFileGlobs or add validation.traceability.testFileExcludeGlobs until the scan reads every test file, and make any unreadable file readable.",
+  );
 }
