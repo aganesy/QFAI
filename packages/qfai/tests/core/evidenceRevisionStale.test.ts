@@ -56,6 +56,7 @@ vi.mock("node:child_process", async (importOriginal) => {
 
 const { changedFilesSince } = await import("../../src/core/gitChanges.js");
 const { staleEvidenceFiles } = await import("../../src/core/validators/tddList.js");
+const { observationReach } = await import("../../src/core/observationReach.js");
 
 const dirs: string[] = [];
 
@@ -403,5 +404,249 @@ describe("staleEvidenceFiles", () => {
     expect(
       staleEvidenceFiles(root, "src", section(head), "tests/integration/lease.test.ts"),
     ).toBeNull();
+  });
+});
+
+/**
+ * A `done` row is measured over what its test reached.
+ *
+ * Over the whole source directory, every completed row in an active repository
+ * went stale within hours whatever changed, and "the change was unrelated" was
+ * a judgement the rule forbade. Measured over the test's imports it is a
+ * computed fact. The in-flight question is unchanged, and the last row here
+ * holds it.
+ */
+describe("staleness at rest, over what the test reached", () => {
+  const TEST = "tests/unit/login.test.ts";
+
+  /**
+   * The test imports `src/login.ts` (written the ESM way, as `.js`), which
+   * imports `src/session.ts`. `src/billing.ts` is imported by nothing.
+   */
+  async function repoWithImports(
+    testBody?: string,
+    extraFiles: Readonly<Record<string, string>> = {},
+  ): Promise<{ root: string; head: string }> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reach-"));
+    dirs.push(root);
+    git(root, "init", "--initial-branch=main");
+    git(root, "config", "user.email", "test@example.com");
+    git(root, "config", "user.name", "test");
+    await write(
+      root,
+      "src/login.ts",
+      'import { open } from "./session";\nexport const login = open;\n',
+    );
+    await write(root, "src/session.ts", "export const open = 1;\n");
+    await write(root, "src/billing.ts", "export const charge = 1;\n");
+    await write(root, "tests/fixtures/user.json", "{}\n");
+    await write(
+      root,
+      TEST,
+      testBody ?? 'import { login } from "../../src/login.js";\nit("logs in", () => login);\n',
+    );
+    for (const [rel, content] of Object.entries(extraFiles)) await write(root, rel, content);
+    git(root, "add", "-A");
+    git(root, "commit", "-m", "seed");
+    const head = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    }).trim();
+    return { root, head };
+  }
+
+  async function reachOf(root: string, manifest: string[] = []): Promise<ReadonlySet<string>> {
+    const reach = await observationReach(root, "src", TEST, manifest);
+    if (reach.kind !== "reach") throw new Error(`expected a reach, got: ${reach.reason}`);
+    return reach.files;
+  }
+
+  it("names the test file and the source files it imports, directly and transitively", async () => {
+    const { root } = await repoWithImports();
+    expect([...(await reachOf(root))].sort()).toEqual(["src/login.ts", "src/session.ts", TEST]);
+  });
+
+  it("stays clean when only a source file the test does not import changed", async () => {
+    const { root, head } = await repoWithImports();
+    await commit(root, "src/billing.ts", "export const charge = 2;\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+    ).toBeNull();
+  });
+
+  it("goes stale when a file the test imports directly changed", async () => {
+    const { root, head } = await repoWithImports();
+    await commit(
+      root,
+      "src/login.ts",
+      'import { open } from "./session";\nexport const login = 2;\n',
+    );
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+    ).toEqual(["src/login.ts"]);
+  });
+
+  it("goes stale when a file the test reaches only transitively changed", async () => {
+    const { root, head } = await repoWithImports();
+    await commit(root, "src/session.ts", "export const open = 2;\n");
+
+    expect(
+      staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+    ).toEqual(["src/session.ts"]);
+  });
+
+  it("counts the files the RED test manifest lists", async () => {
+    const { root, head } = await repoWithImports();
+    await commit(root, "tests/fixtures/user.json", '{ "name": "a" }\n');
+
+    const reach = await reachOf(root, [TEST, "tests/fixtures/user.json"]);
+    expect(staleEvidenceFiles(root, "src", section(head), TEST, new Map(), reach)).toEqual([
+      "tests/fixtures/user.json",
+    ]);
+  });
+
+  it("treats a runtime built-in and an installed package as outside the project", async () => {
+    const { root } = await repoWithImports(
+      [
+        'import path from "node:path";',
+        'import pad from "left-pad";',
+        'import { login } from "../../src/login.js";',
+        'it("logs in", () => [path, pad, login]);',
+        "",
+      ].join("\n"),
+    );
+    await write(root, "node_modules/left-pad/package.json", '{ "name": "left-pad" }\n');
+
+    expect([...(await reachOf(root))].sort()).toEqual(["src/login.ts", "src/session.ts", TEST]);
+  });
+
+  it("falls back, and says why, when an import names no installed package", async () => {
+    // A path alias may lead anywhere under the source directory. Treating it as
+    // external would clear a row whose test reaches the changed file.
+    const { root } = await repoWithImports(
+      'import { login } from "@/login";\nit("logs in", () => login);\n',
+    );
+
+    const reach = await observationReach(root, "src", TEST, []);
+    expect(reach.kind).toBe("unfollowed");
+    expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("@/login");
+  });
+
+  describe("an import through a path alias", () => {
+    const ALIASED_TEST = 'import { format } from "@/lib/format";\nit("formats", () => format);\n';
+    // JSONC, as the compiler reads it: a comment and a trailing comma. The first
+    // target names nothing, so the second has to be tried.
+    const TSCONFIG = [
+      "{",
+      "  // Next.js writes its alias like this.",
+      '  "compilerOptions": {',
+      '    "paths": { "@/*": ["./generated/*", "./src/*"], },',
+      "  },",
+      "}",
+      "",
+    ].join("\n");
+    const FORMAT = "src/lib/format.ts";
+
+    it("follows the alias to the file it names", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("stays clean when a file the alias does not reach changed", async () => {
+      const { root, head } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+      await commit(root, "src/billing.ts", "export const charge = 2;\n");
+
+      expect(
+        staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+      ).toBeNull();
+    });
+
+    it("goes stale when the aliased file changed", async () => {
+      const { root, head } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": TSCONFIG,
+        [FORMAT]: "export const format = 1;\n",
+      });
+      await commit(root, FORMAT, "export const format = 2;\n");
+
+      expect(
+        staleEvidenceFiles(root, "src", section(head), TEST, new Map(), await reachOf(root)),
+      ).toEqual([FORMAT]);
+    });
+
+    it("reads the aliases from the config the root one extends", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "tsconfig.json": '{ "extends": "./tsconfig.base.json" }\n',
+        "tsconfig.base.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }\n',
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("reads jsconfig.json where there is no tsconfig.json", async () => {
+      const { root } = await repoWithImports(ALIASED_TEST, {
+        "jsconfig.json":
+          '{ "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["src/*"] } } }\n',
+        [FORMAT]: "export const format = 1;\n",
+      });
+
+      expect([...(await reachOf(root))].sort()).toEqual([FORMAT, TEST]);
+    });
+
+    it("still falls back for an alias no pattern matches", async () => {
+      const { root } = await repoWithImports(
+        'import { format } from "~/lib/format";\nit("formats", () => format);\n',
+        { "tsconfig.json": TSCONFIG, [FORMAT]: "export const format = 1;\n" },
+      );
+
+      const reach = await observationReach(root, "src", TEST, []);
+      expect(reach.kind).toBe("unfollowed");
+      expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("~/lib/format");
+    });
+
+    it("falls back, naming the pattern, when a matched alias names no file", async () => {
+      const { root } = await repoWithImports(
+        'import { gone } from "@/lib/gone";\nit("formats", () => gone);\n',
+        { "tsconfig.json": TSCONFIG },
+      );
+
+      const reach = await observationReach(root, "src", TEST, []);
+      expect(reach.kind).toBe("unfollowed");
+      expect(reach.kind === "unfollowed" ? reach.reason : "").toContain("`@/*` in tsconfig.json");
+    });
+  });
+
+  it("falls back when an import's path is computed", async () => {
+    const { root } = await repoWithImports(
+      'const name = "login";\nit("logs in", async () => import(`../../src/${name}.js`));\n',
+    );
+
+    expect((await observationReach(root, "src", TEST, [])).kind).toBe("unfollowed");
+  });
+
+  it("falls back when a relative import names no file", async () => {
+    const { root } = await repoWithImports(
+      'import { gone } from "../../src/gone.js";\nit("logs in", () => gone);\n',
+    );
+
+    expect((await observationReach(root, "src", TEST, [])).kind).toBe("unfollowed");
+  });
+
+  it("still measures an in-flight row over the whole source directory", async () => {
+    // No reach is the in-flight question: the code under test is still being
+    // written, so a file the test does not import yet is covered too.
+    const { root, head } = await repoWithImports();
+    await commit(root, "src/billing.ts", "export const charge = 2;\n");
+
+    expect(staleEvidenceFiles(root, "src", section(head), TEST)).toEqual(["src/billing.ts"]);
   });
 });
