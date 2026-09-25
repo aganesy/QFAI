@@ -7,12 +7,15 @@ Produced by `test-design-analyst` in the `coverage` phase of the `/qfai-atdd` ru
 The subject is the removal of the work-log surface `.qfai/steering/`
 (`09_delta.md` `## Triage (2026-09-23)`).
 
-**Matrix rows.** The three test cases this run writes acceptance tests for: `TC-0004-0074`,
-`TC-0004-0075` and `TC-0004-0076`, carried by the ledger rows `TDD-0067` … `TDD-0071`. All three
-declare `Level` `integration` and route to `packages/qfai/tests/integration/**`.
+**Matrix rows.** None. The three test cases this run wrote acceptance tests for, `TC-0004-0074`,
+`TC-0004-0075` and `TC-0004-0076` (ledger rows `TDD-0067` … `TDD-0071`), were withdrawn by
+`CR-20260925-0010` with their rows and their tests, and the pack no longer declares them.
 
 `TC-0004-0018` is also new in this change (rows `TDD-0018`, `TDD-0072`). It declares `Level` `unit`, so
 it owes no acceptance test here and has no matrix row. `/qfai-implement` owns both rows (DL-0026).
+
+`CR-20260925-0010` withdrew the `R-WORKLOG-DRIFT` boundary of that test case with its ledger row
+`TDD-0018`. `TDD-0072`, `done`, is the one row left.
 
 **Not scored in this run.** The other 14 user stories and 38 integration-routed test cases of this
 pack predate the change, and the change neither adds nor removes a case for them. Their ledger rows
@@ -20,13 +23,12 @@ are not created or reset by this change. They are listed under "Obligations not 
 ledger state. Whether they belong in this run's matrix is an open preflight decision, not settled
 here.
 
-**Business rule table.** Every active `BR-0004-*` of `04_Business-Rules.md` owns a row: 30 headings,
+**Business rule table.** Every active `BR-0004-*` of `04_Business-Rules.md` owns a row: 28 headings,
 none carrying a retiring `Status:`. The rules this change removed (`BR-0004-0015`, `-0016`, `-0018`,
-`-0019`, `-0020`) are deleted from the file and owe no row.
+`-0019`, `-0020`), and the two `CR-20260925-0010` withdrew (`BR-0004-0034`, `-0035`), are deleted from
+the file and owe no row.
 
 No `CON-API-*` or `CON-DB-*` contract exists in this repository, and no file of this pack binds one.
-`BR-0004-0034` and `BR-0004-0035` bind `CLI-VAL`, a CLI contract under `.qfai/contracts/cli/`, which
-owes no `QFAI-ATDD-113` / `-115` coverage and contributes no contract-derived failure.
 
 ## How the cells are scored
 
@@ -50,54 +52,10 @@ owes no `QFAI-ATDD-113` / `-115` coverage and contributes no contract-derived fa
 
 ## The matrix
 
-| US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
-| ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
-| TC-0004-0074 | ✅                     | ✅          | n/a        | ⚠️         | n/a             | ✅             | n/a               | n/a           | ⚠️              | planned |
-| TC-0004-0075 | ✅                     | n/a         | ✅         | ⚠️         | n/a             | n/a            | n/a               | n/a           | ⚠️              | planned |
-| TC-0004-0076 | ✅                     | ✅          | ✅         | ✅         | ⚠️              | ⚠️             | n/a               | ✅            | ⚠️              | planned |
+No row. `CR-20260925-0010` withdrew `TC-0004-0074`, `TC-0004-0075` and `TC-0004-0076`, the three rows
+this matrix scored, together with ledger rows `TDD-0067` … `TDD-0071` and their tests.
 
-Totals across the nine scored columns, 27 cells: **✅ 10 / ⚠️ 7 / ❌ 0**, `n/a` 10.
-
-### Row notes
-
-**TC-0004-0074 (`TDD-0067`).**
-
-- Equivalence partitions: one entry for each code the removed validator raised (broken
-  frontmatter, broken `links`, stale `active`, `promote-to` without a Decisions row, `kind: handoff`
-  missing sections). These are the partitions that produced a finding.
-- Normal path: `validate --profile full` over that tree. Planned assertions:
-  - none of the five codes appears;
-  - no finding's file, location or message has a `.qfai/steering/` path segment;
-  - the run wrote its report, so an empty finding list cannot pass by construction.
-- Error path `n/a`: `EX-0004-0042` declares no failure. The one kept failure of `BR-0004-0034`,
-  `QFAI-ASSETS-006`, is owned by `TC-0004-0075` through `EX-0004-0043`.
-- Special values: the broken-frontmatter entry.
-- Boundary `n/a`: the 90-day stale threshold belonged to the removed validator, and no ordered
-  domain survives in `BR-0004-0034`.
-- Combinatorial `n/a`: after the removal the five conditions do not interact.
-- Oracle mutation: restore the `validateWorklogSurface` call in `core/validate.ts`.
-
-**TC-0004-0075 (`TDD-0068`).**
-
-- Error path: `QFAI-ASSETS-006` at `error`, naming `.qfai/assistant/catalog/worklog-entry.schema.md`,
-  on a tree `qfai init` wrote with the schema written back.
-- Normal path `n/a`: `Type: error`. The normal sibling is `TC-0004-0074`.
-- Oracle mutation: restore `catalog/worklog-entry.schema.md` in `core/governedAssistantManifest.ts`.
-
-**TC-0004-0076 (`TDD-0069`, `TDD-0070`, `TDD-0071`).** Three boundaries, one row each.
-
-| Boundary              | Row      | Planned case                                                          |
-| --------------------- | -------- | --------------------------------------------------------------------- |
-| `blocked-by-named`    | TDD-0069 | Filled `Blocked-By`, no `.qfai/steering/`: no error names the row     |
-| `blocked-by-empty`    | TDD-0070 | Empty `Blocked-By`: `TDDLIST_BLOCKED_MISSING_REF` names the row       |
-| `steering-unreadable` | TDD-0071 | Filled row plus an unreadable file: no finding names `.qfai/steering/` |
-
-- Combinatorial: a filled `Blocked-By` is crossed with both steering states, absent (`TDD-0069`)
-  and unreadable (`TDD-0071`).
-- Oracle mutations:
-  - `TDD-0069`: restore the `blockedWithoutWorklog` push in `validators/tddList.ts`.
-  - `TDD-0070`: make `parseBlockedBy` accept an empty cell. This is the falsifiability mutation.
-  - `TDD-0071`: restore the `readSteeringIndex` issue drain.
+Totals across the nine scored columns, 0 cells: **✅ 0 / ⚠️ 0 / ❌ 0**, `n/a` 0.
 
 ## Business rule coverage
 
@@ -117,7 +75,7 @@ Totals across the nine scored columns, 27 cells: **✅ 10 / ⚠️ 7 / ❌ 0**, 
 | BR-0004-0012 | ⚠️            | ✅            | n/a                  | TC-0004-0012                                           | carried |
 | BR-0004-0013 | ✅            | ✅            | n/a                  | TC-0004-0014, TC-0004-0013                             | carried |
 | BR-0004-0014 | ⚠️            | ✅            | n/a                  | TC-0004-0015                                           | carried |
-| BR-0004-0017 | ✅            | ✅            | ⚠️                   | TC-0004-0018 (TDD-0018, TDD-0072; L1, /qfai-implement) | planned |
+| BR-0004-0017 | ⚠️            | ✅            | ⚠️                   | TC-0004-0018 (TDD-0072; L1, /qfai-implement)           | planned |
 | BR-0004-0021 | ✅            | n/a           | n/a                  | TC-0004-0022                                           | carried |
 | BR-0004-0022 | ⚠️            | ✅            | n/a                  | TC-0004-0023                                           | carried |
 | BR-0004-0023 | ✅            | n/a           | n/a                  | TC-0004-0024                                           | carried |
@@ -131,25 +89,22 @@ Totals across the nine scored columns, 27 cells: **✅ 10 / ⚠️ 7 / ❌ 0**, 
 | BR-0004-0031 | ✅            | ✅            | ⚠️                   | TC-0004-0069, TC-0004-0070                             | carried |
 | BR-0004-0032 | ✅            | n/a           | n/a                  | TC-0004-0071                                           | carried |
 | BR-0004-0033 | ✅            | n/a           | ✅                   | TC-0004-0072, TC-0004-0073                             | carried |
-| BR-0004-0034 | ✅            | ✅            | ✅                   | TC-0004-0074 (TDD-0067), TC-0004-0075 (TDD-0068)       | planned |
-| BR-0004-0035 | ✅            | ✅            | ✅                   | TC-0004-0076 (TDD-0069, TDD-0070, TDD-0071)            | planned |
 
-Totals across the three scored columns, 90 cells: **✅ 44 / ⚠️ 14 / ❌ 0**, `n/a` 32.
+Totals across the three scored columns, 84 cells: **✅ 37 / ⚠️ 15 / ❌ 0**, `n/a` 32.
 
 `Covering TC` is derived from `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`.
 
 Rules this change touches:
 
-- `BR-0004-0034`, planned:
-  - Positive: `TDD-0067`.
-  - Negative: the kept failure `QFAI-ASSETS-006`, `TDD-0068`.
-  - Conditional: withdrawn schema absent (`TDD-0067`) and present (`TDD-0068`).
-- `BR-0004-0035`, planned:
-  - Positive: `TDD-0069` and `TDD-0071`.
-  - Negative: `TDD-0070`, the kept `TDDLIST_BLOCKED_MISSING_REF`.
-  - Conditional: filled, empty, and filled beside an unreadable file.
-- `BR-0004-0017`: narrowed by this change. It is scored here because its rows were reset, but both
-  rows are `unit` and `/qfai-implement` writes them.
+- `BR-0004-0017`: narrowed by this change, and again by `CR-20260925-0010`, which withdrew its
+  `R-WORKLOG-DRIFT` clause with ledger row `TDD-0018`. It is scored here because its rows were reset.
+  Its one remaining row, `TDD-0072`, is `unit` and `done`, written by `/qfai-implement`.
+  - Positive ⚠️: the rule accepts a non-empty justification and rejects an empty one, and the design
+    has a case for the rejection only. The ✅ this cell carried before rested on the withdrawn
+    `R-WORKLOG-DRIFT` boundary, which tested a different code, not a non-empty justification.
+  - Negative: `TDD-0072`, the empty `R-REJECTED-READOPT` justification.
+
+`BR-0004-0034` and `BR-0004-0035` were withdrawn by `CR-20260925-0010` and owe no row.
 
 ## Every ❌ cell, named
 
@@ -157,28 +112,15 @@ None. Neither table carries a `❌` cell.
 
 ## Every ⚠️ cell, named
 
-### Matrix (7)
+### Matrix (0)
 
-- `TC-0004-0074` Edge cases: the planned case puts every entry at the top of `.qfai/steering/`.
-  The removed reader recursed into subdirectories and skipped `_templates/`, and no case places an
-  entry deeper. This is partial rather than missing, because the removal deletes the reader
-  outright: no depth-specific code path survives for a nested entry to reach.
-- `TC-0004-0075` Edge cases: `EX-0004-0043` does not say whether the written-back schema keeps a
-  `.assets.lock.json` record. `QFAI-ASSETS-006` is decided by the governed manifest rather than by
-  the lock, so both states should report it. Only the state the fixture picks is exercised.
-- `TC-0004-0076` Boundary values: only the empty `Blocked-By` is a planned failure case. The `-`
-  placeholder and a blocker with no departure status are not exercised. The second of those is the
-  literal value `EX-0004-0044` gives for the passing row (Finding 1).
-- `TC-0004-0076` Special values: an unreadable file is planned. A whitespace-only `Blocked-By` is
-  not.
-- Oracle strength on all three rows: each mutation is named above and not yet shown to fail the
-  test. That is shown at `red` for the branch-1 rows and by the falsifiability run for `TDD-0070`.
+None. The matrix has no row.
 
-### Business rule table (14)
+### Business rule table (15)
 
 - Positive ⚠️ on `BR-0004-0002` and `BR-0004-0007`: the only covering rows (`TDD-0001`,
   `TDD-0002`, `TDD-0007`) are `exception`. A test file exists, but no RED/GREEN was recorded.
-- Positive ⚠️ on `BR-0004-0008`, `-0011`, `-0012`, `-0014` and `-0022`: the rule states an
+- Positive ⚠️ on `BR-0004-0008`, `-0011`, `-0012`, `-0014`, `-0017` and `-0022`: the rule states an
   accepting outcome and a failure, and the design has a case for the failure only.
 - Positive ⚠️ on `BR-0004-0029`: the covering cases exercise the profile mismatch and the
   post-sunset path, not a matching read.
@@ -206,18 +148,14 @@ Pre-existing obligations with no matrix row, and their ledger state today:
 
 ## Findings
 
-1. **`EX-0004-0044` gives a `Blocked-By` value the kept rule rejects.**
-   - The example's passing row has `Blocked-By` `spec-0004:TDD-0001`.
-   - The kept check (`validators/tddList.ts`, `parseBlockedBy`, the block that raises
-     `TDDLIST_BLOCKED_MISSING_REF`) requires both halves: the blocker and `— blocked at <status>`.
-     A bare blocker raises that error.
-   - A test that follows the example literally cannot go green. `BR-0004-0035`'s "non-empty" wording
-     reads the same way.
-   - Routed as a preflight decision. It contradicts the spec, so it is critical.
-2. **The matrix does not cover the pack.** No matrix existed for spec-0004 before this run, and
-   this one scores only the change's rows. The pre-existing debt is recorded above.
+1. **The matrix does not cover the pack.** No matrix existed for spec-0004 before this run, and
+   this one scored only the change's rows, which `CR-20260925-0010` then withdrew. The pre-existing
+   debt is recorded above.
+
+A finding on `EX-0004-0044` and `BR-0004-0035` stood here. `CR-20260925-0010` withdrew both, so it
+no longer applies.
 
 ## Totals for the stage evidence
 
-**✅ 54 / ⚠️ 21 / ❌ 0**, `n/a` 42, across 117 scored cells: 27 matrix cells and 90 business rule
+**✅ 37 / ⚠️ 15 / ❌ 0**, `n/a` 32, across 84 scored cells: 0 matrix cells and 84 business rule
 cells. `Status` is a row verdict and is excluded.

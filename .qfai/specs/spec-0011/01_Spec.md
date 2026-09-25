@@ -64,7 +64,6 @@
 - REQ-0009: Per-item evidence contract -- TDD-ID, TC-ref, RED command+result, GREEN command+result, refactor verify, reviewer results
 - REQ-0010: Parallelization policy -- independent SUT slices only, worktree separation, post-merge integration verify
 - REQ-0011: Visual Review Guard -- DDP-first reading for UI-affecting items
-- discussion-20260923060900824#REQ-0007: Skill text names the existing home of each record
 
 ## Entry points
 

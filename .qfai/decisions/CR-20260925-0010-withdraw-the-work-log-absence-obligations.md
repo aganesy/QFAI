@@ -201,6 +201,8 @@ is approved, `CR-20260924-0006` takes `Status: superseded` and
     `packages/qfai/tests/core/tddListEvidence.test.ts`
 - Source: `packages/qfai/src/cli/main.ts` (line 462); the `66ee3cf6d` hunks of
   `packages/qfai/src/core/validators/tddList.ts`, moved out
+- Documents: `README.md` and `packages/qfai/README.md`, edited together, drop
+  `steering/` under `discussion-20260923060900824#REQ-0012`
 - Contracts: none changed by this CR; the two below carry over from
   `CR-20260924-0006`
 - Schema: none

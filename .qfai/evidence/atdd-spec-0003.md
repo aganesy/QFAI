@@ -286,6 +286,9 @@ signals only.
 | `TDD-0098` | `TC-0003-0061` | Integration | observed-red | [TDD-0098](#tdd-0098) |
 | `TDD-0099` | `TC-0003-0061` | Integration | observed-red | [TDD-0099](#tdd-0099) |
 
+Rows `TDD-0094` … `TDD-0099` are withdrawn by `CR-20260925-0010`. Their ledger rows are deleted
+and tombstoned, and their test files are deleted. Their sections below stay as history.
+
 ### TDD-0058
 
 - TDD-ID: TDD-0058
@@ -3000,10 +3003,10 @@ exit=0
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.
 
-For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change adds are scored under
-`## Rows added by the work-log surface removal` in the same file. Totals for
-those rows: ✅ 12 / ⚠️ 7 / ❌ 0, `n/a` 14, across 33 scored cells (27 matrix
-cells and 6 business rule cells).
+For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change added were scored under
+`## Rows added by the work-log surface removal` in the same file. `CR-20260925-0010` withdrew
+them, so that section scores no row: ✅ 0 / ⚠️ 0 / ❌ 0, `n/a` 0, across 0 scored cells. The
+totals above are unchanged.
 
 ## Work Orders Summary
 

@@ -208,3 +208,207 @@ node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --s
 - Rationale: every routed blocking reviewer returned PASS in cycle 2
   (`review-20260923121814103`), and only the 15 pinned pre-existing errors
   remain repository-wide.
+
+---
+
+# Run: re-derive under CR-20260925-0010 (2026-09-25)
+
+## Objective
+
+- Spec target: spec-0011
+- Mode: `re-derive`, driven by the approved
+  `.qfai/decisions/CR-20260925-0010-withdraw-the-work-log-absence-obligations.md`
+  (step 3 of its rerun plan).
+- Objective: withdraw the record-homes obligations and their ledger rows. The
+  replacement `/qfai-implement` skill text stays.
+
+## Inputs reviewed
+
+- `CR-20260925-0010`, whole record, and the approved Triage group G3.
+- The amended pack `discussion-20260923060900824` (commit `4c2c398b4`):
+  REQ-0007, REQ-0017, `10_Policy.md` and `99_delta.md` `## Drift Events`.
+- Review pack `review-20260925045812201`: `R02` advisory 2 (REQ-0007 and
+  NFR-0006), carried to this re-derive.
+- `.qfai/specs/spec-0011/**`, `.qfai/evidence/atdd-spec-0011.md`
+  `### TDD-0021`..`### TDD-0023`.
+- `packages/qfai/tests/integration/spec0011RecordHomes.test.ts`.
+- `.qfai/assistant/skills/qfai-sdd/SKILL.md`; references `sdd-triage.md`,
+  `spec-traceability-rules.md`, `sdd-pre-draft-grilling.md`; template
+  `templates/evidence/sdd-spec.md`.
+
+## Preflight summary path
+
+- Preflight run id `run-20260925143420772` (Stage 0): ready, source
+  `discussion-pack`, selected pack `discussion-20260923060900824`, 17 imported
+  requirements, no pack gaps, no blockers.
+- Preflight run id `run-20260925150016061`, after Triage: the same result.
+
+## Triage decisions
+
+| Source                                | Subject                                                                                                                                     | Operation | Sub-op | Approved By                            | Rationale                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------ | -------------------------------------- | ----------------------------------------------------------------------- |
+| discussion-20260923060900824#REQ-0007 | Remove AC-0011-0012, BR-0011-0009, EX-0011-0010, TC-0011-0013 and the REQ-0007 source line; TDD-0021..0023 deleted and tombstoned           | UPDATE    | REMOVE | user (Claude Code structured question) | REQ-0007 is checked by review; the rows tested the kept text or absences |
+
+- Persisted in `09_delta.md` as `## Triage (2026-09-25)`, under
+  `## Change Summary` and above `## Triage (2026-09-23)`, with `Depends-On` `-`.
+- Approved by the user through a Claude Code structured question at
+  2026-09-25T04:52:16Z. That one structured answer approved the Change Request
+  (G0) and all four spec groups, G1 to G4, together.
+
+## Open questions
+
+- none
+
+## Decisions made
+
+- DR-0011-0014 / DL-0012: the record-homes obligations are withdrawn.
+  Supersedes DR-0011-0004..DR-0011-0011 and DR-0011-0013. Amends DR-0011-0003
+  and DR-0011-0012, because the skill text and the plan paragraph they decided
+  stand.
+- No rejected option is taken: DL-0003's `do_not` ("Check the whole tree from
+  two test cases") and DL-0011's ("Put independently failing checks behind one
+  row") are not reintroduced, so nothing is re-opened.
+
+## Work performed
+
+- Phase 2:
+  - `01_Spec.md`: the `discussion-20260923060900824#REQ-0007` line removed.
+  - `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`,
+    `06_Test-Cases.md`: AC-0011-0012, BR-0011-0009, EX-0011-0010 and
+    TC-0011-0013 removed.
+  - `07_Decisions.md`: 9 records marked superseded, 2 amended, DR-0011-0014
+    added; the
+    count line reads 13, the number of records in the file.
+- Phase 2b:
+  - `tdd/test-list.md`: TDD-0021..TDD-0023 deleted; a new
+    `## TDD-ID reservations` section, after the ledger table and before
+    `## Notes`, holds their three tombstones.
+  - Downstream ledger sweep: no row is reset. A cell-by-cell comparison with
+    `HEAD` shows the other 20 rows unchanged.
+  - Each deleted row's `Evidence` cell is copied verbatim into the Triage
+    section of `09_delta.md`.
+- Phase 3: `10_Plan.md` no longer cites BR-0011-0009, and says the skill text
+  is checked by review with no test of its own. Critical Constraint 10: no
+  finding.
+- Phase 4: `09_delta.md` gains DELTA-0002 in `## Change Summary`,
+  `## Triage (2026-09-25)`, DL-0012 with its `## Update History` row, and a new
+  `## Change Requests` section with the `CR-20260925-0010` row (`Applied at`
+  `-`).
+- Carried reviewer advisory (`R02` advisory 2): REQ-0007 cites NFR-0006 for
+  `worklog-entry.schema.md`, which NFR-0006's token list does not name. The
+  spec has no item left for REQ-0007, so the note is recorded in the Triage
+  section and in DR-0011-0014: the review that checks REQ-0007 searches for
+  both tokens.
+- Tests to delete, owned by other stages, in the same commit:
+  - `/qfai-atdd`: `packages/qfai/tests/integration/spec0011RecordHomes.test.ts`,
+    all three `it` blocks (TDD-0021 "... records a stop in Blocked-By ...",
+    TDD-0022 "the blocked -> todo bullet of execution-ledger.md closes no
+    record", TDD-0023 "no qfai-implement skill file names .qfai/steering/ ...").
+  - `/qfai-implement`: its entry in `packages/qfai/tsconfig.tests.json`.
+- Phase 0, Phase 1 and Phase 2c were not entered: no contract, no `_policies`
+  file and no remaining obligation changed.
+
+## Contract executability
+
+- none
+
+## Commands executed
+
+```sh
+cd packages/qfai && ./node_modules/.bin/tsup
+node packages/qfai/dist/cli/index.mjs sdd preflight --fail-on error
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --spec spec-0011 --format text
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec spec-0011 --format text
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format text
+node packages/qfai/dist/cli/index.mjs sdd preflight
+./node_modules/.bin/prettier --write <the edited spec files>
+./node_modules/.bin/markdownlint-cli2 <the edited spec files>
+node scripts/check-mdschema.mjs
+node scripts/check-mermaid.mjs
+node scripts/check-doc-clarity.mjs
+```
+
+## Validate evidence paths
+
+- Validate run id `run-20260925143510180`, scope `sdd`, `--spec spec-0011`,
+  before any write: pass, 0 errors, 12 warnings, 4 info.
+- Validate run id `run-20260925145208091`, scope `sdd`, `--spec spec-0011`,
+  after the writes: pass, 0 errors, 12 warnings, 4 info. The same findings.
+- Validate run id `run-20260925145541955`, scope `tdd`, `--spec spec-0011`, on
+  the spec files of `HEAD`: 9 errors, 14 warnings, 5 info.
+- Validate run id `run-20260925145211131`, scope `tdd`, `--spec spec-0011`,
+  after the writes: 10 errors, 14 warnings, 5 info. The new error is
+  `QFAI-ATDD-102` on `spec0011RecordHomes.test.ts`, which still carries the
+  TC-0011-0013 annotation. It clears when the file is deleted. No
+  `TDDLIST_TEST_FILE_MISSING` fires. The other 9 are the pinned
+  `QFAI-TEST-003` in spec-0004 and spec-0006 test files.
+- Validate run id `run-20260925145843475`, scope `sdd`, whole repository:
+  11 errors, all the pinned `QFAI-TDDLIST-017`.
+- After `/qfai-atdd` deleted the ten test files and `/qfai-implement` made its
+  test edits, with the package rebuilt:
+  - Validate run id `run-20260925155811284`, scope `sdd`, `--spec spec-0011`: 1 error,
+    `QFAI-REVIEW-007` on this spec's review pack while its `summary.json`
+    reads `PENDING`. The warnings are the same as before the run.
+  - Validate run id `run-20260925155813876`, scope `tdd`, `--spec spec-0011`: 9 errors, the
+    pinned `QFAI-TEST-003`, as on `HEAD`. No `QFAI-ATDD-102` and no
+    `TDDLIST_TEST_FILE_MISSING`.
+  - Validate run id `run-20260925155923587`, scope `sdd`, whole repository:
+    15 errors: the 11 pinned `QFAI-TDDLIST-017` and one `QFAI-REVIEW-007` per
+    pending pack.
+- `check-mdschema`: 49 files conform. `check-mermaid`: 50 diagrams parse.
+  markdownlint: 0 errors. `check-doc-clarity`: no local identifiers.
+
+## Pre-draft Grilling
+
+| Phase | Session | Ended at | Wrote at             | Frontier                                                  | Evidence |
+| ----- | ------- | -------- | -------------------- | --------------------------------------------------------- | -------- |
+| 2     | skipped | -        | 2026-09-25T05:47:36Z | empty: answered by CR-20260925-0010, approved by the user | -        |
+| 3     | skipped | -        | 2026-09-25T05:47:36Z | empty: answered by CR-20260925-0010, approved by the user | -        |
+
+- Batch record: none
+- These rows belong to this run. The user settled every decision the phases
+  write through `CR-20260925-0010` and its Triage group G3, approved at
+  2026-09-25T04:52:16Z, so no session was opened.
+- `Wrote at` is the time of the post-write validate run, run id
+  `run-20260925144736260`: both phases wrote between spec-0004's validate run
+  and that run.
+- Phase 2b and Phase 4 run no session. Phase 0, Phase 1 and Phase 2c were not
+  entered.
+
+## Work Orders Summary
+
+| Step | Role (sub-agent)         | Agent instance       | Task title                                                                     | Input (refs)                                                  | Output (refs)                                                                                                                                                                                                                                                                                               | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------------ | -------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1    | requirements-analyst     | sdd-withdraw-author  | Stage 0 preflight, and the rerun after Triage                                  | the amended pack                                              | Run ids `run-20260925143420772` and `run-20260925150016061`: ready, 17 requirements, no pack gaps                                                                                                                                                                                                           | PASS                         |
+| 2    | requirements-analyst     | sdd-withdraw-author  | Persist Triage group G3 as `## Triage (2026-09-25)`                            | `CR-20260925-0010`; approved Triage draft G3                  | `09_delta.md` `## Triage (2026-09-25)` and the new `## Change Requests` section                                                                                                                                                                                                                             | PASS                         |
+| 3    | requirements-analyst     | sdd-withdraw-author  | Phase 2 and 2b: remove the items, delete and tombstone TDD-0021..0023          | settled by `CR-20260925-0010`                                 | `01`..`07`, `tdd/test-list.md`; validate sdd `--spec spec-0011`: the baseline findings only                                                                                                                                                                                                                 | PASS                         |
+| 4    | requirements-analyst     | sdd-withdraw-author  | Phase 3 and Phase 4                                                            | `10_Plan.md`, `09_delta.md`                                   | Plan paragraph; DELTA-0002, DL-0012; Critical Constraint 10: no finding                                                                                                                                                                                                                                     | PASS                         |
+| 5    | delivery-planner         | withdraw-triage-gate | Triage gate (`slice-and-scope`, blocking)                                      | `09_delta.md` `## Triage (2026-09-25)`                        | PASS at `working-tree+eb4bd304c565980e33a307009fd7feaae29669bd17e814e36e7121b58e1c6cd3`                                                                                                                                                                                                                     | PASS                         |
+| 6    | solution-architect       | withdraw-design-gate | `design` span gate (blocking)                                                  | spec-0011 `01`..`10`, `tdd/test-list.md`                      | PASS at `working-tree+eb4bd304c565980e33a307009fd7feaae29669bd17e814e36e7121b58e1c6cd3`                                                                                                                                                                                                                     | PASS                         |
+| 7    | completion-reviewer      | -                    | Reviewer Gate                                                                  | review pack `review-20260925150500011`                        | not yet run                                                                                                                                                                                                                                                                                                 | PENDING                      |
+| 8    | qa-gatekeeper            | -                    | Reviewer Gate: the ledger and coverage changed                                 | review pack `review-20260925150500011`                        | not yet run                                                                                                                                                                                                                                                                                                 | PENDING                      |
+| 9    | test-design-analyst      | withdraw-tda         | Test-design check of the withdrawal (`design` span)                            | `03`..`06`, `tdd/test-list.md`, `coverage-depth-spec-0011.md` | PASS: every surviving AC keeps an EX and a TC, and every TC a ledger row at its layer, as at `HEAD`; no example or TC asks for an absence test; TDD-0021..0023 tombstoned in the new `## TDD-ID reservations`; coverage depth scores no withdrawn row. Corrected the stale coverage-depth bullet under Gaps | PASS                         |
+| 10   | requirements-analyst     | sdd-withdraw-author  | Low fix L4/L5: DR-0011-0003 and DR-0011-0012 amended, not superseded           | DR-0011-0003, DR-0011-0012, DR-0011-0014                      | `07_Decisions.md`: both `accepted` with `Amended by: DR-0011-0014`; DR-0011-0014 and the `09_delta.md` Triage bullet list the new supersede set                                                                                                                                                             | PASS                         |
+| 11   | requirements-analyst     | sdd-withdraw-author  | Low fix (Triage-gate advisory): approval note and post-deletion validate lines | this block; runs after the test deletion                      | This block `## Triage decisions` (one answer approved G0 and G1 to G4), `## Validate evidence paths` (post-deletion runs), and the `QFAI-ATDD-102` line of `## Gaps / Open risks`                                                                                                                           | PASS                         |
+| 12   | test-design-analyst      | withdraw-tda         | Low fix: the coverage-depth line of `## Gaps / Open risks`                     | `.qfai/evidence/coverage-depth-spec-0011.md`                  | This block `## Gaps / Open risks`, the coverage-depth line                                                                                                                                                                                                                                                  | PASS                         |
+| 13   | acceptance-test-engineer | withdraw-atdd        | Coverage-depth text for the withdrawal                                         | `.qfai/evidence/coverage-depth-spec-0011.md`                  | Text of `coverage-depth-spec-0011.md`                                                                                                                                                                                                                                                                       | PASS                         |
+
+## Gaps / Open risks
+
+- `.qfai/evidence/coverage-depth-spec-0011.md` was recomputed by the stage
+  that owns it. It scores no row for TC-0011-0013 or BR-0011-0009; this run
+  does not edit it.
+- The `QFAI-ATDD-102` error cleared when `spec0011RecordHomes.test.ts` was
+  deleted; the post-deletion runs above show none.
+- The replacement skill text has no dedicated test. The user accepted this in
+  approving option 1.
+- `.qfai/evidence/atdd-spec-0011.md` `## Cross-spec obligations` keeps its
+  entries. Step 9 of the Change Request writes `Resolution: CR-20260925-0010`
+  on TDD-0021..TDD-0023 there, after the Change Request is applied.
+- Not independent reviewers for this pack: `sdd-withdraw-author`.
+
+## Final status
+
+- Final status: REVISE
+- Rationale: the spec side is written and validates as before, but the routed
+  gates and reviewers are `PENDING`, so the stage is not done.

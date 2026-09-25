@@ -41,6 +41,53 @@ IDs.
   AC-0013-0030 and AC-0013-0029, each with one BR, EX and TC, are added, seeded
   as TDD-0110..TDD-0115, one row per boundary.
 
+- Change ID: DELTA-0002
+- Date: 2026-09-25
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: Under `CR-20260925-0010`, AC-0013-0029, AC-0013-0030, their BR,
+  EX and TC, and ledger rows TDD-0110..TDD-0115 are removed and tombstoned.
+  The skill text they tested stays.
+
+## Triage (2026-09-25, CR-20260925-0010)
+
+The record-homes and approval-stop obligations, whose tests only checked the
+replacement skill text or the absence of the work-log surface, are withdrawn
+under `CR-20260925-0010`. The skill text stays. This heading names the Change
+Request because the renumbering round below took `## Triage (2026-09-25)`.
+
+| Source                                | Subject                                                                                                                                                                                 | Existing Spec | Operation | Sub-op | Approved By                            | Rationale                                                                                                                                       | Depends-On |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0007 | Remove AC-0013-0030, BR-0013-0023, EX-0013-0023, TC-0013-0038 and the REQ-0007 source line (`01_Spec.md:85`); ledger rows TDD-0110, TDD-0112, TDD-0113, TDD-0114 deleted and tombstoned | spec-0013     | UPDATE    | REMOVE | user (Claude Code structured question) | The amended REQ-0007 is checked by review. TDD-0110 tested only the kept replacement text; TDD-0112 to TDD-0114 prove absences                  | -          |
+| discussion-20260923060900824#REQ-0008 | Remove AC-0013-0029, BR-0013-0022, EX-0013-0022, TC-0013-0039 and the REQ-0008 source line (`01_Spec.md:86`); ledger rows TDD-0111, TDD-0115 deleted and tombstoned                     | spec-0013     | UPDATE    | REMOVE | user (Claude Code structured question) | The stop steps in the three files are already pinned by the existing `tests/assets/autoModeApprovalDegrade.test.ts`. TDD-0115 proves an absence | -          |
+
+- Approved By: the user, through a Claude Code structured question at
+  2026-09-25T04:52:16Z, for these rows as one set (Triage group G4 of
+  `CR-20260925-0010`). The same answer approved the Change Request.
+- Line references in the Subject cells are to the files before this run.
+- Retired ledger rows. Phase 2b deleted each row from `tdd/test-list.md` and
+  tombstoned its ID under a new `## TDD-ID reservations` section. No other row
+  is reset. The six rows were at `red` with `Evidence` `-`, so there is no cell
+  to copy. Their rounds are recorded under the matching headings of
+  `.qfai/evidence/atdd-spec-0013.md` (`#tdd-0110` to `#tdd-0115`), and each
+  tombstone points there.
+- The tests those rows drove are deleted in the same commit:
+  - by `/qfai-atdd`, whole files, every `it` block belonging to a deleted row:
+    `packages/qfai/tests/integration/spec0013RecordHomes.test.ts` (TDD-0110,
+    TDD-0112, TDD-0113, TDD-0114) and
+    `packages/qfai/tests/integration/spec0013ApprovalStop.test.ts` (TDD-0111,
+    TDD-0115);
+  - by `/qfai-implement`: the six `KNOWN_OPEN_BUT_TESTED` entries for
+    TDD-0110..TDD-0115 in `packages/qfai/tests/assets/openRowAlreadyTested.test.ts`.
+- REQ-0007 is checked by review. That review searches the shipped assistant tree
+  for both `.qfai/steering/` and `worklog-entry.schema.md`, because NFR-0006's
+  token list names only the first.
+- Decisions: DR-0013-0018 records the withdrawal. It supersedes
+  DR-0013-0006..DR-0013-0014, DR-0013-0016 and DR-0013-0017, and amends
+  DR-0013-0005 and DR-0013-0015, whose skill text and plan paragraph stand. DR-0013-0019 re-opens DR-0013-0008, whose
+  rejection this withdrawal takes. The renumbering record, the earlier Triage
+  rounds and DL-0001..DL-0013 stay as history.
+
 ## Triage (2026-09-25)
 
 The work-log removal chain moves to the next free IDs, as the renumbering
@@ -79,21 +126,23 @@ writes nothing beyond the Triage table and the stop report.
 
 ## Update History
 
-| Date       | DL      | Summary                                                              |
-| ---------- | ------- | -------------------------------------------------------------------- |
-| 2026-09-23 | DL-0001 | The skill names the spec-pack homes, not `Blocked-By`                |
-| 2026-09-23 | DL-0002 | Texts of AC-0013-0030, BR-0013-0023, EX-0013-0023 and TC-0013-0038   |
-| 2026-09-23 | DL-0003 | Texts of AC-0013-0029, BR-0013-0022, EX-0013-0022 and TC-0013-0039   |
-| 2026-09-23 | DL-0004 | TC-0013-0038 checks the whole assistant tree                         |
-| 2026-09-23 | DL-0005 | Source lines on the new ACs and qualified requirement lines          |
-| 2026-09-23 | DL-0006 | One BR, EX and TC per new AC                                         |
-| 2026-09-23 | DL-0007 | TDD-0110 and TDD-0111 are T2                                         |
-| 2026-09-23 | DL-0008 | Their owning module is the skill directory                           |
-| 2026-09-23 | DL-0009 | Tier seeded on the new rows only                                     |
-| 2026-09-23 | DL-0010 | BR-0013-0023 and BR-0013-0022 are realized by the shipped skill text |
-| 2026-09-23 | DL-0011 | The plan names the edit path and cites spec-0004 for the order       |
-| 2026-09-23 | DL-0012 | One row per boundary: TDD-0110..TDD-0115                             |
-| 2026-09-25 | DL-0013 | The work-log removal chain moves to the next free IDs                |
+| Date       | DL      | Summary                                                                         |
+| ---------- | ------- | ------------------------------------------------------------------------------- |
+| 2026-09-23 | DL-0001 | The skill names the spec-pack homes, not `Blocked-By`                           |
+| 2026-09-23 | DL-0002 | Texts of AC-0013-0030, BR-0013-0023, EX-0013-0023 and TC-0013-0038              |
+| 2026-09-23 | DL-0003 | Texts of AC-0013-0029, BR-0013-0022, EX-0013-0022 and TC-0013-0039              |
+| 2026-09-23 | DL-0004 | TC-0013-0038 checks the whole assistant tree                                    |
+| 2026-09-23 | DL-0005 | Source lines on the new ACs and qualified requirement lines                     |
+| 2026-09-23 | DL-0006 | One BR, EX and TC per new AC                                                    |
+| 2026-09-23 | DL-0007 | TDD-0110 and TDD-0111 are T2                                                    |
+| 2026-09-23 | DL-0008 | Their owning module is the skill directory                                      |
+| 2026-09-23 | DL-0009 | Tier seeded on the new rows only                                                |
+| 2026-09-23 | DL-0010 | BR-0013-0023 and BR-0013-0022 are realized by the shipped skill text            |
+| 2026-09-23 | DL-0011 | The plan names the edit path and cites spec-0004 for the order                  |
+| 2026-09-23 | DL-0012 | One row per boundary: TDD-0110..TDD-0115                                        |
+| 2026-09-25 | DL-0013 | The work-log removal chain moves to the next free IDs                           |
+| 2026-09-25 | DL-0014 | The record-homes and approval-stop obligations are withdrawn (CR-20260925-0010) |
+| 2026-09-25 | DL-0015 | RE-OPEN of DL-0004: the record-homes acceptance signal has no test              |
 
 ## Decision Log
 
@@ -237,6 +286,7 @@ notes: AC-0013-0030, BR-0013-0023 and EX-0013-0023 state the tree-wide absence c
 #### Migration / Follow-ups
 
 - No migration required.
+- DL-0015 re-opens this decision (DR-0013-0019).
 
 #### Rejected
 
@@ -495,6 +545,81 @@ notes: The work-log removal chain moves to the next free IDs, because main alloc
   do_not: Let one ID name two obligations.
   temptation: The two chains sit in different parts of the pack.
 
+### DL-0014
+
+#### Meta
+
+```yaml
+id: DL-0014
+date: 2026-09-25
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0013/01_Spec.md (discussion REQ-0007 and REQ-0008 lines removed)
+  - spec-0013/03_Acceptance-Criteria.md (AC-0013-0029, AC-0013-0030 removed)
+  - spec-0013/04_Business-Rules.md (BR-0013-0022, BR-0013-0023 removed)
+  - spec-0013/05_Examples.md (EX-0013-0022, EX-0013-0023 removed)
+  - spec-0013/06_Test-Cases.md (TC-0013-0038, TC-0013-0039 removed)
+  - spec-0013/tdd/test-list.md (TDD-0110..TDD-0115 deleted and tombstoned)
+notes: The record-homes and approval-stop obligations are withdrawn under CR-20260925-0010, approved by the user; the skill text stays (DR-0013-0018).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` deletes `spec0013RecordHomes.test.ts` and
+  `spec0013ApprovalStop.test.ts`, and `/qfai-implement` removes their six
+  `openRowAlreadyTested.test.ts` entries, in the same commit.
+
+#### Rejected
+
+- option: Keep TDD-0110 and TDD-0111 for the replacement skill text
+  reason: The user kept the text and withdrew its tests; REQ-0007 and REQ-0008 are checked by review.
+  do_not: Add a test that pins skill wording or the absence of the work-log surface.
+  temptation: The approval stop is a safety rule.
+
+#### Verification
+
+### Plan (DL-0014)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: no spec-0013 ledger row names a deleted test file, and the stop steps stay pinned
+  method: qfai validate --profile sdd and --profile tdd --spec spec-0013 with the repository build after the files are deleted; tests/assets/autoModeApprovalDegrade.test.ts
+  owner: dev
+  expected: No TDDLIST_TEST_FILE_MISSING and no finding naming TDD-0110..TDD-0115; the existing stop-step assertions pass.
+  links:
+    - .qfai/specs/spec-0013/tdd/test-list.md
+    - packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts
+```
+
+### DL-0015
+
+#### Meta
+
+```yaml
+id: DL-0015
+date: 2026-09-25
+primary: Behavior
+tags: ["@test"]
+compat: Change
+scope:
+  - spec-0013/06_Test-Cases.md (TC-0013-0038 removed)
+notes: RE-OPEN of DL-0004 (DR-0013-0019, re-opening DR-0013-0008). The user amended REQ-0007 to be checked by review through CR-20260925-0010.
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Keep the tree-wide scan as a guard test outside the ledger
+  reason: The user decided that nothing tests the surface is gone.
+  do_not: Add an unregistered test that scans for the work-log surface.
+  temptation: A search is cheap to automate.
+
 ## Origin
 
 - Consolidates: old spec-0011 (Spec Diff Protocol), spec-0038 (Auto-Discovery)
@@ -520,6 +645,12 @@ notes: The work-log removal chain moves to the next free IDs, because main alloc
   - DO NOT author Business Flow as Gherkin (\*.feature files)
   - Temptation: using Gherkin for "executable specs"
   - Reason: Business Flow is Markdown + Mermaid; Gherkin is deprecated for this purpose
+
+- Candidate: Each skill's test case scans its own directory only
+- Reason: DR-0013-0008 held that every acceptance signal needs a test.
+- DO NOT: Leave an acceptance signal without a test.
+- Temptation: Each skill owns only its own directory.
+- Re-opened by: DR-0013-0019
 
 ## ID Renumbering
 
@@ -651,6 +782,7 @@ Rows owned by this spec.
 | CR-20260923-0010 | `spec-0013/03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `06_Test-Cases.md`                                                                                         | confirm-only | claude-code (the user's standing instruction for this session) | 2026-09-23T10:52:00Z |
 | CR-20260913-0009 | `spec-0013/02_User-stories.md`, `tdd/test-list.md`                                                                                                                        | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
 | CR-20260913-0012 | `spec-0013/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive    | user (2026-09-24 reply)                                        | 2026-09-24T09:46:00Z |
+| CR-20260925-0010 | `spec-0013/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md`    | re-derive    | user (Claude Code structured question)                         | -                    |
 
 ### CR-20260913-0009: Ledger boundary repair
 

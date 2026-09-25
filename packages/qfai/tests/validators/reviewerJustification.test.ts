@@ -1,10 +1,8 @@
 /**
  * Validator: reviewerJustification (.qfai/review/**\/*.json).
  *
- * Covers TC-0004-0018: an empty justification on R-WORKLOG-DRIFT raises no
- * justification finding.
+ * Reports that hold no code requiring a justification raise no finding.
  */
-// QFAI:SPEC-0004:TC-0004-0018
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -38,28 +36,6 @@ describe("reviewerJustification validator", () => {
     try {
       const issues = await validateReviewerJustification(root, await getConfig(root));
       expect(issues).toEqual([]);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // TC-0004-0018: an empty justification on R-WORKLOG-DRIFT is not rejected
-  it("TC-0004-0018: raises no justification finding when R-WORKLOG-DRIFT carries an empty justification", async () => {
-    const root = await newRoot("revjust-empty");
-    try {
-      await seedReviewerReport(root, {
-        findings: [
-          { code: "R-WORKLOG-DRIFT", justification: "" },
-          { code: "R-PROMPT-SCANNER-DRIFT", justification: "" },
-        ],
-      });
-      const issues = await validateReviewerJustification(root, await getConfig(root));
-      // Read control: a code that still requires a justification is rejected, so
-      // the report was read.
-      const control = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
-      expect(control.map((i) => i.severity)).toEqual(["error"]);
-      const drift = issues.filter((i) => i.code === "R-WORKLOG-DRIFT");
-      expect(drift).toEqual([]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

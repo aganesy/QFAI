@@ -21,6 +21,91 @@
   `Blocked-By`, naming what it waits on and the status it was blocked at, as
   `TDDLIST_BLOCKED_MISSING_REF` checks. No ledger row changes.
 
+- Change ID: DELTA-0003
+- Date: 2026-09-25
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: Under `CR-20260925-0010`, AC-0004-0040, AC-0004-0041, their BR,
+  EX and TC and ledger rows TDD-0018 and TDD-0067..0071 are removed.
+  AC-0004-0018 and its chain require a justification on `R-REJECTED-READOPT`
+  and say nothing about the removed code. TDD-0072 stays `done`.
+
+## Triage (2026-09-25)
+
+The obligations whose only content is that the work-log surface is absent, or
+that repeat a behaviour an existing test already covers, are withdrawn under
+`CR-20260925-0010`. The production removal stays, and TDD-0072 keeps
+`R-REJECTED-READOPT` tested.
+
+| Source                                | Subject                                                                                                                                                                                                                                                                                              | Existing Spec | Operation | Sub-op | Approved By                            | Rationale                                                                                                                                                                                                                                             | Depends-On |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0002 | Remove AC-0004-0040, BR-0004-0034, EX-0004-0042, EX-0004-0043, TC-0004-0074, TC-0004-0075; ledger rows TDD-0067, TDD-0068 deleted and tombstoned; `16_Traceability-ledger.md` rows 17-19 and 24-25 removed                                                                                           | spec-0004     | UPDATE    | REMOVE | user (Claude Code structured question) | The amended REQ-0002, REQ-0006 and REQ-0010 no longer ask for an absence test. `QFAI-ASSETS-006` on a leftover copy is the generic check, tested by `assistantAssetProvenance.test.ts` ("does report an unshipped sibling")                           | -          |
+| discussion-20260923060900824#REQ-0004 | Remove AC-0004-0041, BR-0004-0035, EX-0004-0044, TC-0004-0076; ledger rows TDD-0069, TDD-0070, TDD-0071 deleted and tombstoned; `16_Traceability-ledger.md` rows 20 and 26 removed                                                                                                                   | spec-0004     | UPDATE    | REMOVE | user (Claude Code structured question) | TDD-0069 and TDD-0071 prove the removed check is gone. TDD-0070 repeats `tests/core/tddListBlockedStatus.test.ts` ("errors when Blocked-By is empty"), which keeps `TDDLIST_BLOCKED_MISSING_REF` tested                                               | -          |
+| discussion-20260923060900824#REQ-0003 | Narrow AC-0004-0018 (drop the `R-WORKLOG-DRIFT` And), BR-0004-0017 (drop its second sentence), EX-0004-0016 (drop the second And) and TC-0004-0018 (one boundary, Type `error`); ledger row TDD-0018 deleted and tombstoned, TDD-0072 kept                                                           | spec-0004     | UPDATE    | MODIFY | user (Claude Code structured question) | Before: two boundaries, `R-REJECTED-READOPT` rejected and `R-WORKLOG-DRIFT` ignored. After: the first only, which predates the change. This row deletes a ledger row, so it needs the approver                                                        | -          |
+| discussion-20260923060900824#REQ-0002 | Adjust `01_Spec.md` to what remains: the source lines naming discussion REQ-0002, 0004, 0006 and 0010, and the AC/BR/EX/TC range lines (`:114-117`). Re-point `16_Traceability-ledger.md` row 21 (BR-0004-0001) to a surviving test of `validate.ts`, and restate the Notes of row 22 (BR-0004-0017) | spec-0004     | UPDATE    | MODIFY | user (Claude Code structured question) | Row 21 binds a deleted file and BR-0004-0001 changed on the branch, so without a binding it raises `QFAI-TRACE-001`. `tests/core/validate.test.ts`, suggested in the plan, is not tracked; `tests/cli/validateRunIncomplete.test.ts` is one candidate | -          |
+
+- Approved By: the user, through a Claude Code structured question at
+  2026-09-25T04:52:16Z, for these rows as one set (Triage group G2 of
+  `CR-20260925-0010`). The same answer approved the Change Request.
+- Line references in the Subject cells are to the files before this run.
+- How the fourth row was applied:
+  - The four `## Relevant Requirements` lines stay. Each requirement's
+    behaviour clause still describes what `qfai validate` does, and
+    DR-0004-0025, which names them, stands. What changed is that no criterion
+    cites them.
+  - The range lines now end at AC-0004-0039, BR-0004-0033, EX-0004-0041 and
+    TC-0004-0073.
+  - Row 21 binds `packages/qfai/tests/core/specScopeValidate.test.ts`. It runs
+    the real `validateProject` over the `sdd` profile and asserts findings from
+    its validators. `tests/cli/validateRunIncomplete.test.ts` was not taken,
+    because it replaces `validateProject` with a mock. `validate.ts` changed
+    on the branch, so the binding needs no `Proof`.
+- Retired ledger rows. Phase 2b deleted each row from `tdd/test-list.md` and
+  tombstoned its ID under `## TDD-ID reservations`. No row is reset. Each row's
+  `Evidence` cell, verbatim:
+  - `spec-0004/TDD-0018`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+63b9d5384b13883d4bd889c2bce67aea49f61b4073591f3527e76605e8bfcfd5 -> .qfai/evidence/implement-spec-0004.md#tdd-0018`
+  - `spec-0004/TDD-0067`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+6bd3dce938ff90e748781d76e25d0dec2f4538bdd7d90f40496b14437d813b05 -> .qfai/evidence/atdd-spec-0004.md#tdd-0067`
+  - `spec-0004/TDD-0068`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+73bc7ce72b88241119b80e5b5eef327de074ad02bbc9152729d42e65e0221ba9 -> .qfai/evidence/atdd-spec-0004.md#tdd-0068`
+  - `spec-0004/TDD-0069`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+66f265784e365f4d16870ec097515ce65966ab9360048c7a35c5d49a0996b3b9 -> .qfai/evidence/atdd-spec-0004.md#tdd-0069`
+  - `spec-0004/TDD-0070`:
+    `RED:falsifiability GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+ea5fbfa46d21439bd483cb0e7b67826bed86536f571d746faef52aadb29a2870 -> .qfai/evidence/atdd-spec-0004.md#tdd-0070`
+  - `spec-0004/TDD-0071`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+66f265784e365f4d16870ec097515ce65966ab9360048c7a35c5d49a0996b3b9 -> .qfai/evidence/atdd-spec-0004.md#tdd-0071`
+- TDD-0072 stays `done` with every cell unchanged, `Boundary`
+  `rejected-readopt-empty` included. It is the boundary TC-0004-0018 keeps.
+  Its evidence names TDD-0018 as `Satisfied-by`, which stays as the record of
+  how that round ran.
+- The tests those rows drove are deleted in the same commit:
+  - by `/qfai-atdd`, whole files, every `it` block belonging to a deleted row:
+    `spec0004WorklogSurfaceRemoval.test.ts` (TDD-0067),
+    `spec0004WithdrawnSchemaFinding.test.ts` (TDD-0068),
+    `spec0004BlockedRowNeedsOnlyBlockedBy.test.ts` (TDD-0069),
+    `spec0004BlockedRowEmptyBlockedBy.test.ts` (TDD-0070) and
+    `spec0004SteeringUnreadableBlockedRow.test.ts` (TDD-0071), all under
+    `packages/qfai/tests/integration/`;
+  - by `/qfai-implement`, in
+    `packages/qfai/tests/validators/reviewerJustification.test.ts` (TDD-0018):
+    the `it` "TC-0004-0018: raises no justification finding when
+    R-WORKLOG-DRIFT carries an empty justification" with its comment (lines
+    46-66), the header sentence (lines 4-5) and the
+    `// QFAI:SPEC-0004:TC-0004-0018` annotation (line 7). Three other tests
+    stay in the file.
+- Coverage that stays, for the reviewer notes carried from the pack:
+  - REQ-0004's positive half, a well-formed `Blocked-By` passing, is covered by
+    `tddListBlockedStatus.test.ts` ("accepts ... with its departure status").
+  - The pack's DUS-002 lines that name `QFAI-ASSETS-006` on the withdrawn
+    schema derive no test or example here: DAC-002-03, the two edge seeds and
+    the idempotency seed of `03_Story-Workshop.md`. The generic check is
+    covered as the first row says.
+- Decisions: DR-0004-0044 records the withdrawal. DR-0004-0045..0047 re-open
+  DR-0004-0028, DR-0004-0032 and DR-0004-0040, whose rejected options this
+  withdrawal takes. The 2026-09-23 Triage rows and DL-0001..DL-0029 stay as
+  history.
+
 ## Triage (2026-09-23)
 
 `qfai validate` stops reading the project-root work-log surface
@@ -135,6 +220,10 @@ only, and a `blocked` ledger row needs nothing beyond its `Blocked-By`.
 | 2026-09-23 | DL-0027 | TDD-0072 runs after TDD-0018 and cites it as `Satisfied-by`                    |
 | 2026-09-23 | DL-0028 | TDD-0067..TDD-0071 need no change; TC-0004-0074 keeps one row                  |
 | 2026-09-23 | DL-0029 | A blocked row passes on a well-formed `Blocked-By` (CR-20260923-0011)          |
+| 2026-09-25 | DL-0030 | The work-log absence obligations are withdrawn (CR-20260925-0010)              |
+| 2026-09-25 | DL-0031 | RE-OPEN of DL-0014: items that assert existing behaviour are dropped           |
+| 2026-09-25 | DL-0032 | RE-OPEN of DL-0018: the R-WORKLOG-DRIFT clause leaves AC-0004-0018             |
+| 2026-09-25 | DL-0033 | RE-OPEN of DL-0026: TDD-0018 is retired                                        |
 
 ## Decision Log
 
@@ -537,6 +626,7 @@ notes: Every appended item is kept (DR-0004-0028).
 #### Migration / Follow-ups
 
 - `/qfai-atdd` writes the tests for TC-0004-0074..0076.
+- DL-0031 re-opens this decision (DR-0004-0045).
 
 #### Rejected
 
@@ -644,6 +734,7 @@ notes: The justification rule resolves to the set reviewerJustification.ts enfor
 
 - No migration required.
 - DL-0025 re-opens this decision (DR-0004-0039).
+- DL-0032 re-opens its rejection of dropping the `R-WORKLOG-DRIFT` clause (DR-0004-0046).
 
 #### Rejected
 
@@ -865,6 +956,7 @@ notes: TC-0004-0018 is Level unit and both its rows are Layer unit, derived from
   `unit`, and stays.
 - DL-0013's VFY-001 names `level: integration` for this case. It is now
   `unit`.
+- DL-0033 re-opens its rejection of retiring TDD-0018 (DR-0004-0047).
 
 #### Rejected
 
@@ -963,6 +1055,173 @@ notes: The items state TDDLIST_BLOCKED_MISSING_REF as it is; the passing Blocked
   do_not: Weaken the check to fit the example.
   temptation: The example is shorter than the check.
 
+### DL-0030
+
+#### Meta
+
+```yaml
+id: DL-0030
+date: 2026-09-25
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0004/01_Spec.md (range lines)
+  - spec-0004/03_Acceptance-Criteria.md (AC-0004-0018 narrowed; AC-0004-0040, AC-0004-0041 removed)
+  - spec-0004/04_Business-Rules.md (BR-0004-0017 narrowed; BR-0004-0034, BR-0004-0035 removed)
+  - spec-0004/05_Examples.md (EX-0004-0016 narrowed; EX-0004-0042..0044 removed)
+  - spec-0004/06_Test-Cases.md (TC-0004-0018 narrowed; TC-0004-0074..0076 removed)
+  - spec-0004/16_Traceability-ledger.md (rows of the removed items; BR-0004-0001 re-bound)
+  - spec-0004/tdd/test-list.md (TDD-0018, TDD-0067..0071 deleted and tombstoned)
+notes: The work-log absence obligations are withdrawn under CR-20260925-0010, approved by the user; TDD-0072 stays (DR-0004-0044).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` deletes the five `spec0004*` integration test files, and
+  `/qfai-implement` removes the TDD-0018 test from
+  `reviewerJustification.test.ts`, in the same commit.
+
+#### Rejected
+
+- option: Bind BR-0004-0001 to tests/cli/validateRunIncomplete.test.ts
+  reason: That file replaces validateProject with a mock, so it runs none of the validators BR-0004-0001 is about.
+  do_not: Bind a machine-gate rule to a test that mocks the gate.
+  temptation: The Change Request named it as a candidate.
+- option: Remove the four discussion requirement lines from 01_Spec.md
+  reason: Each requirement's behaviour clause still describes qfai validate, and DR-0004-0025 stands.
+  do_not: Leave the upstream requirements out of 01_Spec.md.
+  temptation: No criterion cites them any more.
+
+#### Verification
+
+### Plan (DL-0030)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: no spec-0004 ledger row or binding names a deleted test file
+  method: qfai validate --profile sdd and --profile tdd --spec spec-0004 with the repository build, after the test files are deleted
+  owner: dev
+  expected: No TDDLIST_TEST_FILE_MISSING and no QFAI-TRACE-001 for spec-0004.
+  links:
+    - .qfai/specs/spec-0004/tdd/test-list.md
+    - .qfai/specs/spec-0004/16_Traceability-ledger.md
+```
+
+### DL-0031
+
+#### Meta
+
+```yaml
+id: DL-0031
+date: 2026-09-25
+primary: Behavior
+tags: ["@test"]
+compat: Change
+scope:
+  - spec-0004/05_Examples.md (EX-0004-0043 removed)
+  - spec-0004/06_Test-Cases.md (TC-0004-0075, TC-0004-0076 removed)
+notes: RE-OPEN of DL-0014 (DR-0004-0045, re-opening DR-0004-0028). The user approved dropping items an existing test already covers through CR-20260925-0010.
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Keep TDD-0070 beside tddListBlockedStatus.test.ts
+  reason: It repeats "errors when Blocked-By is empty", which predates the change.
+  do_not: Add a second test of a behaviour an existing test already covers.
+  temptation: The row was already done.
+
+#### Verification
+
+### Plan (DL-0031)
+
+```yaml
+- id: VFY-001
+  level: unit
+  target: TDDLIST_BLOCKED_MISSING_REF and QFAI-ASSETS-006 stay tested
+  method: tests/core/tddListBlockedStatus.test.ts and tests/core/assistantAssetProvenance.test.ts
+  owner: dev
+  expected: The existing cases pass unchanged.
+  links:
+    - packages/qfai/tests/core/tddListBlockedStatus.test.ts
+    - packages/qfai/tests/core/assistantAssetProvenance.test.ts
+```
+
+### DL-0032
+
+#### Meta
+
+```yaml
+id: DL-0032
+date: 2026-09-25
+primary: Behavior
+tags: ["@test"]
+compat: Change
+scope:
+  - spec-0004/03_Acceptance-Criteria.md (AC-0004-0018)
+  - spec-0004/04_Business-Rules.md (BR-0004-0017)
+  - spec-0004/05_Examples.md (EX-0004-0016)
+  - spec-0004/06_Test-Cases.md (TC-0004-0018)
+notes: RE-OPEN of DL-0018 (DR-0004-0046, re-opening DR-0004-0032). The R-WORKLOG-DRIFT clause goes because the code is gone, approved by the user through CR-20260925-0010.
+```
+
+#### Migration / Follow-ups
+
+- No migration required. TDD-0072 already tests the boundary that stays.
+
+#### Rejected
+
+- option: Keep the clause and test that R-WORKLOG-DRIFT raises nothing
+  reason: The user decided that nothing reacts to the work-log surface and that no test checks a removed code is ignored.
+  do_not: Test that a removed finding code is ignored.
+  temptation: A rule that lost a code reads as unfinished without a test of the loss.
+
+#### Verification
+
+### Plan (DL-0032)
+
+```yaml
+- id: VFY-001
+  level: unit
+  target: an empty justification on R-REJECTED-READOPT is still an error
+  method: TDD-0072, tests/validators/reviewerRejectedReadopt.test.ts
+  owner: dev
+  expected: The case passes unchanged.
+  links:
+    - packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts
+```
+
+### DL-0033
+
+#### Meta
+
+```yaml
+id: DL-0033
+date: 2026-09-25
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0004/tdd/test-list.md (TDD-0018 deleted and tombstoned)
+notes: RE-OPEN of DL-0026 (DR-0004-0047, re-opening DR-0004-0040). The user approved retiring TDD-0018 through CR-20260925-0010; no row replaces it.
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Seed a fresh row for the retired boundary
+  reason: The boundary is no longer an obligation.
+  do_not: Seed a row for a boundary the case no longer declares.
+  temptation: DL-0026 paired retiring with reseeding.
+
 ## Rejected
 
 - Candidate: Narrow the contract's justification sentence
@@ -975,12 +1234,28 @@ notes: The items state TDDLIST_BLOCKED_MISSING_REF as it is; the passing Blocked
 - DO NOT: Narrow it past the catalog codes BR-0015-0013 relies on.
 - Temptation: Read literally, the broad sentence still covered R-WORKLOG-DRIFT.
 - Re-opened by: DR-0004-0039
+- Candidate: Drop the items that assert existing behaviour
+- Reason: DR-0004-0028 kept every appended item.
+- DO NOT: Drop EX-0004-0043 or TC-0004-0075 as needing no new code.
+- Temptation: The check they assert already exists.
+- Re-opened by: DR-0004-0045
+- Candidate: Drop the R-WORKLOG-DRIFT clause from AC-0004-0018 and BR-0004-0017
+- Reason: DR-0004-0032 held that dropping it would remove an approved acceptance clause to fit the contract.
+- DO NOT: Remove an approved acceptance clause to fit the contract.
+- Temptation: The contract sentence was broader than the rule.
+- Re-opened by: DR-0004-0046
+- Candidate: Retire TDD-0018 and seed a fresh unit row
+- Reason: DR-0004-0040 held that the user had approved keeping TDD-0018.
+- DO NOT: Retire a row the user approved keeping.
+- Temptation: A fresh row avoids relabelling one in place.
+- Re-opened by: DR-0004-0047
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                                                                 | Mode      | Approved by   | Applied at           |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------- | -------------------- |
-| CR-20260923-0011 | `spec-0004/03_Acceptance-Criteria.md`, `spec-0004/04_Business-Rules.md`, `spec-0004/05_Examples.md`, `spec-0004/06_Test-Cases.md` | re-derive | yusuke_senaga | 2026-09-23T20:08:13Z |
+| CR ID            | Upstream artifact                                                                                                                                                                                   | Mode      | Approved by                            | Applied at           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------- | -------------------- |
+| CR-20260923-0011 | `spec-0004/03_Acceptance-Criteria.md`, `spec-0004/04_Business-Rules.md`, `spec-0004/05_Examples.md`, `spec-0004/06_Test-Cases.md`                                                                   | re-derive | yusuke_senaga                          | 2026-09-23T20:08:13Z |
+| CR-20260925-0010 | `spec-0004/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `16_Traceability-ledger.md`, `tdd/test-list.md` | re-derive | user (Claude Code structured question) | -                    |
 
 ## 2026-09-04
 

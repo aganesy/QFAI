@@ -81,7 +81,7 @@
 ## BR-0004-0017: justification non-empty required for R-REJECTED-READOPT
 
 - AC-Refs: AC-0004-0018
-- An `R-REJECTED-READOPT` finding object requires a non-empty `justification: <string>` (trimmed length > 0); an empty, whitespace-only or missing value is an advisory-failing error. `R-WORKLOG-DRIFT` is no longer a Reviewer-Gate code; a report carrying it raises no justification finding.
+- An `R-REJECTED-READOPT` finding object requires a non-empty `justification: <string>` (trimmed length > 0); an empty, whitespace-only or missing value is an advisory-failing error.
 
 ## BR-0004-0021: sunset minor named in deprecation warning
 
@@ -167,17 +167,3 @@
 - AC-Refs: AC-0004-0039
 - The lane MUST pass silently (no `R-PACK-LOCATION-DRIFT`) when pack directories are added only under allowed roots or when no pack directory is touched.
 - Pre-existing legacy packs on unrelated PRs MUST NOT be re-flagged — scope is staged/changed dirs only (per DR-0274).
-
-## BR-0004-0034: validate does not read the work-log directory
-
-- AC-Refs: AC-0004-0040
-- Contract-Refs: CLI-VAL
-- `qfai validate` does not read `.qfai/steering/` and reports nothing about it.
-- The withdrawn schema is not in the governed-asset manifest, so a remaining `.qfai/assistant/catalog/worklog-entry.schema.md` is an unshipped file and raises `QFAI-ASSETS-006`.
-
-## BR-0004-0035: a blocked row needs only its Blocked-By
-
-- AC-Refs: AC-0004-0041
-- Contract-Refs: CLI-VAL
-- A `blocked` ledger row needs only a well-formed `Blocked-By`: what the row waits on, then `— blocked at <status>`, where the status is one of `todo`, `red`, `green`, `refactor` or `review-fix`.
-- Ledger checks do not read `.qfai/steering/`.

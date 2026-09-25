@@ -151,19 +151,6 @@ Scenario: レガシー管理ブロックからの自動移行
   And 新しい管理ブロックに置換される
 ```
 
-```gherkin
-# AC-0003-0039
-# US-Refs: US-0003-0016
-# Source: discussion-20260923060900824#REQ-0001, #REQ-0006, #REQ-0010
-Scenario: No work-log surface is seeded or touched
-  Given an empty project, or one holding an adopter's `.qfai/steering/` and a `catalog/worklog-entry.schema.md` recorded in `.assets.lock.json`
-  When `qfai init` runs, with or without `--force`
-  Then nothing under `.qfai/steering/` is created, modified or deleted
-  And the report names no path under `.qfai/steering/`
-  And the generated `.github/copilot-instructions.md` has no work-log line
-  And under `--force` a recorded copy of the schema is deleted while it matches its record, and an edited copy is kept with a note that its content has been edited
-```
-
 ## AC Catalog (optional)
 
 | AC-ID        | Title                                                       | Notes      | Priority |
@@ -205,7 +192,6 @@ Scenario: No work-log surface is seeded or touched
 | AC-0003-0036 | declined name の copy 前除外                                | REQ-0030   | P1       |
 | AC-0003-0037 | Codex agent profile 生成                                    | REQ-0009   | P1       |
 | AC-0003-0038 | Independent shipped checks and a complete aggregate verdict | REQ-0026   | P1       |
-| AC-0003-0039 | No work-log surface is seeded or touched                    | REQ-0032   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 

@@ -154,18 +154,3 @@
 - AC-Refs: AC-0013-0028
 
 - SDD preflight readiness MUST NOT depend on whether an optional discussion side artifact is present, absent, malformed, or in a legacy format.
-
-## BR-0013-0022: The Approval Stop Leaves Only Its Existing Record
-
-- AC-Refs: AC-0013-0029
-
-- The record of this stop is the `Approved By: -` cells, the `QFAI-TRIAGE-005` errors they raise, and the stop report. The stage writes nothing else for it.
-- `SKILL.md`, `references/sdd-execution-playbook.md` and `references/sdd-triage.md` state the same three steps.
-
-## BR-0013-0023: Decisions And Discoveries Go To The Spec Pack
-
-- AC-Refs: AC-0013-0030
-
-- A decision goes to the spec's `07_Decisions.md` or a Change Request.
-- A consultation or an out-of-scope discovery goes to `08_Open-questions.md` or a Change Request.
-- No file under `packages/qfai/assets/init/.qfai/assistant/**` names `.qfai/steering/` or `worklog-entry.schema.md`, and no shipped `/qfai-sdd` text cites a work-log finding code as an example.

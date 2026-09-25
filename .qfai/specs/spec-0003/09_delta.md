@@ -1,5 +1,56 @@
 # 09 Delta
 
+## Triage (2026-09-25)
+
+The obligations whose only content is that the work-log surface is absent are
+withdrawn under `CR-20260925-0010`. The production removal stays.
+
+| Source                                | Subject                                                                                                                        | Existing Spec | Operation | Sub-op | Approved By                            | Rationale                                                                                                                                                                   | Depends-On |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------- | ------ | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0010 | Remove BR-0003-0049, EX-0003-0052, EX-0003-0053, TC-0003-0059, TC-0003-0060; ledger rows TDD-0094..0097 deleted and tombstoned | spec-0003     | UPDATE    | REMOVE | user (Claude Code structured question) | The amended REQ-0001 and REQ-0010 no longer ask for an absence test. The rule states only that init writes nothing under `.qfai/steering/`, which no code can do (NFR-0006) | -          |
+| discussion-20260923060900824#REQ-0006 | Remove BR-0003-0050, EX-0003-0054, TC-0003-0061; ledger rows TDD-0098, TDD-0099 deleted and tombstoned                         | spec-0003     | UPDATE    | REMOVE | user (Claude Code structured question) | The retire pass is generic and already tested by `tests/core/assistantAssetProvenance.test.ts` ("retires a governed file the installed release no longer ships")            | -          |
+| discussion-20260923060900824#REQ-0010 | Remove AC-0003-0039, its catalog row (`03_Acceptance-Criteria.md:208`) and the spec-local REQ-0032 (`01_Spec.md:112`)          | spec-0003     | UPDATE    | REMOVE | user (Claude Code structured question) | No rule is left under the criterion once the two rows above apply. REQ-0032 exists only to carry it (DR-0003-0013)                                                          | -          |
+| discussion-20260923060900824#REQ-0010 | Narrow US-0003-0016 Notes (`02_User-stories.md:38`) to "Implements REQ-0018"                                                   | spec-0003     | UPDATE    | MODIFY | user (Claude Code structured question) | Drops the citation of the removed REQ-0032. Deletes no ledger row                                                                                                           | -          |
+
+- Approved By: the user, through a Claude Code structured question at
+  2026-09-25T04:52:16Z, for these rows as one set (Triage group G1 of
+  `CR-20260925-0010`). The same answer approved the Change Request.
+- Line references in the Subject cells are to the files before this run.
+- Retired ledger rows. Phase 2b deleted each row from `tdd/test-list.md` and
+  tombstoned its ID under `## TDD-ID reservations`. No other row is reset. Each
+  row's `Evidence` cell, verbatim:
+  - `spec-0003/TDD-0094`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0094`
+  - `spec-0003/TDD-0095`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0095`
+  - `spec-0003/TDD-0096`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0096`
+  - `spec-0003/TDD-0097`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0097`
+  - `spec-0003/TDD-0098`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0098`
+  - `spec-0003/TDD-0099`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9 -> .qfai/evidence/atdd-spec-0003.md#tdd-0099`
+- The tests those rows drove are deleted in the same commit, by `/qfai-atdd`.
+  Every `it` block in both files belonged to a deleted row:
+  - `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts`
+    (TDD-0094..0097);
+  - `packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts`
+    (TDD-0098, TDD-0099).
+- Lines of the discussion pack that derive no test or example. The pack's
+  2026-09-25 drift event names most of them. These are read the same way,
+  because they describe the withdrawn schema under the generic retire pass:
+  - `03_Story-Workshop.md` DAC-002-03;
+  - the two DUS-002 edge seeds: the edited schema copy and the copy with no lock
+    record;
+  - the DUS-002 idempotency seed.
+- Decisions: DR-0003-0030 records the withdrawal and supersedes the decisions
+  that decided the withdrawn items. DR-0003-0031 and DR-0003-0032 re-open
+  DR-0003-0017 and DR-0003-0018, whose rejected options this withdrawal takes.
+  The 2026-09-23 Triage rows and DL-0001..DL-0017 stay as history.
+- The next ledger row is TDD-0100. The tombstones hold that high-water mark,
+  which `CR-20260924-0005` relies on.
+
 ## Triage (2026-09-23)
 
 `qfai init` stops seeding the project-root work-log surface `.qfai/steering/`,
@@ -73,6 +124,9 @@ and leaves an existing one untouched.
 | 2026-09-23 | DL-0015 | BR-0003-0049 is realized by what init does not write                            |
 | 2026-09-23 | DL-0016 | The plan names init's removed symbols and cites spec-0004's plan for the order  |
 | 2026-09-23 | DL-0017 | The removal's tests build their own trees                                       |
+| 2026-09-25 | DL-0018 | The work-log absence obligations are withdrawn (CR-20260925-0010)               |
+| 2026-09-25 | DL-0019 | RE-OPEN of DL-0005: the withdrawn schema needs no rule of its own               |
+| 2026-09-25 | DL-0020 | RE-OPEN of DL-0006: neither init run is tested for the absent surface           |
 
 ## Decision Log
 
@@ -219,6 +273,7 @@ notes: The withdrawn schema's retirement keeps its own rule, example and test ca
 #### Migration / Follow-ups
 
 - No migration required. The retire pass already exists.
+- DL-0019 re-opens this decision (DR-0003-0031).
 
 #### Rejected
 
@@ -245,6 +300,7 @@ notes: TC-0003-0060 covers plain init and init --force (DR-0003-0018).
 #### Migration / Follow-ups
 
 - No migration required.
+- DL-0020 re-opens this decision (DR-0003-0032).
 
 #### Rejected
 
@@ -546,6 +602,138 @@ notes: The removal's tests build their own trees; no shared fixture is planned (
   do_not: Plan a shared fixture before three callers need the same tree.
   temptation: Three tests put files under the same directory.
 
+### DL-0018
+
+#### Meta
+
+```yaml
+id: DL-0018
+date: 2026-09-25
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0003/01_Spec.md (REQ-0032 removed)
+  - spec-0003/02_User-stories.md (US-0003-0016 Notes)
+  - spec-0003/03_Acceptance-Criteria.md (AC-0003-0039 removed)
+  - spec-0003/04_Business-Rules.md (BR-0003-0049, BR-0003-0050 removed)
+  - spec-0003/05_Examples.md (EX-0003-0052..0054 removed)
+  - spec-0003/06_Test-Cases.md (TC-0003-0059..0061 removed)
+  - spec-0003/tdd/test-list.md (TDD-0094..0099 deleted and tombstoned)
+notes: The work-log absence obligations are withdrawn under CR-20260925-0010, approved by the user; the production removal stays (DR-0003-0030).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` deletes `spec0003InitWorklogSurface.test.ts` and
+  `spec0003WithdrawnSchemaRetirement.test.ts` in the same commit.
+
+#### Rejected
+
+- option: Keep the absence tests as the 2026-09-23 pack asked
+  reason: The user withdrew them; a test that a deleted surface is absent covers no behaviour the product has.
+  do_not: Add a test that asserts `.qfai/steering/` or the withdrawn schema is absent.
+  temptation: CLAUDE.md asks for test coverage of every source change.
+
+#### Verification
+
+### Plan (DL-0018)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: no spec-0003 ledger row names a deleted test file
+  method: qfai validate --profile sdd and --profile tdd --spec spec-0003 with the repository build, after the test files are deleted
+  owner: dev
+  expected: No TDDLIST_TEST_FILE_MISSING and no finding naming TDD-0094..0099.
+  links:
+    - .qfai/specs/spec-0003/tdd/test-list.md
+```
+
+### DL-0019
+
+#### Meta
+
+```yaml
+id: DL-0019
+date: 2026-09-25
+primary: Behavior
+tags: ["@test"]
+compat: Change
+scope:
+  - spec-0003/04_Business-Rules.md (BR-0003-0050 removed)
+  - spec-0003/05_Examples.md (EX-0003-0054 removed)
+  - spec-0003/06_Test-Cases.md (TC-0003-0061 removed)
+notes: RE-OPEN of DL-0005 (DR-0003-0031, re-opening DR-0003-0017). The user approved relying on the generic retire-pass test through CR-20260925-0010.
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Exempt `catalog/worklog-entry.schema.md` from the generic retire pass
+  reason: The user kept the mechanism generic, with no exemption for the path.
+  do_not: Add special handling for the withdrawn schema.
+  temptation: An exemption would let its own test stay meaningful.
+
+#### Verification
+
+### Plan (DL-0019)
+
+```yaml
+- id: VFY-001
+  level: unit
+  target: the generic retire pass still retires an unshipped governed file
+  method: tests/core/assistantAssetProvenance.test.ts, "retires a governed file the installed release no longer ships"
+  owner: dev
+  expected: The existing case passes unchanged.
+  links:
+    - packages/qfai/tests/core/assistantAssetProvenance.test.ts
+```
+
+### DL-0020
+
+#### Meta
+
+```yaml
+id: DL-0020
+date: 2026-09-25
+primary: Behavior
+tags: ["@test"]
+compat: Change
+scope:
+  - spec-0003/06_Test-Cases.md (TC-0003-0060 removed)
+notes: RE-OPEN of DL-0006 (DR-0003-0032, re-opening DR-0003-0018). The user approved testing neither init run for the absent surface through CR-20260925-0010.
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Keep TC-0003-0060 for the `--force` run only
+  reason: The user withdrew every absence test, whichever run it reads.
+  do_not: Restore a test of either run that asserts `.qfai/steering/` is unchanged.
+  temptation: NFR-0003 is a data-loss floor.
+
+#### Verification
+
+### Plan (DL-0020)
+
+```yaml
+- id: VFY-001
+  level: manual
+  target: no source path names .qfai/steering/
+  method: NFR-0006's search over packages/qfai/src/** and packages/qfai/assets/**
+  owner: reviewer
+  expected: 0 matches outside CHANGELOG.md and .qfai/** records.
+  links:
+    - .qfai/discussion/discussion-20260923060900824/07_NFR.md
+```
+
 ## 2026-09-22 — US-0003-0014 retired (README file generation)
 
 - Date: 2026-09-22
@@ -589,6 +777,16 @@ carry no README, which is what this change specifies.
   EX-0003-0052..0054 and TC-0003-0059..0061 are added, seeded as
   TDD-0094..0099. OQ-0003-0002 is resolved as moot.
 
+- Change ID: DELTA-0003
+- Date: 2026-09-25
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: Under `CR-20260925-0010`, REQ-0032, AC-0003-0039, BR-0003-0049,
+  BR-0003-0050, EX-0003-0052..0054 and TC-0003-0059..0061 are removed, and
+  ledger rows TDD-0094..0099 are deleted and tombstoned. US-0003-0016 cites
+  REQ-0018 only. `qfai init` still seeds nothing under `.qfai/steering/`; no
+  test asserts it.
+
 ## Migration Record
 
 This spec consolidates the following archived specs:
@@ -617,6 +815,16 @@ This spec consolidates the following archived specs:
 - Reason: 1 CAP = 1 spec directory の原則に反し、init 関連の変更時に 3 スペック間の整合性管理が必要になる
 - DO NOT: init コマンドの機能を複数スペックに分割しないこと
 - Temptation: 「instructions 配布は独立機能」だが、実装上は init.ts の一部であり分離は不要
+- Candidate: Rely on the generic retire-pass test in assistantAssetProvenance.test.ts
+- Reason: DR-0003-0017 kept BR-0003-0050, EX-0003-0054 and TC-0003-0061 for the withdrawn schema.
+- DO NOT: Drop BR-0003-0050, EX-0003-0054 or TC-0003-0061 without the user's approval.
+- Temptation: The retire pass is already tested.
+- Re-opened by: DR-0003-0031
+- Candidate: Cover init --force only
+- Reason: DR-0003-0018 had TC-0003-0060 read the directory after a plain run and after a `--force` run.
+- DO NOT: Leave the plain run untested.
+- Temptation: Upstream REQ-0010's acceptance named `--force` alone.
+- Re-opened by: DR-0003-0032
 
 ## v1.7.13 (2026-04-04) — Canonical Sidecar Convergence
 
@@ -794,13 +1002,14 @@ observable:
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                                                                                       | Mode      | Approved by                                                    | Applied at           |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
-| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                              | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
-| CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md` | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
-| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                        | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
-| CR-20260923-0011 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`     | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:15:07Z |
-| CR-20260923-0013 | `spec-0003/tdd/test-list.md`                                                                                                            | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:52:00Z |
+| CR ID            | Upstream artifact                                                                                                                                                                            | Mode      | Approved by                                                    | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------- | -------------------- |
+| CR-20260923-0003 | `spec-0003/04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                                                                   | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T03:05:00Z |
+| CR-20260923-0006 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`                                                      | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:13:56Z |
+| CR-20260923-0007 | `spec-0003/06_Test-Cases.md`, `tdd/test-list.md`                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T08:26:35Z |
+| CR-20260923-0011 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                          | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:15:07Z |
+| CR-20260923-0013 | `spec-0003/tdd/test-list.md`                                                                                                                                                                 | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T11:52:00Z |
+| CR-20260925-0010 | `spec-0003/01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user (Claude Code structured question)                         | -                    |
 
 ## Triage (2026-09-15)
 

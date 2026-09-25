@@ -48,14 +48,10 @@ What the validators of this spec lose:
 
 The order inside the change. Only its head has to be green:
 
-1. Write the failing tests first: TC-0003-0059..0061, TC-0004-0074..0076, both
-   boundaries of TC-0004-0018, TC-0011-0013, TC-0013-0038 and TC-0013-0039.
-   Each fails against the current code, except two rows that assert behaviour
-   the code already has: TDD-0072 (`rejected-readopt-empty`) and TDD-0070
-   (`blocked-by-empty`). Those two record RED under
-   `qfai-implement/references/red-not-observable.md`. TDD-0072 is a `unit`
-   row, which cannot cite production code as `Satisfied-by`, so it runs after
-   TDD-0018 reaches `done` and cites TDD-0018.
+1. Write the one test the change adds, TDD-0072 (`rejected-readopt-empty`).
+   It asserts behaviour the code already has, so it records RED as a
+   falsifiability proof under `qfai-implement/references/red-not-observable.md`.
+   No test asserts that the work-log surface is absent (`CR-20260925-0010`).
 2. Remove what uses a symbol before the symbol:
    - the seed code in `init.ts`, which spec-0003's plan lists;
    - the validator code above;
@@ -90,7 +86,9 @@ The order inside the change. Only its head has to be green:
      and `tests/e2e/qfai-traceability.md`, and in `KNOWN_TEST_FILE_DRIFT`;
    - the entries in the code registries and in `tsconfig.tests.json`;
    - the `joinProjectSteering` assertions of the TC-0003-0025 tests in
-     `initSpec0003.test.ts` and `init.test.ts`.
+     `initSpec0003.test.ts` and `init.test.ts`;
+   - the absence tests `CR-20260925-0010` withdraws, with their ledger rows.
+     Each spec's `09_delta.md` `## Triage (2026-09-25)` names them.
 5. Move the entries' content:
    - Move each entry's content to the target its disposition names
      (`discussion-20260923060900824#REQ-0013`).
@@ -111,10 +109,10 @@ The order inside the change. Only its head has to be green:
    re-pin may only lower a count, or strike a file whose count reaches zero. No
    file may be added, and a ledger with no pin stays at zero.
 
-`QFAI-ATDD-101`, `-102` and `-112` clear inside the change, before step 7: the
-tests of step 1 carry the new cases' annotations, and step 4 removes the
-annotations of the removed ones. The stage that owns each row's layer,
-`/qfai-atdd` or `/qfai-implement`, writes them; no separate step follows.
+`QFAI-ATDD-101`, `-102` and `-112` clear inside the change, before step 7: step
+4 removes the annotations of the removed cases. The stage that owns each row's
+layer, `/qfai-atdd` or `/qfai-implement`, removes them; no separate step
+follows.
 
 The spec-pack edits of this `/qfai-sdd` run land in the same change. Removing
 the ledger rows first would leave test annotations citing unregistered test
@@ -176,18 +174,17 @@ What the change leaves out:
 
 ### Tests for the work-log removal
 
-- TC-0004-0074, TC-0004-0075 and TC-0004-0076 run `qfai validate` at
-  `integration` level over a temporary tree. Each builds its own tree:
-  malformed entries for TC-0004-0074, a remaining schema copy for TC-0004-0075,
-  and `blocked` rows with an unreadable file under `.qfai/steering/` for
-  TC-0004-0076. The three trees differ, so no shared fixture is introduced.
-- TC-0004-0018 keeps two rows, one per boundary. TDD-0018 proves that an empty
-  justification on `R-WORKLOG-DRIFT` raises nothing. TDD-0072 proves that the
-  same on `R-REJECTED-READOPT` is still an error. The rejection needs its own
-  row, because a gate that rejected nothing would pass the first.
-- TC-0004-0076 splits into three boundaries, because each fails on its own: a
-  named `Blocked-By` passes, an empty one raises `TDDLIST_BLOCKED_MISSING_REF`,
-  and an unreadable file under `.qfai/steering/` raises nothing.
+- TC-0004-0018 has one row, TDD-0072, at `unit` level: an empty justification
+  on `R-REJECTED-READOPT` is still an error. It is the only test the removal
+  adds.
+- The behaviour that remains keeps its existing tests:
+  `TDDLIST_BLOCKED_MISSING_REF` in
+  `packages/qfai/tests/core/tddListBlockedStatus.test.ts`, and
+  `QFAI-ASSETS-006` on an unshipped file in
+  `packages/qfai/tests/core/assistantAssetProvenance.test.ts`.
+- No test asserts that validate ignores `.qfai/steering/` or the removed codes.
+  The codes' absence from `emittedRuleCodes.ts` and the profile lists is
+  checked by NFR-0006's search.
 
 ### File Touchpoints (additions)
 

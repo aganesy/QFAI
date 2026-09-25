@@ -408,3 +408,234 @@ No instance appears in both an authoring step and a review step. Both reviewers 
 
 - Final status: PASS
 - Rationale: both routed reviewers returned `PASS` on re-check, and the spec-scoped validate gate reports no error.
+
+---
+
+# Run: re-derive under CR-20260925-0010 (2026-09-25)
+
+## Objective
+
+- Spec target: spec-0003
+- Mode: `re-derive`, driven by the approved
+  `.qfai/decisions/CR-20260925-0010-withdraw-the-work-log-absence-obligations.md`
+  (step 3 of its rerun plan).
+- Objective: withdraw the obligations whose only content is that the work-log
+  surface is absent, with their ledger rows. The production removal stays.
+
+## Inputs reviewed
+
+- `CR-20260925-0010`, whole record, and the approved Triage group G1.
+- The amended pack `discussion-20260923060900824` (commit `4c2c398b4`):
+  `05_Scope.md`, `06_REQ.md`, `07_NFR.md`, `10_Policy.md`, `99_delta.md`
+  `## Drift Events`, and `03_Story-Workshop.md` DUS-002.
+- Review pack `review-20260925045812201` of the pack amendment: `R01` advisory 1
+  and `R02` advisory 5, carried to this re-derive.
+- `.qfai/specs/spec-0003/**`, and `.qfai/evidence/atdd-spec-0003.md`
+  `### TDD-0094`..`### TDD-0099`.
+- `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts`,
+  `spec0003WithdrawnSchemaRetirement.test.ts`, and
+  `packages/qfai/tests/core/assistantAssetProvenance.test.ts`.
+- `.qfai/assistant/skills/qfai-sdd/SKILL.md`; references `sdd-triage.md`,
+  `spec-traceability-rules.md`, `sdd-pre-draft-grilling.md`; template
+  `templates/evidence/sdd-spec.md`.
+
+## Preflight summary path
+
+- Preflight run id `run-20260925143420772` (Stage 0): ready, source
+  `discussion-pack`, selected pack `discussion-20260923060900824`, 17 imported
+  requirements, no pack gaps, no blockers.
+- Preflight run id `run-20260925150016061`, after Triage: the same result.
+
+## Triage decisions
+
+| Source                                | Subject                                                                                                                        | Operation | Sub-op | Approved By                            | Rationale                                                             |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------- | ------ | -------------------------------------- | --------------------------------------------------------------------- |
+| discussion-20260923060900824#REQ-0010 | Remove BR-0003-0049, EX-0003-0052, EX-0003-0053, TC-0003-0059, TC-0003-0060; ledger rows TDD-0094..0097 deleted and tombstoned | UPDATE    | REMOVE | user (Claude Code structured question) | The amended REQ-0001 and REQ-0010 ask for no absence test             |
+| discussion-20260923060900824#REQ-0006 | Remove BR-0003-0050, EX-0003-0054, TC-0003-0061; ledger rows TDD-0098, TDD-0099 deleted and tombstoned                         | UPDATE    | REMOVE | user (Claude Code structured question) | The retire pass is generic and already tested                        |
+| discussion-20260923060900824#REQ-0010 | Remove AC-0003-0039, its catalog row and the spec-local REQ-0032                                                               | UPDATE    | REMOVE | user (Claude Code structured question) | No rule is left under the criterion                                  |
+| discussion-20260923060900824#REQ-0010 | Narrow US-0003-0016 Notes to "Implements REQ-0018"                                                                             | UPDATE    | MODIFY | user (Claude Code structured question) | Drops the citation of the removed REQ-0032; deletes no ledger row    |
+
+- Persisted in `09_delta.md` as `## Triage (2026-09-25)`, above
+  `## Triage (2026-09-23)`, with `Depends-On` `-` on every row.
+- Approved by the user through a Claude Code structured question at
+  2026-09-25T04:52:16Z. That one structured answer approved the Change Request
+  (G0) and all four spec groups, G1 to G4, together.
+
+## Open questions
+
+- none
+
+## Decisions made
+
+- DR-0003-0030 / DL-0018: the work-log absence obligations are withdrawn.
+  Supersedes DR-0003-0013, DR-0003-0015..0021, DR-0003-0023, DR-0003-0025..0027
+  and DR-0003-0029. Amends DR-0003-0014 and DR-0003-0028.
+  - DR-0003-0023 is superseded beyond the list in the Change Request's Triage
+    draft. It seeded `Tier` on TDD-0094..0099 only, and all six rows are gone.
+- DR-0003-0031 / DL-0019: `[RE-OPEN]` of DR-0003-0017. DL-0005 had rejected
+  relying on the generic retire-pass test "without the user's approval".
+- DR-0003-0032 / DL-0020: `[RE-OPEN]` of DR-0003-0018. DL-0006 had rejected
+  leaving the plain init run untested.
+- The two re-opens are what the Delta Rejected Guard requires when a rejected
+  option is taken. Each carries the user's approval of the Change Request, and
+  `09_delta.md` `## Rejected` points back at each through `Re-opened by:`.
+
+## Work performed
+
+- Phase 2:
+  - `01_Spec.md`: REQ-0032 removed.
+  - `02_User-stories.md`: US-0003-0016 Notes read "Implements REQ-0018".
+  - `03_Acceptance-Criteria.md`: the AC-0003-0039 Gherkin block and its catalog
+    row removed.
+  - `04_Business-Rules.md`: BR-0003-0049 and BR-0003-0050 removed.
+  - `05_Examples.md`: EX-0003-0052..0054 removed.
+  - `06_Test-Cases.md`: the table rows and sections of TC-0003-0059..0061
+    removed.
+  - `07_Decisions.md`: 13 records marked superseded, two amended, three added;
+    the count line reads 32.
+- Phase 2b:
+  - `tdd/test-list.md`: TDD-0094..TDD-0099 deleted; six tombstones added under
+    the existing `## TDD-ID reservations`.
+  - Downstream ledger sweep: no row is reset. A cell-by-cell comparison with
+    `HEAD` shows the other 91 rows unchanged; prettier only re-padded the
+    table.
+  - Each deleted row's `Evidence` cell is copied verbatim into the Triage
+    section of `09_delta.md`.
+- Phase 3: `10_Plan.md` `### Tests for the work-log removal` states that the
+  removal adds no test, and the sentence on the rejected alternative under
+  `### Removing the work-log seed` no longer cites absence tests.
+  Critical Constraint 10: no finding, because the edit adds no architectural
+  element.
+- Phase 4: `09_delta.md` gains `## Triage (2026-09-25)`, DELTA-0003 in
+  `## Change Summary`, DL-0018..DL-0020 with their `## Update History` rows,
+  two `## Rejected` candidates with `Re-opened by:`, pointers in DL-0005 and
+  DL-0006, and the `CR-20260925-0010` row in `## Change Requests`
+  (`Applied at` `-`, as in the Change Request).
+- Carried reviewer advisory (`R01` advisory 1, `R02` advisory 5): the Triage
+  section records that `03_Story-Workshop.md` DAC-002-03, the two DUS-002 edge
+  seeds and the DUS-002 idempotency seed derive no test or example, read the
+  same way as the drift event reads the lines it lists. Disposition of each:
+
+  | Pack line                              | Describes                                                    | Disposition                                     |
+  | -------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------- |
+  | DAC-002-03 (lines 51-53)               | `QFAI-ASSETS-006` on a remaining schema copy                 | No test or example; generic check stays tested |
+  | DUS-002 edge seed, edited copy (62)    | `init --force` keeps an edited copy with the note            | No test or example; TC-0003-0061 withdrawn     |
+  | DUS-002 edge seed, no lock record (63) | `init --force` never visits an unrecorded copy               | No test or example                              |
+  | DUS-002 idempotency seed (66)          | A second `init --force` changes nothing                      | No test or example                              |
+
+- Tests to delete, owned by other stages, in the same commit:
+  - `/qfai-atdd`: `packages/qfai/tests/integration/spec0003InitWorklogSurface.test.ts`
+    (all four `it` blocks: TDD-0094, TDD-0095, TDD-0096, TDD-0097) and
+    `packages/qfai/tests/integration/spec0003WithdrawnSchemaRetirement.test.ts`
+    (both `it` blocks: TDD-0098, TDD-0099).
+  - `/qfai-implement`: the two entries in `packages/qfai/tsconfig.tests.json`.
+- Phase 0, Phase 1 and Phase 2c were not entered: no contract, no `_policies`
+  file and no remaining obligation changed.
+
+## Contract executability
+
+- none
+
+## Commands executed
+
+```sh
+cd packages/qfai && ./node_modules/.bin/tsup
+node packages/qfai/dist/cli/index.mjs sdd preflight --fail-on error
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --spec spec-0003 --format text
+node packages/qfai/dist/cli/index.mjs validate --profile tdd --spec spec-0003 --format text
+node packages/qfai/dist/cli/index.mjs validate --profile sdd --fail-on error --format text
+node packages/qfai/dist/cli/index.mjs sdd preflight
+./node_modules/.bin/prettier --write <the edited spec files>
+./node_modules/.bin/markdownlint-cli2 <the edited spec files>
+node scripts/check-mdschema.mjs
+node scripts/check-mermaid.mjs
+node scripts/check-doc-clarity.mjs
+```
+
+## Validate evidence paths
+
+- Validate run id `run-20260925143435302`, scope `sdd`, `--spec spec-0003`,
+  before any write: pass, 0 errors, 13 warnings, 4 info.
+- Validate run id `run-20260925145049098`, scope `sdd`, `--spec spec-0003`,
+  after the writes: pass, 0 errors, 13 warnings, 4 info. The same findings.
+- Validate run id `run-20260925145351442`, scope `tdd`, `--spec spec-0003`,
+  on the spec files of `HEAD`: 79 errors, 25 warnings, 6 info.
+- Validate run id `run-20260925145106044`, scope `tdd`, `--spec spec-0003`,
+  after the writes: 81 errors, 25 warnings, 6 info. The two new errors are
+  `QFAI-ATDD-102`, one per test file above: each still carries an annotation
+  for a removed test case. They clear when the files are deleted. No
+  `TDDLIST_TEST_FILE_MISSING` fires. The other 79 are the baseline's.
+- Validate run id `run-20260925145843475`, scope `sdd`, whole repository:
+  11 errors, all the pinned `QFAI-TDDLIST-017` in spec-0006, spec-0010 and
+  spec-0012.
+- After `/qfai-atdd` deleted the ten test files and `/qfai-implement` made its
+  test edits, with the package rebuilt:
+  - Validate run id `run-20260925155652911`, scope `sdd`, `--spec spec-0003`: 1 error,
+    `QFAI-REVIEW-007` on this spec's review pack while its `summary.json`
+    reads `PENDING`. The warnings are the same as before the run.
+  - Validate run id `run-20260925155709707`, scope `tdd`, `--spec spec-0003`: 79 errors, the
+    same count as on `HEAD`. No `QFAI-ATDD-102` and no
+    `TDDLIST_TEST_FILE_MISSING`.
+  - Validate run id `run-20260925155923587`, scope `sdd`, whole repository:
+    15 errors: the 11 pinned `QFAI-TDDLIST-017` and one `QFAI-REVIEW-007` per
+    pending pack.
+- `check-mdschema`: 49 files conform. `check-mermaid`: 50 diagrams parse.
+  markdownlint: 0 errors. `check-doc-clarity`: no local identifiers.
+
+## Pre-draft Grilling
+
+| Phase | Session | Ended at | Wrote at             | Frontier                                                     | Evidence |
+| ----- | ------- | -------- | -------------------- | ------------------------------------------------------------ | -------- |
+| 2     | skipped | -        | 2026-09-25T05:38:05Z | empty: answered by CR-20260925-0010, approved by the user    | -        |
+| 3     | skipped | -        | 2026-09-25T05:41:11Z | empty: answered by CR-20260925-0010, approved by the user    | -        |
+
+- Batch record: none
+- These rows belong to this run. The user settled every decision the phases
+  write through `CR-20260925-0010` and its Triage group G1, approved at
+  2026-09-25T04:52:16Z, so no session was opened.
+- The applied readings are not new decisions: superseding DR-0003-0023 beside
+  the listed records, and re-opening the two rejections the withdrawal takes.
+  Each follows a stated rule, and none is critical.
+- Phase 3 `Wrote at` is the time of the post-write validate run, run id
+  `run-20260925144111930`: the plan edit landed between the Phase 2 write and
+  that run.
+- Phase 2b and Phase 4 run no session. Phase 0, Phase 1 and Phase 2c were not
+  entered.
+
+## Work Orders Summary
+
+| Step | Role (sub-agent)      | Agent instance       | Task title                                                                                            | Input (refs)                                                  | Output (refs)                                                                                                                                                                                                                                                                              | Status (PASS/REVISE/PENDING) |
+| ---- | --------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| 1    | requirements-analyst  | sdd-withdraw-author  | Stage 0 preflight, and the rerun after Triage                                                         | the amended pack                                              | Run ids `run-20260925143420772` and `run-20260925150016061`: ready, 17 requirements, no pack gaps                                                                                                                                                                                          | PASS                         |
+| 2    | requirements-analyst  | sdd-withdraw-author  | Persist Triage group G1 as `## Triage (2026-09-25)`                                                   | `CR-20260925-0010`; approved Triage draft G1                  | `09_delta.md` `## Triage (2026-09-25)` and the `## Change Requests` row                                                                                                                                                                                                                    | PASS                         |
+| 3    | requirements-analyst  | sdd-withdraw-author  | Phase 2 and 2b: remove the items, delete and tombstone TDD-0094..0099                                 | settled by `CR-20260925-0010`                                 | `01`..`07`, `tdd/test-list.md`; validate sdd `--spec spec-0003`: the baseline findings only                                                                                                                                                                                                | PASS                         |
+| 4    | requirements-analyst  | sdd-withdraw-author  | Phase 3 and Phase 4                                                                                   | `10_Plan.md`, `09_delta.md`                                   | Plan subsection; DELTA-0003, DL-0018..0020, `## Rejected` candidates; Critical Constraint 10: no finding                                                                                                                                                                                   | PASS                         |
+| 5    | delivery-planner      | withdraw-triage-gate | Triage gate (`slice-and-scope`, blocking)                                                             | `09_delta.md` `## Triage (2026-09-25)`                        | PASS at `working-tree+eb4bd304c565980e33a307009fd7feaae29669bd17e814e36e7121b58e1c6cd3`                                                                                                                                                                                                    | PASS                         |
+| 6    | solution-architect    | withdraw-design-gate | `design` span gate (blocking)                                                                         | spec-0003 `01`..`10`, `tdd/test-list.md`                      | PASS at `working-tree+eb4bd304c565980e33a307009fd7feaae29669bd17e814e36e7121b58e1c6cd3`                                                                                                                                                                                                    | PASS                         |
+| 7    | completion-reviewer   | -                    | Reviewer Gate                                                                                         | review pack `review-20260925150500003`                        | not yet run                                                                                                                                                                                                                                                                                | PENDING                      |
+| 8    | qa-gatekeeper         | -                    | Reviewer Gate: the ledger and coverage changed                                                        | review pack `review-20260925150500003`                        | not yet run                                                                                                                                                                                                                                                                                | PENDING                      |
+| 9    | architecture-reviewer | -                    | Reviewer Gate: rules bound to CLI-INIT removed                                                        | review pack `review-20260925150500003`                        | not yet run                                                                                                                                                                                                                                                                                | PENDING                      |
+| 10   | test-design-analyst   | withdraw-tda         | Test-design check of the withdrawal (`design` span)                                                   | `03`..`06`, `tdd/test-list.md`, `coverage-depth-spec-0003.md` | PASS: every surviving AC keeps an EX and a TC, and every TC a ledger row at its layer, as at `HEAD`; no example or TC asks for an absence test; TDD-0094..0099 tombstoned, next row TDD-0100; coverage depth scores no withdrawn row. Corrected the stale coverage-depth bullet under Gaps | PASS                         |
+| 11   | requirements-analyst  | sdd-withdraw-author  | Low fix (architecture and design advisory): DR-0003-0030 says why `01_Spec.md` names no pack REQ-0001 | DR-0003-0030; Triage group G1                                 | `07_Decisions.md` DR-0003-0030: REQ-0032 carried the pack requirements and G1 withdraws it; they stay traceable through the 2026-09-23 Triage rows                                                                                                                                         | PASS                         |
+| 12   | requirements-analyst  | sdd-withdraw-author  | Low fix (Triage-gate advisory): approval note and post-deletion validate lines                        | this block; runs after the test deletion                      | This block `## Triage decisions` (one answer approved G0 and G1 to G4), `## Validate evidence paths` (post-deletion runs), and the `QFAI-ATDD-102` line of `## Gaps / Open risks`                                                                                                          | PASS                         |
+| 13   | test-design-analyst   | withdraw-tda         | Low fix: the coverage-depth line of `## Gaps / Open risks`                                            | `.qfai/evidence/coverage-depth-spec-0003.md`                  | This block `## Gaps / Open risks`, the coverage-depth line                                                                                                                                                                                                                                 | PASS                         |
+| 14   | backend-engineer      | withdraw-impl        | Both READMEs drop `steering/` (pack REQ-0012)                                                         | `discussion-20260923060900824#REQ-0012`                       | `README.md` and `packages/qfai/README.md`, edited together                                                                                                                                                                                                                                 | PASS                         |
+
+## Gaps / Open risks
+
+- `.qfai/evidence/coverage-depth-spec-0003.md` was recomputed by the stage
+  that owns it. It scores no row for TC-0003-0059..0061 or their rules; this
+  run does not edit it.
+- The two `QFAI-ATDD-102` errors of this spec cleared when the test files were
+  deleted; the post-deletion runs above show none.
+- `qfai init` writing nothing under `.qfai/steering/` is held by NFR-0006's
+  search, not by a test. The user accepted this in approving option 1.
+- `CR-20260925-0010` `Applied at` is still `-`; the `## Change Requests` row
+  copies it and is filled when the Change Request is.
+- Not independent reviewers for this pack: `sdd-withdraw-author`.
+
+## Final status
+
+- Final status: REVISE
+- Rationale: the spec side is written and validates as before, but the routed
+  gates and reviewers are `PENDING`, so the stage is not done.

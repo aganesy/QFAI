@@ -51,7 +51,7 @@ note.
 
 The alternative considered was a new guard that refuses any write under
 `.qfai/steering/`. It was rejected because nothing writes there once the seed
-is gone, so the absence tests hold the rule without new code.
+is gone: no path in `packages/qfai/src/**` names the directory.
 
 What the change leaves out:
 
@@ -73,17 +73,12 @@ What the change leaves out:
 
 ### Tests for the work-log removal
 
-- TC-0003-0059, TC-0003-0060 and TC-0003-0061 go in
-  `packages/qfai/tests/integration/**`, like the other new obligations of this
-  spec (see Test placement below).
-- TC-0003-0060 runs plain `init` and `init --force` against a partial seed
-  (EX-0003-0053). It hashes every file under `.qfai/steering/` before and
-  after. A full, unedited seed would pass on the code that still seeds, so the
-  test could not fail first.
-- TC-0003-0061 has two boundaries, each with its own row: a recorded, unedited
-  schema copy is deleted, and an edited one stays with the edited-content note.
-- Each test builds its own tree. The trees differ from the ones spec-0004's
-  tests build, so no shared fixture is introduced.
+- The removal adds no test to this spec (`CR-20260925-0010`). The tests that
+  pinned the seed are deleted with it, and no test asserts that
+  `.qfai/steering/` is absent.
+- The type check fails on any import of a removed function.
+- The withdrawn schema is retired by the generic pass, which
+  `packages/qfai/tests/core/assistantAssetProvenance.test.ts` already tests.
 
 ## Dependencies
 

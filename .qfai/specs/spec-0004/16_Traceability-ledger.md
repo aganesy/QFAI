@@ -11,19 +11,12 @@ on the branch needs current test proof in its `Proof` column, otherwise
 
 ## Ledger Table (required when this file exists)
 
-| BR/AC        | Implementation File                                        | Test File                                                                    | Notes                                                                           | Proof |
-| ------------ | ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ----- |
-| AC-0004-0018 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts               | `R-REJECTED-READOPT` is the remaining justification-gated code.                 | -     |
-| AC-0004-0040 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/integration/spec0004WorklogSurfaceRemoval.test.ts        | Validate no longer composes a work-log validator.                               | -     |
-| AC-0004-0040 | packages/qfai/src/cli/commands/validate.ts                 | packages/qfai/tests/integration/spec0004WorklogSurfaceRemoval.test.ts        | The profile code lists no work-log code.                                        | -     |
-| AC-0004-0040 | packages/qfai/src/core/governedAssistantManifest.ts        | packages/qfai/tests/integration/spec0004WithdrawnSchemaFinding.test.ts       | The withdrawn schema is not governed, so a remaining copy is `QFAI-ASSETS-006`. | -     |
-| AC-0004-0041 | packages/qfai/src/core/validators/tddList.ts               | packages/qfai/tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts | A `blocked` row is checked against its `Blocked-By` alone.                      | -     |
-| BR-0004-0001 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/integration/spec0004WorklogSurfaceRemoval.test.ts        | The machine gate runs without the work-log validator.                           | -     |
-| BR-0004-0017 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts               | `R-WORKLOG-DRIFT` left the justification-gated set.                             | -     |
-| BR-0004-0028 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/integration/spec0004ProfileSuffixedValidate.test.ts      | The three-part rule for `R-PROMPT-SCANNER-DRIFT` is enforced here.              | -     |
-| BR-0004-0034 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/integration/spec0004WorklogSurfaceRemoval.test.ts        | Validate does not read `.qfai/steering/`.                                       | -     |
-| BR-0004-0034 | packages/qfai/src/core/governedAssistantManifest.ts        | packages/qfai/tests/integration/spec0004WithdrawnSchemaFinding.test.ts       | The withdrawn schema is not in the governed-asset manifest.                     | -     |
-| BR-0004-0035 | packages/qfai/src/core/validators/tddList.ts               | packages/qfai/tests/integration/spec0004BlockedRowNeedsOnlyBlockedBy.test.ts | Ledger checks do not read `.qfai/steering/`.                                    | -     |
+| BR/AC        | Implementation File                                        | Test File                                                               | Notes                                                                   | Proof |
+| ------------ | ---------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----- |
+| AC-0004-0018 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts          | An empty `R-REJECTED-READOPT` justification is an error.                | -     |
+| BR-0004-0001 | packages/qfai/src/core/validate.ts                         | packages/qfai/tests/core/specScopeValidate.test.ts                      | The machine gate runs the SDD validators and aggregates their findings. | -     |
+| BR-0004-0017 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/validators/reviewerRejectedReadopt.test.ts          | `R-REJECTED-READOPT` requires a non-empty justification.                | -     |
+| BR-0004-0028 | packages/qfai/src/core/validators/reviewerJustification.ts | packages/qfai/tests/integration/spec0004ProfileSuffixedValidate.test.ts | The three-part rule for `R-PROMPT-SCANNER-DRIFT` is enforced here.      | -     |
 
 ### Planned bindings
 

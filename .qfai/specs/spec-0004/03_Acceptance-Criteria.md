@@ -78,7 +78,6 @@
 - Given a reviewer report containing an `R-REJECTED-READOPT` finding with an empty or missing `justification:` field
 - When `qfai validate` ingests the reviewer report
 - Then the validator rejects the run with severity error (advisory-failing). A finding with a non-empty `justification:` naming the Decisions row passes
-- And the same report with an empty `justification:` on an `R-WORKLOG-DRIFT` finding raises no justification error
 
 ## AC-0004-0022
 
@@ -180,22 +179,3 @@
 - Given a PR that adds `review-*/` or `discussion-*/` directories only under allowed roots (or touches no pack directories at all)
 - When the `check-pack-locations.mjs` lane runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT` finding; pre-existing legacy packs on unrelated PRs are not re-flagged (staged/changed-dir scope, not a full-tree walk, per DR-0274)
-
-## AC-0004-0040
-
-- US-Refs: US-0004-0020
-- Source: discussion-20260923060900824#REQ-0002, discussion-20260923060900824#REQ-0006, discussion-20260923060900824#REQ-0010
-- Given `.qfai/steering/` holding an entry with broken frontmatter, a `links` value naming a missing spec, an `active` entry last updated more than 90 days ago, a `promote-to` with no Decisions row, and a `kind: handoff` entry missing sections
-- When `qfai validate --profile full` runs
-- Then none of `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE` appears, and no finding names a path under `.qfai/steering/`
-- And a remaining `.qfai/assistant/catalog/worklog-entry.schema.md` is reported as `QFAI-ASSETS-006` (error), like any other file the installed release does not ship
-
-## AC-0004-0041
-
-- US-Refs: US-0004-0001
-- Source: discussion-20260923060900824#REQ-0004
-- Given a ledger holding a `blocked` row whose `Blocked-By` is well-formed, naming what the row waits on and the status it was blocked at, and no record under `.qfai/steering/` for it
-- When `qfai validate --profile tdd` runs
-- Then no error-severity finding is raised for that row
-- And a `blocked` row with an empty `Blocked-By` still raises `TDDLIST_BLOCKED_MISSING_REF`
-- And an unreadable file under `.qfai/steering/` raises nothing

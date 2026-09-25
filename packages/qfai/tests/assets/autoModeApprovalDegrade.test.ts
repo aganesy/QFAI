@@ -55,8 +55,6 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       expect(flattened).toContain(
         "Leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target.",
       );
-      expect(flattened).not.toContain("work-log");
-      expect(flattened).not.toContain("consultation-needed");
       // The error is the report of a suspended run, not a gate to route around.
       expect(flattened).toContain(
         "The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run",
@@ -88,7 +86,6 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       );
       expect(flattened).toContain("hand the run back for a rerun without `--auto`");
       expect(flattened).toContain("never synthesize an approver");
-      expect(flattened).not.toContain("work-log");
     });
 
     it(`${tree}: the triage procedure states the --auto path on both steps`, async () => {
@@ -110,7 +107,6 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       expect(flattened).toContain(
         "Under `--auto`, also ask for a rerun without `--auto` so the approvals can be collected.",
       );
-      expect(flattened).not.toContain("work-log");
     });
   }
 });

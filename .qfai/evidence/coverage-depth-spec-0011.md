@@ -7,17 +7,18 @@ Produced by `test-design-analyst` in the `coverage` phase of the `/qfai-atdd` ru
 The subject is the `/qfai-implement` skill naming the existing home of each record instead of a
 work-log entry under `.qfai/steering/` (`09_delta.md` `## Triage (2026-09-23)`).
 
-**Matrix row.** The one test case this run writes an acceptance test for, `TC-0011-0013`. It
-declares `Level` `integration`, routes to `packages/qfai/tests/integration/**`, and is carried by
-three ledger rows, one per boundary: `TDD-0021`, `TDD-0022` and `TDD-0023`.
+**Matrix rows.** None. The one test case this run wrote an acceptance test for, `TC-0011-0013`
+(ledger rows `TDD-0021`, `TDD-0022` and `TDD-0023`), was withdrawn by `CR-20260925-0010` with its
+rows and its test, and the pack no longer declares it.
 
 **Not scored in this run.** The 8 user stories and `TC-0011-0001` … `TC-0011-0012` predate the
 change, and the change neither adds nor removes a case for them. Those twelve test cases declare no
 `Level`, so they route to `tests/integration/**` too. They are listed under "Obligations not
 scored". Whether they belong in this run's matrix is an open preflight decision.
 
-**Business rule table.** Every active `BR-0011-*` heading of `04_Business-Rules.md` owns a row: nine
-rules, none carrying a retiring `Status:`.
+**Business rule table.** Every active `BR-0011-*` heading of `04_Business-Rules.md` owns a row: eight
+rules, none carrying a retiring `Status:`. `BR-0011-0009` was withdrawn by `CR-20260925-0010` and owes
+no row.
 
 No `CON-API-*` or `CON-DB-*` contract exists in this repository, and no file of this pack binds one.
 
@@ -37,37 +38,9 @@ In this pack every carried covering row is `exception` or `todo`:
 
 ## The matrix
 
-| US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
-| ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
-| TC-0011-0013 | ✅                     | ✅          | n/a        | ⚠️         | n/a             | n/a            | ✅                | n/a           | ✅              | done    |
+No row. `CR-20260925-0010` withdrew `TC-0011-0013`, the one row this matrix scored.
 
-Totals across the nine scored columns, 9 cells: **✅ 4 / ⚠️ 1 / ❌ 0**, `n/a` 4.
-
-### Row notes
-
-The subject is the shipped text under
-`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/`.
-
-- Equivalence partitions: the three record kinds the rule routes, a stop, a decision, and a
-  consultation or out-of-scope discovery.
-- Normal path, `TDD-0021` (`record-homes-stated`): in `SKILL.md` and
-  `references/execution-ledger.md`, one statement records a stop in `Blocked-By`, and one
-  statement sends a decision, a consultation and an out-of-scope discovery to `/qfai-sdd` as a
-  Change Request. Both are asserted inside the extracted bullet or paragraph, not as whole-file
-  substrings.
-- State transitions, `TDD-0022` (`resume-closes-no-record`): the `blocked -> todo` bullet of
-  `references/execution-ledger.md` is extracted by its lead text. The test asserts that the bullet
-  was found and is non-empty, then that it contains no `archived` and no instruction to close a
-  record.
-- `TDD-0023` (`no-surface-reference`): every file under the skill directory is read, and the test
-  asserts the file count is above zero. No file may contain `.qfai/steering/` or
-  `worklog-entry.schema.md`, and neither `SKILL.md` nor `references/execution-ledger.md` may contain
-  "work-log entry".
-- Error path `n/a`: `BR-0011-0009` names no failure.
-- Oracle mutations, each applied to the shipped text:
-  - `TDD-0021`: delete the out-of-scope discovery clause.
-  - `TDD-0022`: re-insert "set its `status:` to `archived`".
-  - `TDD-0023`: re-insert the `.qfai/steering/<id>.md` sentence.
+Totals across the nine scored columns, 0 cells: **✅ 0 / ⚠️ 0 / ❌ 0**, `n/a` 0.
 
 ## Business rule coverage
 
@@ -81,15 +54,13 @@ The subject is the shipped text under
 | BR-0011-0006 | ⚠️            | n/a           | n/a                  | TC-0011-0010                               | carried |
 | BR-0011-0007 | ❌            | ❌            | n/a                  | TC-0011-0011                               | carried |
 | BR-0011-0008 | ❌            | n/a           | n/a                  | TC-0011-0012                               | carried |
-| BR-0011-0009 | ✅            | n/a           | n/a                  | TC-0011-0013 (TDD-0021, TDD-0022, TDD-0023) | done    |
 
-Totals across the three scored columns, 27 cells: **✅ 1 / ⚠️ 10 / ❌ 3**, `n/a` 13.
+Totals across the three scored columns, 24 cells: **✅ 0 / ⚠️ 10 / ❌ 3**, `n/a` 11.
 
 `Covering TC` is derived from `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`.
 
-`BR-0011-0009` states three unconditional clauses, so its Conditional cell is `n/a`. A line of
-`BR-0011-0005` begins "Status-only evidence …". It is rule text, not a retiring `Status:`, so the
-rule is active.
+A line of `BR-0011-0005` begins "Status-only evidence …". It is rule text, not a retiring
+`Status:`, so the rule is active.
 
 ## Every ❌ cell, named
 
@@ -105,13 +76,9 @@ case outside its own rule (Article VII of `.qfai/assistant/constitution/constitu
 
 ## Every ⚠️ cell, named
 
-### Matrix (1)
+### Matrix (0)
 
-- `TC-0011-0013` Edge cases: `AC-0011-0012` names `SKILL.md` and `references/**`. The positive
-  record-home check (`TDD-0021`) reads `SKILL.md` and `references/execution-ledger.md` only. The
-  absence check (`TDD-0023`) covers every file, so a stray instruction elsewhere to write an entry
-  under `.qfai/steering/` is still caught. A reference that routes a record somewhere else without
-  naming the surface is not.
+None. The matrix has no row.
 
 ### Business rule table (10)
 
@@ -133,12 +100,13 @@ case outside its own rule (Article VII of `.qfai/assistant/constitution/constitu
 
 ## Findings
 
-1. **No matrix existed for spec-0011 before this run.** This one scores only the change's row.
-2. **`TC-0011-0013` binds its three boundaries to one test case.** The rows follow the ledger (one
-   per boundary), so the three selectors must live in separate `it` blocks. Otherwise the first
-   failing assertion hides the other two REDs.
+1. **No matrix existed for spec-0011 before this run.** This one scored only the change's row, which
+   `CR-20260925-0010` then withdrew.
+
+A finding on how `TC-0011-0013` bound its boundaries stood here. `CR-20260925-0010` withdrew that test
+case, so it no longer applies.
 
 ## Totals for the stage evidence
 
-**✅ 5 / ⚠️ 11 / ❌ 3**, `n/a` 17, across 36 scored cells: 9 matrix cells and 27 business rule
+**✅ 0 / ⚠️ 10 / ❌ 3**, `n/a` 11, across 24 scored cells: 0 matrix cells and 24 business rule
 cells.

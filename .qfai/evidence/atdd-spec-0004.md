@@ -206,6 +206,9 @@ No ledger cell is written here: `/qfai-implement` writes `Status`, `DR-ID` and
 | `TDD-0070` | `TC-0004-0076` | integration | falsifiability | ready, step 3c | [TDD-0070](#tdd-0070) |
 | `TDD-0071` | `TC-0004-0076` | integration | observed-red   | ready, after `TDD-0069`'s GREEN | [TDD-0071](#tdd-0071) |
 
+Rows `TDD-0067` … `TDD-0071` are withdrawn by `CR-20260925-0010`. Their ledger rows are deleted
+and tombstoned, and their test files are deleted. Their sections below stay as history.
+
 ### TDD-0067
 
 - TDD-ID: TDD-0067
@@ -3114,8 +3117,9 @@ cd packages/qfai && NO_COLOR=1 npx vitest run --reporter=verbose tests/integrati
 
 ## Coverage Depth Matrix
 
-See `.qfai/evidence/coverage-depth-spec-0004.md` (committed). Totals: ✅ 54 / ⚠️ 21 / ❌ 0,
-`n/a` 42, across 117 scored cells: 27 matrix cells and 90 business rule cells.
+See `.qfai/evidence/coverage-depth-spec-0004.md` (committed). Totals: ✅ 37 / ⚠️ 15 / ❌ 0,
+`n/a` 32, across 84 scored cells: 0 matrix cells and 84 business rule cells. `CR-20260925-0010`
+withdrew the three matrix rows and two of the business rules.
 
 ## Work Orders Summary
 

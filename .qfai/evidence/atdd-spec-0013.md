@@ -315,6 +315,9 @@ are `todo` until they are completed again.
 | `TDD-0111` | `TC-0013-0039` | Integration | falsifiability | red |
 | `TDD-0115` | `TC-0013-0039` | Integration | falsifiability | red |
 
+Rows `TDD-0110` … `TDD-0115` are withdrawn by `CR-20260925-0010`. Their ledger rows are deleted
+and tombstoned, and their test files are deleted. Their sections below stay as history.
+
 One of the four reaches part of a multi-clause obligation. The part each reaches
 is recorded with the row, so the evidence says what it proves rather than
 restating what the test case asks for.
@@ -3726,16 +3729,14 @@ exit=0
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0013.md`.
-Totals: ✅ 66 / ⚠️ 116 / ❌ 312, with 7 not applicable, across 501 scored cells —
-441 matrix depth cells (49 rows × 9 columns) and 60 business rule cells
-(20 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
+Totals: ✅ 78 / ⚠️ 117 / ❌ 312, with 15 not applicable, across 522 scored cells —
+459 matrix depth cells (51 rows × 9 columns) and 63 business rule cells
+(21 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
 
-For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change adds are scored under
-`## Update: the work-log removal` in the same file. Totals for the stage evidence after
-that update: ✅ 85 / ⚠️ 119 / ❌ 312, `n/a` 30, across 546 scored cells —
-477 matrix depth cells (53 rows × 9 columns) and 69 business rule cells
-(23 rows × 3 columns).
+For the /qfai-atdd run 2026-09-23T19:33:24.738Z: the rows this change added were scored under
+`## Update: the work-log removal` in the same file. `CR-20260925-0010` withdrew them, so they
+add nothing to these totals.
 
 ## Work Orders Summary
 

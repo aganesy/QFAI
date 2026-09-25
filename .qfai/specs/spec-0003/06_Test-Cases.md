@@ -82,9 +82,6 @@ stays the first markdown table in this file):
 | TC-0003-0056 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered document checks: isolated legs, preserved check name        |
 | TC-0003-0057 | integration | AC-0003-0038               | EX-0003-0050 | normal   | delivered validation profiles: isolated legs, preserved verdict       |
 | TC-0003-0058 | integration | AC-0003-0038               | EX-0003-0051 | error    | aggregate failure protection: bad result and missing binding          |
-| TC-0003-0059 | integration | AC-0003-0039               | EX-0003-0052 | normal   | no work-log path or instructions line after init                      |
-| TC-0003-0060 | integration | AC-0003-0039               | EX-0003-0053 | edge     | populated work-log directory unchanged by init and init --force       |
-| TC-0003-0061 | integration | AC-0003-0039               | EX-0003-0054 | edge     | withdrawn schema: unedited copy retired, edited copy kept             |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -756,47 +753,3 @@ Verify:
 - an aggregate that no longer binds its dependency's result is rejected and named
 - a step that could not preserve failure — conditional, tolerant shell, `continue-on-error`, an action, or work of its own — is rejected as well
 - an aggregate whose job shape cannot preserve failure — a second step, or `continue-on-error` set on the job — is rejected as well
-
-## TC-0003-0059: no work-log path or instructions line after init
-
-**Level:** integration
-**EX Refs:** EX-0003-0052
-**AC Refs:** AC-0003-0039
-**Type:** normal
-
-Setup: an empty temp dir.
-Action: run `runInit` once and capture its report.
-Verify:
-
-- no path exists under `.qfai/steering/`, and the report names none (boundary `no-steering-path`)
-- the generated `.github/copilot-instructions.md` has no work-log line (boundary `no-worklog-instructions-line`)
-
-## TC-0003-0060: populated work-log directory unchanged by init and init --force
-
-**Level:** integration
-**EX Refs:** EX-0003-0053
-**AC Refs:** AC-0003-0039
-**Type:** edge
-
-Setup: an initialised temp dir whose `.qfai/steering/` holds an edited `README.md` and one adopter entry, with no `.gitkeep` and no `_templates/entry.md`. Record the path set under `.qfai/steering/` and each file's SHA-256.
-Action: run `runInit`, then `runInit` with `--force`, reading the directory after each run.
-Verify:
-
-- after the plain run, the path set and every SHA-256 equal the recorded values (boundary `plain-init-byte-identical`)
-- after the `--force` run, the path set and every SHA-256 equal the recorded values (boundary `force-init-byte-identical`)
-
-The fixture omits both files the removed seed wrote. A fully seeded, unedited directory is left alone by create-only copying as well, so it cannot fail against the code that still seeds.
-
-## TC-0003-0061: withdrawn schema: unedited copy retired, edited copy kept
-
-**Level:** integration
-**EX Refs:** EX-0003-0054
-**AC Refs:** AC-0003-0039
-**Type:** edge
-
-Setup: two initialised temp dirs, each holding `.qfai/assistant/catalog/worklog-entry.schema.md` with a matching record in `.qfai/assistant/.assets.lock.json`. In the second, edit the file after it was recorded.
-Action: run `runInit` with `--force` in each.
-Verify:
-
-- first dir: the file is gone and the lock has no key for it (boundary `unedited-copy-retired`)
-- second dir: the file is byte-identical to its edited content, and the report carries the note that its content has been edited and it was not removed (boundary `edited-copy-kept-with-note`)

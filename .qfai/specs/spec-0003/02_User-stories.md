@@ -35,7 +35,7 @@
 - Parent: CAP-0003
 - Goal: `qfai init` seeds the four assistant-tree layers (`constitution/`, `manifest/`, `catalog/`, `process/`) in a new project, so the layout agreed in the CHG-003 discussion pack exists after one command
 - Non-goals: validate-side enforcement (spec-0004), Reviewer-Gate drift findings (spec-0015)
-- Notes: Implements REQ-0018 and REQ-0032; resolve paths through `assistantPaths.ts` (REQ-0022)
+- Notes: Implements REQ-0018; resolve paths through `assistantPaths.ts` (REQ-0022)
 
 ## US-0003-0017: --upgrade-assistant-tree migration helper
 

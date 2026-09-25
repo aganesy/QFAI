@@ -94,7 +94,6 @@
 - Given a reviewer report JSON containing `{"code": "R-REJECTED-READOPT", "justification": ""}`
 - When `qfai validate` ingests it
 - Then validate exits with error severity (advisory-failing)
-- And given a report containing `{"code": "R-WORKLOG-DRIFT", "justification": ""}`, validate raises no justification finding
 
 ## EX-0004-0020
 
@@ -205,29 +204,3 @@
 - Given a PR that adds `.qfai/discussion/discussion-20260527075558258/` (under an allowed root) and edits an unrelated README
 - When `check-pack-locations.mjs` runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT`, and a pre-existing legacy `review-old/` directory untouched by the PR is not re-flagged
-
-## EX-0004-0042
-
-- BR-Ref: BR-0004-0034
-- Given a tree whose `.qfai/steering/` holds five entries: one with broken frontmatter, one whose `links` names a spec that does not exist, one `active` entry last updated more than 90 days ago, one whose `promote-to` has no Decisions row, and one `kind: handoff` entry missing sections
-- And the tree has no `.qfai/assistant/steering/` directory
-- When `qfai validate --profile full` runs
-- Then no finding carries `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` or `R-HANDOFF-INCOMPLETE`
-- And no finding names a path with a `.qfai/steering/` segment
-- The validator that reads the directory raises all five codes on this tree, so the example fails until that validator is gone
-
-## EX-0004-0043
-
-- BR-Ref: BR-0004-0034
-- Given a tree `qfai init` wrote, with `.qfai/assistant/catalog/worklog-entry.schema.md` written back into it
-- When `qfai validate --profile full` runs
-- Then `QFAI-ASSETS-006` (error) names `.qfai/assistant/catalog/worklog-entry.schema.md`
-
-## EX-0004-0044
-
-- BR-Ref: BR-0004-0035
-- Given a ledger with a `blocked` row whose `Blocked-By` is `spec-0004:TDD-0001 — blocked at todo`, and no `.qfai/steering/` directory
-- When `qfai validate --profile tdd` runs
-- Then no error-severity finding names that row
-- And given the same row with an empty `Blocked-By`, `TDDLIST_BLOCKED_MISSING_REF` names it
-- And given a ledger with a `blocked` row whose `Blocked-By` is `spec-0004:TDD-0001 — blocked at todo`, plus a file under `.qfai/steering/` that cannot be read, no finding names `.qfai/steering/`

@@ -109,7 +109,6 @@ Contract short IDs resolve through `_policies/05_Contracts.md#Contract Index`.
   - The failure code is `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`, in the bare `R-` lint namespace. Catalog membership follows the severity class, so this error-class code belongs in `JUSTIFICATION_CATALOG`, but its registration is deferred as a lockstep change (`spec-0015` `OQ-0015-0001`). Its absence is a temporary divergence, not a permanent property.
   - Ordering: the gate lands **in the same change as, or before,** spec-0017's upstream pack REQ-0025, which retires the repository's own copy of the shipped workflows
   - The lane dimension covers aggregate lanes as well: a job that declares an always-run condition together with a `needs` list, asserted against the exact list.
-- REQ-0032 (upstream pack discussion-20260923060900824 REQ-0001, REQ-0006, REQ-0010): no work-log surface - `qfai init`, with or without `--force`, creates, modifies and deletes nothing under `.qfai/steering/`, names no path there in its report, and generates no work-log line in `.github/copilot-instructions.md`. Under `--force`, a copy of the withdrawn `catalog/worklog-entry.schema.md` that `.assets.lock.json` records is deleted while it matches its record; an edited copy stays, and init notes that its content has been edited
 
 ## Entry points
 

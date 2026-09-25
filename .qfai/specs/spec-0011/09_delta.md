@@ -12,6 +12,49 @@
   EX-0011-0010 and TC-0011-0013 are added, seeded as TDD-0021..TDD-0023, one
   row per boundary.
 
+- Change ID: DELTA-0002
+- Date: 2026-09-25
+- Primary: Behavior
+- Tags: @docs, @test
+- Summary: Under `CR-20260925-0010`, AC-0011-0012, BR-0011-0009,
+  EX-0011-0010 and TC-0011-0013 are removed, and ledger rows
+  TDD-0021..TDD-0023 are deleted and tombstoned. The skill text they tested
+  stays.
+
+## Triage (2026-09-25)
+
+The record-homes obligations, whose tests only checked the replacement skill
+text or the absence of the work-log surface, are withdrawn under
+`CR-20260925-0010`. The skill text stays.
+
+| Source                                | Subject                                                                                                                                                                       | Existing Spec | Operation | Sub-op | Approved By                            | Rationale                                                                                                                                             | Depends-On |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0007 | Remove AC-0011-0012, BR-0011-0009, EX-0011-0010, TC-0011-0013 and the REQ-0007 source line (`01_Spec.md:67`); ledger rows TDD-0021, TDD-0022, TDD-0023 deleted and tombstoned | spec-0011     | UPDATE    | REMOVE | user (Claude Code structured question) | The amended REQ-0007 is checked by review. The replacement skill text stays; TDD-0021 tested only that text, and TDD-0022 and TDD-0023 prove absences | -          |
+
+- Approved By: the user, through a Claude Code structured question at
+  2026-09-25T04:52:16Z, for this row (Triage group G3 of `CR-20260925-0010`).
+  The same answer approved the Change Request.
+- Line references in the Subject cell are to the files before this run.
+- Retired ledger rows. Phase 2b deleted each row from `tdd/test-list.md` and
+  tombstoned its ID under a new `## TDD-ID reservations` section. No other row
+  is reset. Each row's `Evidence` cell, verbatim:
+  - `spec-0011/TDD-0021`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e -> .qfai/evidence/atdd-spec-0011.md#tdd-0021`
+  - `spec-0011/TDD-0022`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e -> .qfai/evidence/atdd-spec-0011.md#tdd-0022`
+  - `spec-0011/TDD-0023`:
+    `RED:fail GREEN:pass ORACLE:proved TIER:T2 REV:working-tree+c292c15294d9d938c98ea2b44f8628d362f65785919015b7c37e29791107264e -> .qfai/evidence/atdd-spec-0011.md#tdd-0023`
+- The tests those rows drove are deleted in the same commit, by `/qfai-atdd`:
+  `packages/qfai/tests/integration/spec0011RecordHomes.test.ts`. Every `it`
+  block in the file belonged to a deleted row.
+- REQ-0007 is checked by review. That review searches the `qfai-implement`
+  skill for both `.qfai/steering/` and `worklog-entry.schema.md`, because
+  NFR-0006's token list names only the first.
+- Decisions: DR-0011-0014 records the withdrawal. It supersedes
+  DR-0011-0004..DR-0011-0011 and DR-0011-0013, and amends DR-0011-0003 and
+  DR-0011-0012, whose skill text and plan paragraph stand. No rejected option is taken, so nothing is
+  re-opened. The 2026-09-23 Triage row and DL-0001..DL-0011 stay as history.
+
 ## Triage (2026-09-23)
 
 The qfai-implement skill names the existing home of each record instead of a
@@ -45,6 +88,7 @@ work-log entry under `.qfai/steering/`.
 | 2026-09-23 | DL-0009 | BR-0011-0009 is realized by the shipped skill text, with no contract     |
 | 2026-09-23 | DL-0010 | The plan names the edit path and cites spec-0004 for the order           |
 | 2026-09-23 | DL-0011 | TC-0011-0013 holds one row per boundary: TDD-0021..TDD-0023              |
+| 2026-09-25 | DL-0012 | The record-homes obligations are withdrawn (CR-20260925-0010)            |
 
 ## Decision Log
 
@@ -364,6 +408,52 @@ notes: TC-0011-0013 names three boundaries, one ledger row each, and checks the 
   do_not: Put independently failing checks behind one row.
   temptation: All three fail today, so one row turns red either way.
 
+### DL-0012
+
+#### Meta
+
+```yaml
+id: DL-0012
+date: 2026-09-25
+primary: Behavior
+tags: ["@docs", "@test"]
+compat: Change
+scope:
+  - spec-0011/01_Spec.md (discussion REQ-0007 line removed)
+  - spec-0011/03_Acceptance-Criteria.md (AC-0011-0012 removed)
+  - spec-0011/04_Business-Rules.md (BR-0011-0009 removed)
+  - spec-0011/05_Examples.md (EX-0011-0010 removed)
+  - spec-0011/06_Test-Cases.md (TC-0011-0013 removed)
+  - spec-0011/tdd/test-list.md (TDD-0021..TDD-0023 deleted and tombstoned)
+notes: The record-homes obligations are withdrawn under CR-20260925-0010, approved by the user; the skill text stays (DR-0011-0014).
+```
+
+#### Migration / Follow-ups
+
+- `/qfai-atdd` deletes `spec0011RecordHomes.test.ts` in the same commit.
+
+#### Rejected
+
+- option: Keep TDD-0021 for the replacement skill text
+  reason: The user kept the text and withdrew its tests; REQ-0007 is checked by review.
+  do_not: Add a test that pins skill wording or the absence of the work-log surface.
+  temptation: The text is shipped, and shipped text usually has a test.
+
+#### Verification
+
+### Plan (DL-0012)
+
+```yaml
+- id: VFY-001
+  level: integration
+  target: no spec-0011 ledger row names a deleted test file
+  method: qfai validate --profile sdd and --profile tdd --spec spec-0011 with the repository build, after the test file is deleted
+  owner: dev
+  expected: No TDDLIST_TEST_FILE_MISSING and no finding naming TDD-0021..TDD-0023.
+  links:
+    - .qfai/specs/spec-0011/tdd/test-list.md
+```
+
 ## Origin
 
 - Consolidates: old spec-0014 (TDD unification), spec-0015 (Guardrail Hardening), spec-0016 (Dev Toolkit Hardening)
@@ -434,3 +524,9 @@ notes: TC-0011-0013 names three boundaries, one ledger row each, and checks the 
   5. Treat `kind: unscoped-discovery` as non-blocking (REQ-0016): record and continue, do not abort current scope.
 - Cascade: SKILL.md `project_memory:` validated by spec-0004. Reviewer-Gate drift checks (spec-0015) run on outputs.
 - Source: REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017
+
+## Change Requests
+
+| CR ID            | Upstream artifact                                                                                                                                                      | Mode      | Approved by                            | Applied at |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------------------------------- | ---------- |
+| CR-20260925-0010 | `spec-0011/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `10_Plan.md`, `tdd/test-list.md` | re-derive | user (Claude Code structured question) | -          |

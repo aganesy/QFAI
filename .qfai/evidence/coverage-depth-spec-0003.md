@@ -829,130 +829,19 @@ pattern set is made, and is held by review.
 
 ## Rows added by the work-log surface removal
 
-Produced by `test-design-analyst` in the `coverage` phase of the `/qfai-atdd` run started
-`2026-09-23T19:33:24.738Z`, over the working tree of branch `claude/qfai-steering-discussion-69d8a9`.
-The subject is `qfai init` no longer seeding or touching the work-log surface `.qfai/steering/`
-(`09_delta.md` `## Triage (2026-09-23)`).
+`CR-20260925-0010` withdrew every row this section scored, with its ledger rows and its tests:
 
-**Rows.** The three test cases this run writes acceptance tests for: `TC-0003-0059`,
-`TC-0003-0060` and `TC-0003-0061`, carried by the ledger rows `TDD-0094` … `TDD-0099`, and the two
-business rules they cover, `BR-0003-0049` and `BR-0003-0050`. All three test cases declare `Level`
-`integration` and route to `packages/qfai/tests/integration/**`.
+- the test cases `TC-0003-0059`, `TC-0003-0060` and `TC-0003-0061`, carried by `TDD-0094` …
+  `TDD-0099`;
+- the business rules they covered, `BR-0003-0049` and `BR-0003-0050`.
+
+None of them is in the pack any longer, so this section scores no row.
 
 **Relation to the matrix above.** Every other obligation of the pack is scored above, by a run that
 credits only a case that runs. Its totals are the ones that run's stage evidence restates, so they
-are left as computed. Two of its rows score obligations this change removed, `TC-0003-0022` and
-`BR-0003-0016` (ledger row `TDD-0022` is tombstoned); the next full recompute drops them.
-
-### How these cells are scored
-
-- No acceptance test for these rows exists yet. A cell is ✅ when the test case design declares a
-  case for the category and a seeded ledger row carries it. The row notes name the assertion the
-  `red` phase writes. The completion review re-reads the cells against the written tests.
-- **Oracle strength** is ⚠️ on every planned row: each names its mutation, and no run has shown it
-  yet.
-- **`n/a`** is used only where the category's obligation is absent for the row.
-- `Covering TC` is derived from `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`.
-
-### Matrix rows
-
-| US/TC ID     | Equivalence partitions | Normal path | Error path | Edge cases | Boundary values | Special values | State transitions | Combinatorial | Oracle strength | Status  |
-| ------------ | ---------------------- | ----------- | ---------- | ---------- | --------------- | -------------- | ----------------- | ------------- | --------------- | ------- |
-| TC-0003-0059 | ✅                     | ✅          | n/a        | ⚠️         | n/a             | n/a            | n/a               | n/a           | ⚠️              | planned |
-| TC-0003-0060 | ✅                     | n/a         | n/a        | ⚠️         | n/a             | n/a            | n/a               | ✅            | ⚠️              | planned |
-| TC-0003-0061 | ✅                     | n/a         | ✅         | ✅         | ✅              | n/a            | n/a               | ⚠️            | ⚠️              | planned |
-
-Totals across the nine scored columns, 27 cells: **✅ 8 / ⚠️ 6 / ❌ 0**, `n/a` 13.
-
-#### Row notes
-
-**TC-0003-0059 (`TDD-0094`, `TDD-0095`).** `runInit` in an empty temp directory.
-
-- `TDD-0094` (`no-steering-path`). Planned assertions:
-  - `.qfai/steering` does not exist, asserted by an `lstat` that must fail with `ENOENT`, not by an
-    empty glob;
-  - no report line names a path with a `.qfai/steering/` segment.
-
-  The matcher must not match `.qfai/assistant/steering/`, which the legacy-migration lines still
-  print.
-- `TDD-0095` (`no-worklog-instructions-line`): the generated `.github/copilot-instructions.md`
-  names neither `.qfai/steering/` nor `worklog-entry.schema.md`, and has no "work-log" line.
-- Error path `n/a`: `BR-0003-0049` declares no failure.
-- Oracle mutations:
-  - `TDD-0094`: restore the `seedProjectSteering` call in `cli/commands/init.ts`.
-  - `TDD-0095`: restore the "AI work-log surface" line in the instructions builder of the same
-    file.
-
-**TC-0003-0060 (`TDD-0096`, `TDD-0097`).** `Type: edge`, so Normal path is `n/a` and
-`TC-0003-0059` carries it.
-
-- Fixture: an initialised temp directory whose `.qfai/steering/` holds an edited `README.md` and one
-  adopter entry, with no `.gitkeep` and no `_templates/entry.md`. The fixture builds exactly this
-  set whatever `init` seeded (`EX-0003-0053`).
-- Planned assertions: after the run, the recursive path set and every SHA-256 equal the pre-run
-  values. The pre-run set has two files, so the comparison is not over an empty set.
-- Combinatorial: plain run (`TDD-0096`) and `--force` run (`TDD-0097`).
-- Oracle mutation: restore `seedProjectSteering`, which writes the two missing files.
-
-**TC-0003-0061 (`TDD-0098`, `TDD-0099`).** `Type: edge`.
-
-- Error path: the refusal to delete an edited copy is the data-loss floor of
-  `.agents/rules/minimal-implementation.md` § 2. `TDD-0099` covers it.
-- Boundary values: the recorded hash matching (`TDD-0098`) against not matching (`TDD-0099`).
-- Planned assertions:
-  - `TDD-0098`: the file is gone, and the re-read lock has other keys but none for
-    `catalog/worklog-entry.schema.md`.
-  - `TDD-0099`: the bytes equal the edited content, and the report carries the withdrawn-asset note
-    "is no longer shipped by this release, but its content has been edited, so it was not removed".
-    The generic diverged-file note does not match.
-- Oracle mutations:
-  - `TDD-0098`: skip `retireVerifiedGovernedAsset` in `retireWithdrawnGovernedAssets`.
-  - `TDD-0099`: drop the `currentHash !== previousHash` guard in the same function.
-
-### Business rule rows
-
-| BR ID        | Positive case | Negative case | Conditional branches | Covering TC                                                    | Status  |
-| ------------ | ------------- | ------------- | -------------------- | -------------------------------------------------------------- | ------- |
-| BR-0003-0049 | ✅            | n/a           | ✅                   | TC-0003-0059 (TDD-0094, -0095), TC-0003-0060 (TDD-0096, -0097) | planned |
-| BR-0003-0050 | ✅            | ✅            | ⚠️                   | TC-0003-0061 (TDD-0098, TDD-0099)                              | planned |
-
-Totals across the three scored columns, 6 cells: **✅ 4 / ⚠️ 1 / ❌ 0**, `n/a` 1.
-
-- `BR-0003-0049`, planned:
-  - Positive: `TDD-0094` … `TDD-0097`.
-  - Negative `n/a`: the rule names no failure.
-  - Conditional: with and without `--force` (`TDD-0096`, `TDD-0097`), and an empty against a
-    populated directory (`TDD-0094`, `TDD-0096`).
-- `BR-0003-0050`, planned:
-  - Positive: `TDD-0098`.
-  - Negative: `TDD-0099`, the edited copy kept, which is a data-loss floor case.
-
-### Every ❌ cell in these rows
-
-None.
-
-### Every ⚠️ cell in these rows
-
-- `TC-0003-0059` Edge cases: the design runs a plain `init` in an empty directory only. The
-  `--force` regeneration of the instructions file is not exercised. The same builder writes both,
-  so the gap is partial.
-- `TC-0003-0060` Edge cases: the design compares bytes and path sets and does not assert the report.
-  Under the current code a populated directory with an edited `README.md` is exactly where the
-  report names `.qfai/steering/` paths, in the create-only drift note. `BR-0003-0049` asks for no
-  such name. Only `TC-0003-0059`, in an empty directory, asserts the report (finding below).
-- `TC-0003-0061` Combinatorial: only the `--force` branch is exercised for the withdrawn schema. A
-  plain run, which must keep the file and its record, has no case.
-- Oracle strength on all three rows: the mutations are named in the row notes and not yet shown to
-  fail the tests.
-- `BR-0003-0050` Conditional: the plain-run branch has no case, as in the matrix rows above.
-
-### Finding
-
-**`TC-0003-0060` does not assert the report of a populated directory.** `BR-0003-0049` says init
-names no `.qfai/steering/` path in its report. The case most likely to break that rule is a
-populated directory, and its test compares bytes only. Adding the assertion would widen the declared
-boundaries, so it is raised as an advisory for `/qfai-sdd`, not written here.
+are left as computed. Two of its rows score obligations the work-log removal deleted, `TC-0003-0022`
+and `BR-0003-0016` (ledger row `TDD-0022` is tombstoned); the next full recompute drops them.
 
 ### Totals for these rows
 
-**✅ 12 / ⚠️ 7 / ❌ 0**, `n/a` 14, across 33 scored cells: 27 matrix cells and 6 business rule cells.
+**✅ 0 / ⚠️ 0 / ❌ 0**, `n/a` 0, across 0 scored cells.

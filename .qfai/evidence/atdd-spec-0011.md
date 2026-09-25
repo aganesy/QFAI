@@ -116,6 +116,9 @@ No ledger cell is written here: `/qfai-implement` writes `Status`, `DR-ID` and `
 | `TDD-0022` | `TC-0011-0013` | Integration | observed-red | [TDD-0022](#tdd-0022) |
 | `TDD-0023` | `TC-0011-0013` | Integration | observed-red | [TDD-0023](#tdd-0023) |
 
+Rows `TDD-0021` … `TDD-0023` are withdrawn by `CR-20260925-0010`. Their ledger rows are deleted
+and tombstoned, and their test file is deleted. Their sections below stay as history.
+
 ### TDD-0021
 
 - TDD-ID: TDD-0021
@@ -858,8 +861,9 @@ exit=0
 
 ## Coverage Depth Matrix
 
-See `.qfai/evidence/coverage-depth-spec-0011.md` (committed). Totals: ✅ 4 / ⚠️ 12 / ❌ 3,
-`n/a` 17, across 36 scored cells: 9 matrix cells and 27 business rule cells.
+See `.qfai/evidence/coverage-depth-spec-0011.md` (committed). Totals: ✅ 0 / ⚠️ 10 / ❌ 3,
+`n/a` 11, across 24 scored cells: 0 matrix cells and 24 business rule cells. `CR-20260925-0010`
+withdrew the matrix row and one business rule.
 
 ## Work Orders Summary
 

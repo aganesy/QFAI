@@ -111,9 +111,9 @@
 ## Entry points
 
 - US range in this spec: US-0004-0001..US-0004-0039
-- AC range: AC-0004-0001..AC-0004-0041
-- BR range: BR-0004-0001..BR-0004-0035
-- EX range: EX-0004-0001..EX-0004-0044
-- TC range: TC-0004-0001..TC-0004-0076
+- AC range: AC-0004-0001..AC-0004-0039
+- BR range: BR-0004-0001..BR-0004-0033
+- EX range: EX-0004-0001..EX-0004-0041
+- TC range: TC-0004-0001..TC-0004-0073
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream
