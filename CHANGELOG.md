@@ -45,6 +45,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Two spec-0011 rows closed without their reviews now have them** (#2291).
+  `TDD-0026` and `TDD-0039`, the two `seam-only` rows, had been closed at
+  `exception` with their gatekeeper turns and reviews waived. Each was
+  reopened, broken on purpose to show its test fails, restored, and passed by
+  `qa-gatekeeper`, `completion-reviewer` and `implementation-reviewer`. Both
+  leave the spec-0011 review waiver. spec-0011 gains its ATDD evidence file and
+  its Coverage Depth Matrix. The waiver's other fourteen rows are still open.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
