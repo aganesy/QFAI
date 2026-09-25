@@ -1,0 +1,221 @@
+old_id,new_id,disposition,reason
+spec-0001/US-0001-0010,US-0001-0202,carried,main's new story
+spec-0001/AC-0001-0010,assistant-routing.md#ownership-boundary,existing,the skill inventory is the shipped SKILL.md set with no fixed list
+spec-0001/AC-0001-0011,AC-0001-0003-02,carried,skill order within each built-in plan; qfai-run above the order
+spec-0001/AC-0001-0012,AC-0001-0004-02,carried,Stage 0 reuse
+spec-0001/AC-0001-0013,"AC-0001-0202-01, AC-0001-0202-02",carried,split into free-text pass-on and the worker check
+spec-0001/AC-0001-0014,AC-0001-0202-04,carried,
+spec-0001/AC-0001-0015,AC-0001-0202-03,carried,
+spec-0001/AC-0001-0016,AC-0001-0202-05,carried,
+spec-0001/AC-0001-0017,AC-0001-0202-06,carried,
+spec-0001/AC-0001-0018,AC-0001-0004-03,carried,
+spec-0001/AC-0001-0019,AC-0001-0004-04,carried,
+spec-0001/BR-0001-0019,BR-0678,carried in part,bugfix half; the missing-test half is replaced by the change-request approval of a story-authoring stage
+spec-0001/BR-0001-0020,assistant-routing.md#ownership-boundary,existing,no fixed skill list
+spec-0001/BR-0001-0021,BR-0674,carried,
+spec-0001/BR-0001-0023,BR-0675,carried,policy digests are qfai.config.yaml and .qfai/assistant/rule/**
+spec-0001/BR-0001-0025,"BR-0668, BR-0669",carried,
+spec-0001/BR-0001-0026,BR-0671,carried,
+spec-0001/BR-0001-0027,BR-0670,carried,
+spec-0001/BR-0001-0028,BR-0672,carried,
+spec-0001/BR-0001-0029,BR-0673,carried,
+spec-0001/BR-0001-0030,BR-0676,carried,
+spec-0001/BR-0001-0031,BR-0677,carried,
+spec-0001/EX-0001-0014,EX-0001-0002-02,existing,same meaning
+spec-0001/EX-0001-0015,EX-0001-0002-12,carried in part,missing-test half dropped
+spec-0001/EX-0001-0016,assistant-routing.md#ownership-boundary,existing,
+spec-0001/EX-0001-0017,EX-0001-0003-02,carried,
+spec-0001/EX-0001-0019,EX-0001-0004-01,existing,same meaning
+spec-0001/EX-0001-0025,"EX-0001-0004-03, EX-0001-0004-04, EX-0001-0004-05",carried,
+spec-0001/EX-0001-0026,"EX-0001-0202-01, EX-0001-0202-02, EX-0001-0202-03",carried,
+spec-0001/EX-0001-0027,EX-0001-0202-04,carried,
+spec-0001/EX-0001-0028,EX-0001-0202-07,carried,
+spec-0001/EX-0001-0029,"EX-0001-0202-05, EX-0001-0202-06",carried,
+spec-0001/EX-0001-0030,EX-0001-0202-08,carried,
+spec-0001/EX-0001-0031,EX-0001-0202-09,carried,
+spec-0001/EX-0001-0032,"EX-0001-0004-06, EX-0001-0004-07",carried,
+spec-0004/US-0004-0040,dropped,dropped,the TRIAGE validator family is removed (DEC-0096); the check is the workflow core's at accept (BR-0663; BR-0664)
+spec-0004/AC-0004-0042,dropped,dropped,no Approved By column (BR-0321)
+spec-0004/AC-0004-0043,BR-0664,dropped,one approval set: the core's check
+spec-0004/AC-0004-0044,dropped,dropped,plans are never installed
+spec-0004/AC-0004-0045,BR-0664,dropped,one approval set: the core's check
+spec-0004/AC-0004-0046,BR-0664,dropped,no QFAI-TRIAGE-011 and no Authorization-Ref column (BR-0017; BR-0321)
+spec-0004/BR-0004-0036..0040,"BR-0663, BR-0664",dropped,the validator rules become the core's accept-time check
+spec-0004/EX-0004-0045..0058,"BR-0663, BR-0664",dropped,validator examples; the core's checks carry the meaning; plan-install examples are obsolete
+spec-0015/US-0015-0009,AC-0001-0175-03,carried,the run-binding sentence becomes a criterion
+spec-0015/AC-0015-0015,AC-0001-0175-03,carried,primarySpecId becomes the business flow the stage works on
+spec-0015/AC-0015-0023,AC-0001-0167-05,carried,package routing defaults
+spec-0015/AC-0015-0024,AC-0001-0175-02,carried,
+spec-0015/AC-0015-0025,AC-0001-0169-04,carried,
+spec-0015/AC-0015-0026,AC-0001-0169-05,carried,
+spec-0015/BR-0015-0010,BR-0681,carried,
+spec-0015/BR-0015-0018,BR-0679,carried,the upgrade-merge sentence is dropped
+spec-0015/BR-0015-0019,BR-0680,carried,
+spec-0015/BR-0015-0020,BR-0682,carried,
+spec-0015/BR-0015-0021,BR-0683,carried,
+spec-0015/EX-0015-0019,EX-0001-0175-03,carried,
+spec-0015/EX-0015-0020,EX-0001-0167-08,carried,
+spec-0015/EX-0015-0021,EX-0001-0175-02,carried,
+spec-0015/EX-0015-0022,EX-0001-0169-04,carried,
+spec-0015/EX-0015-0023,EX-0001-0169-05,carried,
+spec-0015/DR-0015-0010,dropped,dropped,no routing file is installed so nothing is merged on upgrade
+spec-0003/US-0003-0029,US-0001-0203,carried,main's install story
+spec-0003/AC-0003-0015,AC-0001-0033-03,carried,the two new check-ignore lines; .qfai/runs/ renamed .qfai/run/
+spec-0003/BR-0003-0013,BR-0684,carried,the two new block lines
+spec-0003/EX-0003-0016,EX-0001-0033-05,carried,
+spec-0003/EX-0003-0082,EX-0001-0033-06,carried,
+spec-0003/EX-0003-0083,EX-0001-0033-07,carried,
+spec-0003/AC-0003-0050,AC-0001-0203-01,carried,plans and schemas are not installed
+spec-0003/AC-0003-0051,AC-0001-0203-02,carried,
+spec-0003/AC-0003-0041,AC-0001-0203-03,carried,with the MD041 preamble allowance
+spec-0003/AC-0003-0042,AC-0001-0203-04,carried,
+spec-0003/AC-0003-0043..0047,dropped,dropped,plan install and lock; init conflict report; routing notice and --force routing merge (DEC-0752; DEC-0753)
+spec-0003/AC-0003-0048,AC-0001-0203-06,carried,
+spec-0003/AC-0003-0049,AC-0001-0203-07,carried,
+spec-0003/BR-0003-0061,BR-0685,carried,minus plans and plan lock records
+spec-0003/BR-0003-0062,BR-0686,carried,
+spec-0003/BR-0003-0051,BR-0687,carried,
+spec-0003/BR-0003-0052,BR-0689,carried,
+spec-0003/BR-0003-0053..0057,dropped,dropped,plan install and lock; conflict report; routing merge
+spec-0003/BR-0003-0058,BR-0692,carried,
+spec-0003/BR-0003-0059,BR-0693,carried,
+spec-0003/BR-0003-0060,dropped,dropped,no manifest/ is written
+-,BR-0688,added,MD041 preamble allowance in the shipped markdownlint config
+-,BR-0690,added,workflow.mode values and default in the configuration contract
+-,BR-0691,added,the invalid workflow.mode config issue in the validate contract
+spec-0003/EX-0003-0084,EX-0001-0203-01,carried,
+spec-0003/EX-0003-0085,EX-0001-0203-02,carried,
+spec-0003/EX-0003-0056..0065,EX-0001-0203-03..13,carried,-0010 is added for the MD041 allowance
+spec-0003/EX-0003-0066..0067,dropped,dropped,plan lock records and plan refresh
+spec-0003/EX-0003-0068,EX-0001-0203-18,carried,restated for a shipped rule under rule/
+spec-0003/EX-0003-0069..0071,dropped,dropped,plan and lock rerun; lock upgrade record
+spec-0003/EX-0003-0072,EX-0001-0203-16,carried,
+spec-0003/EX-0003-0073..0079,dropped,dropped,init conflict report and routing merge
+spec-0003/EX-0003-0080,EX-0001-0203-17,carried,host-link real paths
+spec-0003/EX-0003-0081,EX-0001-0203-19,carried,
+spec-0003/TC-0003-0089,EX-0001-0203-19,carried,annotated with AC-0001-0203-07 in skippedSkillCount.test.ts
+-,EX-0001-0203-14,added,validate with workflow.mode: always
+-,EX-0001-0203-15,added,the three valid modes raise no issue
+-,EX-0001-0203-20,added,the --force case of skippedSkillCount.test.ts
+spec-0017/US-0017-0016,US-0002-0024,carried,narrowed to the init suites until the workflow core's suites exist
+spec-0017/AC-0017-0037,AC-0002-0024-01,carried,
+spec-0017/AC-0017-0038,AC-0002-0024-02,carried,
+spec-0017/AC-0017-0039,AC-0002-0024-03,carried,
+spec-0017/BR-0017-0071,BR-0694,carried,tech.md
+spec-0017/BR-0017-0072,BR-0695,carried,tech.md
+spec-0017/BR-0017-0073,BR-0696,carried,tech.md
+spec-0017/BR-0017-0074,BR-0697,carried,tech.md
+spec-0017/EX-0017-0072,"EX-0002-0024-01, EX-0002-0024-02",carried,
+spec-0017/EX-0017-0073,"EX-0002-0024-04, EX-0002-0024-05",carried,
+spec-0017/EX-0017-0074,"EX-0002-0024-06, EX-0002-0024-07",carried,
+spec-0017/EX-0017-0075,EX-0002-0024-03,carried,
+spec-0017/TC-0017-0094,EX-0002-0024-01,carried,suiteList.test.ts
+spec-0017/TC-0017-0095,EX-0002-0024-03,carried,suitesLandFirst.test.ts
+spec-0017/TC-0017-0096,EX-0002-0024-02,carried,suiteList.test.ts
+spec-0017/TC-0017-0097,EX-0002-0024-04,carried,selectionAndVerdict.test.ts
+spec-0017/TC-0017-0098,EX-0002-0024-05,carried,selectionAndVerdict.test.ts
+spec-0017/TC-0017-0099,EX-0002-0024-06,carried,inJobBuild.test.ts
+spec-0017/TC-0017-0100,EX-0002-0024-07,carried,inJobBuild.test.ts
+spec-0008/US-0008-0009,US-0001-0204,carried,
+spec-0008/US-0008-0010,US-0001-0205,carried,example coverage untouched
+spec-0008/AC-0008-0015..0020,AC-0001-0204-01..06,carried,scoped to the bound flow; owningFlow
+spec-0008/AC-0008-0021..0023,AC-0001-0205-01..03,carried,owner by the kind of the first matched ID
+spec-0008/BR-0008-0013,BR-0698,merged,one rule for the three skills' entry check
+spec-0008/BR-0008-0014,BR-0699,merged,one rule for the three Operations tables
+spec-0008/BR-0008-0015,BR-0701,carried,
+spec-0008/BR-0008-0016,BR-0702,carried,owningFlow
+spec-0008/BR-0008-0017,BR-0703,carried,
+spec-0008/BR-0008-0018,BR-0704,merged,with BR-0011-0013
+spec-0008/BR-0008-0019,BR-0713,merged,with BR-0011-0020
+spec-0008/BR-0008-0020,BR-0714,merged,with BR-0011-0021
+spec-0008/BR-0008-0021,BR-0715,merged,with BR-0011-0022
+spec-0008/EX-0008-0014..0019,EX-0001-0204-01..06,carried,
+spec-0008/EX-0008-0020..0022,EX-0001-0205-01..03,carried,
+spec-0008/DR-0008-0004,DEC-0773,carried,merged with DR-0011-0015
+spec-0011/US-0011-0009,US-0001-0207,carried,
+spec-0011/US-0011-0010,US-0001-0208,carried,
+spec-0011/US-0011-0011,US-0001-0209,carried,covered example stays covered
+spec-0011/US-0011-0012,US-0001-0210,carried,example test
+spec-0011/AC-0011-0026,AC-0001-0207-01,carried,
+spec-0011/AC-0011-0013..0017,AC-0001-0207-02..06,carried,the bound flow supplies --flow; checkpoint names an example
+spec-0011/AC-0011-0018..0020,AC-0001-0208-01..03,carried,matchedIds
+spec-0011/AC-0011-0021..0022,AC-0001-0209-01..02,carried,
+spec-0011/AC-0011-0023..0025,AC-0001-0210-01..03,carried,
+spec-0011/BR-0011-0023,BR-0698,merged,
+spec-0011/BR-0011-0010,BR-0699,merged,
+spec-0011/BR-0011-0011,BR-0700,carried,
+spec-0011/BR-0011-0012,BR-0705,carried,
+spec-0011/BR-0011-0013,BR-0704,merged,
+spec-0011/BR-0011-0014,"BR-0706, BR-0707",split,
+spec-0011/BR-0011-0015..0019,BR-0708..BR-0712,carried,
+spec-0011/BR-0011-0020..0022,BR-0713..BR-0715,merged,
+spec-0011/EX-0011-0025,EX-0001-0207-01,carried,
+spec-0011/EX-0011-0011..0015,EX-0001-0207-02..06,carried,
+spec-0011/EX-0011-0024,EX-0001-0207-07,carried,
+spec-0011/EX-0011-0016..0017,EX-0001-0208-01..02,carried,
+spec-0011/EX-0011-0018,"EX-0001-0208-03, EX-0001-0208-04",split,
+spec-0011/EX-0011-0019..0020,EX-0001-0209-01..02,carried,
+spec-0011/EX-0011-0021..0023,EX-0001-0210-01..03,carried,
+spec-0011/DR-0011-0015,DEC-0773,carried,merged with DR-0008-0004
+spec-0011/DR-0011-0016,DEC-0774,carried,
+spec-0014/US-0014-0021,US-0001-0215,carried,
+spec-0014/AC-0014-0023..0029,AC-0001-0215-01..07,carried,scoped to another flow
+spec-0014/BR-0014-0026..0030,BR-0716..BR-0720,carried,
+spec-0014/BR-0014-0031,BR-0698,merged,
+spec-0014/BR-0014-0032,BR-0699,merged,
+spec-0014/BR-0014-0033,BR-0721,carried,
+spec-0014/EX-0014-0030..0034,EX-0001-0215-01..05,carried,flowId in place of specId
+spec-0014/EX-0014-0037,EX-0001-0215-06,carried,
+spec-0014/EX-0014-0035..0036,EX-0001-0215-07..08,carried,
+spec-0010/US-0010-0008,US-0001-0089,restated,brand-direction change request option 1
+spec-0010/US-0010-0009,US-0001-0090,restated,retitled Design Direction Handoff
+spec-0010/US-0010-0013,US-0001-0206,carried,discussion as a stage of a run
+spec-0010/AC-0010-0001,AC-0001-0087-01,existing,BR-0232 restated instead
+spec-0010/AC-0010-0006,AC-0001-0089-01,restated,
+spec-0010/AC-0010-0007,"AC-0001-0090-01, AC-0001-0090-02",restated,the /qfai-sdd half is AC-0001-0090-02
+spec-0010/AC-0010-0013..0015,AC-0001-0206-01..03,carried,
+spec-0010/BR-0010-0001,BR-0232,restated,names /qfai-sdd as the author of DESIGN.md
+spec-0010/BR-0010-0006,BR-0234,restated,
+spec-0010/BR-0010-0007,"BR-0235, BR-0742",restated,the /qfai-sdd half is BR-0742
+spec-0010/BR-0010-0013..0015,BR-0722..BR-0724,carried,
+spec-0010/EX-0010-0006,EX-0001-0089-01,restated,
+spec-0010/EX-0010-0007,"EX-0001-0090-01, EX-0001-0090-02",restated,
+spec-0010/EX-0010-0014..0016,EX-0001-0206-01..03,carried,
+spec-0012/US-0012-0144,US-0001-0211,carried,binds a flow
+spec-0012/AC-0012-0176..0177,AC-0001-0211-01..02,carried,
+spec-0012/AC-0012-0178,"AC-0001-0211-03, AC-0001-0211-04",split,
+spec-0012/BR-0012-0136..0137,BR-0725..BR-0726,carried,
+spec-0012/BR-0012-0138,"BR-0727, BR-0728",split,owningFlow
+spec-0012/EX-0012-0192..0195,EX-0001-0211-01..04,carried,
+spec-0013/US-0013-0015,US-0001-0212,carried,a new story or flow in place of a capability
+spec-0013/US-0013-0016,US-0001-0213,carried,one example under an existing criterion
+spec-0013/US-0013-0017,US-0001-0214,carried,
+spec-0013/AC-0013-0043..0045,AC-0001-0212-01..03,carried,the citation is in the triage row's Approach
+spec-0013/AC-0013-0031,AC-0001-0212-04,carried,--auto: the row never reaches WIP
+spec-0013/AC-0013-0032,AC-0001-0212-01,merged,Authorization-Ref column obsolete
+spec-0013/AC-0013-0033..0034,AC-0001-0213-01..02,carried,Boundary-slug half dropped
+spec-0013/AC-0013-0035,AC-0001-0213-02,merged,seeding writes no test
+spec-0013/AC-0013-0036,AC-0001-0213-03,carried,a decisions.md triage row in place of 09_delta
+spec-0013/AC-0013-0037..0041,AC-0001-0214-01..05,carried,renamed operations; flow and new_story targets
+-,AC-0001-0214-06,added,the change-request approval (DEC-0748)
+spec-0013/BR-0013-0037..0038,BR-0729..BR-0730,carried,
+spec-0013/BR-0013-0024..0025,BR-0731..BR-0732,carried,
+spec-0013/BR-0013-0026,BR-0729,merged,column obsolete
+spec-0013/BR-0013-0027..0028,BR-0733..BR-0734,carried,
+spec-0013/BR-0013-0029,BR-0734,merged,layer derivation is ledger-only
+spec-0013/BR-0013-0030..0035,BR-0735..BR-0740,carried,
+spec-0013/BR-0013-0036,dropped,dropped,ledger Boundary slug
+-,BR-0741,added,the change-request approval (DEC-0748)
+spec-0013/EX-0013-0036..0037,EX-0001-0212-01..02,carried,
+spec-0013/EX-0013-0024..0025,EX-0001-0212-03..04,carried,
+spec-0013/EX-0013-0026,dropped,dropped,documents the Authorization-Ref column
+spec-0013/EX-0013-0027..0028,EX-0001-0213-01..02,carried,
+spec-0013/EX-0013-0029,dropped,dropped,ledger layer derivation
+spec-0013/EX-0013-0030,EX-0001-0213-03,carried,
+spec-0013/EX-0013-0031..0035,EX-0001-0214-01..05,carried,
+-,EX-0001-0214-06,added,the change-request approval (DEC-0748)
+spec-0002/AC-0002-0010,AC-0001-0015-01,restated,CR-20260912-0003 statement B
+spec-0002/BR-0002-0008,BR-0038,restated,CR-20260912-0003 statement A
+spec-0002/BR-0002-0010,BR-0040,restated,CR-20260912-0003 statement B
+spec-0002/EX-0002-0011,EX-0001-0015-01,restated,
+all packs/06_Test-Cases.md 09_delta.md 10_Plan.md tdd/test-list.md 16_Traceability-ledger.md 01_Spec.md tables,dropped,dropped,ledger test-case delta plan and spec-pack bookkeeping
