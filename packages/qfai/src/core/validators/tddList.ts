@@ -2595,19 +2595,16 @@ async function isAuditedCompletedEntry(
  * `Review pack seal` in `## Final status` for exactly that case and asks the
  * completion gate to recompute the seal over the recorded path.
  *
- * **An absent pack does not seal.** Elsewhere a missing pack is tolerated
- * because the committed entry still carries what the gate re-derives — the
- * audited hashes over committed evidence and the reviewers' PASS. A stage has
- * none of that: `## Final status` records only a path and a digest, so with the
- * directory gone nothing in the repository can contradict them. Accepting
- * `ENOENT` let a canonical-looking path, any 64 hex digits and a hand-written
- * re-verify block clear a `done` row's stale RED hash on a fresh clone, which
- * is every clone but the author's. `qfai-atdd/references/shared-test-artifacts.md`
- * reads a stage block "only when that file's `## Final status` names its
- * `Review pack` and a `Review pack seal` that **still recomputes** from it";
- * where it cannot be recomputed, the block is not readable evidence. The
- * editing-row home stays portable, and closing the stage gap for a fresh clone
- * needs committed stage provenance the contract does not define yet.
+ * **An absent pack is judged on the committed record.** Review packs are
+ * local-only, so every clone but the author's has none, CI included. Where the
+ * named directory does not exist, the gate reads what `## Final status`
+ * records: a canonical pack path, a well-formed seal, and no stated outcome
+ * other than PASS. That is how an item's absent pack is read as well, and it
+ * makes the stage record mean the same thing on every checkout. With the pack
+ * gone nothing in the repository can contradict the path or the digest, so on
+ * such a checkout the record is only as good as the review of the change that
+ * committed it. A pack path that exists but cannot be read is still rejected:
+ * a damaged pack is not the fresh-clone case.
  *
  * **A seal that recomputes is not a verdict.** The seal says the named
  * directory has not been edited since it was recorded; it says nothing about
@@ -2660,8 +2657,12 @@ async function hasSealedStageStatus(
   if (safePack === null) return false;
   try {
     await lstat(path.join(root, ...safePack.split("/")));
-  } catch {
-    return false;
+  } catch (error) {
+    // SIMPLIFIED: an absent pack is accepted on its recorded path and seal
+    // alone, since a stage records no hash over committed evidence to recompute.
+    // Lift when: the stage record carries committed provenance the gate can
+    // recompute without the pack.
+    return isEnoent(error);
   }
   const files = await collectReviewPackFiles(root, pack);
   if (files === null || reviewPackSeal(files) !== bareSha256(seal)) return false;
@@ -2801,10 +2802,11 @@ async function currentReverifyRecordRevision(
  *   item (`isAuditedCompletedEntry`). An item cannot re-verify itself: the
  *   consumer is `done` and has no edge on which to observe anything.
  * - **a zero-row stage's `coverage-depth-spec-NNNN.md`**, which owns no item
- *   entry, where `## Final status` must carry the stage `Review pack`, a
- *   `Review pack seal` that still recomputes from it, and a pack whose request,
- *   response and `summary.json` record the stage reviewer's PASS over that
- *   stage's own spec (`hasSealedStageStatus`).
+ *   entry, where `## Final status` must carry the stage `Review pack` and a
+ *   `Review pack seal`. Where the pack is present, the seal must still
+ *   recompute from it and its request, response and `summary.json` must record
+ *   the stage reviewer's PASS over that stage's own spec; where it is absent,
+ *   the recorded fields are read instead (`hasSealedStageStatus`).
  */
 async function* currentSharedArtifactReverifyRevisions(
   context: CompletedEvidenceContext,

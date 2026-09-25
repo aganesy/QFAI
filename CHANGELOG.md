@@ -84,6 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A sealed stage record is judged the same on CI as on the machine that
+  wrote it** (#2507). Review packs under `.qfai/review/` are gitignored, but
+  `QFAI-TDDLIST-008` treated a stage's missing pack as no seal. A
+  `Shared-artifact re-verify` block in `coverage-depth-spec-NNNN.md` therefore
+  cleared a stale RED hash only where the pack was on disk, and failed on CI and
+  on every fresh clone. Where the recorded pack is absent, the gate now reads
+  the committed `## Final status` instead: a canonical `Review pack` path, a
+  well-formed `Review pack seal`, and no stated outcome other than PASS. A pack
+  that is present is still recomputed and read as before.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

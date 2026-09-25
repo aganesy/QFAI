@@ -58,6 +58,11 @@ At completion, recompute the seal over the **recorded** path and compare it with
 the **recorded** value, then check that `## Final status` says what that pack
 says.
 
+Where the recorded pack is absent, as on a fresh clone or in CI, there is
+nothing to recompute. The gate then checks the record itself: the path is a
+canonical pack path, the seal is a digest, and `## Final status` states no
+outcome other than PASS.
+
 The recording and the recomputation must be two moments. A value computed from
 the pack at completion always matches itself, whatever was edited in between,
 and the stage audit hash covers the evidence but not the verdict — so a
