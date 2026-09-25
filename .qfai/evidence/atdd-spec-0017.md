@@ -329,6 +329,20 @@ Two things are left to `qa-gatekeeper` rather than decided here:
   routed. Each `Falsifiability revision` is recorded so the gate can rebuild
   the mutated tree from `6b9fb192c` and the recorded edit.
 
+### /qfai-atdd — run started 2026-09-25T02:54:38.996Z
+
+Preflight: session opened
+
+The run covers `TDD-0062` alone. `CR-20260924-0002` fixes its test case, its
+boundary and its selector, and the test at that selector already reads the
+four sliced jobs and the release shape step. What the confidence check left
+open was whether the entry the split run wrote for the row can serve as its
+handover.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T03:01:06.945Z | 0a49a497103316797e59b018f72da1f0a809398f | 2026-09-25T03:02:10.000Z | preflight | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 13 tests across 8
@@ -1459,6 +1473,16 @@ still `/qfai-implement` step 3c's to take.
 | `TDD-0070` | `TC-0017-0070` | Integration | falsifiability | [TDD-0070](#tdd-0070) |
 | `TDD-0083` | `TC-0017-0083` | Integration | falsifiability | [TDD-0083](#tdd-0083) |
 
+The run started 2026-09-25T02:54:38.996Z hands `TDD-0062` over on the
+falsifiability branch, for the cycle `CR-20260924-0002` opened. The gap its
+earlier entry records is closed: the test now reads `release.yml`'s
+`gate-tests` and `gate-floor` jobs and its `verify` job's `SUITE_SLICES`, and
+the entry shows each of them failing the case.
+
+| TDD-ID | Obligation | Layer | RED provenance | Entry |
+| ------ | ---------- | ----- | -------------- | ----- |
+| `TDD-0062` | `TC-0017-0062` | Integration | falsifiability | [TDD-0062](#tdd-0062) |
+
 ### TDD-0016
 
 - TDD-ID: TDD-0016
@@ -1890,6 +1914,15 @@ packages/qfai/tests/helpers/runnerProjects.ts
 packages/qfai/tests/scripts/sliceSurfaceAlignment.test.ts
 ```
 
+#### Handover for the CR-20260924-0002 cycle
+
+The run that applied `CR-20260924-0002` left the record below for this row. It
+did not advance the row, and its fields do not form a handover: the trio is
+unprefixed, the command selects by `TDD-0062` rather than by the row's
+`Selector`, and no edit is recorded for the mutation. It is kept verbatim, out
+of the field grammar, and the handover after it replaces it.
+
+````text
 #### Round 2 — CR-20260924-0002
 
 - TDD-ID: TDD-0062
@@ -1919,6 +1952,62 @@ packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 - GREEN result: exit 0; `Test Files 1 passed (1) Tests 1 passed | 3 skipped`.
 - GREEN revision: working-tree+36e1e85071e17d27f7ca38f73361c508977ea8c7849e559f2f767128969d024e
 - Oracle proof: the named predicate mutation fails this row's selector and is reverted before GREEN.
+````
+
+Handover by the `/qfai-atdd` run started 2026-09-25T02:54:38.996Z:
+
+- TDD-ID: TDD-0062
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+- Selector: agrees across the runner, scripts, CI and release declarations
+- TC-ref: TC-0017-0062
+- DR-ID: CR-20260924-0002
+- Branch: falsifiability — the test, the helper it reads and the workflows it reads all predate this run, and the case passed on its first run
+- Predicate to break: .github/workflows/release.yml:515, the `gate-tests` job's `matrix.slice` list — `slice: [core, validators, integration, e2e, cli, unit, scripts]`
+- Mutation: remove `, scripts` from line 515
+- Why it fails: `gate-tests` then expands over six slices while the runner declares seven.
+  `expect(sorted(matrixSlices(workflow, job)), …).toEqual(projects)` fails as an assertion at `spec0017SliceAlignment.test.ts:19:73`, labelled `release.yml#gate-tests`
+- Other rows: none. In `tests/scripts/ownWorkflowTopology.test.ts` two cases that carry no ledger row fail: "runs the suite exactly once for one tree, on the range and on the floor" and "checks the same slice set the sliced jobs expand over". `spec0017CiMatrix.test.ts`, the other three cases of `spec0017SliceAlignment.test.ts`, `tests/scripts/sliceSurfaceAlignment.test.ts` and `tests/scripts/workflowHygiene.test.ts` pass: Test Files 2 failed | 3 passed (5); Tests 3 failed | 184 passed (187)
+
+`TC-0017-0062` names every job that expands over the slice set. Two are in
+`ci.yml` and two in `release.yml`, and the release `verify` job's shape step
+declares the same set in `SUITE_SLICES`. Each surface was mutated on its own,
+in both directions for the release matrices. Every mutation failed the row's
+case alone as an assertion, and every file was restored before the next.
+
+| Mutation | Surface | Assertion | Location |
+| -------- | ------- | --------- | -------- |
+| drop `scripts` | `ci.yml:480`, `node-floor` | `ci.yml#node-floor`: 6 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| drop `scripts` | `ci.yml:578`, `test` | `ci.yml#test`: 6 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| drop `scripts` | `release.yml:515`, `gate-tests` | `release.yml#gate-tests`: 6 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| drop `scripts` | `release.yml:581`, `gate-floor` | `release.yml#gate-floor`: 6 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| add `pr-merge` | `release.yml:515`, `gate-tests` | `release.yml#gate-tests`: 8 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| add `pr-merge` | `release.yml:581`, `gate-floor` | `release.yml#gate-floor`: 8 names against 7 | `spec0017SliceAlignment.test.ts:19:73` |
+| drop `scripts` | `release.yml:217`, `SUITE_SLICES` | 6 names against 7 | `spec0017SliceAlignment.test.ts:21:42` |
+
+Each run: `pnpm -C packages/qfai exec vitest run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations"`,
+with Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The same command
+on the restored tree passes: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4).
+
+The selector is the `it` title without its `TC-0017-0062 (TDD-0062): ` prefix.
+It holds no regular-expression metacharacter, no other test in the package
+carries it, and it selects this one case of the file's four.
+
+The trials show the mutations discriminate. They are not the row's
+falsifiability trio: `/qfai-implement` Phase Red step 3c applies the named
+mutation and records the `Round 2:` fields.
+
+- RED test hash: 4f6607d4a52348fe78c4987065c5f3dbe69a0a209886aefb9862d508ff0dea68
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/spec0017WorkflowSurfaces.ts
+packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
+```
+
+#### Shared-artifact re-verify
+
+None. No test file or helper changed, so no recorded `RED test hash` moves.
 
 ### TDD-0069
 
@@ -2207,6 +2296,24 @@ orchestrator. It wrote no test, and no reviewer was routed from it.
 | 17 | backend-engineer | backend-engineer | /qfai-implement: TDD-0070 step 3c mutation, restore and GREEN | #tdd-0070 | Round 1 | PASS |
 | 18 | backend-engineer | backend-engineer | /qfai-implement: TDD-0083 step 3c mutation, restore and GREEN | #tdd-0083 | Round 1 | PASS |
 | 19 | backend-engineer | backend-engineer | /qfai-implement: refactor verify of the nine rows over each whole test file, and `red -> green -> refactor` | #tdd-0016 … #tdd-0083 | Refactor verify fields; tdd/test-list.md | PASS |
+
+### Rows for the run started 2026-09-25T02:54:38.996Z
+
+One agent ran this invocation and took each routed role inline. Nothing was
+dispatched. A row below records a check that agent performed in that role;
+the review-phase gates were not run here and are recorded as `PENDING`.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 20 | test-design-analyst | stage3-agent (inline) | coverage: route `TC-0017-0062` and check its rows | 06_Test-Cases.md, 03_Acceptance-Criteria.md `AC-0017-0027`, 04_Business-Rules.md `BR-0017-0057`, tdd/test-list.md, 02_User-stories.md | Level `integration` routes to `tests/integration/**`; `spec0017SliceAlignment.test.ts:1` carries the annotation; the case has two rows, `TDD-0062` (boundary `equal`) and `TDD-0105` (boundary `seven`), each on its own `it`; all 93 test cases of the spec have a row, 9 user stories have 9 E2E rows, and the spec binds no API contract | PASS |
+| 21 | qa-strategist | stage3-agent (inline) | coverage: what the row's oracle must fail on | `TC-0017-0062`, `BR-0017-0057` | the five surfaces the case names, each mutated alone: a slice dropped from every matrix and from `SUITE_SLICES`, and a slice added to both release matrices | PASS |
+| 22 | delivery-planner | stage3-agent (inline) | red: confirm the row can be handed over | tdd/test-list.md, `.qfai/decisions/CR-*.md` | `TDD-0062` is `todo`, not `blocked`; `CR-20260924-0002` is approved and applied; no unresolved Change Request in scope names the row | PASS |
+| 23 | acceptance-test-engineer | stage3-agent (inline) | red: run the row's selector, then apply, run and revert the seven mutations | the test file, its helper, `ci.yml`, `release.yml` | #tdd-0062, the mutation table; every mutation failed the case as an assertion, and the restored tree passed | PASS |
+| 24 | acceptance-test-engineer | stage3-agent (inline) | implementation: decide whether the test needs a change | the test file, `SLICED_JOBS` and `releaseShapeSlices` in the helper | no change: the test already reads the four sliced jobs and the release shape step | PASS |
+| 25 | acceptance-test-engineer | stage3-agent (inline) | Hand `TDD-0062` over on the falsifiability branch | steps 22 to 24 | #tdd-0062 | PASS |
+| 26 | acceptance-test-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T02:54:38.996Z/agents): write a new handover for this cycle and keep the split run's record verbatim in a fence | #tdd-0062, `qfai-implement` Phase Red step 3b | #tdd-0062; that record names the branch but not the row's selector, prefixes only part of its trio and records no edit, so step 3b could not verify it; deleting it would drop an observation; no position disagreed | PASS |
+| 27 | completion-reviewer | not routed | review: completion gate for this run | #tdd-0062, this block | - | PENDING |
+| 28 | qa-gatekeeper | not routed | review: evidence gate for this run | #tdd-0062, this block | - | PENDING |
 
 ## Execution logs
 
