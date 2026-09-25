@@ -40,7 +40,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/implementVolumePolicy.test.ts",
   "tests/assets/implementationReviewerBlocking.test.ts",
   "tests/assets/initAssetsRootMirror.test.ts",
-  "tests/assets/initContractSteeringSeed.test.ts",
   "tests/assets/integrationVerifyRemedy.test.ts",
   "tests/assets/layerDerivationProcedure.test.ts",
   "tests/assets/layerVocabularyCrosswalk.test.ts",
@@ -79,7 +78,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/assets/unitComponentLayers.test.ts",
   "tests/assets/usSliceDeferral.test.ts",
   "tests/assets/workOrderUpstreamBan.test.ts",
-  "tests/assets/worklogSchemaShipped.test.ts",
   "tests/cli/args.test.ts",
   "tests/cli/commands/prototypingCertify.test.ts",
   "tests/cli/commands/prototypingIterate.test.ts",
@@ -463,5 +461,4 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/validators/uix/threeLayer.test.ts",
   "tests/validators/uix/trendScan.test.ts",
   "tests/validators/upstreamSsotGuard.test.ts",
-  "tests/validators/worklogSurface.test.ts",
 ];

@@ -44,12 +44,12 @@ Given `extractedDesignSystem` resolves to `.qfai/contracts/design/design-system.
 
 Given a failing test, when Phase Green writes production code for it, then the code written is the least that makes that test pass, and behaviour no test yet demands is not generalized ahead of its own RED.
 
-## AC-0011-0012: The implement stage follows the stage-skill handover
+## AC-0011-0026: The implement stage follows the stage-skill handover
 
 - US-Refs: US-0011-0009
 
 ```gherkin
-# AC-0011-0012
+# AC-0011-0026
 # Source: discussion-20260923171450572#REQ-0051
 Scenario: The implement stage follows the stage-skill handover
   Given workflow mode active

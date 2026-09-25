@@ -153,7 +153,7 @@ Cited, not copied. The pack policies are `discussion-20260923171450572`
 
 | Policy                              | Holds that                                                                               | Realized by                              |
 | ----------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `_policies/08_Decisions.md` DR-0296 | A new capability is approved once, at routing                                            | BR-0018-0001..BR-0018-0006               |
+| `_policies/08_Decisions.md` DR-0299 | A new capability is approved once, at routing                                            | BR-0018-0001..BR-0018-0006               |
 | `_policies/08_Decisions.md` DR-0297 | A diagnosed missing-test row is appended without a Change Request                        | BR-0018-0036, BR-0018-0037               |
 | DPOL-01                             | The run asks only for a material decision or a fact only the operator holds              | BR-0018-0051, BR-0018-0057               |
 | DPOL-02                             | Authority has exactly three kinds                                                        | CLI-WF `## Authorizations`; BR-0018-0059 |
@@ -172,7 +172,7 @@ Cited, not copied. The pack policies are `discussion-20260923171450572`
 
 - Evidence: `.qfai/evidence/discussion-20260923171450572.md` (the discussion
   record) and the batch record under `.qfai/evidence/`. The Phase 0 contracts and
-  `_policies/08_Decisions.md` DR-0296 and DR-0297 carry the decisions made before
+  `_policies/08_Decisions.md` DR-0299 and DR-0297 carry the decisions made before
   this pack was written.
 
 ## Relevant Requirements

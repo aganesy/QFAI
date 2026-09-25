@@ -40,11 +40,10 @@ const ROOT = process.cwd();
 
 /**
  * Whole trees excluded because their tracked content is a historical
- * record — a Change Request decision, a discussion-pack transcript, a
- * dated work-log entry, run evidence — and citing a real review or issue
- * inside a record of what actually happened is not the slop this rule
- * targets. `CHANGELOG.md` is the same case by name: the writing rule
- * itself says PR and issue numbers belong there.
+ * record — a Change Request decision, a discussion-pack transcript, or
+ * run evidence. Citing a real review or issue inside a record of what
+ * happened is outside this rule. `CHANGELOG.md` is the same case by
+ * name: the writing rule itself says PR and issue numbers belong there.
  */
 const EXCLUDE_PREFIX = [
   "tmp/",
@@ -57,7 +56,6 @@ const EXCLUDE_PREFIX = [
   ".qfai/discussion_archive/",
   ".qfai/decisions/",
   ".qfai/evidence/",
-  ".qfai/steering/",
   // Generated mirrors: a finding here would point at the wrong file to
   // edit. The source under packages/qfai/assets/init/** is scanned instead.
   ".qfai/assistant/",

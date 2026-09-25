@@ -17,11 +17,11 @@ Work was interrupted at the user's request on 2026-09-25 JST. This checkpoint co
 ## Decisions already authorized
 
 - Finish completion: commit tracked evidence immediately before `finish`; `finish` records completion in the runtime journal only. The CLI contracts and spec-0018 reflect this choice.
-- `CR-20260924-0006` option 1: add an independent negative case and ledger row for a missing CREATE authorization ID.
-- `CR-20260925-0003`: assign TDD-0014 to workflow core `decide.ts`.
-- `CR-20260925-0004` option 1: use typed `{kind,ref}` route references. SDD is updated; implementation and affected ledger rows remain pending.
+- `CR-20260924-0008` option 1: add an independent negative case and ledger row for a missing CREATE authorization ID.
+- `CR-20260925-0017`: assign TDD-0014 to workflow core `decide.ts`.
+- `CR-20260925-0018` option 1: use typed `{kind,ref}` route references. SDD is updated; implementation and affected ledger rows remain pending.
 - `CR-20260913-0012` option 1: remove two contradictory later acceptance criteria and retain the valid optional side-artifact criterion under a new ID. The spec-0013 limited SDD rerun passed.
-- `CR-20260925-0005` option 1: reconcile spec-0012 duplicate and stale boundaries. This CR is only partially applied at interruption; its `Applied at` field remains unset.
+- `CR-20260925-0019` option 1: reconcile spec-0012 duplicate and stale boundaries. This CR is only partially applied at interruption; its `Applied at` field remains unset.
 - The choice for `CR-20260912-0003` was still awaiting the user's answer when work stopped. Do not infer approval.
 
 ## Implementation position
@@ -34,7 +34,7 @@ Work was interrupted at the user's request on 2026-09-25 JST. This checkpoint co
 
 ## Interrupted spec-0012 reconciliation
 
-- `CR-20260925-0005` has approved metadata and an unfinished resolution. The SDD owner changed `06_Test-Cases.md`, `09_delta.md`, `16_Traceability-ledger.md`, and `tdd/test-list.md`, but did not finish the scoped validation or mark the CR applied.
+- `CR-20260925-0019` has approved metadata and an unfinished resolution. The SDD owner changed `06_Test-Cases.md`, `09_delta.md`, `16_Traceability-ledger.md`, and `tdd/test-list.md`, but did not finish the scoped validation or mark the CR applied.
 - TC-0012-0334 was removed from active coverage; TC-0012-0335 was moved to L3 with a real post-handoff output oracle. TDD-0583 and 0568 were seeded as Integration rows. Six duplicate or stale rows were retired with their original Evidence strings preserved. TDD-0336, 0337 and 0338 were re-scoped, but their `done` status, DR-ID and Evidence still need the `/qfai-implement` change-request preflight reset.
 - The CR originally misstated that the six retired rows had `Evidence: -` and had never executed. All six were `done` with descriptive Evidence. The CR was corrected after an independent review; preserve that history.
 - A scoped SDD run then found `TDDLIST_TC_NOT_COVERED TC-0012-0321`. Independent review found that the superseded index-14 case should leave active `06_Test-Cases.md`, with its former text and successor TC-0012-0357 retained in `09_delta.md`. The owner was applying that correction when interrupted. Check the current files and rerun scoped SDD, drift, ATDD/full profile, and dogfood backlog. TC-0012-0325 may have the same residual coverage problem.
