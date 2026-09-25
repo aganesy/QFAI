@@ -122,6 +122,16 @@
   are unchanged. IDs are unchanged. TDD-0303 stays at todo; this CR goes in
   its DR-ID.
 
+- Change ID: DELTA-0010
+- Date: 2026-09-25
+- Primary: Follow-up
+- Tags: @docs
+- Summary: CR-20260925-0013 option 1. CLI-WF `### Work order` says `target` is
+  absent from the `route` and `discussion` work orders, which bind no spec and
+  no new capability, and never absent from any other. No item of this spec
+  said every work order carries a target: BR-0018-0004 requires one on the SDD
+  work order only. No ledger row changes.
+
 ## Triage (2026-09-24 intent-driven entry)
 
 The per-spec copy of the approved `CREATE` row in `_policies/10_delta.md` under the same
@@ -593,6 +603,7 @@ through `finish`, so its example ends that way.
 | CR-20260925-0010 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/03..06`                                                                                   | re-derive | user        | 2026-09-25T03:00:14Z |
 | CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`; `spec-0018/03..06`                                   | re-derive | user        | 2026-09-25T03:23:20Z |
 | CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`; `spec-0018/06_Test-Cases.md`                                                                         | re-derive | user        | 2026-09-25T06:04:36Z |
+| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                       | re-derive | user        | 2026-09-25T07:34:27Z |
 
 ## Merge reconciliation (2026-09-25)
 
