@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 import {
   CLI,
   commitAll,
@@ -38,13 +39,16 @@ export async function acceptThenNext(
  * independent QA pass, commits the tree and calls `finish`.
  */
 export async function verifyAndFinish(root: string, runId: string, document: unknown) {
-  await write(root, ".qfai/runs/shared/verify.json", '{"status":"PASS","scope":"full"}');
+  const report = '{"status":"PASS","scope":"full"}';
+  await write(root, ".qfai/runs/shared/verify.json", report);
   const verified = await submit(
     root,
     runId,
     "accept",
     resultFor(document, "verify-1", {
-      artifactRefs: [{ path: ".qfai/runs/shared/verify.json", digest: "submitted" }],
+      artifactRefs: [
+        { path: ".qfai/runs/shared/verify.json", digest: hashAssistantAssetText(`${report}\n`) },
+      ],
       reviewResults: [
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],

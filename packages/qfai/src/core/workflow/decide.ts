@@ -458,6 +458,8 @@ export interface WorkflowInput {
     seam?: { targetTestId: string; observation: string };
     testObservation?: string;
     changedFiles?: { path: string; digest: string }[];
+    // Its shape is checked by the command adapter when it copies the reports it names.
+    artifactRefs?: unknown;
     red?: { testId: string; failureKind: string };
     regressionFix?: { testId?: string; rerunRef?: string; reviewRef?: string };
     reviewResults?: WorkflowReview[];
@@ -1062,18 +1064,29 @@ function routePlanIsInvalid(
   }
 }
 
-// SIMPLIFIED: a submitted digest of a file the facts carry no digest for is not checked.
-// Lift when: the command adapter supplies the digest of every file a result names.
+// Each entry of a submitted file list that names a path, with the digest submitted for it.
+export function submittedFileRefs(list: unknown): { path: string; digest: unknown }[] {
+  return (Array.isArray(list) ? list : []).flatMap((entry: unknown) =>
+    isRecord(entry) && typeof entry.path === "string"
+      ? [{ path: entry.path, digest: entry.digest }]
+      : [],
+  );
+}
+
+// Every submitted digest of a changed file or an artifact is checked against the core's own. A
+// path the facts carry no digest for names no readable file under the project's real root: a
+// changed file outside it is refused as `write-scope`, an artifact as `schema`, and a deleted
+// file has no digest to compare.
 function digestRefusals(
   result: NonNullable<WorkflowInput["result"]>,
   facts: WorkflowFacts,
 ): InputRefusal[] {
-  return (result.changedFiles ?? [])
-    .filter((changed) => {
-      const own = facts.fileDigests?.[changed.path];
-      return own !== undefined && own !== changed.digest;
+  return [...submittedFileRefs(result.changedFiles), ...submittedFileRefs(result.artifactRefs)]
+    .filter((named) => {
+      const own = facts.fileDigests?.[named.path];
+      return own !== undefined && own !== named.digest;
     })
-    .map((changed) => ({ reason: "digest-mismatch", subject: changed.path }));
+    .map((named) => ({ reason: "digest-mismatch", subject: named.path }));
 }
 
 // A repeated work order names each input by the digest the file has now, never a stale one.
@@ -1086,8 +1099,9 @@ function refreshedInputs(workOrder: WorkflowWorkOrder, facts: WorkflowFacts): Wo
   return { ...workOrder, inputs };
 }
 
-// SIMPLIFIED: an input whose digest the facts do not carry is left out of the work order.
-// Lift when: the command adapter supplies the digest of every file a work order names.
+// An `sdd_append` work order names the diagnosis's reproduction record as its input, at the
+// digest the file has now. A record that names no readable file under the project's real root
+// has no digest, and is not named.
 function diagnosisInputs(
   stageKind: string,
   diagnosis: WorkflowSnapshot["diagnosis"],
