@@ -6,7 +6,7 @@ Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-base
 
 | Operation                         | What the work order asks                                      |
 | --------------------------------- | ------------------------------------------------------------- |
-| `resolve-product-scope`           | Settle the product scope the routing left open, and only that |
+| `resolve-unsettled-product-scope` | Settle the product scope the routing left open, and only that |
 
 The skill serves exactly these operations. A work order naming any other is refused.
 
