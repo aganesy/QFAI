@@ -6,18 +6,24 @@ waivers:
       paths: [".qfai/specs/spec-0018/tdd/test-list.md"]
     match:
       dl_ids:
-        [
-          TDD-0003,
-          TDD-0015,
-          TDD-0026,
-          TDD-0027,
-          TDD-0028,
-          TDD-0029,
-          TDD-0030,
-          TDD-0527,
-          TDD-0528,
-          TDD-0529,
-        ]
+        - TDD-0003
+        - TDD-0005
+        - TDD-0006
+        - TDD-0007
+        - TDD-0008
+        - TDD-0009
+        - TDD-0010
+        - TDD-0011
+        - TDD-0012
+        - TDD-0015
+        - TDD-0026
+        - TDD-0027
+        - TDD-0028
+        - TDD-0029
+        - TDD-0030
+        - TDD-0527
+        - TDD-0528
+        - TDD-0529
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"

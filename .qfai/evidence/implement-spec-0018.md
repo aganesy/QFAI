@@ -12,6 +12,14 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0002 | TC-0018-0002 | Done gate PASS (12/12); Round 2 reviews and checkpoint sealed |
 | TDD-0003 | TC-0018-0003 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0004 | TC-0018-0004 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
+| TDD-0005 | TC-0018-0005 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0006 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0007 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0008 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0009 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0010 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0011 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0012 | TC-0018-0007 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0013 | TC-0018-0008 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
 | TDD-0015 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0026 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
@@ -909,6 +917,86 @@ Restored suite: exit 0; Test Files 3 passed (3); Tests 4 passed (4).
 - Checkpoint verification result: `PASS; exit 0; TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability; TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results; TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order; TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in one routing round; four selected tests passed`
 - Checkpoint verification revision: `working-tree+b9208778615dad76ebb308c719ced90c8e420d2c298960150de89f385a740628`
 - Checkpoint verification seal: `8e6ec6ed825762871b8b12387526e38079fd264b0c941be10ecad9c56086085a`
+
+### TDD-0005
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theSddWorkOrderAlwaysHasATarget.test.ts`
+- Selector: `TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result reporting bindings for the slot`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theSddWorkOrderAlwaysHasATarget.test.ts --testNamePattern='TC-0018-0005 \(TDD-0005\): Issue the SDD work order, then accept an SDD result reporting bindings for the slot' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theSddWorkOrderAlwaysHasATarget.test.ts:97:18` — the SDD work order targeted the slot, but accepting the result with `bindings` published no `binding-recorded` event, so no later work order was issued.
+- GREEN result: exit 0; `✓ ... TC-0018-0005 (TDD-0005): ...`, 1 passed. The SDD order targets `{ kind: "new_capability", slotId }`, one `binding-recorded` event carries the binding, and the next work order targets `{ kind: "spec", specId }`.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`accept` of an SDD result publishes one `binding-recorded` event per binding; a later feature work order targets the bound spec).
+
+### TDD-0006
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0006): scope-digest-at-issue`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0006\): scope-digest-at-issue' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `toEqual(reasked)` at `tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts:104:34` — `next` issued the SDD work order (state `running`, `work-order-issued`) although the current scope digest differed from the approval's.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0006): scope-digest-at-issue`, 1 passed. State `awaiting_input`, one new `create` question for the slot, no work order.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`approvalIsStale` compares the recorded and current scope digests; a stale approval at SDD issue re-asks through `reaskCreate`, the same path as a missing authorization ID).
+
+### TDD-0007
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0007): scope-digest-at-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0007\): scope-digest-at-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `toEqual(reasked)` at `tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts:108:34` — `accept` applied the SDD result (`accept-nonfinal-result`, `binding-recorded`) under a changed scope digest.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0007): scope-digest-at-accept`, 1 passed, 1 skipped. The result is not applied; the run moves to `awaiting_input` with a new `create` question.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`accept` of the SDD work order re-asks when the approval is stale).
+
+### TDD-0008
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0008): capability-text-at-issue`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0008\): capability-text-at-issue' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `toEqual(reasked)` at `tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts:117:42` — the SDD work order was issued although the checked capability text for the slot differed from the approved text.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0008): capability-text-at-issue`, 1 passed, 2 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`approvalIsStale` also compares the approved capability text with the current one for the slot; the new question carries the current text).
+
+### TDD-0009
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0009): capability-text-at-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0009\): capability-text-at-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0007 and TDD-0008: the accept-time check calls the same staleness judgement.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0009): capability-text-at-accept`, 1 passed, 3 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (no change beyond TDD-0008).
+
+### TDD-0010
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0010): widening-replan-at-issue`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0010\): widening-replan-at-issue' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0006. The fixture computes both digests from the write areas, so a replan that adds `src/billing/**` changes the scope digest the approval was given under.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0010): widening-replan-at-issue`, 1 passed.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (no change beyond TDD-0006).
+
+### TDD-0011
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0006 (TDD-0011): widening-replan-at-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0006 \(TDD-0011\): widening-replan-at-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0007, for the same reason as TDD-0010.
+- GREEN result: exit 0; `✓ ... TC-0018-0006 (TDD-0011): widening-replan-at-accept`, 1 passed, 6 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (no change beyond TDD-0007).
+
+### TDD-0012
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts`
+- Selector: `TC-0018-0007 (TDD-0012): Bind the created spec ID, then issue the next SDD-bound work order`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/stalenessIsJudgedAtIssueAndAtAccept.test.ts --testNamePattern='TC-0018-0007 \(TDD-0012\): Bind the created spec ID, then issue the next SDD-bound work order' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0005 and TDD-0006: binding the spec leaves the scope digest unchanged, so the next work order targets the bound spec and no question opens.
+- GREEN result: exit 0; `✓ ... TC-0018-0007 (TDD-0012): ...`, 1 passed, 6 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (no change beyond TDD-0005).
 
 ### TDD-0013
 

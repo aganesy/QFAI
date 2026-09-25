@@ -19,6 +19,13 @@ export interface WorkflowEvent {
   resultRef?: string;
   stageInstanceId?: string;
   outcome?: string;
+  binding?: WorkflowBinding;
+}
+
+interface WorkflowBinding {
+  slotId: string;
+  capabilityId: string;
+  specId: string;
 }
 
 interface WorkflowWorkOrder {
@@ -86,8 +93,10 @@ interface WorkflowSnapshot {
   };
   specBinding?: { specId: string };
   diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] } | null;
+  capabilities?: WorkflowQuestion["capability"][];
   approval?: {
     authorizationId?: string;
+    scopeDigest?: string;
     kind: string;
     operation: string;
     effect: string;
@@ -114,6 +123,7 @@ interface WorkflowInput {
     expectedSequence: number;
     outcome: string;
     diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] };
+    bindings?: WorkflowBinding[];
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -156,6 +166,44 @@ function createQuestion(
     recommendation: "create",
     capability,
   };
+}
+
+function reaskCreate(
+  run: WorkflowSnapshot["run"],
+  capability: WorkflowQuestion["capability"],
+): WorkflowDecision {
+  const question = createQuestion(`question-${run.sequence + 1}-1`, capability);
+  return {
+    verdict: {
+      ok: true,
+      run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
+      questions: [question],
+      workOrder: null,
+    },
+    events: [{ type: "question-opened", question }, { type: "material-decision" }],
+  };
+}
+
+// SIMPLIFIED: judges staleness only from the facts the snapshot carries.
+// Lift when: the snapshot is rebuilt from the journal, which carries both digests and texts.
+function approvalIsStale(snapshot: WorkflowSnapshot): boolean {
+  const recorded = snapshot.approval?.scopeDigest;
+  const approved = snapshot.approval?.target?.capability;
+  const current = currentCapability(snapshot);
+  return (
+    (recorded !== undefined &&
+      snapshot.scopeDigest !== undefined &&
+      recorded !== snapshot.scopeDigest) ||
+    (approved !== undefined &&
+      current !== undefined &&
+      JSON.stringify([approved.goal, approved.covers, approved.excludes]) !==
+        JSON.stringify([current.goal, current.covers, current.excludes]))
+  );
+}
+
+function currentCapability(snapshot: WorkflowSnapshot): WorkflowQuestion["capability"] | undefined {
+  const slotId = snapshot.approval?.target?.slotId;
+  return snapshot.capabilities?.find((capability) => capability.slotId === slotId);
 }
 
 function activeStages(
@@ -386,6 +434,8 @@ export function decide(
         };
       }
       nextWorkOrder.target = { kind: "spec", specId };
+    } else if (plan.route === "feature" && stage.stageKind !== "sdd" && snapshot.specBinding) {
+      nextWorkOrder.target = { kind: "spec", specId: snapshot.specBinding.specId };
     } else if (stage.stageKind === "sdd") {
       const slotId = approval?.target?.slotId;
       if (!slotId) {
@@ -398,7 +448,7 @@ export function decide(
           events: [],
         };
       }
-      if (!approval.authorizationId) {
+      if (!approval.authorizationId || approvalIsStale(snapshot)) {
         const capability = approval.target?.capability;
         if (!capability) {
           return {
@@ -410,19 +460,7 @@ export function decide(
             events: [],
           };
         }
-        const question = createQuestion(`question-${run.sequence + 1}-1`, {
-          ...capability,
-          slotId,
-        });
-        return {
-          verdict: {
-            ok: true,
-            run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
-            questions: [question],
-            workOrder: null,
-          },
-          events: [{ type: "question-opened", question }, { type: "material-decision" }],
-        };
+        return reaskCreate(run, currentCapability(snapshot) ?? { ...capability, slotId });
       }
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
@@ -494,21 +532,43 @@ export function decide(
       };
     }
 
+    const approvedCapability = snapshot.approval?.target?.capability;
+    if (
+      plan.route === "feature" &&
+      nextStage.stageKind === "sdd" &&
+      approvedCapability &&
+      workOrder.target?.kind === "new_capability" &&
+      approvalIsStale(snapshot)
+    ) {
+      return reaskCreate(
+        run,
+        currentCapability(snapshot) ?? { ...approvedCapability, slotId: workOrder.target.slotId },
+      );
+    }
     const endsDiscovery =
       plan.route === "discovery" && acceptedStages.length + 1 === selectedStages.length;
+    const events: WorkflowEvent[] = [
+      {
+        type: endsDiscovery ? "scope-or-obligation-revision" : "accept-nonfinal-result",
+        resultRef: `results/${result.resultId}.json`,
+        stageInstanceId: workOrder.stageInstanceId,
+        outcome: result.outcome,
+      },
+      ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
+        type: "binding-recorded",
+        binding,
+      })),
+    ];
     return {
       verdict: {
         ok: true,
-        run: { ...run, state: endsDiscovery ? "routing" : "ready", sequence: run.sequence + 1 },
-      },
-      events: [
-        {
-          type: endsDiscovery ? "scope-or-obligation-revision" : "accept-nonfinal-result",
-          resultRef: `results/${result.resultId}.json`,
-          stageInstanceId: workOrder.stageInstanceId,
-          outcome: result.outcome,
+        run: {
+          ...run,
+          state: endsDiscovery ? "routing" : "ready",
+          sequence: run.sequence + events.length,
         },
-      ],
+      },
+      events,
     };
   }
 
