@@ -155,10 +155,12 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
 function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const seam = foldSeam(snapshot, record);
   if (seam) return seam;
-  if (record.outcome === "needs_repair") return foldRepair(snapshot, record);
-  const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
   const replans =
     (snapshot.replans ?? 0) + (record.event === "scope-or-obligation-revision" ? 1 : 0);
+  if (record.outcome === "needs_repair") {
+    return { ...foldRepair(snapshot, record), ...(replans > 0 ? { replans } : {}) };
+  }
+  const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
   const appendedRows = [...(snapshot.appendedRows ?? []), ...(record.appendedRows ?? [])];
   return {
     ...rest,

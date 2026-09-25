@@ -116,7 +116,7 @@ function measurementRefusals(result: WorkflowResult): InputRefusal[] {
 
 // A blocked result may list only findings the run cannot repair itself: one outside the checked
 // write scope, or one inside it that only the operator can clear, owned by a flow that exists
-// and, inside the scope, by the bound flow.
+// and, inside the scope, by the bound flow. A run that binds no flow names no owning flow.
 function blockedRefusals(
   result: WorkflowResult,
   workOrder: WorkflowWorkOrder,
@@ -128,9 +128,10 @@ function blockedRefusals(
   return (result.debts ?? []).flatMap((debt, index): InputRefusal[] => {
     const inside = scope.some((area) => areaCovers(area, debt.path));
     const skillOwned = Boolean(debt.resolvingOwner?.trim()) && debt.resolvingOwner !== "operator";
-    const repairable =
-      (inside && (skillOwned || debt.owningFlow !== boundFlow)) ||
-      !(facts.flows ?? []).includes(debt.owningFlow);
+    const owningFlow = debt.owningFlow ?? undefined;
+    const flowHolds =
+      owningFlow === undefined ? boundFlow === undefined : (facts.flows ?? []).includes(owningFlow);
+    const repairable = (inside && (skillOwned || owningFlow !== boundFlow)) || !flowHolds;
     return repairable ? [{ reason: "blocked-repairable", subject: `debts[${index}]` }] : [];
   });
 }
@@ -430,6 +431,16 @@ function acceptedEvents(
   ];
 }
 
+// A repair needs a new plan when a finding's owner is a skill no stage of this plan serves.
+function repairOutsidePlan(snapshot: WorkflowSnapshot, result: WorkflowResult): boolean {
+  if (result.outcome !== "needs_repair") return false;
+  const served = new Set((snapshot.plan?.stages ?? []).map((stage) => stage.skill));
+  return (result.debts ?? []).some(
+    ({ resolvingOwner }) =>
+      resolvingOwner !== undefined && resolvingOwner !== "operator" && !served.has(resolvingOwner),
+  );
+}
+
 // The run cannot go on past this result: a budget reached is `blocked`, never a pass.
 function budgetHalt(
   snapshot: WorkflowSnapshot,
@@ -472,7 +483,8 @@ function settleResult(
   }
   const needsReplan =
     (plan?.route === "discovery" && lastOfPlan) ||
-    (workOrder.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs");
+    (workOrder.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs") ||
+    repairOutsidePlan(snapshot, result);
   const halted = budgetHalt(snapshot, result, needsReplan);
   if (halted) return halted;
   const events = acceptedEvents(workOrder, result, needsReplan, extras);

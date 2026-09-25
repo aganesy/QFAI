@@ -533,7 +533,8 @@ export interface WorkflowDebt {
   findingCode: string;
   path: string;
   cause: string;
-  owningFlow: string;
+  // `null` in a run that binds no flow.
+  owningFlow: string | null;
   detectingCommand: string;
   resolvingOwner?: string;
   blockingExtent: string;

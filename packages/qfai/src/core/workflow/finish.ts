@@ -184,7 +184,9 @@ function debtUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFac
       );
     })
     .filter(reported)
-    .flatMap((debt) => unmetOf("debt-open", [debt.owningFlow], debt.resolvingOwner ?? "operator"));
+    .flatMap((debt) =>
+      unmetOf("debt-open", [debt.owningFlow ?? debt.path], debt.resolvingOwner ?? "operator"),
+    );
 }
 
 function driftUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {

@@ -412,7 +412,7 @@
           "minLength": 1
         },
         "owningFlow": {
-          "type": "string",
+          "type": ["string", "null"],
           "minLength": 1
         },
         "detectingCommand": {

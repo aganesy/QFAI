@@ -320,9 +320,12 @@ function planRevision(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
 }
 
 // The stage `next` issues: a repair's owner, or the first selected stage not yet accepted.
-// SIMPLIFIED: a repair goes to the plan stage the first finding's owner serves.
-// Lift when: a repair owned by no plan stage returns the run to routing, and the detecting stage
-// is reissued after the repair is accepted.
+// A repair owned by no stage of the plan never reaches here: `accept` sends it back to routing.
+// SIMPLIFIED: a repair inside the plan goes to the stage the first finding's owner serves only
+// from a snapshot that carries the repair request. The journal fold records none, and `accept`
+// takes a result only for the next stage in plan order, so a run read back from its journal
+// reissues the detecting stage. Lift when: the fold keeps the request, `accept` takes the owner
+// stage's result without advancing plan order, and the request is cleared once the repair is in.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
   plan: Plan,
