@@ -231,6 +231,68 @@ function origin(record: OldRecord): string {
   return `${record.source}#${record.oldId}`;
 }
 
+type Candidate = { source: string; archive: string };
+
+/** Every file step 2 merges and archives, whether or not it exists. */
+async function mergeCandidates(context: MigrationContext): Promise<Candidate[]> {
+  const specsRelative = relative(context.root, context.specsDir);
+  const candidates: Candidate[] = [];
+  for (const pack of await listDirs(context.specsDir)) {
+    if (!/^spec-\d{4}$/.test(pack)) continue;
+    for (const file of ["07_Decisions.md", "08_Open-questions.md", "09_delta.md"]) {
+      candidates.push({
+        source: `${specsRelative}/${pack}/${file}`,
+        archive: `.qfai/evidence/migration-spec-to-story/retired/${pack}/${file}`,
+      });
+    }
+  }
+  for (const file of ["08_Decisions.md", "09_Open-questions.md", "10_delta.md"]) {
+    candidates.push({
+      source: `${specsRelative}/_policies/${file}`,
+      archive: `.qfai/evidence/migration-spec-to-story/retired/_policies/${file}`,
+    });
+  }
+  for (const file of await listChangeRequests(path.join(context.root, ".qfai/decisions"))) {
+    candidates.push({
+      source: `.qfai/decisions/${file}`,
+      archive: `.qfai/evidence/migration-spec-to-story/retired/decisions/${file}`,
+    });
+  }
+  return candidates;
+}
+
+/** The decision record each retired pack's `01_Spec.md` becomes. */
+async function retiredPackRecords(context: MigrationContext): Promise<OldRecord[]> {
+  const specsRelative = relative(context.root, context.specsDir);
+  const records: OldRecord[] = [];
+  for (const pack of await listDirs(context.specsDir)) {
+    if (!/^spec-\d{4}$/.test(pack)) continue;
+    const specSource = `${specsRelative}/${pack}/01_Spec.md`;
+    const specText = await readIfPresent(path.join(context.root, specSource));
+    const record = specText === null ? null : retiredPack(specText, specSource, pack);
+    if (record) records.push(record);
+  }
+  return records;
+}
+
+/**
+ * The first input step 2 has not merged, or null once it has run: a source
+ * file it archives, or a retired pack with no decision row yet. A later step
+ * moves those packs' files away, and step 2 could no longer read them.
+ */
+export async function pendingMergeInput(context: MigrationContext): Promise<string | null> {
+  for (const candidate of await mergeCandidates(context)) {
+    if ((await readIfPresent(path.join(context.root, candidate.source))) !== null) {
+      return candidate.source;
+    }
+  }
+  const decisions = (await readIfPresent(path.join(context.specsDir, "decisions.md"))) ?? "";
+  const unmerged = (await retiredPackRecords(context)).find(
+    (record) => !decisions.includes(origin(record)),
+  );
+  return unmerged?.source ?? null;
+}
+
 export const step02: MigrationStep = {
   number: 2,
   writeSet: ["qfai", "specs"],
@@ -240,36 +302,8 @@ export const step02: MigrationStep = {
     const forAPerson: string[] = [];
     const sources: Array<{ source: string; archive: string; text: string }> = [];
     const specsRelative = relative(context.root, context.specsDir);
-    const candidates: Array<{ source: string; archive: string }> = [];
-    const records: OldRecord[] = [];
-    for (const pack of await listDirs(context.specsDir)) {
-      if (!/^spec-\d{4}$/.test(pack)) continue;
-      const specSource = `${specsRelative}/${pack}/01_Spec.md`;
-      const specText = await readIfPresent(path.join(context.root, specSource));
-      if (specText !== null) {
-        const record = retiredPack(specText, specSource, pack);
-        if (record) records.push(record);
-      }
-      for (const file of ["07_Decisions.md", "08_Open-questions.md", "09_delta.md"]) {
-        candidates.push({
-          source: `${specsRelative}/${pack}/${file}`,
-          archive: `.qfai/evidence/migration-spec-to-story/retired/${pack}/${file}`,
-        });
-      }
-    }
-    for (const file of ["08_Decisions.md", "09_Open-questions.md", "10_delta.md"]) {
-      candidates.push({
-        source: `${specsRelative}/_policies/${file}`,
-        archive: `.qfai/evidence/migration-spec-to-story/retired/_policies/${file}`,
-      });
-    }
-    for (const file of await listChangeRequests(path.join(context.root, ".qfai/decisions"))) {
-      candidates.push({
-        source: `.qfai/decisions/${file}`,
-        archive: `.qfai/evidence/migration-spec-to-story/retired/decisions/${file}`,
-      });
-    }
-    for (const candidate of candidates) {
+    const records = await retiredPackRecords(context);
+    for (const candidate of await mergeCandidates(context)) {
       const text = await readIfPresent(path.join(context.root, candidate.source));
       if (text === null) continue;
       sources.push({ ...candidate, text });

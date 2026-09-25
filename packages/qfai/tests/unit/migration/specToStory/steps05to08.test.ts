@@ -572,6 +572,101 @@ describe("migration steps 5 to 8", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  async function partialRuleRun() {
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/id-map.json",
+      serializeIdMap({
+        version: 1,
+        ids: {
+          [spec]: {
+            "BR-0001-0001": "BR-0001",
+            "BR-0001-0002": "BR-0002",
+            "EX-0001-0001": "EX-0001-0001-01",
+            "EX-0001-0002": "EX-0001-0001-02",
+          },
+        },
+        placements: {
+          [spec]: { "BR-0001-0001": "api/orders.yaml", "BR-0001-0002": "api/later.yaml" },
+        },
+        retiredPacks: {},
+      }),
+    );
+    await put(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/plan.yaml",
+      "flows: []\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: api/later.yaml\n",
+    );
+    const source =
+      "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | An order total is never negative. |\n| BR-0001-0002 | A later rule. |\n";
+    await put(context.root, `.qfai/spec/${spec}/04_Business-Rules.md`, source);
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/05_Examples.md`,
+      "| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | BR-0001-0001 | First | Pass |\n| EX-0001-0002 | BR-0001-0002 | Second | Pass |\n",
+    );
+    await put(context.root, ".qfai/spec/03_contract/api/orders.yaml", "openapi: 3.0.0\n");
+    const first = capture();
+    expect(await executePlannedStep(step07, context, false, first.io)).toBe(3);
+    expect(first.output.join("")).toContain("contract api/later.yaml does not exist");
+    const current = path.join(context.specsDir, spec, "04_Business-Rules.md");
+    const archive = path.join(
+      context.root,
+      ".qfai/evidence/migration-spec-to-story/retired",
+      spec,
+      "04_Business-Rules.md",
+    );
+    expect(await readFile(archive, "utf8")).toBe(source);
+    expect(await readFile(current, "utf8")).not.toContain("BR-0001-0001");
+    await put(context.root, ".qfai/spec/03_contract/api/later.yaml", "openapi: 3.0.0\n");
+    return { context, source, current, archive };
+  }
+
+  it("refuses to remove a partly moved rule source that was edited after the first run", async () => {
+    const { context, current } = await partialRuleRun();
+    const edited = `${await readFile(current, "utf8")}\nKeep BR-0001-0002 under review.\n`;
+    await writeFile(current, edited);
+    const rerun = capture();
+    expect(await executePlannedStep(step07, context, false, rerun.io)).toBe(2);
+    expect(rerun.error.join("")).toContain(
+      `.qfai/spec/${spec}/04_Business-Rules.md differs from its archived original minus the rules already moved`,
+    );
+    expect(await readFile(current, "utf8")).toBe(edited);
+    expect(await readFile(path.join(context.contractsDir, "api/later.yaml"), "utf8")).toBe(
+      "openapi: 3.0.0\n",
+    );
+  });
+
+  it("completes a partly moved rule source on a clean rerun", async () => {
+    const { context, source, current, archive } = await partialRuleRun();
+    const rerun = capture();
+    expect(await executePlannedStep(step07, context, false, rerun.io)).toBe(0);
+    expect(rerun.output.join("")).toContain(
+      `.qfai/spec/${spec}/04_Business-Rules.md: archive complete; remove migrated rule source`,
+    );
+    await expect(readFile(current)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readFile(archive, "utf8")).toBe(source);
+    expect(
+      parseYaml(await readFile(path.join(context.contractsDir, "api/later.yaml"), "utf8")),
+    ).toMatchObject({
+      "x-qfai-rules": [
+        { id: "BR-0002", statement: "A later rule.", examples: ["EX-0001-0001-02"] },
+      ],
+    });
+    expect(
+      parseYaml(await readFile(path.join(context.contractsDir, "api/orders.yaml"), "utf8")),
+    ).toMatchObject({
+      "x-qfai-rules": [
+        {
+          id: "BR-0001",
+          statement: "An order total is never negative.",
+          examples: ["EX-0001-0001-01"],
+        },
+      ],
+    });
+  });
+
   it("keeps a rule whose only citing example stayed unmapped", async () => {
     // QFAI:EX-0004-0009-09
     const context = await fixture();

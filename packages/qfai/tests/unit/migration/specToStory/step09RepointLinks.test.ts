@@ -1,7 +1,11 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../../../src/core/config.js";
-import { executePlannedStep } from "../../../../src/migration/specToStory/harness.js";
+import { executePlannedStep, runStep } from "../../../../src/migration/specToStory/harness.js";
 import { step09 } from "../../../../src/migration/specToStory/step09RepointLinks.js";
 
 type RepairOptions = { includeMissing?: boolean; onlyRelative?: ReadonlySet<string> };
@@ -195,6 +199,41 @@ describe("migration integration-link repointing", () => {
     const operation = plan.operations[0];
     if (operation?.kind !== "delegate") throw new Error("Expected a delegated operation.");
     await expect(operation.apply()).rejects.toThrow("a real file occupies the path");
+  });
+
+  it("repoints an old host link after every other trace of the old layout is gone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-step09-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      );
+      repairStub.use((_root, dryRun, report) => {
+        report(
+          dryRun ? "  would relink .claude/skills/qfai-sdd" : "  relinked .claude/skills/qfai-sdd",
+        );
+      });
+      let output = "";
+      const io = {
+        cwd: root,
+        stdout: { write: (value: string) => (output += value) },
+        stderr: {
+          write: (value: string) => {
+            throw new Error(value);
+          },
+        },
+      };
+      const operation = "## Operations\n- .claude/skills/qfai-sdd: repoint host integration link";
+      expect(await runStep(9, ["--dry-run"], io)).toBe(0);
+      expect(output).toContain(operation);
+      expect(repairStub.calls.map(([, dryRun]) => dryRun)).toEqual([true]);
+      output = "";
+      expect(await runStep(9, [], io)).toBe(0);
+      expect(output).toContain(operation);
+      expect(repairStub.calls.map(([, dryRun]) => dryRun)).toEqual([true, true, false]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("does not claim a completed repair when the writer reports a real-run failure", async () => {

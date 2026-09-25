@@ -627,4 +627,68 @@ describe("migration steps 1 to 4", () => {
       );
     });
   });
+
+  it("reruns step 4 after step 7 moved part of a pack's rules", async () => {
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      const rules =
+        "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0001 | First rule. |\n| BR-0001-0002 | Second rule. |\n";
+      await put(root, ".qfai/spec/spec-0001/04_Business-Rules.md", rules);
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/plan.yaml",
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: api/later.yaml\n",
+      );
+      const first = await run(step04, await context(root));
+      expect(first.errors).toBe("");
+      const mapPath = path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json");
+      const map = await readFile(mapPath, "utf8");
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/retired/spec-0001/04_Business-Rules.md",
+        rules,
+      );
+      await put(
+        root,
+        ".qfai/spec/spec-0001/04_Business-Rules.md",
+        "# Rules\n\n| BR-ID | Rule |\n| --- | --- |\n| BR-0001-0002 | Second rule. |",
+      );
+      const rerun = await run(step04, await context(root));
+      expect(rerun.errors).toBe("");
+      expect(rerun.code).toBe(first.code);
+      expect(await readFile(mapPath, "utf8")).toBe(map);
+    });
+  });
+
+  it("matches a promoted DR by the decision file promote-to names, not by the DR ID alone", async () => {
+    // QFAI:EX-0004-0007-10
+    await withProject(async (root) => {
+      await put(
+        root,
+        "qfai.config.yaml",
+        "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      );
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/id-map.json",
+        '{"version":1,"ids":{},"placements":{},"retiredPacks":{}}\n',
+      );
+      await put(root, ".qfai/evidence/migration-spec-to-story/plan.yaml", "flows: []\nrules: []\n");
+      await put(
+        root,
+        ".qfai/spec/decisions.md",
+        "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | .qfai/spec/spec-0001/07_Decisions.md#DR-0001: First pack | a | DONE |\n| DEC-0002 | .qfai/spec/spec-0002/07_Decisions.md#DR-0001: Second pack | b | DONE |\n",
+      );
+      await put(
+        root,
+        ".qfai/steering/entry.md",
+        "---\nid: entry\npromote-to: spec-0002/07_Decisions.md\npromoted-to: DR-0001\n---\nBody\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(0);
+      const entry = await readFile(path.join(root, ".qfai/steering/entry.md"), "utf8");
+      expect(entry).toContain("promote-to: decisions.md");
+      expect(entry).toContain("promoted-to: DEC-0002");
+    });
+  });
 });

@@ -175,6 +175,70 @@ describe("migration harness", () => {
     });
   });
 
+  it("writes into a project whose root is reached through a link", async () => {
+    const ctx = await context();
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-migration-linked-root-"));
+    roots.push(parent);
+    const linked = path.join(parent, "project");
+    await symlink(ctx.root, linked, process.platform === "win32" ? "junction" : "dir");
+    const through: MigrationContext = {
+      ...ctx,
+      root: linked,
+      specsDir: path.join(linked, ".qfai", "spec"),
+      contractsDir: path.join(linked, ".qfai", "spec", "03_contract"),
+    };
+    const step: MigrationStep = {
+      number: 4,
+      writeSet: ["qfai"],
+      plan: () =>
+        Promise.resolve({
+          operations: [{ kind: "write", target: ".qfai/evidence/note.md", content: "note\n" }],
+        }),
+    };
+    const captured = capture();
+    expect(await executePlannedStep(step, through, false, captured.io)).toBe(0);
+    expect(captured.error).toEqual([]);
+    expect(await readFile(path.join(ctx.root, ".qfai/evidence/note.md"), "utf8")).toBe("note\n");
+  });
+
+  it("refuses steps 3 to 8 until step 2 has merged its sources and retired packs", async () => {
+    const ctx = await context();
+    await put(
+      ctx.root,
+      "qfai.config.yaml",
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(ctx.root, ".qfai/spec/spec-0001/01_Spec.md", "# Spec\n\n- Status: active\n");
+    await put(
+      ctx.root,
+      ".qfai/spec/spec-0001/07_Decisions.md",
+      "# Decisions\n\n## DR-0001: Keep orders\n\n- Status: accepted\n",
+    );
+    await put(
+      ctx.root,
+      ".qfai/spec/spec-0002/01_Spec.md",
+      "# Spec\n\n- Status: superseded\n- Superseded by: spec-0001\n",
+    );
+    for (const step of [3, 4, 7, 8]) {
+      const refused = capture();
+      expect(await runStep(step, ["--dry-run"], { cwd: ctx.root, ...refused.io })).toBe(2);
+      expect(refused.error.join("")).toBe(
+        `Run step 2 before step ${step}: .qfai/spec/spec-0001/07_Decisions.md is not merged yet.\n`,
+      );
+    }
+    await rm(path.join(ctx.root, ".qfai/spec/spec-0001/07_Decisions.md"));
+    const retired = capture();
+    expect(await runStep(7, [], { cwd: ctx.root, ...retired.io })).toBe(2);
+    expect(retired.error.join("")).toBe(
+      "Run step 2 before step 7: .qfai/spec/spec-0002/01_Spec.md is not merged yet.\n",
+    );
+    expect(await lstat(path.join(ctx.root, ".qfai/spec/spec-0002/01_Spec.md"))).toBeTruthy();
+    expect(await runStep(2, [], { cwd: ctx.root, ...capture().io })).toBe(0);
+    const ordered = capture();
+    expect(await runStep(7, [], { cwd: ctx.root, ...ordered.io })).toBe(2);
+    expect(ordered.error.join("")).toBe("Run step 4 before step 7.\n");
+  });
+
   it("refuses a move collision before any write", async () => {
     const ctx = await context();
     await writeFile(path.join(ctx.root, ".qfai", "source.md"), "source");

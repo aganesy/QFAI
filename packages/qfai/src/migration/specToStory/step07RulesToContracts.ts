@@ -6,7 +6,12 @@ import { parseDocument } from "yaml";
 import { isEnoent } from "../../core/fs/errno.js";
 import { escapeTableCell, splitMarkdownRow } from "../../core/specPackParsers.js";
 import { readIdMap } from "./idMap.js";
-import { parseLegacyRecords, retiredLegacyStatus, withoutLegacyRecords } from "./legacyRecords.js";
+import {
+  parseLegacyRecords,
+  retiredLegacyStatus,
+  withoutLegacyRecords,
+  type LegacyRecord,
+} from "./legacyRecords.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
 import { assertUnchangedPlacements, readMigrationPlan } from "./step04RenumberIds.js";
 import {
@@ -210,6 +215,34 @@ function applicableNfr(markdown: string): string | null {
   return match?.[1]?.trim() || null;
 }
 
+/**
+ * Refuses a rule source that is neither its archived original nor that
+ * original minus rules this step moves. An earlier partial run leaves the
+ * second shape; anything else is an edit made since, which a rewrite or
+ * removal of the source would lose.
+ */
+function assertArchiveRemainder(
+  root: string,
+  source: string,
+  current: string,
+  original: string,
+  rows: readonly LegacyRecord[],
+  present: ReadonlySet<string>,
+  moved: ReadonlySet<string>,
+): void {
+  if (current === original) return;
+  const removed = new Set(rows.map((row) => row.id).filter((id) => !present.has(id)));
+  if (
+    [...removed].every((id) => moved.has(id)) &&
+    current === withoutLegacyRecords(original, rows, removed)
+  ) {
+    return;
+  }
+  throw new MigrationInputError(
+    `${repositoryRelative(root, source)} differs from its archived original minus the rules already moved`,
+  );
+}
+
 export const step07: MigrationStep = {
   number: 7,
   writeSet: ["qfai", "specs", "contracts"],
@@ -237,10 +270,14 @@ export const step07: MigrationStep = {
     const sourceChanges: MigrationOperation[] = [];
     const routedByPack = new Map<string, Set<string>>();
     for (const source of sourceFiles) {
-      const original = await readMigrationInput(source);
-      if (original === null) continue;
+      const current = await readMigrationInput(source);
+      if (current === null) continue;
       const specId = path.basename(path.dirname(source));
+      const retired = path.join(context.root, RETIRED, specId, "04_Business-Rules.md");
+      const archived = await readMigrationInput(retired);
+      const original = archived ?? current;
       const rows = parseLegacyRecords(original, "BR", source);
+      const present = new Set(parseLegacyRecords(current, "BR", source).map((row) => row.id));
       const moved = new Set<string>();
       for (const record of rows) {
         const oldId = record.id;
@@ -266,66 +303,34 @@ export const step07: MigrationStep = {
           continue;
         }
         const rule = { id: mapped ?? "", statement: record.cells.Rule ?? "", examples };
-        groups.set(target, [...(groups.get(target) ?? []), rule]);
+        if (present.has(oldId)) groups.set(target, [...(groups.get(target) ?? []), rule]);
         moved.add(oldId);
         routedByPack.set(specId, (routedByPack.get(specId) ?? new Set()).add(contract ?? ""));
       }
-      if (moved.size > 0) {
-        const retired = path.join(context.root, RETIRED, specId, "04_Business-Rules.md");
-        const archiveMissing = (await readMigrationInput(retired)) === null;
-        const remaining = withoutLegacyRecords(original, rows, moved);
-        if (rows.length === moved.size) {
-          sourceChanges.push(
-            archiveMissing
-              ? {
-                  kind: "move",
-                  source: repositoryRelative(context.root, source),
-                  target: repositoryRelative(context.root, retired),
-                }
-              : {
-                  kind: "remove",
-                  target: repositoryRelative(context.root, source),
-                  description: "archive complete; remove migrated rule source",
-                },
-          );
-        } else {
-          if (archiveMissing) {
-            sourceChanges.push({
-              kind: "write",
-              target: repositoryRelative(context.root, retired),
-              content: original,
-            });
-          }
-          sourceChanges.push({
-            kind: "write",
-            target: repositoryRelative(context.root, source),
-            content: remaining,
-          });
-        }
-      } else {
-        const retired = path.join(context.root, RETIRED, specId, "04_Business-Rules.md");
-        const archived = await readMigrationInput(retired);
-        if (rows.length === 0) {
-          sourceChanges.push(
-            archived === null
-              ? {
-                  kind: "move",
-                  source: repositoryRelative(context.root, source),
-                  target: repositoryRelative(context.root, retired),
-                }
-              : {
-                  kind: "remove",
-                  target: repositoryRelative(context.root, source),
-                  description: "archive complete; remove empty rule source",
-                },
-          );
-        } else if (archived === null) {
-          sourceChanges.push({
-            kind: "write",
-            target: repositoryRelative(context.root, retired),
-            content: original,
-          });
-        }
+      assertArchiveRemainder(context.root, source, current, original, rows, present, moved);
+      const sourcePath = repositoryRelative(context.root, source);
+      const retiredPath = repositoryRelative(context.root, retired);
+      if (rows.length === moved.size) {
+        sourceChanges.push(
+          archived === null
+            ? { kind: "move", source: sourcePath, target: retiredPath }
+            : {
+                kind: "remove",
+                target: sourcePath,
+                description:
+                  rows.length === 0
+                    ? "archive complete; remove empty rule source"
+                    : "archive complete; remove migrated rule source",
+              },
+        );
+        continue;
+      }
+      if (archived === null) {
+        sourceChanges.push({ kind: "write", target: retiredPath, content: original });
+      }
+      const remaining = moved.size === 0 ? original : withoutLegacyRecords(original, rows, moved);
+      if (current !== remaining) {
+        sourceChanges.push({ kind: "write", target: sourcePath, content: remaining });
       }
     }
     const operations: MigrationOperation[] = [];

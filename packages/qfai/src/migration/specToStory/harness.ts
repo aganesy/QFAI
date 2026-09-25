@@ -587,8 +587,13 @@ export async function staleStageOperations(
   return operations;
 }
 
-async function assertNoSymlinkParents(target: string, _context: MigrationContext): Promise<void> {
-  const start = path.parse(target).root;
+/**
+ * Refuses a target reached through a symbolic link below the project root.
+ * The root and the directories above it are the operator's choice, so a
+ * project opened through a link or a junction is not refused for it.
+ */
+async function assertNoSymlinkParents(target: string, context: MigrationContext): Promise<void> {
+  const start = inside(context.root, target) ? context.root : path.parse(target).root;
   const relative = path.relative(start, path.dirname(target));
   let current = start;
   for (const part of relative.split(path.sep).filter(Boolean)) {
@@ -1076,6 +1081,15 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     staleStages = await staleStageOperations(context, step);
     if (!(await hasLegacyEntries(context)) && staleStages.length === 0) {
       const selected = await loadStep(step);
+      if (step === 9) {
+        // Step 1 moved the directories the host links pointed at, so an old
+        // link outlives every other trace of the old layout.
+        const plan = await selected.plan(context);
+        if (plan.operations.length > 0) {
+          const linkStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
+          return await executePlannedStep(linkStep, context, argv.length === 1, io);
+        }
+      }
       if (step === 10) {
         const plan = await selected.plan(context);
         const hasStaging = plan.operations.some(
@@ -1103,6 +1117,14 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
           io.stderr.write(`Run step 1 before step ${step}.\n`);
           return 2;
         }
+      }
+    }
+    if (step >= 3 && step <= 8) {
+      const { pendingMergeInput } = await import("./step02MergeTables.js");
+      const pending = await pendingMergeInput(context);
+      if (pending !== null) {
+        io.stderr.write(`Run step 2 before step ${step}: ${pending} is not merged yet.\n`);
+        return 2;
       }
     }
     if (step >= 5 && step <= 8 && map === null) {

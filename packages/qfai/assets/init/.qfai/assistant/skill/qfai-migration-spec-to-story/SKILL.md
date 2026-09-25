@@ -83,7 +83,7 @@ this installed skill directory. `scripts/_step.mjs` is the shared package
 loader used by all ten entry points and must be shipped with them. Step 9 only
 repairs links. Do not run `npx qfai init --force` during migration.
 
-The scripts print `## Operations` even when empty. Steps 2 through 8 also print
+The scripts print `## Operations` even when empty. Steps 2 through 10 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints
 `## Annotations kept`. An empty section says `none`. Rerunning a completed step
 must change no file, and an interrupted step can be run again. The complete

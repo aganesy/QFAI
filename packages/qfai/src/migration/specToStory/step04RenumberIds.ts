@@ -385,7 +385,8 @@ async function readOldPack(context: MigrationContext, id: string): Promise<OldPa
       const archived = await readOptional(
         path.join(context.root, `.qfai/evidence/migration-spec-to-story/retired/${id}/${file}`),
       );
-      const raw = file === "05_Examples.md" ? (archived ?? current) : (current ?? archived);
+      const archiveFirst = file === "04_Business-Rules.md" || file === "05_Examples.md";
+      const raw = archiveFirst ? (archived ?? current) : (current ?? archived);
       if (raw === null)
         throw new MigrationInputError(`${relative(context.root, dir)}/${file} is missing`);
       return [file, raw] as const;
@@ -688,16 +689,12 @@ async function archiveSource(
   context: MigrationContext,
   source: string,
   target: string,
-  preserveSource: boolean,
 ): Promise<MigrationOperation[]> {
   const original = await readOptional(path.join(context.root, source));
   if (original === null) return [];
   const archived = await readOptional(path.join(context.root, target));
   if (archived !== null && archived !== original) {
     throw new MigrationInputError(`${target} differs from ${source}`);
-  }
-  if (preserveSource) {
-    return archived === null ? [{ kind: "write", target, content: original }] : [];
   }
   return archived === null
     ? [{ kind: "move", source, target }]
@@ -820,13 +817,20 @@ async function rekeyWorklogs(
       }
     }
     const promoteTo = document.get("promote-to");
-    if (typeof promoteTo === "string" && /^spec-\d{4}\/07_Decisions\.md$/.test(promoteTo)) {
+    const oldDecisionFile =
+      typeof promoteTo === "string" && /^spec-\d{4}\/07_Decisions\.md$/.test(promoteTo)
+        ? `${relative(context.root, context.specsDir)}/${promoteTo}`
+        : null;
+    if (oldDecisionFile !== null) {
       document.set("promote-to", "decisions.md");
       changed = true;
     }
     const promotedTo = document.get("promoted-to");
     if (typeof promotedTo === "string" && /^DR-\d+(?:-\d+)?$/.test(promotedTo)) {
-      const matched = decisions.filter((row) => row.content.includes(`#${promotedTo}:`));
+      const matched =
+        oldDecisionFile === null
+          ? []
+          : decisions.filter((row) => row.content.includes(`${oldDecisionFile}#${promotedTo}:`));
       if (matched.length === 1) {
         document.set("promoted-to", matched[0]?.id);
         changed = true;
@@ -1147,7 +1151,6 @@ export const step04: MigrationStep = {
             context,
             source,
             `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/${file}`,
-            !allMapped,
           )),
         );
       }
@@ -1158,7 +1161,6 @@ export const step04: MigrationStep = {
             context,
             source,
             `.qfai/evidence/migration-spec-to-story/retired/${pack.id}/${file}`,
-            false,
           )),
         );
       }
@@ -1184,7 +1186,6 @@ export const step04: MigrationStep = {
           context,
           source,
           `.qfai/evidence/migration-spec-to-story/retired/_policies/${file}`,
-          false,
         )),
       );
     }
