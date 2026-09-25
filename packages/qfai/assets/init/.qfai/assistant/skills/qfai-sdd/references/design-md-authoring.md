@@ -6,6 +6,14 @@ Applies only to a UI-bearing target — one whose classified surface set names
 `web`, `mobile`, `desktop` or `mixed`. A cli-only target has no root
 `DESIGN.md`.
 
+## Contents
+
+- Where the answers come from
+- Output mapping
+- Taking the values from the theme
+- When the file already exists
+- Freezing it
+
 ## Where the answers come from
 
 The interview is `/qfai-discussion`'s, and its record is the discussion pack
@@ -114,3 +122,21 @@ to touch a colour has nothing to be consistent with.
 and a project may have authored its own. Write only when the file is missing.
 An existing file is validated and frozen as it stands, except that an
 unreplaced sample is refused rather than frozen.
+
+## Freezing it
+
+The Phase 0 procedure for a UI-bearing target on a visual-prototyping surface.
+
+1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If missing, author it per the sections above, from the design direction the discussion pack this spec's provenance names already recorded — the classification in `01_Context.md` and the reference registries in `04_Sources.md`. A spec taken in through import-lite has no pack and therefore no recorded
+   direction: stop and ask for it rather than inventing a brand.
+2. Call `isUnreplacedDesignMdSample(text)`. If it returns `true`, the file is still a qfai sample brand and MUST NOT be frozen: stop and ask the user to author this product's own brand SSOT, deleting the `QFAI-SAMPLE-DESIGN-MD` marker comment if present (samples from releases older than the marker are recognised by content instead). `npx qfai init` seeds the sample into the project root
+   and never overwrites it, so step 1's missing-file check cannot catch this — an unreplaced sample parses and validates by construction, and freezing it binds `/qfai-prototyping` and the reviewer lock rule to a fictional brand.
+3. Call `parseDesignMd(text)`. If the result is `{ error: ParseError }`, stop and report `path` / `code` / `message` for the parse error. Otherwise the result is `{ data: DesignMd; body: string }`; pass `data` to `validateDesignMd(data)`. If that issue list is non-empty, stop and report each issue. Both functions, together with `hashDesignMd` and the `DesignMd` / `ParseError` /
+   `ParseResult` / `ValidationIssue` types, are re-exported from the public `qfai` package entry (`import { parseDesignMd, validateDesignMd, hashDesignMd, isUnreplacedDesignMdSample } from "qfai"`).
+4. Call `hashDesignMd(text)` to compute sha256 over the raw bytes.
+5. Write `.qfai/contracts/design/DESIGN.md.lock.yaml` from the template at `templates/contracts/design-md-lock.sample.yaml` with these fields:
+   - `designMdPath: "DESIGN.md"`
+   - `designMdSha256: <hex>`
+   - `frozenAt: <UTC ISO-8601>`, the time of this freeze. A re-freeze writes every field again, never the hash alone: gates compare `designMdSha256` with `DESIGN.md`, and no gate reads `frozenAt`, so a stale one passes and records a freeze that did not happen then.
+   - `schemaTokens.colors`, `fontFamilies`, `radii`, `shadows` enumerated per the sample.
+6. Record the freeze in `_policies/05_Contracts.md` under the Contract Index. The lock yaml plus root `DESIGN.md` are the only brand contract; per-aspect brand yaml contracts have been removed.

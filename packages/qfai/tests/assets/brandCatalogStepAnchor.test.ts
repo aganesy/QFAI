@@ -94,7 +94,12 @@ describe("brand catalog step anchor", () => {
     expect(freezeStart, "qfai-sdd has no Phase 0 DESIGN.md Freeze section").toBeGreaterThan(-1);
     const freezeEnd = sddSkill.indexOf("\n## ", freezeStart + 1);
     const freeze = sddSkill.slice(freezeStart, freezeEnd === -1 ? undefined : freezeEnd);
-    expect(freeze).toMatch(/author it here per `references\/design-md-authoring\.md`/);
+    expect(freeze).toContain("`references/design-md-authoring.md#freezing-it`");
+    const authoring = await readFile(
+      path.join(skillsRoot, "qfai-sdd", "references", "design-md-authoring.md"),
+      "utf-8",
+    );
+    expect(authoring).toContain("If missing, author it per the sections above");
 
     // A Required Process step is written as an imperative, so the test reads
     // the step's own opening verb rather than anywhere `DESIGN.md` appears —

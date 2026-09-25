@@ -2,6 +2,15 @@
 
 Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 
+## Contents
+
+- Stage order
+- Stage 0: Preflight
+- Stage 1: Triage
+- Shared-before-Slice Rule
+- Plan gate in a no-argument batch
+- Stop Conditions
+
 ## Stage order
 
 1. **Stage 0 - Preflight** (source inventory; see Stage 0 below)
@@ -164,6 +173,28 @@ instead and continue:
 A pack that exists under a non-canonical name is not an absent pack: rename it
 rather than falling back here. Validator: `QFAI-IMPLITE-001`.
 
+### Import-lite evidence: naming, lifetime and intake
+
+Producer: Stage 0, in every invocation form. When Stage 0 finds specs under `<paths.specsDir>` and no `<paths.discussionDir>/discussion-*/` pack directory at all, create `.qfai/evidence/import-lite-<ts>.md` from `templates/evidence/import-lite.md` and record where the requirements actually came from. That is the documented route for a spec set imported from outside QFAI, and it satisfies
+`QFAI-IMPLITE-001` without fabricating a discussion pack. A pack that exists but is incomplete is not this case — the pack is present, so this route never opens for it. Stage 0 handles it the way it handles any non-normative source: record what is missing and carry on. Neither repair the pack nor write import-lite evidence beside it.
+
+The `-<ts>` suffix is what makes one file per import run possible. The check does also accept a copy kept under the template's own name (`import-lite.md`), but that is a single fixed path, so a second import would overwrite the first run's trail. `<ts>` is the canonical 17-digit run stamp (`YYYYMMDDhhmmssSSS`, the same form discussion packs use); a suffix that is not exactly that stamp
+is rejected, so a `-<n>` collision counter does not work here. Claim the name with an exclusive create (`wx` / `O_EXCL`) — listing the directory and picking a free name is not a reservation, so two runs inside the same millisecond would both read the same name as free and the later write would erase the earlier run's trail. When the exclusive create fails because the file exists,
+re-stamp and retry: one file per import run, never an overwrite of an earlier one.
+
+Create it only once at least one `## Sources` entry or a `## User provided excerpt` is in hand, and delete it if the run then stops for want of an input source: an otherwise empty `import-lite-*` file silences `QFAI-IMPLITE-001` while leaving preflight with nothing to read. This artifact is a pointer for preflight, never requirement/spec SSOT — carry unresolved items into the spec's Open
+Questions.
+
+The packaged `runSddPreflight` API takes this route itself, so do not hand-write the summary. When the pack check blocks and the evidence resolves, it returns `source: import-lite` with the evidence file as the selected input, an unknown `Imported REQ count` (a pointer artifact carries no REQ ids) and `/qfai-sdd` as the next command — so the summary names its real input source instead of
+a pack that does not exist. It writes both copies under `<paths.outDir>`: the run-scoped `preflight/run-<timestamp>/preflight_summary.md` that evidence cites, and the `preflight_summary.md` pointer each rerun rewrites — the latter is `.qfai/report/preflight_summary.md` only when `qfai.config.yaml` leaves `paths.outDir` at its default; a hand-written copy in the old place would be a
+second, unread one. Evidence is an entrypoint, never an override: a misnamed pack still blocks, and an incomplete one is read as the source, its gaps listed under `## Pack Gaps`.
+
+On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` / `07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs. US and AC items this route writes carry the evidence pair `Source: import-lite-<ts>#<REQ-ID>` in
+place of the `<pack-id>#<discussion-id>` one; the form is defined in `references/spec-traceability-rules.md`.
+
+`<paths.specsDir>` and `<paths.discussionDir>` are the resolved settings, `.qfai/specs/` and `.qfai/discussion/` by default; the check resolves them before it looks. The evidence path is not one of them — `.qfai/evidence/` is canonical and stays put even under a `paths.discussionDir` override, because every writer (`npx qfai init`, prototyping, audit log) uses it. Writing the evidence
+beside a relocated discussion directory puts it where nothing looks, leaving `QFAI-IMPLITE-001` unclearable.
+
 ## Stage 1: Triage
 
 1. Enumerate active spec summaries (skip `superseded` / `deprecated` / `removed`).
@@ -192,6 +223,24 @@ Detailed procedure: `sdd-triage.md`.
 - Contracts-first and Outline are shared work.
 - Slice, Plan, and Delta are target-spec work.
 - In no-argument mode, shared work runs once and per-spec work fans out after shared outputs stabilize.
+
+## Plan gate in a no-argument batch
+
+The Plan gate is `/qfai-sdd`'s own step, not a routed reviewer. Each target's Plan is checked
+against `templates/specs/spec/10_Plan.md#implementation-approach` as that Plan is finalized,
+before the target is integrated.
+
+Routing places every reviewer in the terminal span, where `review` runs once per invocation after
+Phase 4 — so a reviewer cannot hold one target while the batch releases the rest, and a check that
+waited for one would report a deficient Plan only after the batch had taken it in. The terminal
+review still reads what this step recorded. A usage this Plan cites in a **sibling target of the
+same batch** is not settled here. The siblings are delegated in parallel, so the sibling may not
+have written that output yet and a verdict taken now would follow worker timing rather than the Plan
+— reading the sibling's own worktree moves where the check looks, not when it may look. Record the
+citation and carry it to the batch tail, where every target is integrated and the terminal review
+reads it. Integration is the barrier, and it is the first point at which such a usage is either
+present or missing for good. Every usage inside this target is still settled here, as it is for a
+single-spec run.
 
 ## Stop Conditions
 

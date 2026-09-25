@@ -20,7 +20,8 @@ describe("the lock's frozenAt says what it is and what checks it", () => {
     it(`${tree}: a re-freeze writes every field, and no gate reads frozenAt`, async () => {
       // A freeze that rewrote only the hash passed every gate, and a green run
       // read as evidence the timestamp had moved with it.
-      const skill = unwrap(await read(tree, "SKILL.md"));
+      // The freeze steps live in the reference the skill body points at.
+      const skill = unwrap(await read(tree, "references/design-md-authoring.md"));
       expect(skill).toContain("A re-freeze writes every field again, never the hash alone");
       expect(skill).toContain("no gate reads `frozenAt`");
 
