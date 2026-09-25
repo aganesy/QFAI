@@ -6,7 +6,7 @@ This matrix scores every active obligation the pack declares: the **13 user stor
 `02_User-stories.md`, the **13 test cases** of `06_Test-Cases.md`, and the **12 business rules**
 of `04_Business-Rules.md`. All three sets are read from the pack, not from the ledger.
 
-The marks are derived from `.qfai/specs/spec-0010/tdd/test-list.md` as it stands on 2026-09-25, by the rules
+The marks are derived from `.qfai/specs/spec-0010/tdd/test-list.md` as it stands on 2026-09-26, by the rules
 below. A mark records what the ledger shows was run: a row's status, and whether its evidence
 records an assertion that failed before the change and passed after it. It is not a reviewer's
 reading of the assertions, and a reviewer who reads one and disagrees overrides the mark.
@@ -57,7 +57,7 @@ reading of the assertions, and a reviewer who reads one and disagrees overrides 
 | US-0010-0010 | n/a | ❌ | n/a | n/a | n/a | n/a | n/a | n/a | ❌ | ❌ |
 | US-0010-0011 | ⚠️ | ❌ | ⚠️ | n/a | n/a | n/a | n/a | n/a | ❌ | ❌ |
 | US-0010-0012 | ⚠️ | ❌ | n/a | n/a | ⚠️ | n/a | n/a | n/a | ❌ | ❌ |
-| US-0010-0013 | ⚠️ | ✅ | n/a | n/a | n/a | n/a | n/a | n/a | ✅ | ⚠️ |
+| US-0010-0013 | ⚠️ | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0001 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0005 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0006 | ⚠️ | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
@@ -72,7 +72,7 @@ reading of the assertions, and a reviewer who reads one and disagrees overrides 
 | TC-0010-0015 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 | TC-0010-0016 | n/a | ⚠️ | n/a | n/a | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
 
-Matrix: **US 13 / TC 13**; scored cells **✅ 6 / ⚠️ 30 / ❌ 22** and n/a 176;
+Matrix: **US 13 / TC 13**; scored cells **✅ 4 / ⚠️ 32 / ❌ 22** and n/a 176;
 status **✅ 2 / ⚠️ 13 / ❌ 11**.
 
 ### Business rule coverage (§7)
@@ -127,7 +127,7 @@ Each is an open gap, not an exemption: the ledger row that would cover it is sti
 
 ## Every ⚠️ cell, named
 
-44 cell(s), each with the reason its mark was derived.
+46 cell(s), each with the reason its mark was derived.
 
 - `TC-0010-0001` · Normal path: the case's declared `Type` (normal); closed without a failing RED: TDD-0001.
 - `TC-0010-0001` · Oracle strength: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
@@ -159,6 +159,8 @@ Each is an open gap, not an exemption: the ledger row that would cover it is sti
 - `US-0010-0012` · Equivalence partitions: the 2 cases tracing to it through its criteria are its partitions; some are not fully covered.
 - `US-0010-0012` · Boundary values: 1 boundary case(s) (TC-0010-0013); some are not fully covered.
 - `US-0010-0013` · Equivalence partitions: the 3 cases tracing to it through its criteria are its partitions; some are not fully covered.
+- `US-0010-0013` · Normal path: the story's E2E ledger rows; closed without a failing RED: TDD-0033. Its cell reads `RED:fail`, but the evidence it points to records exit 0 on the first run, already satisfied.
+- `US-0010-0013` · Oracle strength: the story's E2E rows: a closed row records no failing RED (already satisfied, `RED:n-a`, or evidence outside the pointer grammar), or a row is open.
 - `BR-0010-0001` · Positive case: normal cases TC-0010-0001 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
 - `BR-0010-0005` · Positive case: normal cases TC-0010-0005 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
 - `BR-0010-0006` · Positive case: normal cases TC-0010-0006 (no ledger row names it in `BR-Ref`; the cases sharing one of its acceptance criteria); not all fully covered.
