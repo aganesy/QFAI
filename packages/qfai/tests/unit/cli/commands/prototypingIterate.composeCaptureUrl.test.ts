@@ -13,7 +13,8 @@
  * coupling.
  *
  * Six branches cover every composition arm:
- *   1. absolute URL passthrough (`http://` / `https://`);
+ *   1. absolute URL passthrough (`http://` / `https://`), with inputs a
+ *      join would change or reject;
  *   2. route-relative URL + targetUrl (leading slash);
  *   3. route-relative URL + targetUrl (no leading slash, trailing
  *      slash on base — WHATWG URL semantics);
@@ -30,14 +31,17 @@ import { describe, expect, it } from "vitest";
 import { composeCaptureUrl } from "../../../../src/cli/commands/prototypingIterate.js";
 
 describe("composeCaptureUrl — direct unit coverage", () => {
-  it("forwards absolute https:// URLs verbatim (operator override wins over base)", () => {
-    const result = composeCaptureUrl("https://example.com/page", "http://localhost:5173");
+  // QFAI:SPEC-0012:TC-0012-0486
+  it("opens an https:// screen URL as written when no --target-url is set", () => {
+    const result = composeCaptureUrl("https://example.com/page", undefined);
     expect(result).toEqual({ ok: true, url: "https://example.com/page" });
   });
 
-  it("forwards absolute http:// URLs verbatim", () => {
-    const result = composeCaptureUrl("http://example.com/page", "http://localhost:5173");
-    expect(result).toEqual({ ok: true, url: "http://example.com/page" });
+  // QFAI:SPEC-0012:TC-0012-0486
+  it("opens an http:// screen URL as written rather than joining it to --target-url", () => {
+    // Joining would normalise the bare origin to `http://example.com/`.
+    const result = composeCaptureUrl("http://example.com", "http://localhost:5173");
+    expect(result).toEqual({ ok: true, url: "http://example.com" });
   });
 
   it("composes a leading-slash route-relative URL against targetUrl", () => {
