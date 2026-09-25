@@ -1161,15 +1161,14 @@ packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts
 - Round 1: Oracle proof: mutation — the three lines of the legacy-layout item deleted from `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts`, whose blob is 94c2c242053742f9a45c10e6d8b823390b8749e1 before and after. Command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts -t "TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window", which selects TC-0003-0059 (TDD-0094): generated Copilot instructions state the closed legacy window. Result: FAIL — Test Files 1 failed (1); Tests 3 failed | 1 passed (4): `AssertionError: expected '' to contain '.qfai/assistant/steering/'` at `tests/integration/initCopilotLegacyWindow.test.ts:41:24`, `expected '' to contain 'qfai init reports it on stderr as a…'` at `:47:24`, `expected '' to contain 'qfai init --upgrade-assistant-tree'` at `:51:24`. Reverted by restoring the file, whose blob is again 94c2c242053742f9a45c10e6d8b823390b8749e1; the same command then passes: Test Files 1 passed (1); Tests 4 passed (4)
 
 The RED showed bullets 1, 2 and 4 failing against the wrong text, and the
-Oracle proof showed bullets 1 to 3 failing without the item, so every assertion
-in the selector has been seen to fail.
-
-The `qa-gatekeeper` RED gate and build-phase gate on this row have not run.
-They are owed before the reviews.
+Oracle proof showed bullets 1 to 3 failing without the item, so every case in
+the selector has been seen to fail.
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/initCopilotLegacyWindow.test.ts tests/cli/init.test.ts tests/cli/initAgentEntryPointRules.test.ts tests/e2e/initE2E.test.ts tests/integration/agentsRulesSurface.test.ts tests/integration/distributedSurfaceLeakage.test.ts tests/assets/outputLanguageSingleSource.test.ts tests/cli/main.test.ts tests/integration/shippedWorkflowDetection.test.ts
 - Refactor verify result: PASS — Test Files 9 passed (9); Tests 783 passed (783). No production or test file changed in this phase. The suite is the row's Test file, every test that reads the generated or the repository's Copilot instructions, and the detection file whose case title this change renamed
 - Refactor verify revision: 1ebcbe0ee2d7578f3cbad0d004cb6e540afb8de3
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate on the observed RED against the pre-fix surface at cb835cbff; build-phase GREEN + oracle proof)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the observed RED (bullets 1, 2, 4 at :42:24, :47:24, :55:22) and its assertion-stripped run, reviewed revision cb835cbff1313257292d405fa4b39d0f703b59a5; build-phase GREEN + oracle proof (item deleted, bullets 1-3 at :41:24, :47:24, :51:24), reviewed revision b639815a9f23e6de8f2e59baf28c62f3935814f0. Gate taken after GREEN and refactor, on the kept RED commit
 
 ## Coverage Depth Matrix
 
@@ -1245,13 +1244,13 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 64 | - | n/a | grilling(-@2026-09-25T03:20:00.000Z/none): none | - | - | PASS |
 | 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0011; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
 | 66 | acceptance-test-engineer | stage run | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0011 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
-| 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation | PENDING |
+| 67 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | qa-gatekeeper fields | PASS |
 | 68 | - | n/a | grilling(-@2026-09-25T03:24:00.000Z/none): none | - | - | PASS |
 | 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0011 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
 | 70 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0094 | spec-0003 ledger; 06_Test-Cases.md; 02_User-stories.md; test-layers.md | Integration is right for the Level and the directory; every verify bullet has an assertion; no obligation of the CR lacks a row; advisory to read any `warning` in the item, adopted | PASS |
 | 71 | backend-engineer | stage run | /qfai-implement: TDD-0094 GREEN, correcting the legacy-layout item in `buildCopilotInstructions`, and the Oracle proof | #tdd-0094 | packages/qfai/src/cli/commands/init.ts; #tdd-0094 Round 1 | PASS |
 | 72 | backend-engineer | stage run | /qfai-implement: TDD-0094 Refactor verify | #tdd-0094 | Refactor verify fields | PASS |
-| 73 | qa-gatekeeper | - | /qfai-implement: TDD-0094 build-phase GREEN + oracle proof | #tdd-0094 | not run in this invocation | PENDING |
+| 73 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0094 build-phase GREEN + oracle proof | #tdd-0094 | qa-gatekeeper fields | PASS |
 | 74 | completion-reviewer | - | /qfai-implement: completion review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
 | 75 | implementation-reviewer | - | /qfai-implement: code quality review of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
 | 76 | orchestrator | - | /qfai-implement: checkpoint verification of TDD-0094 | #tdd-0094 | not run in this invocation | PENDING |
