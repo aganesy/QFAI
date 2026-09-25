@@ -56,6 +56,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **`qfai init` says how many shipped skills it left unchanged.** A plain run
+  keeps a shipped skill whose project copy differs from this release. It now
+  prints how many it kept, and that `qfai init --force` replaces them with the
+  shipped versions, overwriting local edits.
+
 - **Specs move to the story tree.** Projects using the former
   `.qfai/specs/spec-*` layout must run the bundled
   `qfai-migration-spec-to-story` skill before adopting this release, or stay on
