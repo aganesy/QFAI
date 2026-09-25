@@ -186,10 +186,14 @@ and that none were added or dropped — in the `Rationale` column of the
 Under a QFAI work order, the approval pass (step 5) changes by operation.
 
 - **`CREATE`.** Stage 1 checks the `human_decision` the work order cites
-  instead of asking. A passing row is persisted with `Authorization-Ref` and
+  instead of asking. The check passes only when the record exists, matches the
+  row's operation and capability, and is not stale. A passing row is persisted with `Authorization-Ref` and
   with `Approved By` copied as `answeredBy@YYYY-MM-DD`. A missing, mismatched or
   stale approval persists no triage row and asks the operator nothing: the stage
-  returns `awaiting_input` naming the row and the reason.
+  returns `awaiting_input` naming the row and the reason. An approval is stale
+  when the scope digest it was given under changes, when the approved capability
+  text changes, or when a replan widens the scope. The clock alone never makes an
+  approval stale.
 - **`DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run. A routing-time authorization approves none of them.
 
 Inside a run, Stage 1 asks the operator nothing itself. Its stage result opens
@@ -240,6 +244,13 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 Optional: `Depends-On`, what the row waits on before its work can start.
+
+`Authorization-Ref` is optional and found by its header name, as `Depends-On`
+is. It is filled on an approval-required `CREATE` row only, and a row of any
+other operation carries no reference. Its value is
+`run-<17 digits>/<authorizationId>`: the run, then the cited record. A row
+citing a record copies `answeredBy@YYYY-MM-DD` from the record into
+`Approved By`. A row without the column, or with `-` in it, stays valid.
 
 `Depends-On` holds `-`, or a comma-separated list of what must finish first:
 

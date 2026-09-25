@@ -172,3 +172,16 @@ Rows closed under DR-0298, one entry per row.
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/testFixLayers.test.ts`
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
+
+### TDD-0029
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/implement/orchestrated/missingTestCarveOut.test.ts`
+- Selector: `TC-0011-0021 (TDD-0029): A Diagnosed Missing Test Raises No Change Request`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/missingTestCarveOut.test.ts --testNamePattern='TC-0011-0021 \(TDD-0029\): A Diagnosed Missing Test Raises No Change Request' --reporter=verbose`
+- RED result: exit 1; `AssertionError: skills/qfai-implement/SKILL.md states the carve-out on a scope-gap line: expected '' to match /scope gap/i`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md`, `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/change-request-reset.md`, `packages/qfai/tests/integration/implement/orchestrated/missingTestCarveOut.test.ts`
+- Reopened by: CR-20260925-0006 part A; the case asserts that each scope-gap line names `/qfai-sdd` as the skill that appends the row, with no decision ID. The `SKILL.md` line is edited in place, so the file gains no line.
+- Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
