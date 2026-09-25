@@ -5,12 +5,12 @@
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-24`
 - Class: `intent`
-- Status: `approved`
+- Status: `superseded`
 - Approved by: `Codex` under the user's instruction to complete and merge the work-log removal; this is an implementation scope decision, not a new product decision
 - Approved at: `2026-09-24`
 - Approved option: `1`
 - Applied at: `2026-09-24`
-- Superseded by: `-`
+- Superseded by: `CR-20260925-0010`
 
 ## Identifier
 
