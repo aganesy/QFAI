@@ -2,6 +2,10 @@
 
 Rows closed under DR-0298, one entry per row.
 
+`TDD-0026` and `TDD-0039` were reopened from `exception` for the reviews
+DR-0298 waived. Both are `Integration` rows, so their evidence is in
+`.qfai/evidence/atdd-spec-0011.md`.
+
 ## Ledger rows advanced
 
 ### TDD-0021
@@ -65,18 +69,6 @@ Rows closed under DR-0298, one entry per row.
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/ledgerCheckNotCached.test.ts`
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
 
-### TDD-0026
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: Integration
-- Test file: `packages/qfai/tests/integration/implement/orchestrated/seamOnly.test.ts`
-- Selector: `TC-0011-0018 (TDD-0026): A Seam-Only Work Order Lands Only the Minimal Connection`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/seamOnly.test.ts --testNamePattern='TC-0011-0018 \(TDD-0026\): A Seam-Only Work Order Lands Only the Minimal Connection' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## `seam-only` section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed | 1 skipped (2)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/seamOnly.test.ts`
-- Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
-
 ### TDD-0035
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -87,18 +79,6 @@ Rows closed under DR-0298, one entry per row.
 - RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
 - GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
 - Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
-
-### TDD-0039
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: Integration
-- Test file: `packages/qfai/tests/integration/implement/orchestrated/seamOnly.test.ts`
-- Selector: `TC-0011-0027 (TDD-0039): A seam that cannot be landed`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/implement/orchestrated/seamOnly.test.ts --testNamePattern='TC-0011-0027 \(TDD-0039\): A seam that cannot be landed' --reporter=verbose`
-- RED result: exit 1; `AssertionError: the ## `seam-only` section exists: expected '' not to be '' // Object.is equality`
-- GREEN result: exit 0; 1 passed | 1 skipped (2)
-- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/references/orchestrated-mode.md`, `packages/qfai/tests/integration/implement/orchestrated/seamOnly.test.ts`
-- Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
 
 ### TDD-0027
 
