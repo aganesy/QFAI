@@ -528,7 +528,7 @@ the lower edge of the band.
 **TC-0004-0071 — `Equivalence partitions`, `Normal path`, `Error path`.** Only a misplaced
 `review-*` directory is covered. A misplaced `discussion-*` directory, also a declared failure, has
 no case, and the passing cases are bound to `TC-0004-0072` only. The case accepts the proposal
-`.qfai/review/review-2026-05-27/`, where the test case names `.qfai/review/2026-05-27/`.
+`.qfai/review/review-2026-05-27/`, where the test case names `.qfai/review/2026-05-27/`. <!-- qfai:not-a-citation .qfai/review/review-2026-05-27/ .qfai/review/2026-05-27/ -->
 
 **TC-0004-0072 — `Equivalence partitions`.** No case adds a pack under `tmp/`, the third allowed
 root.
