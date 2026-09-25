@@ -741,6 +741,11 @@ packages/qfai/tests/helpers/tempTree.ts
 - Checkpoint verification revision: 040df779f969c686b4691293753df01714598fce
 - Checkpoint verification seal: 1fed3a1e8850d952c44f7783bda1d66098805c9df4cd237ba3cf1ecce75a30cc
 
+## Coverage Depth Matrix
+
+See `.qfai/evidence/coverage-depth-spec-0018.md`. Its 408 rows (10 stories, 269 test cases, 129 business rules)
+total by `Status`: **✅ 366 / ⚠️ 39 / ❌ 3**. This run changes no mark: the six stories it reviews were already ✅.
+
 ## Work Orders Summary
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
