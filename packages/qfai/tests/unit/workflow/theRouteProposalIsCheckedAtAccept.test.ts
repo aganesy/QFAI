@@ -1,8 +1,14 @@
 // QFAI:SPEC-0018:TC-0018-0012
 
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { writeTracked } from "../../../src/core/workflow/persistence.js";
+import { removeTempTree } from "../../helpers/tempTree.js";
 import type {
   NormativeReferenceKind,
   ObservedReferenceKind,
@@ -301,6 +307,77 @@ it("TC-0018-0012 (TDD-0022): stage-set", () => {
       { reason: "stage-set", subject: "deploy" },
     ),
   );
+});
+
+const bugfixPlan = {
+  route: "bugfix",
+  stages: [
+    { stageInstanceId: "diagnose", stageKind: "diagnose", when: "always" },
+    { stageInstanceId: "implement", stageKind: "implement", when: "missing_test_row_needed" },
+    { stageInstanceId: "verify", stageKind: "verify", when: "always" },
+  ],
+};
+
+function bugfixProposal(affectedSpecIds: string[]): Proposal {
+  return {
+    ...checkedProposal(),
+    candidateRoute: "bugfix",
+    goal: "Return 404 for a missing export.",
+    affectedSpecIds,
+    newCapabilities: [],
+    requiredStages: ["diagnose", "verify"],
+  };
+}
+
+const activeSpecs = {
+  specs: { "spec-0007": { lifecycle: "active" }, "spec-0008": { lifecycle: "active" } },
+  plans: { bugfix: bugfixPlan },
+};
+
+it("TC-0018-0012: spec-binding", () => {
+  const actual = [
+    acceptRouting(bugfixProposal(["spec-0007", "spec-0008"]), activeSpecs),
+    acceptRouting(bugfixProposal([]), activeSpecs),
+  ];
+  const expected = refused({ reason: "spec-binding", subject: "affectedSpecIds" });
+  expect(actual).toEqual([expected, expected]);
+});
+
+it("A plan with no new capability binds the one spec it affects when it is accepted", () => {
+  const actual = acceptRouting(bugfixProposal(["spec-0007"]), activeSpecs);
+  expect({
+    state: actual.run?.state,
+    sequence: actual.run?.sequence,
+    events: actual.events.map(({ type, binding }) => ({ type, binding })),
+  }).toEqual({
+    state: "ready",
+    sequence: 4,
+    events: [
+      { type: "plan-accepted", binding: undefined },
+      { type: "binding-recorded", binding: { specId: "spec-0007" } },
+    ],
+  });
+});
+
+it("A spec bound from the affected spec adds no targetBindings entry", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-bindings-"));
+  try {
+    const record = { prevHash: null, operation: "accept", recordedAt: "2026-09-25T00:00:00Z" };
+    const slotted = { slotId: "slot-3-1", capabilityId: "CAP-0001", specId: "spec-0001" };
+    await writeTracked(
+      dir,
+      [
+        { ...record, sequence: 1, event: "binding-recorded", binding: { specId: "spec-0007" } },
+        { ...record, sequence: 2, event: "binding-recorded", binding: slotted },
+        { ...record, sequence: 3, event: "accept-nonfinal-result", outcome: "accepted" },
+      ],
+      { run: { id: "run-bindings", state: "ready", sequence: 3 } },
+    );
+    const summary: unknown = JSON.parse(await readFile(path.join(dir, "summary.json"), "utf8"));
+    expect(summary).toMatchObject({ targetBindings: [slotted] });
+  } finally {
+    await removeTempTree(dir);
+  }
 });
 
 const missingSpecReference: Proposal["expectedBehaviorRefs"] = [

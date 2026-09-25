@@ -563,8 +563,11 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
     route: snapshot.plan?.route ?? null,
     completionTarget: snapshot.completionTarget ?? "qfai_done",
     state: snapshot.run.state,
+    // A spec bound from the proposal's affected spec has no slot, and no entry here.
     targetBindings: records.flatMap((record) =>
-      record.event === "binding-recorded" && record.binding ? [record.binding] : [],
+      record.event === "binding-recorded" && record.binding && "slotId" in record.binding
+        ? [record.binding]
+        : [],
     ),
     stages: accepted.map((stage) => ({
       stageInstanceId: stage.stageInstanceId,
