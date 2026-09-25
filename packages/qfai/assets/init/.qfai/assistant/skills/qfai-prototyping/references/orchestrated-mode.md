@@ -6,7 +6,7 @@ Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-base
 
 | Operation                   | What the work order asks                                          |
 | --------------------------- | ----------------------------------------------------------------- |
-| `existing-runtime`          | Prototype against the runtime contract the bound spec already has |
+| `existing-runtime-contract` | Prototype against the runtime contract the bound spec already has |
 
 The skill serves exactly these operations. A work order naming any other is refused.
 
