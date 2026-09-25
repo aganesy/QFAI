@@ -1,6 +1,6 @@
 # qfai-prototyping in a workflow run
 
-Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-baseline.md` first. This file applies only to the `worker` state: the skill holds a QFAI work order that matches an issued one.
+Run the entry check in `.qfai/assistant/constitution/shared-skill-operating-baseline.md#workflow-run-entry-check-mandatory` first. This file applies only to the `worker` state: the skill holds a QFAI work order that matches an issued one.
 
 ## Operations
 
