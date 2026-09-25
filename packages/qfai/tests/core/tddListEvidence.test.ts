@@ -313,7 +313,12 @@ interface EvidenceOptions {
   revision?: string;
   /** Write this role's blocking `REVISE` where the gate used to miss it. */
   hiddenVerdictRole?: string;
-  hiddenVerdictWrapper?: "fence" | "comment" | "duplicate";
+  hiddenVerdictWrapper?: "fence" | "comment" | "duplicate" | "list-duplicate";
+  /**
+   * Write every response's `Result`, `Reviewed revision` and `Audited evidence
+   * hash` as list items (`- Result: PASS`), the form reviewers commonly use.
+   */
+  verdictFieldsAsListItems?: boolean;
   /**
    * The Coverage Depth Matrix the reviewers audited, when the entry's hashes
    * are meant to cover it. Omit it to hash the evidence section alone — which
@@ -454,6 +459,9 @@ function responseBody(role: string, passRecord: string, options: EvidenceOptions
   if (options.hiddenVerdictWrapper === "duplicate") {
     return passRecord.replace("Result: PASS\n", "Result: PASS\nResult: REVISE\n");
   }
+  if (options.hiddenVerdictWrapper === "list-duplicate") {
+    return passRecord.replace("Result: PASS\n", "Result: PASS\n- Result: REVISE\n");
+  }
   return options.hiddenVerdictWrapper === "comment"
     ? `Result: REVISE\n\n<!--\n${passRecord}-->\n`
     : `Result: REVISE\n\n\`\`\`\n${passRecord}\`\`\`\n`;
@@ -516,7 +524,11 @@ async function materializeEvidence(
   for (const [role, packAuditHash] of reviews) {
     const hashLines =
       options.auditedHashLines?.(packAuditHash) ?? `Audited evidence hash: ${packAuditHash}\n`;
-    const passRecord = `Result: PASS\nReviewed revision: ${revision}\n${hashLines}`;
+    const plainPassRecord = `Result: PASS\nReviewed revision: ${revision}\n${hashLines}`;
+    const passRecord =
+      options.verdictFieldsAsListItems === true
+        ? plainPassRecord.replace(/^(?=\S)/gm, "- ")
+        : plainPassRecord;
     if (options.requestOnlyPassRole === role) request.push(passRecord);
     await writeFile(
       path.join(responseDir, `R01_${role}.md`),
@@ -6378,6 +6390,34 @@ result, so the assertion cannot be tightened without drift.
         ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
         { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
         { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: "duplicate" },
+      );
+      expect(codes).toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  // Reviewers commonly write the response as a list. The verdict it states is
+  // the same one, so the gate reads it rather than reporting no PASS at all.
+  it("reads verdict fields written as list items", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { verdictFieldsAsListItems: true },
+      );
+      expect(codes).not.toContain("QFAI-TDDLIST-008");
+    });
+  });
+
+  // Accepting the list form must not let a verdict hide in it: a list item is
+  // a second visible Result, exactly as a second plain line is.
+  it("rejects a list-item REVISE beside a plain PASS", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: "list-duplicate" },
       );
       expect(codes).toContain("QFAI-TDDLIST-008");
     });

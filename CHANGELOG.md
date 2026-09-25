@@ -84,6 +84,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A reviewer response may write its verdict fields as list items** (#2411).
+  `QFAI-TDDLIST-008` read `Result`, `Reviewed revision` and
+  `Audited evidence hash` only from a line that starts with the field name. A
+  response writing them as `- Result: PASS` was read as carrying no verdict, and the finding
+  did not say why. Those three fields are now read with or without a list
+  marker. Both forms count toward the one-value rule, so a `- Result: REVISE`
+  item beside a `Result: PASS` line is still refused.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
