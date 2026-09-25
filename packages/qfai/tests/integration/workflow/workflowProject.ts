@@ -126,6 +126,9 @@ export async function initProject(): Promise<string> {
     { recursive: true },
   );
   commitAll(root);
+  // The base ref validate diffs against, as a clone of the default branch has it.
+  // Without it validate reports QFAI-TRACE-003 as an error.
+  git(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
   return root;
 }
 
