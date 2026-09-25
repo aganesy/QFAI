@@ -53,6 +53,7 @@
     "test:cli": "vitest run --project cli",
     "test:unit": "vitest run --project unit",
     "test:scripts": "vitest run --project scripts",
+    "test:windows-parity": "vitest run tests/unit/workflow/ tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },

@@ -31,12 +31,12 @@
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: integration
 - Reset by: `CR-20260912-0003` (option 1; TC-0010-0006 re-derived). The earlier selector named no case in its file.
-- Test file: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
+- Test file: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
 - Selector: `TC-0010-0006: the skill's planner-first guidance ranks no exploration and keeps the brand direction the user's`
 - RED command (cwd `packages/qfai`): as TDD-0006
 - RED result: already satisfied: exit 0 for this case on the first run
 - GREEN result: exit 0; 26 passed (26)
-- Changed files: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
+- Changed files: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
 
 ### TDD-0010
 
@@ -333,6 +333,24 @@ packages/qfai/tests/integration/discussionOperationsSpec0010.test.ts
 - Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 1 passed (1). Off a checkpoint boundary, since other rows of spec-0010 are still at todo, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
 - Checkpoint verification revision: 9a886a6921fe9097741948f19a669679895ae419
 - Checkpoint verification seal: 752266afbe90cfa9635f0491cece3a91d1715bc366c328ab7082178d5878c9f7
+
+### TDD-0033
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0004 journey, discussion variant, as spec-0018 `10_Plan.md` `### Which journey discharges which stage story` assigns it; the test also carries `QFAI:SPEC-0010:US-0010-0013`.
+- Test file: `packages/qfai/tests/e2e/spec0018StopForMyDecisionE2E.test.ts`
+- Selector: `US-0018-0004, discussion variant (spec-0010 TDD-0033)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018StopForMyDecisionE2E.test.ts --testNamePattern='US-0018-0004, discussion variant \(spec-0010 TDD-0033\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by spec-0018 TDD-0470, whose discussion work order carries `settled`, and by the discovery route returning the run to routing once its discussion stage is accepted
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018StopForMyDecisionE2E.test.ts > US-0018-0004, discussion variant (spec-0010 TDD-0033): the discussion stage gets what is settled and returns the run to routing`
+- Production files: none
+
+## Coverage Depth Matrix
+
+See `.qfai/evidence/coverage-depth-spec-0010.md` (committed).
+Totals: ✅ 14 / ⚠️ 37 / ❌ 23, with 196 not applicable, across 270 scored cells — 234 matrix cells (26 rows × 9 columns) and 36 business rule cells (12 rows × 3 columns).
+The marks are derived from the pack and the TDD ledger by the rules that file states;
+`Status` is a row verdict and is outside every total.
 
 ## Grilling Session
 

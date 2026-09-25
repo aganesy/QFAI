@@ -104,11 +104,25 @@ export type RegeneratedAssistantLayer = (typeof REGENERATED_ASSISTANT_LAYERS)[nu
 
 /**
  * Maps a POSIX path relative to `.qfai/assistant/` to the sha256 of the
- * content qfai wrote at that path, beside the package version that wrote it.
+ * content qfai wrote at that path, beside the package version that wrote it and
+ * the conflicts that run found. Nothing reads the conflicts back: every run
+ * recomputes them.
  */
 export type AssistantAssetsLock = {
   packageVersion?: string;
   files: Record<string, string>;
+  conflicts?: readonly AssistantAssetConflict[];
+};
+
+/**
+ * A file an upgrade left in conflict with the workflow's correspondence check:
+ * its POSIX path relative to `.qfai/assistant/`, the cause it trips, and what
+ * differs.
+ */
+export type AssistantAssetConflict = {
+  path: string;
+  trigger: "contract-undeclared" | "reviewer-missing";
+  difference: string;
 };
 
 /**
@@ -759,7 +773,11 @@ export async function writeAssistantAssetsLock(
   const target = assistantAssetsLockPath(assistantRoot);
   const staging = `${target}.${randomUUID()}.tmp`;
   try {
-    const body = { packageVersion: lock.packageVersion, files: ordered };
+    const body = {
+      packageVersion: lock.packageVersion,
+      files: ordered,
+      conflicts: lock.conflicts ?? [],
+    };
     await writeFile(staging, `${JSON.stringify(body, null, 2)}\n`, {
       encoding: "utf-8",
       flag: "wx",

@@ -102,3 +102,15 @@ Rows closed under DR-0298, one entry per row.
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-maintain/SKILL.md`, `packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml (qfai-maintain entry)`, `.claude/skills/qfai-maintain, .agents/skills/qfai-maintain, .codex/skills/qfai-maintain, .github/skills/qfai-maintain (links)`, `packages/qfai/tests/integration/stageSkillModelInvocationSpec0001.test.ts`
 - Note: The test reads the shipped skill files. spec-0018's adapter case reads the tree `qfai init` writes and keeps its own row; this module carries only this spec's annotation.
 - Evidence file: this spec has no ATDD evidence file, and creating one owes a committed Coverage Depth Matrix (`QFAI-ATDD-133`), so the entry is recorded here.
+
+### TDD-0042
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey, handover variant: the deterministic half only, as spec-0018 `10_Plan.md` assigns it; the model's pickup of a free-text request stays release evidence. The test carries `QFAI:SPEC-0001:US-0001-0010`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, handover variant \(spec-0001 TDD-0042; spec-0003 TDD-0125\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by spec-0018's result identity check (a result naming a work order the run never issued is refused and nothing is written) and by spec-0001's entry-check rows
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001, handover variant (spec-0001 TDD-0042; spec-0003 TDD-0125): a result for a work order never issued is refused, and the stage skills' entry check points at the installed qfai-run`
+- Production files: none
+

@@ -13,7 +13,8 @@ export interface RoutingSeed {
 
 export interface ExpectedRouting {
   requestKind: string;
-  allowedRoutes: readonly string[];
+  // `null` is the route of a request that opens no new run, such as a resume.
+  allowedRoutes: readonly (string | null)[];
   requiresHumanInput: boolean;
   must: readonly string[];
   forbid: readonly string[];
@@ -88,7 +89,8 @@ export function isSafetyRelevant(
 // What the manual runner observed for one seed.
 export interface RunRecord {
   seedId: string;
-  route: string;
+  // `null` when the host opened no run.
+  route: string | null;
   observed: readonly string[];
   askedQuestion: boolean;
 }

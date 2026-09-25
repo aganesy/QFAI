@@ -382,7 +382,29 @@ function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot 
   };
 }
 
+// An acceptance result asking for a seam opens the seam request instead of completing its stage,
+// and the seam-only result closes it; neither is an accepted plan stage. The acceptance stage is
+// then reissued at its next attempt.
+function foldSeam(snapshot: Snapshot, record: JournalRecord): Snapshot | undefined {
+  const order = snapshot.outstandingWorkOrder;
+  if (!order) return undefined;
+  if (record.seamRequest) {
+    const seamRequest = {
+      parentWorkOrderId: order.workOrderId,
+      stageInstanceId: order.stageInstanceId,
+      attempt: order.attempt,
+      targetTestId: record.seamRequest.targetTestId,
+    };
+    return { ...withoutWorkOrder(snapshot), seamRequest };
+  }
+  if (order.operation !== "seam-only" || !snapshot.seamRequest) return undefined;
+  const { seamRequest: _closed, ...rest } = withoutWorkOrder(snapshot);
+  return rest;
+}
+
 function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const seam = foldSeam(snapshot, record);
+  if (seam) return seam;
   const stage = {
     stageInstanceId: record.stageInstanceId ?? "",
     stageKind: record.stageKind ?? snapshot.outstandingWorkOrder?.stageKind ?? "",

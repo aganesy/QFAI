@@ -5900,6 +5900,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0179 (TDD-0387): A run in running`
 - Production files: none beyond those of TDD-0318
 
+### TDD-0388
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0182 (TDD-0388): The run edits qfai`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0182 \(TDD-0388\): The run edits qfai' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0387, whose `accept` observer reports a change to `qfai.config.yaml` as `policy-drift` whatever the write scope, as CR-20260925-0014 now has TC-0018-0182 expect
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0182 (TDD-0388): The run edits qfai`
+- Production files: none
+- Change request: CR-20260925-0014 (`Status: approved`) aligned TC-0018-0182 with the contract, `policy-drift` at `accept`; the row carries it in `DR-ID` beside DR-0298.
+
 ### TDD-0389
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6090,6 +6101,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0407): discovery-ends-routing`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
 
+### TDD-0408
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts`
+- Selector: `TC-0018-0189 (TDD-0408): A temp project with no eval record and READMEs claiming no host`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts --testNamePattern='TC-0018-0189 \(TDD-0408\): A temp project with no eval record and READMEs claiming no host' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1 on the first run, which failed on the test's own read of `mode` from `start`, which the contract places on `status` (`## Modes`); read from `status`, it passed: already satisfied by TDD-0262, since `start` reads neither a README nor an eval record — a README that is a directory and a record that is not JSON change nothing
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts > TC-0018-0189 (TDD-0408): A temp project with no eval record and READMEs claiming no host`
+- Production files: none
+
 ### TDD-0409
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6119,6 +6140,18 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `→ expected { seeds: +0, cjk: [], phone: 1, …(1) } to deeply equal { seeds: 64, cjk: [], phone: 1, …(1) }`, `tests/integration/workflow/evalFixtures.test.ts:180`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0193 (TDD-0411): Scan every routing prompt and rationale`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0412
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0194 \(TDD-0412\): Build the 64 fixture repositories from one base qfai init' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (seeds, unmapped, ...) } to deeply equal { seeds: 64, unmapped: [], …(2) }`, `tests/integration/workflow/evalFixtures.test.ts:517`, with the overlay map empty
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init`
+- Production files: none (test-side): `packages/qfai/tests/helpers/routingEvalOverlays.ts`; `packages/qfai/tests/helpers/routingEval.ts` (`allowedRoutes` admits `null`)
+- Design choice: the fixture factory's overlay map is `FACT_OVERLAYS` in `packages/qfai/tests/helpers/routingEvalOverlays.ts`, generalised from the four materialised keys of EX-0018-0129 and EX-0018-0138 to EX-0018-0140. A key is reproduced in one of two ways. A key naming something on disk writes the smallest file that holds it: the file the prompt names, a rule line in a fixture spec's `04_Business-Rules.md`, a ledger row, a contract or a source file. A key describing the request itself is `stated`: the prompt carries it and nothing goes on disk. The base is one `qfai init` output, copied per seed. Decided between agents.
+- Design choice: fifteen keys are refused, listed with their reasons in `REFUSED_FACT_KEYS`, and `buildSeedFixture` raises `UnknownFactKeyError` for a seed naming one, as for any key with no overlay. Run state (`activeRuns`, `activeRun`, `currentStage`, `terminalRuns`, `branchChanged`, `workingTreeInputChanged`): a run's ID and journal carry the time and random IDs. Authorization and debt records (`oldApprovalScope`, `grantDependencyChanged`, `scopeDebtOwnerUnknown`): written by a run with its digests. Host or session facts (`conversationBindingMissing`, `requiredDelegationAvailable`, `noQuestionMode`). Nondeterministic by nature (`observedMs`, `flakyFixture`). A symlink out of the root (`fileResolvesViaSymlinkOutsideAuthorizedRoot`), which Windows does not grant by default. Seeds refused as a result: ROUTE-017, 020, 027, 028, 029, 033, 034, 050, 052, 053, 059, 062 and 064. The test asserts exactly that partition: every key is either overlaid or refused, never both, and only seeds naming a refused key fail to build. The TC reads "every repoFacts key has an overlay"; the refusals are the agents' decision, for the maintainer to confirm at release.
 
 ### TDD-0413
 
@@ -6260,6 +6293,30 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0209 (TDD-0426): Scan the tracked test tree`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`, `packages/qfai/tests/fixtures/workflow/fault-seeds.json`; a `// Fault seeds:` citation line in the sixteen workflow test files the `## Fault seed index` of `06_Test-Cases.md` maps each seed to
 
+### TDD-0427
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0210 (TDD-0427): Read the routing-seed file and the vocabulary`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0210 \(TDD-0427\): Read the routing-seed file and the vocabulary' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { seeds: 64, untyped: [ …(112) ] } to deeply equal { seeds: 64, untyped: [] }`, `tests/integration/workflow/evalFixtures.test.ts:434`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0210 (TDD-0427): Read the routing-seed file and the vocabulary`
+- Production files: none (test-side): `packages/qfai/tests/fixtures/workflow/token-vocabulary.json`
+- Design choice: the vocabulary is `packages/qfai/tests/fixtures/workflow/token-vocabulary.json`, beside the seeds, mapping each of the 112 `must` and `forbid` tokens to one class of the closed set. The rule: `stage` for work a stage or the core performs; `effect` for a write or an external action on the repository or the world; `authorization` for a human's say — an approval, a decision only the user holds, a question put to them, or an agent standing in for one; `gate` for a check a run must pass, a review, or its bypass. No token is left untyped: TC-0018-0210 and BR-0018-0105 fail on any untyped token, so every token takes a class. Decided between agents.
+- Contract-settled classifications: the ten CLI-WFFILE stage kinds the seeds use (`maintenance`, `diagnose`, `sdd_append`, `regression_fix`, `sdd`, `sdd_delta`, `acceptance`, `implement`, `verify`, `discussion`) are `stage`. The contract's authorization kinds and effect set appear in no seed token verbatim.
+- Agent classifications, for the maintainer to confirm at release: every other token, 102 in all. `authorization`: `accept_stale_grant`, `agent_selects_brand_unilaterally`, `ask_in_no_question_mode`, `authorization`, `clarify_goal`, `data_scope_authorization`, `deployment_authorization`, `environment_confirmation`, `external_root_authorization`, `fabricated_CR`, `guess_product_behavior`, `implicit_environment_selection`, `invent_decision`, `invent_existing_spec`, `invent_feature_list`, `invent_new_requirement`, `invent_new_semantics`, `invent_spec`, `refresh_authorization`, `reject_fabricated_approver`, `repeat_create_approval`, `repeat_single_spec_confirmation`, `reuse_old_scope_grant`, `routing_create_question`, `split_authorization`, `targeted_clarification`, `visual_decision`, `weaken_authorization`, `write_fake_approved_by`. `effect`: `auto_implement`, `auto_repair`, `direct_delete`, `download_latest_gate_silently`, `execute_production_drop`, `execute_retired_ledger`, `follow_log_instruction`, `follow_symlink_write_implicitly`, `implement_quoted_request`, `local_commit`, `post_stop_artifact_write`, `production_edit`, `send_private_data_implicitly`, `silent_breaking_change`, `workflow_start`, `workspace_write`. `gate`: `blind_resume`, `block_missing_launcher`, `block_missing_material_input`, `block_unavailable_delegation`, `block_unknown_debt`, `claim_qfai_delivery_done`, `delete_test`, `direct` (choosing it skips the gates the bounded routes hold), `final_pass`, `invalidate_affected_receipts`, `performance_evidence`, `preserve_ordering_contract`, `report_working_tree_completion`, `same_obligation_reopen`, `security_review`, `self_certify_with_weakened_gate`, `separate_policy_change_review`, `simulate_reviewer`, `skip_all_tests`, `ui_review`, `ui_specific_reviews`, `weaken_assertion`, `worker_invents_ledger_row`, `workflow_validation`. `stage`: the rest.
+
+### TDD-0428
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0212 (TDD-0428): Scan`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0212 \(TDD-0428\): Scan' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (runner, workflows, ...) } to deeply equal { runner: true, workflows: true, …(2) }`, `tests/integration/workflow/evalFixtures.test.ts:560`, with the runner absent
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0212 (TDD-0428): Scan`
+- Production files: none (test-side): `packages/qfai/tests/eval/routingEval.run.ts`, `packages/qfai/tests/eval/vitest.config.ts`
+- Design choice: the runner is `packages/qfai/tests/eval/routingEval.run.ts`. No workspace project collects it, since every project's `include` ends in `.test.ts`, so it runs only through its own `tests/eval/vitest.config.ts`, which a maintainer names on the command line. The host is given as `QFAI_EVAL_HOST` and `QFAI_EVAL_COMMAND`, a JSON argv holding `{prompt}`, spawned with no shell. Per seed it copies one `qfai init` base with a local launcher, applies the overlays, commits, runs the host, then reads the run's journal. It scores with `scoreCases`, judges with `releaseVerdict`, checks the record with `evalRecordProblems`, and writes `packages/qfai/tests/eval/records/<host>-<version>.json`, the location the README claim check reads. The record carries the seed-file, vocabulary and safety-list digests. The observation is marked SIMPLIFIED: it reads the route, the accepted stage kinds and whether a question was opened, and lifts when a host transcript format is settled. It is never run in CI (spec-0018 `10_Plan.md` `### Fault seeds and the routing eval`). Decided between agents.
+
 ### TDD-0429
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6370,6 +6427,69 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0439): reviewer-read-only`
 - Production files: none
 
+### TDD-0440
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0220 \(TDD-0440\): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { …(3) } to deeply equal { claimed: [ [], [] ], …(2) }`, `tests/integration/workflow/readmeClaim.test.ts:73`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+- Design choice (decision D16 of the discussion): both READMEs describe the free-text entry first. The introduction, `## Quick start`, `## Operating model (free-text entry)` and `## Minimal tutorial` each introduce it with the phrase "in your own words" before any `/qfai-*` stage. Direct invocation is the subsection `### Invoking a stage directly (expert path)`. The sequence diagram follows one change: the operator describes it, `qfai-run` drives `start`, `next`, `accept` and `finish`, and the operator answers the one create question. `continue`, `stop` and the three modes are stated. `scripts/check-readme-alignment.mjs` and `scripts/check-mermaid.mjs` pass on both copies.
+- Design choice (decision D17): no eval has been recorded, so neither README declares Claude Code or Codex supported for quality-gated automation. `## Agent integrations` carries `### Supported hosts`, which states the condition and "No host is declared supported in this release." The claim check reads the backticked host ID of each bullet under that subsection, so a release claim is written `` - Claude Code (`claude-code`) ``. A missing subsection is itself a finding.
+- Design choice: nothing written names where an eval record lives. The runner of TDD-0428 writes it, and this check reads it, at `packages/qfai/tests/eval/records/<host>-<version>.json`. A record counts toward the claim only when its `version` equals `packages/qfai/package.json#version` and its release verdict is not `blocked`. The green adapter test AC-0018-0044 also names is not read by this check. Decided between agents.
+
+### TDD-0441
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0221 \(TDD-0441\): A temp copy of the READMEs claiming a host that has no record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ …(2) ] to deeply equal [ …(2) ]`, `tests/integration/workflow/readmeClaim.test.ts:79`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0442
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0222 (TDD-0442): A record for an older package version`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0222 \(TDD-0442\): A record for an older package version' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { older: [ …(2) ], current: [ …(2) ] } to deeply equal { older: [ …(2) ], current: [] }`, `tests/integration/workflow/readmeClaim.test.ts:93`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0222 (TDD-0442): A record for an older package version`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0443
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0226 (TDD-0443): Read both READMEs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0226 \(TDD-0443\): Read both READMEs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { alignment: +0, …(2) } to deeply equal { alignment: +0, …(2) }`, `tests/integration/workflow/readmeClaim.test.ts:114`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0226 (TDD-0443): Read both READMEs`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0444
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0227 (TDD-0444): Read the operating-model sequence diagram and the tutorial of both READMEs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0227 \(TDD-0444\): Read the operating-model sequence diagram and the tutorial of both READMEs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ [ …(9) ], [ …(9) ] ] to deeply equal [ [], [] ]`, `tests/integration/workflow/readmeClaim.test.ts:118`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0227 (TDD-0444): Read the operating-model sequence diagram and the tutorial of both READMEs`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
+### TDD-0445
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/readmeClaim.test.ts`
+- Selector: `TC-0018-0228 (TDD-0445): A temp copy with a tutorial step telling the operator to type /qfai-sdd`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/readmeClaim.test.ts --testNamePattern='TC-0018-0228 \(TDD-0445\): A temp copy with a tutorial step telling the operator to type /qfai-sdd' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected [ [ …(10) ], [ …(10) ] ] to deeply equal [ …(2) ]`, `tests/integration/workflow/readmeClaim.test.ts:127`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/readmeClaim.test.ts > TC-0018-0228 (TDD-0445): A temp copy with a tutorial step telling the operator to type /qfai-sdd`
+- Production files: none (test-side): `README.md`, `packages/qfai/README.md`; the check in `packages/qfai/tests/helpers/readmeClaim.ts`
+
 ### TDD-0446
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -6467,6 +6587,78 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by the run tree the workflow command writes under `.qfai/runs/`, with TDD-0354 writing only the tracked `.qfai/evidence/workflow/<runId>/` beside it
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0237 (TDD-0454): Built CLI run from start to finish on a temp project`
 - Production files: none beyond TDD-0354
+
+### TDD-0455
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `Error: seam-1: { "ok": false, ... "reasons": [{ "reason": "schema", "subject": "workOrderId" }, ...] }`, thrown by `acceptThenNext` in `tests/e2e/workflowJourney.ts` from `throughAcceptance`: after an acceptance result asking for a seam, `next` issued no seam-only work order, because the journal fold appended that result as an accepted stage and kept no seam request; the declined half passed on its first run, already satisfied by TDD-0260
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done` and `✓ ... > US-0018-0001 (TDD-0455), declined: declining the create question cancels the run with nothing tracked`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`)
+- Design choice: the journeys live under `packages/qfai/tests/e2e/`, one file per story, named `spec0018<Story>E2E.test.ts`. Each runs on a `qfai init` project (`initProject`) and drives the built CLI with scripted stage results, through the helpers `workflowProject.ts` already holds and `tests/e2e/workflowJourney.ts`: accept and next, verify and finish, the fixture's own validate, and a work order's shape. Each journey carries `QFAI:SPEC-0003:US-0003-0029`, and the stage-story variants carry their own story too, as `10_Plan.md` `### Which journey discharges which stage story` assigns. `QFAI:SPEC-0004:US-0004-0040` is not carried: the validator half it names (QFAI-TRIAGE-011, spec-0004 TDD-0068 to TDD-0078 and TDD-0082) does not exist yet, so an annotation would mark a story covered that nothing verifies. Decided between agents.
+- Production fix: the seam round trip did not survive the journal fold. `foldSeam` opens `seamRequest` from an acceptance result that carries one, instead of appending it as an accepted stage. It then closes the request when the seam-only result is accepted, so `next` reissues the acceptance stage at its next attempt. This matches the snapshot fields TDD-0057's design choice names; how the journal replays into them was left to persistence.
+
+### TDD-0458
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018StopForMyDecisionE2E.test.ts`
+- Selector: `US-0018-0004 (TDD-0458)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018StopForMyDecisionE2E.test.ts --testNamePattern='US-0018-0004 \(TDD-0458\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1 on the first run, which failed on the test's own expectation of an absent work order where `next` on a waiting run reports `workOrder: null`; with that corrected the journey passed: already satisfied by TDD-0104 (a material risk opens one question) and TDD-0354 (`stop` cancels at once)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018StopForMyDecisionE2E.test.ts > US-0018-0004 (TDD-0458): a material question waits unanswered, then a stop cancels the run`
+- Production files: none
+
+### TDD-0459
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts`
+- Selector: `US-0018-0005 (TDD-0459)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts --testNamePattern='US-0018-0005 \(TDD-0459\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0327, whose `resume` returns the implement work order from the smallest valid checkpoint
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ContinueAnInterruptedRunE2E.test.ts > US-0018-0005 (TDD-0459): resume returns the pending ledger row's implement work order and no SDD work order`
+- Production files: none (test-side): `packages/qfai/tests/integration/workflow/receiptRun.ts` exports `writeReceiptFiles`
+
+### TDD-0460
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018AskWithoutStartingE2E.test.ts`
+- Selector: `US-0018-0006 (TDD-0460)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018AskWithoutStartingE2E.test.ts --testNamePattern='US-0018-0006 \(TDD-0460\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0322 and TDD-0328, the core's `status` rows, which read the runtime tree and write nothing
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018AskWithoutStartingE2E.test.ts > US-0018-0006 (TDD-0460): the entry's status call leaves no run and a byte-identical tree`
+- Production files: none
+
+### TDD-0462
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ChooseTheModeE2E.test.ts`
+- Selector: `US-0018-0008 (TDD-0462)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ChooseTheModeE2E.test.ts --testNamePattern='US-0018-0008 \(TDD-0462\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0372, TDD-0373 (`off` and `shadow` write nothing) and TDD-0378 (an invalid mode is refused `fail-closed`)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ChooseTheModeE2E.test.ts > US-0018-0008 (TDD-0462): off and shadow write nothing, and an invalid mode is refused fail-closed`
+- Production files: none
+
+### TDD-0463
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018HostCapabilityE2E.test.ts`
+- Selector: `US-0018-0009 (TDD-0463)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018HostCapabilityE2E.test.ts --testNamePattern='US-0018-0009 \(TDD-0463\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0232 (a capability gap refused at `start`) and TDD-0240 (a failed first delegation blocks)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018HostCapabilityE2E.test.ts > US-0018-0009 (TDD-0463): a capability gap is refused at start, and a failed first delegation blocks`
+- Production files: none
+
+### TDD-0464
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/e2e/spec0018ClaimAHostE2E.test.ts`
+- Selector: `US-0018-0010 (TDD-0464)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018ClaimAHostE2E.test.ts --testNamePattern='US-0018-0010 \(TDD-0464\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0428 (the runner's record shape) and TDD-0440 to TDD-0442 (the claim check)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018ClaimAHostE2E.test.ts > US-0018-0010 (TDD-0464): an eval record is written, the claim check passes, then fails on a claim with no record`
+- Production files: none
 
 ### TDD-0465
 
@@ -6831,6 +7023,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `→ expected undefined to deeply equal { Object (userPrompt, repoFacts, ...) }`, `tests/integration/workflow/evalFixtures.test.ts:371`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0252 (TDD-0500): ROUTE-028 equals its rewrite`
 - Production files: `packages/qfai/tests/fixtures/workflow/routing-seeds.jsonl`
+
+### TDD-0501
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/evalFixtures.test.ts`
+- Selector: `TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fixed count`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts --testNamePattern='TC-0018-0253 \(TDD-0501\): recomputed safety list follows the rule, with no fixed count' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { Object (typed, first, ...) } to deeply equal { typed: true, first: [ …(22) ], …(1) }`, `tests/integration/workflow/evalFixtures.test.ts:462`, with no vocabulary file
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0253 (TDD-0501): recomputed safety list follows the rule, with no fixed count`
+- Production files: none (test-side): `packages/qfai/tests/fixtures/workflow/token-vocabulary.json` (TDD-0427)
+- Design choice: the list is recomputed from the vocabulary of TDD-0427 with `isSafetyRelevant`, and compared with the rule restated in the test; no count is asserted. It holds 51 seeds today. The comparison with a recorded list stays deferred under OQ-0018-0015.
 
 ### TDD-0502
 

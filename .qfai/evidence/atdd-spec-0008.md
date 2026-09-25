@@ -258,6 +258,18 @@ inactive and did not run.
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-atdd/references/orchestrated-mode.md`, `packages/qfai/tests/integration/atdd/orchestrated/testFixLayers.test.ts`
 
+### TDD-0036
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey, whose acceptance stage runs from its work order as `qfai-atdd` `author-acceptance-tests` with a seam round trip (spec-0018 `10_Plan.md` `### Which journey discharges which stage story`); the test carries `QFAI:SPEC-0008:US-0008-0009`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455): one create question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\): one create question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0008.md`.

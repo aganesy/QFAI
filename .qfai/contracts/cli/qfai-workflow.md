@@ -269,6 +269,7 @@ failed check in `reasons[]`:
 | `scope-escape`        | A write area resolves outside the project root, or `requestKind` is not `change`                                                                                                                                                               |
 | `unresolved-approval` | A risk signal needing the operator is neither answered nor opened as a question                                                                                                                                                                |
 | `stage-set`           | `requiredStages` omits a stage the plan runs `always`, omits `verify` on a change route, or names a stage the plan lacks                                                                                                                       |
+| `spec-binding`        | `newCapabilities` is empty, the plan has a stage that takes a spec target, and `affectedSpecIds` names no spec or more than one                                                                                                                |
 
 No write area can name an authoritative authorization or decision record: the
 `protected-surface` paths are closed to the proposal and to `recordAreas` alike.
@@ -281,6 +282,17 @@ A checked proposal becomes the run's plan. Its write scope is the
 the review profile of the run's `qfai-implement` and `qfai-atdd` work orders to
 `implementation-heavy`, as [Work order](#work-order) states.
 
+A run binds its spec in one of two ways:
+
+- When the checked proposal lists `newCapabilities`, the SDD result's `bindings`
+  bind it ([Authorizations](#authorizations)).
+- When it lists none and the plan has a stage that takes a spec target, accepting
+  the checked plan binds the one spec `affectedSpecIds` names. The core appends a
+  `binding-recorded` event naming that spec, with no slot.
+
+Every stage but `route`, `discussion`, `maintenance` and `verify` takes the bound
+spec as its `target`. A plan with no other stage binds no spec.
+
 ### Work order
 
 | Field                                                | Content                                                                                                                                                                                                                           |
@@ -288,7 +300,7 @@ the review profile of the run's `qfai-implement` and `qfai-atdd` work orders to
 | `runId`, `workOrderId`, `stageInstanceId`, `attempt` | Identity. `workOrderId` is stable until a result for it is accepted                                                                                                                                                               |
 | `stageKind`, `operation`                             | From the plan. One fixed operation per work order                                                                                                                                                                                 |
 | `executor`                                           | `{ skill }`                                                                                                                                                                                                                       |
-| `target`                                             | `{ kind: "spec", specId }` or `{ kind: "new_capability", slotId }`. Absent from the `route` and `discussion` work orders, which bind no spec and no new capability; never absent from any other                                   |
+| `target`                                             | `{ kind: "spec", specId }` or `{ kind: "new_capability", slotId }`. Absent from the `route`, `discussion`, `maintenance` and `verify` work orders, which bind no spec and no new capability; never absent from any other          |
 | `scope`                                              | `{ digest, writeAreas, protectedTargets, allowedEffects, nonGoals }`                                                                                                                                                              |
 | `recordAreas`                                        | The stage's own records for the bound spec, which the core derives from the stage kind, as below. Held apart from `scope`: `scope.digest` covers `scope` only, and the announcement shows `scope` only                            |
 | `inputs`                                             | `{ path, digest }` per input                                                                                                                                                                                                      |

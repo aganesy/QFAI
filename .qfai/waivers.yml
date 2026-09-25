@@ -5,7 +5,16 @@ waivers:
     scope:
       paths: [".qfai/specs/spec-0001/tdd/test-list.md"]
     match:
-      dl_ids: [TDD-0034, TDD-0035, TDD-0036, TDD-0037, TDD-0038, TDD-0039, TDD-0040, TDD-0041]
+      dl_ids:
+        - TDD-0034
+        - TDD-0035
+        - TDD-0036
+        - TDD-0037
+        - TDD-0038
+        - TDD-0039
+        - TDD-0040
+        - TDD-0041
+        - TDD-0042
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -30,7 +39,6 @@ waivers:
       paths: [".qfai/specs/spec-0003/tdd/test-list.md"]
     match:
       dl_ids:
-        - TDD-0126
         - TDD-0095
         - TDD-0096
         - TDD-0097
@@ -47,11 +55,22 @@ waivers:
         - TDD-0108
         - TDD-0109
         - TDD-0110
+        - TDD-0111
         - TDD-0112
         - TDD-0113
+        - TDD-0114
         - TDD-0115
+        - TDD-0116
+        - TDD-0117
+        - TDD-0118
+        - TDD-0119
         - TDD-0120
+        - TDD-0121
+        - TDD-0122
+        - TDD-0123
         - TDD-0124
+        - TDD-0125
+        - TDD-0126
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -63,8 +82,21 @@ waivers:
     match:
       dl_ids:
         - TDD-0067
+        - TDD-0068
+        - TDD-0069
+        - TDD-0070
+        - TDD-0071
+        - TDD-0072
+        - TDD-0073
+        - TDD-0074
+        - TDD-0075
+        - TDD-0076
+        - TDD-0077
+        - TDD-0078
         - TDD-0079
         - TDD-0080
+        - TDD-0081
+        - TDD-0082
         - TDD-0083
         - TDD-0084
         - TDD-0085
@@ -79,7 +111,16 @@ waivers:
       paths: [".qfai/specs/spec-0008/tdd/test-list.md"]
     match:
       dl_ids:
-        [TDD-0027, TDD-0028, TDD-0029, TDD-0030, TDD-0031, TDD-0032, TDD-0033, TDD-0034, TDD-0035]
+        - TDD-0027
+        - TDD-0028
+        - TDD-0029
+        - TDD-0030
+        - TDD-0031
+        - TDD-0032
+        - TDD-0033
+        - TDD-0034
+        - TDD-0035
+        - TDD-0036
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -97,6 +138,7 @@ waivers:
         - TDD-0011
         - TDD-0025
         - TDD-0026
+        - TDD-0033
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -121,6 +163,7 @@ waivers:
         - TDD-0032
         - TDD-0033
         - TDD-0034
+        - TDD-0035
         - TDD-0039
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
@@ -139,6 +182,7 @@ waivers:
         - TDD-0579
         - TDD-0580
         - TDD-0581
+        - TDD-0582
         - TDD-0583
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
@@ -164,6 +208,8 @@ waivers:
         - TDD-0123
         - TDD-0124
         - TDD-0125
+        - TDD-0126
+        - TDD-0128
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -183,7 +229,25 @@ waivers:
     scope:
       paths: [".qfai/specs/spec-0015/tdd/test-list.md"]
     match:
-      dl_ids: [TDD-0038, TDD-0039, TDD-0054, TDD-0055, TDD-0056, TDD-0057, TDD-0058]
+      dl_ids: [TDD-0038, TDD-0054, TDD-0055, TDD-0056, TDD-0057, TDD-0058]
+    reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
+    expires: "2026-12-31"
+    evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
+    owner: "yusuke_senaga"
+  - id: WVR-20260925-17
+    rule: TDDLIST_EXCEPTION_PARKED
+    scope:
+      paths: [".qfai/specs/spec-0017/tdd/test-list.md"]
+    match:
+      dl_ids:
+        - TDD-0111
+        - TDD-0112
+        - TDD-0113
+        - TDD-0114
+        - TDD-0115
+        - TDD-0116
+        - TDD-0117
+        - TDD-0118
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"
@@ -577,6 +641,7 @@ waivers:
         - TDD-0385
         - TDD-0386
         - TDD-0387
+        - TDD-0388
         - TDD-0389
         - TDD-0390
         - TDD-0391
@@ -596,9 +661,11 @@ waivers:
         - TDD-0405
         - TDD-0406
         - TDD-0407
+        - TDD-0408
         - TDD-0409
         - TDD-0410
         - TDD-0411
+        - TDD-0412
         - TDD-0413
         - TDD-0414
         - TDD-0415
@@ -613,6 +680,8 @@ waivers:
         - TDD-0424
         - TDD-0425
         - TDD-0426
+        - TDD-0427
+        - TDD-0428
         - TDD-0429
         - TDD-0430
         - TDD-0431
@@ -624,6 +693,12 @@ waivers:
         - TDD-0437
         - TDD-0438
         - TDD-0439
+        - TDD-0440
+        - TDD-0441
+        - TDD-0442
+        - TDD-0443
+        - TDD-0444
+        - TDD-0445
         - TDD-0446
         - TDD-0447
         - TDD-0448
@@ -633,6 +708,13 @@ waivers:
         - TDD-0452
         - TDD-0453
         - TDD-0454
+        - TDD-0455
+        - TDD-0458
+        - TDD-0459
+        - TDD-0460
+        - TDD-0462
+        - TDD-0463
+        - TDD-0464
         - TDD-0465
         - TDD-0466
         - TDD-0467
@@ -669,6 +751,7 @@ waivers:
         - TDD-0498
         - TDD-0499
         - TDD-0500
+        - TDD-0501
         - TDD-0502
         - TDD-0503
         - TDD-0504

@@ -884,6 +884,28 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - Changed files: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`
 - Reopened by: CR-20260925-0006 part A; the case dropped its citation clause.
 
+### TDD-0126
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey: the routing-time `create` answer is the only one asked, and the SDD work order targets the approved `new_capability` slot with no second question; the test carries `QFAI:SPEC-0013:US-0013-0015`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455): one create question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\): one create question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+### TDD-0128
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey: the `qfai-sdd` work order names exactly its operation and target, and every later work order targets the spec SDD bound; the test carries `QFAI:SPEC-0013:US-0013-0017`.
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001 (TDD-0455): one create question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001 \(TDD-0455\): one create question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001 (TDD-0455): one create question, then every stage from its work order, and finish qfai_done`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
 ### TDD-0129
 
 - Retired: row deleted 2026-09-25 in the merge reconciliation. It duplicated origin/main's application of the same approved option of CR-20260913-0012, and TDD-0081 now owns its case. Its test file was deleted; the checks it made that TDD-0081's test lacked moved there. The record below is kept as it was written.

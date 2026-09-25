@@ -40,7 +40,13 @@ export async function seedTriageProject(table: string): Promise<string> {
   const specsDir = path.join(root, ".qfai", "specs");
   await mkdir(path.join(specsDir, "_policies"), { recursive: true });
   await writeFile(path.join(specsDir, "_policies", "11_Slice-Policy.md"), "# 11 Slice Policy\n");
-  const dir = path.join(specsDir, "spec-0001");
+  await writeTriagePack(root, table);
+  return root;
+}
+
+/** Writes an active `spec-0001` pack under `root` whose delta holds `table`. */
+export async function writeTriagePack(root: string, table: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(dir, { recursive: true });
   const spec = [
     "# 01 Spec",
@@ -63,7 +69,6 @@ export async function seedTriageProject(table: string): Promise<string> {
   }
   const delta = ["# 09 Delta", "", "## Change Summary", "", "- one change", "", "## Triage", ""];
   await writeFile(path.join(dir, "09_delta.md"), `${[...delta, table, ""].join("\n")}\n`);
-  return root;
 }
 
 /** The `QFAI-TRIAGE-*` findings over the project at `root`. */
