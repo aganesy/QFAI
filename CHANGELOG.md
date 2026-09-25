@@ -46,6 +46,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
   it.
 
+- **A `done` row goes stale only when something its test reached changed**
+  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
+  every observation. In an active repository every completed row therefore went
+  stale within hours, whatever changed, and full-history validation failed on
+  rows whose test and module had not moved. A `done` row is now measured over
+  its test file, the files its newest `RED test manifest` lists, and the files
+  under `srcDir` those import, directly or transitively. Relative imports are
+  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
+  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
+  installed packages are outside the project. Where an import cannot be
+  followed — an alias no pattern resolves, a computed `import()` or
+  `require()`, a relative path that names no file, or a test file that is not
+  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
+  and the finding says why. The finding now names the covered set it measured.
+  `evidence-revision.md` states the at-rest scope; the in-flight check before
+  submitting still covers the whole source directory.
+
 - **A blocked ledger row whose Change Request is settled is reported**
   (#2015). A `blocked` row that named a Change Request stayed `blocked` after
   the request was decided, and nothing said so. `validate` now warns with
