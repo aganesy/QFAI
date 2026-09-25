@@ -85,6 +85,10 @@ export type ParsedArgs = {
     prototypingCycle?: number;
     /** --check flag for `qfai prototyping certify --check`. */
     prototypingCheckOnly?: boolean;
+    /** Subcommand for `qfai design <refreeze>`. */
+    designAction?: "refreeze";
+    /** --check flag for `qfai design refreeze --check`. */
+    designCheckOnly?: boolean;
     /**
      * --scope <saas-package|full> for `qfai prototyping certify`. When
      * set to `saas-package`, the sealed certificate carries
@@ -424,6 +428,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
+      }
+      args.shift();
+    }
+  }
+
+  // `qfai design <subcommand>` — currently only `refreeze` is supported.
+  if (command === "design") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      if (candidate === "refreeze") {
+        options.designAction = candidate;
+      } else {
+        markInvalid(subcommandReason("design", candidate));
       }
       args.shift();
     }
@@ -877,10 +894,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--check": {
-        // only used by `qfai prototyping certify --check`.
-        // The flag takes no value; presence flips the boolean.
+        // Read by `qfai prototyping certify --check` and
+        // `qfai design refreeze --check`. The flag takes no value.
         if (ownedByPrototyping("certify")) {
           options.prototypingCheckOnly = true;
+        } else if (command === "design" && options.designAction === "refreeze") {
+          options.designCheckOnly = true;
         } else {
           markInvalid(notValidHere("--check"));
         }
@@ -1159,6 +1178,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   if (command === "sdd" && !options.help && !options.sddAction) {
     markInvalid(subcommandReason("sdd", null));
   }
+  if (command === "design" && !options.help && !options.designAction) {
+    markInvalid(subcommandReason("design", null));
+  }
   // init 以外の全コマンドは `--root` を「対象ディレクトリ」として読む。
   // init だけが `--dir` しか見ないため、`--root` を渡すと値が捨てられ
   // cwd が初期化されていた。init でも `--root` を出力先のエイリアスと
@@ -1178,6 +1200,7 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["handoff", "upgrade"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
+  ["design", "refreeze"],
 ]);
 
 /**

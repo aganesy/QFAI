@@ -424,6 +424,8 @@ a root `DESIGN.md`, a design contract or a prototype, so assuming visual leaves 
 
 `/qfai-prototyping` re-checks the lock sha256 against the live `DESIGN.md` on every cycle and exits 2 on mismatch.
 
+After an intended edit to a frozen `DESIGN.md`, run `npx qfai design refreeze`. It runs steps 2 to 4, rewrites the lock's `designMdSha256` and `frozenAt`, and brings `design-system.yaml` and `prototype-handoff.yaml` to the same hash where they exist. `--check` lists the files that are out of date and writes nothing. The first freeze is still this section's.
+
 ## Quality Gate
 
 Run the full checklist from `references/sdd-quality-gate.md`. The gate also covers status-field and Triage-section checks.

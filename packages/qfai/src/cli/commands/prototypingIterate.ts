@@ -640,7 +640,7 @@ export async function runPrototypingIterate(
     error(
       "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
         `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
-        "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze.",
+        "DESIGN.md was edited after the SDD freeze; if the edit is intended, run `qfai design refreeze`.",
     );
     return 2;
   }
