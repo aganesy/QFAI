@@ -84,6 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Seven spec-0017 ledger rows close with the reviews their earlier close
+  skipped** (#2296). TDD-0111 to TDD-0118 cover the Windows parity job in
+  this repository's CI. They had closed at `exception` under a review waiver.
+  Each is reopened and shown to fail when its predicate in the workflow or
+  the package script is broken. Seven then pass two qa-gatekeeper turns and a
+  completion and an implementation review. The spec-0017 waiver is removed.
+  TDD-0113 stays open at `todo`: its test does not check that the temp
+  directory's name contains a space, and goes back to have that assertion
+  added.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
