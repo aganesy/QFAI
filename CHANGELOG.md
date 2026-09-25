@@ -45,6 +45,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- The `qfai workflow` contract states how a run with an unreadable record is
+  reported (#2316). `status --run` returns `ok: true`, exit 0, and the run in
+  state `legacy` with sequence 0, carrying no stage, work order or questions.
+  Every other operation naming the run is refused `unknown-run`. `legacy` is a
+  report, not a state of the run state machine. The command's behaviour is
+  unchanged.
+
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as
