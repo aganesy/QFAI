@@ -39,6 +39,7 @@ function undelegated(document: unknown) {
     attempt: field(workOrder, "attempt"),
     expectedSequence: field(workOrder, "expectedSequence"),
     outcome: "unrun",
+    testObservation: "unrun",
     delegation: { status: "unavailable", attempt: 1 },
   };
 }
