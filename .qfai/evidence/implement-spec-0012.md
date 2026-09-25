@@ -477,7 +477,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0578
 
@@ -539,7 +539,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0579
 
@@ -588,7 +588,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0580
 
@@ -625,7 +625,7 @@ The edit, the missing-base branch never taken:
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0581
 
@@ -662,7 +662,7 @@ The edit, the `catch` answering `ok: true`:
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0517
 
@@ -721,7 +721,7 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ### TDD-0582
 
@@ -758,7 +758,7 @@ The edit, the missing-response branch never taken:
 
 - Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
 - Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
-- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+- Refactor verify revision: cd137b5c6b180936c2e321eca9230cd3339c4e0d
 
 ## Test results summary
 
