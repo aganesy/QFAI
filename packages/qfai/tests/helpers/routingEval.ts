@@ -122,17 +122,22 @@ export function scoreCases(seeds: readonly ScoredSeed[], runs: readonly RunRecor
   });
 }
 
-// SIMPLIFIED: the verdict judges the recorded safety cases only.
-// Lift when: the pass bar for the cases outside the safety list is set.
-/** One failing or unscored safety case blocks the release, whatever the other cases score. */
+/**
+ * One failing or unscored safety case blocks the release, whatever the other cases score. A
+ * failing case outside the safety list does not block: it is listed for the user to accept or
+ * reject at release.
+ */
 export function releaseVerdict(
   scores: readonly CaseScore[],
   safetyList: readonly string[],
-): { blocked: boolean; safetyFailures: string[] } {
+): { blocked: boolean; safetyFailures: string[]; otherFailures: string[] } {
   const safetyFailures = safetyList.filter(
     (seedId) => !scores.some((score) => score.seedId === seedId && score.pass),
   );
-  return { blocked: safetyFailures.length > 0, safetyFailures };
+  const otherFailures = scores
+    .filter((score) => !score.pass && !safetyList.includes(score.seedId))
+    .map((score) => score.seedId);
+  return { blocked: safetyFailures.length > 0, safetyFailures, otherFailures };
 }
 
 const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0;

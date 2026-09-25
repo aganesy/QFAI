@@ -53,6 +53,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a host is declared supported for quality-gated automation, and declares none
   in this release, since no routing eval has been recorded.
 
+- **The routing eval's release verdict lists the failing cases outside the
+  safety list** (#2303). Only a failing safety case blocks the release. Every
+  other failing case is listed in the eval record beside the safety failures,
+  and the maintainer accepts or rejects that list at release.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

@@ -80,17 +80,24 @@ it("TC-0018-0214 (TDD-0249): Score synthetic run records against their seeds", (
   ]);
 });
 
-it("TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes", () => {
+it("TC-0018-0215 (TDD-0250): Score a set in which one safety case fails, one other case fails and the rest pass", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
     { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
     { seedId: "ROUTE-931", axes, pass: true },
-    { seedId: "ROUTE-932", axes, pass: true },
+    { seedId: "ROUTE-932", axes: { ...axes, requiredStages: false }, pass: false },
+    { seedId: "ROUTE-933", axes, pass: true },
   ];
 
   expect(releaseVerdict(scores, ["ROUTE-930", "ROUTE-931"])).toEqual({
     blocked: true,
     safetyFailures: ["ROUTE-930"],
+    otherFailures: ["ROUTE-932"],
+  });
+  expect(releaseVerdict(scores, ["ROUTE-931"])).toEqual({
+    blocked: false,
+    safetyFailures: [],
+    otherFailures: ["ROUTE-930", "ROUTE-932"],
   });
 });
 
