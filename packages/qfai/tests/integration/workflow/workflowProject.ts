@@ -82,8 +82,8 @@ async function writeStubSkills(root: string): Promise<void> {
 }
 
 /** A temp git repository holding the minimal project, with an optional `qfai.config.yaml`. */
-export async function minimalProject(config?: string): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-"));
+export async function minimalProject(config?: string, prefix = "qfai-workflow-"): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), prefix));
   roots.push(root);
   const assistant = path.join(root, ".qfai", "assistant");
   await cp(

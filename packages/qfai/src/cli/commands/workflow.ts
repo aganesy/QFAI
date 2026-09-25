@@ -42,8 +42,8 @@ import {
   writeTracked,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
-import type { WorkflowOperation } from "../lib/args.js";
 import { resolveToolVersion } from "../../core/version.js";
+import type { WorkflowOperation } from "../lib/args.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
 
 type Verdict = WorkflowDecision["verdict"];
@@ -119,6 +119,10 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
     return { ok: false, run: null, error: { code: "unknown-run", message: UNKNOWN_RUN } };
   }
   const journal = await readJournal(runDir);
+  if (!journal.ok && journal.fault === "legacy") {
+    const run = { id: runId, state: "legacy", sequence: 0 };
+    return { ok: false, run, error: { code: "unknown-run", message: LEGACY } };
+  }
   if (!journal.ok) {
     const run = { id: runId, state: "failed", sequence: 0 };
     return { ok: false, run, error: { code: journal.fault, message: INTEGRITY } };
@@ -136,6 +140,8 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
 }
 
 const UNKNOWN_RUN = "No run has that ID. Read the status to find the run in progress.";
+const INTEGRITY = "The run's record is damaged, so the run has failed. Start a new run.";
+const LEGACY = "This run was recorded in a format this version cannot read. Start a new run.";
 const NEWER_RECORD = "A newer version of qfai wrote this run. Upgrade qfai to continue it.";
 
 // Whether a recorded package version is later than the running one, by MAJOR.MINOR.PATCH.
@@ -146,7 +152,6 @@ function isNewer(recorded: string | undefined, running: string): boolean {
   const index = left.findIndex((part, at) => part !== right[at]);
   return index >= 0 && (left[index] ?? 0) > (right[index] ?? 0);
 }
-const INTEGRITY = "The run's record is damaged, so the run has failed. Start a new run.";
 
 // The worktree's one run that has not ended, or none. A run a newer package wrote is refused.
 async function activeRun(runsDir: string): Promise<LoadedRun | Refusal | undefined> {
@@ -177,6 +182,10 @@ async function status(root: string, runsDir: string, runId: string | undefined):
   }
   const loaded = await loadRun(runsDir, runId);
   if (loaded.ok) return reportStatus(loaded.run.snapshot, mode);
+  if (loaded.run?.state === "legacy") {
+    emit({ ok: true, run: loaded.run, mode });
+    return EXIT_CODES.ok;
+  }
   if (loaded.run && EXIT_ONE.includes(loaded.error.code)) {
     emit({ ok: true, run: loaded.run, mode, cause: loaded.error.code });
     return EXIT_CODES.ok;
@@ -312,6 +321,16 @@ async function writeReportCopies(runDir: string, copies: ReportCopy[]) {
   return undefined;
 }
 
+// A snapshot behind the journal, left by a crash after an event was published, is rebuilt from
+// the journal before the operation reads it.
+async function rebuildStaleSnapshot(loaded: LoadedRun) {
+  const text = await readFile(path.join(loaded.runDir, "snapshot.json"), "utf8").catch(() => "");
+  const parsed = parsePayload(text);
+  if (!isRefusal(parsed) && parsed.value.reflects === loaded.snapshot.run.sequence)
+    return undefined;
+  return writeSnapshot(loaded.runDir, loaded.snapshot);
+}
+
 // Step 7: once tracked evidence has begun, the tracked files follow the journal. `finish` and a
 // run that had already ended leave them as they are.
 async function syncTracked(options: WorkflowOptions, loaded: LoadedRun) {
@@ -400,19 +419,43 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
     return routingFacts(root, input.result?.proposal);
   }
   if (input.operation === "decision") return { now: new Date().toISOString() };
-  return ledgerFacts(root, snapshot, input);
+  return stageFacts(root, snapshot, input);
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared.
-async function ledgerFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
+// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
+async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
   const { state } = snapshot.run;
   const reads =
     (input.operation === "next" && state === "ready") ||
     (input.operation === "accept" && state === "running");
   const specId = snapshot.specBinding?.specId;
   const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
-  return ledger ? { ledger } : {};
+  const accepting = input.operation === "accept" && state === "running";
+  const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
+  return { ...(ledger ? { ledger } : {}), ...(changedRealPaths ? { changedRealPaths } : {}) };
+}
+
+// Where each submitted changed path really is: a link or a case variant is judged by the file it
+// names, and a path that resolves outside the project's real root is `null`.
+async function realPathsOf(
+  root: string,
+  result: WorkflowInput["result"],
+): Promise<Record<string, string | null>> {
+  const realRoot = await realpath(root);
+  const changed: unknown = result?.changedFiles;
+  const submitted = (Array.isArray(changed) ? changed : [])
+    .map((entry: unknown) => (isRecord(entry) ? entry.path : undefined))
+    .filter((each): each is string => typeof each === "string");
+  const entries = await Promise.all(
+    submitted.map(async (each): Promise<[string, string | null][]> => {
+      const real = await realpath(path.resolve(root, each)).catch(() => undefined);
+      if (real === undefined) return [];
+      const inside = real.startsWith(`${realRoot}${path.sep}`);
+      return [[each, inside ? path.relative(realRoot, real).split(path.sep).join("/") : null]];
+    }),
+  );
+  return Object.fromEntries(entries.flat());
 }
 
 // What a replay of this operation returns, recorded on its last event.
@@ -522,6 +565,8 @@ async function writeOperation(options: WorkflowOptions): Promise<number> {
   return underLock(options, runId, async () => {
     const loaded = await loadRun(path.join(options.root, RUNS_DIR), runId);
     if (!loaded.ok) return refuse(loaded.run, loaded.error);
+    const stale = await rebuildStaleSnapshot(loaded.run);
+    if (stale) return refuse(loaded.run.snapshot.run, stale);
     return decideAndPublish(options, loaded.run);
   });
 }
@@ -585,7 +630,7 @@ async function startUnderLock(options: WorkflowOptions): Promise<number> {
   const runsDir = path.join(options.root, RUNS_DIR);
   const active = await activeRun(runsDir);
   if (active && "code" in active) return refuse(null, active);
-  if (active) return refuse(null, runActive(active.snapshot.run));
+  if (active) return refuse(active.snapshot.run, runActive(active.snapshot.run));
   const payload = await readPayload(options.root, options.inPath, path.join(RUNS_DIR, "inbox"));
   if (isRefusal(payload)) return refuse(null, payload);
   const { value } = payload;

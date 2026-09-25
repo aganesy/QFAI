@@ -493,6 +493,9 @@ export interface WorkflowFacts {
   reviewerRoles?: Record<string, string[]>;
   // A fail-closed cause an observer found for this operation.
   cause?: FailClosedCause;
+  // Each submitted changed path's real path relative to the project's real root, or `null` when
+  // it resolves outside the root. A path the observer could not resolve is absent.
+  changedRealPaths?: Record<string, string | null>;
   // The run's cumulative changed paths, observed at this write operation.
   observedChangedPaths?: string[];
   // Each Change Request record, whether it is approved, and the paths it authorizes.
@@ -747,7 +750,9 @@ function resultRefusals(
     }
   });
   for (const changed of result.changedFiles ?? []) {
-    if (!areas.some((area) => areaCovers(area, changed.path))) {
+    const real = facts.changedRealPaths?.[changed.path];
+    const judged = real === undefined ? changed.path : real;
+    if (judged === null || !areas.some((area) => areaCovers(area, judged))) {
       refusals.push({ reason: "write-scope", subject: changed.path });
     }
   }

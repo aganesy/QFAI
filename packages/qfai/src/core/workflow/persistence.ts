@@ -212,9 +212,13 @@ export interface WorkflowReplay {
 
 export type IntegrityFault = "torn-event" | "sequence-gap" | "hash-mismatch";
 
+// A run directory whose journal is not in this format: no journal directory, or a first event
+// that parses but is not a record. It is reported as legacy, never as a run.
+export type JournalFault = IntegrityFault | "legacy";
+
 export type JournalRead =
   | { ok: true; records: JournalRecord[]; lastHash: string | null }
-  | { ok: false; fault: IntegrityFault };
+  | { ok: false; fault: JournalFault };
 
 const EVENT_FILE = /^\d{6}\.json$/;
 
@@ -230,26 +234,30 @@ function isJournalRecord(value: unknown): value is JournalRecord {
   return isRecord(value) && typeof value.sequence === "number" && typeof value.event === "string";
 }
 
-function parseRecord(bytes: Buffer): JournalRecord | undefined {
+// The record an event file holds; `null` for text that is JSON but not a record.
+function parseRecord(bytes: Buffer): JournalRecord | null | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bytes.toString("utf8"));
   } catch {
     return undefined;
   }
-  return isJournalRecord(parsed) ? parsed : undefined;
+  return isJournalRecord(parsed) ? parsed : null;
 }
 
 // Every published event from `000001`, with no gap, each chained to the bytes before it.
 export async function readJournal(runDir: string): Promise<JournalRead> {
   const journal = path.join(runDir, "journal");
-  const names = (await readdir(journal)).filter((name) => EVENT_FILE.test(name)).sort();
+  const listed = await readdir(journal).catch(() => undefined);
+  if (!listed) return { ok: false, fault: "legacy" };
+  const names = listed.filter((name) => EVENT_FILE.test(name)).sort();
   const records: JournalRecord[] = [];
   let lastHash: string | null = null;
   for (const [index, name] of names.entries()) {
     if (name !== eventName(index + 1)) return { ok: false, fault: "sequence-gap" };
     const bytes = await readFile(path.join(journal, name));
     const record = parseRecord(bytes);
+    if (record === null && index === 0) return { ok: false, fault: "legacy" };
     if (!record || record.sequence !== index + 1) return { ok: false, fault: "torn-event" };
     if (record.prevHash !== lastHash) return { ok: false, fault: "hash-mismatch" };
     records.push(record);

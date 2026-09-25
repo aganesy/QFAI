@@ -328,6 +328,25 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0323 | TC-0018-0106 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0324 | TC-0018-0106 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0325 | TC-0018-0106 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0326 | TC-0018-0107 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0336 | TC-0018-0117 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0337 | TC-0018-0118 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0338 | TC-0018-0119 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0339 | TC-0018-0120 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0340 | TC-0018-0121 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0341 | TC-0018-0123 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0342 | TC-0018-0124 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0343 | TC-0018-0125 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0344 | TC-0018-0126 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0345 | TC-0018-0127 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0346 | TC-0018-0128 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0347 | TC-0018-0128 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0348 | TC-0018-0129 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0349 | TC-0018-0130 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0350 | TC-0018-0131 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0351 | TC-0018-0132 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0352 | TC-0018-0133 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0353 | TC-0018-0134 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0354 | TC-0018-0138 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
@@ -337,6 +356,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0372 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0373 | TC-0018-0169 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0374 | TC-0018-0170 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0375 | TC-0018-0171 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0376 | TC-0018-0173 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0377 | TC-0018-0174 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0378 | TC-0018-0175 | Closed `exception` under DR-0298; per-row review waived |
@@ -5141,6 +5161,196 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0106 (TDD-0325): start`
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`
 
+### TDD-0326
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse as a record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0107 \(TDD-0326\): A run directory whose journal the core cannot parse as a record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { state: 'failed', …(1) } to deeply equal { state: 'legacy', …(1) }` at `tests/integration/workflow/journal.test.ts:236:6`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0107 (TDD-0326): A run directory whose journal the core cannot parse as a record`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`
+
+### TDD-0336
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0117 (TDD-0336): Built CLI`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0117 \(TDD-0336\): Built CLI' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: 'run-active', …(2) } to deeply equal { code: 'run-active', …(2) }` at `tests/integration/workflow/journal.test.ts:248:6` (the refusal named no run)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0117 (TDD-0336): Built CLI`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0337
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0118 (TDD-0337): A write operation while`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0118 \(TDD-0337\): A write operation while' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the lock the workflow command takes, whose `lock-held` refusal names the holder's run, operation and start time
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0118 (TDD-0337): A write operation while`
+- Production files: none
+
+### TDD-0338
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0119 (TDD-0338): A lock whose start time is years old and whose pid is the live test process`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0119 \(TDD-0338\): A lock whose start time is years old and whose pid is the live test process' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the lock takeover, which reads the owner's host and pid and never the lock's age
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0119 (TDD-0338): A lock whose start time is years old and whose pid is the live test process`
+- Production files: none
+
+### TDD-0339
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0120 (TDD-0339): A lock on this host whose pid is an exited child, with an orphan journal/`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0120 \(TDD-0339\): A lock on this host whose pid is an exited child, with an orphan journal/' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the lock takeover, which discards the owner run's unpublished `journal/.NNNNNN.tmp` before removing the lock
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0120 (TDD-0339): A lock on this host whose pid is an exited child, with an orphan journal/`
+- Production files: none
+
+### TDD-0340
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0121 (TDD-0340): A lock naming another hostname and a pid not alive here`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0121 \(TDD-0340\): A lock naming another hostname and a pid not alive here' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the lock takeover, which never takes over a lock stamped with another hostname
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0121 (TDD-0340): A lock naming another hostname and a pid not alive here`
+- Production files: none
+
+### TDD-0341
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0123 (TDD-0341): An LF and a CRLF copy of a watched file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0123 \(TDD-0341\): An LF and a CRLF copy of a watched file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the policy digests, which hash each watched file after CRLF normalization
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0123 (TDD-0341): An LF and a CRLF copy of a watched file`
+- Production files: none
+
+### TDD-0342
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0124 (TDD-0342): Built CLI under a temp root whose name has a space`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0124 \(TDD-0342\): Built CLI under a temp root whose name has a space' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the workflow command, which passes paths as argv and never through a shell
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0124 (TDD-0342): Built CLI under a temp root whose name has a space`
+- Production files: none
+
+### TDD-0343
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0125 \(TDD-0343\): A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { code: undefined, reasons: undefined } to deeply equal { code: 'invalid-input', …(1) }` at `tests/integration/workflow/journal.test.ts:372:6`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0125 (TDD-0343): A changed file reached through a symlink on POSIX, or a junction on Windows, whose real path is outside the project root`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0344
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-area path`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0126 \(TDD-0344\): A changed file named by a case variant of a write-area path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { ok: false, reasons: [ { …(2) } ] } to deeply equal { ok: true, reasons: undefined }` at `tests/integration/workflow/journal.test.ts:397:5` (on the case-insensitive Windows file system)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0126 (TDD-0344): A changed file named by a case variant of a write-area path`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0345
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0127 (TDD-0345): A published journal/000004`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0127 \(TDD-0345\): A published journal/000004' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the journal integrity check every operation runs before it decides
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0127 (TDD-0345): A published journal/000004`
+- Production files: none
+
+### TDD-0346
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0128 (TDD-0346): missing-000003`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0128 \(TDD-0346\): missing-000003' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the journal integrity check every operation runs before it decides
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0128 (TDD-0346): missing-000003`
+- Production files: none
+
+### TDD-0347
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0128 (TDD-0347): missing-000001`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0128 \(TDD-0347\): missing-000001' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the journal integrity check every operation runs before it decides
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0128 (TDD-0347): missing-000001`
+- Production files: none
+
+### TDD-0348
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0129 (TDD-0348): An event whose prevHash does not match the previous file's bytes`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0129 \(TDD-0348\): An event whose prevHash does not match the previous file's bytes' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the journal integrity check every operation runs before it decides
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0129 (TDD-0348): An event whose prevHash does not match the previous file's bytes`
+- Production files: none
+
+### TDD-0349
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0130 (TDD-0349): status on a journal with a torn event`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0130 \(TDD-0349\): status on a journal with a torn event' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `status`, which reports a run failing its integrity check as `failed` with the fault as `cause`, and writes nothing
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0130 (TDD-0349): status on a journal with a torn event`
+- Production files: none
+
+### TDD-0350
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0131 (TDD-0350): A published event with a snapshot one sequence behind`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0131 \(TDD-0350\): A published event with a snapshot one sequence behind' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { same: true, reflects: 2, …(1) } to deeply equal { same: true, reflects: 3, …(1) }` at `tests/integration/workflow/journal.test.ts:492:6`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0131 (TDD-0350): A published event with a snapshot one sequence behind`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0351
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0132 (TDD-0351): Delete snapshot`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0132 \(TDD-0351\): Delete snapshot' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `status`, which folds the journal and never reads `snapshot.json`, and the snapshot writer
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0132 (TDD-0351): Delete snapshot`
+- Production files: none
+
+### TDD-0352
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0133 (TDD-0352): Files under work-orders/ that no event references, left by a crash at write step 4`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0133 \(TDD-0352\): Files under work-orders/ that no event references, left by a crash at write step 4' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the work order writer, which renames a new file over any file left at that name
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0133 (TDD-0352): Files under work-orders/ that no event references, left by a crash at write step 4`
+- Production files: none
+
+### TDD-0353
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0134 (TDD-0353): Tracked files behind the journal after a crash at write step 6`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0134 \(TDD-0353\): Tracked files behind the journal after a crash at write step 6' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0354, whose tracked writer rewrites `summary.json` whenever it differs from the journal
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0134 (TDD-0353): Tracked files behind the journal after a crash at write step 6`
+- Production files: none beyond TDD-0354
+
 ### TDD-0354
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -5231,6 +5441,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0170 \(TDD-0374\): Read the mode guidance of the shipped qfai-run' --reporter=verbose` (cwd `packages/qfai`)
 - RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` mode table. The route is proposed as its stages in plain words, since the operator never sees a route name
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0170 (TDD-0374): Read the mode guidance of the shipped qfai-run`
+- Production files: none
+
+### TDD-0375
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/journal.test.ts`
+- Selector: `TC-0018-0171 (TDD-0375): Built CLI status while`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/journal.test.ts --testNamePattern='TC-0018-0171 \(TDD-0375\): Built CLI status while' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by `status`, which takes no lock and reads only published events
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/journal.test.ts > TC-0018-0171 (TDD-0375): Built CLI status while`
 - Production files: none
 
 ### TDD-0376
