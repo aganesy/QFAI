@@ -12,6 +12,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The orchestrator may keep working while a delegated work order runs**
+  (#2244). The shared delegation baseline now says the orchestrator is not
+  required to block on a delegation. Where the host starts a delegation and
+  returns at once, delivers the result later as a message, and lets the
+  orchestrator wait on purpose, the orchestrator may plan, prepare the next work
+  order and integrate outputs already returned. It still may not do the
+  delegated work, author the primary artifact or review, and an ordering the
+  parallelization policy makes mandatory still holds.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
