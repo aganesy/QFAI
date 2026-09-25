@@ -136,8 +136,16 @@ describe("story-tree prototyping report", () => {
     expect(markdown).toContain("### Render");
     expect(markdown).toContain("### Browser QA");
     expect(markdown).toContain("### Calibration");
-    expect(markdown).toContain("QFAI-PROT-009");
-    expect(markdown).toContain("/qfai-prototyping");
+    // The report's closing `## Findings` lists every issue, so the finding and
+    // the rerun line are read from the prototyping section alone.
+    const section = markdown.slice(
+      markdown.indexOf("## Prototyping"),
+      markdown.indexOf("## Decision Guardrails"),
+    );
+    expect(section).toContain("- html: missing (iter-01/checkout.html)");
+    expect(section).toContain("### Validation findings");
+    expect(section).toContain("QFAI-PROT-009");
+    expect(section).toContain("Rerun /qfai-prototyping");
     expect(written).toContain("### Render");
     expect(written).toContain("QFAI-PROT-009");
   });

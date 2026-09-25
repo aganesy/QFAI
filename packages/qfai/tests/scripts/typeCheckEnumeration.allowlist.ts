@@ -151,7 +151,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/sddPreflight.test.ts",
   "tests/core/sddTriage.test.ts",
   "tests/core/skillsIntegrity.test.ts",
-  "tests/core/specDiffDetector.test.ts",
   "tests/core/specLayoutCaseExact.test.ts",
   "tests/core/specPackParsers.test.ts",
   "tests/core/specScope.test.ts",

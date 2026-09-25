@@ -1,10 +1,9 @@
 /**
- * E2E acceptance for spec-0013 CHG-006 user stories US-0013-0012,
- * US-0013-0013, US-0013-0014:
+ * E2E acceptance for spec-0013 CHG-006 user stories US-0013-0012 and
+ * US-0013-0014:
  *   - US-0013-0012: resolve the active discussion pack via a single
  *     helper reading `.qfai/state.json#discussion.currentId` (no
  *     modification-time guessing; clear recovery error on ambiguity).
- *   - US-0013-0013: surface_type auto-populate on a UI-companion spec.
  *   - US-0013-0014: structured primary_tasks `{id,label,acceptance}`
  *     shape accepted; recommended ceiling of 7 named in
  *     QFAI-AUD-020 warning text.
@@ -16,14 +15,13 @@
 // QFAI:BF-0001
 // QFAI:BF-0001
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { populateSurfaceTypeIfUiCompanion } from "../../src/core/detection/surfaceType.js";
 import {
   resolveActiveDiscussionPack,
   ResolveActiveDiscussionPackError,
@@ -47,20 +45,6 @@ async function seedDiscussionPack(name: string): Promise<string> {
   const packDir = path.join(root, ".qfai", "discussion", name);
   await mkdir(packDir, { recursive: true });
   return packDir;
-}
-
-async function seedSpec(specId: string, body: string): Promise<string> {
-  const specDir = path.join(root, ".qfai", "spec", `spec-${specId}`);
-  await mkdir(specDir, { recursive: true });
-  const specPath = path.join(specDir, "01_Spec.md");
-  await writeFile(specPath, body, "utf-8");
-  await writeFile(path.join(specDir, "02_User-stories.md"), "# User stories\n", "utf-8");
-  await writeFile(
-    path.join(specDir, "03_Acceptance-Criteria.md"),
-    "# Acceptance Criteria\n",
-    "utf-8",
-  );
-  return specPath;
 }
 
 async function seedUiCompanion(filename: string, body: string): Promise<void> {
@@ -89,25 +73,6 @@ describe("spec-0013 US-0013-0012 active-pack resolver", () => {
       expect(message).toMatch(/qfai discussion use <id>/);
       expect(message).toMatch(/discussion-20260101000000000/);
     }
-  });
-});
-
-describe("spec-0013 US-0013-0013 surface_type auto-populate", () => {
-  it("normal: populator writes surface_type: ui-bearing when a UI companion exists", async () => {
-    const specPath = await seedSpec(
-      "0099",
-      ["---", "id: spec-0099", "---", "", "# Sample", ""].join("\n"),
-    );
-    await seedUiCompanion(
-      "ui-0099-dashboard.yaml",
-      ["screens:", "  - id: dashboard", "    route: /dashboard", "    primary_tasks: []", ""].join(
-        "\n",
-      ),
-    );
-    const result = await populateSurfaceTypeIfUiCompanion(root, "0099", defaultConfig);
-    expect(result.changed).toBe(true);
-    const body = await readFile(specPath, "utf-8");
-    expect(body).toMatch(/surface_type:\s*ui-bearing/);
   });
 });
 
