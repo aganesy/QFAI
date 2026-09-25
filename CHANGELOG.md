@@ -174,6 +174,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
 
+- **The capture tests check what they claim** (#2281). The tests for a 204
+  and a 399 response asserted only that capture succeeded, so a runner that
+  reported success for them without taking a screenshot passed. They now
+  assert the screenshot. A new test pins that an upper-case `HTTPS://` screen
+  URL is opened as written: without the case-insensitive match it was joined
+  to `--target-url` instead, and no test failed. Tests only; the product does
+  not change.
+
 ## [1.12.3] - 2026-09-24
 
 ### Fixed
