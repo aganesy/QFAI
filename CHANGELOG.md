@@ -95,6 +95,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   validate findings, so a debt whose finding remains stays `debt-open` while
   the validate gate passes.
 
+- **`qfai workflow resume` admits a repair an approved Change Request made
+  outside the run** (#2481). A run blocked on `scope-dependency` stayed
+  refused after the drift was repaired outside it, because the command gave
+  `resume` no Change Request and no file digest. `resume` now reads every
+  approved Change Request under `.qfai/decisions/` and the digest of each
+  changed path. A path the blocker names and the request's `## Impact scope`
+  names by its project-relative path is admitted, with the request's own
+  record, at its current digest. Later operations and `finish` recheck the
+  approval and the digest. A request that is not approved admits nothing, and
+  the run stays blocked. A blocked stage result may now list a finding owned by
+  any existing spec, as the contract states: the command had not told the core
+  which specs exist, so every such result was refused `blocked-repairable`.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

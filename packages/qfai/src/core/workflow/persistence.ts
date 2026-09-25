@@ -453,9 +453,10 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
     ...(record.workOrder ? { outstandingWorkOrder: record.workOrder } : {}),
     delegationRetries: (snapshot.delegationRetries ?? 0) + 1,
   }),
-  "blocker-cleared-and-revalidated": (snapshot) => {
+  "blocker-cleared-and-revalidated": (snapshot, record) => {
     const { halt: _cleared, ...rest } = snapshot;
-    return rest;
+    if (!record.adjustments?.length) return rest;
+    return { ...rest, startAdjustments: [...(rest.startAdjustments ?? []), ...record.adjustments] };
   },
 };
 

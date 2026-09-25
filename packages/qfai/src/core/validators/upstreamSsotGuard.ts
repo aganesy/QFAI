@@ -172,7 +172,7 @@ function scopeDeclares(scope: string, file: string): boolean {
  * accepting a filename at the end of a sentence, where the `.` is not followed
  * by a word character.
  */
-function scopeNames(scope: string, token: string): boolean {
+export function scopeNames(scope: string, token: string): boolean {
   if (token.length === 0) {
     return false;
   }
@@ -199,6 +199,17 @@ function escapeForRegExp(value: string): string {
  * `references/change-request-reset.md`.
  */
 async function readApprovedCrScopes(root: string): Promise<string[]> {
+  const records = await readApprovedChangeRequests(root);
+  return records.map((record) => record.scope);
+}
+
+/**
+ * Every approved Change Request whose `## Impact scope` says something: its
+ * project-relative record path and that section.
+ */
+export async function readApprovedChangeRequests(
+  root: string,
+): Promise<{ recordPath: string; scope: string }[]> {
   const dir = path.join(root, DECISIONS_REL_DIR);
   let entries: string[];
   try {
@@ -206,22 +217,24 @@ async function readApprovedCrScopes(root: string): Promise<string[]> {
   } catch {
     return [];
   }
-  const scopes = await Promise.all(
+  const records = await Promise.all(
     entries
       .filter((name) => CR_FILE_RE.test(name))
+      .sort()
       .map(async (name) => {
         try {
           const content = await readFile(path.join(dir, name), "utf-8");
-          return CR_APPROVED_RE.test(content) ? extractImpactScope(content) : "";
+          const scope = CR_APPROVED_RE.test(content) ? extractImpactScope(content) : "";
+          return { recordPath: `${DECISIONS_REL_DIR}/${name}`, scope };
         } catch {
           // Unreadable is not approval. The detector's job is to make an
           // undisclosed edit visible, and a CR nobody can read discloses
           // nothing.
-          return "";
+          return { recordPath: "", scope: "" };
         }
       }),
   );
-  return scopes.filter((scope) => scope.trim().length > 0);
+  return records.filter((record) => record.scope.trim().length > 0);
 }
 
 export async function validateUpstreamSsotGuard(

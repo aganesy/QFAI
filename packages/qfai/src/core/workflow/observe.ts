@@ -10,6 +10,7 @@ import { loadConfig, resolvePath } from "../config.js";
 import { gitStdout, normalizeRepoPath, uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
+import { readApprovedChangeRequests, scopeNames } from "../validators/upstreamSsotGuard.js";
 import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
 import { areaCovers } from "./decide.js";
@@ -224,7 +225,7 @@ function pathReferences(proposal: unknown): string[] {
   );
 }
 
-async function specFacts(root: string): Promise<NonNullable<WorkflowFacts["specs"]>> {
+export async function specFacts(root: string): Promise<NonNullable<WorkflowFacts["specs"]>> {
   const { config } = await loadConfig(root);
   const entries = await collectSpecEntries(resolvePath(root, config, "specsDir"));
   return Object.fromEntries(
@@ -288,6 +289,38 @@ async function dependencyDigest(root: string, dependency: string): Promise<strin
   }
   const members = await fg(dependency, { cwd: root, dot: true, onlyFiles: true });
   return hashAssistantAssetText(members.sort().join("\n"));
+}
+
+// What admits a change made outside the run: each approved Change Request with the changed
+// paths its `## Impact scope` names by project-relative path, and each path's digest. `resume`
+// reads them for every changed path, and any other operation for the paths a `resume` admitted.
+// A path that names no regular file under the project's real root has no digest.
+export async function changeRequestFactsOf(
+  root: string,
+  snapshot: WorkflowSnapshot,
+  operation: string,
+  changed: readonly string[],
+): Promise<WorkflowFacts> {
+  const paths =
+    operation === "resume" ? changed : (snapshot.startAdjustments ?? []).map((each) => each.path);
+  if (paths.length === 0) return {};
+  const realRoot = await realpath(root);
+  const [records, digests] = await Promise.all([
+    readApprovedChangeRequests(root),
+    Promise.all(
+      paths.map(async (each) =>
+        (await isProjectFile(realRoot, root, each))
+          ? [[each, hashAssistantAssetText(await readFile(path.join(root, each), "utf8"))] as const]
+          : [],
+      ),
+    ),
+  ]);
+  const changeRequests = records.map(({ recordPath, scope }) => ({
+    recordPath,
+    approved: true,
+    paths: paths.filter((each) => scopeNames(scope, each)),
+  }));
+  return { changeRequests, fileDigests: Object.fromEntries(digests.flat()) };
 }
 
 // SIMPLIFIED: the obligation fingerprint is the digest of the bound spec's user stories,
@@ -390,7 +423,8 @@ async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
 }
 
 // What `finish` observes: validate run in process, this run's verify report, the tool and
-// policy it runs under, and the run's cumulative changed paths and which of them are uncommitted.
+// policy it runs under, the run's cumulative changed paths and which of them are uncommitted, and
+// what still admits each change a `resume` admitted.
 export async function completionFacts(
   root: string,
   runDir: string,
@@ -423,5 +457,5 @@ export async function completionFacts(
     changedPaths: changed,
     uncommittedPaths: changed.filter((file) => uncommitted.has(file)),
   };
-  return { completion };
+  return { completion, ...(await changeRequestFactsOf(root, snapshot, "finish", changed)) };
 }

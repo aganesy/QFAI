@@ -15,6 +15,7 @@ import type {
 import {
   baselineOf,
   boundaryOf,
+  changeRequestFactsOf,
   completionFacts,
   identityOf,
   ledgerFactsOf,
@@ -23,6 +24,7 @@ import {
   receiptValidityOf,
   routingFacts,
   runChangedPaths,
+  specFacts,
   startFacts,
 } from "../../core/workflow/observe.js";
 import {
@@ -428,11 +430,23 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
     policyNowOf(root),
     runChangedPaths(root, snapshot.boundary),
   ]);
-  const facts =
+  const facts: WorkflowFacts =
     input.operation === "accept" && snapshot.run.state === "routing"
       ? await routingFacts(root, input.result?.proposal)
       : await stageFacts(root, snapshot, input);
-  return { ...facts, identity, policyNow, observedChangedPaths };
+  const repair = await changeRequestFactsOf(root, snapshot, input.operation, observedChangedPaths);
+  const fileDigests = { ...facts.fileDigests, ...repair.fileDigests };
+  // A blocked result may list only findings owned by a spec that exists.
+  const blocked = input.operation === "accept" && input.result?.outcome === "blocked";
+  return {
+    ...facts,
+    ...repair,
+    ...(Object.keys(fileDigests).length > 0 ? { fileDigests } : {}),
+    ...(blocked && !facts.specs ? { specs: await specFacts(root) } : {}),
+    identity,
+    policyNow,
+    observedChangedPaths,
+  };
 }
 
 // The bound spec's ledger, read when a work order is issued against it and when its result is
