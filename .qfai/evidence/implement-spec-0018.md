@@ -10,7 +10,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | ------ | ------- | --------------------- |
 | TDD-0001 | TC-0018-0001 | Done after both reviews and the completion gate passed |
 | TDD-0002 | TC-0018-0002 | Done gate PASS (12/12); Round 2 reviews and checkpoint sealed |
-| TDD-0003 | TC-0018-0003 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0003 | TC-0018-0003 | Reopened; Round 2 review REVISE (attempt 1); at `review-fix`, waiting on a passing package run and re-review |
 | TDD-0004 | TC-0018-0004 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
 | TDD-0005 | TC-0018-0005 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0006 | TC-0018-0006 | Closed `exception` under DR-0298; per-row review waived |
@@ -540,6 +540,27 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | S1 | adopted | 2026-09-24T20:26:22.776Z | working-tree+fcd40b3cb714bc7fbd4e1849a338e128cb85421ad54c782de859160324a64245 | 2026-09-24T20:27:01.140Z | TDD-0027 missing-test RED scope and accurate re-observation | empty | none in flight | 3 | 0 | 0 |
 | S2 | adopted | 2026-09-24T21:01:47.541Z | working-tree+2b4fbf814c2df27db7b18cfceed4b84c50572b68a19a4dc2216e4437ff532428 | 2026-09-24T21:04:09.002Z | TDD-0028 bounded-change stage fixture and selector scope | empty | none in flight | 3 | 0 | 0 |
 
+### /qfai-implement — run started 2026-09-25T15:07:30.451Z
+
+Preflight: session opened. The run reopens `TDD-0003` and `TDD-0527` from
+`exception` under `DR-0298` to take them through the reviews that record waived.
+Both rows' production code is already in `decide.ts`, so the session settled how
+the reopened round takes its RED. `delivery-planner` was the griller.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T15:13:09.199Z | working-tree+f256384594cb20e78bef061103cf8191bd08a879137bcfe6ed8e7ffe29577dc0 | 2026-09-25T15:13:43.727Z | preflight | empty | none in flight | 1 | 0 | 0 |
+
+`test-design-analyst#1` advised giving the `TC-0018-0268` fixture a matching
+scope digest, so the test excludes the staleness path by itself. The run does
+not act on it: the row's obligation is met without it, and the request is the
+review of the existing rows.
+
+`TDD-0527` went back to its committed `exception` state before its cycle
+began, and stays under the `DR-0298` waiver. The reverse import walk from
+`decide.ts` does not close, so each row's refactor verify is a run of the whole
+package. This run completes `TDD-0003` alone.
+
 ## Work Orders Summary
 
 | Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
@@ -652,6 +673,17 @@ Preflight: confidence high. The prior RED failure was a session-record defect. A
 | 104 | architecture-reviewer | /root/architecture_review | grilling(S2@2026-09-24T20:20:52.855Z/agents): leave shipped-plan details to their owning test | TC-0018-0016; TC-0018-0020; TDD-0266 | The fixture proves progression without claiming the final shipped bounded-change plan or multiple-target selection | PASS |
 | 105 | backend-engineer | /root/tdd0001_red | Observe TDD-0028 RED | S2 decisions; bounded-change test selector | Assertion RED at test:326:18; comparison-only strip PASS; restored RED; direct and bugfix siblings 2/2 PASS | PASS |
 | 106 | qa-gatekeeper | /root/qa_review | Judge TDD-0028 RED | Current-run S2 chronology; Round 1 selector, strip, hashes and revision | Independent RED PASS: assertion failure and stripped pass reproduced; siblings 2/2; source/test hashes and 2,507-record revision matched | PASS |
+| 107 | delivery-planner | delivery-planner#1 (run 2026-09-25T15:07:30.451Z) | /qfai-implement plan: frame the reopened rows TDD-0003 and TDD-0527 | test-list.md; implement-spec-0018.md#tdd-0003, #tdd-0527; DR-0298; CR-20260924-0008 | Both rows workable, T2, reviewed alone, TDD-0003 then TDD-0527, no parallel dispatch; both selectors single-boundary; no unresolved Change Request names either row | PASS |
+| 108 | test-design-analyst | test-design-analyst#1 (run 2026-09-25T15:07:30.451Z) | /qfai-implement plan: coverage and layer check for TDD-0003 and TDD-0527 | test-list.md; 03_Acceptance-Criteria.md; 04_Business-Rules.md; 05_Examples.md; 06_Test-Cases.md; the row test file | Each row owns exactly its TC at Layer Unit; BR-0018-0002 has no obligation without a row; three advisories, none acted on in this run | PASS |
+| 109 | delivery-planner | delivery-planner#1 (run 2026-09-25T15:07:30.451Z) | grilling(S1@2026-09-25T15:07:30.451Z/agents): the reopened round takes its RED by withdrawing only the row's own predicate from decide.ts, observing the assertion failure while nothing makes it pass, and re-landing the code byte for byte in Green | red-not-observable.md; round-evidence.md; red-admissibility.md; DR-0298 | The falsifiability path is closed to a Unit row returned from exception, and reusing the Round 1 RED is not fresh; the withdrawal is temporary and checked by hash, so the decision is not critical; no position disagreed | PASS |
+| 110 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0003 Round 2 RED on the withdrawn tree | implement-spec-0018.md#tdd-0003; S1 decision | Round 2 withdrawal, RED, assertion-stripped run, RED revision and test hash | PASS |
+| 111 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0003 Round 2 RED phase gate on the withdrawn tree | implement-spec-0018.md#tdd-0003 Round 2 RED fields | RED admissible: assertion failure at test:135:18 inside the selector, stripped run passes, RED revision and test hash reproduced | PASS |
+| 112 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0003 Round 2 re-landing, GREEN, oracle proof and refactor verify | implement-spec-0018.md#tdd-0003; qa-gatekeeper#2 advisories | decide.ts restored byte for byte; GREEN exit 0; two one-line oracle mutations each fail at test:135:18; no refactor edit; package run exit 1 (open-row guard over this run's own rows, load timeouts) | PASS |
+| 113 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement: TDD-0003 Round 2 build-phase GREEN and oracle proof | implement-spec-0018.md#tdd-0003 Round 2 GREEN and Oracle proof | GREEN and both mutations reproduced on the restored tree; Round 2 Revision reproduced | PASS |
+| 114 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0003 refactor verify, second package run | implement-spec-0018.md#tdd-0003 row-level Refactor verify fields | Package run exit 1: two load timeouts, one test that also fails alone and never loads decide.ts, one disk-full error that passes alone; open-row guard now passes | PASS |
+| 115 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0003 completion review, Round 2 attempt 1 | implement-spec-0018.md#tdd-0003; this run's blocks; TC-0018-0003; CR-20260924-0008 | review-20260925183440115 <!-- qfai:not-a-citation --> | REVISE |
+| 116 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0003 code review, Round 2 attempt 1 | decide.ts; the row test file; implement-spec-0018.md#tdd-0003 | review-20260925183440115 <!-- qfai:not-a-citation --> | REVISE |
+| 117 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0003 review-fix, refusedInput in the SDD branch of next | review-20260925183440115 <!-- qfai:not-a-citation -->; decide.ts | Two refusals now call refusedInput; row tests, tests/unit/workflow, tsc and eslint exit 0; cross-spec re-run of four files passes; package run still owed | PASS |
 
 ## Ledger rows advanced
 
@@ -1141,6 +1173,7 @@ Tests  1 failed | 1 skipped (2)
 ### TDD-0003
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived; the Round 1 REVISE finding is fixed below.
+- Reopened: `exception` -> `todo` in the run started 2026-09-25T15:07:30.451Z, to take the gatekeeper turns and reviews `DR-0298` waived. Round 2 is that cycle.
 
 - TDD-ID: TDD-0003
 - Layer: Unit
@@ -1148,7 +1181,7 @@ Tests  1 failed | 1 skipped (2)
 - Selector: `TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order`
 - TC-ref: TC-0018-0003
 - Owning module: `packages/qfai/src/core/workflow/decide.ts`
-- qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase at `working-tree+abb7b0f8c5bcca9e37cbf1c33e09b302054168a1b9c697c4fef4434890273085`; GREEN and oracle phase at `working-tree+3aaf41d9fc2b30faf95af865bb0bfe43deb3d544edbcc60441ed333f339d6b0a`; both against HEAD `ccca63a7ad553c8eb4bbd4da38f52d2d74189cdd`)
+- qa-gatekeeper: PASS x4 (Round 2: qa-gatekeeper#2 — RED phase on the withdrawn tree at `working-tree+9936ad90274b7e0ba28bd2369ecf8fc787fb74eecc7e36b08ae549a2e61ffaac`; qa-gatekeeper#3 — build-phase GREEN and both oracle mutations at `working-tree+f256384594cb20e78bef061103cf8191bd08a879137bcfe6ed8e7ffe29577dc0`; both against HEAD `b5d357c14ae396a0d436491692af17be018b278c`. Round 1: qa-gatekeeper#1 — RED phase at `working-tree+abb7b0f8c5bcca9e37cbf1c33e09b302054168a1b9c697c4fef4434890273085`; GREEN and oracle phase at `working-tree+3aaf41d9fc2b30faf95af865bb0bfe43deb3d544edbcc60441ed333f339d6b0a`; both against HEAD `ccca63a7ad553c8eb4bbd4da38f52d2d74189cdd`)
 
 #### Round 1
 - Round 1: RED revision: `working-tree+abb7b0f8c5bcca9e37cbf1c33e09b302054168a1b9c697c4fef4434890273085` (two consecutive calculations agreed; 2,496 path records).
@@ -1250,12 +1283,12 @@ Test Files  1 failed (1)
 Tests       1 failed (1)
 ```
 
-- Cross-spec ownership: all 18 other spec ledgers and 386 `done` rows were checked before editing `decide.ts`. None directly owns the source or either test file; the reverse production import closure reaches only this spec's test files. No other spec's completed row was affected.
-- Refactor decision: no code edit. The new `decision` branch and SDD reference generation serve this row's causal boundary. A generic replay or decision abstraction would precede later obligations.
-- Relevant suite: the reverse production import closure of `decide.ts` contains the two spec-0018 unit test files and no production importer; package fallback is unnecessary. The suite covers TDD-0001, TDD-0002 and TDD-0003.
-- Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --reporter=verbose` (cwd: `packages/qfai`).
-- Refactor verify result: exit 0; two files and all three selectors passed before and after the completed-row oracle re-verification. No source or test edit followed the restored GREEN run.
-- Refactor verify revision: `working-tree+3aaf41d9fc2b30faf95af865bb0bfe43deb3d544edbcc60441ed333f339d6b0a` (two consecutive calculations agreed; 2,496 path records).
+- Earlier close — Cross-spec ownership: all 18 other spec ledgers and 386 `done` rows were checked before editing `decide.ts`. None directly owns the source or either test file; the reverse production import closure reaches only this spec's test files. No other spec's completed row was affected.
+- Earlier close — Refactor decision: no code edit. The new `decision` branch and SDD reference generation serve this row's causal boundary. A generic replay or decision abstraction would precede later obligations.
+- Earlier close — Relevant suite: the reverse production import closure of `decide.ts` contains the two spec-0018 unit test files and no production importer; package fallback is unnecessary. The suite covers TDD-0001, TDD-0002 and TDD-0003.
+- Earlier close — Refactor verify command: `node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --reporter=verbose` (cwd: `packages/qfai`).
+- Earlier close — Refactor verify result: exit 0; two files and all three selectors passed before and after the completed-row oracle re-verification. No source or test edit followed the restored GREEN run.
+- Earlier close — Refactor verify revision: `working-tree+3aaf41d9fc2b30faf95af865bb0bfe43deb3d544edbcc60441ed333f339d6b0a` (two consecutive calculations agreed; 2,496 path records).
 - Completed-row oracle re-verification: On the current source, TDD-0001's returned-state mutation failed its selector at line 90:18 on `routing` versus `awaiting_input`. TDD-0002's missing-result-reference mutation failed at line 233:6 with replay failure and only SDD issued. Its later CREATE-event mutation failed at line 233:6 on `laterCreateQuestions: 1` against expected `0`, with stages and replayed results intact. Each mutation was removed immediately, and the shared suite passed 3/3 afterward. Restored source SHA-256: `cdf08d52b6d28845f871730a9fd72837426c425bf1c041dec560a0d71ff16682`; shared test SHA-256: `60ec5d84ca15aa0231c5dd819426e5656acb053eb5da88d0b9708dcbfe76125b`; TDD-0003 test SHA-256: `4dbed72930d7f8e4034c517eac21041120c5352944aae3082e4a17086dda6cc5`.
 
 ```text
@@ -1292,6 +1325,435 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
 - The test's ready snapshot now passes the recorded authorization itself as the approval, which removed a type assertion and an `exactOptionalPropertyTypes` error under `tsconfig.tests.json`.
 - Re-run: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --testNamePattern='TC-0018-0003 \(TDD-0003\)' --reporter=verbose` (cwd `packages/qfai`) exit 0; 1 passed, 1 skipped.
 - The Round 1 advisory on round-evidence layout was repaired earlier (see Record defects).
+
+#### Round 2
+
+- Round 2: Withdrawal: the row's code was already in `decide.ts`, so this round's RED withdraws only this row's predicate from it. In the `decision` branch, the recorded `human_decision` authorization keeps `operation: null` and carries no `new_capability` target, so a `proceed` answer no longer records a CREATE authorization. In `next`, the SDD work order no longer gets `target` or `authorizationRefs` from the approval. The test file is not edited. The withdrawn tree type-checks: `node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json` (cwd `packages/qfai`) exit 0. Before the withdrawal the selector passed: the RED command below exited 0, with 1 passed and 1 skipped. Pre-withdrawal SHA-256 of `decide.ts`: `689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7`. Withdrawn SHA-256: `11c9d4af4d1a541f2ab40d5c6627bdef913597d5e20957605742a61fffe1b7ed`.
+
+```diff
+@@ -2251,20 +2251,7 @@ function decideAnswer(
+     answer,
+     effect,
+     answeredBy: input.answeredBy,
+-    operation: question.capability && slotId ? "CREATE" : null,
+-    ...(question.capability && slotId
+-      ? {
+-          target: {
+-            kind: "new_capability",
+-            slotId,
+-            capability: {
+-              goal: question.capability.goal,
+-              covers: question.capability.covers,
+-              excludes: question.capability.excludes,
+-            },
+-          },
+-        }
+-      : {}),
++    operation: null,
+   };
+   const events = answerEvents(authorization, settledWith(snapshot, question, input));
+   const next = {
+@@ -2500,8 +2487,6 @@ export function decide(
+         }
+         return reaskCreate(run, currentCapability(snapshot) ?? { ...capability, slotId });
+       }
+-      nextWorkOrder.target = { kind: "new_capability", slotId };
+-      nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
+     }
+     const recordAreas = recordAreasOf(nextWorkOrder);
+     if (recordAreas.length > 0) nextWorkOrder.recordAreas = recordAreas;
+```
+
+- Round 2: Withdrawal effect on other selectors: in the same file, TDD-0527 (`TC-0018-0268`) still passes on the withdrawn tree. Across `tests/unit/workflow`, the withdrawal fails 9 of 311 tests: this selector, plus TDD-0005, TDD-0007, TDD-0009, TDD-0011, TDD-0013, TDD-0065, TDD-0076 and TDD-0077. Those rows are built on the same CREATE authorization and work-order binding. On the pre-withdrawal source the same directory passed 311 of 311, with exit 0.
+- Round 2: RED revision: `working-tree+9936ad90274b7e0ba28bd2369ecf8fc787fb74eecc7e36b08ae549a2e61ffaac`
+- Two consecutive calculations agreed: 2,807 path records, HEAD `b5d357c14ae396a0d436491692af17be018b278c`.
+- Round 2: RED test hash: `ab3ad92ffb67485d043e9ec91b4290239eeddaf7d19416e3edc8b0d99f068c46`
+- Round 2: RED test hash manifest: `packages/qfai/tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts`
+- Round 2: RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --testNamePattern='TC-0018-0003 \(TDD-0003\)' --reporter=verbose` (cwd: `packages/qfai`)
+- Round 2: RED failure mode: assertion
+- Round 2: RED result: exit 1. The selector loaded and failed at its final assertion, `tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts:135:18`. The `proceed` answer still moved the run to `ready` and recorded one `human_decision`. That authorization carried `operation: null` and no `new_capability` target. `next` then issued no SDD work order, so `stageKind` was `undefined`, `target` was `null` and `authorizationRefsMatch` was `false`. These are the two parts of the predicate this row owns: the CREATE authorization, and the SDD work order bound to it.
+
+```text
+ × |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order 12ms
+   → expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+
+ FAIL  |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order
+AssertionError: expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+
+- Expected
++ Received
+
+@@ -8,11 +8,11 @@
+      "answeredBy": "operator-1",
+      "authorizationId": "authorization-5",
+      "capture": "agent_captured",
+      "effect": "proceed",
+      "kind": "human_decision",
+-     "operation": "CREATE",
++     "operation": null,
+      "question": {
+        "options": [
+          {
+            "description": "SDD writes the new capability's spec.",
+            "effect": "proceed",
+@@ -34,30 +34,14 @@
+      },
+      "questionId": "question-3-1",
+      "recordedAt": "2026-09-24T00:00:00.000Z",
+      "runId": "run-feature",
+      "scopeDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+-     "target": {
+-       "capability": {
+-         "covers": [
+-           "Up to five unique emails per customer",
+-         ],
+-         "excludes": [
+-           "Notification delivery",
+-         ],
+-         "goal": "Customer notification email registration",
+-       },
+-       "kind": "new_capability",
+-       "slotId": "slot-3-1",
+-     },
+    },
+    "decisionState": "ready",
+    "humanDecisionCount": 1,
+    "sddWorkOrder": {
+-     "authorizationRefsMatch": true,
+-     "stageKind": "sdd",
+-     "target": {
+-       "kind": "new_capability",
+-       "slotId": "slot-3-1",
+-     },
++     "authorizationRefsMatch": false,
++     "stageKind": undefined,
++     "target": null,
+    },
+  }
+
+ ❯ tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts:135:18
+    133|     },
+    134|   };
+    135|   expect(actual).toEqual(expected);
+       |                  ^
+    136| });
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+```
+
+- Round 2: RED assertion-stripped result: on the withdrawn tree, only the final assertion was changed, to `void actual; void expected;`. Both `decide` calls and both operands were still evaluated. The same RED command then exited 0, with the selector passing and TDD-0527 skipped. The strip diff was captured before the restore. After the restore, the test's SHA-256 was back to `ab3ad92ffb67485d043e9ec91b4290239eeddaf7d19416e3edc8b0d99f068c46`, and the RED command failed again at `135:18` with exit 1.
+
+```diff
+@@ -132,7 +132,8 @@ it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision use
+       authorizationRefsMatch: true,
+     },
+   };
+-  expect(actual).toEqual(expected);
++  void actual;
++  void expected;
+ });
+ 
+ // QFAI:SPEC-0018:TC-0018-0268
+```
+
+```text
+Exit: 0
+ ✓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order 4ms
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+```
+
+- Round 2: Oracle proof plan: after GREEN on the restored `decide.ts`, apply two mutations, each separate from the withdrawal and each alone. Mutation A, in `decideAnswer`, replaces only `operation: question.capability && slotId ? "CREATE" : null` with `operation: null` and keeps the `new_capability` target, so `next` still issues the bound SDD work order. The selector must fail at `135:18` on `operation: null` against `"CREATE"`. Mutation B, in `next`, deletes only `nextWorkOrder.authorizationRefs = [...]` and keeps the CREATE authorization and the work order's target. The selector must fail at `135:18` on `authorizationRefsMatch: false` against `true`. Each run uses the GREEN command below. After each mutation, restore `decide.ts` to SHA-256 `689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7` and re-run GREEN, which must exit 0.
+- Round 2: Revision: `working-tree+f256384594cb20e78bef061103cf8191bd08a879137bcfe6ed8e7ffe29577dc0`
+- Round 2: GREEN command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --testNamePattern='TC-0018-0003 \(TDD-0003\)' --reporter=verbose` (cwd: `packages/qfai`)
+- Round 2: GREEN result: exit 0. The selector passed and TDD-0527 was skipped. `decide.ts` was restored from HEAD with `git checkout`, the withdrawal being its only change. `git diff --quiet` on the file then exited 0, and its SHA-256 was `689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7`, the pre-withdrawal value. The test file was not edited; its SHA-256 is still `ab3ad92ffb67485d043e9ec91b4290239eeddaf7d19416e3edc8b0d99f068c46`.
+
+```text
+ ✓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order 8ms
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+```
+
+- Round 2: Oracle proof: both mutations ran against the row's selector, `TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order`, using the GREEN command above. Each was applied alone to the restored source, then removed with `git checkout`. After each removal, `git diff --quiet` exited 0, the SHA-256 was back to `689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7`, and GREEN exited 0 with 1 passed and 1 skipped.
+  - Mutation A failed with exit 1 at `135:18`. The authorization carried `operation: null` against `"CREATE"`, and its `new_capability` target was unchanged. The plan expected `next` still to issue the SDD work order. It did not: the feature-plan check in `decide.ts` also refuses an approval whose `operation` is not `"CREATE"`. So `stageKind` was `undefined`, `target` was `null` and `authorizationRefsMatch` was `false`. The mutated line is still only the one in `decideAnswer`.
+  - Mutation B failed with exit 1 at `135:18` on `authorizationRefsMatch: false` against `true`. Everything else matched: the CREATE authorization, `stageKind: "sdd"` and the work order's `new_capability` target.
+
+```diff
+@@ -2251,7 +2251,7 @@ function decideAnswer(
+     answer,
+     effect,
+     answeredBy: input.answeredBy,
+-    operation: question.capability && slotId ? "CREATE" : null,
++    operation: null,
+     ...(question.capability && slotId
+       ? {
+           target: {
+```
+
+```text
+Mutation A — Exit: 1
+ × |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order 20ms
+   → expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+
+ FAIL  |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order
+AssertionError: expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+
+- Expected
++ Received
+
+@@ -8,11 +8,11 @@
+      "answeredBy": "operator-1",
+      "authorizationId": "authorization-5",
+      "capture": "agent_captured",
+      "effect": "proceed",
+      "kind": "human_decision",
+-     "operation": "CREATE",
++     "operation": null,
+      "question": {
+        "options": [
+          {
+            "description": "SDD writes the new capability's spec.",
+            "effect": "proceed",
+@@ -51,13 +51,10 @@
+      },
+    },
+    "decisionState": "ready",
+    "humanDecisionCount": 1,
+    "sddWorkOrder": {
+-     "authorizationRefsMatch": true,
+-     "stageKind": "sdd",
+-     "target": {
+-       "kind": "new_capability",
+-       "slotId": "slot-3-1",
+-     },
++     "authorizationRefsMatch": false,
++     "stageKind": undefined,
++     "target": null,
+    },
+  }
+
+ ❯ tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts:135:18
+    133|     },
+    134|   };
+    135|   expect(actual).toEqual(expected);
+       |                  ^
+    136| });
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+```
+
+```diff
+@@ -2501,7 +2501,6 @@ export function decide(
+         return reaskCreate(run, currentCapability(snapshot) ?? { ...capability, slotId });
+       }
+       nextWorkOrder.target = { kind: "new_capability", slotId };
+-      nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
+     }
+     const recordAreas = recordAreasOf(nextWorkOrder);
+     if (recordAreas.length > 0) nextWorkOrder.recordAreas = recordAreas;
+```
+
+```text
+Mutation B — Exit: 1
+ × |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order 17ms
+   → expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+
+ FAIL  |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order
+AssertionError: expected { decisionState: 'ready', …(3) } to deeply equal { decisionState: 'ready', …(3) }
+
+- Expected
++ Received
+
+@@ -51,11 +51,11 @@
+      },
+    },
+    "decisionState": "ready",
+    "humanDecisionCount": 1,
+    "sddWorkOrder": {
+-     "authorizationRefsMatch": true,
++     "authorizationRefsMatch": false,
+      "stageKind": "sdd",
+      "target": {
+        "kind": "new_capability",
+        "slotId": "slot-3-1",
+      },
+
+ ❯ tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts:135:18
+    133|     },
+    134|   };
+    135|   expect(actual).toEqual(expected);
+       |                  ^
+    136| });
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 skipped (2)
+```
+
+```text
+Restore after each mutation — Exit: 0
+decide.ts SHA-256: 689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7
+ ✓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order
+ ↓ |unit| tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts > TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
+ Test Files  1 passed (1)
+      Tests  1 passed | 1 skipped (2)
+```
+
+- Round 2: Review pack (attempt 1): .qfai/review/review-20260925183440115
+- Round 2: Review pack seal (attempt 1): 268775f6f9485d00a2227bc38d42a6b7cd7a939aa35c16a81c49f86ff0c1adb1
+- Round 2: reviewer verdict (attempt 1): REVISE. completion-reviewer: the refactor-verify package runs exited 1, and an explained failure is not a pass (gate items 6 and 12). implementation-reviewer: the two refusals in the SDD branch of `next` repeat `refusedInput`. Both findings take the path that opens no round: the rework is behaviour-preserving, and the row is re-reviewed at `review-fix` -> `refactor` once a package run exits 0.
+
+- Cross-spec ownership: checked against the 17 other spec ledgers, excluding the `spec-XXXX` template, and their 372 `done` rows.
+  - Direct: no row names `decide.ts` as its `Owning module` or this row's test file as its `Test file`.
+  - Reverse dependency, import walk: 29 rows match. They are spec-0010 TDD-0016 and TDD-0017, through `tests/integration/cli/commands/discussion.test.ts`; 22 spec-0012 rows, through `tests/e2e/spec0012PrototypingRemediationE2E.test.ts` and `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts`; and spec-0015 TDD-0032, through `tests/integration/cli/commands/handoffUpgrade.test.ts`.
+  - Reverse dependency, package fallback: all 372 rows match.
+  - No `Cross-spec obligations` entry is owed. This round's net change to `decide.ts` is none: the file ends byte-identical to HEAD, where those rows were certified. The package run below executed every one of those rows' test files, and none of them failed.
+- Refactor decision: removed duplication in the SDD branch of `next` in `decide.ts`. That branch refuses with `invalid-input` and "The feature work order is not ready." in two places: when the approval has no `slotId`, and when a missing or stale authorization has no capability to re-ask. Each wrote the refusal object out in full. Both now return `refusedInput(run, "The feature work order is not ready.")`, the helper that builds exactly that object and that the file already calls seven times. The returned value is identical, so no test changes. Nothing else in the file changed: the CREATE authorization in `decideAnswer` and the SDD work order's binding stay as they were. The edit reaches other specs' `done` rows; the cross-spec result is under `#### Review fix under the Round 2 review` below.
+- Relevant suite: the package fallback, every test in `packages/qfai`. The reverse production import closure of `decide.ts` is `src/core/workflow/observe.ts`, `src/core/workflow/persistence.ts`, `src/cli/commands/workflow.ts`, `src/cli/main.ts` and `src/cli/index.ts`. The test import graph, walked through `tests/unit/workflow/finishFixture.ts`, `tests/integration/workflow/ledgerFixture.ts` and `tests/eval/routingEval.run.ts`, reaches 89 test files. The walk cannot close there. `src/cli/main.ts` imports the workflow command statically, so the built bundle under `dist/cli/` loads `decide.ts` on every CLI invocation. Tests reach that bundle as a subprocess through `tests/integration/workflow/workflowProject.ts`, `tests/e2e/workflowJourney.ts`, `tests/helpers/routingEvalOverlays.ts` and other harnesses. That edge runs through generated code, so resolution widened to the package. `dist/` was rebuilt from this tree first with `node node_modules/tsup/dist/cli-default.js` (cwd: `packages/qfai`), exit 0.
+- Refactor verify command: in order, all with cwd `packages/qfai`: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run`; the same command with each of `tests/cli/initAgentEntryPointRules.test.ts`, `tests/integration/workflow/evalFixtures.test.ts` and `tests/scripts/workflowHygieneRequiredContext.test.ts` alone; `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --maxWorkers=4`, stopped and void; `NO_COLOR=1 node node_modules/vitest/vitest.mjs run --maxWorkers=4`; then `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/cli/initAgentEntryPointRules.test.ts`, `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/scripts/workflowHygieneRequiredContext.test.ts` and `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/evalFixtures.test.ts`.
+- Refactor verify result: first package run, exit 1. 975 of 982 files passed and 3 were skipped. 14,818 tests passed, 15 failed and 82 were skipped. Every failure is classified below. The one failing test that loads `decide.ts` timed out, and it passed when its file was run on its own.
+  - `tests/assets/openRowAlreadyTested.test.ts`: 1 assertion failure, on this run's own ledger state. The test lists open rows whose test already exists, and it found `spec-0018 TDD-0003 red TC-0018-0003` and `spec-0018 TDD-0527 todo TC-0018-0268`. Those are the two rows this run reopened. The file reads the ledgers, not `decide.ts`, and the failure clears when both rows leave the open statuses.
+  - `tests/cli/initAgentEntryPointRules.test.ts`: 10 tests hit the 120-second timeout under full-suite load. Run on its own, the file passed 274 of 274, with exit 0.
+  - `tests/scripts/workflowHygieneRequiredContext.test.ts`: 3 tests hit the 120-second timeout. Run on its own, 86 of 87 passed. `refuses a package declaring any hook the package manager runs at install time` still timed out at 120 seconds, with exit 1. The file checks workflow and manifest files and does not load `decide.ts`.
+  - `tests/integration/workflow/evalFixtures.test.ts`: `TC-0018-0194 (TDD-0412)` hit the 300-second timeout. This file does reach `decide.ts`, because it spawns the built CLI's `init`. Run on its own, it passed 36 of 36, with exit 0.
+  - None of the four files is the `Test file` of another spec's `done` row.
+
+```text
+Package run — Exit: 1
+ ❯ |e2e| tests/assets/openRowAlreadyTested.test.ts (2 tests | 1 failed) 8965ms
+ ❯ |integration| tests/integration/workflow/evalFixtures.test.ts (36 tests | 1 failed) 317826ms
+ ❯ |cli| tests/cli/initAgentEntryPointRules.test.ts (274 tests | 10 failed) 2184402ms
+ ❯ |scripts| tests/scripts/workflowHygieneRequiredContext.test.ts (87 tests | 3 failed) 1152449ms
+ Test Files  4 failed | 975 passed | 3 skipped (982)
+      Tests  15 failed | 14818 passed | 82 skipped (14915)
+   Duration  2668.37s
+
+AssertionError: expected [ …(84) ] to deeply equal [ …(82) ]
++   "spec-0018 TDD-0003 red TC-0018-0003",
++   "spec-0018 TDD-0527 todo TC-0018-0268",
+ ❯ tests/assets/openRowAlreadyTested.test.ts:244:35
+
+Standalone re-runs (cwd: packages/qfai), same command with one file each:
+tests/cli/initAgentEntryPointRules.test.ts          — Exit: 0; Tests 274 passed (274)
+tests/integration/workflow/evalFixtures.test.ts     — Exit: 0; Tests 36 passed (36)
+tests/scripts/workflowHygieneRequiredContext.test.ts — Exit: 1; Tests 1 failed | 86 passed (87); Error: Test timed out in 120000ms.
+```
+
+- Second package run, with TDD-0003 at `refactor` and TDD-0527 at `exception` throughout: exit 1. 976 of 982 files passed and 3 were skipped. 14,829 tests passed, 4 failed and 82 were skipped. `openRowAlreadyTested.test.ts` passed. Every failure is a timeout or a full disk, and each failing file was re-run alone.
+  - `decide.ts` kept SHA-256 `689827818bd0dacc2bbba1979e9db2879148a427c1c3c3ef40d32aa83b3a4dc7` and the same modification time for the whole run and for the re-runs, sampled every 5 seconds. `git status --short -- packages/` was empty before and after. The CLI bundle under `dist/cli/` was not rebuilt, and it still carries both of this row's predicates.
+  - The first start of this command is void. A concurrent oracle check rewrote `decide.ts` while it was starting, so it was stopped after 46 seconds. The run above started once the file had been unchanged for 5 minutes.
+  - `tests/cli/initAgentEntryPointRules.test.ts`: `keeps review boundary repairs byte-preserving with force=true` timed out at 120 seconds. Alone: 274 of 274 passed, exit 0.
+  - `tests/scripts/workflowHygieneRequiredContext.test.ts`: 2 tests timed out at 120 seconds. Alone: 86 of 87 passed, exit 1. `refuses a package declaring any hook the package manager runs at install time` timed out again, as it did alone after the first package run. The test runs `bash scripts/check-toolchain-action.sh` against nine planted trees and never loads the CLI or `decide.ts`.
+  - `tests/integration/workflow/evalFixtures.test.ts`: `TC-0018-0194 (TDD-0412)` failed with `ENOSPC` while copying a fixture. The C: drive had 142 MB free when the run ended. This file reaches `decide.ts` through the built CLI's `init`. Alone, with 5 GB free: 36 of 36 passed, exit 0.
+  - None of the three files is the `Test file` of another spec's `done` row.
+
+```text
+Second package run — Exit: 1
+ ❯ |cli| tests/cli/initAgentEntryPointRules.test.ts (274 tests | 1 failed) 1393455ms
+ ❯ |integration| tests/integration/workflow/evalFixtures.test.ts (36 tests | 1 failed) 201395ms
+ ❯ |scripts| tests/scripts/workflowHygieneRequiredContext.test.ts (87 tests | 2 failed) 1282916ms
+ Test Files  3 failed | 976 passed | 3 skipped (982)
+      Tests  4 failed | 14829 passed | 82 skipped (14915)
+   Duration  3810.02s
+
+ FAIL  |cli| tests/cli/initAgentEntryPointRules.test.ts > optional review directive detection > keeps review boundary repairs byte-preserving with force=true
+Error: Test timed out in 120000ms.
+ FAIL  |scripts| tests/scripts/workflowHygieneRequiredContext.test.ts > the pre-flight is run against planted trees, not read > reads a lifecycle hook out of the JSON, not off the start of a line
+Error: Test timed out in 120000ms.
+ FAIL  |scripts| tests/scripts/workflowHygieneRequiredContext.test.ts > the pre-flight is run against planted trees, not read > refuses a package declaring any hook the package manager runs at install time
+Error: Test timed out in 120000ms.
+ FAIL  |integration| tests/integration/workflow/evalFixtures.test.ts > TC-0018-0194 (TDD-0412): Build the 64 fixture repositories from one base qfai init
+Error: ENOSPC: no space left on device, copyfile '...\qfai-eval-base-JslKoP\.qfai\assistant\skills\qfai-sdd\templates\specs\_policies\03_Capabilities.md' -> '...\qfai-eval-seed-wDVdop\...\03_Capabilities.md'
+
+Standalone re-runs (cwd: packages/qfai), one file each, without --maxWorkers, in this order:
+tests/cli/initAgentEntryPointRules.test.ts           — Exit: 0; Tests 274 passed (274)
+tests/scripts/workflowHygieneRequiredContext.test.ts — Exit: 1; Tests 1 failed | 86 passed (87); Error: Test timed out in 120000ms.
+tests/integration/workflow/evalFixtures.test.ts      — Exit: 0; Tests 36 passed (36)
+```
+
+- Refactor verify revision: `working-tree+f256384594cb20e78bef061103cf8191bd08a879137bcfe6ed8e7ffe29577dc0`
+
+#### Review fix under the Round 2 review
+
+- Change: in the SDD branch of `next` in `packages/qfai/src/core/workflow/decide.ts`, the two inline `invalid-input` refusals now return `refusedInput(run, "The feature work order is not ready.")`. No other line changed. `decide.ts` SHA-256 is now `e65af449be91f45a7506c1357f10469bf2e5e64df47e524cc18e5bd3c94128e7`. The test file is unchanged at `ab3ad92ffb67485d043e9ec91b4290239eeddaf7d19416e3edc8b0d99f068c46`.
+
+```diff
+diff --git a/packages/qfai/src/core/workflow/decide.ts b/packages/qfai/src/core/workflow/decide.ts
+index 56e7a7ecd..c4ab561ca 100644
+--- a/packages/qfai/src/core/workflow/decide.ts
++++ b/packages/qfai/src/core/workflow/decide.ts
+@@ -2477,26 +2477,12 @@ export function decide(
+     } else if (stage.stageKind === "sdd") {
+       const slotId = approval?.target?.slotId;
+       if (!slotId) {
+-        return {
+-          verdict: {
+-            ok: false,
+-            run,
+-            error: { code: "invalid-input", message: "The feature work order is not ready." },
+-          },
+-          events: [],
+-        };
++        return refusedInput(run, "The feature work order is not ready.");
+       }
+       if (!approval.authorizationId || approvalIsStale(snapshot)) {
+         const capability = approval.target?.capability;
+         if (!capability) {
+-          return {
+-            verdict: {
+-              ok: false,
+-              run,
+-              error: { code: "invalid-input", message: "The feature work order is not ready." },
+-            },
+-            events: [],
+-          };
++          return refusedInput(run, "The feature work order is not ready.");
+         }
+         return reaskCreate(run, currentCapability(snapshot) ?? { ...capability, slotId });
+       }
+```
+
+- Cross-spec ownership, re-run for this edit: the 17 other spec ledgers, excluding the `spec-XXXX` template, and their 372 `done` rows. The Round 2 record above said no entry was owed because `decide.ts` ended byte-identical to HEAD. That no longer holds.
+  - Direct: no row names `decide.ts` as its `Owning module` or this row's test file as its `Test file`.
+  - Reverse dependency, import walk: the edit adds and removes no import, so the closure recorded in Round 2 stands. 29 rows match:
+
+    | Blocked spec | Blocked TDD-IDs                                                                                                                      | Test file reached                                                            |
+    | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+    | spec-0010    | TDD-0016, TDD-0017                                                                                                                   | `tests/integration/cli/commands/discussion.test.ts`                          |
+    | spec-0012    | TDD-0460, TDD-0461, TDD-0462, TDD-0463, TDD-0473, TDD-0474, TDD-0475, TDD-0476, TDD-0490 to TDD-0495, TDD-0509 to TDD-0513, TDD-0567 | `tests/e2e/spec0012PrototypingRemediationE2E.test.ts`                        |
+    | spec-0012    | TDD-0497, TDD-0572 to TDD-0576                                                                                                       | `tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts` |
+    | spec-0015    | TDD-0032                                                                                                                             | `tests/integration/cli/commands/handoffUpgrade.test.ts`                      |
+
+  - Reverse dependency, package fallback: all 372 rows match.
+  - Obligation at risk: each matched row certifies a CLI behaviour whose test loads `decide.ts` through the static import in `src/cli/main.ts`. None of them asserts on the SDD work-order refusal. The edit returns the same object on the same two paths, so the behaviour those rows certify has moved into a helper call and has not changed. This is not upstream drift, and no Change Request is raised.
+  - Re-run, read-only, against the changed tree: the four test files above in one command, `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/cli/commands/discussion.test.ts tests/e2e/spec0012PrototypingRemediationE2E.test.ts tests/integration/cli/commands/prototypingIterate.checkConvergence.test.ts tests/integration/cli/commands/handoffUpgrade.test.ts --reporter=verbose` (cwd: `packages/qfai`). Exit 0: 4 files passed, 75 tests passed and 2 skipped. The two skipped tests are in the `handoff upgrade overwrite guard` block of `handoffUpgrade.test.ts`, and neither is TDD-0032's selector. Every selector of the 29 rows passed. These files import `src/` directly, so no `dist/` rebuild was needed for them.
+  - No mutation re-run is owed. The edit is to production code, not to a fixture, helper or expected value these rows' tests use.
+  - Still owed: the other 343 rows the package fallback matches are re-verified only by an exit-0 package run, listed under Environment findings. `completion-reviewer` has to re-review the 29 rows' obligations with the re-run above as input. Until then the obligation is open, and the entry for it belongs under `## Cross-spec obligations`.
+- Verification, cwd `packages/qfai` unless stated:
+
+  | Command                                                                                                                            | Exit | Result                                              |
+  | ---------------------------------------------------------------------------------------------------------------------------------- | ---- | --------------------------------------------------- |
+  | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --reporter=verbose` | 0    | 1 file; 2 tests passed (TC-0018-0003, TC-0018-0268) |
+  | `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow`                                                           | 0    | 75 files; 311 tests passed                          |
+  | `node ../../node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`                                                             | 0    | no output                                           |
+  | `node ../../node_modules/eslint/bin/eslint.js src/core/workflow/decide.ts`                                                         | 0    | no output                                           |
+  | `node node_modules/eslint/bin/eslint.js --max-warnings 0 packages/qfai/src/core/workflow/decide.ts` (cwd: repo root)               | 0    | no output                                           |
+  | `node node_modules/prettier/bin/prettier.cjs --check packages/qfai/src/core/workflow/decide.ts` (cwd: repo root)                   | 0    | formatted                                           |
+
+- Tree after the edit: `working-tree+aa68dc69d3211fa5b89ed4aad00a6d4b2f94e2a96f8b2f75b6aca610a16c6c5b` (two consecutive calculations agreed; 2,807 path records; HEAD `b5d357c14`).
+- Environment findings. These are the failures of the two package runs recorded above. None is caused by this row.
+  - `tests/scripts/workflowHygieneRequiredContext.test.ts > refuses a package declaring any hook the package manager runs at install time`: `environment/tooling`. It fails on its own on HEAD's unchanged code on this host, at the 120-second timeout with exit 1, after both package runs. The test runs `bash scripts/check-toolchain-action.sh` against nine planted trees and never loads `decide.ts`. No ledger names this file, so no spec-0018 row owns it. This row may neither fix it nor raise its timeout.
+  - `tests/cli/initAgentEntryPointRules.test.ts`: nondeterministic gate. Cause: tests exceed the 120-second timeout under full-suite load on this host. It passed on its own, 274 of 274, exit 0, after each package run. No ledger names this file.
+  - `tests/integration/workflow/evalFixtures.test.ts > TC-0018-0194 (TDD-0412)`: nondeterministic gate. Cause: `ENOSPC` while copying a fixture, with 142 MB free on C: when the run ended. The first package run hit the 300-second timeout here instead. It passed on its own with 5 GB free, 36 of 36, exit 0. Its owning row, spec-0018 TDD-0412, is at `exception` under DR-0298.
+  - The package run of the relevant suite, the package fallback with `dist/` rebuilt from this tree, is still owed on a host where it passes. This host cannot give one, so it is left to CI on a Linux host. The `Refactor verify` fields above record the runs on the earlier tree. They are re-recorded from that exit-0 run, and the row does not return to `refactor` before it.
 
 ### TDD-0004
 
@@ -7334,6 +7796,19 @@ None.
 ## Cross-spec obligations
 
 None. Before considering a source or test edit, all 18 other specs' ledgers were scanned for `done` rows naming either file by repository path or dotted module alias; direct matches: 0. The reverse dependency scan found only this row's test importing `decide.ts`, no production importer, and no importer of the test file. No other spec's completed selector is reached by either file.
+
+The entries above record earlier runs. One entry is open, from the run started
+2026-09-25T15:07:30.451Z:
+
+| Field | Value |
+| ----- | ----- |
+| TDD-ID | TDD-0003 |
+| Blocked spec | spec-0010, spec-0012 and spec-0015 through the import walk; every other spec's `done` rows through the package fallback |
+| Blocked TDD-IDs | spec-0010 TDD-0016, TDD-0017; spec-0012 TDD-0460 to TDD-0463, TDD-0473 to TDD-0476, TDD-0490 to TDD-0495, TDD-0497, TDD-0509 to TDD-0513, TDD-0567, TDD-0572 to TDD-0576; spec-0015 TDD-0032 |
+| File | `packages/qfai/src/core/workflow/decide.ts` |
+| Change required | The two inline refusals in the SDD branch of `next` return `refusedInput` instead, as the Round 2 implementation review required |
+| Obligation at risk | Each blocked row certifies a CLI behaviour whose test loads `decide.ts` through `src/cli/main.ts`. None asserts on this refusal, and the returned object is unchanged. The four test files the import walk reaches pass on the changed tree. The package run that covers the rest is still owed (`### TDD-0003`, Review fix under the Round 2 review) |
+| Resolution | open: a `completion-reviewer` re-review, with those re-runs and a passing package run as input |
 
 ## Commands executed
 
