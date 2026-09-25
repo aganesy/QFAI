@@ -431,16 +431,71 @@ describe("automerge is declared together with the check that decides whether any
     // So the exceptions are enumerated here: one entry per package the bot may not offer, and
     // nothing else may carry `enabled: false`.
     //
-    // The list is the claim. A rule that later widened to another package, or to an update type
-    // on a package that still moves, changes this set and fails here rather than passing green
-    // over an invariant it no longer holds.
-    const EXEMPT = ["@vitest/coverage-v8"];
+    // The list is the claim. A rule that later widened to another package, or narrowed an
+    // exception to one update type, changes what this reads and fails here rather than passing
+    // green over an invariant it no longer holds.
+    const EXEMPT = ["@vitest/coverage-v8", "vitest"];
+
+    // Each `packageRules` entry, WHOLE. A bounded lookahead from `matchPackageNames` reads a
+    // window rather than an object, and JSON5 fixes no property order — so a `matchUpdateTypes`
+    // written after `enabled: false` falls outside the window and the narrowing it performs is
+    // invisible. This walks braces instead, skipping strings and comments, so the block a claim
+    // below reads is the rule Renovate reads.
+    const ruleObjects = (config: string): string[] => {
+      const at = config.indexOf("packageRules:");
+      if (at === -1) return [];
+      const open = config.indexOf("[", at);
+      if (open === -1) return [];
+      const rules: string[] = [];
+      let depth = 0;
+      let from = -1;
+      let quote = "";
+      let comment = false;
+      for (let i = open; i < config.length; i += 1) {
+        const ch = config[i] ?? "";
+        const next = config[i + 1] ?? "";
+        if (comment) {
+          if (ch === "\n") comment = false;
+          continue;
+        }
+        if (quote !== "") {
+          if (ch === "\\") i += 1;
+          else if (ch === quote) quote = "";
+          continue;
+        }
+        if (ch === "/" && next === "/") {
+          comment = true;
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+          continue;
+        }
+        if (ch === "{") {
+          if (depth === 0) from = i;
+          depth += 1;
+          continue;
+        }
+        if (ch === "}") {
+          depth -= 1;
+          if (depth === 0 && from !== -1) {
+            rules.push(config.slice(from, i + 1));
+            from = -1;
+          }
+          continue;
+        }
+        if (ch === "]" && depth === 0) break;
+      }
+      return rules;
+    };
 
     const config = configText();
-    const disabled = [
-      ...config.matchAll(/matchPackageNames:\s*\[([^\]]*)\][\s\S]{0,400}?enabled:\s*false/g),
-    ]
-      .flatMap((match) => [...(match[1] ?? "").matchAll(/"([^"]+)"/g)].map((name) => name[1]))
+    const disablingRules = ruleObjects(config).filter((rule) => /enabled:\s*false/.test(rule));
+    const disabled = disablingRules
+      .flatMap((rule) => [
+        ...(/matchPackageNames:\s*\[([^\]]*)\]/.exec(rule)?.[1] ?? "").matchAll(/"([^"]+)"/g),
+      ])
+      .map((match) => match[1])
       .filter((name): name is string => name !== undefined)
       .sort();
 
@@ -454,17 +509,22 @@ describe("automerge is declared together with the check that decides whether any
     // And the exception is a refusal to offer the package at all, not a narrowing to one update
     // type. A narrowing leaves the same pairing broken on every other update type, which is the
     // reading the provider's own peer range makes unsafe.
-    for (const name of EXEMPT) {
-      const rule = new RegExp(
-        `matchPackageNames:\\s*\\[[^\\]]*"${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^\\]]*\\][\\s\\S]{0,400}?enabled:\\s*false`,
-      );
-      const block = rule.exec(config)?.[0] ?? "";
+    for (const rule of disablingRules) {
       expect(
-        block,
-        `${name} must be switched off outright: a \`matchUpdateTypes\` beside it would leave the ` +
-          "update types it does not name arriving exactly as before",
+        rule,
+        "a package switched off must be switched off outright: a `matchUpdateTypes` anywhere in " +
+          "the same rule leaves the update types it does not name arriving exactly as before",
       ).not.toMatch(/matchUpdateTypes/);
     }
+
+    // And a security fix still reaches them. The vulnerability block is applied as a forced
+    // override, so its own `enabled` is the one thing that outranks the refusal above — without
+    // it, the manual-update exception silently becomes an exception to that policy too.
+    expect(
+      /vulnerabilityAlerts:\s*\{[\s\S]*?\n {2}\}/.exec(config)?.[0] ?? "",
+      "the vulnerability policy must state `enabled: true`, or a package switched off above " +
+        "stops receiving security fixes as well as ordinary ones",
+    ).toMatch(/enabled:\s*true/);
 
     // And the guide a maintainer reads says the same, because the rule alone tells nobody that
     // the package now moves by hand.
@@ -473,7 +533,7 @@ describe("automerge is declared together with the check that decides whether any
       expect(
         guide,
         `.github/renovate.md promises that nothing waits for a human, so it has to name ${name} ` +
-          "as the package that does",
+          "as a package that does",
       ).toContain(name);
     }
   });
