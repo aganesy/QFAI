@@ -2,7 +2,7 @@
  * Integration: `qfai init` installs the workflow entry — the two entry skills, the built-in plans
  * and each plan-named stage skill's orchestrated-mode reference — through the existing asset copy.
  */
-// QFAI:SPEC-0003:TC-0003-0062
+// QFAI:SPEC-0003:TC-0003-0093
 // QFAI:SPEC-0003:TC-0003-0063
 // QFAI:SPEC-0003:TC-0003-0064
 import { createHash } from "node:crypto";
@@ -75,7 +75,7 @@ async function expectWrappersResolve(root: string): Promise<void> {
 }
 
 describe("the workflow entry install set", () => {
-  it("TC-0003-0062: Fresh init installs the entry skills, plans and references", async () => {
+  it("TC-0003-0093: Fresh init installs the entry skills, plans and references", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       await expectInstallSet(root);

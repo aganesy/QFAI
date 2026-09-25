@@ -10,6 +10,13 @@
 6. Evidence contract: per-item fresh evidence validation
 7. Parallelization policy: independence check, worktree separation, integration verify
 
+The skill-text part of removing the work-log surface is edited in
+`packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/` and
+mirrored by `pnpm sync:ssot`. It lands in the same change as the removal of
+`QFAI-TDDLIST-015`, in the order spec-0004's `10_Plan.md` states under
+"Removing the work-log surface". The text is checked by review and has no
+test of its own (`CR-20260925-0010`).
+
 ### Intent-driven entry (CAP-0018)
 
 This change introduces no architectural element. It writes `qfai-implement`'s
@@ -18,7 +25,7 @@ own `references/orchestrated-mode.md` in the table format CLI-WFFILE owns.
 Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implementation order`.
 
 - **U2:** `qfai-implement/references/orchestrated-mode.md`, holding:
-  - the entry check (BR-0011-0009);
+  - the entry check (BR-0011-0023);
   - the Operations table, `diagnose-only`, `implement`, `seam-only`,
     `regression-fix` and `test-fix` (BR-0011-0010);
   - the run binding and `checkpointRef` (BR-0011-0011, 0012);
@@ -52,7 +59,7 @@ written for this spec, so there is no `L1` or `L2` case.
 
 | Layer | What it proves                                                                                                               | Test module, one per BR, under `packages/qfai/tests/integration/implement/orchestrated/` | TCs                        |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------- |
-| `L3`  | The entry check and the one `SKILL.md` citation line                                                                         | `stageSkillHandover.test.ts` (BR-0011-0009)                                              | TC-0011-0013               |
+| `L3`  | The entry check and the one `SKILL.md` citation line                                                                         | `stageSkillHandover.test.ts` (BR-0011-0023)                                              | TC-0011-0028               |
 | `L3`  | The Operations table is exactly the five implement operations                                                                | `operationsTable.test.ts` (BR-0011-0010)                                                 | TC-0011-0014               |
 | `L3`  | A run binding supplies `primarySpecId` without a question                                                                    | `runBinding.test.ts` (BR-0011-0011)                                                      | TC-0011-0015               |
 | `L3`  | A long stage resumes at the row `checkpointRef` names                                                                        | `checkpointResume.test.ts` (BR-0011-0012)                                                | TC-0011-0016               |
@@ -108,7 +115,7 @@ batch evidence (spec-0018 `10_Plan.md` `### Findings carried on purpose`).
 | Finding                                                           | Why it is expected                                                                                                                                                                                                                                                 | Until                            |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
 | `QFAI-ATDD-111` naming US-0011-0009..0012                         | The journeys that discharge them do not exist yet. The finding is project-wide and charged to `.qfai/specs/spec-0001`                                                                                                                                              | spec-0018's tier-4 journeys land |
-| `QFAI-ATDD-112` naming TC-0011-0013..0027                         | The integration tests do not exist yet. Charged the same way                                                                                                                                                                                                       | ATDD writes them                 |
+| `QFAI-ATDD-112` naming TC-0011-0014..0027, TC-0011-0028           | The integration tests do not exist yet. Charged the same way                                                                                                                                                                                                       | ATDD writes them                 |
 | `QFAI-ATDD-131` on `.qfai/specs/spec-0011`, pinned at 1 in `full` | The spec has no Coverage Depth Matrix yet. The push that adds its first `.qfai/evidence/coverage-depth-spec-0011.md` re-pins `full` with `node scripts/check-dogfood-backlog.mjs --profile full --pin`, which strikes the entry, since a count below its pin fails | That push                        |
 
 ## Dependencies

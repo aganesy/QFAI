@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { operationsOf, readShipped } from "../../../helpers/shippedAssistant.js";
 
 describe("qfai-implement in a workflow run", () => {
-  it("TC-0011-0014 (TDD-0022): The Operations Table Lists Exactly the Implement Operations", async () => {
+  it("TC-0011-0014 (TDD-0041): The Operations Table Lists Exactly the Implement Operations", async () => {
     const { header, ids } = operationsOf(
       await readShipped("skills/qfai-implement/references/orchestrated-mode.md"),
     );

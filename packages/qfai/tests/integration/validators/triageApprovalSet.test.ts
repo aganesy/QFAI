@@ -5,7 +5,7 @@
  * The operation set is held here; which of them need approval is `requiresApproval()`'s answer, so
  * the validator and the triage module cannot disagree.
  */
-// QFAI:SPEC-0004:TC-0004-0074
+// QFAI:SPEC-0004:TC-0004-0084
 import { afterEach, describe, expect, it } from "vitest";
 
 import { requiresApproval, type TriageOp } from "../../../src/core/sddTriage.js";
@@ -40,8 +40,8 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => removeTempTree(root)));
 });
 
-describe("TC-0004-0074: one approval set", () => {
-  it("TC-0004-0074: QFAI-TRIAGE-005 on exactly the rows requiresApproval() is true for", async () => {
+describe("TC-0004-0084: one approval set", () => {
+  it("TC-0004-0084: QFAI-TRIAGE-005 on exactly the rows requiresApproval() is true for", async () => {
     const root = await seedTriageProject(triageTable(HEADERS, OPERATIONS.map(row)));
     roots.push(root);
 

@@ -65,7 +65,7 @@
 
 - Orchestrator delegates; it does not simulate missing roles.
 - Blocking reviewer findings gate completion.
-- DR-0296 (`_policies/08_Decisions.md`): a new capability is approved once, at
+- DR-0299 (`_policies/08_Decisions.md`): a new capability is approved once, at
   routing, and `--auto` approves nothing. BR-0015-0019 relates it to the buckets.
 
 ## Evidence Summary

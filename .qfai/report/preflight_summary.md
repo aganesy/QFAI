@@ -3,13 +3,13 @@
 ## Status
 
 - status: ready
-- run id: run-20260925063058863
+- run id: run-20260925150016061
 - source: discussion-pack
-- selected discussion-pack: C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\issue-pr-cycle-496f7a\.qfai\discussion\discussion-20260923171450572
+- selected discussion-pack: C:\Users\pc\Documents\GitHub\QFAI\.claude\worktrees\qfai-steering-discussion-69d8a9\.qfai\discussion\discussion-20260923060900824
 
 ## Requirement Intake
 
-- Imported REQ count: 68
+- Imported REQ count: 17
 
 ## Pack Gaps
 

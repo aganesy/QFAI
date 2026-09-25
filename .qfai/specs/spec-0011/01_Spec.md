@@ -67,8 +67,8 @@ section each rule is realized by in `## Contract Realization`.
 - Test-first: write failing test before production code
 - Minimal code: write minimum production code to make test pass
 - `_policies/08_Decisions.md` DR-0297: a diagnosed missing-test row is appended by `/qfai-sdd` without a Change Request, and this skill never seeds a row
-- A defective unit-layer test is fixed with ledger status untouched (DR-0011-0003)
-- A regression on a `done` row is fixed in production code, and the row stays `done` (DR-0011-0004)
+- A defective unit-layer test is fixed with ledger status untouched (DR-0011-0015)
+- A regression on a `done` row is fixed in production code, and the row stays `done` (DR-0011-0016)
 
 ## Evidence Summary
 
@@ -103,7 +103,7 @@ half; the local list above keeps its own numbering.
 | `discussion-20260923171450572#REQ-0045` | CLI-WF `### Stage result`; BR-0011-0015, BR-0011-0016                                            |
 | `discussion-20260923171450572#REQ-0046` | CLI-WF `## Ledger row-set check`; BR-0011-0017, BR-0011-0018, BR-0011-0019                       |
 | `discussion-20260923171450572#REQ-0048` | CLI-WF `### Stage result`; CLI-WFFILE `### Vocabulary`; BR-0011-0020, BR-0011-0021, BR-0011-0022 |
-| `discussion-20260923171450572#REQ-0051` | CLI-WF `### host:stage-skill-handover`; BR-0011-0009                                             |
+| `discussion-20260923171450572#REQ-0051` | CLI-WF `### host:stage-skill-handover`; BR-0011-0023                                             |
 | `discussion-20260923171450572#REQ-0052` | CLI-WFFILE `### The Operations table`; BR-0011-0010                                              |
 | `discussion-20260923171450572#REQ-0056` | BR-0011-0013                                                                                     |
 | `discussion-20260923171450572#NFR-0003` | `## Applicable NFR` above; measured, no rule                                                     |

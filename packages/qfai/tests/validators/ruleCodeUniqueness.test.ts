@@ -198,16 +198,11 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
   ],
   [
     // Deliberately re-emits the finding's own code so the justification gap is
-    // reported under the code it applies to; those codes belong to
-    // `reviewerGate.ts` / `worklogSurface.ts`, which own them as literals.
+    // reported under the code it applies to. `reviewerGate.ts` owns the first
+    // two as literals; `R-REJECTED-READOPT` reaches this gate only from a
+    // reviewer report.
     "validators/reviewerJustification.ts",
-    [
-      "R-CERTIFY-VERIFY-CIRCULAR",
-      "R-HANDOFF-INCOMPLETE",
-      "R-PROMPT-SCANNER-DRIFT",
-      "R-REJECTED-READOPT",
-      "R-WORKLOG-DRIFT",
-    ],
+    ["R-CERTIFY-VERIFY-CIRCULAR", "R-PROMPT-SCANNER-DRIFT", "R-REJECTED-READOPT"],
   ],
 ]);
 

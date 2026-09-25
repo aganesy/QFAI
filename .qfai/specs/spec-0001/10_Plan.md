@@ -39,7 +39,7 @@ skills a built-in plan names, each bound to it by its own rule:
 | ------------------ | ------------------------------------------------------------------------------- |
 | `qfai-atdd`        | BR-0008-0013                                                                    |
 | `qfai-discussion`  | BR-0010-0014                                                                    |
-| `qfai-implement`   | BR-0011-0009                                                                    |
+| `qfai-implement`   | BR-0011-0023                                                                    |
 | `qfai-prototyping` | BR-0012-0136                                                                    |
 | `qfai-sdd`         | BR-0013-0033                                                                    |
 | `qfai-verify`      | BR-0014-0031                                                                    |

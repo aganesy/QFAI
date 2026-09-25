@@ -186,7 +186,7 @@ Land the foundation of CHG-002 Wave 3 (core loop destructive changes) on `featur
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: unit
-- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0329).
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0329).
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
 - Selector: `returns null when designMdViolations is non-empty (other conditions met)`
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/core/prototyping/iteration.test.ts --testNamePattern='returns null when designMdViolations is non-empty' --reporter=verbose`
@@ -359,13 +359,13 @@ is declared.
 
 ---
 
-# CR-20260925-0005 preflight and TDD-0364 test fix (2026-09-24 UTC)
+# CR-20260925-0019 preflight and TDD-0364 test fix (2026-09-24 UTC)
 
-## CR-20260925-0005 preflight
+## CR-20260925-0019 preflight
 
-The approved Option 1 of `CR-20260925-0005` names exactly three rows for reset:
+The approved Option 1 of `CR-20260925-0019` names exactly three rows for reset:
 `TDD-0336`, `TDD-0337` and `TDD-0338`. The owner rerun re-scoped each row to one
-case. Each row moved `done -> todo`, with `CR-20260925-0005` appended to its
+case. Each row moved `done -> todo`, with `CR-20260925-0019` appended to its
 `DR-ID`. No other row was reset.
 
 ### Withdrawn history
@@ -391,7 +391,7 @@ counts toward the re-scoped obligations; each row owes a fresh cycle.
 
 ### test_fix — 2026-09-24
 
-- Kind: D14 `test_fix` under approved action 4 of `CR-20260925-0005`. The row
+- Kind: D14 `test_fix` under approved action 4 of `CR-20260925-0019`. The row
   keeps `Status = done`, its `TC-Refs` and its obligation.
 - Change: in `packages/qfai/tests/core/prototyping/iteration.test.ts`, the
   `TC-0012-0320` test's `layoutAntiPatternsDetected` fixture changed from

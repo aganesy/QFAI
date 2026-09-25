@@ -2959,7 +2959,7 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: integration
-- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0323).
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0323).
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Selector: `returns 2 when --target-url is missing at cycle 0`
 - RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/cli/commands/prototypingIterate.test.ts --testNamePattern='TC-0012-0326|returns 2 when --target-url is missing at cycle 0|returns 64 when the latest iter has nothing open and no anti-patterns' --reporter=verbose`
@@ -2971,7 +2971,7 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: integration
-- Reset by: `CR-20260925-0005` (option 1; re-scoped to TC-0012-0326). The case-ID selector named no case in its file, so the case was written with the id at the head of its title.
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0326). The case-ID selector named no case in its file, so the case was written with the id at the head of its title.
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Selector: `TC-0012-0326` (matches `TC-0012-0326: cycle 0 records the DESIGN.md digest that the lock carries`)
 - RED command (cwd `packages/qfai`): as TDD-0337
@@ -2983,7 +2983,7 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
-- Seeded by: `CR-20260925-0005` (option 1; TC-0012-0324).
+- Seeded by: `CR-20260925-0019` (option 1; TC-0012-0324).
 - Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
 - Selector: `returns 64 when the latest iter has nothing open and no anti-patterns`
 - RED command (cwd `packages/qfai`): as TDD-0337

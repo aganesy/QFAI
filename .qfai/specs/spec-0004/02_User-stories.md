@@ -7,14 +7,12 @@
 - US-0004-0020: canonical validators only in the production validate path
 - US-0004-0027: validate to enforce current `/qfai-prototyping` skill contracts and UI evidence paths
 - US-0004-0028: `qfai validate` to enforce that `.qfai/assistant/` only contains the 4 canonical layers (`constitution/`, `man…
-- US-0004-0029: `qfai validate` to verify the YAML frontmatter schema and check that `links: [...]` resolve to real specs/disc…
-- US-0004-0030: `qfai validate` to require non-empty `justification:` on every `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` findin…
-- US-0004-0031: `qfai validate` to surface `W-PENDING-PROMOTION` until a work-log decision is fully promoted (`07_Decisions.md…
+- US-0004-0030: `qfai validate` to require a non-empty `justification:` on every `R-REJECTED-READOPT` finding
 - US-0004-0032: `qfai validate` to emit `D-DEPRECATED-PATH` (with the sunset minor version named in-text) when legacy `.qfai/a…
 - US-0004-0033: `qfai validate` to surface `W-SKILL-DOC-BROKEN-REF` for SKILL.md references that don't resolve in the new layo…
 - US-0004-0034: each run to write to a profile-suffixed output path (`.qfai/report/validate-<profile>.json`) alongside an alwa…
 - US-0004-0035: CI to refuse merge when only one half of the SSOT-sync pair changed
-- US-0004-0036: `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-WORKLOG-…
+- US-0004-0036: `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the justification rule REQ-0036…
 - US-0004-0037: `qfai validate --profile saas-package` to PASS when the prototyping-profile validate PASSes, a DCON-005 design…
 - US-0004-0038: `auditProfile.ts` to accept both the legacy string-only `primary_tasks` form and the structured `{id, label, a…
 - US-0004-0039: a `check-pack-locations.mjs` CI lane wired into `pnpm ci:lint` to reject `review-*/` or `discussion-*/` direct…
@@ -40,17 +38,9 @@ As a maintainer, I want validate to enforce current `/qfai-prototyping` skill co
 
 As a release manager validating a v1.9.0 project, I want `qfai validate` to enforce that `.qfai/assistant/` only contains the 4 canonical layers (`constitution/`, `manifest/`, `catalog/`, `process/`), so that drift back to the legacy single-layer `steering/` is mechanically caught (REQ-0034).
 
-## US-0004-0029
-
-As an AI agent reading/writing work-log entries under `.qfai/steering/`, I want `qfai validate` to verify the YAML frontmatter schema and check that `links: [...]` resolve to real specs/discussions/entries, so that broken-link rot and ad-hoc schema drift are caught at gate time (REQ-0035, REQ-0039).
-
 ## US-0004-0030
 
-As a Reviewer-Gate consumer, I want `qfai validate` to require non-empty `justification:` on every `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` finding and to flag `kind: handoff` entries missing any of the 5 required body sections via `R-HANDOFF-INCOMPLETE`, so that reviewer findings are auditable and handoffs are operationally complete (REQ-0036, REQ-0042).
-
-## US-0004-0031
-
-As an engineer closing decision loops, I want `qfai validate` to surface `W-PENDING-PROMOTION` until a work-log decision is fully promoted (`07_Decisions.md` row + archive + `promoted-to` back-ref) AND to surface `W-WORKLOG-STALE` for `status: active` entries with `updated` older than 90 days, so that stale or unfinished decisions don't silently linger (REQ-0037, REQ-0038).
+As a Reviewer-Gate consumer, I want `qfai validate` to require a non-empty `justification:` on every `R-REJECTED-READOPT` finding, so that a re-adopted rejected option is always explained (REQ-0036).
 
 ## US-0004-0032
 
@@ -70,7 +60,7 @@ As a contributor changing either `findDesignMdViolations.ts` (scanner) or `gener
 
 ## US-0004-0036
 
-As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the existing `R-WORKLOG-DRIFT` justification contract), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).
+As a Reviewer-Gate consumer ingesting `R-PROMPT-SCANNER-DRIFT` findings, I want `qfai validate` to reject any such finding whose `justification:` is empty (mirroring the justification rule REQ-0036 states for `R-REJECTED-READOPT`), so that drift findings always name the modified file, the missing-counterpart file, and the unmatched contract clause (REQ-0125).
 
 ## US-0004-0037
 

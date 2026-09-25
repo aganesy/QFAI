@@ -237,6 +237,39 @@ the work orders below.
 - No wall-clock improvement is claimed here. The projected figures belong to Plan step 11, which
   owes captured before-and-after numbers under BR-0017-0030.
 
+## Capability split and coverage-density observations
+
+The capability split check derives expected spec names from list position. With
+`N` capabilities it expects the contiguous set `spec-0001` through
+`spec-000N`; it does not use a capability's declared number. A permanent
+reserved gap therefore becomes unsatisfiable when the count reaches it.
+`spec-0017` was a trailing reservation. Adding the seventeenth capability
+either used that reserved name or produced both `QFAI-SPLIT-103` (missing)
+and `QFAI-SPLIT-104` (extra). The slice policy makes reservations temporary:
+renumber a gap when the count reaches it. `OQ-0023` records the possible
+number-based check.
+
+An escalation made during the 2026-08-05 review claimed that
+`paths.testsDir` pointed to a missing repository-root `tests/` directory
+and that satisfying the ATDD gate required a user decision and a new root
+directory. That claim was false. The directory was tracked and held two
+Markdown annotation ledgers with 200 and 486 `QFAI:` annotations. The
+scanner's default glob included Markdown, and `spec-0001` cleared both ATDD
+gates from that directory. Remaining `QFAI-ATDD-111` and `-112` findings
+were annotation work for the ATDD and implementation stages. No SDD-stage
+user decision was outstanding on this point.
+
+`QFAI-COV-207` listed artifacts covered exactly once. The review gave each
+signal a disposition:
+
+| Signal | Disposition |
+| ------ | ----------- |
+| `spec-0017`: 66 business rules with one example each | Accepted. The rule-to-example mapping was intentionally one-to-one and index-aligned, as `05_Examples.md` and `09_delta.md` state. |
+| `spec-0017`: 50 examples with one test case each | Accepted. All 34 acceptance criteria had multiple test cases covering normal and error or boundary behaviour. The 16 examples with multiple cases owned distinct falsifying oracles. |
+| `spec-0003`: 21 acceptance criteria with one test case each | Pre-existing and outside the eight requirements absorbed in this change. All 12 criteria added by this change had at least two cases. |
+
+No density warning was accepted without review, and none required a new case.
+
 ## Final status
 
 - Final status: PASS
@@ -997,7 +1030,7 @@ Apply the approved UPDATE rows of the 2026-09-24 intent-driven entry Triage to s
 | 20 | architecture-reviewer (griller) | p2-w3-griller | grilling(2/agents): L14 The setup action on Windows | settled recommendation and cited specifications | Decision: A fact for the devops-ci-engineer to look up at design: whether `./.github/actions/setup` runs unchanged on `windows-latest`. If it does not, that is a finding before Phase 3, since BR-0017-0025 forbids an inline Windows preamble; reason: A fact the environment settles; disagreeing: none | PASS |
 | 21 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K1 regression_fix receipts | settled recommendation and cited specifications | Decision: Contract: `regressionFix: { testId, rerunRef, reviewRef }` on a `regression_fix` result, and `invalid-input` reason `regression-fix-receipt`. BR-0018-0039 unchanged; BR-0011-0019 names the field; TC-0018-0068 gains the refusal pair; reason: D18 names the same test, and only a field carries that; it mirrors `testFix`; disagreeing: none | PASS |
 | 22 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K2 Direct-exclusion seeds | settled recommendation and cited specifications | Decision: Rewrite ROUTE-044, ROUTE-045, ROUTE-022 and ROUTE-024 to cover the four missing direct-exclusion classes while keeping the 24 fault and 64 route seed counts; reason: REQ-0007 requires a routing seed for each excluded class. Those four seeds duplicate cases already carried by ROUTE-014, ROUTE-021 or ROUTE-031 after the user chose English-only prompts, so their slots can cover environment settings, SQL files, generated files and QFAI-owned skills or constitution. Each rewritten seed forbids `direct`; disagreeing: SA proposed recording a gap and adding no seed; rejected because it would leave four required classes untested | PASS |
-| 23 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K3/K4 Non-CREATE approvals in a run | settled recommendation and cited specifications | Decision: `Authorization-Ref` is valid only on CREATE rows. Other approval-required operations keep the Stage 1 human question; the answer reaches the next attempt through `authorizationRefs`, and the row copies `answeredBy@date` into `Approved By` for the existing validator check; reason: D5 and REQ-0042/0043 require a reference for the routing-time CREATE approval, while DR-0296 preserves the existing questions for the other operations. DPOL-04 requires a recorded human answer without requiring a second carrier on those rows; one CLI-VAL change removes an unreachable Binding branch; disagreeing: RA proposed a new question kind, operation and target fields, and a Binding branch for every approval; rejected as more mechanism than the request needs | PASS |
+| 23 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K3/K4 Non-CREATE approvals in a run | settled recommendation and cited specifications | Decision: `Authorization-Ref` is valid only on CREATE rows. Other approval-required operations keep the Stage 1 human question; the answer reaches the next attempt through `authorizationRefs`, and the row copies `answeredBy@date` into `Approved By` for the existing validator check; reason: D5 and REQ-0042/0043 require a reference for the routing-time CREATE approval, while DR-0299 preserves the existing questions for the other operations. DPOL-04 requires a recorded human answer without requiring a second carrier on those rows; one CLI-VAL change removes an unreachable Binding branch; disagreeing: RA proposed a new question kind, operation and target fields, and a Binding branch for every approval; rejected as more mechanism than the request needs | PASS |
 | 24 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K5 The shared-obligation Boundary rule | settled recommendation and cited specifications | Decision: **A new rule, BR-0013-0036** (AC-Refs AC-0013-0034): a seeded row on an obligation that already has a row names a `Boundary`, and each existing sibling lacking one gains its slug, with `Status` and `Evidence` unchanged. EX-0013-0028's `BR-Ref` names BR-0013-0028 and BR-0013-0036; reason: BR-0013-0028's title says seeding changes no existing row; the slug is the one change to an existing row, so as a bullet it would contradict its own BR; disagreeing: SA (a bullet on BR-0013-0028; not taken) | PASS |
 | 25 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K6 The owner of a missing environment | settled recommendation and cited specifications | Decision: Merged. Contract: CLI-WF `### Stage result` states `resolvingOwner`'s domain, a skill a plan names or `operator`. Obligation: BR-0014-0030 is **split**. Three repair kinds return `needs_repair` with `resolvingOwner` `qfai-sdd`, `qfai-atdd` or `qfai-implement`. A missing environment is not a repair: verify returns `blocked`, blocker `stage-blocked`, cleared by `operator`. AC-0014-0027 is reworded to match; reason: The field needs a domain the core can dispatch to, and the environment case already fits the blocker set (REQ-0039); disagreeing: none | PASS |
 | 26 | architecture-reviewer (griller) | p2c-griller | grilling(2c.1/agents): K7 A blocked seam-only result | settled recommendation and cited specifications | Decision: Contract, the seam paragraph: a `blocked` or `unrun` seam-only result blocks the run like any result; the parent acceptance attempt stays open; once `resume` clears it, `next` reissues the seam-only work order as a new attempt; a `needs_repair` seam result routes by its `debts` (R1). No BR changes; one TC in spec-0011; reason: What `next` issues is the core's behaviour; disagreeing: none | PASS |
