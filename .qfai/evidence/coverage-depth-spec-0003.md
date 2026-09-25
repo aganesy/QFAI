@@ -79,9 +79,9 @@ rather than text scans, and closed-set equality rather than presence. `TC-0003-0
 and their `Status` records the disagreement. In each the product moved and the pack did not. See
 Findings 2.
 
-Section "Every ❌ cell, named" accounts for all 176 of them in named groups whose coordinates are
+Section "Every ❌ cell, named" accounts for all 178 of them in named groups whose coordinates are
 fully enumerated, so that "one justification per `❌`" is checkable rather than asserted. Section
-"Every ⚠️ cell, named" does the same for all 130 partial scores, which the PASS criterion also
+"Every ⚠️ cell, named" does the same for all 133 partial scores, which the PASS criterion also
 requires a rationale for.
 
 ## What was measured, and how
@@ -157,6 +157,62 @@ How each cell of the two rows was scored:
 
 `AC-0003-0039` also names `US-0003-0010` and `US-0003-0020` in its `US-Refs`. The annotation binds this
 case to the test case, so it cannot answer either story, and neither story row was rescored.
+
+### The three rows added for the mode line
+
+`TC-0003-0071`, `TC-0003-0072`, `TC-0003-0073` and `BR-0003-0052` were read at revision `b0c0cdcac`,
+from `tests/integration/init/modeLine.test.ts` and the `TDD-0106` and `TDD-0107` entries of
+`.qfai/evidence/atdd-spec-0003.md`. The file carries one `QFAI:SPEC-0003` annotation per test case at
+its head and holds one `it` per test case, each titled with its ID. The Scope counts above describe
+the set scored before these rows; `TC-0003-0060` … `-0070`, `-0074` onward, and the business rules
+other than `BR-0003-0052` from `BR-0003-0050` onward are not scored in this file.
+
+Every case runs `runInit` in process and keeps each line that matches `/^Workflow mode: .*$/gm` from
+the captured output.
+
+| Test case | What it runs | What it asserts |
+| --- | --- | --- |
+| `TC-0003-0071` | `runInit` into an empty git repository with `yes: false` | the parsed config has no `workflow` key; no output line ends in `?`; the mode lines equal `["Workflow mode: active"]` |
+| `TC-0003-0072` | a fresh install, then a plain `runInit` | before the run the config has no `workflow:` line; after it the config bytes are equal; the mode lines equal `["Workflow mode: active"]` |
+| `TC-0003-0073` | four fresh installs, with `workflow.mode` appended as `active`, `shadow`, `off` and `bogus`; a plain `runInit` in each | config bytes equal; the mode lines equal the one expected line, `Workflow mode: "bogus" is invalid; expected active, shadow or off` for the invalid one; `process.exitCode` is unset or 0 |
+
+`TC-0003-0073`'s four boundaries share one `it`, which loops over them. A failure in one stops the
+loop there, so the cell marks below hold for every value that runs to completion.
+
+How each cell of the four rows was scored:
+
+| Coordinate | Mark | Why |
+| --- | --- | --- |
+| `TC-0003-0071` × EP | ✅ | One input partition, a fresh install without `--yes`, and both output partitions, the absent key and the mode line, are asserted. |
+| `TC-0003-0071` × NP | ✅ | `Type` is `normal`, and each of the three verify bullets has an assertion. |
+| `TC-0003-0071` × ER | n/a | `AC-0003-0042` and `EX-0003-0063` declare no failure outcome. |
+| `TC-0003-0071` × ED | ⚠️ | See "Every ⚠️ cell, named". |
+| `TC-0003-0071` × BV | n/a | No ordered or sized domain. |
+| `TC-0003-0071` × SV | n/a | The row plants no input beyond the empty directory, which is its partition. |
+| `TC-0003-0071` × ST | n/a | One run. |
+| `TC-0003-0071` × CO | n/a | `--yes` and stdin are two fixed conditions of one scenario, not varied against each other. |
+| `TC-0003-0071` × OS | ⚠️ | See "Every ⚠️ cell, named". |
+| `TC-0003-0072` × EP | ✅ | The upgrade-with-no-key partition is set up, and its precondition is asserted before the run. |
+| `TC-0003-0072` × NP | ✅ | `Type` is `normal`, and both verify bullets have an assertion. |
+| `TC-0003-0072` × ER | n/a | `EX-0003-0064` declares no failure outcome. |
+| `TC-0003-0072` × ED | ❌ | See Group 5. |
+| `TC-0003-0072` × BV | n/a | No ordered or sized domain. |
+| `TC-0003-0072` × SV | n/a | The absent key is the row's partition; the other shapes of a missing mode are scored under ED. |
+| `TC-0003-0072` × ST | ✅ | Install, then a plain upgrade. The state before is asserted, and the state after is compared byte for byte. |
+| `TC-0003-0072` × CO | n/a | No interacting conditions. |
+| `TC-0003-0072` × OS | ✅ | A byte comparison and an exact list equality. Deleting the mode-line call in `runInit`, or writing a `workflow` key, fails the case. |
+| `TC-0003-0073` × EP | ✅ | The valid partition is run through each of its three members, and the invalid partition through `bogus`. |
+| `TC-0003-0073` × NP | n/a | `Type` is `boundary`. |
+| `TC-0003-0073` × ER | n/a | An invalid value is named on the mode line and the run exits 0, so the row owns no kept failure. The `validate` finding for it belongs to spec-0018. |
+| `TC-0003-0073` × ED | ✅ | The invalid value runs to completion: exit 0 and an unchanged config are asserted for it as for the valid three, so init neither fails on nor repairs an invalid key. |
+| `TC-0003-0073` × BV | ⚠️ | See "Every ⚠️ cell, named". |
+| `TC-0003-0073` × SV | ❌ | See Group 5. |
+| `TC-0003-0073` × ST | n/a | The row declares no transition; each install is run once after its config is set. |
+| `TC-0003-0073` × CO | n/a | No interacting conditions. The mode crossed with upgrade conflicts belongs to `BR-0003-0055`. |
+| `TC-0003-0073` × OS | ✅ | An exact line per value, a byte comparison and the exit code. Printing a different mode, dropping the invalid wording, rewriting the config or setting exit 1 each fails the case. |
+| `BR-0003-0052` × Positive | ✅ | No key written, no question asked and the mode named are asserted by `TC-0003-0071` and `-0072`. |
+| `BR-0003-0052` × Negative | n/a | The rule rejects nothing: an invalid value is reported with exit 0. That report is a branch of the rule, scored under Conditional. |
+| `BR-0003-0052` × Conditional | ✅ | Absent key → `active` (`TC-0003-0071`, `-0072`); a valid value → that value; an invalid value → named invalid (`TC-0003-0073`). Each branch is taken. |
 
 ### The four cases moved into an integration module
 
@@ -290,30 +346,33 @@ on `US-0003-0023`, `-0024` and `-0026`.
 | TC-0003-0057 | ✅ | ✅ | ❌ | ✅ | n/a | ❌ | n/a | ✅ | ✅ | ⚠️ |
 | TC-0003-0058 | ⚠️ | n/a | ⚠️ | ✅ | n/a | ✅ | n/a | ⚠️ | ⚠️ | ⚠️ |
 | TC-0003-0059 | ✅ | ✅ | n/a | ✅ | n/a | n/a | n/a | n/a | ✅ | ✅ |
+| TC-0003-0071 | ✅ | ✅ | n/a | ⚠️ | n/a | n/a | n/a | n/a | ⚠️ | ⚠️ |
+| TC-0003-0072 | ✅ | ✅ | n/a | ❌ | n/a | n/a | ✅ | n/a | ✅ | ⚠️ |
+| TC-0003-0073 | ✅ | n/a | n/a | ✅ | ⚠️ | ❌ | n/a | n/a | ✅ | ⚠️ |
 
-Totals across the nine scored depth columns, 774 cells (86 rows × 9): **✅ 199 / ⚠️ 113 / ❌ 150**,
-with `n/a` 312.
+Totals across the nine scored depth columns, 801 cells (89 rows × 9): **✅ 208 / ⚠️ 116 / ❌ 152**,
+with `n/a` 325.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 86 rows, for reading only, is ✅ 10 / ⚠️ 42 / ❌ 34.
+grand total at the end. Its distribution across the 89 rows, for reading only, is ✅ 10 / ⚠️ 45 / ❌ 34.
 
-Per scored depth column, 86 cells each:
+Per scored depth column, 89 cells each:
 
 | Column | ✅ | ⚠️ | ❌ | n/a |
 | --- | --- | --- | --- | --- |
-| Equivalence partitions | 37 | 27 | 22 | 0 |
-| Normal path | 27 | 17 | 19 | 23 |
-| Error path | 10 | 5 | 14 | 57 |
-| Edge cases | 34 | 12 | 22 | 18 |
-| Boundary values | 11 | 9 | 9 | 57 |
-| Special values | 13 | 3 | 12 | 58 |
-| State transitions | 13 | 4 | 13 | 56 |
-| Combinatorial | 15 | 12 | 16 | 43 |
-| Oracle strength | 39 | 24 | 23 | 0 |
+| Equivalence partitions | 40 | 27 | 22 | 0 |
+| Normal path | 29 | 17 | 19 | 24 |
+| Error path | 10 | 5 | 14 | 60 |
+| Edge cases | 35 | 13 | 23 | 18 |
+| Boundary values | 11 | 10 | 9 | 59 |
+| Special values | 13 | 3 | 13 | 60 |
+| State transitions | 14 | 4 | 13 | 58 |
+| Combinatorial | 15 | 12 | 16 | 46 |
+| Oracle strength | 41 | 25 | 23 | 0 |
 
 The shape of that table is the pack's central fact. The `❌` cells in `Normal path` and
-`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-seven rows
-have a passing normal path and thirty-nine a strong oracle. `Error path` is `n/a` on 57 rows because
+`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-nine rows
+have a passing normal path and forty-one a strong oracle. `Error path` is `n/a` on 60 rows because
 most rows own no kept failure, and twelve of the fourteen `Error path` `❌` cells are on rows with a
 credited case.
 
@@ -377,23 +436,24 @@ which the placeholder `TC-0003-0017` is the example route for.
 | BR-0003-0047 | ✅ | n/a | ✅ | TC-0003-0056, TC-0003-0057 | ✅ |
 | BR-0003-0048 | ❌ | ⚠️ | ❌ | TC-0003-0058 | ❌ |
 | BR-0003-0049 | ✅ | n/a | n/a | TC-0003-0059 | ✅ |
+| BR-0003-0052 | ✅ | n/a | ✅ | TC-0003-0071, TC-0003-0072, TC-0003-0073 | ✅ |
 
-Totals across the three scored columns, 147 cells: **✅ 44 / ⚠️ 17 / ❌ 26**, with `n/a` 60.
+Totals across the three scored columns, 150 cells: **✅ 46 / ⚠️ 17 / ❌ 26**, with `n/a` 61.
 
-`Status` here is likewise a row verdict and is not counted. Its distribution across the 49 rows is
-✅ 20 / ⚠️ 9 / ❌ 20.
+`Status` here is likewise a row verdict and is not counted. Its distribution across the 50 rows is
+✅ 21 / ⚠️ 9 / ❌ 20.
 
 `Negative case` is scored only where the rule or its example declares a failure outcome — a
 rejection, an exit 1, an error, a refusal, a closed stop. A rule stated as a prohibition with no
 rejection mechanism ("leaves no floating reference", "is never pruned") is scored as its positive
-case, which is why 36 of the 49 rows are `n/a` in that column. `Conditional branches` is scored only
+case, which is why 37 of the 50 rows are `n/a` in that column. `Conditional branches` is scored only
 where the rule states two or more branches with different outcomes; 24 rules state one.
 
 ## Every ❌ cell, named
 
-The matrix carries **150** `❌` scored cells and the business rule table carries **26** — **176 in
+The matrix carries **152** `❌` scored cells and the business rule table carries **26** — **178 in
 all**. They are accounted for below in six groups. Every group names every coordinate it covers and
-states its count, and the six counts sum to 176:
+states its count, and the six counts sum to 178:
 
 | Group | Cells |
 | --- | --- |
@@ -401,9 +461,9 @@ states its count, and the six counts sum to 176:
 | 2. Thirteen test cases answered only by source-text reads | 57 |
 | 3. Two coverage placeholders with no test | 6 |
 | 4. Remaining cells of the stories that have a case | 42 |
-| 5. Remaining cells of the test cases that have a case | 15 |
+| 5. Remaining cells of the test cases that have a case | 17 |
 | 6. Business rule scored columns | 26 |
-| **Total** | **176** |
+| **Total** | **178** |
 
 Column abbreviations in the tables below: EP equivalence partitions, NP normal path, ER error path,
 ED edge cases, BV boundary values, SV special values, ST state transitions, CO combinatorial, OS
@@ -566,7 +626,7 @@ failure, boundary, special value, sequence or combination of its own.
 | `US-0003-0028` | CO | `EX-0003-0046` plants profile and threshold together; this layer plants the profile alone. |
 | | | **42** |
 
-### Group 5 — remaining cells of the test cases that have a case (15 cells)
+### Group 5 — remaining cells of the test cases that have a case (17 cells)
 
 | Row | Column | Why `❌` |
 | --- | --- | --- |
@@ -585,7 +645,9 @@ failure, boundary, special value, sequence or combination of its own.
 | `TC-0003-0056` | CO | Result × scope output — the one exception `BR-0003-0048` states — is in the unannotated `it.each` at line 123. |
 | `TC-0003-0057` | ER | The executing verdict cases are the unannotated `it.each` at line 202. |
 | `TC-0003-0057` | SV | The empty and unknown results are in the same unannotated `it.each`. |
-| | | **15** |
+| `TC-0003-0072` | ED | `AC-0003-0042` names an upgrade over a config with no `workflow.mode` key, which includes a `workflow` mapping that holds no `mode`. `readWorkflowMode` reads that shape as `active` through its own branch. The case plants only a config with no `workflow` key at all, so that branch is never run. |
+| `TC-0003-0073` | SV | Only `bogus`, a plain unknown string, stands for an invalid value. Nothing plants an empty `mode:` (YAML null), a non-string such as `mode: 1`, or a scalar `workflow: active`. For the scalar, `configuredWorkflowMode` returns the `workflow` value itself, and that branch is never run. |
+| | | **17** |
 
 ### Group 6 — the 26 ❌ cells of the business rule scored columns
 
@@ -630,10 +692,10 @@ failure, boundary, special value, sequence or combination of its own.
 
 ## Every ⚠️ cell, named
 
-113 scored depth cells in the matrix and 17 scored cells in the business rule table are `⚠️` —
-**130 in all**. The PASS criterion requires a documented rationale for each, so each is named here.
+116 scored depth cells in the matrix and 17 scored cells in the business rule table are `⚠️` —
+**133 in all**. The PASS criterion requires a documented rationale for each, so each is named here.
 
-### Matrix depth cells (113)
+### Matrix depth cells (116)
 
 | Coordinate | Rationale |
 | --- | --- |
@@ -750,6 +812,9 @@ failure, boundary, special value, sequence or combination of its own.
 | `TC-0003-0058` × ER | Every non-success result fails the document aggregate; the other two aggregates are not exercised. |
 | `TC-0003-0058` × CO | The scope output is unset in every run, so the scope exception is not crossed. |
 | `TC-0003-0058` × OS | The checker is test-owned; the product half is the unmodified document body. |
+| `TC-0003-0071` × ED | The row runs init with stdin closed. The case calls `runInit` in process with `yes: false` and leaves the test worker's stdin as it is. Init reads no stdin today, so nothing changes now, but a prompt added later would meet an open stdin here. |
+| `TC-0003-0071` × OS | The key check parses the YAML, and the mode-line check is an exact list equality. The no-prompt bullet is checked only by `/\?\s*$/m`, so a prompt that does not end in `?`, such as `Mode [active]:` or `(y/N)`, passes. |
+| `TC-0003-0073` × BV | All three valid members are run, and one value outside the set. That value, `bogus`, is far from every member. No near miss such as `Active` or `activ` is planted, which is where a case-insensitive or prefix match would slip through. |
 
 ### Business rule table (17)
 
@@ -857,8 +922,8 @@ six above it.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 243 / ⚠️ 130 / ❌ 176**, with `n/a 372`, across all 921 scored cells — 774 matrix depth cells and
-147 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
+**✅ 254 / ⚠️ 133 / ❌ 178**, with `n/a 386`, across all 951 scored cells — 801 matrix depth cells and
+150 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
 Three kinds of work would move the `❌` cells, and they are different in kind:

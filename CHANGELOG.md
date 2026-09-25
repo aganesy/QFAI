@@ -35,6 +35,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a pool block, and `vite` is declared as the peer the runner requires
   instead of being resolved for it. The supported Node range is unchanged.
 
+- **Two spec-0003 mode-line rows now carry the reviews their waiver skipped**
+  (#2287). `TDD-0106` and `TDD-0107` had closed at `exception` with per-row
+  review waived. Each now has a falsifiability run with its RED and GREEN gated
+  by `qa-gatekeeper`, a completion review and a code quality review, and is
+  `done`. Both leave waiver `WVR-20260925-03`. `TDD-0108` stays under the
+  waiver: its one case covers four boundaries, which must be split first.
+
 - **The type checker moves to TypeScript 6.** The seventh major ships the
   compiler as a native binary and no longer exposes the classic compiler API
   from its main entry, which the test tree and the declaration build both read;
