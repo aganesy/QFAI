@@ -2065,6 +2065,10 @@ tree from that commit and the edit above.
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate: falsifiability, rebuilt mutated tree working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60 on 7937fad2121f5174c479fa1eefcc4cb9f3d494e3; build-phase GREEN + oracle proof: reviewed revision 7937fad2121f5174c479fa1eefcc4cb9f3d494e3, re-run at HEAD 3cf22bdec841fe578c28b8ebff7082232d6e1f95)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate: rebuilt working-tree+5f277bbe… with HEAD taken as 7937fad21 matches; mutant release.yml SHA-256 5d3969fd…edb781; assertion at spec0017SliceAlignment.test.ts:19:73 labelled release.yml#gate-tests, row case only, 1 failed | 3 skipped (4); RED test hash 4f6607d4… recomputes. Build-phase GREEN and oracle proof: selector 1 passed | 3 skipped (4), whole file 4/4 at 3cf22bdec. Gate taken after the ledger had moved, on the rebuilt tree
 
+- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed; the row goes back for a new round
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
+
 ### TDD-0069
 
 - TDD-ID: TDD-0069
@@ -2386,8 +2390,8 @@ three review-phase gates were not run here.
 | 33 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` step 3c mutation of `release.yml:515`, revert and restored GREEN | #tdd-0062 | Round 2 | PASS |
 | 34 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` refactor verify over the whole test file on the committed tree | #tdd-0062 | Refactor verify fields | PASS |
 | 35 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: `TDD-0062` RED gate on the rebuilt falsifiability tree, and the build-phase GREEN | #tdd-0062 | qa-gatekeeper fields | PASS |
-| 36 | completion-reviewer | not routed | /qfai-implement: `TDD-0062` completion review | #tdd-0062 | - | PENDING |
-| 37 | implementation-reviewer | not routed | /qfai-implement: `TDD-0062` code review | #tdd-0062 | - | PENDING |
+| 36 | completion-reviewer | completion-reviewer | /qfai-implement: `TDD-0062` completion review, attempt 1 | #tdd-0062 | review-20260925130000000 <!-- qfai:not-a-citation --> | PASS |
+| 37 | implementation-reviewer | implementation-reviewer | /qfai-implement: `TDD-0062` code review, attempt 1 | #tdd-0062 | review-20260925130000000 <!-- qfai:not-a-citation --> | REVISE |
 
 ## Execution logs
 
