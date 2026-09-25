@@ -84,6 +84,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0002's coverage record matches its re-derived pack** (#2313). The
+  record still scored two rules the pack no longer states and a ledger without
+  story rows. It now scores the seven stories, five test cases and four
+  business rules the pack holds today. The six stories with no acceptance test
+  are named as open. No spec obligation, test or ledger row changed.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

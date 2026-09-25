@@ -2,9 +2,15 @@
 
 ## Objective
 
-Carry the proof for the one `Integration` row of this spec's ledger whose test
-could be identified. The pack's other rows are not backfilled here, and the
-reason is recorded under Gaps.
+Two runs have written here.
+
+- The first carried the proof for `TDD-0001`, the one `Integration` row whose
+  test could be identified then.
+- The run started 2026-09-25T19:23:36.331Z regenerates the coverage records after
+  `CR-20260912-0003` (option 1) re-derived the pack and its ledger. That is
+  the record half of the request's approved action 9. The other half, the
+  tests the six `todo` E2E rows owe, is not done, so action 9 stays open. The
+  run writes no test and advances no row.
 
 ## Inputs reviewed (files/paths)
 
@@ -14,7 +20,25 @@ reason is recorded under Gaps.
 - `packages/qfai/tests/core/sddPreflight.test.ts`
 - `packages/qfai/src/core/discussionPack.ts`
 
+Run started 2026-09-25T19:23:36.331Z, in addition:
+
+- `.qfai/specs/spec-0002/01_Spec.md` to `07_Decisions.md`, and `09_delta.md`
+- `.qfai/decisions/CR-20260912-0003-spec-0002-states-two-rules-the-product-replaced.md`
+- `.qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md`
+- The ten test files listed under Commands executed
+
 ## Decisions made (with rationale)
+
+Run started 2026-09-25T19:23:36.331Z: the run regenerates the two coverage
+records and writes no test. Action 9 of `CR-20260912-0003` asks for both: the
+records, and the tests for every ATDD-owned row still owed. This run does the
+records only. The tests for `TDD-0013`, `-0014`, `-0015`, `-0017`, `-0018`
+and `-0019` are still owed, so action 9 stays open, and the six rows stay at
+`todo` under Gaps. The reset rows `TDD-0008`, `-0009`, `-0012` and
+`-0016` already have tests and are at `exception` under `DR-0298`, so they owe
+this stage nothing.
+
+First run:
 
 `TDD-0001` names `TC-0002-0001`: a discussion pack of fifteen files passes
 readiness with no required-file issue. The row's `Test file` and `Selector`
@@ -33,7 +57,33 @@ The RED cannot be observed — the implementation shipped long before this
 record — so the row takes the falsifiability path, and the mutation below is
 what that path asks for.
 
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-25T19:23:36.331Z
+
+Preflight: confidence high
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+
+No session was opened. The spec, the ledger and the approved action are settled
+input, and the run's work is to score them.
+
 ## Work performed (what changed, where)
+
+Run started 2026-09-25T19:23:36.331Z:
+
+- `.qfai/evidence/coverage-depth-spec-0002.md` — regenerated from the pack as
+  option 1 of `CR-20260912-0003` leaves it: seven active stories, five active
+  test cases and four active business rules. Both tables were re-scored from
+  the tests that carry each obligation, both totals recounted, every `❌` and
+  `⚠️` cell named, and the findings rewritten.
+- This file — this run's grilling block, the totals under
+  `## Coverage Depth Matrix`, the work orders, and the gaps.
+
+No test, ledger row or spec file changed.
+
+First run:
 
 - `.qfai/specs/spec-0002/tdd/test-list.md` — `TDD-0001`'s `Test file`,
   `Selector` and `Evidence` corrected. `TDD-0011`'s `Selector` and `Evidence`
@@ -48,31 +98,67 @@ revision `84081298686311832c7e7ac3b7da08eb542b40b0`. The mutation was reverted
 from a copy of the pre-mutation bytes, and the tree re-addressed afterwards to
 confirm it had returned to the clean value.
 
-| Run                       | Command                                                                                                                                     | Result               |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| `TDD-0001` GREEN          | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 26 passed            |
-| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 1 failed, 25 passed  |
-| Refactor verify           | `npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts`                                                    | 36 passed            |
-| Checkpoint                | `npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'` | 4601 passed          |
+| Run                       | Command                                                                                                                                     | Result              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `TDD-0001` GREEN          | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 26 passed           |
+| `TDD-0001` falsifiability | `npx vitest run tests/core/sddPreflight.test.ts`                                                                                            | 1 failed, 25 passed |
+| Refactor verify           | `npx vitest run tests/core/sddPreflight.test.ts tests/validators/uix/threeLayer.test.ts`                                                    | 36 passed           |
+| Checkpoint                | `npx vitest run --project core --project validators --exclude 'tests/core/prFixMonitor.test.ts' --exclude 'tests/core/prMergePlan.test.ts'` | 4601 passed         |
+
+Run started 2026-09-25T19:23:36.331Z, each file run alone from `packages/qfai` with
+`NO_COLOR=1 node node_modules/vitest/vitest.mjs run <file> --reporter=dot`:
+
+| File                                                           | Result    |
+| -------------------------------------------------------------- | --------- |
+| `tests/core/sddPreflight.test.ts`                              | 23 passed |
+| `tests/validators/uix/threeLayer.test.ts`                      | 10 passed |
+| `tests/integration/validatorConvergenceIntegration.test.ts`    | 7 passed  |
+| `tests/integration/discussionSkillTemplateIntegration.test.ts` | 24 passed |
+| `tests/e2e/discussionHardeningE2E.test.ts`                     | 2 passed  |
+| `tests/e2e/spec0002PlannerFirstE2E.test.ts`                    | 1 passed  |
+| `tests/assets/assets.test.ts`                                  | 94 passed |
+| `tests/assets/sddStage0PrototypingOptional.test.ts`            | 12 passed |
+| `tests/assets/designDirectionInterview.test.ts`                | 12 passed |
+| `tests/integration/sddOptionalArtifactPreflight.test.ts`       | 3 passed  |
+
+Scoped gate, from the repository root against the built package:
+`node packages/qfai/dist/cli/index.cjs validate --profile atdd --fail-on error --spec spec-0002`
+exits 1 with `error=9`. All nine are `QFAI-TEST-003` (`describe.skip`) in
+`packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts`,
+`packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts` and
+`packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts`.
+None names a spec-0002 obligation. The one spec-0002 finding is
+`QFAI-ATDD-119` (`info`): nine obligations are covered by an annotation carrier
+alone — `US-0002-0001`, `-0002`, `-0003`, `-0008`, `-0009`, `-0010`, and
+`TC-0002-0001`, `-0009`, `-0011`.
 
 ## Test volume estimate
 
-Not applicable. This run authored no test; it records proof for a row whose
-test already exists.
+Not applicable to either run. Neither authored a test.
 
 ## Coverage obligations checklist
 
-Unchanged by this run. The spec's obligations and their coverage are scored in
-the Coverage Depth Matrix below.
+Scored per obligation in the Coverage Depth Matrix below. In short:
+
+| Obligation                                                  | Covered by                                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `US-0002-0005`                                              | `packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts` (`TDD-0016`)                           |
+| `US-0002-0001`, `-0002`, `-0003`, `-0008`, `-0009`, `-0010` | No test; `TDD-0013`, `-0014`, `-0015`, `-0017`, `-0018`, `-0019` are `todo`                      |
+| `TC-0002-0001`, `-0008`, `-0009`, `-0010`, `-0011`          | A passing test each; three are carrier-only for placement or annotation reasons the matrix names |
+| `CON-API`, `CON-DB`                                         | None referenced by this spec                                                                     |
 
 ## Ledger rows advanced
 
-No row changed status. The row below was already `done`; this run supplies the
-evidence its cell points at.
+No run recorded here moved a row's status. `TDD-0001` was already `done` when
+its evidence was written. `TDD-0008`, `-0009` and `-0016` were closed at
+`exception` under `DR-0298` by `/qfai-implement`, which wrote their sections.
 
-| TDD-ID     | Obligation     | Layer       | RED provenance | Status |
-| ---------- | -------------- | ----------- | -------------- | ------ |
-| `TDD-0001` | `TC-0002-0001` | integration | falsifiability | done   |
+| TDD-ID     | Obligation     | Layer       | RED provenance   | Status    |
+| ---------- | -------------- | ----------- | ---------------- | --------- |
+| `TDD-0001` | `TC-0002-0001` | integration | falsifiability   | done      |
+| `TDD-0008` | `TC-0002-0008` | integration | none (`DR-0298`) | exception |
+| `TDD-0009` | `TC-0002-0009` | integration | none (`DR-0298`) | exception |
+| `TDD-0016` | `US-0002-0005` | E2E         | none (`DR-0298`) | exception |
 
 ### TDD-0001
 
@@ -156,20 +242,37 @@ did not run.
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
-Totals: ✅ 11 / ⚠️ 17 / ❌ 91, with 1 not applicable, across 120 scored cells —
+Totals: ✅ 23 / ⚠️ 19 / ❌ 41, with n/a 37, across 120 scored cells —
 108 matrix depth cells (12 rows × 9 columns) and 12 business rule cells
 (4 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
-every total.
+every total. The 16 row verdicts read ✅ 0 / ⚠️ 10 / ❌ 6.
 
 ## Work Orders Summary
 
-| Role                | Task                                              | Status (PASS/REVISE/PENDING) |
-| ------------------- | ------------------------------------------------- | ---------------------------- |
-| test-design-analyst | Score the twelve obligations and write the matrix | PASS                         |
+| Step | Role (sub-agent)    | Agent instance        | Task title                                                                          | Input (refs)                                                    | Output (refs)                              | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------- | --------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------ | ---------------------------- |
+| 1    | test-design-analyst | test-design-analyst   | Score the twelve obligations and write the matrix (first run)                       | 02_User-stories.md, 06_Test-Cases.md, 04_Business-Rules.md      | .qfai/evidence/coverage-depth-spec-0002.md | PASS                         |
+| 2    | test-design-analyst | test-design-analyst#2 | Regenerate the matrix after CR-20260912-0003 (run started 2026-09-25T19:23:36.331Z) | CR-20260912-0003 action 9; 01-07 of spec-0002; tdd/test-list.md | .qfai/evidence/coverage-depth-spec-0002.md | PASS                         |
+| 3    | -                   | -                     | grilling(-@2026-09-25T19:23:36.331Z/none): none                                     | -                                                               | -                                          | PASS                         |
 
 ## Cross-spec obligations
 
-None.
+The scoped gate exits 1 on nine `QFAI-TEST-003` findings, one row each. The
+three files sit outside the `tests/<layer>/spec-NNNN/**` layout, so each owner
+is read from the `QFAI:SPEC-NNNN` annotation the file carries, as for a
+`QFAI-TEST-001` stub.
+
+| Finding       | Contract ID | Test file                                                                     | Owning spec | Why not this stage's work                                                                      | Closed by                                            |
+| ------------- | ----------- | ----------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts:41      | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts:67      | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0004SaasPackageAndPackLocationE2E.test.ts:88      | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts:45 | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts:62 | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/integration/spec0004SaasPackageAndPackLocation.test.ts:77 | spec-0004   | A `describe.skip` in spec-0004's acceptance test; this stage may not edit another spec's test. | spec-0004's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts:41               | spec-0006   | A `describe.skip` in spec-0006's acceptance test; this stage may not edit another spec's test. | spec-0006's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts:60               | spec-0006   | A `describe.skip` in spec-0006's acceptance test; this stage may not edit another spec's test. | spec-0006's next `/qfai-atdd` run, or `/qfai-verify` |
+| QFAI-TEST-003 | -           | packages/qfai/tests/e2e/spec0006DoctorRemediationE2E.test.ts:78               | spec-0006   | A `describe.skip` in spec-0006's acceptance test; this stage may not edit another spec's test. | spec-0006's next `/qfai-atdd` run, or `/qfai-verify` |
 
 ## Execution logs
 
@@ -178,25 +281,41 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-Four of the pack's six ledger rows are not backfilled, and none of them can be
-until the row is true.
+What stays open after this run, with its owner. The matrix names every open
+cell under `## Every ❌ cell, named` and every finding under `## Findings`.
 
-| Row                    | What stops it                                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TDD-0008`             | `TC-0002-0008` asks that a planner-first pass be preserved. Nothing in the package emits a planner-first finding.                                                                     |
-| `TDD-0009`, `TDD-0010` | `TC-0002-0009` asks that a planner-first violation be emitted. Same: the validator that did so was retired.                                                                           |
-| `TDD-0012`             | `TC-0002-0011` names README and skill wording. The row names `threeLayer.test.ts`, which reads neither. The case that reads both is in `assets.test.ts`, which the row does not name. |
-
-`TDD-0009` and `TDD-0010` also share one obligation with no `Boundary` between
-them, which is a separate finding on the ledger.
-
-One test in the pack's neighbourhood passes without proving anything:
-`packages/qfai/tests/validators/uix/threeLayer.test.ts`, `non-UI skip`. Removing
-the non-UI guard from the function it calls leaves it green, because that
-function returns nothing for an absent sidecar either way. The case that does
-discriminate is `skips non-UI packs`, and `TDD-0011` now names it.
+| Gap                                                                                                                                                                                           | Owner                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Six E2E rows at `todo` with no test: `TDD-0013`, `-0014`, `-0015`, `-0017`, `-0018`, `-0019` (matrix finding 1)                                                                               | The rest of `CR-20260912-0003` action 9: a later `/qfai-atdd spec-0002` run                  |
+| Four ❌ depth cells on rows that are closed: `TC-0002-0001` Special values (`TDD-0001`), `TC-0002-0009` Combinatorial (`TDD-0009`), `TC-0002-0010` Edge cases and Special values (`TDD-0011`) | The row that owes each; a later `/qfai-atdd spec-0002` run                                   |
+| `TC-0002-0001`, `-0009`, `-0011` are carrier-only (matrix finding 2)                                                                                                                          | A later `/qfai-atdd spec-0002` run, or a Change Request where a `Level` or `Layer` must move |
+| The `TC-0002-0010` annotation sits on a case that cannot fail on the non-UI guard (matrix finding 3)                                                                                          | A later `/qfai-atdd spec-0002` run                                                           |
+| A test title claims a comparison it does not make, and one annotated case accepts the replaced wording (matrix findings 4, 5)                                                                 | `/qfai-implement spec-0002`, which owns `TDD-0012`                                           |
+| The `TDD-0010` reservation names a retained test case no file contains (matrix finding 6)                                                                                                     | `/qfai-implement spec-0002`, which owns the ledger                                           |
+| `QFAI-DPACK-002` is asserted by no test (matrix finding 7)                                                                                                                                    | `/qfai-implement spec-0002`                                                                  |
+| The shipped completion matrix's `## CLI Packs` section cites a condition 7 that does not exist (matrix finding 8)                                                                             | A product fix to `discussion-completion-matrix.md`, outside this stage                       |
+| `TDD-0008`, `-0009`, `-0012`, `-0016` record no failing run before their pass (matrix finding 9)                                                                                              | A review pass that reopens them, as `DR-0298` provides                                       |
+| `TDD-0001`: `QFAI-TDDLIST-008` (the recorded RED test hash no longer matches its manifest) and `QFAI-TDDLIST-023` (`done` on a carrier-only case)                                             | `/qfai-implement spec-0002`                                                                  |
+| `CR-20260912-0003` action 7 re-verifies `TDD-0011` in place                                                                                                                                   | `/qfai-implement spec-0002`                                                                  |
+| The scoped gate exits 1 on the nine findings under Cross-spec obligations                                                                                                                     | spec-0004 and spec-0006                                                                      |
 
 ## Final status
 
-PASS for the row recorded here. The pack is not clean; the rows above are
-listed rather than claimed.
+Run started 2026-09-25T19:23:36.331Z: FAIL for the spec-wide ATDD Definition
+of Done. The coverage records this run regenerated are confirmed.
+
+- Not done: six stories have no acceptance test, so the rest of
+  `CR-20260912-0003` action 9 stays open.
+- Not a cross-spec pass: the scoped gate exits 1 on `QFAI-TEST-003`, which is
+  outside the codes that admit `PASS with cross-spec obligations`. The nine
+  findings are recorded against spec-0004 and spec-0006 above.
+- Confirmed by `completion-reviewer` and `qa-gatekeeper` in
+  `review-20260925200351792`. Round 1 returned REVISE from both. Round 2
+  returned PASS from both, on reviewed revision
+  `73eee8ab19b466c382b6b1f103630b80f3553e2a` with audited evidence hash
+  `467abc2d6b0334c6d4ebf3e131eab6df4821e716522141b651f67ae2082eead9`.
+
+Review pack: `.qfai/review/review-20260925200351792/` <!-- qfai:not-a-citation .qfai/review/review-20260925200351792/ -->
+Review pack seal: 6bf87c730c427a96af10dcf3676014eea17b045b9aa15a0f9acb04773bf5bab1
+
+First run: PASS for the row recorded here.
