@@ -651,13 +651,13 @@ jobs:
           QFAI_TEMP_ROOT: ${{ runner.temp }}\qfai tmp
         run: New-Item -ItemType Directory -Force -Path $env:QFAI_TEMP_ROOT | Out-Null
       - uses: ./.github/actions/setup
-      - name: Build qfai on the Windows runner
-        run: pnpm -C packages/qfai build
       - name: Run the Windows parity suites
         env:
           TEMP: ${{ runner.temp }}\qfai tmp
           TMP: ${{ runner.temp }}\qfai tmp
         run: pnpm -C packages/qfai test:windows-parity
+      - name: Build qfai on the Windows runner
+        run: pnpm -C packages/qfai build
 
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`
