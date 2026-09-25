@@ -9,6 +9,10 @@ Use this document to keep SKILL bodies compact. Skill files should reference thi
 - The orchestrator may create work orders, delegate tasks, integrate outputs, and present results.
 - The orchestrator must not generate the primary artifact first draft.
 - The orchestrator must not self-approve or act as reviewer for convenience.
+- The orchestrator is not required to block while a delegated work order runs. Where the host runs delegation in the background — the call that starts it returns at once, the finished result arrives as a later message, and the orchestrator can wait for a result on purpose —
+  it may carry on with its own work meanwhile: planning, preparing the next work order, and integrating outputs already returned.
+- That work stays the orchestrator's own. It never includes the delegated work itself, the primary artifact or a review, and the two prohibitions above bound it.
+- Where the stage's ledger or a seam makes an ordering mandatory, `.qfai/assistant/skills/qfai-implement/references/parallelization-policy.md` governs, and carrying on does not override it.
 
 ### Capability Probe (MUST)
 

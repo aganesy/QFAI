@@ -301,6 +301,40 @@ describe("assets guardrails", () => {
     }
   });
 
+  it("ensures shared delegation baseline lets the orchestrator work while a delegation runs", async () => {
+    const baselinePath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "constitution",
+      "shared-skill-delegation-baseline.md",
+    );
+    const baseline = await readFile(baselinePath, "utf-8");
+    const start = baseline.indexOf("### Orchestrator Protocol (MUST)");
+    const end = baseline.indexOf("### Capability Probe (MUST)");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const protocol = baseline.slice(start, end);
+
+    const requiredPhrases = [
+      // The permission itself: without it "delegate, then integrate" reads as
+      // an order and the orchestrator blocks on every delegation.
+      "The orchestrator is not required to block while a delegated work order runs.",
+      // The three host capabilities the permission depends on.
+      "the call that starts it returns at once",
+      "the finished result arrives as a later message",
+      "the orchestrator can wait for a result on purpose",
+      // The bounds: carrying on is not doing the delegated work, and an
+      // ordering another document makes mandatory still holds.
+      "It never includes the delegated work itself, the primary artifact or a review",
+      "The orchestrator must not generate the primary artifact first draft.",
+      "parallelization-policy.md` governs, and carrying on does not override it.",
+    ];
+
+    for (const phrase of requiredPhrases) {
+      expect(protocol).toContain(phrase);
+    }
+  });
+
   it("ensures shared operating baseline defines gate failure autorepair protocol", async () => {
     const baselinePath = path.join(
       templateQfaiDir,
