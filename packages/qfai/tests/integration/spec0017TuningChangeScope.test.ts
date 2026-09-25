@@ -29,14 +29,20 @@ import type { Dirent } from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DECLARED_START, projectKnobs } from "../../vitest.knobs";
-import workspace from "../../vitest.workspace";
+import { CONCURRENCY_ENV, DECLARED_START, WORKERS_ENV } from "../../vitest.knobs";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
 const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+
+/**
+ * The value every project declares, re-derived here rather than imported so the baseline is not read
+ * out of the file under test: the declared starting value, held to the cores the machine has. The
+ * measurement behind the cap sits on the declaration itself.
+ */
+const DECLARED_CONCURRENCY = Math.min(DECLARED_START, availableParallelism());
 
 /** A GitHub Actions run identifier: a long bare integer. */
 const RUN_ID = /\b\d{9,14}\b/g;
@@ -56,11 +62,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 interface Project {
   readonly name: string;
   readonly includes: readonly string[];
+  /** Each setting that moves the project off the declared value, written `axis=value`. */
   readonly departures: readonly string[];
 }
 
-function readProjects(): Project[] {
-  const entries: unknown = workspace;
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.resetModules();
+});
+
+/**
+ * The projects as declared, with the tuning overrides cleared.
+ *
+ * The overrides change what every project runs with, not what any project declares, so a run with
+ * one set has moved nothing. The workspace is imported afresh because it reads the environment once,
+ * when it is evaluated.
+ */
+async function readProjects(): Promise<Project[]> {
+  vi.resetModules();
+  for (const key of [WORKERS_ENV, CONCURRENCY_ENV]) vi.stubEnv(key, undefined);
+  const module: unknown = await import("../../vitest.workspace");
+  const entries = isRecord(module) ? module["default"] : undefined;
   expect(Array.isArray(entries), "the workspace must resolve to a list of projects").toBe(true);
   const out: Project[] = [];
   for (const entry of Array.isArray(entries) ? entries : []) {
@@ -70,12 +92,11 @@ function readProjects(): Project[] {
     if (name === "") continue;
 
     const departures: string[] = [];
-    if (test["maxConcurrency"] !== projectKnobs.maxConcurrency) {
+    if (test["maxConcurrency"] !== DECLARED_CONCURRENCY) {
       departures.push(`maxConcurrency=${String(test["maxConcurrency"])}`);
     }
     for (const axis of ROOT_ONLY_AXES) {
-      if (test[axis] !== undefined)
-        departures.push(`${axis}=${String(test[axis])} (root-only axis)`);
+      if (test[axis] !== undefined) departures.push(`${axis}=${String(test[axis])}`);
     }
     const includes = Array.isArray(test["include"])
       ? test["include"].filter((value): value is string => typeof value === "string")
@@ -108,20 +129,34 @@ async function countTests(includes: readonly string[]): Promise<number> {
 }
 
 /**
- * Every moved project that does not carry three run identifiers recorded against IT.
+ * Every moved project whose move is not recorded with three run identifiers.
  *
- * Bound to the change rather than free-standing: the identifiers must sit in a record that names this
- * project. Three greens recorded for a different tuning change say nothing about this one, and losing
- * that binding is the mistake `CR-20260820-0012` records its own first split making.
+ * Bound to the change rather than to the project: the identifiers count only in the section that
+ * records THIS move: the last one naming the project and every setting it now departs with, each in
+ * backticks. An earlier change to the same project is a different change, and its greens say nothing
+ * about this one. Losing that binding is the mistake `CR-20260820-0012` records its own first split
+ * making.
+ *
+ * Whether the runs were consecutive is not something a record can show, so this counts distinct
+ * identifiers; `CR-20260925-0021` restates the case to what the record carries.
  */
-function unjustifiedMoves(moved: readonly string[], sections: readonly string[]): string[] {
+function unjustifiedMoves(
+  moved: readonly Pick<Project, "name" | "departures">[],
+  sections: readonly string[],
+): string[] {
   const out: string[] = [];
-  for (const name of moved) {
-    const naming = sections.filter((section) => section.includes(`\`${name}\``));
-    const ids = new Set<string>();
-    for (const section of naming) for (const id of section.match(RUN_ID) ?? []) ids.add(id);
+  for (const { name, departures } of moved) {
+    const record = sections
+      .filter((section) => section.includes(`\`${name}\``))
+      .filter((section) => departures.every((setting) => section.includes(`\`${setting}\``)))
+      .at(-1);
+    if (record === undefined) {
+      out.push(`${name}: no section records the move to ${departures.join(", ")}`);
+      continue;
+    }
+    const ids = new Set(record.match(RUN_ID) ?? []);
     if (ids.size < 3)
-      out.push(`${name}: ${String(ids.size)} run identifier(s) recorded against it, needs 3`);
+      out.push(`${name}: ${String(ids.size)} run identifier(s) recorded against its move, needs 3`);
   }
   return out;
 }
@@ -129,7 +164,10 @@ function unjustifiedMoves(moved: readonly string[], sections: readonly string[])
 // QFAI:SPEC-0017:TC-0017-0069
 describe("at most one runner project is moved off the declared parallelism value", () => {
   it("reads every project, and finds the departing set holds no more than the largest one", async () => {
-    const projects = readProjects();
+    // Read under an override that differs from the declared value, which is what a timing run sets.
+    // The declarations have not moved, so the result must be the same as with no override at all.
+    vi.stubEnv(CONCURRENCY_ENV, String(DECLARED_CONCURRENCY + 1));
+    const projects = await readProjects();
 
     // Non-vacuity, and the part that makes an empty departure set mean something. The names are
     // enumerated rather than counted: a scan that silently dropped a project would still satisfy a
@@ -140,18 +178,8 @@ describe("at most one runner project is moved off the declared parallelism value
         "tuned without this rule noticing",
     ).toEqual(["cli", "core", "e2e", "integration", "scripts", "unit", "validators"]);
 
-    // The value being compared against is the DECLARED one, not whatever the file happens to hold.
-    // Without this the rule would follow a quiet edit to `projectKnobs` and report nothing moved.
-    //
-    // Held to the cores the machine has, which is where the declared value lands on a runner that
-    // cannot hold it, and re-derived here rather than imported so the baseline is not read out of
-    // the file under test. The measurement behind the cap sits on the declaration itself.
-    expect(
-      projectKnobs.maxConcurrency,
-      "the comparison baseline must be the declared starting value, or every project moves together " +
-        "and the set stays empty",
-    ).toBe(Math.min(DECLARED_START, availableParallelism()));
-
+    // Each project is compared with the DECLARED value, not with the shared knob, so a quiet edit to
+    // the knob moves every project at once and fails the rule below rather than hiding.
     const moved = projects.filter((project) => project.departures.length > 0);
     // AT MOST one, not none. Writing `toEqual([])` here would be stricter than the rule and would
     // redden on the first legitimate tuning change — a guard someone then has to weaken, which is how
@@ -183,7 +211,7 @@ describe("at most one runner project is moved off the declared parallelism value
 // QFAI:SPEC-0017:TC-0017-0083
 describe("a moved project carries the run identifiers that justify the move", () => {
   it("requires three recorded runs against the change that moved it, and none against no change", async () => {
-    const projects = readProjects();
+    const projects = await readProjects();
     const moved = projects.filter((project) => project.departures.length > 0);
 
     const text = await readFile(DECISIONS, "utf8");
@@ -194,36 +222,59 @@ describe("a moved project carries the run identifiers that justify the move", ()
     ).toBeGreaterThan(0);
 
     expect(
-      unjustifiedMoves(
-        moved.map((project) => project.name),
-        sections,
-      ),
+      unjustifiedMoves(moved, sections),
       "a project moved off the declared value without three recorded runs is a parallelism claim " +
         "landing on argument, which is the thing BR-0017-0030 and this rule both forbid",
     ).toEqual([]);
 
     // **The antecedent is empty today, so the assertion above is vacuous, so it is not the whole
-    // case.** These four fixtures exercise the predicate itself: without them a `return []` would
-    // satisfy the line above, and this row would report coverage of a rule it never evaluated.
+    // case.** These fixtures exercise the predicate itself: without them a `return []` would satisfy
+    // the line above, and this row would report coverage of a rule it never evaluated.
     const THREE = "runs `32370185891`, `32370813280`, `32370926286`";
+    const unit = { name: "unit", departures: ["maxConcurrency=4"] };
     expect(
-      unjustifiedMoves(["unit"], [`DR-X: tuned \`unit\` — ${THREE}`]),
-      "three identifiers recorded against the project that moved is the accepting shape",
+      unjustifiedMoves([unit], [`DR-X: tuned \`unit\` to \`maxConcurrency=4\` — ${THREE}`]),
+      "three identifiers in the section recording the move is the accepting shape",
     ).toEqual([]);
     expect(
-      unjustifiedMoves(["unit"], ["DR-X: tuned `unit` — runs `32370185891`, `32370813280`"]),
+      unjustifiedMoves(
+        [unit],
+        ["DR-X: tuned `unit` to `maxConcurrency=4` — runs `32370185891`, `32370813280`"],
+      ),
       "two is not three",
-    ).toEqual(["unit: 2 run identifier(s) recorded against it, needs 3"]);
+    ).toEqual(["unit: 2 run identifier(s) recorded against its move, needs 3"]);
     expect(
-      unjustifiedMoves(["unit"], ["DR-X: tuned `unit`, and it was faster"]),
+      unjustifiedMoves([unit], ["DR-X: tuned `unit` to `maxConcurrency=4`, and it was faster"]),
       "a move with no identifiers at all",
-    ).toEqual(["unit: 0 run identifier(s) recorded against it, needs 3"]);
+    ).toEqual(["unit: 0 run identifier(s) recorded against its move, needs 3"]);
     // The binding, which is the half `CR-20260820-0012` records its own first attempt losing: greens
     // belonging to a different tuning change say nothing about this one.
     expect(
-      unjustifiedMoves(["unit"], [`DR-X: tuned \`integration\` — ${THREE}`]),
+      unjustifiedMoves([unit], [`DR-X: tuned \`integration\` to \`maxConcurrency=4\` — ${THREE}`]),
       "identifiers recorded against a DIFFERENT project must not justify this one",
-    ).toEqual(["unit: 0 run identifier(s) recorded against it, needs 3"]);
+    ).toEqual(["unit: no section records the move to maxConcurrency=4"]);
+    // The same project, changed twice. The earlier change's greens sit in a section that names the
+    // project, and pooling by project name would let them justify the later move.
+    expect(
+      unjustifiedMoves(
+        [unit],
+        [
+          `DR-X: tuned \`unit\` to \`maxConcurrency=6\` — ${THREE}`,
+          "DR-Y: tuned `unit` to `maxConcurrency=4`, and it was faster",
+        ],
+      ),
+      "an earlier change to the same project must not justify a later move of it",
+    ).toEqual(["unit: 0 run identifier(s) recorded against its move, needs 3"]);
+    expect(
+      unjustifiedMoves(
+        [unit],
+        [
+          "DR-X: tuned `unit` to `maxConcurrency=6`, and it was faster",
+          `DR-Y: tuned \`unit\` to \`maxConcurrency=4\` — ${THREE}`,
+        ],
+      ),
+      "and the later change's own greens justify it whatever the earlier record carries",
+    ).toEqual([]);
   });
 });
 
@@ -258,7 +309,7 @@ describe("a rerun-to-green rate above one in twenty reopens the setting", () => 
     // positively instead of leaving an empty loop to stand for it.
     const text = await readFile(DECISIONS, "utf8");
     const sections = text.split(/^### /m).slice(1);
-    const projectNames = readProjects().map((project) => project.name);
+    const projectNames = (await readProjects()).map((project) => project.name);
     const tuningRecords = sections.filter((section) =>
       projectNames.some((name) => section.includes(`tuned \`${name}\``)),
     );
