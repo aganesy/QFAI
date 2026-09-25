@@ -200,6 +200,8 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   reports?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reports"];
   // On an accepted stage result: what its receipt depends on.
   dependencies?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["dependencies"];
+  // On an accepted stage result: the digest of the result file its `resultRef` names.
+  resultDigest?: string;
   testObservation?: string;
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
@@ -267,6 +269,28 @@ export async function readJournal(runDir: string): Promise<JournalRead> {
     lastHash = sha256(bytes);
   }
   return { ok: true, records, lastHash };
+}
+
+// A stage result as the core keeps it under `results/`, with the digest of those bytes.
+export interface ResultFile {
+  path: string;
+  digest: string;
+  bytes: Buffer;
+}
+
+export function resultFileOf(result: { resultId: string }): ResultFile {
+  const bytes = Buffer.from(`${JSON.stringify(result, null, 2)}\n`, "utf8");
+  return { path: `results/${result.resultId}.json`, digest: sha256(bytes), bytes };
+}
+
+// Written before the event that references it is published, so a crash leaves a file no event
+// references, which the retried operation replaces.
+export async function writeResultFile(
+  runDir: string,
+  file: ResultFile,
+): Promise<IoRefusal | undefined> {
+  await mkdir(path.join(runDir, "results"), { recursive: true });
+  return writeRecord(path.join(runDir, ...file.path.split("/")), file.bytes);
 }
 
 // Each event goes to `.NNNNNN.tmp` and is renamed to its published name, which the lock and
@@ -552,11 +576,19 @@ function trackingBegun(records: readonly JournalRecord[]): boolean {
 }
 
 // The tracked summary, from the journal: IDs, digests and outcomes, never request text, an
-// answer or anything the run settled.
-// SIMPLIFIED: a stage's receipt digests are those of its report copies.
-// Lift when: the core writes each accepted result under `results/` and digests it.
+// answer or anything the run settled. A stage's receipt digests are its result file's, then its
+// report copies'.
 function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot) {
   const accepted = snapshot.acceptedStages ?? [];
+  const resultDigests = new Map(
+    records.flatMap((record): [string, string][] =>
+      record.resultRef && record.resultDigest ? [[record.resultRef, record.resultDigest]] : [],
+    ),
+  );
+  const resultDigestOf = (receiptRef: string | undefined): string[] => {
+    const digest = receiptRef ? resultDigests.get(receiptRef) : undefined;
+    return digest ? [digest] : [];
+  };
   return {
     runId: snapshot.run.id,
     qfaiVersion: snapshot.executionContext?.qfaiVersion ?? "",
@@ -571,7 +603,10 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
       stageKind: stage.stageKind,
       outcome: stage.outcome,
       testObservation: stage.testObservation ?? "not_applicable",
-      receiptDigests: (stage.reports ?? []).map((report) => report.digest),
+      receiptDigests: [
+        ...resultDigestOf(stage.receiptRef),
+        ...(stage.reports ?? []).map((report) => report.digest),
+      ],
       reviewerRoles: (stage.reviewResults ?? [])
         .filter((review) => review.verdict === "PASS")
         .map((review) => review.role),

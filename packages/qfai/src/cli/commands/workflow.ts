@@ -39,14 +39,16 @@ import {
   readJournal,
   recordsOf,
   releaseLock,
+  resultFileOf,
   RUNS_DIR,
   snapshotOf,
   TRACKED_DIR,
   writeRecord,
+  writeResultFile,
   writeSnapshot,
   writeTracked,
 } from "../../core/workflow/persistence.js";
-import type { JournalRecord } from "../../core/workflow/persistence.js";
+import type { JournalRecord, ResultFile } from "../../core/workflow/persistence.js";
 import { resolveToolVersion } from "../../core/version.js";
 import type { WorkflowOperation } from "../lib/args.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
@@ -517,7 +519,11 @@ function extrasOf(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
   decision: WorkflowDecision,
-  accepted: { copies: ReportCopy[]; dependencies: WorkflowDependency[] },
+  accepted: {
+    copies: ReportCopy[];
+    dependencies: WorkflowDependency[];
+    result: ResultFile | undefined;
+  },
 ) {
   return (event: WorkflowEvent): Partial<JournalRecord> => {
     if (event.type === "unsettled-material-input" && decision.verdict.plan) {
@@ -533,9 +539,18 @@ function extrasOf(
       ...(testObservation ? { testObservation } : {}),
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(reports.length > 0 ? { reports } : {}),
+      ...(accepted.result ? { resultDigest: accepted.result.digest } : {}),
       dependencies: accepted.dependencies,
     };
   };
+}
+
+// The submitted stage result, when an event of the decision references it.
+function referencedResult(input: WorkflowInput, decision: WorkflowDecision) {
+  const result = input.result && resultFileOf(input.result);
+  return result && decision.events.some((event) => event.resultRef === result.path)
+    ? result
+    : undefined;
 }
 
 async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Promise<number> {
@@ -548,12 +563,15 @@ async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Pr
     const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
     if (!Array.isArray(copies)) return refuse(snapshot.run, copies);
     const dependencies = await acceptedDependencies(options.root, snapshot, read.input, decision);
+    const result = referencedResult(read.input, decision);
     const records = recordsOf(
       decision,
       { operation: options.operation, before: snapshot.run },
-      extrasOf(snapshot, read.input, decision, { copies, dependencies }),
+      extrasOf(snapshot, read.input, decision, { copies, dependencies, result }),
       replayKey(read.input, decision, read.digest),
     );
+    const unwrittenResult = result ? await writeResultFile(loaded.runDir, result) : undefined;
+    if (unwrittenResult) return refuse(snapshot.run, unwrittenResult);
     const unwritten = await writeReportCopies(loaded.runDir, copies);
     if (unwritten) return refuse(snapshot.run, unwritten);
     const refused = await publish(loaded, records, decision.verdict);
