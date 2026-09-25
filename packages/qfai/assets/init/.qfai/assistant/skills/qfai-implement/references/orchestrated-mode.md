@@ -61,7 +61,7 @@ When the seam cannot be landed or observed:
 - It is returned `blocked` only with its cause listed in `debts`: owned by
   `operator` for a missing environment, or naming a spec outside the checked
   write scope for a dependency beyond it.
-- With no such finding, it is returned `unrun`.
+- With no such finding, it is returned `blocked`.
 - A cause the stage can repair itself is returned `needs_repair`, never
   `blocked`.
 - None of these results reports a `pass` observation, and the main
