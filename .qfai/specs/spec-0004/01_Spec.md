@@ -121,10 +121,6 @@ each rule added on 2026-09-24 is realized by, in `## Contract Realization`.
 - REQ-0164: `auditProfile.ts` accepts string-only AND structured `{id,label,acceptance}` `primary_tasks` (DR-0268); `QFAI-AUD-020` warning names the `3..7` recommended count band (DR-0267); string-only continues to PASS during the deprecation window
 - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` (DR-0274 staged/changed-dir scope) integrated into `pnpm ci:lint`; rejects misplaced `review-*/` / `discussion-*/` dirs with `R-PACK-LOCATION-DRIFT` referencing `.agents/rules/root-additions-policy.md`
 - REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
-- discussion-20260923060900824#REQ-0002: `qfai validate` no longer reads `.qfai/steering/`
-- discussion-20260923060900824#REQ-0004: `QFAI-TDDLIST-015` and `QFAI-TDDLIST-016` are removed
-- discussion-20260923060900824#REQ-0006: The shipped schema is withdrawn
-- discussion-20260923060900824#REQ-0010: An adopter's existing `.qfai/steering/` is left alone
 
 ### discussion-20260923171450572 (2026-09-24)
 

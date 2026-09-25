@@ -82,6 +82,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   written beside it, and the forward lane now names any such exemption on a
   passing run instead of reading only the compiler configuration.
 
+- **The four specs of the work-log removal copy its requirements down by one
+  rule** (#2423). A requirement of the removal's discussion pack is listed in a
+  spec's `01_Spec.md` while a criterion of that spec answers it, and leaves with
+  the last such criterion. spec-0003, spec-0011 and spec-0013 already followed
+  this. spec-0004 still listed four requirements no criterion answers, and now
+  drops them. Each requirement stays traced through the Triage rows in the
+  specs' `09_delta.md`. The rule is a proposal: its decision record,
+  `DR-0004-0048`, waits for the owner's approval.
+
 ### Fixed
 
 - **The generated Copilot instructions describe the legacy layout as the
