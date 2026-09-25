@@ -38,7 +38,16 @@ import { isInside } from "./validators/utils.js";
  * directory for one of these, rather than for an import that names no file.
  */
 export type ObservationReach =
-  | { readonly kind: "reach"; readonly files: ReadonlySet<string> }
+  | {
+      readonly kind: "reach";
+      readonly files: ReadonlySet<string>;
+      /**
+       * `files`, plus every other repository file the walk passed through
+       * outside `node_modules`: the test helpers, fixtures and setup modules
+       * that `files` leaves out because they sit outside the source directory.
+       */
+      readonly walked: ReadonlySet<string>;
+    }
   | { readonly kind: "unfollowed"; readonly reason: string };
 
 /** What one file imports, resolved, or why its imports cannot be followed. */
@@ -451,5 +460,9 @@ export async function observationReach(
     if (imports.kind === "unfollowed") return imports;
     pending.push(...imports.files);
   }
-  return { kind: "reach", files: covered };
+  const walked = new Set(covered);
+  for (const file of visited) {
+    if (!underNodeModules(file)) walked.add(toRelative(file));
+  }
+  return { kind: "reach", files: covered, walked };
 }

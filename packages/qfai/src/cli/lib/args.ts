@@ -66,6 +66,10 @@ export type ParsedArgs = {
     guardrailsFormat?: "text" | "json";
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
+    /** `--base <revision>` for `qfai cross-spec`. */
+    crossSpecBase?: string;
+    /** `--format <text|json>` for `qfai cross-spec`. */
+    crossSpecFormat?: "text" | "json";
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec" | "rescope";
     /** `rescope --remove <surface-id>`, repeatable. */
@@ -803,6 +807,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
+      case "--base": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--base"));
+          break;
+        }
+        if (command === "cross-spec") {
+          options.crossSpecBase = next;
+        } else {
+          markInvalid(notValidHere("--base"));
+        }
+        break;
+      }
       case "--path": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -1246,7 +1263,7 @@ function formatChoicesFor(command: string | null): string {
   if (command === "validate") {
     return "text|github";
   }
-  if (command === "doctor" || command === "prototyping") {
+  if (command === "doctor" || command === "prototyping" || command === "cross-spec") {
     return "text|json";
   }
   return "";
@@ -1334,6 +1351,13 @@ function applyFormatOption(
   if (command === "db-drift") {
     if (value === "text" || value === "json") {
       options.dbDriftFormat = value;
+      return true;
+    }
+    return false;
+  }
+  if (command === "cross-spec") {
+    if (value === "text" || value === "json") {
+      options.crossSpecFormat = value;
       return true;
     }
     return false;

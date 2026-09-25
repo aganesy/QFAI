@@ -1,5 +1,6 @@
 import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
+import { runCrossSpec } from "./commands/crossSpec.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
@@ -51,6 +52,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "report",
   "doctor",
   "db-drift",
+  "cross-spec",
   "guardrails",
   "audit",
   "sdd",
@@ -232,6 +234,16 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.dbDriftFormat !== undefined ? { format: options.dbDriftFormat } : {}),
           ...(options.dbDriftOut !== undefined ? { outPath: options.dbDriftOut } : {}),
           ...(options.failOn === "never" ? { failOn: "never" as const } : {}),
+        });
+      }
+      return;
+    case "cross-spec":
+      {
+        const resolvedRoot = await resolveRoot(options, options.crossSpecFormat === "json");
+        process.exitCode = await runCrossSpec({
+          root: resolvedRoot,
+          ...(options.crossSpecBase !== undefined ? { base: options.crossSpecBase } : {}),
+          ...(options.crossSpecFormat !== undefined ? { format: options.crossSpecFormat } : {}),
         });
       }
       return;
@@ -477,6 +489,7 @@ Commands:
   report                       Emit validation results and aggregates
   doctor                       Diagnose config, paths and output preconditions
   db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
+  cross-spec                   List the completed ledger rows in every spec that a change puts at risk, with each row's selector and current proof
   guardrails                   Extract / check Decision Guardrails (list|extract|check)
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
@@ -541,6 +554,8 @@ Options:
   --max <number>                guardrails extract: maximum number of entries
   --keyword <text>              guardrails list/extract: keyword filter
   --format <text|json>          guardrails list/extract/check: output format (default text)
+  --base <revision>             cross-spec: measure the change from this revision (default: baseBranch in qfai.config.yaml, else origin/main)
+  --format <text|json>          cross-spec: output format (default text)
   --target-url <url>            prototyping preflight/iterate: URL under evaluation
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: peek at a converged loop state without re-running it (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)

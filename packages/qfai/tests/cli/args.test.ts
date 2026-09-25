@@ -147,6 +147,23 @@ describe("parseArgs", () => {
     expect(parsed.options.reportFormat).toBe("md");
   });
 
+  it("parses --base and --format for cross-spec", () => {
+    const parsed = parseArgs(
+      ["cross-spec", "--base", "origin/main", "--format", "json"],
+      process.cwd(),
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.crossSpecBase).toBe("origin/main");
+    expect(parsed.options.crossSpecFormat).toBe("json");
+  });
+
+  it("refuses a cross-spec --format other than text or json", () => {
+    const parsed = parseArgs(["cross-spec", "--format", "md"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain("text|json");
+    expect(parsed.options.crossSpecFormat).toBeUndefined();
+  });
+
   it("requires a value for --base-url", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["report", "--base-url", "--format", "md"], cwd);
@@ -839,6 +856,13 @@ describe("parseArgs", () => {
         wrongCommand: ["validate"],
         probe: (o) => expect(o.validateFormat).toBe("github"),
         untouched: (o) => expect(o.prototypingMode).toBeUndefined(),
+      },
+      {
+        flag: "--base",
+        value: "origin/main",
+        wrongCommand: ["validate"],
+        probe: (o) => expect(o.validateFormat).toBe("github"),
+        untouched: (o) => expect(o.crossSpecBase).toBeUndefined(),
       },
     ];
 

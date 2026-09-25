@@ -1034,7 +1034,7 @@ function collectEvidenceAnchors(evidence: string): EvidenceAnchor[] {
   return anchors;
 }
 
-interface MarkdownEvidenceIndex {
+export interface MarkdownEvidenceIndex {
   anchors: ReadonlySet<string>;
   sections: ReadonlyMap<string, string>;
 }
@@ -5775,6 +5775,116 @@ async function atRestReach(
       .find((value) => value !== null) ?? rowEvidenceFieldValue(fields, "RED test manifest");
   const manifestPaths = manifest === null ? [] : redTestManifestPaths(manifest);
   return observationReach(root, srcRelDir, testFile, manifestPaths, cache);
+}
+
+/**
+ * The mutation a completed row's current proof records.
+ *
+ * An ordinary round records it as `Oracle proof`; a round whose RED was not
+ * observable records the mutation run itself as `Falsifiability command` and
+ * `Falsifiability result`.
+ */
+export type RecordedProof =
+  | { readonly kind: "oracle-proof"; readonly round: number | null; readonly proof: string }
+  | {
+      readonly kind: "falsifiability";
+      readonly round: number | null;
+      readonly command: string;
+      readonly result: string | null;
+    }
+  | { readonly kind: "none" };
+
+/** What a completed row's evidence entry says about its current observation. */
+export interface CompletedEntryRecord {
+  /** The evidence file holding the entry, repository-relative. */
+  readonly evidenceFile: string;
+  readonly anchor: string;
+  /** The highest `Round N` the entry records, or `null` for an unprefixed entry. */
+  readonly latestRound: number | null;
+  readonly greenCommand: string | null;
+  /** The other test inputs the newest `RED test manifest` names. */
+  readonly manifestPaths: readonly string[];
+  readonly proof: RecordedProof;
+}
+
+/**
+ * The current proof: the latest round's, with the unprefixed row-level field
+ * as the fallback an entry written before round prefixes carries. An earlier
+ * round's proof is never taken, because a later round rewrote the code it
+ * mutated. The completion gate reads `Oracle proof` the same way.
+ */
+function currentRecordedProof(fields: string, latestRound: number | null): RecordedProof {
+  const levels: ReadonlyArray<number | null> = latestRound === null ? [null] : [latestRound, null];
+  for (const round of levels) {
+    const read = (field: string): string | null =>
+      round === null
+        ? rowEvidenceFieldValue(fields, field)
+        : roundEvidenceFieldValue(fields, round, field);
+    const command = read("Falsifiability command");
+    if (command !== null) {
+      return { kind: "falsifiability", round, command, result: read("Falsifiability result") };
+    }
+    const proof = read("Oracle proof");
+    if (proof !== null) return { kind: "oracle-proof", round, proof };
+  }
+  return { kind: "none" };
+}
+
+/**
+ * The evidence entry a completed ledger row resolves to, and its current proof.
+ *
+ * The entry is looked for first in the file the row's `Layer` owns — the
+ * implement file for a row marked `Pre-split-evidence: implement` — and then
+ * in every other file the `Evidence` cell points at. `null` when neither holds
+ * a `### TDD-NNNN` section for the row.
+ */
+export async function readCompletedEntryRecord(
+  root: string,
+  specNumber: string,
+  layer: string,
+  tddId: string,
+  evidenceCell: string,
+  cache: Map<string, MarkdownEvidenceIndex | null> = new Map(),
+): Promise<CompletedEntryRecord | null> {
+  const anchor = tddId.toLowerCase();
+  const candidates = [
+    expectedEvidenceFile(specNumber, layer, evidenceCell),
+    ...collectEvidenceAnchors(evidenceCell).map((found) => found.file),
+  ];
+  for (const evidenceFile of new Set(candidates)) {
+    let index = cache.get(evidenceFile);
+    if (index === undefined) {
+      const evidencePath = path.join(root, evidenceFile);
+      index = (await exists(evidencePath))
+        ? markdownEvidenceIndex(await readSafe(evidencePath))
+        : null;
+      cache.set(evidenceFile, index);
+    }
+    const section = index?.sections.get(anchor);
+    if (section === undefined) continue;
+    const fields = entryOwnFields(section);
+    const rounds = evidenceRoundNumbers(fields);
+    const latestRound = rounds.at(-1) ?? null;
+    const newest = (field: string): string | null =>
+      [...rounds]
+        .reverse()
+        .map((round) => roundEvidenceFieldValue(fields, round, field))
+        .find((value) => value !== null) ?? rowEvidenceFieldValue(fields, field);
+    const manifest = newest("RED test manifest");
+    return {
+      evidenceFile,
+      anchor,
+      latestRound,
+      greenCommand:
+        (latestRound === null
+          ? null
+          : roundEvidenceFieldValue(fields, latestRound, "GREEN command")) ??
+        rowEvidenceFieldValue(fields, "GREEN command"),
+      manifestPaths: manifest === null ? [] : redTestManifestPaths(manifest),
+      proof: currentRecordedProof(fields, latestRound),
+    };
+  }
+  return null;
 }
 
 /**

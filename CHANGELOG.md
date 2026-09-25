@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **`qfai cross-spec` lists the cross-spec re-review input for a change**
+  (#2424). It reads the files changed since a base revision (`--base`, default
+  `baseBranch`, else `origin/main`), committed or not. For each blocked `done`
+  row in any current spec it prints the changed files that matched, the
+  `Selector`, the latest round's `GREEN command`, and the current proof.
+  `--format json` gives the same list as JSON. It runs nothing.
+
+  - The current proof is the `Oracle proof` or `Falsifiability command` of the
+    highest `Round N`. It is read from the entry the row's `Evidence` cell
+    points at, in the implement or the ATDD file. A row reset and completed
+    again, or reworked in a later round, is no longer replayed against an
+    earlier round's proof.
+  - A row is matched on the imports its own test reaches, test helpers
+    included. Only a row whose reach cannot be walked takes the package
+    fallback, so a small change no longer blocks every row in the package.
+    `cross-spec-ownership.md` describes this per-row widening.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
