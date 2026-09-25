@@ -192,4 +192,4 @@ async function runEval(): Promise<void> {
   );
 }
 
-it("runs the routing eval against one host", runEval, 0);
+it("runs the routing eval against one host", runEval);

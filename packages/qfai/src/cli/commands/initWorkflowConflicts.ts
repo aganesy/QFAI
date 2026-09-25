@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { AssistantAssetConflict } from "../../core/assistantAssetProvenance.js";
 import { ASSISTANT_DIR } from "../../core/paths/assistantPaths.js";
+import { isRecord } from "../../core/workflow/parse.js";
 import { checkInstalledPlans, type PlanRefusal } from "../../core/workflow/plans.js";
 
 const ROUTING = "manifest/agent-routing.yml";
@@ -15,7 +16,12 @@ const ROUTING = "manifest/agent-routing.yml";
  * its differences joined, keyed by its path under `.qfai/assistant/`.
  */
 export async function findWorkflowConflicts(destRoot: string): Promise<AssistantAssetConflict[]> {
-  const check = await checkInstalledPlans(destRoot);
+  const check = await checkInstalledPlans(destRoot).catch((error: unknown) => {
+    // A file init cannot read is reported by init itself; the check has nothing to compare.
+    if (isRecord(error) && typeof error.code === "string") return undefined;
+    throw error;
+  });
+  if (check === undefined) return [];
   if (check.cause === "contract-undeclared") {
     return mergeByPath(check.refusals.map(contractConflict));
   }

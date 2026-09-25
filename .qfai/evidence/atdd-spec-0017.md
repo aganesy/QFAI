@@ -23,7 +23,7 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 118 rows: 97 `Integration`,
-  11 `Unit`; **75 `refactor`, 0 `blocked`, 34 `todo`**, with 6 `done` and 3 `review-fix`.
+  11 `Unit`; **75 `refactor`, 0 `blocked`, 26 `todo`**, with 6 `done` and 3 `review-fix`.
   The nine additional `Integration` rows split six acceptance cases into independent outcomes and remain `todo`.
   The intent-driven entry added eight `todo` rows, `TDD-0111` to `TDD-0118`: seven `Integration` and a tenth `E2E`.
   At the 2026-09-23 run, nine rows were `E2E`, one per story, seeded at `todo`.
