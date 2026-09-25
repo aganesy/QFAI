@@ -11,6 +11,7 @@ import {
   mergeBaseRevision,
   withoutPathsGoneAtHead,
 } from "../gitChanges.js";
+import { parseHeadings } from "../parse/markdown.js";
 import { collectSpecEntries } from "../specLayout.js";
 import {
   parseAllMarkdownTables,
@@ -130,6 +131,20 @@ function concretePath(value: string): boolean {
   );
 }
 
+/**
+ * The offset and level of every heading outside a fenced code block. A `#`
+ * line inside a fence is a code comment, such as a Gherkin `# Source:` line,
+ * and does not end a section.
+ */
+function headingOffsets(text: string): { index: number; level: number }[] {
+  const lineStarts = [0];
+  for (const match of text.matchAll(/\n/g)) lineStarts.push(match.index + 1);
+  return parseHeadings(text).map((heading) => ({
+    index: lineStarts[heading.line - 1] ?? text.length,
+    level: heading.level,
+  }));
+}
+
 /** Each ID is compared by its own content, independent of its table position. */
 function obligationContent(text: string, kind: "BR" | "AC"): Map<string, string> | null {
   const values = new Map<string, string[]>();
@@ -159,11 +174,21 @@ function obligationContent(text: string, kind: "BR" | "AC"): Map<string, string>
       const enclosing = all[index - 1];
       return !(marker[1] === "#" && enclosing?.[1] !== "#" && enclosing?.[2] === marker[2]);
     });
+  const headings = headingOffsets(normalized);
   for (const [index, marker] of markers.entries()) {
     const id = marker[2];
     if (!id) continue;
     const start = marker.index;
-    const next = markers[index + 1]?.index ?? normalized.length;
+    const level = marker[1]?.length ?? 1;
+    // A section also stops at the next heading of its own level or higher, so
+    // a closing section such as `## Completion Gate` is not read as part of
+    // the last criterion, and appending a criterion before it leaves the
+    // previous one unchanged.
+    const sibling = headings.find((heading) => heading.index > start && heading.level <= level);
+    const next = Math.min(
+      markers[index + 1]?.index ?? normalized.length,
+      sibling?.index ?? normalized.length,
+    );
     const section = normalized.slice(start, next);
     const block = (marker[1] === "#" ? section.split(/^```/m)[0] : section)?.trim() ?? "";
     const previous = values.get(id) ?? [];

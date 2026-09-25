@@ -84,6 +84,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Adding a criterion after the last one no longer marks that one as
+  changed** (#2451). `QFAI-TRACE-001` compares each `BR-*` and `AC-*` section
+  with the merge base, and the last section ran to the end of the file. A
+  closing section such as `## Completion Gate` was read as part of the last
+  criterion, so inserting a new criterion before it changed the earlier one's
+  text and asked for a ledger row or proof nobody owed. A section now also
+  ends at the next heading of its own level or higher. A `#` line inside a
+  fenced block, such as a Gherkin `# Source:` comment, is not a heading.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
