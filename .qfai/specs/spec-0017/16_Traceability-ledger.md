@@ -22,34 +22,43 @@ A binding moves up when its implementation obligation is realized.
 
 ## Ledger Table (required when this file exists)
 
-| BR/AC        | Implementation File                   | Test File                                                          | Notes                                                               | Proof    |
-| ------------ | ------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------- | -------- |
-| AC-0017-0003 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017CiMatrix.test.ts           | Documentation-only selection and skipped matrix jobs.               | -        |
-| AC-0017-0003 | .github/required-status-contexts.json | packages/qfai/tests/scripts/workflowHygieneRequiredContext.test.ts | Pinned unconditional dependencies and their reasons.                | -        |
-| AC-0017-0011 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | The criterion is realized by the durable decision record.           | -        |
-| AC-0017-0027 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Both CI slice matrices use the current set.                         | -        |
-| AC-0017-0027 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Both release matrices and verify use the current set.               | -        |
-| AC-0017-0027 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Per-slice scripts use the current set.                              | -        |
-| AC-0017-0027 | packages/qfai/vitest.workspace.ts     | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Runner projects use the current set.                                | -        |
-| AC-0017-0036 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts  | Operation capability, isolation and fallback.                       | -        |
-| AC-0017-0036 | package.json                          | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts  | The unchanged local aggregate preserves the ordered command vector. | TDD-0107 |
-| BR-0017-0005 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | Sequencing rule in the decision record.                             | -        |
-| BR-0017-0006 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017CiMatrix.test.ts           | Retained matrix legs skip when detection excludes them.             | -        |
-| BR-0017-0006 | .github/required-status-contexts.json | packages/qfai/tests/scripts/workflowHygieneRequiredContext.test.ts | Current check names stay pinned when a suite retires.               | -        |
-| BR-0017-0022 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | Release preparation owns the pin update.                            | -        |
-| BR-0017-0023 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | The decision record explains why no root configuration exists.      | -        |
-| BR-0017-0045 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | Sequencing rule across specs.                                       | -        |
-| BR-0017-0056 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | CI matrix legs use per-slice scripts.                               | -        |
-| BR-0017-0056 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Release matrix legs use per-slice scripts.                          | -        |
-| BR-0017-0056 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Current and retired per-slice scripts.                              | -        |
-| BR-0017-0057 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Both CI slice sets agree.                                           | -        |
-| BR-0017-0057 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Both release slice sets and verify agree.                           | -        |
-| BR-0017-0057 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Per-slice script set agrees.                                        | -        |
-| BR-0017-0057 | packages/qfai/vitest.workspace.ts     | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts     | Runner project set agrees.                                          | -        |
-| BR-0017-0061 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts              | Sequencing rule in the decision record.                             | -        |
-| BR-0017-0068 | .github/workflows/release.yml         | packages/qfai/tests/scripts/ownWorkflowTopology.test.ts            | Only selected successful gates permit upload.                       | -        |
-| BR-0017-0069 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts  | Release capability, fallback and workspace isolation.               | -        |
-| BR-0017-0070 | package.json                          | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts  | The existing local command vector satisfies the separate rule.      | TDD-0107 |
+| BR/AC        | Implementation File                   | Test File                                                                 | Notes                                                                      | Proof    |
+| ------------ | ------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------- |
+| AC-0017-0003 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017CiMatrix.test.ts                  | Documentation-only selection and skipped matrix jobs.                      | -        |
+| AC-0017-0003 | .github/required-status-contexts.json | packages/qfai/tests/scripts/workflowHygieneRequiredContext.test.ts        | Pinned unconditional dependencies and their reasons.                       | -        |
+| AC-0017-0011 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | The criterion is realized by the durable decision record.                  | -        |
+| AC-0017-0027 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Both CI slice matrices use the current set.                                | -        |
+| AC-0017-0027 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Both release matrices and verify use the current set.                      | -        |
+| AC-0017-0027 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Per-slice scripts use the current set.                                     | -        |
+| AC-0017-0027 | packages/qfai/vitest.workspace.ts     | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Runner projects use the current set.                                       | -        |
+| AC-0017-0036 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts         | Operation capability, isolation and fallback.                              | -        |
+| AC-0017-0036 | package.json                          | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts         | The unchanged local aggregate preserves the ordered command vector.        | TDD-0107 |
+| AC-0017-0037 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/suiteList.test.ts           | The Windows job runs only the suite-list script, under a spaced temp root. | -        |
+| AC-0017-0037 | packages/qfai/package.json            | packages/qfai/tests/integration/windowsParity/suiteList.test.ts           | The suite-list script names exactly the declared suites.                   | -        |
+| AC-0017-0038 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts | The Windows job follows detection and joins the verdict.                   | -        |
+| AC-0017-0039 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts          | The Windows job builds the package on its own runner.                      | -        |
+| BR-0017-0005 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | Sequencing rule in the decision record.                                    | -        |
+| BR-0017-0006 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017CiMatrix.test.ts                  | Retained matrix legs skip when detection excludes them.                    | -        |
+| BR-0017-0006 | .github/required-status-contexts.json | packages/qfai/tests/scripts/workflowHygieneRequiredContext.test.ts        | Current check names stay pinned when a suite retires.                      | -        |
+| BR-0017-0022 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | Release preparation owns the pin update.                                   | -        |
+| BR-0017-0023 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | The decision record explains why no root configuration exists.             | -        |
+| BR-0017-0045 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | Sequencing rule across specs.                                              | -        |
+| BR-0017-0056 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | CI matrix legs use per-slice scripts.                                      | -        |
+| BR-0017-0056 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Release matrix legs use per-slice scripts.                                 | -        |
+| BR-0017-0056 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Current and retired per-slice scripts.                                     | -        |
+| BR-0017-0057 | .github/workflows/ci.yml              | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Both CI slice sets agree.                                                  | -        |
+| BR-0017-0057 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Both release slice sets and verify agree.                                  | -        |
+| BR-0017-0057 | packages/qfai/package.json            | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Per-slice script set agrees.                                               | -        |
+| BR-0017-0057 | packages/qfai/vitest.workspace.ts     | packages/qfai/tests/integration/spec0017SliceAlignment.test.ts            | Runner project set agrees.                                                 | -        |
+| BR-0017-0061 | .qfai/specs/spec-0017/07_Decisions.md | packages/qfai/tests/assets/actionPinBumpOwner.test.ts                     | Sequencing rule in the decision record.                                    | -        |
+| BR-0017-0068 | .github/workflows/release.yml         | packages/qfai/tests/scripts/ownWorkflowTopology.test.ts                   | Only selected successful gates permit upload.                              | -        |
+| BR-0017-0069 | .github/workflows/release.yml         | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts         | Release capability, fallback and workspace isolation.                      | -        |
+| BR-0017-0070 | package.json                          | packages/qfai/tests/integration/spec0017ReleaseOperations.test.ts         | The existing local command vector satisfies the separate rule.             | TDD-0107 |
+| BR-0017-0071 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/suiteList.test.ts           | The Windows job runs only the suite-list script, under a spaced temp root. | -        |
+| BR-0017-0071 | packages/qfai/package.json            | packages/qfai/tests/integration/windowsParity/suiteList.test.ts           | The suite-list script names exactly the declared suites.                   | -        |
+| BR-0017-0072 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts | The Windows job follows detection and joins the verdict.                   | -        |
+| BR-0017-0073 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts          | The Windows job builds the package on its own runner.                      | -        |
+| BR-0017-0074 | .github/workflows/ci.yml              | packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts     | The job lands with the suites its list names.                              | -        |
 
 Six governance obligations bind to the decision record. A changed rule with an unchanged
 decision record needs explicit proof of the existing binding. The release prerequisite rule
