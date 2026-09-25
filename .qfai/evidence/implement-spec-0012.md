@@ -475,6 +475,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
 ### TDD-0578
 
 - TDD-ID: TDD-0578
@@ -533,6 +537,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
 ### TDD-0579
 
 - TDD-ID: TDD-0579
@@ -578,6 +586,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate
 
 - Round 1: GREEN result: Entry 1: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Entry 2: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
 ### TDD-0580
 
 - TDD-ID: TDD-0580
@@ -611,6 +623,10 @@ The edit, the missing-base branch never taken:
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when a route-relative URL has no targetUrl"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
 ### TDD-0581
 
 - TDD-ID: TDD-0581
@@ -643,6 +659,10 @@ The edit, the `catch` answering `ok: true`:
 - Round 1: Revision: 11d0a611206c5450f7976cc67be6b88f697fa1e9
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts -t "returns ok=false with the operator-facing flag named when URL composition throws"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 7 skipped (8). Run after `git checkout -- packages/qfai/src/cli/commands/prototypingIterate.ts`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
 
 ### TDD-0517
 
@@ -699,6 +719,10 @@ pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCapture
 
 - Round 1: GREEN result: Each entry: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
 
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
 ### TDD-0582
 
 - TDD-ID: TDD-0582
@@ -731,3 +755,36 @@ The edit, the missing-response branch never taken:
 - Round 1: Revision: 974b74da4715962fceb02de8db96ee70881536c3
 - Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts -t "REJECTS a null response \(no navigation occurred\)"
 - Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 5 skipped (6). Run after `git checkout -- packages/qfai/src/core/prototyping/defaultCaptureScreen.ts`
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/unit/cli/commands/prototypingIterate.composeCaptureUrl.test.ts tests/unit/core/prototyping/defaultCaptureScreen.responseStatus.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 14 passed (14). No production file changed in this run, so there was nothing to refactor, and the two edited test files are the relevant suite. Run on the tree the reviews read
+- Refactor verify revision: 39d6e87175897bd234578f68ae98e757ba43f36f
+
+## Test results summary
+
+| Row        | Boundary                                         | Tier | Round 1 revision | Mutation fails                |
+| ---------- | ------------------------------------------------ | ---- | ---------------- | ----------------------------- |
+| `TDD-0516` | `absolute-url-opened-as-written`                 | T1   | `e0d26853c`      | both entries                  |
+| `TDD-0578` | `route-relative-url-joined-to-target-url`        | T1   | `349b4a973`      | both entries, by concatenation |
+| `TDD-0579` | `no-screen-url-falls-back-to-target-url`         | T1   | `bcaf8cc4c`      | both entries                  |
+| `TDD-0580` | `route-relative-url-without-target-url-rejected` | T1   | `d4c7798e8`      | its one entry                 |
+| `TDD-0581` | `uncomposable-pair-rejected`                     | T1   | `11d0a6112`      | its one entry                 |
+| `TDD-0517` | `status-400-or-above-rejected`                   | T2   | `22b107140`      | all five entries              |
+| `TDD-0582` | `no-response-rejected`                           | T2   | `974b74da4`      | its one entry                 |
+
+Every row is at `refactor`. The five T1 rows form the review group keyed
+`BR-0012-0066`; `TDD-0517` and `TDD-0582` are reviewed alone. The
+`qa-gatekeeper` turns on the seven mutation runs, the reviews and the
+checkpoint are still owed.
+
+## Commands executed
+
+- `node scripts/smoke-qfai-cli.mjs` — the skeleton re-run, exit 0.
+- The falsifiability, GREEN and refactor-verify commands in each row's entry.
+- `node tmp/evidence-tools.mjs revision` and `revision --content-address`, for
+  each `Revision` and `Falsifiability revision`.
+
+## Gaps / Open risks
+
+- The `qa-gatekeeper` RED gate for each row runs after the revert, on a tree
+  rebuilt from the row's Round 1 revision and the recorded edit.
