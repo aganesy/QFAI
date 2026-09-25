@@ -155,7 +155,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("checks prototype-handoff artifact references when present", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -172,7 +172,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("validates designSystemMirror specifically — a missing target surfaces PROT-009", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -196,7 +196,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("handoff field issues point at prototype-handoff.yaml (not prototyping.json)", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -213,7 +213,31 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     // Issue#path tells the operator WHICH file to edit. For handoff
     // field violations, that file is prototype-handoff.yaml — not
     // prototyping.json (which is the generic refIntegrity owner).
-    expect(handoffIssue?.file).toBe(".qfai/contracts/design/prototype-handoff.yaml");
+    expect(handoffIssue?.file).toBe(".qfai/spec/03_contract/design/prototype-handoff.yaml");
+  });
+
+  // The handoff lives in `paths.contractsDir`. A copy left at the retired
+  // `.qfai/contracts/design/` is not the one this gate reads.
+  it("reads the handoff from paths.contractsDir", async () => {
+    const root = await newTempDir();
+    const handoff = ['finalArtifact: ""', 'designSystemMirror: "missing.yaml"'].join("\n");
+    await mkdir(path.join(root, ".qfai", "contracts", "design"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "contracts", "design", "prototype-handoff.yaml"),
+      handoff,
+      "utf-8",
+    );
+    expect(await validatePrototypingArtifactRefIntegrity(root, defaultConfig)).toEqual([]);
+
+    const config = { ...defaultConfig, paths: { ...defaultConfig.paths, contractsDir: "custom" } };
+    await mkdir(path.join(root, "custom", "design"), { recursive: true });
+    await writeFile(
+      path.join(root, "custom", "design", "prototype-handoff.yaml"),
+      handoff,
+      "utf-8",
+    );
+    const files = (await validatePrototypingArtifactRefIntegrity(root, config)).map((i) => i.file);
+    expect(files).toContain("custom/design/prototype-handoff.yaml");
   });
 
   // The cycle-0 seed is written BEFORE capture runs, so any ref it carried
