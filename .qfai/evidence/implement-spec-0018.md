@@ -226,6 +226,28 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0216 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0217 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0218 | TC-0018-0165 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0219 | TC-0018-0172 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0220 | TC-0018-0172 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0221 | TC-0018-0172 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0222 | TC-0018-0172 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0223 | TC-0018-0180 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0224 | TC-0018-0180 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0225 | TC-0018-0180 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0226 | TC-0018-0180 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0227 | TC-0018-0181 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0228 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0229 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0230 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0231 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0232 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0233 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0234 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0235 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0236 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0237 | TC-0018-0187 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0238 | TC-0018-0188 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0239 | TC-0018-0188 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0240 | TC-0018-0190 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -3889,6 +3911,226 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 once the fixture was complete: already satisfied by TDD-0026 (commit `db90cccff`), whose direct drive issues and accepts both stages, and TDD-0035 (commit `f5d638aae`), whose `finish` completes a `ready` run. The two earlier runs failed on the test's own fixture, not on production code: the routing result carried no proposal, and then the canned verify result carried no `qa-gatekeeper` review, which `finish` lists as `review-missing`
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theDirectPlan.test.ts > TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned accepted results`
 - Production files: none
+
+### TDD-0219
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0172 (TDD-0219): active`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0172 \(TDD-0219\): active' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected null to be 'active' // Object.is equality` at `tests/unit/workflow/persistence.test.ts:48:40`: the mode reader seam read no mode
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0172 (TDD-0219): active`
+- Production files: `packages/qfai/src/core/config.ts`
+
+### TDD-0220
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0172 (TDD-0220): shadow`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0172 \(TDD-0220\): shadow' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected null to be 'shadow' // Object.is equality` at `tests/unit/workflow/persistence.test.ts:48:40`: the reader knew `active` only
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0172 (TDD-0220): shadow`
+- Production files: `packages/qfai/src/core/config.ts`
+
+### TDD-0221
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0172 (TDD-0221): off`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0172 \(TDD-0221\): off' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected null to be 'off' // Object.is equality` at `tests/unit/workflow/persistence.test.ts:48:40`: the reader knew `active` and `shadow` only
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0172 (TDD-0221): off`
+- Production files: `packages/qfai/src/core/config.ts`
+
+### TDD-0222
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/persistence.test.ts`
+- Selector: `TC-0018-0172 (TDD-0222): invalid`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/persistence.test.ts --testNamePattern='TC-0018-0172 \(TDD-0222\): invalid' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0219, whose reader returns `null` for any value outside the known modes and guesses none (the seam before it returned `null` for every value, so this row never observed a failure)
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/persistence.test.ts > TC-0018-0172 (TDD-0222): invalid`
+- Production files: none
+
+### TDD-0223
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0180 (TDD-0223): ready-refused`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0180 \(TDD-0223\): ready-refused' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'running', …(3) } to deeply equal { state: 'ready', …(3) }` at `tests/unit/workflow/aLaterCauseStopsChaining.test.ts:68:49`: `next` issued a work order despite the `policy-drift` cause
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0180 (TDD-0223): ready-refused`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0224
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0180 (TDD-0224): awaiting-input-refused`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0180 \(TDD-0224\): awaiting-input-refused' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'awaiting_input', …(3) }` at `tests/unit/workflow/aLaterCauseStopsChaining.test.ts:72:37`: the answer was recorded despite the `policy-drift` cause
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0180 (TDD-0224): awaiting-input-refused`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0225
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0180 (TDD-0225): ready-stop`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0180 \(TDD-0225\): ready-stop' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0149 (commit `8d4b1d4c8`), whose `stop` is decided before anything the facts carry and cancels a `ready` run
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0180 (TDD-0225): ready-stop`
+- Production files: none
+
+### TDD-0226
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0180 (TDD-0226): awaiting-input-stop`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0180 \(TDD-0226\): awaiting-input-stop' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0149 (commit `8d4b1d4c8`), whose `stop` is decided before anything the facts carry and cancels a `awaiting_input` run
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0180 (TDD-0226): awaiting-input-stop`
+- Production files: none
+
+### TDD-0227
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aLaterCauseStopsChaining.test.ts`
+- Selector: `TC-0018-0181 (TDD-0227): Facts where the observed diff escapes the authorized write scope at a write operation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aLaterCauseStopsChaining.test.ts --testNamePattern='TC-0018-0181 \(TDD-0227\): Facts where the observed diff escapes the authorized write scope at a write operation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', halt: undefined } to deeply equal { state: 'blocked', halt: { …(3) } }` at `tests/unit/workflow/aLaterCauseStopsChaining.test.ts:106:79`: the result was accepted although the observed change escaped the write scope
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aLaterCauseStopsChaining.test.ts > TC-0018-0181 (TDD-0227): Facts where the observed diff escapes the authorized write scope at a write operation`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0228
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0228): host-copilot`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0228\): host-copilot' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:64:48`: `start` created the run for host `copilot`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0228): host-copilot`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0229
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0229): host-unlisted`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0229\): host-unlisted' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:68:54`: `start` created the run for an unlisted host
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0229): host-unlisted`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0230
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0230): fetch-skill-body`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0230\): fetch-skill-body' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `fetchSkillBody` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0230): fetch-skill-body`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0231
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0231): invoke-stage`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0231\): invoke-stage' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `invokeStage` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0231): invoke-stage`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0232
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0232): delegate-sub-agent`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0232\): delegate-sub-agent' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `delegateSubAgent` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0232): delegate-sub-agent`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0233
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0233): relay-question`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0233\): relay-question' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `relayQuestion` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0233): relay-question`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0234
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0234): run-shell-and-tests`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0234\): run-shell-and-tests' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `runShellAndTests` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0234): run-shell-and-tests`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0235
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0235): write-project-root`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0235\): write-project-root' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `writeProjectRoot` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0235): write-project-root`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0236
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0236): keep-run-record`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0236\): keep-run-record' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `keepRunRecord` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0236): keep-run-record`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0237
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0187 (TDD-0237): resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0187 \(TDD-0237\): resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { Object (run, code, ...) } to deeply equal { Object (run, code, ...) }` at `tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts:84:67`: `start` created the run with `resume` reported `false`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0187 (TDD-0237): resume`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0238
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0188 (TDD-0238): claude-code`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0188 \(TDD-0238\): claude-code' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0139 (commit `c779cb1af`), whose `start` creates the run in `routing`; the host check added for TC-0018-0187 admits `claude-code` with every capability `true`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0188 (TDD-0238): claude-code`
+- Production files: none
+
+### TDD-0239
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts`
+- Selector: `TC-0018-0188 (TDD-0239): codex`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts --testNamePattern='TC-0018-0188 \(TDD-0239\): codex' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run: already satisfied by TDD-0139 (commit `c779cb1af`), whose `start` creates the run in `routing`; the host check added for TC-0018-0187 admits `codex` with every capability `true`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/anIncapableHostIsRefusedAtStart.test.ts > TC-0018-0188 (TDD-0239): codex`
+- Production files: none
+
+### TDD-0240
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts`
+- Selector: `TC-0018-0190 (TDD-0240): The first stage needing a real delegation returns delegation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts --testNamePattern='TC-0018-0190 \(TDD-0240\): The first stage needing a real delegation returns delegation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'blocked', halt: { …(3) } } to deeply equal { state: 'blocked', halt: { …(3) } }` at `tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts:35:79`: the first unavailable delegation named blocker `delegation-unavailable` instead of cause `unsupported-capability`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aFailedFirstDelegationBlocks.test.ts > TC-0018-0190 (TDD-0240): The first stage needing a real delegation returns delegation`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0527
 

@@ -440,6 +440,8 @@ interface WorkflowFacts {
   reviewerRoles?: Record<string, string[]>;
   // A fail-closed cause an observer found for this operation.
   cause?: FailClosedCause;
+  // The run's cumulative changed paths, observed at this write operation.
+  observedChangedPaths?: string[];
 }
 
 // What `finish` observes: validate run in process, the offered verify report, the tool and
@@ -1064,8 +1066,15 @@ function decideDelegation(
   const { run } = snapshot;
   const status = result.delegation?.status;
   if (status === "unavailable") {
-    const halt = { blocker: "delegation-unavailable" as const, owner: "operator" };
-    return blockOnResult(run, result, undefined, { ...halt, subjects: ["delegateSubAgent"] });
+    const subjects = ["delegateSubAgent"];
+    // SIMPLIFIED: every plan stage is taken to need a real delegation, so the first delegation
+    // is the one of a run with no accepted stage.
+    // Lift when: a plan or work order marks which stages need a real delegation.
+    const first = (snapshot.acceptedStages ?? []).length === 0;
+    const halt: WorkflowHalt = first
+      ? { cause: "unsupported-capability", owner: "operator", subjects }
+      : { blocker: "delegation-unavailable", owner: "operator", subjects };
+    return blockOnResult(run, result, undefined, halt);
   }
   if (status !== "saturated") return undefined;
   const retries = snapshot.delegationRetries ?? 0;
@@ -1364,15 +1373,7 @@ function scopeUnmet(
     ledger && ledger.specId === snapshot.specBinding?.specId
       ? ledger.rows.filter((row) => row.status !== "done" && row.status !== "exception")
       : [];
-  // SIMPLIFIED: the authorized set is the plan's write scope and the run's own evidence tree.
-  // Lift when: the snapshot records the record areas of every work order the run issued.
-  const areas = [
-    ...(snapshot.plan?.writeScope ?? []),
-    `.qfai/evidence/workflow/${snapshot.run.id}`,
-  ];
-  const escaped = completion.changedPaths.filter(
-    (changed) => !areas.some((area) => areaCovers(area, changed)),
-  );
+  const escaped = escapedPaths(snapshot, completion.changedPaths);
   const approval = snapshot.approval;
   const unanswered =
     (approval && !approval.authorizationId) || (snapshot.plan?.route === "feature" && !approval)
@@ -1507,6 +1508,27 @@ function planRevision(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
   if (ref === undefined || facts.receiptValidity?.[ref] === "valid") return undefined;
   const run = { ...snapshot.run, state: "routing", sequence: snapshot.run.sequence + 1 };
   return { verdict: { ok: true, run }, events: [{ type: "required-plan-revision" }] };
+}
+
+// SIMPLIFIED: the authorized set is the plan's write scope and the run's own evidence tree.
+// Lift when: the snapshot records the record areas of every work order the run issued.
+function escapedPaths(snapshot: WorkflowSnapshot, changedPaths: readonly string[]): string[] {
+  const areas = [
+    ...(snapshot.plan?.writeScope ?? []),
+    `.qfai/evidence/workflow/${snapshot.run.id}`,
+  ];
+  return changedPaths.filter((changed) => !areas.some((area) => areaCovers(area, changed)));
+}
+
+// The fail-closed cause found for this operation: one an observer reported, or a cumulative
+// change that escaped the run change boundary.
+function foundCause(
+  snapshot: WorkflowSnapshot,
+  facts: WorkflowFacts,
+): { cause: FailClosedCause; subjects: string[] } | undefined {
+  if (facts.cause) return { cause: facts.cause, subjects: [] };
+  const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? []);
+  return escaped.length > 0 ? { cause: "invariant-violation", subjects: escaped } : undefined;
 }
 
 function refusedFailClosed(run: WorkflowSnapshot["run"], cause: FailClosedCause) {
@@ -1644,6 +1666,30 @@ function valueDigestOf(value: string | undefined, key: string | undefined) {
 // SIMPLIFIED: start records the execution context from the facts it is given; it checks no
 // capability report, active run or baseline.
 // Lift when: start's own refusals and its validate baseline are decided here.
+const SUPPORTED_HOSTS = ["claude-code", "codex"];
+
+const REQUIRED_CAPABILITIES = [
+  "fetchSkillBody",
+  "invokeStage",
+  "delegateSubAgent",
+  "relayQuestion",
+  "runShellAndTests",
+  "writeProjectRoot",
+  "keepRunRecord",
+  "resume",
+];
+
+// The refusal message for a host the core cannot run on, naming the host or each capability it
+// lacks; undefined when the host and every capability are supported.
+function unsupportedHarness(harness: WorkflowHarness): string | undefined {
+  if (!SUPPORTED_HOSTS.includes(harness.host)) {
+    return `No run was created: ${harness.host} is not a supported host. Invoke a stage skill by name instead.`;
+  }
+  const missing = REQUIRED_CAPABILITIES.filter((name) => harness.capabilities[name] !== true);
+  if (missing.length === 0) return undefined;
+  return `No run was created: the host reports no ${missing.join(", ")}. Invoke a stage skill by name instead.`;
+}
+
 function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecision {
   const start = facts.start;
   const text = input.request?.text ?? "";
@@ -1652,6 +1698,18 @@ function decideStart(input: WorkflowInput, facts: WorkflowFacts): WorkflowDecisi
     const message = "The run could not be started. Check the request and try again.";
     return {
       verdict: { ok: false, run: null, error: { code: "invalid-input", message } },
+      events: [],
+    };
+  }
+  const unsupported = unsupportedHarness(input.harness);
+  if (unsupported) {
+    const cause = "unsupported-capability" as const;
+    return {
+      verdict: {
+        ok: false,
+        run: null,
+        error: { code: "fail-closed", message: unsupported, cause },
+      },
       events: [],
     };
   }
@@ -1842,6 +1900,11 @@ export function decide(
     return { verdict: { ok: false, run, error: { code: "run-terminal", message } }, events: [] };
   }
   if (input.operation === "decision" && input.stop === true) return decideStop(run, input);
+  // A cause found where the state machine has no edge to `blocked` refuses the operation;
+  // at `finish` it is an unmet condition instead.
+  const found = input.operation === "finish" ? undefined : foundCause(snapshot, facts);
+  const waiting = run.state === "ready" || run.state === "awaiting_input";
+  if (found && waiting) return refusedFailClosed(run, found.cause);
   const workOrder = snapshot.outstandingWorkOrder;
   const result = input.result;
   const proposal = result?.proposal;
@@ -1850,6 +1913,9 @@ export function decide(
   if (input.operation === "accept" && result) {
     const refused = acceptPreamble(snapshot, input, result);
     if (refused) return refused;
+    if (found && run.state === "running") {
+      return blockOnResult(run, result, undefined, { ...found, owner: "operator" });
+    }
   }
 
   if (input.operation === "finish") return decideFinish(snapshot, facts);

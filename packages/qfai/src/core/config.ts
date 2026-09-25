@@ -375,6 +375,23 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   return { config: normalized, issues, configPath, document: parsed };
 }
 
+const WORKFLOW_MODES = ["active", "shadow", "off"] as const;
+
+export type WorkflowMode = (typeof WORKFLOW_MODES)[number];
+
+/**
+ * The workflow mode in force, read from the parsed config document. `null` means the value is
+ * none of the three, and no mode is guessed in its place.
+ */
+export function readWorkflowMode(document: unknown): WorkflowMode | null {
+  const workflow = isRecord(document) ? document.workflow : undefined;
+  if (workflow === undefined) return "active";
+  if (!isRecord(workflow)) return null;
+  const mode = workflow.mode;
+  if (mode === undefined) return "active";
+  return WORKFLOW_MODES.find((known) => known === mode) ?? null;
+}
+
 export function resolvePath(root: string, config: QfaiConfig, key: ConfigPathKey): string {
   return path.resolve(root, config.paths[key]);
 }

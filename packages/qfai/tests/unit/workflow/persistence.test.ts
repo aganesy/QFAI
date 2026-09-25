@@ -1,8 +1,11 @@
 // QFAI:SPEC-0018:TC-0018-0122
+// QFAI:SPEC-0018:TC-0018-0172
 
 import { expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { workflowExitCode } from "../../../src/cli/commands/workflow.js";
+import { readWorkflowMode } from "../../../src/core/config.js";
 import { writeRecord } from "../../../src/core/workflow/persistence.js";
 
 const busy: [string, string][] = [
@@ -26,5 +29,22 @@ for (const [title, code] of busy) {
       exitCode: 1,
       calls: [".qfai/runs/run-1/snapshot.json"],
     });
+  });
+}
+
+const modes: [string, string, string | null][] = [
+  ["TC-0018-0172 (TDD-0219): active", "active", "active"],
+  ["TC-0018-0172 (TDD-0220): shadow", "shadow", "shadow"],
+  ["TC-0018-0172 (TDD-0221): off", "off", "off"],
+  ["TC-0018-0172 (TDD-0222): invalid", "always", null],
+];
+
+for (const [title, value, mode] of modes) {
+  it(title, () => {
+    const document: unknown = parseYaml(`workflow:
+  mode: ${value}
+`);
+
+    expect(readWorkflowMode(document)).toBe(mode);
   });
 }
