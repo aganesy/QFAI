@@ -111,6 +111,16 @@ owns and the test case both verify. The verify text names both catalog shapes
 the first case builds, and the skill section the second case reads. Nothing
 surfaced during the run that the spec or the change request leaves open.
 
+### /qfai-implement — run started 2026-09-25T02:02:32.686Z
+
+Preflight: confidence high
+
+No session opened. `CR-20260925-0008` fixes the two rows and the boundary
+each owns, and the `/qfai-atdd` handover names each predicate and its
+mutation. Both named lines hold the named text at this revision, and nothing
+surfaced during the run that the spec, the change request or the handover
+leave open.
+
 ## Ledger rows advanced
 
 The original four rows were already `done`. The three new rows remain `todo`
@@ -588,6 +598,17 @@ its revision is a separate stage-wide obligation.
 #### Round 1
 
 - Round 1: Satisfied-by: packages/qfai/src/core/validators/specSplitByCapability.ts, `capReferenceIssues` — `QFAI-SPLIT-105` for a spec whose `01_Spec.md` does not name the capability the catalog pairs it with
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: expected [] to deeply equal [ [ 'spec-0002', 'CAP-0001' ], …(1) ]` at `tests/integration/sddSkillSpec0013.test.ts:271:84`
+
+The edit, the capability check dropped from the condition at line 552:
+
+```diff
+-    if (specText.trim().length === 0 || !specText.includes(capId)) {
++    if (specText.trim().length === 0) {
+```
+
+- Round 1: Falsifiability revision: working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd
 - Round 1: RED failure mode: falsifiability
 - Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
 - Round 1: RED test manifest:
@@ -595,6 +616,10 @@ its revision is a separate stage-wide obligation.
 ```text
 packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 ```
+
+- Round 1: Revision: b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "reports a spec id the catalog moves to another capability"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/src/core/validators/specSplitByCapability.ts`, which restores the file as it is at that revision
 
 ### TDD-0111
 
@@ -616,6 +641,16 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 #### Round 1
 
 - Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md, `## Arguments and Target Selection (Mandatory)` — the bullet making a reorder of the capability-to-spec mapping a Change Request
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL\.md makes reordering the capability-to-spec mapping a Change Request"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on `AssertionError: expected '## Arguments and Target Selection (Ma…' to contain 'Reordering capability-to-spec mapping…'` at `tests/integration/sddSkillSpec0013.test.ts:287:21`
+
+The edit, line 267 deleted:
+
+```diff
+-- Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
+```
+
+- Round 1: Falsifiability revision: working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e
 - Round 1: RED failure mode: falsifiability
 - Round 1: RED test hash: 3fa41420770ad4ebc9dc6d77fa86fc6e270ebb60b9c3ace098356c946dc5549d
 - Round 1: RED test manifest:
@@ -623,6 +658,10 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 ```text
 packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 ```
+
+- Round 1: Revision: b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts -t "SKILL\.md makes reordering the capability-to-spec mapping a Change Request"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md`, which restores the file as it is at that revision
 
 ## Coverage Depth Matrix
 
@@ -646,6 +685,14 @@ every total.
 | 1 | acceptance-test-engineer | acceptance-test-engineer | Write the `TDD-0110` and `TDD-0111` cases under a `TC-0013-0010` describe the `TDD-0010` selector does not match | CR-20260925-0008, 06_Test-Cases.md `TC-0013-0010` | `sddSkillSpec0013.test.ts` | PASS |
 | 2 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0110` and `TDD-0111` on the falsifiability branch | the test file, `specSplitByCapability.ts`, the `qfai-sdd` `SKILL.md` | #tdd-0110, #tdd-0111 | PASS |
 | 3 | - | n/a | grilling(-@2026-09-25T01:55:05.779Z/none): none | - | - | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-25T02:02:32.686Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 4 | - | n/a | grilling(-@2026-09-25T02:02:32.686Z/none): none | - | - | PASS |
+| 5 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 falsifiability run with the capability check dropped at line 552, then the revert and the restored GREEN | #tdd-0110, `specSplitByCapability.ts` | Round 1 | PASS |
+| 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
 
 ## Cross-spec obligations
 
