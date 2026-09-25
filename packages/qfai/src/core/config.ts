@@ -372,7 +372,7 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
   }
 
   const normalized = normalizeConfig(parsed, configPath, issues);
-  if (readWorkflowMode(parsed) === "off") {
+  if (readWorkflowMode(parsed) === null) {
     issues.push(
       configIssue(
         configPath,
