@@ -24,6 +24,7 @@ import { ensureRootGitignoreEntries, runInit } from "../../src/cli/commands/init
 import { defaultConfig } from "../../src/core/config.js";
 import { validateProject } from "../../src/core/validate.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(__dirname, "../..");
@@ -332,6 +333,9 @@ async function project(): Promise<string> {
 let journey: Journey;
 beforeAll(async () => {
   const root = await project();
+  // Initialised before the migration: its host links name the plural
+  // directories, which is what step 9 repoints.
+  await seedOldHostLinks(root);
   const preload = await networkGuard(root);
   const dry: Result[] = [];
   const applied: Result[] = [];

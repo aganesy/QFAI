@@ -21,6 +21,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { seedOldHostLinks } from "../helpers/oldHostLinks.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -219,6 +220,9 @@ let unresolved: Failure;
 
 beforeAll(async () => {
   const root = await project();
+  // Initialised before the migration: its host links name the plural
+  // directories, which is what step 9 repoints.
+  await seedOldHostLinks(root);
   const dry: Result[] = [];
   const real: Result[] = [];
   const dryUnchanged: boolean[] = [];

@@ -20,6 +20,7 @@ import {
   rmdir,
   stat,
   symlink,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
@@ -4399,6 +4400,12 @@ type WrapperSyncOptions = {
   installedRuleMasters?: ReadonlySet<string>;
   /** Defaults to stdout, which is what `qfai init` wants. */
   report?: Note;
+  /**
+   * `false` leaves the holds beside a link this call creates to the caller.
+   * By default they are removed, because a hold records a path a repair
+   * emptied and the link now fills it.
+   */
+  discardRepointHolds?: boolean;
 };
 
 type SyncResult = {
@@ -4696,56 +4703,60 @@ async function describeUnrewritable(linkPath: string): Promise<string> {
   return "a special file occupies the path";
 }
 
-/**
- * Whether a migration repairs or reports this roster path even when the gate
- * does not name it.
- *
- * The gate reports wrappers only in a project it can tell was initialised. A
- * project still on the old layout may carry nothing that proves it, and its
- * links to the plural directories are still init's links. So the migration
- * reads each roster path itself:
- *
- * | the path holds                              | outcome                                       |
- * | ------------------------------------------- | --------------------------------------------- |
- * | nothing, beside a repair's hold of its link | restored: a repoint stopped part-way          |
- * | nothing else                                | left absent; the project may have removed it  |
- * | a link to the plural directory              | repointed                                     |
- * | a link to anywhere else                     | left to the gate; it may be the project's own |
- * | a file, directory or other entry            | preserved and reported as occupied            |
- */
-async function isMigrationRosterEntry(wrapper: PlannedWrapper): Promise<boolean> {
+/** What a roster path holds, as far as a migration's link repair is concerned. */
+type RosterLink =
+  | { kind: "absent" }
+  | { kind: "old" }
+  | { kind: "current" }
+  | { kind: "foreign"; target: string }
+  | { kind: "occupied" };
+
+async function rosterLink(wrapper: PlannedWrapper): Promise<RosterLink> {
   let stats: Stats;
   try {
     stats = await lstat(wrapper.linkPath);
   } catch (err: unknown) {
-    if (isEnoent(err)) return (await interruptedRepointHolds(wrapper)).length > 0;
+    if (isEnoent(err)) return { kind: "absent" };
     throw err;
   }
-  if (!stats.isSymbolicLink()) return true;
+  if (!stats.isSymbolicLink()) return { kind: "occupied" };
   const base = path.dirname(wrapper.linkPath);
-  return sameLinkTarget(base, await readlink(wrapper.linkPath), wrapper.legacyTarget);
+  const target = await readlink(wrapper.linkPath);
+  if (sameLinkTarget(base, target, wrapper.legacyTarget)) return { kind: "old" };
+  if (sameLinkTarget(base, target, wrapper.target)) return { kind: "current" };
+  return { kind: "foreign", target };
 }
 
 /** Whether two link targets, read relative to `base`, name the same path. */
-function sameLinkTarget(base: string, left: string, right: string): boolean {
+function sameLinkTarget(
+  base: string,
+  left: string,
+  right: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
   const a = path.resolve(base, left);
   const b = path.resolve(base, right);
-  if (process.platform !== "win32") return a === b;
+  if (platform !== "win32") return a === b;
   return path.relative(a.toLowerCase(), b.toLowerCase()) === "";
 }
 
 /**
- * The holds a repoint of `wrapper` left behind when it stopped between moving
- * the old link aside and creating the new one.
+ * The holds beside `linkPath` that still hold a link to one of `targets`.
  *
  * {@link replaceLinkThroughHold} moves a link into
- * `<link>.qfai-repair-<pid>[-<n>]/` before it writes the replacement, so a hold
- * still holding a link to this wrapper's old or new target is the record that
- * the repair, not the project, emptied the path.
+ * `<link>.qfai-repair-<pid>[-<n>]/` before it writes the replacement. Every
+ * writer that creates a link at `linkPath` removes these holds, so one that
+ * remains means a repair emptied the path and nothing has written it since.
+ * The name is matched by the pattern prune and the gate use, so an entry that
+ * merely starts like a hold is not one.
  */
-async function interruptedRepointHolds(wrapper: PlannedWrapper): Promise<string[]> {
-  const base = path.dirname(wrapper.linkPath);
-  const name = path.basename(wrapper.linkPath);
+async function repointHolds(
+  linkPath: string,
+  targets: readonly string[],
+  platform?: NodeJS.Platform,
+): Promise<string[]> {
+  const base = path.dirname(linkPath);
+  const name = path.basename(linkPath);
   let entries: string[];
   try {
     entries = await readdir(base);
@@ -4754,18 +4765,57 @@ async function interruptedRepointHolds(wrapper: PlannedWrapper): Promise<string[
     throw err;
   }
   const holds: string[] = [];
-  for (const entry of entries.filter((candidate) => candidate.startsWith(`${name}.qfai-repair-`))) {
+  for (const entry of entries.sort()) {
+    const suffix = SIDECAR_RE.exec(entry);
+    if (suffix === null || entry.slice(0, suffix.index) !== name) continue;
     const held = path.join(base, entry, name);
     if ((await safeLstat(held))?.isSymbolicLink() !== true) continue;
     const target = await readlink(held);
-    if (
-      sameLinkTarget(base, target, wrapper.legacyTarget) ||
-      sameLinkTarget(base, target, wrapper.target)
-    ) {
+    if (targets.some((candidate) => sameLinkTarget(base, target, candidate, platform))) {
       holds.push(path.join(base, entry));
     }
   }
   return holds;
+}
+
+/**
+ * Removes one hold: the link it holds, then the directory itself.
+ *
+ * `rmdir` is not recursive, so a hold that has gained anything besides the
+ * link it was made for stays where it is, with that content.
+ */
+async function removeRepointHold(hold: string, name: string): Promise<unknown> {
+  try {
+    await unlink(path.join(hold, name));
+    await rmdir(hold);
+    return null;
+  } catch (err: unknown) {
+    return err;
+  }
+}
+
+/**
+ * Removes the holds beside a link its writer has just created, once the link
+ * stands, so that no hold outlives the empty path it records.
+ */
+async function discardRepointHolds(
+  linkPath: string,
+  targets: readonly string[],
+  options: WrapperSyncOptions,
+): Promise<void> {
+  const note = options.report ?? info;
+  for (const hold of await repointHolds(linkPath, targets, options.platform)) {
+    if (options.dryRun) {
+      note(`  would remove the hold of an interrupted repair: ${hold}`);
+      continue;
+    }
+    const failure = await removeRepointHold(hold, path.basename(linkPath));
+    note(
+      failure === null
+        ? `  removed the hold of an interrupted repair: ${hold}`
+        : `  note: ${linkPath} is written, but the hold beside it could not be removed (${hold}): ${describeError(failure)}`,
+    );
+  }
 }
 
 /** The wrapper paths the gate is currently reporting, waivers applied. */
@@ -4809,19 +4859,118 @@ async function isOwnShippedAgentLink(root: string, linkedParent: string): Promis
 }
 
 /**
+ * What a migration does at each roster path, read from the path itself.
+ *
+ * The gate reports wrappers only in a project it can tell was initialised. A
+ * project still on the old layout may carry nothing that proves it, and its
+ * links to the plural directories are still init's links. So the migration
+ * reads each roster path, and its answer overrides the gate's where they
+ * differ:
+ *
+ * | the path holds                               | outcome                                              |
+ * | -------------------------------------------- | ---------------------------------------------------- |
+ * | nothing, beside a hold of an interrupted run | restored, and the hold removed                       |
+ * | nothing else                                 | left absent, even when the gate reports it missing   |
+ * | a link to the plural directory               | repointed, and any hold beside it removed            |
+ * | a link to the singular directory, and a hold | the hold removed; the link is already right          |
+ * | a link to anywhere else                      | left as it is, and reported when the gate names it   |
+ * | a file, directory or other entry             | preserved and reported as occupied                   |
+ *
+ * A hold means a repair emptied the path and nothing has written it since,
+ * because every writer that creates the link removes the holds beside it. So
+ * restoring on a hold undoes the repair's own emptying, never a removal the
+ * project made. Removing the hold is part of the same repoint, and is listed
+ * with it.
+ *
+ * `named` is updated in place. The map returned holds, per roster path, the
+ * holds this pass removes there.
+ */
+async function planMigrationRoster(
+  root: string,
+  planned: ReadonlyMap<string, PlannedWrapper>,
+  named: Set<string>,
+  selected: (relative: string) => boolean,
+): Promise<{ holds: Map<string, string[]>; declined: string[] }> {
+  const holds = new Map<string, string[]>();
+  const declined: string[] = [];
+  for (const [relative, wrapper] of planned) {
+    const found = await rosterLink(wrapper);
+    if (found.kind === "foreign") {
+      if (named.delete(relative)) {
+        declined.push(
+          `${relative}: the link names ${found.target}, which is neither the old nor the new directory`,
+        );
+      }
+      continue;
+    }
+    const own = (
+      await repointHolds(wrapper.linkPath, [wrapper.legacyTarget, wrapper.target])
+    ).filter((hold) => selected(toRelativePath(root, hold)));
+    if (found.kind === "absent" && own.length === 0) {
+      named.delete(relative);
+      continue;
+    }
+    if (found.kind === "current") {
+      if (own.length > 0) holds.set(relative, own);
+      continue;
+    }
+    if (!selected(relative)) continue;
+    named.add(relative);
+    if (own.length > 0) holds.set(relative, own);
+  }
+  return { holds, declined };
+}
+
+/**
+ * Why a link cannot be written at this roster path, or `null` when it can.
+ *
+ * `holdsOnly` asks for the parent check alone: removing a hold beside a link
+ * that is already right needs no canonical source.
+ */
+async function whyNotRelinkable(
+  root: string,
+  relative: string,
+  wrapper: PlannedWrapper,
+  holdsOnly: boolean,
+): Promise<string | null> {
+  const linkedAncestor = await firstLinkedComponent(path.dirname(wrapper.linkPath), root);
+  if (linkedAncestor !== null) return `${relative}: a linked parent occupies ${linkedAncestor}`;
+  if (holdsOnly) return null;
+  const source = path.resolve(path.dirname(wrapper.linkPath), wrapper.target);
+  const linkedSourceParent = await firstLinkedComponent(path.dirname(source), root);
+  if (linkedSourceParent !== null && !(await isOwnShippedAgentLink(root, linkedSourceParent))) {
+    return `${relative}: canonical source has a linked parent at ${linkedSourceParent}`;
+  }
+  let sourceKind: Stats;
+  try {
+    sourceKind = await lstat(source);
+  } catch (err: unknown) {
+    if (isEnoent(err)) return `${relative}: canonical source is missing at ${source}`;
+    throw err;
+  }
+  if (
+    sourceKind.isSymbolicLink() ||
+    (wrapper.type === "dir" ? !sourceKind.isDirectory() : !sourceKind.isFile())
+  ) {
+    return `${relative}: canonical source has the wrong kind at ${source}`;
+  }
+  return null;
+}
+
+/**
  * Relinks the integration wrappers the gate is reporting. A migration also
  * repoints roster links still naming the plural directories, and restores a
- * path only where an interrupted repoint of its own emptied it.
+ * path only where an interrupted repoint of its own emptied it
+ * ({@link planMigrationRoster}).
  *
  * `qfai init --force` clears the same finding, but it also regenerates
  * `.qfai/assistant/skill/**`, `assistant/agent/**` and the shipped plain
  * files, so an unattended pass cannot be allowed to reach for it: local edits
  * to any of those would be gone without the operator asking. This writes
  * symlinks and nothing else, through the same {@link ensureSymlink} `init`
- * uses. A migration also reads each roster path itself
- * ({@link isMigrationRosterEntry}), so a project the gate cannot yet tell was
- * initialised still has its links repointed. Its journaled path set limits
- * the live run to paths the dry run named.
+ * uses. A migration's journaled path set limits the live run to paths the dry
+ * run named. A hold it removes is one of those paths, reported on a relink
+ * line of its own, so the dry run lists it.
  *
  * Two kinds of path are reported rather than rewritten, because a pass that
  * passed over them in silence would read as having repaired the tree:
@@ -4851,56 +5000,48 @@ export async function repairIntegrationWrappers(
   const selected = (relative: string): boolean => options.onlyRelative?.has(relative) ?? true;
   const named = new Set([...gateNamed].filter(selected));
   const planned = await plannedWrappers(root);
-  if (options.includeMissing) {
-    for (const [relative, wrapper] of planned) {
-      if (selected(relative) && (await isMigrationRosterEntry(wrapper))) named.add(relative);
-    }
-  }
-  if (named.size === 0) {
+  const migration = options.includeMissing
+    ? await planMigrationRoster(root, planned, named, selected)
+    : { holds: new Map<string, string[]>(), declined: [] };
+  const paths = new Set([...named, ...migration.holds.keys()]);
+  if (paths.size === 0 && migration.declined.length === 0) {
     report(`${WRAPPER_REPAIR_LABEL} — nothing to repair`);
     return;
   }
 
   const repaired: string[] = [];
-  const declined: string[] = [];
+  const declined: string[] = [...migration.declined];
   const failed: string[] = [];
   // The writer's own notes — a sidecar it could not remove, an original it put
   // back and where. Collected rather than printed: this caller's stdout may be
   // carrying a JSON document, and `init`'s writer sends them straight there.
   const notes: string[] = [];
+  const settleHolds = async (wrapper: PlannedWrapper, holds: readonly string[]) => {
+    for (const hold of holds) {
+      const relative = toRelativePath(root, hold);
+      const failure = dryRun
+        ? null
+        : await removeRepointHold(hold, path.basename(wrapper.linkPath));
+      if (failure === null) repaired.push(relative);
+      else failed.push(`${relative}: ${describeError(failure)}`);
+    }
+  };
 
-  for (const relative of Array.from(named).sort()) {
+  for (const relative of Array.from(paths).sort()) {
     const wrapper = planned.get(relative);
     if (wrapper === undefined) {
       declined.push(`${relative}: this release ships no skill or agent by that name`);
       continue;
     }
-    const linkedAncestor = await firstLinkedComponent(path.dirname(wrapper.linkPath), root);
-    if (linkedAncestor !== null) {
-      declined.push(`${relative}: a linked parent occupies ${linkedAncestor}`);
+    const holds = migration.holds.get(relative) ?? [];
+    const holdsOnly = !named.has(relative);
+    const refusal = await whyNotRelinkable(root, relative, wrapper, holdsOnly);
+    if (refusal !== null) {
+      declined.push(refusal);
       continue;
     }
-    const source = path.resolve(path.dirname(wrapper.linkPath), wrapper.target);
-    const linkedSourceParent = await firstLinkedComponent(path.dirname(source), root);
-    if (linkedSourceParent !== null && !(await isOwnShippedAgentLink(root, linkedSourceParent))) {
-      declined.push(`${relative}: canonical source has a linked parent at ${linkedSourceParent}`);
-      continue;
-    }
-    let sourceKind: Stats;
-    try {
-      sourceKind = await lstat(source);
-    } catch (err: unknown) {
-      if (isEnoent(err)) {
-        declined.push(`${relative}: canonical source is missing at ${source}`);
-        continue;
-      }
-      throw err;
-    }
-    if (
-      sourceKind.isSymbolicLink() ||
-      (wrapper.type === "dir" ? !sourceKind.isDirectory() : !sourceKind.isFile())
-    ) {
-      declined.push(`${relative}: canonical source has the wrong kind at ${source}`);
+    if (holdsOnly) {
+      await settleHolds(wrapper, holds);
       continue;
     }
     try {
@@ -4908,17 +5049,15 @@ export async function repairIntegrationWrappers(
         force: false,
         dryRun,
         legacyTarget: wrapper.legacyTarget,
+        // A migration removes the holds it planned, and only those, below.
+        discardRepointHolds: !options.includeMissing,
         report: (line) => {
           for (const part of line.split("\n")) notes.push(`  ${part.trim()}`);
         },
       });
       if (result === "created") {
         repaired.push(relative);
-        if (!dryRun && options.includeMissing) {
-          for (const hold of await interruptedRepointHolds(wrapper)) {
-            await discardHold(hold, wrapper.linkPath, (line) => notes.push(line));
-          }
-        }
+        await settleHolds(wrapper, holds);
       } else {
         declined.push(`${relative}: ${await describeUnrewritable(wrapper.linkPath)}`);
       }
@@ -5427,9 +5566,13 @@ async function isFollowable(linkPath: string): Promise<boolean> {
  *   would destroy an entry created while this repair was in flight; `link`
  *   refuses `EEXIST` but raises `EPERM` on a symlink. `symlink` does both —
  *   refuses an occupied path, and reproduces the only content a symlink has,
- *   its target.
+ *   its target. Where the platform refuses `symlink` itself, the held link
+ *   goes back by `rename` ({@link putBackHeldEntry}).
  * - **Cleanup is not the repair.** Once the new link stands, a failure to
  *   remove the hold is a note.
+ *
+ * `createSymlink` is the writer the caller was given, so a platform that
+ * refuses it refuses the replacement and the put-back alike.
  */
 async function replaceLinkThroughHold(
   linkPath: string,
@@ -5437,6 +5580,7 @@ async function replaceLinkThroughHold(
   type: "dir" | "file",
   note: Note,
   held = target,
+  createSymlink: typeof symlink = symlink,
 ): Promise<"created" | "skipped"> {
   const hold = await claimHoldDir(linkPath);
   const sidecar = path.join(hold, path.basename(linkPath));
@@ -5453,13 +5597,13 @@ async function replaceLinkThroughHold(
     // Not the entry this repair was authorised to replace. It goes back by the
     // same atomic claim the rollback uses, and the repair declines rather than
     // recreating something over a path somebody else owns.
-    await restoreHeldLink({ hold, sidecar, linkPath, type, note });
+    await restoreHeldLink({ hold, sidecar, linkPath, type, note, createSymlink });
     return "skipped";
   }
   try {
-    await symlink(target, linkPath, type);
+    await createSymlink(target, linkPath, type);
   } catch (error: unknown) {
-    await restoreHeldLink({ hold, sidecar, linkPath, type, note, cause: error });
+    await restoreHeldLink({ hold, sidecar, linkPath, type, note, createSymlink, cause: error });
     throw error;
   }
   await discardHold(hold, linkPath, note);
@@ -5485,10 +5629,11 @@ async function restoreHeldLink(args: {
   linkPath: string;
   type: "dir" | "file";
   note: Note;
+  createSymlink: typeof symlink;
   cause?: unknown;
 }): Promise<void> {
-  const { hold, sidecar, linkPath, type, note } = args;
-  const failure = await putBackHeldEntry(sidecar, linkPath, type);
+  const { hold, sidecar, linkPath, type, note, createSymlink } = args;
+  const failure = await putBackHeldEntry(sidecar, linkPath, type, createSymlink);
   if (failure === null) {
     await discardHold(hold, linkPath, note);
     return;
@@ -5512,7 +5657,11 @@ async function restoreHeldLink(args: {
  * - a **symlink** goes back with `symlink`, the only non-overwriting way to
  *   create one (`rename` overwrites; `link` raises `EPERM` on a symlink). An
  *   `EEXIST` from it is the proof that another process took the pathname, which
- *   is what makes the failed-recreate rollback safe.
+ *   is what makes the failed-recreate rollback safe. An `EPERM` from it is the
+ *   platform refusing to create symlinks at all — Windows without Developer
+ *   Mode, the case that sent the replacement here — and then the held link
+ *   itself goes back by `rename`, which needs no such right, while the
+ *   pathname is still free.
  * - **anything else** — a regular file another process wrote in the window
  *   between the followability probe and the move — goes back with `rename`,
  *   which is what moved it and the only thing that reproduces it. Reading the
@@ -5528,6 +5677,7 @@ async function putBackHeldEntry(
   sidecar: string,
   linkPath: string,
   type: "dir" | "file",
+  createSymlink: typeof symlink,
 ): Promise<unknown> {
   const held = await safeLstat(sidecar);
   if (held?.isSymbolicLink() === true) {
@@ -5535,11 +5685,18 @@ async function putBackHeldEntry(
     if (target === null) {
       return new Error(`Cannot read the held symlink's target: ${sidecar}`);
     }
-    return await symlink(target, linkPath, type).then(
+    const refused = await createSymlink(target, linkPath, type).then(
       () => null,
       (err: unknown) => err,
     );
+    if (!isEperm(refused)) return refused;
+    return await renameIntoFreePath(sidecar, linkPath);
   }
+  return await renameIntoFreePath(sidecar, linkPath);
+}
+
+/** `rename`, refused with `EEXIST` when `linkPath` is already taken. */
+async function renameIntoFreePath(sidecar: string, linkPath: string): Promise<unknown> {
   if ((await safeLstat(linkPath)) !== undefined) {
     const occupied: NodeJS.ErrnoException = new Error(`${linkPath} is occupied by another entry`);
     occupied.code = "EEXIST";
@@ -5612,19 +5769,46 @@ async function claimHoldDir(linkPath: string): Promise<string> {
   );
 }
 
+/**
+ * Writes the managed link at `linkPath`, then removes the holds an interrupted
+ * repair left beside it ({@link discardRepointHolds}).
+ *
+ * Every caller writes through here, so a hold outlives its empty path only
+ * where a caller opts out and removes the holds itself.
+ */
 async function ensureSymlink(
   linkPath: string,
   target: string,
   type: "dir" | "file",
   options: WrapperSyncOptions,
 ): Promise<"created" | "skipped"> {
+  const result = await writeManagedLink(linkPath, target, type, options);
+  if (result === "created" && options.discardRepointHolds !== false) {
+    const targets = options.legacyTarget === undefined ? [target] : [target, options.legacyTarget];
+    await discardRepointHolds(linkPath, targets, options);
+  }
+  return result;
+}
+
+async function writeManagedLink(
+  linkPath: string,
+  target: string,
+  type: "dir" | "file",
+  options: WrapperSyncOptions,
+): Promise<"created" | "skipped"> {
   const note = options.report ?? info;
+  const createSymlink = options.createSymlink ?? symlink;
   const linkStat = await safeLstat(linkPath);
 
   if (linkStat !== undefined) {
     if (linkStat.isSymbolicLink()) {
       const currentTarget = await readlink(linkPath);
-      const isValid = path.normalize(currentTarget) === path.normalize(target);
+      const isValid = sameLinkTarget(
+        path.dirname(linkPath),
+        currentTarget,
+        target,
+        options.platform,
+      );
 
       if (isValid && !options.force) {
         // The target string being right is not the same as the link working.
@@ -5666,19 +5850,38 @@ async function ensureSymlink(
         if (options.dryRun) {
           return "created";
         }
-        return await replaceLinkThroughHold(linkPath, target, type, note);
+        return await replaceLinkThroughHold(
+          linkPath,
+          target,
+          type,
+          note,
+          currentTarget,
+          createSymlink,
+        );
       }
       if (
         !options.force &&
         options.legacyTarget !== undefined &&
-        sameLinkTarget(path.dirname(linkPath), currentTarget, options.legacyTarget)
+        sameLinkTarget(
+          path.dirname(linkPath),
+          currentTarget,
+          options.legacyTarget,
+          options.platform,
+        )
       ) {
         // A link to the plural directory is moved aside, not removed: a
         // repoint that fails puts it back, and one that stops part-way leaves
         // the hold as the record that this repair emptied the path.
         if (options.dryRun) return "created";
         try {
-          return await replaceLinkThroughHold(linkPath, target, type, note, currentTarget);
+          return await replaceLinkThroughHold(
+            linkPath,
+            target,
+            type,
+            note,
+            currentTarget,
+            createSymlink,
+          );
         } catch (err: unknown) {
           throw symlinkFailure(err, options.platform);
         }
@@ -5734,7 +5937,7 @@ async function ensureSymlink(
   if (!options.dryRun) {
     await mkdir(path.dirname(linkPath), { recursive: true });
     try {
-      await (options.createSymlink ?? symlink)(target, linkPath, type);
+      await createSymlink(target, linkPath, type);
     } catch (err: unknown) {
       throw symlinkFailure(err, options.platform);
     }
