@@ -131,6 +131,20 @@ describe("discussion skill template integration", () => {
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
+
+    // No completion condition selects a screen exploration or finalizes a design system: the
+    // explorations stay unranked. The brand direction is the one visual decision recorded, and it
+    // is the user's.
+    const matrix = await readFile(completionMatrixPath, "utf-8");
+    const uiBearing = collectOrderedList(
+      matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
+    );
+    expect(uiBearing).toMatch(/carried\s+unranked/);
+    expect(uiBearing).toMatch(/no\s+single\s+screen\s+exploration\s+is\s+selected/);
+    expect(uiBearing).toMatch(/design\s+system\s+is\s+not\s+finalized/);
+    expect(uiBearing).toMatch(/01_Context\.md#Design Direction/);
+    expect(uiBearing).toMatch(/taken\s+without\s+the\s+user\s+carries\s+`chosen_by: assumption`/);
+    expect(content).toMatch(/published theme the product is built on is the user's decision/);
   });
 
   // SKILL.md is the only file the skill is guaranteed to load; references are

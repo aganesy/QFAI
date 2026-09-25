@@ -1990,6 +1990,7 @@ describe("assets guardrails", () => {
     expect(content).toContain("prototyping.yaml");
   });
 
+  // QFAI:SPEC-0002:TC-0002-0011
   it("ensures qfai-discussion skill and artifact rules use canonical pack wording", async () => {
     const skillPath = path.join(
       templateQfaiDir,

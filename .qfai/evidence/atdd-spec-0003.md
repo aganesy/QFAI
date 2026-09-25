@@ -796,6 +796,39 @@ packages/qfai/tests/integration/shippedWorkflowPortability.test.ts
 - GREEN result: exit 0; 1 passed (1)
 - Changed files: `packages/qfai/tests/integration/init/entryDirective.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` captures stderr, where the refusal is written)
 
+### TDD-0105
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0071: Fresh non-interactive init: no mode key, mode line active`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/init/modeLine.test.ts --reporter=verbose`
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config and no-prompt assertions before it passed)
+- GREEN result: exit 0; 3 passed (3)
+- Changed files: `packages/qfai/src/cli/commands/init.ts` (`workflowModeLine` after the run report), `packages/qfai/tests/integration/init/modeLine.test.ts`, `packages/qfai/tests/integration/init/upgradeStates.ts` (`initQuietly` takes `yes`)
+
+### TDD-0106
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0072: Upgrade with no mode key: config unchanged, mode active`
+- RED command (cwd `packages/qfai`): as TDD-0105
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` (the config was already byte-identical)
+- GREEN result: exit 0; 3 passed (3)
+- Changed files: as TDD-0105
+
+### TDD-0107
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/init/modeLine.test.ts`
+- Selector: `TC-0003-0073: Mode line for active, shadow, off and an invalid value`
+- RED command (cwd `packages/qfai`): as TDD-0105
+- RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'Workflow mode: active' ]` on the first of the four installs
+- GREEN result: exit 0; 3 passed (3); the invalid value prints `Workflow mode: "bogus" is invalid; expected active, shadow or off`
+- Changed files: as TDD-0105
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / ⚠️ 130 / ❌ 176, with 365 not applicable, across 909 scored cells.

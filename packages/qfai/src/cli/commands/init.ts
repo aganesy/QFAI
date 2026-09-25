@@ -40,6 +40,7 @@ import {
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../core/assistantAssetProvenance.js";
+import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
@@ -716,6 +717,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.verbose ?? false,
   );
+  info(await workflowModeLine(destRoot));
 
   for (const note of [
     ...upgradeResult.preservedNotes,
@@ -742,6 +744,29 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot);
   }
+}
+
+/**
+ * The summary line naming the workflow mode the project's config puts in force. Init writes no
+ * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
+ */
+async function workflowModeLine(destRoot: string): Promise<string> {
+  const { document } = await loadConfig(destRoot);
+  const mode = readWorkflowMode(document);
+  if (mode !== null) return `Workflow mode: ${mode}`;
+  const configured = JSON.stringify(configuredWorkflowMode(document));
+  return `Workflow mode: ${configured} is invalid; expected active, shadow or off`;
+}
+
+/** The value the config holds where the mode belongs: `workflow.mode`, or `workflow` itself. */
+function configuredWorkflowMode(document: unknown): unknown {
+  const workflow =
+    typeof document === "object" && document !== null && "workflow" in document
+      ? document.workflow
+      : undefined;
+  return typeof workflow === "object" && workflow !== null && "mode" in workflow
+    ? workflow.mode
+    : workflow;
 }
 
 // ---------------------------------------------------------------------------
