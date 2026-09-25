@@ -369,6 +369,19 @@ on its first run.
 | ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
 | S1 | adopted | 2026-09-25T03:29:58.000Z | 08796c47f0f2d64e68fffc82403afc0125224405 | 2026-09-25T03:30:05.000Z | preflight | empty | none in flight | 1 | 0 | 0 |
 
+### /qfai-implement — run started 2026-09-25T03:32:07.281Z
+
+Preflight: session opened
+
+The run resumes `TDD-0062` at `review-fix` from the `/qfai-atdd` handback.
+The handback fixes the corrected test, the path and the mutation to re-take.
+What was open was which round the attempt-1 verdict closed, since the record
+named Round 1.
+
+| Session | Ended | Ended at | Revision | Work resumed | Subject | Frontier | Lookups | Decisions | Open | Escalated |
+| ------- | ----- | -------- | -------- | ------------ | ------- | -------- | ------- | --------- | ---- | --------- |
+| S1 | adopted | 2026-09-25T03:32:15.000Z | 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363 | 2026-09-25T03:32:20.000Z | preflight | empty | none in flight | 1 | 0 | 0 |
+
 ## Work performed (what changed, where)
 
 - **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 13 tests across 8
@@ -2085,9 +2098,9 @@ tree from that commit and the edit above.
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1 — RED phase gate: falsifiability, rebuilt mutated tree working-tree+5f277bbe71551055ae5f0643487d583864a8b34bc427307fcd72ad5185da5c60 on 7937fad2121f5174c479fa1eefcc4cb9f3d494e3; build-phase GREEN + oracle proof: reviewed revision 7937fad2121f5174c479fa1eefcc4cb9f3d494e3, re-run at HEAD 3cf22bdec841fe578c28b8ebff7082232d6e1f95)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate: rebuilt working-tree+5f277bbe… with HEAD taken as 7937fad21 matches; mutant release.yml SHA-256 5d3969fd…edb781; assertion at spec0017SliceAlignment.test.ts:19:73 labelled release.yml#gate-tests, row case only, 1 failed | 3 skipped (4); RED test hash 4f6607d4… recomputes. Build-phase GREEN and oracle proof: selector 1 passed | 3 skipped (4), whole file 4/4 at 3cf22bdec. Gate taken after the ledger had moved, on the rebuilt tree
 
-- Round 1: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed; the row goes back for a new round
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
+- Round 2: reviewer verdict (attempt 1): REVISE — implementation-reviewer: the sliced-matrix check reads only matrix.slice, so an include or exclude on the release matrices changes the legs unnoticed. Path taken: no new production behaviour — the test was corrected under `/qfai-atdd`, no round was opened, the proof was re-taken under Round 2 and the `Refactor verify` fields refreshed
+- Round 2: Review pack (attempt 1): .qfai/review/review-20260925130000000 <!-- qfai:not-a-citation -->
+- Round 2: Review pack seal (attempt 1): d115eab5aef594b58623a1e77f44852ba03657c99a07390ea8a44a0d92302f59
 
 #### Review-fix handback — Round 2, attempt 1
 
@@ -2126,6 +2139,46 @@ packages/qfai/tests/integration/spec0017SliceAlignment.test.ts
 ```
 
 The row's `Test file` and `Selector` are unchanged.
+
+#### Re-taken proof — Round 2, after the test replacement
+
+The `/qfai-implement` run started 2026-09-25T03:32:07.281Z re-took the proof
+on the corrected test, with the mutation the reviewer named: an `exclude` on
+`gate-tests`. The same mutation on the test before the edit passes the
+selector, 1 passed | 3 skipped (4), which is the gap the `REVISE` names.
+
+- Round 2: Satisfied-by: .github/workflows/release.yml, the `gate-tests` job's `strategy.matrix` at lines 514-515 — a matrix holding the `slice` list and nothing else, so every listed slice runs as a leg
+- Round 2: Falsifiability command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 2: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 3 skipped (4). The row's case fails on `AssertionError: release.yml#gate-tests matrix keys: expected [ 'slice', 'exclude' ] to deeply equal [ 'slice' ]` at `tests/integration/spec0017SliceAlignment.test.ts:28:9`
+
+The edit, a line added after line 515 of `.github/workflows/release.yml`:
+
+```diff
+       matrix:
+         slice: [core, validators, integration, e2e, cli, unit, scripts]
++        exclude: [{ slice: scripts }]
+```
+
+- Round 2: Replacement proof revision: working-tree+a0f0b17ac1e677baf8c610fc5c46ed45c6d67779253b59a67c708a7874420e82
+
+That revision was computed with the mutation in the tree, on top of
+`5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363`, which holds the corrected test.
+The mutation was reverted with `git checkout -- .github/workflows/release.yml`
+after the run. The `qa-gatekeeper` verdicts above were taken on the test
+before the edit; the gate on this proof has not been routed yet, and it can
+rebuild the mutated tree from that commit and the edit above.
+
+The GREEN after the revert, on the corrected test:
+
+- Round 2: Revision: 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363
+- Round 2: GREEN command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts -t "agrees across the runner, scripts, CI and release declarations" (run from `packages/qfai`)
+- Round 2: GREEN result: Test Files 1 passed (1); Tests 1 passed | 3 skipped (4). Run after the revert, on the tree at that revision
+
+The refreshed refactor verify:
+
+- Refactor verify command: node node_modules/vitest/vitest.mjs run tests/integration/spec0017SliceAlignment.test.ts (run from `packages/qfai`)
+- Refactor verify result: Test Files 1 passed (1); Tests 4 passed (4). The test file is the only file this rework changed, and the whole file is the relevant suite. Run on the committed tree
+- Refactor verify revision: 5f1f49b1ab85803d9c0e8ba2c1d573c0080d8363
 
 ### TDD-0069
 
@@ -2461,6 +2514,20 @@ handback. Nothing was dispatched.
 | 38 | acceptance-test-engineer | stage3-agent (inline) | review-fix: require each sliced job's matrix to hold only `slice` | implementation-reviewer attempt 1 in review-20260925130000000 <!-- qfai:not-a-citation -->, the test file, the helper | `spec0017SliceAlignment.test.ts`; the helper unchanged | PASS |
 | 39 | acceptance-test-engineer | stage3-agent (inline) | review-fix: run the corrected test, replace the Round 2 hash and mark the proof stale | the corrected test | #tdd-0062, review-fix handback; first run passed, so no round opened | PASS |
 | 40 | acceptance-test-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T03:29:44.936Z/agents): take the no-round path rather than open Round 3 | the work order, `qfai-atdd` review-fix rules, `round-evidence.md` | #tdd-0062; the corrected test passes on its first run and no production behaviour changes, so the rules open no round and have the proof re-taken under Round 2. Disagreeing position: the work order asked for a new round | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-25T03:32:07.281Z
+
+The same agent ran this invocation inline. The gate on the re-taken proof and
+the re-review were not run here.
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 41 | backend-engineer | stage3-agent (inline) | grilling(S1@2026-09-25T03:32:07.281Z/agents): attribute the attempt-1 verdict, pack and seal to Round 2 | #tdd-0062 | #tdd-0062; the reviewers read the Round 2 cycle at 7937fad21, and Round 1 is the cycle before `CR-20260924-0002`; the pack and seal values are unchanged; no position disagreed | PASS |
+| 42 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` re-take the proof with an `exclude` on `gate-tests`, revert and GREEN | #tdd-0062, the corrected test | Round 2 re-taken proof | PASS |
+| 43 | backend-engineer | stage3-agent (inline) | /qfai-implement: `TDD-0062` refresh the refactor verify on the committed tree, and `review-fix -> refactor` | #tdd-0062 | Refactor verify fields; tdd/test-list.md | PASS |
+| 44 | qa-gatekeeper | not routed | /qfai-implement: `TDD-0062` gate on the re-taken proof and its GREEN | #tdd-0062 | - | PENDING |
+| 45 | completion-reviewer | not routed | /qfai-implement: `TDD-0062` completion review, attempt 2 | #tdd-0062 | - | PENDING |
+| 46 | implementation-reviewer | not routed | /qfai-implement: `TDD-0062` code review, attempt 2 | #tdd-0062 | - | PENDING |
 
 ## Execution logs
 

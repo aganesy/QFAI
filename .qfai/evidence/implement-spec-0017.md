@@ -3627,6 +3627,14 @@ completion is declared.
 - `record:unchecked`, `TDD-0032`, `TDD-0033`, `TDD-0034`, `TDD-0035`, Round 1: `Resumed-from-blocked ... blocked at todo` was reconstructed, not copied from `Blocked-By`, which held `-` before the resumption.
 - `record:unchecked`, `TDD-0070`, Round 1: the review pack `review-20260923120009000` holding the qa-gatekeeper#1 `REVISE` was written after that gate's Round 2 `PASS`, so the round that Round 2 follows carries the verdict that opened it. Its response file is the gatekeeper's own, re-issued by the same reviewer, stating when the verdict was given and when it was written into the pack.
 
+Open entries from the completion review of the `/qfai-implement` run started
+2026-09-25T03:05:15.811Z, attempt 1, pack `review-20260925130000000` <!-- qfai:not-a-citation -->.
+Two are repaired in place and say so; the first cannot be.
+
+- `record:unchecked`, `TDD-0062`, Round 2: the ledger moved to `refactor` before the RED gate answered, and the mutation was reverted before the gate saw it. The gate passed later on the tree it rebuilt. Grilling decision S1 of that run records the position that disagreed. Not repairable: the order is history.
+- `record:unchecked`, `TDD-0062`, Stage 0: the skeleton re-run was written here, under the plan phase, and not in `skeleton.md`. Repaired: `skeleton.md` now records the re-run under `qfai`.
+- `record:unchecked`, `TDD-0062`: the entry opened with the identity block from before `CR-20260924-0002` (the old test file and selector), which disagreed with the handover below it. Repaired: the block is kept verbatim in a fence under a note, so no field outside the fence names the old identity.
+
 ## Plan phase — /qfai-implement run started 2026-09-25T03:05:15.811Z
 
 The run takes one row by name, `TDD-0062`, from the `/qfai-atdd` handover in
