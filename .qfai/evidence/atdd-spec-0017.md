@@ -23,7 +23,7 @@ See § "Round 1, and the five things it changed" and § "The gate moved".
   stage must not reintroduce (P5)
 - `.qfai/specs/spec-0017/09_delta.md` — including its `## Rejected` section (Delta Rejected Guard)
 - `.qfai/specs/spec-0017/tdd/test-list.md` — 118 rows: 97 `Integration`,
-  11 `Unit`; **75 `refactor`, 0 `blocked`, 26 `todo`**, with 6 `done` and 3 `review-fix`.
+  11 `Unit`; **75 `refactor`, 0 `blocked`, 27 `todo`**, with 13 `done` and 3 `review-fix`.
   The nine additional `Integration` rows split six acceptance cases into independent outcomes and remain `todo`.
   The intent-driven entry added eight `todo` rows, `TDD-0111` to `TDD-0118`: seven `Integration` and a tenth `E2E`.
   At the 2026-09-23 run, nine rows were `E2E`, one per story, seeded at `todo`.
@@ -329,6 +329,15 @@ Two things are left to `qa-gatekeeper` rather than decided here:
 - the order of the step: each mutation was reverted before the gate was
   routed. Each `Falsifiability revision` is recorded so the gate can rebuild
   the mutated tree from `6b9fb192c` and the recorded edit.
+
+### /qfai-implement — run started 2026-09-25T12:13:00.000Z
+
+Preflight: confidence high
+
+No session opened. The run reopens TDD-0111 to TDD-0118 to take the reviews
+their earlier close skipped. The spec, the ledger rows and their tests are
+settled input, and each row's test already passes, which routes it to the
+falsifiability branch without a decision to make.
 
 ## Work performed (what changed, where)
 
@@ -2130,6 +2139,22 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 
 ### TDD-0111
 
+- TDD-ID: TDD-0111
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/suiteList.test.ts
+- Selector: TC-0017-0094: The Windows job runs exactly the declared suite list
+- TC-ref: TC-0017-0094
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the Windows job existed, failed on `expected undefined to be 'windows-latest'`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: packages/qfai/package.json, script `test:windows-parity`, the suite list the Windows job runs
+- Mutation: the entry `tests/core/gitignoreMatcher.test.ts` deleted from the list, committed alone as cb631eeaa0c13d70ec32dbc56859026cc0d076b2 and reverted by the commit after it (876f6d40de4437fa44e43eff47a54e4cee16764f)
+- Why it fails: the list then differs from the declared suites, and `expect([...suiteList()].sort()).toEqual([...DECLARED_SUITES].sort())` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`
@@ -2138,9 +2163,116 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected undefined to be 'windows-latest' // Object.is equality`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/package.json, script `test:windows-parity`, the suite list the Windows job runs
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suiteList.test.ts -t "TC-0017-0094: The Windows job runs exactly the declared suite list"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: expected [ 'tests/cli/init', …(7) ] to deeply equal [ 'tests/cli/init', …(8) ]` at `tests/integration/windowsParity/suiteList.test.ts:45:37`
+
+The edit:
+
+```diff
+-    "test:windows-parity": "vitest run tests/unit/workflow/ tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
++    "test:windows-parity": "vitest run tests/unit/workflow/ tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/validators/assistantTreeMigration.test.ts",
+```
+
+- Round 1: Falsifiability revision: cb631eeaa0c13d70ec32dbc56859026cc0d076b2
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 0295cc0cee3045bef19a2a9a687e5baaaeec6e25fd48b51c916d2d2fbafea441
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+packages/qfai/tests/integration/windowsParity/suiteList.test.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suiteList.test.ts -t "TC-0017-0094: The Windows job runs exactly the declared suite list"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert and the merge of the default branch; the merge changed one pinned digest in another job of `.github/workflows/ci.yml` and none of this row's predicate or test files
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suiteList.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision cb631eeaa0c13d70ec32dbc56859026cc0d076b2; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0111
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: cb631eeaa0c13d70ec32dbc56859026cc0d076b2
+Findings: none
+Evidence checked: the commit changes `package.json` only, removing `tests/core/gitignoreMatcher.test.ts` from `test:windows-parity`, which is the script `Satisfied-by` names. Re-observed: 1 failed, 1 skipped, on `expected [ 'tests/cli/init', …(7) ] to deeply equal […(8)]` at `suiteList.test.ts:45:37`, inside the selector. The hash `0295cc0c…` recomputes.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0111
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings:
+- advisory — The test file `suiteList.test.ts` is shared with TDD-0113, which is open. See cross-row finding 2.
+Evidence checked:
+- GREEN re-run: 1 passed, 1 skipped (2), exit 0.
+- Refactor verify re-run over `suiteList.test.ts`: 2 passed (2), exit 0.
+- `Round 1: Revision`, `Refactor verify revision` and the ledger `REV:` are all 195c3832.
+- Mutation cb631eea deletes one entry from `test:windows-parity` in `package.json`, the predicate `Satisfied-by` names. It failed at `suiteList.test.ts:45:37`, inside the row's own selector (raw capture `tmp/2296/red/TDD-0111.txt`).
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000001 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 8feeb8cb3587da5f7f6fc96a02077be22f1b038cbfdad765eb5d40fe6dbe2ec4
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: ae7c34123f2d1f10528ec4ace6b45638119fbabc9c0c14cc9f394d61fd73d5f3
+- Spec review pack: .qfai/review/review-20260925160000001 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 8feeb8cb3587da5f7f6fc96a02077be22f1b038cbfdad765eb5d40fe6dbe2ec4
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: ae7c34123f2d1f10528ec4ace6b45638119fbabc9c0c14cc9f394d61fd73d5f3
+- Code quality review pack: .qfai/review/review-20260925160000001 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 8feeb8cb3587da5f7f6fc96a02077be22f1b038cbfdad765eb5d40fe6dbe2ec4
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0112
 
+- TDD-ID: TDD-0112
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts
+- Selector: TC-0017-0095: Every suite-list entry resolves to a collected test file
+- TC-ref: TC-0017-0095
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the suite list existed, failed on `expected 0 to be greater than 0`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: packages/qfai/package.json, script `test:windows-parity`, every entry naming a test file the workspace collects
+- Mutation: the entry `tests/core/gitignoreMatcher.test.ts` renamed to `tests/core/gitignoreMatchers.test.ts`, a file that does not exist, committed alone as 49c287bb56577459227cd38009a5c04572134783 and reverted by the commit after it (86b39404ccb2b2c1b0fd54ee2099518d0df6c7b0)
+- Why it fails: the renamed entry matches no collected test file, and `expect(unresolved, "entries matching no collected test file").toEqual([])` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts`
@@ -2149,9 +2281,118 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected 0 to be greater than 0` (no suite list yet)
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/package.json, script `test:windows-parity`, every entry naming a test file the workspace collects
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suitesLandFirst.test.ts -t "TC-0017-0095: Every suite-list entry resolves to a collected test file"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: entries matching no collected test file: expected [ Array(1) ] to deeply equal []` at `tests/integration/windowsParity/suitesLandFirst.test.ts:54:67`
+
+The edit:
+
+```diff
+-    "test:windows-parity": "vitest run tests/unit/workflow/ tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatcher.test.ts tests/validators/assistantTreeMigration.test.ts",
++    "test:windows-parity": "vitest run tests/unit/workflow/ tests/integration/workflow/ tests/cli/init tests/integration/init/ tests/core/assistantAssetProvenance.test.ts tests/unit/shared/provenanceLockConfirm.test.ts tests/core/gitignoreGovernanceRecords.test.ts tests/core/gitignoreMatchers.test.ts tests/validators/assistantTreeMigration.test.ts",
+```
+
+- Round 1: Falsifiability revision: 49c287bb56577459227cd38009a5c04572134783
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: ecf9585753904ce0bdd688d0eaa9bb595ebee9f897901bcce2e286f2bf4ecbaf
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+packages/qfai/tests/integration/windowsParity/suitesLandFirst.test.ts
+packages/qfai/vitest.knobs.ts
+packages/qfai/vitest.workspace.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suitesLandFirst.test.ts -t "TC-0017-0095: Every suite-list entry resolves to a collected test file"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert and the merge of the default branch; the merge changed one pinned digest in another job of `.github/workflows/ci.yml` and none of this row's predicate or test files
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suitesLandFirst.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 49c287bb56577459227cd38009a5c04572134783; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0112
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: 49c287bb56577459227cd38009a5c04572134783
+Findings: none
+Evidence checked: the commit changes `package.json` only, renaming the entry to a file that does not exist. Re-observed: 1 failed, on `entries matching no collected test file: … to deeply equal []` at `suitesLandFirst.test.ts:54:67`, and the output names `tests/core/gitignoreMatchers.test.ts`. The hash `ecf95857…` recomputes. The manifest correctly includes `vitest.workspace.ts` and `vitest.knobs.ts`, which the test imports.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0112
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings: none
+Evidence checked:
+- GREEN re-run: 1 passed (1), exit 0.
+- Refactor verify re-run over `suitesLandFirst.test.ts`: 1 passed (1), exit 0.
+- Revision fields agree.
+- Mutation 49c287bb renames the entry to a file that does not exist. It failed at `suitesLandFirst.test.ts:54:67`, and the output names the unresolved entry.
+- The test matches entries by substring (`file.includes(entry)`). Vitest's own file filters also match by substring, so this is not a weak oracle.
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000002 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 07b5790be090a1e2cde17a4ce3c6fd173f57f724a2a84c0ce307bb312125c514
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: 617d903c3206ce091795f543ea03b5c9a57873780cda1ac0256305907e4cbf13
+- Spec review pack: .qfai/review/review-20260925160000002 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 07b5790be090a1e2cde17a4ce3c6fd173f57f724a2a84c0ce307bb312125c514
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: 617d903c3206ce091795f543ea03b5c9a57873780cda1ac0256305907e4cbf13
+- Code quality review pack: .qfai/review/review-20260925160000002 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 07b5790be090a1e2cde17a4ce3c6fd173f57f724a2a84c0ce307bb312125c514
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0113
 
+- TDD-ID: TDD-0113
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/suiteList.test.ts
+- Selector: TC-0017-0096: The job points TEMP and TMP at a directory with a space
+- TC-ref: TC-0017-0096
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job had a test step, failed on `expected -1 to be greater than 0`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `windows-parity`, the `TEMP` and `TMP` values of the step `Run the Windows parity suites`
+- Mutation: both values changed from `${{ runner.temp }}\qfai tmp` to `${{ runner.temp }}\qfai-tmp`, committed alone as 600de20260b1657075dbc5b68b6839eeacca8cfa and reverted by the commit after it (63947f98163a7c7aa11e7380a331ced23ba68ea8)
+- Why it fails: no earlier step then creates the directory the test step points at, and `expect(creators, "one earlier step creates that directory").toHaveLength(1)` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`
@@ -2160,9 +2401,79 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected -1 to be greater than 0` (no test step). A workflow command file cannot carry the value inside the verdict's closure, which the hygiene lane refuses, so the test step sets TEMP and TMP in its own `env:` and the step before it creates the directory
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/suiteList.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+The earlier assertion that `TEMP` names a path with a space still passes under this mutation, because the unexpanded `${{ runner.temp }}` expression itself contains spaces. The mutation is caught only by the assertion that an earlier step creates the same directory.
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `windows-parity`, the `TEMP` and `TMP` values of the step `Run the Windows parity suites`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/suiteList.test.ts -t "TC-0017-0096: The job points TEMP and TMP at a directory with a space"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: one earlier step creates that directory: expected [] to have a length of 1 but got +0` at `tests/integration/windowsParity/suiteList.test.ts:62:65`
+
+The edit:
+
+```diff
+-          TEMP: ${{ runner.temp }}\qfai tmp
+-          TMP: ${{ runner.temp }}\qfai tmp
++          TEMP: ${{ runner.temp }}\qfai-tmp
++          TMP: ${{ runner.temp }}\qfai-tmp
+```
+
+- Round 1: Falsifiability revision: 600de20260b1657075dbc5b68b6839eeacca8cfa
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 0295cc0cee3045bef19a2a9a687e5baaaeec6e25fd48b51c916d2d2fbafea441
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+packages/qfai/tests/integration/windowsParity/suiteList.test.ts
+```
+
+- qa-gatekeeper attempts: qa-gatekeeper#1 REVISE, RED phase gate on the falsifiability mutation run, reviewed revision 600de20260b1657075dbc5b68b6839eeacca8cfa
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0113
+Gate: RED phase (falsifiability)
+Result: REVISE
+Reviewed revision: 600de20260b1657075dbc5b68b6839eeacca8cfa
+Findings:
+- blocking — The test does not check the clause the row is named for. TC-0017-0096 requires a directory "whose name contains a space". The test checks this with `/\S \S/.test(TEMP)` at `suiteList.test.ts:54`. That pattern matches `{ r` inside the unexpanded `${{ runner.temp }}` expression, so it passes for any value that starts with that expression. I confirmed with node that it matches `${{ runner.temp }}\qfai-tmp`. The recorded mutation was caught only because TEMP/TMP no longer matched the `QFAI_TEMP_ROOT` of the step that creates the directory, at line 62. The evidence says this itself. A mutation that removes the space from all three values the same way would pass the test. I worked this out from the test code; I did not apply it, because I was not allowed to edit files.
+  - The test belongs to `/qfai-atdd`, so it goes back there. The fix is to check for the space in the path after the `${{ … }}` expression. This only asserts what the TC already states, so it is not new scope.
+  - After that, re-take the trio: `Satisfied-by`, command, result, `Falsifiability revision`, and the RED test hash and manifest. Use a mutation that removes only the space.
+  - The row is already at `refactor`, so move it back with `refactor -> red`, citing this verdict.
+Evidence checked: the commit changes `ci.yml` only, the TEMP/TMP values. Re-observed: 1 failed, 1 skipped, on `one earlier step creates that directory: expected [] to have a length of 1 but got +0` at `suiteList.test.ts:62:65`. The hash `0295cc0c…` recomputes. The TC-0017-0096 text is in `06_Test-Cases.md:161`.
+````
+
+- Open: the RED phase gate returned REVISE, so the row stays at `todo`. The test checks the space with `/\S \S/`, which the unexpanded `${{ runner.temp }}` expression already satisfies, so removing the space from the directory name and from both values together would pass it. The test goes back to `/qfai-atdd` to assert the space in the path after the expression; the falsifiability trio is then re-taken with a mutation that removes only the space.
 
 ### TDD-0114
 
+- TDD-ID: TDD-0114
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts
+- Selector: TC-0017-0097: The job follows change detection and joins the verdict
+- TC-ref: TC-0017-0097
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job existed, failed on `expected [] to deeply equal [ 'detect' ]`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `windows-parity`, its `if:` condition on the detection output
+- Mutation: the line `if: ${{ needs.detect.outputs.full == 'true' }}` deleted, committed alone as 8d5c6a72ac43051a1be27e688b4fd99f0594ccbc and reverted by the commit after it (b4dff989eb81aac86b6c4804f2a04a56d14f9ad9)
+- Why it fails: the job then runs whatever detection decides, and `expect(windows.if).toBe(job("test").if)` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`
@@ -2171,9 +2482,114 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected [] to deeply equal [ 'detect' ]`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `windows-parity`, its `if:` condition on the detection output
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts -t "TC-0017-0097: The job follows change detection and joins the verdict"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: expected undefined to be '${{ needs.detect.outputs.full == \'tr…' // Object.is equality` at `tests/integration/windowsParity/selectionAndVerdict.test.ts:16:24`
+
+The edit:
+
+```diff
+-    if: ${{ needs.detect.outputs.full == 'true' }}
+```
+
+- Round 1: Falsifiability revision: 8d5c6a72ac43051a1be27e688b4fd99f0594ccbc
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 832822a7d596b1acdf9af3d88e6a304e2d214eca281906a0c63733db2ba98998
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts -t "TC-0017-0097: The job follows change detection and joins the verdict"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert and the merge of the default branch; the merge changed one pinned digest in another job of `.github/workflows/ci.yml` and none of this row's predicate or test files
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 8d5c6a72ac43051a1be27e688b4fd99f0594ccbc; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0114
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: 8d5c6a72ac43051a1be27e688b4fd99f0594ccbc
+Findings: none
+Evidence checked: the commit changes `ci.yml` only, deleting `if: ${{ needs.detect.outputs.full == 'true' }}`. Re-observed: 1 failed, 1 skipped, on `expected undefined to be '${{ needs.detect.outputs.full == \'tr…'` at `selectionAndVerdict.test.ts:16:24`. The hash `832822a7…` recomputes.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0114
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings: none
+Evidence checked:
+- GREEN re-run: 1 passed, 1 skipped (2), exit 0.
+- Refactor verify re-run over `selectionAndVerdict.test.ts`: 2 passed (2), exit 0.
+- Revision fields agree.
+- Mutation 8d5c6a72 deletes the `windows-parity` job's `if:` line. It failed at `selectionAndVerdict.test.ts:16:24` (`expected undefined to be '${{ needs.detect.outputs.full …'`), inside the row's selector.
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000003 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4603a347b6c78116e1b9b0e49578bed00493b8898869a2de7079d386661b70b5
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: 6b10f8df2267ae581611cd68eb2064784c06f9779129057e6ad616cc08eefa62
+- Spec review pack: .qfai/review/review-20260925160000003 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4603a347b6c78116e1b9b0e49578bed00493b8898869a2de7079d386661b70b5
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: 6b10f8df2267ae581611cd68eb2064784c06f9779129057e6ad616cc08eefa62
+- Code quality review pack: .qfai/review/review-20260925160000003 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4603a347b6c78116e1b9b0e49578bed00493b8898869a2de7079d386661b70b5
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0115
 
+- TDD-ID: TDD-0115
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts
+- Selector: TC-0017-0098: A failing Windows job fails the aggregate verdict
+- TC-ref: TC-0017-0098
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job joined the verdict, failed on `expected [ 'detect', 'lint', …(7) ] to include 'windows-parity'`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `ci-pass`, the `windows-parity` entry in its `needs`
+- Mutation: the line `windows-parity,` deleted from the `needs` list, committed alone as 156176db878479695cb005205ff87e80d84a28df and reverted by the commit after it (72b913f092278ec9c2cc26ae52854a2c6ff1a657)
+- Why it fails: the verdict then never sees the Windows job, and `expect(Object.keys(needs)).toContain(WINDOWS_JOB)` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`
@@ -2182,9 +2598,115 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: expected [ 'detect', 'lint', …(7) ] to include 'windows-parity'`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `ci-pass`, the `windows-parity` entry in its `needs`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts -t "TC-0017-0098: A failing Windows job fails the aggregate verdict"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: expected [ 'detect', 'lint', …(7) ] to include 'windows-parity'` at `tests/integration/windowsParity/selectionAndVerdict.test.ts:27:32`
+
+The edit:
+
+```diff
+-        windows-parity,
+```
+
+- Round 1: Falsifiability revision: 156176db878479695cb005205ff87e80d84a28df
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 832822a7d596b1acdf9af3d88e6a304e2d214eca281906a0c63733db2ba98998
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+packages/qfai/tests/integration/windowsParity/selectionAndVerdict.test.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts -t "TC-0017-0098: A failing Windows job fails the aggregate verdict"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/selectionAndVerdict.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 156176db878479695cb005205ff87e80d84a28df; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0115
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: 156176db878479695cb005205ff87e80d84a28df
+Findings: none
+Evidence checked: the commit changes `ci.yml` only, removing `windows-parity,` from `ci-pass` `needs`. Re-observed: 1 failed, 1 skipped, on `expected [ 'detect', 'lint', …(7) ] to include 'windows-parity'` at `selectionAndVerdict.test.ts:27:32`. The hash `832822a7…` recomputes.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0115
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings:
+- advisory — The proof fails on the guard `expect(Object.keys(needs)).toContain(WINDOWS_JOB)` at `:27:32`, not on `verdictExit(needs)).toBe(1)`. That still discriminates: without the guard, the same mutation leaves an all-success needs map, so `toBe(1)` would fail. No rework needed.
+Evidence checked:
+- GREEN re-run: 1 passed, 1 skipped (2), exit 0.
+- Refactor verify re-run over `selectionAndVerdict.test.ts`: 2 passed (2), exit 0.
+- Revision fields agree.
+- Mutation 156176db removes `windows-parity` from `ci-pass` `needs`, the predicate `Satisfied-by` names.
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000004 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): f7d96011c73834e8470f164fa2bd2d61f2053a74b2eeab8ddd3d0f8cb34baff8
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: e2165a31f461c86c9ea018f1ca4c9d3ff18748b17f5d3944bd8604ec1eda36b7
+- Spec review pack: .qfai/review/review-20260925160000004 <!-- qfai:not-a-citation -->
+- Spec review pack seal: f7d96011c73834e8470f164fa2bd2d61f2053a74b2eeab8ddd3d0f8cb34baff8
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: e2165a31f461c86c9ea018f1ca4c9d3ff18748b17f5d3944bd8604ec1eda36b7
+- Code quality review pack: .qfai/review/review-20260925160000004 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: f7d96011c73834e8470f164fa2bd2d61f2053a74b2eeab8ddd3d0f8cb34baff8
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0116
 
+- TDD-ID: TDD-0116
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts
+- Selector: TC-0017-0099: A package build precedes the job's first test step
+- TC-ref: TC-0017-0099
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job existed, failed on `a step builds packages/qfai: expected -1 to be greater than or equal to 0`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `windows-parity`, the step `Build qfai on the Windows runner` placed before the test step
+- Mutation: the build step moved from before `Run the Windows parity suites` to after it, as the job's last step, committed alone as f544a40b6b51f7f9fed1f43226625cf7110f913a and reverted by the commit after it (48fab048405e291dfe1069f3cd73fbb2246b9841)
+- Why it fails: the test step then comes before the build, and `expect(testAt, "a step runs the tests").toBeGreaterThan(buildAt)` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`
@@ -2193,9 +2715,123 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: a step builds packages/qfai: expected -1 to be greater than or equal to 0`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `windows-parity`, the step `Build qfai on the Windows runner` placed before the test step
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts -t "TC-0017-0099: A package build precedes the job's first test step"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: a step runs the tests: expected 3 to be greater than 4` at `tests/integration/windowsParity/inJobBuild.test.ts:19:45`
+
+The edit:
+
+```diff
+-      - name: Build qfai on the Windows runner
+-        run: pnpm -C packages/qfai build
+       - name: Run the Windows parity suites
+         env:
+           TEMP: ${{ runner.temp }}\qfai tmp
+           TMP: ${{ runner.temp }}\qfai tmp
+         run: pnpm -C packages/qfai test:windows-parity
++      - name: Build qfai on the Windows runner
++        run: pnpm -C packages/qfai build
+```
+
+- Round 1: Falsifiability revision: f544a40b6b51f7f9fed1f43226625cf7110f913a
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a42bc8af2e8bdaa43c237fabeaec3077fa23996198a6ed945ccb1f9c3b6354c2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts -t "TC-0017-0099: A package build precedes the job's first test step"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision f544a40b6b51f7f9fed1f43226625cf7110f913a; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0116
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: f544a40b6b51f7f9fed1f43226625cf7110f913a
+Findings:
+- advisory — The assertion at `inJobBuild.test.ts:19` is labelled "a step runs the tests", but it checks that the tests run after the build. The failure (`expected 3 to be greater than 4`) is correct; only the label is misleading. `/qfai-atdd` can relabel it.
+Evidence checked: the commit changes `ci.yml` only, moving the build step after the test step. Re-observed: 1 failed, 1 skipped, at `inJobBuild.test.ts:19:45`. The hash `a42bc8af…` recomputes.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0116
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings: none
+Evidence checked:
+- GREEN re-run: 1 passed, 1 skipped (2), exit 0.
+- Refactor verify re-run over `inJobBuild.test.ts`: 2 passed (2), exit 0.
+- Revision fields agree.
+- Mutation f544a40b moves the build step after the test step. It failed at `inJobBuild.test.ts:19:45` (`expected 3 to be greater than 4`).
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000005 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): c09000483cdf375cd6d0cb78833d5db906e8929fdfed1adc1deb804384227859
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: 2921bf4e338c4c63eb89591ddefcc9c548da9b942333709b145d8c344988bde6
+- Spec review pack: .qfai/review/review-20260925160000005 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c09000483cdf375cd6d0cb78833d5db906e8929fdfed1adc1deb804384227859
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: 2921bf4e338c4c63eb89591ddefcc9c548da9b942333709b145d8c344988bde6
+- Code quality review pack: .qfai/review/review-20260925160000005 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c09000483cdf375cd6d0cb78833d5db906e8929fdfed1adc1deb804384227859
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0117
 
+- TDD-ID: TDD-0117
+- Layer: Integration
+- Test file: packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts
+- Selector: TC-0017-0100: The job neither needs build nor downloads its artifact
+- TC-ref: TC-0017-0100
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job existed, failed on `the job declares its steps: expected 0 to be greater than 0`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `windows-parity`, its `needs` naming `detect` alone
+- Mutation: `needs: [detect]` changed to `needs: [detect, build]`, committed alone as 0e0addfcbdce248fddc78987d8c3fc67bd2df071 and reverted by the commit after it (f79975c245f2405dc40d3818a93039f918dddd9d)
+- Why it fails: the job then waits on the `build` job, and `expect(needsOf(windows)).not.toContain("build")` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: Integration
 - Test file: `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`
@@ -2204,9 +2840,116 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
 - RED result: exit 1; `AssertionError: the job declares its steps: expected 0 to be greater than 0`
 - GREEN result: exit 0; the selector passed (1 passed)
 - Changed files: `.github/workflows/ci.yml` (the `windows-parity` job and its place in `ci-pass`'s needs), `.github/required-status-contexts.json` (dependency, condition, gated verification and its digest, code-path pin re-pinned), `packages/qfai/package.json` (`test:windows-parity`), `.github/workflows/release.yml` (the release classifier does not count the list as a slice), `packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts`, `packages/qfai/tests/integration/windowsParity/ownCi.ts` (new helper), `packages/qfai/tests/integration/spec0017CiMatrix.test.ts` (check-name lists re-pinned with the job)
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `windows-parity`, its `needs` naming `detect` alone
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts -t "TC-0017-0100: The job neither needs build nor downloads its artifact"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 1 skipped (2). The row's case fails on `AssertionError: expected [ 'detect', 'build' ] to not include 'build'` at `tests/integration/windowsParity/inJobBuild.test.ts:26:34`
+
+The edit:
+
+```diff
+-    needs: [detect]
++    needs: [detect, build]
+```
+
+- Round 1: Falsifiability revision: 0e0addfcbdce248fddc78987d8c3fc67bd2df071
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: a42bc8af2e8bdaa43c237fabeaec3077fa23996198a6ed945ccb1f9c3b6354c2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/integration/windowsParity/inJobBuild.test.ts
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts -t "TC-0017-0100: The job neither needs build nor downloads its artifact"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 1 skipped (2). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/inJobBuild.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 0e0addfcbdce248fddc78987d8c3fc67bd2df071; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0117
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: 0e0addfcbdce248fddc78987d8c3fc67bd2df071
+Findings: none
+Evidence checked: the commit changes `ci.yml` only, from `needs: [detect]` to `needs: [detect, build]`. Re-observed: 1 failed, 1 skipped, on `expected [ 'detect', 'build' ] to not include 'build'` at `inJobBuild.test.ts:26:34`. The hash `a42bc8af…` recomputes.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0117
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings: none
+Evidence checked:
+- GREEN re-run: 1 passed, 1 skipped (2), exit 0.
+- Refactor verify re-run over `inJobBuild.test.ts`: 2 passed (2), exit 0.
+- Revision fields agree.
+- Mutation 0e0addfc changes `needs: [detect]` to `[detect, build]`. It failed at `inJobBuild.test.ts:26:34`.
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000006 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): d1e646419549b98b9d6d240aa348b28b9e3509a5cdd07f799d749d843298a860
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: 9974b45722f7aa89c3be6a46096b4e208aaf0853988aba2f082378c3f976bdfe
+- Spec review pack: .qfai/review/review-20260925160000006 <!-- qfai:not-a-citation -->
+- Spec review pack seal: d1e646419549b98b9d6d240aa348b28b9e3509a5cdd07f799d749d843298a860
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: 9974b45722f7aa89c3be6a46096b4e208aaf0853988aba2f082378c3f976bdfe
+- Code quality review pack: .qfai/review/review-20260925160000006 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: d1e646419549b98b9d6d240aa348b28b9e3509a5cdd07f799d749d843298a860
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ### TDD-0118
 
+- TDD-ID: TDD-0118
+- Layer: E2E
+- Test file: packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts
+- Selector: US-0017-0016: a Windows regression fails the verdict on the pull request that causes it
+- US-ref: US-0017-0016
+- Reopened: `exception` -> `todo` at 2a8529865d645cb645e5d820ce715ac72f0354a1, to take the qa-gatekeeper and reviewer turns the row closed without. `DR-0298` stays in `DR-ID` as the record of why it was parked.
+- Earlier close: `exception` under DR-0298 on 2026-09-25, with per-row review waived. Its natural RED, taken before the job existed, failed on `expected undefined to be 'windows-latest'`. It recorded no round fields and no revision, so it cannot stand as a round of its own, and the cycle below is Round 1. Its entry is kept below as it stood at 2a8529865d645cb645e5d820ce715ac72f0354a1.
+- Branch: falsifiability — the job and the script the test reads already exist, so the test passed on its first run
+- Predicate to break: .github/workflows/ci.yml, job `windows-parity`, `runs-on: windows-latest`
+- Mutation: `runs-on: windows-latest` changed to `runs-on: ubuntu-latest`, committed alone as ff77095468d34d2ec7ef60c2e4cd33adb875328e and reverted by the commit after it (195c3832f599b58608d5d8d5433c58bd74e0d2fd)
+- Why it fails: the parity job then runs on Linux, and `expect(windows["runs-on"]).toBe("windows-latest")` fails
+- Branch classified by: the orchestrator of this `/qfai-implement` run, under DR-0298 § Reopening, which sends a reopened row back through its cycle with the reviews it skipped. No `/qfai-atdd` run took part: no test was written or changed, so there was no new test to hand over, and the first run, the predicate and the mutation are recorded here for the qa-gatekeeper to judge.
+- Open: the job has not had a trial run on a Windows runner. Its `timeout-minutes` of 30 is an unmeasured ceiling, and the per-suite counts, timings and the code-path pin's before and after figures are still owed to DR-0017-0024 once that run exists. This row's case does not depend on them: the test cases keep run-time results out of the rows.
+
+The earlier entry:
+
+````text
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
 - Layer: E2E
 - Test file: `packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts`
@@ -2219,6 +2962,96 @@ packages/qfai/tests/integration/spec0017TuningChangeScope.test.ts
   unmeasured ceiling, and the per-suite counts, timings and the code-path pin's before and after
   figures (22 instances, 290 minutes, 20 installs before; 23, 320 and 21 after) are still owed to
   DR-0017-0024 once that run exists.
+````
+
+First run, at a9716f825f4dbe2b0ec77b099a4bb15048aebb27, whose tree differs from 2a8529865d645cb645e5d820ce715ac72f0354a1 only in the ledger and `.qfai/waivers.yml`, with the four other test files of these rows:
+
+```text
+pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+  Test Files 5 passed (5); Tests 8 passed (8)
+```
+
+#### Round 1
+
+- Round 1: Satisfied-by: .github/workflows/ci.yml, job `windows-parity`, `runs-on: windows-latest`
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0017WindowsParityE2E.test.ts -t "US-0017-0016: a Windows regression fails the verdict on the pull request that causes it"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected 'ubuntu-latest' to be 'windows-latest' // Object.is equality` at `tests/e2e/spec0017WindowsParityE2E.test.ts:38:32`
+
+The edit:
+
+```diff
+-    runs-on: windows-latest
++    runs-on: ubuntu-latest
+```
+
+- Round 1: Falsifiability revision: ff77095468d34d2ec7ef60c2e4cd33adb875328e
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 8a1f552193436f951e90664486414259c68dd94f4327d3c33d829683f3469dd2
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/e2e/spec0017WindowsParityE2E.test.ts
+packages/qfai/tests/integration/windowsParity/ownCi.ts
+```
+
+- Round 1: Revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0017WindowsParityE2E.test.ts -t "US-0017-0016: a Windows regression fails the verdict on the pull request that causes it"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Taken at 195c3832f599b58608d5d8d5433c58bd74e0d2fd, after the mutation's revert
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0017WindowsParityE2E.test.ts
+- Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
+- Refactor verify revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision ff77095468d34d2ec7ef60c2e4cd33adb875328e; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+
+The qa-gatekeeper#1 verdict, as returned:
+
+````text
+Row: TDD-0118
+Gate: RED phase (falsifiability)
+Result: PASS
+Reviewed revision: ff77095468d34d2ec7ef60c2e4cd33adb875328e
+Findings: none
+Evidence checked: the commit changes `ci.yml` only, `runs-on: windows-latest` to `ubuntu-latest`. Re-observed: 1 failed, on `expected 'ubuntu-latest' to be 'windows-latest'` at `spec0017WindowsParityE2E.test.ts:38:32`. The hash `8a1f5521…` recomputes. A path-and-symbol `Satisfied-by` is accepted on an E2E row handed over by `/qfai-atdd`.
+````
+
+The qa-gatekeeper#2 verdict, as returned:
+
+````text
+Row: TDD-0118
+Gate: GREEN, refactor verify and oracle proof
+Result: PASS
+Reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+Findings: none
+Evidence checked:
+- GREEN re-run: 1 passed (1), exit 0.
+- Refactor verify re-run over `spec0017WindowsParityE2E.test.ts`: 1 passed (1), exit 0.
+- Revision fields agree. 195c3832 is this row's own revert commit.
+- Mutation ff770954 changes `runs-on` to `ubuntu-latest`, a predicate the journey asserts on. It failed at `spec0017WindowsParityE2E.test.ts:38:32`. The falsifiability form is the expected evidence for an ATDD-owned `E2E` row.
+````
+
+A first pair of reviews for this row returned PASS from both reviewers. Its implementation-reviewer response named the reviewer instance in its `Reviewer role` line, so no gate reads it as that role's verdict. That earlier pack is left as sealed, and is not named here because it certifies nothing. The reviews recorded below were taken again, on this entry with the `Branch classified by` line added and the `Open` line restated outside the earlier entry's quote.
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925160000007 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 85be33550caf0c88445396b5ac050de1610d16968b211560bd9638b47e5cdb94
+- Spec review: PASS
+- Spec reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Spec audited evidence hash: 9eac875a82ae39cf316a4cab723523c036d7897eaf26b253ace254879314e804
+- Spec review pack: .qfai/review/review-20260925160000007 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 85be33550caf0c88445396b5ac050de1610d16968b211560bd9638b47e5cdb94
+- Code quality review: PASS
+- Code quality reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Code quality audited evidence hash: 9eac875a82ae39cf316a4cab723523c036d7897eaf26b253ace254879314e804
+- Code quality review pack: .qfai/review/review-20260925160000007 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 85be33550caf0c88445396b5ac050de1610d16968b211560bd9638b47e5cdb94
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/windowsParity/ tests/e2e/spec0017WindowsParityE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 5 passed (5); Tests 8 passed (8). Off a checkpoint boundary, since other rows of spec-0017 are still open, so the narrow suite over the files these rows name is the checkpoint
+- Checkpoint verification revision: 195c3832f599b58608d5d8d5433c58bd74e0d2fd
+- Checkpoint verification seal: 83b9a0842cabba483de15eeb2a3031f1534c733dacb7c72c7a2337e04280cfbe
 
 ## Coverage Depth Matrix
 
@@ -2300,6 +3133,64 @@ orchestrator. It wrote no test, and no reviewer was routed from it.
 | 17 | backend-engineer | backend-engineer | /qfai-implement: TDD-0070 step 3c mutation, restore and GREEN | #tdd-0070 | Round 1 | PASS |
 | 18 | backend-engineer | backend-engineer | /qfai-implement: TDD-0083 step 3c mutation, restore and GREEN | #tdd-0083 | Round 1 | PASS |
 | 19 | backend-engineer | backend-engineer | /qfai-implement: refactor verify of the nine rows over each whole test file, and `red -> green -> refactor` | #tdd-0016 … #tdd-0083 | Refactor verify fields; tdd/test-list.md | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-25T12:13:00.000Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | - | n/a | grilling(-@2026-09-25T12:13:00.000Z/none): none | - | - | PASS |
+| 2 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability mutation, revert and GREEN | #tdd-0111 | cb631eeaa0c13d70ec32dbc56859026cc0d076b2, 876f6d40de4437fa44e43eff47a54e4cee16764f; Round 1 | PASS |
+| 3 | backend-engineer | backend-engineer | /qfai-implement: TDD-0112 falsifiability mutation, revert and GREEN | #tdd-0112 | 49c287bb56577459227cd38009a5c04572134783, 86b39404ccb2b2c1b0fd54ee2099518d0df6c7b0; Round 1 | PASS |
+| 4 | backend-engineer | backend-engineer | /qfai-implement: TDD-0113 falsifiability mutation, revert and GREEN | #tdd-0113 | 600de20260b1657075dbc5b68b6839eeacca8cfa, 63947f98163a7c7aa11e7380a331ced23ba68ea8; Round 1 | PASS |
+| 5 | backend-engineer | backend-engineer | /qfai-implement: TDD-0114 falsifiability mutation, revert and GREEN | #tdd-0114 | 8d5c6a72ac43051a1be27e688b4fd99f0594ccbc, b4dff989eb81aac86b6c4804f2a04a56d14f9ad9; Round 1 | PASS |
+| 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0115 falsifiability mutation, revert and GREEN | #tdd-0115 | 156176db878479695cb005205ff87e80d84a28df, 72b913f092278ec9c2cc26ae52854a2c6ff1a657; Round 1 | PASS |
+| 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0116 falsifiability mutation, revert and GREEN | #tdd-0116 | f544a40b6b51f7f9fed1f43226625cf7110f913a, 48fab048405e291dfe1069f3cd73fbb2246b9841; Round 1 | PASS |
+| 8 | backend-engineer | backend-engineer | /qfai-implement: TDD-0117 falsifiability mutation, revert and GREEN | #tdd-0117 | 0e0addfcbdce248fddc78987d8c3fc67bd2df071, f79975c245f2405dc40d3818a93039f918dddd9d; Round 1 | PASS |
+| 9 | backend-engineer | backend-engineer | /qfai-implement: TDD-0118 falsifiability mutation, revert and GREEN | #tdd-0118 | ff77095468d34d2ec7ef60c2e4cd33adb875328e, 195c3832f599b58608d5d8d5433c58bd74e0d2fd; Round 1 | PASS |
+| 10 | backend-engineer | backend-engineer | /qfai-implement: refactor verify of the eight rows over each whole test file | #tdd-0111 … #tdd-0118 | Refactor verify fields | PASS |
+| 11 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0111 falsifiability run | `#tdd-0111` | `#tdd-0111` qa-gatekeeper verdict | PASS |
+| 12 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0112 falsifiability run | `#tdd-0112` | `#tdd-0112` qa-gatekeeper verdict | PASS |
+| 13 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0113 falsifiability run | `#tdd-0113` | `#tdd-0113` qa-gatekeeper verdict | REVISE |
+| 14 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0114 falsifiability run | `#tdd-0114` | `#tdd-0114` qa-gatekeeper verdict | PASS |
+| 15 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0115 falsifiability run | `#tdd-0115` | `#tdd-0115` qa-gatekeeper verdict | PASS |
+| 16 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0116 falsifiability run | `#tdd-0116` | `#tdd-0116` qa-gatekeeper verdict | PASS |
+| 17 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0117 falsifiability run | `#tdd-0117` | `#tdd-0117` qa-gatekeeper verdict | PASS |
+| 18 | `qa-gatekeeper` | qa-gatekeeper#1 | RED gate, TDD-0118 falsifiability run | `#tdd-0118` | `#tdd-0118` qa-gatekeeper verdict | PASS |
+| 19 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0111 | `#tdd-0111`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0111` qa-gatekeeper verdict | PASS |
+| 20 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0112 | `#tdd-0112`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0112` qa-gatekeeper verdict | PASS |
+| 21 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0114 | `#tdd-0114`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0114` qa-gatekeeper verdict | PASS |
+| 22 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0115 | `#tdd-0115`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0115` qa-gatekeeper verdict | PASS |
+| 23 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0116 | `#tdd-0116`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0116` qa-gatekeeper verdict | PASS |
+| 24 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0117 | `#tdd-0117`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0117` qa-gatekeeper verdict | PASS |
+| 25 | `qa-gatekeeper` | qa-gatekeeper#2 | GREEN gate and oracle proof, TDD-0118 | `#tdd-0118`, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0118` qa-gatekeeper verdict | PASS |
+| 26 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0111, first pair | `#tdd-0111`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 27 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0111, first pair | `#tdd-0111`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 28 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0112, first pair | `#tdd-0112`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 29 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0112, first pair | `#tdd-0112`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 30 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0114, first pair | `#tdd-0114`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 31 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0114, first pair | `#tdd-0114`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 32 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0115, first pair | `#tdd-0115`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 33 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0115, first pair | `#tdd-0115`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 34 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0116, first pair | `#tdd-0116`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 35 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0116, first pair | `#tdd-0116`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 36 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0117, first pair | `#tdd-0117`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 37 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0117, first pair | `#tdd-0117`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 38 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0118, first pair | `#tdd-0118`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R01 (not counted: see the entry) | PASS |
+| 39 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0118, first pair | `#tdd-0118`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | the first pack, R02 (not counted: see the entry) | PASS |
+| 40 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0111, retaken on the repaired entry | `#tdd-0111`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0111` Spec review fields | PASS |
+| 41 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0111, retaken on the repaired entry | `#tdd-0111`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0111` Code quality review fields | PASS |
+| 42 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0112, retaken on the repaired entry | `#tdd-0112`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0112` Spec review fields | PASS |
+| 43 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0112, retaken on the repaired entry | `#tdd-0112`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0112` Code quality review fields | PASS |
+| 44 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0114, retaken on the repaired entry | `#tdd-0114`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0114` Spec review fields | PASS |
+| 45 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0114, retaken on the repaired entry | `#tdd-0114`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0114` Code quality review fields | PASS |
+| 46 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0115, retaken on the repaired entry | `#tdd-0115`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0115` Spec review fields | PASS |
+| 47 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0115, retaken on the repaired entry | `#tdd-0115`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0115` Code quality review fields | PASS |
+| 48 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0116, retaken on the repaired entry | `#tdd-0116`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0116` Spec review fields | PASS |
+| 49 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0116, retaken on the repaired entry | `#tdd-0116`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0116` Code quality review fields | PASS |
+| 50 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0117, retaken on the repaired entry | `#tdd-0117`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0117` Spec review fields | PASS |
+| 51 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0117, retaken on the repaired entry | `#tdd-0117`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0117` Code quality review fields | PASS |
+| 52 | `completion-reviewer` | completion-reviewer#1 | Spec review, TDD-0118, retaken on the repaired entry | `#tdd-0118`, spec-0017, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0118` Spec review fields | PASS |
+| 53 | `implementation-reviewer` | implementation-reviewer#1 | Code quality review, TDD-0118, retaken on the repaired entry | `#tdd-0118`, test and production, 195c3832f599b58608d5d8d5433c58bd74e0d2fd | `#tdd-0118` Code quality review fields | PASS |
 
 ## Execution logs
 
