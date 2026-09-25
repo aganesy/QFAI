@@ -4668,7 +4668,7 @@ completion is declared.
 
 ## Title rename in the TDD-0038 describe
 
-`CR-20260925-0009` asked for the fourth case of the `TDD-0038` describe to be
+`CR-20260925-0011` asked for the fourth case of the `TDD-0038` describe to be
 renamed to what it asserts. The case sanctions and requires three full-history
 requests, and its title named one. Commit
 2935e8900b06d0f45d397f155df162918fbba07a changed that title string and nothing

@@ -92,7 +92,7 @@ Preflight: confidence high
 
 Preflight: confidence high
 
-No session opened. `CR-20260925-0009` fixes the row, the test case it covers and
+No session opened. `CR-20260925-0011` fixes the row, the test case it covers and
 the text it checks, and nothing surfaced during the run that the spec or the
 change request leaves open.
 
@@ -100,7 +100,7 @@ change request leaves open.
 
 Preflight: confidence high
 
-No session was opened: `CR-20260925-0009` settles every decision this row needs.
+No session was opened: `CR-20260925-0011` settles every decision this row needs.
 
 ## Work performed (what changed, where)
 
@@ -127,7 +127,7 @@ No session was opened: `CR-20260925-0009` settles every decision this row needs.
 - New `packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts`: the
   `TC-0003-0059` case for `TDD-0094`, annotated `QFAI:SPEC-0003:TC-0003-0059`, and
   listed in `packages/qfai/tsconfig.tests.json`. `tests/integration/qfai-traceability.md`
-  carries the case. `CR-20260925-0009` asked for it.
+  carries the case. `CR-20260925-0011` asked for it.
 
 ## Commands executed + key outputs
 
@@ -1081,7 +1081,7 @@ A second mutation, the one the earlier entry ran beyond the proof, exercises the
 - Branch: observed-red — the surface existed and was wrong. `buildCopilotInstructions` in `packages/qfai/src/cli/commands/init.ts` wrote a legacy-layout item that called the layout read-compatible and the finding a warning, so the case failed on its first run against the tree before the fix
 - Oracle proof plan: delete the legacy-layout item from `buildCopilotInstructions`. The three cases that read the item then fail on an assertion
 
-`CR-20260925-0009` seeded the row for `TC-0003-0059`. The case runs `runInit`
+`CR-20260925-0011` seeded the row for `TC-0003-0059`. The case runs `runInit`
 into an empty temporary directory, reads the `.github/copilot-instructions.md`
 it wrote, and takes the top-level list item that mentions `D-DEPRECATED-PATH`,
 with its continuation lines joined.
@@ -1243,11 +1243,11 @@ See `.qfai/evidence/coverage-depth-spec-0003.md` (committed). Totals: ✅ 238 / 
 | 62 | implementation-reviewer | implementation-reviewer | /qfai-implement: code quality review of TDD-0001 and TDD-0037, attempt 1 | #tdd-0001, #tdd-0037 | one response per row in that row's review pack | PASS |
 | 63 | orchestrator | orchestrator | /qfai-implement: checkpoint verification of TDD-0001 on its Test file and of TDD-0037 on the full suite | #tdd-0001, #tdd-0037 | Checkpoint verification fields | PASS |
 | 64 | - | n/a | grilling(-@2026-09-25T03:20:00.000Z/none): none | - | - | PASS |
-| 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0009; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
-| 66 | acceptance-test-engineer | stage run | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0009 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
+| 65 | delivery-planner | delivery-planner | /qfai-atdd: scope approval of the TDD-0094 selector before its RED | CR-20260925-0011; 06_Test-Cases.md TC-0003-0059; the proposed test | one boundary, not a matrix; write the Selector as the bare describe name | PASS |
+| 66 | acceptance-test-engineer | stage run | /qfai-atdd: write the TC-0003-0059 case, take its RED and assertion-stripped run, and hand TDD-0094 over on the observed-red path | CR-20260925-0011 | packages/qfai/tests/integration/initCopilotLegacyWindow.test.ts; #tdd-0094 | PASS |
 | 67 | qa-gatekeeper | - | /qfai-atdd: TDD-0094 RED phase gate on the observed RED | #tdd-0094 | not run in this invocation | PENDING |
 | 68 | - | n/a | grilling(-@2026-09-25T03:24:00.000Z/none): none | - | - | PASS |
-| 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0009 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
+| 69 | delivery-planner | delivery-planner | /qfai-implement plan phase: tier, groups, dispatch and order for TDD-0094 | spec-0003 ledger; CR-20260925-0011 | T2, no T1 group, serial, TDD-0094 alone; TDD-0038 is not moved | PASS |
 | 70 | test-design-analyst | test-design-analyst | /qfai-implement plan phase: coverage and layer ownership for TDD-0094 | spec-0003 ledger; 06_Test-Cases.md; 02_User-stories.md; test-layers.md | Integration is right for the Level and the directory; every verify bullet has an assertion; no obligation of the CR lacks a row; advisory to read any `warning` in the item, adopted | PASS |
 | 71 | backend-engineer | stage run | /qfai-implement: TDD-0094 GREEN, correcting the legacy-layout item in `buildCopilotInstructions`, and the Oracle proof | #tdd-0094 | packages/qfai/src/cli/commands/init.ts; #tdd-0094 Round 1 | PASS |
 | 72 | backend-engineer | stage run | /qfai-implement: TDD-0094 Refactor verify | #tdd-0094 | Refactor verify fields | PASS |

@@ -1,6 +1,6 @@
 # Change Request
 
-- ID: `CR-20260925-0009`
+- ID: `CR-20260925-0011`
 - Title: `spec-0003 still describes README generation and an open legacy window`
 - Raised by: `qfai-sdd`
 - Raised at: `2026-09-25T03:18:00Z`
