@@ -127,6 +127,9 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
 
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 8bcbdcf33d3f0426830f5592e5cb7f7e75fedb74; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
+
 ### TDD-0377
 
 - TDD-ID: TDD-0377
@@ -175,6 +178,9 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/mode.test.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 2 passed (2). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
+
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 07dbf529305d1ee19a675a5b68783ffeeabbb483; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
 
 ### TDD-0378
 
@@ -225,6 +231,9 @@ packages/qfai/tests/integration/workflow/workflowProject.ts
 - Refactor verify result: Test Files 1 passed (1); Tests 1 passed (1). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the whole test file is the relevant suite
 - Refactor verify revision: af0b531172dcc2eddb7460d518b41bb30ad8fb38
 
+- qa-gatekeeper: PASS
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS, RED phase gate on the falsifiability mutation run, reviewed revision 42a118538785942d612917133dea6cd6b682b3e2; qa-gatekeeper#2 PASS, GREEN, refactor verify and the mutation as oracle proof, reviewed revision af0b531172dcc2eddb7460d518b41bb30ad8fb38
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0018.md` (committed). Totals: ✅ 820 / ⚠️ 42 / ❌ 6.
@@ -242,6 +251,8 @@ applicable). `Status` is a row verdict and is outside every total.
 | 1    | -                | n/a                | grilling(-@2026-09-25T15:43:01.083Z/none): none                                                  | -                     | -             | PASS                         |
 | 2    | backend-engineer | backend-engineer#1 | Falsifiability runs for `TDD-0376` to `TDD-0378`, each committed alone and reverted to its GREEN | #tdd-0376 to #tdd-0378 | Round 1       | PASS                         |
 | 3    | backend-engineer | backend-engineer#1 | Refactor verify for `TDD-0376` to `TDD-0378` at the final revision                               | #tdd-0376 to #tdd-0378 | Refactor verify fields | PASS                |
+| 4 | qa-gatekeeper | qa-gatekeeper#1 | RED phase gate on each falsifiability mutation run, `TDD-0376` to `TDD-0378` | #tdd-0376 to #tdd-0378, 8bcbdcf33, 07dbf5293, 42a118538 | qa-gatekeeper fields | PASS |
+| 5 | qa-gatekeeper | qa-gatekeeper#2 | GREEN, refactor verify and oracle proof, `TDD-0376` to `TDD-0378` | #tdd-0376 to #tdd-0378, af0b531172dcc2eddb7460d518b41bb30ad8fb38 | qa-gatekeeper fields | PASS |
 
 ## Cross-spec obligations
 
