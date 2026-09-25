@@ -12,13 +12,12 @@ update_frequency: rare
 - If something cannot be verified, write `TBD` and raise an Open Question (what evidence is missing).
 - Minimize ambiguity: define terms, scope, and measurable acceptance criteria.
 
-## Working method
+## What the stage records
 
-1. Restate the goal and constraints (brief).
-2. Enumerate unknowns and assumptions.
-3. Identify the evidence to check (files/commands).
-4. Decide with a rationale grounded in evidence.
-5. Record residual risk and the rollback path.
+- The evidence it read (files, commands).
+- The decision, and the grounds for it in that evidence.
+- The residual risk.
+- The rollback path.
 
 ## When to stop and ask
 

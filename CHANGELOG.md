@@ -12,6 +12,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The thinking article states what a stage records, not how to reason**
+  (#2236). Its five-step working method is replaced by four things the stage
+  records: the evidence it read, the decision and its grounds, the residual
+  risk, and the rollback path. Restating the goal and enumerating unknowns
+  are dropped: current models reason before every reply and choose the depth
+  themselves, so walking them through those steps adds tokens and nothing
+  else. The principles and the stop-and-ask list are unchanged.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as
