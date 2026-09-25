@@ -2175,13 +2175,29 @@ function requestNamesReviewUnit(
 }
 
 /**
- * The ids a request's one visible `TDD-ID` line lists, in order, or `null` when
- * the request states that line other than once or lists nothing on it.
+ * The ids a request names in one visible `TDD-ID` line or the documented
+ * `## TDD IDs` list. Both forms must name the whole review unit exactly once.
  */
 function requestedTddIds(request: string): string[] | null {
   const values = visibleLineFieldValues(request, "TDD-ID");
-  if (values.length !== 1) return null;
-  const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+  if (values.length > 1) return null;
+  if (values.length === 1) {
+    const members = (values[0] ?? "").split(/[\s,]+/).filter((member) => member.length > 0);
+    return members.length === 0 ? null : members;
+  }
+  const lines = maskEvidenceRegions(request.replace(/\r\n/g, "\n")).split("\n");
+  const headings = lines.flatMap((line, index) =>
+    /^#{1,6}\s+TDD IDs\s*$/i.test(line.trim()) ? [index] : [],
+  );
+  if (headings.length !== 1) return null;
+  const members: string[] = [];
+  for (const line of lines.slice((headings[0] ?? 0) + 1)) {
+    if (/^\s*#{1,6}\s+/.test(line)) break;
+    if (line.trim().length === 0) continue;
+    const member = /^\s*[-*]\s+(TDD-\d{4})\s*$/i.exec(line)?.[1];
+    if (member === undefined) return null;
+    members.push(member);
+  }
   return members.length === 0 ? null : members;
 }
 
@@ -3828,7 +3844,8 @@ async function invalidCompletedEvidenceArtifacts(
       ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      memberAuditedHashes(response, members)?.get(expected.tddId) !== auditedHash
+      bareSha256(memberAuditedHashes(response, members)?.get(expected.tddId) ?? "") !==
+        bareSha256(auditedHash)
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,
@@ -4342,7 +4359,8 @@ function roundPackRecordsClosing(
       answered.length !== 1 ||
       verdict.revision === null ||
       revision !== verdict.revision ||
-      memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) !== verdict.hash
+      bareSha256(memberAuditedHashes(answered[0] ?? "", members)?.get(tddId) ?? "") !==
+        bareSha256(verdict.hash)
     ) {
       return false;
     }
