@@ -4705,25 +4705,67 @@ async function describeUnrewritable(linkPath: string): Promise<string> {
  * links to the plural directories are still init's links. So the migration
  * reads each roster path itself:
  *
- * | the path holds                          | outcome                                       |
- * | --------------------------------------- | --------------------------------------------- |
- * | nothing                                 | restored, so an interrupted run can resume    |
- * | a link to the plural directory          | repointed                                     |
- * | a link to anywhere else                 | left to the gate; it may be the project's own |
- * | a file, directory or other entry        | preserved and reported as occupied            |
+ * | the path holds                              | outcome                                       |
+ * | ------------------------------------------- | --------------------------------------------- |
+ * | nothing, beside a repair's hold of its link | restored: a repoint stopped part-way          |
+ * | nothing else                                | left absent; the project may have removed it  |
+ * | a link to the plural directory              | repointed                                     |
+ * | a link to anywhere else                     | left to the gate; it may be the project's own |
+ * | a file, directory or other entry            | preserved and reported as occupied            |
  */
 async function isMigrationRosterEntry(wrapper: PlannedWrapper): Promise<boolean> {
   let stats: Stats;
   try {
     stats = await lstat(wrapper.linkPath);
   } catch (err: unknown) {
-    if (isEnoent(err)) return true;
+    if (isEnoent(err)) return (await interruptedRepointHolds(wrapper)).length > 0;
     throw err;
   }
   if (!stats.isSymbolicLink()) return true;
   const base = path.dirname(wrapper.linkPath);
-  const current = path.resolve(base, await readlink(wrapper.linkPath));
-  return current === path.resolve(base, wrapper.legacyTarget);
+  return sameLinkTarget(base, await readlink(wrapper.linkPath), wrapper.legacyTarget);
+}
+
+/** Whether two link targets, read relative to `base`, name the same path. */
+function sameLinkTarget(base: string, left: string, right: string): boolean {
+  const a = path.resolve(base, left);
+  const b = path.resolve(base, right);
+  if (process.platform !== "win32") return a === b;
+  return path.relative(a.toLowerCase(), b.toLowerCase()) === "";
+}
+
+/**
+ * The holds a repoint of `wrapper` left behind when it stopped between moving
+ * the old link aside and creating the new one.
+ *
+ * {@link replaceLinkThroughHold} moves a link into
+ * `<link>.qfai-repair-<pid>[-<n>]/` before it writes the replacement, so a hold
+ * still holding a link to this wrapper's old or new target is the record that
+ * the repair, not the project, emptied the path.
+ */
+async function interruptedRepointHolds(wrapper: PlannedWrapper): Promise<string[]> {
+  const base = path.dirname(wrapper.linkPath);
+  const name = path.basename(wrapper.linkPath);
+  let entries: string[];
+  try {
+    entries = await readdir(base);
+  } catch (err: unknown) {
+    if (isEnoent(err)) return [];
+    throw err;
+  }
+  const holds: string[] = [];
+  for (const entry of entries.filter((candidate) => candidate.startsWith(`${name}.qfai-repair-`))) {
+    const held = path.join(base, entry, name);
+    if ((await safeLstat(held))?.isSymbolicLink() !== true) continue;
+    const target = await readlink(held);
+    if (
+      sameLinkTarget(base, target, wrapper.legacyTarget) ||
+      sameLinkTarget(base, target, wrapper.target)
+    ) {
+      holds.push(path.join(base, entry));
+    }
+  }
+  return holds;
 }
 
 /** The wrapper paths the gate is currently reporting, waivers applied. */
@@ -4767,8 +4809,9 @@ async function isOwnShippedAgentLink(root: string, linkedParent: string): Promis
 }
 
 /**
- * Relinks the integration wrappers the gate is reporting. A migration may also
- * ask to restore missing wrappers from the shipped roster.
+ * Relinks the integration wrappers the gate is reporting. A migration also
+ * repoints roster links still naming the plural directories, and restores a
+ * path only where an interrupted repoint of its own emptied it.
  *
  * `qfai init --force` clears the same finding, but it also regenerates
  * `.qfai/assistant/skill/**`, `assistant/agent/**` and the shipped plain
@@ -4871,6 +4914,11 @@ export async function repairIntegrationWrappers(
       });
       if (result === "created") {
         repaired.push(relative);
+        if (!dryRun && options.includeMissing) {
+          for (const hold of await interruptedRepointHolds(wrapper)) {
+            await discardHold(hold, wrapper.linkPath, (line) => notes.push(line));
+          }
+        }
       } else {
         declined.push(`${relative}: ${await describeUnrewritable(wrapper.linkPath)}`);
       }
@@ -5353,7 +5401,11 @@ async function isFollowable(linkPath: string): Promise<boolean> {
 }
 
 /**
- * Recreates an intact-but-unfollowable symlink, restoring it if that fails.
+ * Replaces a symlink through a hold, restoring it if that fails.
+ *
+ * Two links take this path: one that names the right target but cannot be
+ * followed, and one still naming the plural directory. `held` is the target
+ * the moved link must name for the replacement to go ahead.
  *
  * The link is moved aside rather than deleted, for the reason
  * {@link recreateFlattenedLink} gives: `EPERM` on Windows without Developer
@@ -5379,11 +5431,12 @@ async function isFollowable(linkPath: string): Promise<boolean> {
  * - **Cleanup is not the repair.** Once the new link stands, a failure to
  *   remove the hold is a note.
  */
-async function recreateUnfollowableLink(
+async function replaceLinkThroughHold(
   linkPath: string,
   target: string,
   type: "dir" | "file",
   note: Note,
+  held = target,
 ): Promise<"created" | "skipped"> {
   const hold = await claimHoldDir(linkPath);
   const sidecar = path.join(hold, path.basename(linkPath));
@@ -5396,7 +5449,7 @@ async function recreateUnfollowableLink(
     await rm(hold, { recursive: true, force: true }).catch(() => undefined);
     throw renameErr;
   }
-  if (!(await movedLinkNamesTarget(sidecar, target))) {
+  if (!(await movedLinkNamesTarget(sidecar, held))) {
     // Not the entry this repair was authorised to replace. It goes back by the
     // same atomic claim the rollback uses, and the repair declines rather than
     // recreating something over a path somebody else owns.
@@ -5613,7 +5666,22 @@ async function ensureSymlink(
         if (options.dryRun) {
           return "created";
         }
-        return await recreateUnfollowableLink(linkPath, target, type, note);
+        return await replaceLinkThroughHold(linkPath, target, type, note);
+      }
+      if (
+        !options.force &&
+        options.legacyTarget !== undefined &&
+        sameLinkTarget(path.dirname(linkPath), currentTarget, options.legacyTarget)
+      ) {
+        // A link to the plural directory is moved aside, not removed: a
+        // repoint that fails puts it back, and one that stops part-way leaves
+        // the hold as the record that this repair emptied the path.
+        if (options.dryRun) return "created";
+        try {
+          return await replaceLinkThroughHold(linkPath, target, type, note, currentTarget);
+        } catch (err: unknown) {
+          throw symlinkFailure(err, options.platform);
+        }
       }
       // Broken or --force → remove and recreate
       if (!options.dryRun) {
@@ -5668,22 +5736,25 @@ async function ensureSymlink(
     try {
       await (options.createSymlink ?? symlink)(target, linkPath, type);
     } catch (err: unknown) {
-      if (isEpermOnWindows(err, options.platform)) {
-        throw new Error(
-          [
-            "Failed to create a symlink (EPERM).",
-            "On Windows, Developer Mode has to be enabled:",
-            "  Settings > System > For developers > Developer Mode: ON",
-            "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
-          ].join("\n"),
-          { cause: err },
-        );
-      }
-      throw err;
+      throw symlinkFailure(err, options.platform);
     }
   }
 
   return "created";
+}
+
+/** What a refused `symlink` raises: Developer Mode guidance on Windows, the error elsewhere. */
+function symlinkFailure(err: unknown, platform?: NodeJS.Platform): unknown {
+  if (!isEpermOnWindows(err, platform)) return err;
+  return new Error(
+    [
+      "Failed to create a symlink (EPERM).",
+      "On Windows, Developer Mode has to be enabled:",
+      "  Settings > System > For developers > Developer Mode: ON",
+      "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+    ].join("\n"),
+    { cause: err },
+  );
 }
 
 /**

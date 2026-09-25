@@ -4,7 +4,18 @@
 // nothing else — and reports, rather than passes over, every path a link
 // rewrite is not the repair for.
 
-import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  readlink,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -101,6 +112,9 @@ afterEach(() => {
 /** A skill the shipped roster carries, so its wrapper is one init would write. */
 const SHIPPED_SKILL = "qfai-atdd";
 const WRAPPER = `.claude/skills/${SHIPPED_SKILL}`;
+/** What the wrapper named before the migration, and what it names after. */
+const PLURAL_TARGET = path.join("..", "..", ".qfai", "assistant", "skills", SHIPPED_SKILL);
+const SINGULAR_TARGET = path.join("..", "..", ".qfai", "assistant", "skill", SHIPPED_SKILL);
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-link-repair-"));
@@ -247,24 +261,102 @@ describe("repairIntegrationWrappers", () => {
     });
   });
 
-  it("previews and restores a missing migration wrapper without touching the rest of the roster", async () => {
+  it("leaves every absent roster path absent when no repoint of its own emptied it", async () => {
+    // An absent wrapper is one the project may have removed on purpose, and
+    // the gate treats it as benign. A migration that filled it in would change
+    // more than the links it repoints.
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await wireProject(root);
       await rm(wrapperPath(root));
       injectedFindings = [];
+      const agentDirs = AGENT_INTEGRATION_CONFIGS.map(({ dir }) => path.join(root, dir));
+
+      expect((await repair(root, true, { includeMissing: true })).join("\n")).toContain(
+        "nothing to repair",
+      );
+      expect((await repair(root, false, { includeMissing: true })).join("\n")).toContain(
+        "nothing to repair",
+      );
+      await expect(stat(wrapperPath(root))).rejects.toThrow();
+      for (const dir of agentDirs) expect(await readdir(dir)).toEqual([]);
+    });
+  });
+
+  it("restores a path an interrupted repoint emptied, and removes the hold it left", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      const hold = `${wrapperPath(root)}.qfai-repair-4242`;
+      await mkdir(hold);
+      await symlink(PLURAL_TARGET, path.join(hold, SHIPPED_SKILL), "dir");
+      injectedFindings = [];
       const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
 
-      expect((await repair(root)).join("\n")).toContain("nothing to repair");
       expect((await repair(root, true, options)).join("\n")).toContain(`would relink ${WRAPPER}`);
       await expect(stat(wrapperPath(root))).rejects.toThrow();
+      expect(await readlink(path.join(hold, SHIPPED_SKILL))).toBe(PLURAL_TARGET);
 
       const lines = await repair(root, false, options);
       expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
-      expect(lines.join("\n")).toContain("left alone=0");
-      expect((await stat(wrapperPath(root))).isDirectory()).toBe(true);
+      expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+      await expect(stat(hold)).rejects.toThrow();
     });
   });
+
+  it("keeps the plural link in its hold when the repoint is refused, and a rerun completes it", async () => {
+    await withProject(async (root) => {
+      if (!(await canCreateSymlink(root))) return;
+      await wireProject(root);
+      await rm(wrapperPath(root));
+      await symlink(PLURAL_TARGET, wrapperPath(root), "dir");
+      injectedFindings = [];
+      const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
+      symlinkDenied = true;
+
+      const refused = await repair(root, false, options);
+      expect(refused.join("\n")).toContain(`could not relink ${WRAPPER}`);
+      const holds = (await readdir(path.dirname(wrapperPath(root)))).filter((name) =>
+        name.startsWith(`${SHIPPED_SKILL}.qfai-repair-`),
+      );
+      expect(holds).toHaveLength(1);
+      const held = path.join(path.dirname(wrapperPath(root)), holds[0] ?? "", SHIPPED_SKILL);
+      expect(await readlink(held)).toBe(PLURAL_TARGET);
+      await expect(lstat(wrapperPath(root))).rejects.toThrow();
+
+      symlinkDenied = false;
+      const lines = await repair(root, false, options);
+      expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+      expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+      expect(
+        (await readdir(path.dirname(wrapperPath(root)))).filter((name) =>
+          name.startsWith(`${SHIPPED_SKILL}.qfai-repair-`),
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  it.runIf(process.platform === "win32")(
+    "repoints a plural link whose target differs only in case on Windows",
+    async () => {
+      await withProject(async (root) => {
+        if (!(await canCreateSymlink(root))) return;
+        await wireProject(root);
+        await rm(wrapperPath(root));
+        await symlink(PLURAL_TARGET.toUpperCase(), wrapperPath(root), "dir");
+        injectedFindings = [];
+
+        const lines = await repair(root, false, {
+          includeMissing: true,
+          onlyRelative: new Set([WRAPPER]),
+        });
+
+        expect(lines.join("\n")).toContain(`relinked ${WRAPPER}`);
+        expect(await readlink(wrapperPath(root))).toBe(SINGULAR_TARGET);
+      });
+    },
+  );
 
   it("does not create a missing wrapper through a linked integration directory", async () => {
     await withProject(async (root) => {
@@ -275,6 +367,9 @@ describe("repairIntegrationWrappers", () => {
       const skillsDir = path.join(root, ".claude", "skills");
       await rm(skillsDir, { recursive: true, force: true });
       await symlink(outside, skillsDir, "dir");
+      const hold = path.join(outside, `${SHIPPED_SKILL}.qfai-repair-4242`);
+      await mkdir(hold);
+      await symlink(PLURAL_TARGET, path.join(hold, SHIPPED_SKILL), "dir");
       injectedFindings = [];
 
       const lines = await repair(root, false, {
@@ -296,6 +391,7 @@ describe("repairIntegrationWrappers", () => {
         force: true,
       });
       await rm(wrapperPath(root));
+      await symlink(PLURAL_TARGET, wrapperPath(root), "dir");
       injectedFindings = [];
       const options = { includeMissing: true, onlyRelative: new Set([WRAPPER]) };
 
@@ -305,7 +401,7 @@ describe("repairIntegrationWrappers", () => {
 
       const result = await repair(root, false, options);
       expect(result.join("\n")).toContain(`left alone ${WRAPPER}: canonical source`);
-      await expect(stat(wrapperPath(root))).rejects.toThrow();
+      expect(await readlink(wrapperPath(root))).toBe(PLURAL_TARGET);
     });
   });
 

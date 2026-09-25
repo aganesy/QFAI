@@ -214,6 +214,27 @@ async function fileSnapshot(root: string): Promise<Map<string, string>> {
   return entries;
 }
 
+/** Every entry in the six host integration directories, a missing directory included. */
+async function hostEntries(root: string): Promise<string[]> {
+  const entries: string[] = [];
+  for (const host of [
+    ".claude/skills",
+    ".agents/skills",
+    ".codex/skills",
+    ".github/skills",
+    ".claude/agents",
+    ".github/agents",
+  ]) {
+    const names = await readdir(path.join(root, host)).catch((error: unknown) => {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+      throw error;
+    });
+    if (names === null) entries.push(`${host} (absent)`);
+    else entries.push(...names.sort().map((name) => `${host}/${name}`));
+  }
+  return entries;
+}
+
 async function networkGuard(root: string): Promise<string> {
   const file = path.join(root, "migration-network-guard.cjs");
   await writeFile(
@@ -1654,15 +1675,17 @@ describe("BF-0004 acceptance criteria", () => {
     );
     expect(step(oldLinkRoot, 1).status).toBe(0);
     const beforeLinks = await fileSnapshot(oldLinkRoot);
+    const beforeHostEntries = await hostEntries(oldLinkRoot);
     const linked = step(oldLinkRoot, 9);
     expect(linked.status).toBe(0);
     expect((await readlink(wrapper)).replace(/\\/g, "/")).toContain("assistant/skill/qfai-sdd");
     const afterLinks = await fileSnapshot(oldLinkRoot);
     expect(
-      [...new Set([...beforeLinks.keys(), ...afterLinks.keys()])]
-        .filter((name) => beforeLinks.get(name) !== afterLinks.get(name))
-        .every((name) => changedPathPatterns[8]?.some((pattern) => pattern.test(name))),
-    ).toBe(true);
+      [...new Set([...beforeLinks.keys(), ...afterLinks.keys()])].filter(
+        (name) => beforeLinks.get(name) !== afterLinks.get(name),
+      ),
+    ).toEqual([".claude/skills/qfai-sdd"]);
+    expect(await hostEntries(oldLinkRoot)).toEqual(beforeHostEntries);
 
     const occupiedRoot = await project();
     expect(step(occupiedRoot, 1).status).toBe(0);

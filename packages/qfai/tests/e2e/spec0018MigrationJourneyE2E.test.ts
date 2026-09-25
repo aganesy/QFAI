@@ -488,16 +488,10 @@ describe("spec-0018: one shipped-script migration journey", () => {
     const noSpawn = await noSpawnPreload(normal);
     const before = await fingerprint(normal, HOST_WRAPPERS);
     const repaired = step(normal, 9, [], ["--require", noSpawn]);
-    // The fixture carries only the canonical skill and agent it links, so every
-    // other shipped roster entry has no source. Step 9 reports each of those
-    // under `## For a person` with exit 3 instead of creating a dangling link.
-    expect(repaired.status, repaired.stderr).toBe(3);
-    const unsettled = forAPerson(repaired.stdout);
-    expect(unsettled.length).toBeGreaterThan(0);
-    for (const item of unsettled) {
-      expect(item).toMatch(/^- left alone \S+: canonical source is missing at /);
-      expect([...HOST_WRAPPERS].some((wrapper) => item.includes(` ${wrapper}:`))).toBe(false);
-    }
+    // Every other shipped roster path is absent here. Step 9 repoints the
+    // links it finds and leaves an absent path absent: nothing to report.
+    expect(repaired.status, repaired.stderr).toBe(0);
+    expect(forAPerson(repaired.stdout)).toEqual([]);
     expect(await fingerprint(normal, HOST_WRAPPERS)).toBe(before);
     for (const dir of HOST_SKILL_DIRS) {
       expect((await readlink(path.join(normal, dir, "qfai-sdd"))).replace(/\\/g, "/")).toContain(
