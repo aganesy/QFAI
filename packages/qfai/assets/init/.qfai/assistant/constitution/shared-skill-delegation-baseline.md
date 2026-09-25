@@ -197,6 +197,8 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/web-research`    | Source authority and freshness, citation accuracy, claim support                                    | Spec content, implementation structure                                                  |
 | `/qfai-grilling`   | Decisions asked rather than assumed, facts naming where they were read, the session's end condition | The merit of what the user decided, and the artifacts the invoking stage writes from it |
 | `/qfai-grill`      | The same, reported to the user rather than to a stage                                               | The merit of what the user decided; there is no artifact to review                      |
+| `/qfai-maintain`   | That the diff changes no behaviour, and the checks run over it                                      | Whether the new wording is the better one                                               |
+| `/qfai-run`        | Nothing of its own: it writes no artifact, and each stage's reviewers review that stage's work      | Every artifact a stage writes, which that stage's remit covers                          |
 
 Article VII excess in the reviewing stage's own artifacts is in scope;
 quality of downstream implementation code is deferred at upstream stages.
@@ -254,6 +256,30 @@ A blocking review that cannot be delegated because the agent budget is spent is 
 - Record the reuse in the Work Orders Summary (`Task title` prefixed `re-review (sequential reuse)`).
 - If even sequential reuse is impossible, hard stop with the review gate recorded as `PENDING` rather than `PASS`. `PENDING` is not `PASS`; DONE stays blocked and the stage stays resumable.
 - Never record a waived or self-performed review as `PASS`.
+
+## Inside a workflow run
+
+A run is one `qfai workflow` run, and its work orders are the ones the CLI
+issues to a stage.
+
+### Actor history in a run
+
+- The run's history of authors, recommenders and reviewers travels with every
+  work order, in its `actorHistory` field.
+- An agent instance recorded there as the author or recommender of an artifact
+  never counts as that artifact's independent reviewer, whichever stage it
+  was recorded in.
+- No required reviewer is dropped to save tokens. An unavailable required
+  delegation stops the run, as
+  [Delegation Failure (Hard Stop)](#delegation-failure-hard-stop) states.
+
+### Grilling in a run
+
+- A grilling session inside a run takes what the work order's `settled` field
+  records as settled, and asks none of it again.
+- It works only the remaining frontier.
+- It keeps the split between user sessions and delegated sessions that
+  `.agents/rules/grilling.md` sets out.
 
 ## Work order template
 

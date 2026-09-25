@@ -62,12 +62,41 @@ A file extension alone never makes a change a maintenance edit.
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 
+## Inputs Priority
+
+- P1: `.qfai/assistant/constitution/*`
+- P2: the write scope the request or the work order gives
+- P3: `.qfai/assistant/catalog/*`
+- P4: the files being edited
+
 ## Sub-agent Delegation (MANDATORY)
 
 Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
-- `doc-steward` makes the edit and runs the checks.
+### Orchestrator Protocol (MUST)
+
+- `doc-steward` makes the edit and runs the checks. The orchestrator makes no
+  edit itself.
 - `completion-reviewer` reviews the diff. It never reviews an edit it made.
+
+### Capability Probe (MUST)
+
+The delegation to `doc-steward` is the capability check. Classify a failure
+with the baseline taxonomy before anything else.
+
+### Delegation Failure (Hard Stop)
+
+- `unavailable`: stop, edit nothing, and report the class.
+- `saturated`: use the baseline's bounded retry.
+- Do not simulate roles. An edit or a review is never done here in place of its
+  agent.
+
+## Work Orders Summary
+
+| Step | Role (sub-agent)      | Agent instance  | Task title      | Input (refs)           | Output (refs)        | Status (PASS/REVISE/PENDING) |
+| ---- | --------------------- | --------------- | --------------- | ---------------------- | -------------------- | ---------------------------- |
+| 1    | `doc-steward`         | `<instance id>` | Make the edit   | The write scope        | The diff, the checks | PASS/REVISE                  |
+| 2    | `completion-reviewer` | `<instance id>` | Review the diff | The diff and judgement | The verdict          | PASS/REVISE                  |
 
 ### Reviewer Gate (MUST)
 
@@ -89,6 +118,7 @@ and on the no-behaviour-change judgement. A REVISE sends the finding back to
   - scope expansions outside the active envelope
   - destructive operations (rm / overwrite / force-push)
 - hard-required:
+  - edit target (the text or comment to change; an empty target is asked for, never guessed)
 
 A skill MAY narrow any of the three buckets (drop an entry the skill cannot reach), and
 MAY instantiate a category entry — `approval-required governance operations` — with the
@@ -100,7 +130,7 @@ entry outside the prototype's categories. Widening triggers a Reviewer-Gate find
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the project's Markdown and link checks run over the changed files, each exiting 0. A check the project does not have is UNRUN, not a pass.
 
 project_memory:
 
