@@ -169,4 +169,4 @@ D4 named seven specs for Change Requests, and this spec is not one of them. The 
 | ---------------- | -------------------------------------------------------------------------------------- | --------- | ----------- | -------------------- |
 | CR-20260924-0002 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user        | 2026-09-24T18:26:35Z |
 | CR-20260925-0004 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user        | 2026-09-24T19:00:08Z |
-| CR-20260912-0003 | `spec-0010` `US-0010-0008` and `US-0010-0009` chains                                   | re-derive | user        | -                    |
+| CR-20260912-0003 | `spec-0010` `US-0010-0008` and `US-0010-0009` chains                                   | re-derive | user        | 2026-09-25T00:21:41Z |

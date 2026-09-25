@@ -16,6 +16,7 @@ Two rules in this pack were contradicted by the product that satisfies them.
 | OP-003 | UPDATE  | REQ-0005, AC-0002-0010, BR-0002-0010, EX-0002-0011, TC-0002-0011               | the artifact is optional, and absent from a cli-only pack               |
 | OP-004 | UPDATE  | DR-0002-0001, DR-0002-0003                                                     | the decisions narrowed the same way                                     |
 | OP-005 | UPDATE  | tdd/test-list.md (TDD-0008, -0009, -0012, -0016)                               | reset to `todo`; TDD-0012 re-pointed at the three-document wording case |
+| OP-006 | DELETE  | tdd/test-list.md (TDD-0010)                                                    | retired and reserved; its case stays in the suite unledgered            |
 
 ### Rejected
 
@@ -67,6 +68,6 @@ Two rules in this pack were contradicted by the product that satisfies them.
 
 ## Change Requests
 
-| CR ID            | Upstream artifact                                                       | Mode      | Approved by | Applied at |
-| ---------------- | ----------------------------------------------------------------------- | --------- | ----------- | ---------- |
-| CR-20260912-0003 | `spec-0002/01_Spec.md` (REQ-0012, REQ-0005) and the layers beneath them | re-derive | user        | -          |
+| CR ID            | Upstream artifact                                                       | Mode      | Approved by | Applied at           |
+| ---------------- | ----------------------------------------------------------------------- | --------- | ----------- | -------------------- |
+| CR-20260912-0003 | `spec-0002/01_Spec.md` (REQ-0012, REQ-0005) and the layers beneath them | re-derive | user        | 2026-09-25T00:21:41Z |

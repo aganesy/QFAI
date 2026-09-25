@@ -1,12 +1,13 @@
 ---
 id: 2026-09-12-spec-0002-two-statements-the-product-replaced
-status: active
+status: archived
 kind: consultation-needed
 created: 2026-09-12
-updated: 2026-09-13
+updated: 2026-09-25
 scope: spec-0002
-blocking: true
+blocking: false
 promote-to: null
+closure-rationale: CR-20260912-0003 was approved with option 1 and applied at 2026-09-25T00:21:41Z, so both statements are settled and nothing is blocked any more.
 links: ["spec-0002"]
 ---
 
@@ -54,6 +55,12 @@ the same sentence in all three. It cannot be pointed at while the criterion
 says the opposite of what that sentence says.
 
 ## What the next session picks up
+
+**Settled.** `CR-20260912-0003` was approved with option 1 and applied on
+2026-09-25 (`Applied at` `2026-09-25T00:21:41Z`). What remains is two later
+stage runs: `/qfai-implement spec-0002`, which re-verifies `TDD-0011` and
+re-executes the reset rows, and `/qfai-atdd` for `spec-0002` and `spec-0010`.
+The rest of this section is the plan as it stood while the request was open.
 
 `CR-20260912-0003` is `open` and carries three options with a recommendation. It
 needs the user's decision, per statement — they may be settled differently.

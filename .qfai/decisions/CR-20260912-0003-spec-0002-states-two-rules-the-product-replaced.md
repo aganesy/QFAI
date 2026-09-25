@@ -9,7 +9,7 @@
 - Approved by: `user` — Option 1 selected through the structured question tool
 - Approved at: `2026-09-24T23:26:20Z`
 - Approved option: `1`
-- Applied at: `-`
+- Applied at: `2026-09-25T00:21:41Z`
 - Superseded by: `-`
 
 ## Context
@@ -836,8 +836,8 @@ internally contradictory.
 
 ## Resolution
 
-Option 1 is being applied. The owner re-derivation and the ledger resets are
-done. One retirement is held, so `Applied at` is not set.
+Option 1 is applied. The owner re-derivation, the ledger resets and the one
+retirement are done.
 
 The record was refreshed against the tree before it was applied:
 
@@ -862,7 +862,7 @@ The record was refreshed against the tree before it was applied:
     `does not block when latest UI-bearing discussion pack is missing prototyping.yaml`
     in `packages/qfai/tests/core/sddPreflight.test.ts`, and that case exists.
     The test disposition action 6 gives it, "none to dispose of", no longer
-    holds. See the held step below.
+    holds. The disposition taken is recorded below.
 
 The owner re-derivation, `/qfai-sdd` in mode `re-derive`:
 
@@ -897,16 +897,30 @@ The `/qfai-implement` Change Request preflight:
   carrier-only list. `spec-0002/TDD-0008` and `TDD-0012` joined the
   open-but-tested list until their re-execution reaches `done`.
 
-**Held: the retirement of `spec-0002/TDD-0010` (action 6) and its reservation
-(action 8).** The row's case exists and asserts that the preflight does not
-block a UI-bearing pack missing `prototyping.yaml`. No ledger row other than
-this one names it, and no test case annotates it. The retirement procedure
-requires the case to be deleted or re-pointed at a surviving obligation. This
-record chose neither, because it assumed no such case existed. The nearest
-obligation is the side-artifact criterion of `spec-0013`, which has no test case
-or row, and option 1 does not reach `spec-0013`. The row stays `done` until that
-disposition is decided.
+**Retired: `spec-0002/TDD-0010` (action 6), with its id reserved (action 8).**
 
-Still owed once it is: the `spec-0002/TDD-0011` re-verification (action 7), the
-`/qfai-atdd` passes (action 9), closing the consultation entry (action 10), and
-`Applied at`.
+- Retired at `Status = done`. Original `Evidence`, verbatim:
+  `current preflight unit test pass`.
+- The row was a second row on `TC-0002-0009`, over a case about
+  `prototyping.yaml` that the obligation does not name.
+- Test disposition: its test
+  `does not block when latest UI-bearing discussion pack is missing prototyping.yaml`
+  in `packages/qfai/tests/core/sddPreflight.test.ts` stays in the suite
+  unledgered as regression coverage of the spec-0013 side-artifact criterion.
+  The case is unchanged.
+- Why the case is kept: the approved action disposes of no test, and the case
+  still covers behaviour `spec-0013` requires. The disposition was settled
+  between agents. Deleting the case was rejected because it removes live
+  coverage. A new Change Request to give the case a `spec-0013` row was rejected
+  because this request does not need one. No position disagreed.
+- The id is reserved under the ledger's `## TDD-ID reservations`, and the row
+  left the carrier-only list of completed rows.
+
+`Applied at` records the completed owner rerun and ledger sweep. The
+consultation entry closes in the same change (action 10). Two later stage runs
+remain:
+
+- `/qfai-implement spec-0002` re-verifies `TDD-0011` in place (action 7) and
+  re-executes the reset rows.
+- `/qfai-atdd spec-0002` and `/qfai-atdd spec-0010` regenerate the coverage
+  records and write the tests the `todo` rows owe (action 9).
