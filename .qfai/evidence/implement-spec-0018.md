@@ -10,13 +10,16 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | ------ | ------- | --------------------- |
 | TDD-0001 | TC-0018-0001 | Done after both reviews and the completion gate passed |
 | TDD-0002 | TC-0018-0002 | Done gate PASS (12/12); Round 2 reviews and checkpoint sealed |
-| TDD-0003 | TC-0018-0003 | Round 1 reviews REVISE; authorization-ID repair required |
+| TDD-0003 | TC-0018-0003 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0004 | TC-0018-0004 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
 | TDD-0013 | TC-0018-0008 | Done gate PASS (12/12); Round 1 reviews and checkpoint sealed |
-| TDD-0015 | TC-0018-0012 | Round 3 implementation review REVISE; CR-20260925-0004 approved, owner rerun pending |
-| TDD-0026 | TC-0018-0016 | Refactor verify passed; parked for BR-0018-0010 T1 group review |
-| TDD-0027 | TC-0018-0016 | Refactor verify passed; parked for BR-0018-0010 T1 group review |
-| TDD-0028 | TC-0018-0016 | RED assertion and independent QA passed; GREEN pending |
+| TDD-0015 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0026 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0027 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0028 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 
 ## Grilling Session
 
@@ -634,7 +637,15 @@ Tests  1 failed | 1 skipped (2)
 - Checkpoint verification revision: `working-tree+6cf6876200678b49d5e891c8360829d0aca110924635582dccf1e4af7cf8dc37`
 - Checkpoint verification seal: `23e1c7229e251f931727c205a6fe17e21b456536d84f5000951b1285edea3449` (the canonical revision, command and result lines above).
 
+#### Fixture correction under CR-20260924-0002
+
+- The ready-snapshot `approval` now carries `authorizationId: "authorization-4"`. `next` no longer issues an SDD work order for a CREATE approval without a persisted ID, so the fixture's ID-less approval stopped reaching SDD.
+- Before the fixture change, with the missing-ID check in `decide.ts`: exit 1; the comparison at `tests/unit/workflow/oneCreateQuestionAtRouting.test.ts:233:6` failed.
+- After the fixture change: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/oneCreateQuestionAtRouting.test.ts --testNamePattern='TC-0018-0002 \(TDD-0002\)' --reporter=verbose` (cwd `packages/qfai`) exit 0; 1 passed, 1 skipped. The no-repeat assertion is unchanged. Status stays `done`.
+
 ### TDD-0003
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived; the Round 1 REVISE finding is fixed below.
 
 - TDD-ID: TDD-0003
 - Layer: Unit
@@ -778,6 +789,14 @@ Restored suite: exit 0; Test Files 2 passed (2); Tests 3 passed (3).
 - Round 1: Review pack (attempt 1): `.qfai/review/review-20260924232138000/`.
 - Round 1: Review pack seal (attempt 1): `c0ea171f89875ed76b17a5f514b2e1aa1995ed734239e2e954e62e4ffb8470c5` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 1: reviewer verdict (attempt 1): REVISE
+
+#### Review fix under CR-20260924-0002
+
+- The Round 1 blocking finding is fixed: `next` issues the SDD work order only when the CREATE approval carries a persisted `authorizationId`, and the order's `authorizationRefs` holds exactly that record's path. A missing ID opens a new `create` question instead (TDD-0527). The `SIMPLIFIED` marker that deferred this check is removed.
+- `decide.ts` TS2322 fixed: the decision branch narrows `snapshot.scopeDigest` to `string` before building the authorization record.
+- The test's ready snapshot now passes the recorded authorization itself as the approval, which removed a type assertion and an `exactOptionalPropertyTypes` error under `tsconfig.tests.json`.
+- Re-run: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --testNamePattern='TC-0018-0003 \(TDD-0003\)' --reporter=verbose` (cwd `packages/qfai`) exit 0; 1 passed, 1 skipped.
+- The Round 1 advisory on round-evidence layout was repaired earlier (see Record defects).
 
 ### TDD-0004
 
@@ -1021,6 +1040,8 @@ Restored suite: exit 0; Test Files 4 passed (4); Tests 5 passed (5).
 
 ### TDD-0015
 
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived; the Round 3 REVISE finding is fixed below under the approved reference shape.
+
 - TDD-ID: TDD-0015
 - Layer: Unit
 - Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
@@ -1254,6 +1275,17 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 - Round 3: Review pack (attempt 1): `.qfai/review/review-20260925023352000/`.
 - Round 3: Review pack seal (attempt 1): `2a922e435142d870d0d564fd76a3caa6153886d9455edff620b58ea9e01d2828` (all four pack files, Markdown normalized and JSON raw, repo-relative path plus NUL plus content SHA-256, records sorted and joined with LF).
 - Round 3: reviewer verdict (attempt 1): REVISE. Completion review passed. Implementation review confirmed all three prior fixes but reproduced an absent extensionless root path `Dockerfile` without any `facts.pathExistence` entry passing to a CREATE question. The untyped reference also admits symbolic values such as `request`, so the next step must settle path classification before another GREEN edit. Both reviewers independently recorded revision `working-tree+7191d665068aae9662f5e9ad35e036dd5ff747ba8608336d64d878c0e5e14cba` and audited evidence hash `03c9f1dd6a57b53b10fb43184beabf4458668467368439acf24008823174d733`.
+
+#### Typed route references under CR-20260925-0004
+
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0015): unknown-path`
+- The fixture now carries `{ kind, ref }` entries: normative `request` and a missing `path`; observed a missing `path`, `Dockerfile` as a `path` with no path-existence fact, and a missing `evidence` file with no fact.
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0015\): unknown-path' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:106:18` — `code` was `invalid-input` where `proposal-refused` with four `unknown-path` reasons was expected.
+- GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0015): unknown-path`, 1 passed.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (classifies a reference by its declared kind; a `path` or `evidence` reference without a `true` existence fact is `unknown-path`; spelling and observer-map keys no longer decide), `packages/qfai/src/core/workflow/parse.ts` (the reference kinds and entry type).
+- Shared fixtures migrated to typed references: `oneCreateQuestionAtRouting.test.ts` (TDD-0001) and `oneApprovalPerCapability.test.ts` (TDD-0004), with the symbolic `request` entry typed as `request`. All ten selectors in `tests/unit/workflow/` pass after the change, TDD-0001, TDD-0004 and TDD-0013 included.
 
 ### TDD-0026
 
@@ -1530,6 +1562,36 @@ AssertionError: expected { issued: [ { …(5) }, …(2) ], …(6) } to deeply eq
 ❯ tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:326:18
 Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 ```
+
+### TDD-0527
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts`
+- Selector: `TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts --testNamePattern='TC-0018-0268 \(TDD-0527\): missing persisted CREATE authorization at SDD issue' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/theAnswerIsABoundHumanDecision.test.ts:190:18` — the run went to `running` with an SDD work order carrying `authorizationRefs: []` and one `work-order-issued` event, where `awaiting_input` with one `create` question for `slot-3-1` was expected.
+- GREEN result: exit 0; `✓ ... TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue`, 1 passed, 1 skipped.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`next` opens a new `create` question for the approval's slot and moves `ready` to `awaiting_input` when the CREATE approval has no `authorizationId`; the question builder is shared with routing).
+
+### TDD-0528
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/routeProposalReferenceShape.test.ts`
+- Selector: `TC-0018-0269 (TDD-0528): bare string in expectedBehaviorRefs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/routeProposalReferenceShape.test.ts --testNamePattern='TC-0018-0269 \(TDD-0528\): bare string in expectedBehaviorRefs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/routeProposalReferenceShape.test.ts:72:18` — the stub parser accepted the bare string, `error` was `null` and the proposal reached `decide`, which returned events.
+- GREEN result: exit 0; `✓ ... TC-0018-0269 (TDD-0528): bare string in expectedBehaviorRefs`, 1 passed.
+- Production files: `packages/qfai/src/core/workflow/parse.ts` (`parseRouteReferences` requires exact `{ kind, ref }` entries of the closed kinds each array allows, and refuses anything else `invalid-input` / `schema` naming the entry, before `decide` runs).
+
+### TDD-0529
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/routeProposalReferenceShape.test.ts`
+- Selector: `TC-0018-0269 (TDD-0529): bare string in observedRefs`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/routeProposalReferenceShape.test.ts --testNamePattern='TC-0018-0269 \(TDD-0529\): bare string in observedRefs' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied by TDD-0528, whose parser checks both arrays with one entry check.
+- GREEN result: exit 0; `✓ ... TC-0018-0269 (TDD-0529): bare string in observedRefs`, 1 passed, 1 skipped.
+- Production files: `packages/qfai/src/core/workflow/parse.ts` (no change beyond TDD-0528).
 
 ## Record defects
 

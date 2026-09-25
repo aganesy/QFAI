@@ -3,6 +3,11 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type {
+  NormativeReferenceKind,
+  ObservedReferenceKind,
+  RouteReference,
+} from "../../../src/core/workflow/parse.js";
 
 it("TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in one routing round", () => {
   const snapshot = {
@@ -33,8 +38,10 @@ it("TC-0018-0004 (TDD-0004): Two new capabilities open two CREATE questions in o
         requestKind: "change",
         candidateRoute: "feature",
         goal: "Let customers manage notification email addresses and delivery preferences.",
-        expectedBehaviorRefs: ["request"],
-        observedRefs: [],
+        expectedBehaviorRefs: [
+          { kind: "request", ref: "request" },
+        ] satisfies RouteReference<NormativeReferenceKind>[],
+        observedRefs: [] satisfies RouteReference<ObservedReferenceKind>[],
         affectedSpecIds: [],
         riskSignals: [],
         unresolvedQuestions: [],

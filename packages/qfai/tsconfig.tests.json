@@ -381,6 +381,7 @@
     "tests/validators/validatorReachability.test.ts",
     "tests/assets/mdschemaRouting.test.ts",
     "tests/assets/gateItemBudget.test.ts",
-    "tests/core/gitChanges.test.ts"
+    "tests/core/gitChanges.test.ts",
+    "tests/unit/workflow/**/*.ts"
   ]
 }

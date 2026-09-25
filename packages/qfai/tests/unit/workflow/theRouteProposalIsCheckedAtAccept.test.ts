@@ -3,6 +3,11 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type {
+  NormativeReferenceKind,
+  ObservedReferenceKind,
+  RouteReference,
+} from "../../../src/core/workflow/parse.js";
 
 it("TC-0018-0012 (TDD-0015): unknown-path", () => {
   const missingPath = "packages/qfai/src/core/workflow/missing-observed-reference.ts";
@@ -37,8 +42,15 @@ it("TC-0018-0012 (TDD-0015): unknown-path", () => {
         requestKind: "change",
         candidateRoute: "feature",
         goal: "Let each customer register a notification email.",
-        expectedBehaviorRefs: ["request", missingNormativePath],
-        observedRefs: [missingPath, missingRootFile, missingDotFile],
+        expectedBehaviorRefs: [
+          { kind: "request", ref: "request" },
+          { kind: "path", ref: missingNormativePath },
+        ] satisfies RouteReference<NormativeReferenceKind>[],
+        observedRefs: [
+          { kind: "path", ref: missingPath },
+          { kind: "path", ref: missingRootFile },
+          { kind: "evidence", ref: missingDotFile },
+        ] satisfies RouteReference<ObservedReferenceKind>[],
         affectedSpecIds: [],
         riskSignals: [],
         unresolvedQuestions: [],
@@ -61,7 +73,6 @@ it("TC-0018-0012 (TDD-0015): unknown-path", () => {
     now: "2026-09-25T00:00:00.000Z",
     pathExistence: {
       [missingPath]: false,
-      [missingRootFile]: false,
       [missingNormativePath]: false,
     },
   };

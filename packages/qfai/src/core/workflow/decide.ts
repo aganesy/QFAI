@@ -1,3 +1,5 @@
+import type { NormativeReferenceKind, ObservedReferenceKind, RouteReference } from "./parse.js";
+
 export interface WorkflowQuestion {
   questionId: string;
   kind: "create";
@@ -89,7 +91,11 @@ interface WorkflowSnapshot {
     kind: string;
     operation: string;
     effect: string;
-    target?: { kind: string; slotId: string };
+    target?: {
+      kind: string;
+      slotId: string;
+      capability?: Omit<WorkflowQuestion["capability"], "slotId">;
+    };
   };
   acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
 }
@@ -111,8 +117,8 @@ interface WorkflowInput {
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
-      expectedBehaviorRefs: string[];
-      observedRefs: string[];
+      expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
+      observedRefs: RouteReference<ObservedReferenceKind>[];
       newCapabilities: {
         goal: string;
         covers: string[];
@@ -121,6 +127,34 @@ interface WorkflowInput {
       }[];
       requiredStages: string[];
     };
+  };
+}
+
+function createQuestion(
+  questionId: string,
+  capability: WorkflowQuestion["capability"],
+): WorkflowQuestion {
+  return {
+    questionId,
+    kind: "create",
+    text: `Create a capability for ${capability.goal}?`,
+    options: [
+      {
+        optionId: "create",
+        label: "Create it",
+        description: "SDD writes the new capability's spec.",
+        effect: "proceed",
+      },
+      {
+        optionId: "decline",
+        label: "Do not create it",
+        description: "The run ends without creating the capability.",
+        effect: "stop",
+      },
+    ],
+    selection: { min: 1, max: 1 },
+    recommendation: "create",
+    capability,
   };
 }
 
@@ -166,13 +200,15 @@ export function decide(
     const chosen = question?.options.find(
       (option) => option.optionId === input.answer?.optionIds[0],
     );
+    const scopeDigest = snapshot.scopeDigest;
     if (
       input.expectedSequence !== run.sequence ||
       question?.kind !== "create" ||
       input.answer?.optionIds.length !== 1 ||
       !chosen ||
       !input.answeredBy?.trim() ||
-      !/^[a-f0-9]{64}$/.test(snapshot.scopeDigest ?? "") ||
+      scopeDigest === undefined ||
+      !/^[a-f0-9]{64}$/.test(scopeDigest) ||
       !facts.now ||
       !Number.isFinite(Date.parse(facts.now)) ||
       new Date(facts.now).toISOString() !== facts.now ||
@@ -194,7 +230,7 @@ export function decide(
       runId: run.id,
       kind: "human_decision",
       capture: "agent_captured",
-      scopeDigest: snapshot.scopeDigest,
+      scopeDigest,
       recordedAt: facts.now,
       questionId: question.questionId,
       question: { text: question.text, options: question.options, selection: question.selection },
@@ -336,12 +372,34 @@ export function decide(
           events: [],
         };
       }
+      if (!approval.authorizationId) {
+        const capability = approval.target?.capability;
+        if (!capability) {
+          return {
+            verdict: {
+              ok: false,
+              run,
+              error: { code: "invalid-input", message: "The feature work order is not ready." },
+            },
+            events: [],
+          };
+        }
+        const question = createQuestion(`question-${run.sequence + 1}-1`, {
+          ...capability,
+          slotId,
+        });
+        return {
+          verdict: {
+            ok: true,
+            run: { ...run, state: "awaiting_input", sequence: run.sequence + 2 },
+            questions: [question],
+            workOrder: null,
+          },
+          events: [{ type: "question-opened", question }, { type: "material-decision" }],
+        };
+      }
       nextWorkOrder.target = { kind: "new_capability", slotId };
-      // SIMPLIFIED: next also accepts a ready snapshot without a persisted approval ID.
-      // Lift when: ready-snapshot validation requires the authorization record.
-      nextWorkOrder.authorizationRefs = approval.authorizationId
-        ? [`authorizations/${approval.authorizationId}.json`]
-        : [];
+      nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
     return {
       verdict: {
@@ -436,9 +494,7 @@ export function decide(
     proposal?.requestKind !== "change" ||
     proposal.candidateRoute !== "feature" ||
     !Array.isArray(proposal.expectedBehaviorRefs) ||
-    proposal.expectedBehaviorRefs.some((ref) => typeof ref !== "string") ||
     !Array.isArray(proposal.observedRefs) ||
-    proposal.observedRefs.some((ref) => typeof ref !== "string") ||
     !proposal.requiredStages.includes("sdd") ||
     !proposal.requiredStages.includes("verify") ||
     !Array.isArray(capabilities) ||
@@ -465,15 +521,11 @@ export function decide(
     };
   }
 
-  const references = new Set([...proposal.expectedBehaviorRefs, ...proposal.observedRefs]);
-  const unknownPaths = [...references].filter(
-    (ref) =>
-      (Object.hasOwn(facts.pathExistence ?? {}, ref) ||
-        ref.includes("/") ||
-        ref.includes("\\") ||
-        /^[^/\\]+\.[^./\\]+$/.test(ref) ||
-        /^\.[^./\\]+$/.test(ref)) &&
-      facts.pathExistence?.[ref] !== true,
+  const pathReferences = [...proposal.expectedBehaviorRefs, ...proposal.observedRefs]
+    .filter((reference) => reference.kind === "path" || reference.kind === "evidence")
+    .map((reference) => reference.ref);
+  const unknownPaths = [...new Set(pathReferences)].filter(
+    (ref) => facts.pathExistence?.[ref] !== true,
   );
   if (unknownPaths.length > 0) {
     return {
@@ -490,33 +542,14 @@ export function decide(
     };
   }
 
-  const questions: WorkflowQuestion[] = capabilities.map((capability, index) => ({
-    questionId: `question-${run.sequence + 1}-${index + 1}`,
-    kind: "create",
-    text: `Create a capability for ${capability.goal}?`,
-    options: [
-      {
-        optionId: "create",
-        label: "Create it",
-        description: "SDD writes the new capability's spec.",
-        effect: "proceed",
-      },
-      {
-        optionId: "decline",
-        label: "Do not create it",
-        description: "The run ends without creating the capability.",
-        effect: "stop",
-      },
-    ],
-    selection: { min: 1, max: 1 },
-    recommendation: "create",
-    capability: {
+  const questions: WorkflowQuestion[] = capabilities.map((capability, index) =>
+    createQuestion(`question-${run.sequence + 1}-${index + 1}`, {
       goal: capability.goal,
       covers: capability.covers,
       excludes: capability.excludes,
       slotId: `slot-${run.sequence + 1}-${index + 1}`,
-    },
-  }));
+    }),
+  );
 
   return {
     verdict: {

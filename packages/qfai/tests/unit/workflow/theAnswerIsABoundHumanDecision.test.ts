@@ -69,21 +69,13 @@ it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision use
     authorization && "authorizationId" in authorization ? authorization.authorizationId : null;
   const authorizationRef =
     typeof authorizationId === "string" ? `authorizations/${authorizationId}.json` : null;
-  const approval = authorization as {
-    kind: string;
-    operation: string;
-    effect: string;
-    target?: { kind: string; slotId: string };
-  } | null;
-  const readySnapshot = {
-    run: decision.verdict.run ?? awaitingSnapshot.run,
-    plan,
-    approval: approval ?? undefined,
-    approvalRef: authorizationRef,
-  };
   const next =
     decision.verdict.ok && decision.verdict.run?.state === "ready" && authorization
-      ? decide(readySnapshot, { operation: "next" }, {})
+      ? decide(
+          { run: decision.verdict.run, plan, approval: authorization },
+          { operation: "next" },
+          {},
+        )
       : null;
   const workOrder = next?.verdict.workOrder;
   const target = workOrder && "target" in workOrder ? workOrder.target : null;
@@ -139,6 +131,53 @@ it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision use
       target: { kind: "new_capability", slotId: question.capability.slotId },
       authorizationRefsMatch: true,
     },
+  };
+  expect(actual).toEqual(expected);
+});
+
+// QFAI:SPEC-0018:TC-0018-0268
+it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue", () => {
+  const capability = {
+    goal: "Customer notification email registration",
+    covers: ["Up to five unique emails per customer"],
+    excludes: ["Notification delivery"],
+  };
+  const readySnapshot = {
+    run: { id: "run-feature", state: "ready", sequence: 5 },
+    plan: {
+      route: "feature",
+      stages: [
+        { stageInstanceId: "feature-sdd", stageKind: "sdd" },
+        { stageInstanceId: "feature-verify", stageKind: "verify" },
+      ],
+    },
+    approval: {
+      kind: "human_decision",
+      operation: "CREATE",
+      effect: "proceed",
+      target: { kind: "new_capability", slotId: "slot-3-1", capability },
+    },
+  };
+
+  const next = decide(readySnapshot, { operation: "next" }, {});
+
+  const actual = {
+    ok: next.verdict.ok,
+    state: next.verdict.run?.state,
+    workOrder: next.verdict.workOrder ?? null,
+    questions: (next.verdict.questions ?? []).map((question) => ({
+      kind: question.kind,
+      slotId: question.capability.slotId,
+      goal: question.capability.goal,
+    })),
+    issuedEvents: next.events.filter((event) => event.type === "work-order-issued").length,
+  };
+  const expected = {
+    ok: true,
+    state: "awaiting_input",
+    workOrder: null,
+    questions: [{ kind: "create", slotId: "slot-3-1", goal: capability.goal }],
+    issuedEvents: 0,
   };
   expect(actual).toEqual(expected);
 });

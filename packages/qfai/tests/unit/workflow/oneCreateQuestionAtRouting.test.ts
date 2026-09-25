@@ -4,6 +4,11 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import type {
+  NormativeReferenceKind,
+  ObservedReferenceKind,
+  RouteReference,
+} from "../../../src/core/workflow/parse.js";
 
 it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability", () => {
   const snapshot = {
@@ -34,8 +39,10 @@ it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked pro
         requestKind: "change",
         candidateRoute: "feature",
         goal: "Let each customer register up to five unique notification emails.",
-        expectedBehaviorRefs: ["request"],
-        observedRefs: [],
+        expectedBehaviorRefs: [
+          { kind: "request", ref: "request" },
+        ] satisfies RouteReference<NormativeReferenceKind>[],
+        observedRefs: [] satisfies RouteReference<ObservedReferenceKind>[],
         affectedSpecIds: [],
         riskSignals: [],
         unresolvedQuestions: [],
@@ -101,6 +108,7 @@ it("TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to i
     ],
   };
   const approval = {
+    authorizationId: "authorization-4",
     kind: "human_decision",
     operation: "CREATE",
     effect: "proceed",
