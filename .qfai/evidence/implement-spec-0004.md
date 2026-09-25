@@ -27,6 +27,44 @@ Findings the plan phase hands on, none of which blocks these rows:
   `Layer`. Declaring a recognised `Level` in `06_Test-Cases.md` is a `/qfai-sdd`
   change.
 
+### Record defects
+
+Open entries from the reviews of the run started 2026-09-25T10:21:29.000Z. Each
+is repaired, with a record re-attestation, before spec-0004 completion is
+declared.
+
+- `record:red-test-manifest`, `TDD-0083` to `TDD-0086`, Round 1: the manifest
+  names only the test file. It also owes the helpers the file reads,
+  `packages/qfai/tests/integration/init/upgradeStates.ts` and
+  `packages/qfai/tests/helpers/stdout.ts`, and a `RED test hash` recomputed
+  over all three.
+- `record:falsifiability-evidence`, `TDD-0086`: `Other rows` and the matching
+  decision in `atdd-spec-0004.md` say no mutation can put a finding on a fresh
+  tree without failing `TDD-0083`. A mutation that reports only an unedited
+  `bugfix.yml` would fail `TDD-0086` alone. The observed facts stand: the
+  recorded mutation also fails `TDD-0083`.
+
+### Handoff to /qfai-sdd
+
+- `AC-0004-0044` and `BR-0004-0038`: add a test case for a plan that still
+  holds an earlier release's bytes, drawing `QFAI-ASSETS-004` at `error`. The
+  `older-plan` overlay in `upgradeStates.ts` already builds that tree. Seed its
+  ledger row.
+- `06_Test-Cases.md`, the workflow-plan provenance preamble and
+  `EX-0004-0052` to `EX-0004-0055`: they name the built `qfai init` and
+  `qfai validate`. The cases call `runInit` from source and
+  `validateAssistantAssets`. Reword them, or move one case to the built CLI.
+- The ledger's `Owning module` cell for these rows names
+  `validators/assistantAssets.ts`. Three of the four predicates are in
+  `assistantAssetProvenance.ts`.
+
+Optional test hardening, for `/qfai-atdd`:
+
+- The `TC-0004-0083` case asserts only an absence. An assertion that the plans
+  are installed and recorded would stop it passing on a tree with none.
+- The `TC-0004-0082` case asserts that the edited memo exists. The overlay
+  already fails when the memo is missing, so the assertion can be removed.
+
 ## Ledger rows advanced
 
 ### TDD-0067

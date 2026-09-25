@@ -65,10 +65,6 @@ waivers:
         - TDD-0067
         - TDD-0079
         - TDD-0080
-        - TDD-0083
-        - TDD-0084
-        - TDD-0085
-        - TDD-0086
     reason: "Closed under DR-0298: the user waived per-row review for the intent-driven batch; RED and GREEN are recorded per row."
     expires: "2026-12-31"
     evidence: ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md"

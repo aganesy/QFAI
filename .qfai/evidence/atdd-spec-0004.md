@@ -139,6 +139,26 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+b18458ea82b5f590c7c54c08d16a36fdd038149938536a5db93231dcb843127b, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:37:81; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4461036d60f63f59c0b35e2b71aabc497d4652fb278289db63e750fa12db9a95
+- Spec review: PASS
+- Spec reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Spec audited evidence hash: 36a464936bf5995303a2d913f7a9b350848877b4ed6a779107191325d91b2140
+- Spec review pack: .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4461036d60f63f59c0b35e2b71aabc497d4652fb278289db63e750fa12db9a95
+- Code quality review: PASS
+- Code quality reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Code quality audited evidence hash: 36a464936bf5995303a2d913f7a9b350848877b4ed6a779107191325d91b2140
+- Code quality review pack: .qfai/review/review-20260925110010000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4461036d60f63f59c0b35e2b71aabc497d4652fb278289db63e750fa12db9a95
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification seal: 029cefd37aeb1f94bf2c2d042c60fcb1daf714e63d8a6765d68511e5745236ff
+
 ### TDD-0084
 
 - TDD-ID: TDD-0084
@@ -186,6 +206,26 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - Refactor verify revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 REVISE — RED phase gate: `Predicate to break` and `Satisfied-by` named `validateAssistantAssets`, while the mutated line sits in `validateAssistantAssetProvenance`; every recorded value reproduced (working-tree+925efd1f8c3f19aaf690b79c9b28ce516599d7d11bf21dd5c7019e0186c36948 with HEAD taken as 2facbb04e, AssertionError at workflowPlanProvenance.test.ts:48:65, RED test hash recomputes); qa-gatekeeper#2 PASS — RED phase gate attempt 2, after both fields were corrected; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
+
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110020000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 54dd915f7e2ed001c63840a3f652e9900182ee73c924e129d4ea23ee72c7ca96
+- Spec review: PASS
+- Spec reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Spec audited evidence hash: 2f32e413fa25021c41e5a92e6e2e3f581d7c048e6bae842a2e6cb24a212e0b30
+- Spec review pack: .qfai/review/review-20260925110020000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 54dd915f7e2ed001c63840a3f652e9900182ee73c924e129d4ea23ee72c7ca96
+- Code quality review: PASS
+- Code quality reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Code quality audited evidence hash: 2f32e413fa25021c41e5a92e6e2e3f581d7c048e6bae842a2e6cb24a212e0b30
+- Code quality review pack: .qfai/review/review-20260925110020000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 54dd915f7e2ed001c63840a3f652e9900182ee73c924e129d4ea23ee72c7ca96
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification seal: 029cefd37aeb1f94bf2c2d042c60fcb1daf714e63d8a6765d68511e5745236ff
 
 ### TDD-0085
 
@@ -235,6 +275,26 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+65c64dc7c446d67f50477988bbcdb225ab4d766ad7fe5aa82be115f2dbf144b4, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:61:68; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110030000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 45961d5ecb9b923505de31fceafffb88f3747c502ac915cb88da2341c9c89379
+- Spec review: PASS
+- Spec reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Spec audited evidence hash: c87c69e7dd873b3dcd7a7251ca828b76921a4520657af44e741c669b36f96c90
+- Spec review pack: .qfai/review/review-20260925110030000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 45961d5ecb9b923505de31fceafffb88f3747c502ac915cb88da2341c9c89379
+- Code quality review: PASS
+- Code quality reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Code quality audited evidence hash: c87c69e7dd873b3dcd7a7251ca828b76921a4520657af44e741c669b36f96c90
+- Code quality review pack: .qfai/review/review-20260925110030000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 45961d5ecb9b923505de31fceafffb88f3747c502ac915cb88da2341c9c89379
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification seal: 029cefd37aeb1f94bf2c2d042c60fcb1daf714e63d8a6765d68511e5745236ff
+
 ### TDD-0086
 
 - TDD-ID: TDD-0086
@@ -283,6 +343,26 @@ packages/qfai/tests/integration/validators/workflowPlanProvenance.test.ts
 - qa-gatekeeper: PASS
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree working-tree+f29c69a51f4003256f0cb36e30e084030676dd3754560c3fe13a7e2a9415defb, reproduced with HEAD taken as 2facbb04e; AssertionError at workflowPlanProvenance.test.ts:67:67; RED test hash recomputes; qa-gatekeeper#1 PASS — build-phase GREEN and oracle proof at 2facbb04e2e0898946280327267f46ce1299aab7: selector 1 passed | 3 skipped, file 4/4
 
+- Round 1: reviewer verdict (attempt 1): PASS
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110040000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): d14af2bc2059511f3859d793107dc20e7d8e52eed938b3b82da9d4f2907bde67
+- Spec review: PASS
+- Spec reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Spec audited evidence hash: e466822f0f462125dc21a54d1c414a95358df768bef051e7108af5d7da5f07ae
+- Spec review pack: .qfai/review/review-20260925110040000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: d14af2bc2059511f3859d793107dc20e7d8e52eed938b3b82da9d4f2907bde67
+- Code quality review: PASS
+- Code quality reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Code quality audited evidence hash: e466822f0f462125dc21a54d1c414a95358df768bef051e7108af5d7da5f07ae
+- Code quality review pack: .qfai/review/review-20260925110040000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: d14af2bc2059511f3859d793107dc20e7d8e52eed938b3b82da9d4f2907bde67
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification command: cd packages/qfai && NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/validators/workflowPlanProvenance.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 4 passed (4). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 75fecd26795210c9bad74f448d4a5a44d6c110df
+- Checkpoint verification seal: 029cefd37aeb1f94bf2c2d042c60fcb1daf714e63d8a6765d68511e5745236ff
+
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0004.md` (committed). Totals: ✅ 132 / ⚠️ 43 / ❌ 196.
@@ -293,16 +373,25 @@ applicable. `Status` is a row verdict and is outside every total.
 
 ## Work Orders Summary
 
-| Step | Role (sub-agent)         | Agent instance             | Task title                                                                                                            | Input (refs)                                                       | Output (refs)               | Status (PASS/REVISE/PENDING) |
-| ---- | ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------- | ---------------------------- |
-| 1    | test-design-analyst      | test-design-analyst#1      | /qfai-atdd coverage: score every obligation of spec-0004 and write the matrix                                         | 02_User-stories.md, 04_Business-Rules.md, 06_Test-Cases.md         | coverage-depth-spec-0004.md | REVISE                       |
-| 2    | acceptance-test-engineer | acceptance-test-engineer#1 | Hand over `TDD-0083` to `TDD-0086` on the falsifiability branch                                                       | the test file, `assistantAssetProvenance.ts`, `assistantAssets.ts` | #tdd-0083 to #tdd-0086      | PASS                         |
-| 3    | -                        | n/a                        | grilling(-@2026-09-25T10:19:31.967Z/none): none                                                                       | -                                                                  | -                           | PASS                         |
-| 4    | -                        | n/a                        | grilling(-@2026-09-25T10:21:29.000Z/none): none                                                                       | -                                                                  | -                           | PASS                         |
-| 5    | backend-engineer         | backend-engineer#1         | /qfai-implement: falsifiability runs for `TDD-0083` to `TDD-0086`, each reverted to its GREEN                         | #tdd-0083 to #tdd-0086                                             | Round 1                     | PASS                         |
-| 6    | backend-engineer         | backend-engineer#1         | /qfai-implement: refactor verify for `TDD-0083` to `TDD-0086` on the committed tree                                   | #tdd-0083 to #tdd-0086                                             | Refactor verify fields      | PASS                         |
-| 7    | qa-gatekeeper            | qa-gatekeeper#1            | /qfai-implement: RED phase gate on each rebuilt mutated tree, and the build-phase GREEN, for `TDD-0083` to `TDD-0086` | #tdd-0083 to #tdd-0086                                             | qa-gatekeeper fields        | REVISE                       |
-| 8    | qa-gatekeeper            | qa-gatekeeper#2            | /qfai-implement: `TDD-0084` RED phase gate, attempt 2                                                                 | #tdd-0084                                                          | qa-gatekeeper fields        | PASS                         |
+| Step | Role (sub-agent)         | Agent instance             | Task title                                                                                                            | Input (refs)                                                       | Output (refs)                                         | Status (PASS/REVISE/PENDING) |
+| ---- | ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------- | ---------------------------- |
+| 1    | test-design-analyst      | test-design-analyst#1      | /qfai-atdd coverage: score every obligation of spec-0004 and write the matrix                                         | 02_User-stories.md, 04_Business-Rules.md, 06_Test-Cases.md         | coverage-depth-spec-0004.md                           | REVISE                       |
+| 2    | acceptance-test-engineer | acceptance-test-engineer#1 | Hand over `TDD-0083` to `TDD-0086` on the falsifiability branch                                                       | the test file, `assistantAssetProvenance.ts`, `assistantAssets.ts` | #tdd-0083 to #tdd-0086                                | PASS                         |
+| 3    | -                        | n/a                        | grilling(-@2026-09-25T10:19:31.967Z/none): none                                                                       | -                                                                  | -                                                     | PASS                         |
+| 4    | -                        | n/a                        | grilling(-@2026-09-25T10:21:29.000Z/none): none                                                                       | -                                                                  | -                                                     | PASS                         |
+| 5    | backend-engineer         | backend-engineer#1         | /qfai-implement: falsifiability runs for `TDD-0083` to `TDD-0086`, each reverted to its GREEN                         | #tdd-0083 to #tdd-0086                                             | Round 1                                               | PASS                         |
+| 6    | backend-engineer         | backend-engineer#1         | /qfai-implement: refactor verify for `TDD-0083` to `TDD-0086` on the committed tree                                   | #tdd-0083 to #tdd-0086                                             | Refactor verify fields                                | PASS                         |
+| 7    | qa-gatekeeper            | qa-gatekeeper#1            | /qfai-implement: RED phase gate on each rebuilt mutated tree, and the build-phase GREEN, for `TDD-0083` to `TDD-0086` | #tdd-0083 to #tdd-0086                                             | qa-gatekeeper fields                                  | REVISE                       |
+| 8    | qa-gatekeeper            | qa-gatekeeper#2            | /qfai-implement: `TDD-0084` RED phase gate, attempt 2                                                                 | #tdd-0084                                                          | qa-gatekeeper fields                                  | PASS                         |
+| 9    | completion-reviewer      | completion-reviewer        | /qfai-implement: `TDD-0083` completion review                                                                         | #tdd-0083                                                          | review-20260925110010000 <!-- qfai:not-a-citation --> | PASS                         |
+| 10   | implementation-reviewer  | implementation-reviewer    | /qfai-implement: `TDD-0083` code review                                                                               | #tdd-0083                                                          | review-20260925110010000 <!-- qfai:not-a-citation --> | PASS                         |
+| 11   | completion-reviewer      | completion-reviewer        | /qfai-implement: `TDD-0084` completion review                                                                         | #tdd-0084                                                          | review-20260925110020000 <!-- qfai:not-a-citation --> | PASS                         |
+| 12   | implementation-reviewer  | implementation-reviewer    | /qfai-implement: `TDD-0084` code review                                                                               | #tdd-0084                                                          | review-20260925110020000 <!-- qfai:not-a-citation --> | PASS                         |
+| 13   | completion-reviewer      | completion-reviewer        | /qfai-implement: `TDD-0085` completion review                                                                         | #tdd-0085                                                          | review-20260925110030000 <!-- qfai:not-a-citation --> | PASS                         |
+| 14   | implementation-reviewer  | implementation-reviewer    | /qfai-implement: `TDD-0085` code review                                                                               | #tdd-0085                                                          | review-20260925110030000 <!-- qfai:not-a-citation --> | PASS                         |
+| 15   | completion-reviewer      | completion-reviewer        | /qfai-implement: `TDD-0086` completion review                                                                         | #tdd-0086                                                          | review-20260925110040000 <!-- qfai:not-a-citation --> | PASS                         |
+| 16   | implementation-reviewer  | implementation-reviewer    | /qfai-implement: `TDD-0086` code review                                                                               | #tdd-0086                                                          | review-20260925110040000 <!-- qfai:not-a-citation --> | PASS                         |
+| 17   | orchestrator             | orchestrator               | /qfai-implement: checkpoint verification for `TDD-0083` to `TDD-0086`, off a checkpoint boundary                      | #tdd-0083 to #tdd-0086                                             | Checkpoint verification fields                        | PASS                         |
 
 The coverage REVISE names one gap, and it is outside these four rows: see
 `## Gaps / Open risks`.
@@ -328,4 +417,8 @@ Recorded per row above.
 
 ## Final status
 
-PENDING — the row reviews have not run yet.
+FAIL for the stage, confirmed by the orchestrator. The four rows are `done`: each
+carries a PASS from `qa-gatekeeper`, `completion-reviewer` and
+`implementation-reviewer`. The stage stays open because the coverage phase
+returned REVISE on the untested stale-copy clause of `BR-0004-0038`, which
+needs a `/qfai-sdd` change. No stage review pack has been opened.

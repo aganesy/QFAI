@@ -37,6 +37,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **spec-0004's four workflow-plan provenance rows are reviewed** (#2288).
+  `TDD-0083` to `TDD-0086` had closed at `exception` with their reviews
+  waived. Each now carries a falsifiability record: one production mutation
+  that fails the row's own assertion, then the revert. Each also carries its
+  `qa-gatekeeper`, `completion-reviewer` and `implementation-reviewer`
+  verdicts, closes at `done`, and leaves the waiver. A Coverage Depth Matrix
+  for spec-0004 is committed with them. The spec's three triage rows still
+  sit under the waiver.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
