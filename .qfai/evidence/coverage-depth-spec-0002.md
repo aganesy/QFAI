@@ -7,10 +7,9 @@ This matrix scores the seven active user stories `02_User-stories.md` declares �
 `06_Test-Cases.md` declares — `TC-0002-0001`, `-0008`, `-0009`, `-0010` and `-0011`, all at
 `Level: L3` — against the tests that actually discharge them in `packages/qfai/tests/**`. The
 obligation set is read from those two files in full, and not from the rows of
-`.qfai/specs/spec-0002/tdd/test-list.md`, because the ledger is missing rows the seeding contract
-requires — seven of them, one per story (see Findings). `TC-0002-0002` … `-0007` were removed from
-the active table when the `discussionDesignHardening` validator and the exploration-sidecar family
-were retired, so they are not scored; `US-0002-0004`, `-0006` and `-0007` were retired with them
+`.qfai/specs/spec-0002/tdd/test-list.md`. `TC-0002-0002` … `-0007` were removed from the active
+table when the `discussionDesignHardening` validator and the exploration-sidecar family were
+retired, so they are not scored; `US-0002-0004`, `-0006` and `-0007` were retired with them
 and have no `US-*` block left to score. None of the seven remaining stories carries a
 `- x-qfai-status: planned` meta line, so all seven are active and all seven own a row. The business
 rule table below carries all four active `BR-0002-*` of `04_Business-Rules.md`; `BR-0002-0002` …
@@ -18,44 +17,46 @@ rule table below carries all four active `BR-0002-*` of `04_Business-Rules.md`; 
 retiring it, so all four own a row.
 
 **A `US-*` row is scored against the files that declare the story**, which is what an annotation
-does. No file in `packages/qfai/tests/**` carries a `QFAI:SPEC-0002:US-*` annotation, so every story
-here is declared by prose alone. Where the behaviour under a story is exercised, that coverage is
-scored on the `TC-*` row whose obligation it discharges; reading it a second time into the story
-would report an obligation owed to the E2E layer as met by a layer that holds no test for it.
+does. One file in `packages/qfai/tests/**` carries a `QFAI:SPEC-0002:US-*` annotation:
+`tests/e2e/spec0002PlannerFirstE2E.test.ts` declares `US-0002-0005`, and that row is scored against
+it. The other six stories are declared by prose alone. Where the behaviour under one of those six
+is exercised, that coverage is scored on the `TC-*` row whose obligation it discharges; reading it
+a second time into the story would report an obligation owed to the E2E layer as met by a layer
+that holds no test for it.
 
-**The ledger is not a coverage source for this pack, and the matrix does not read it.** It has six
-rows — four `integration` and two `validators` — and eight columns with no `US-Refs` among them, so
-not one of the seven active stories appears in it. Of the rows it does have, three `done` rows name
-a `Selector` that appears in no file in the repository, and a fourth names one that resolves to a
-test about a different behaviour. A `Status` column that says `done` over a selector nothing can run
-is a claim, not a measurement. Every test-case score below comes from a test that was located in the
-tree and executed.
+**The ledger is not a coverage source for this pack, and the matrix does not read it.** A `Status`
+column that says `done` over a selector nothing can run is a claim, not a measurement, and Finding 4
+records four rows that made that claim. Every test-case score below comes from a test that was
+located in the tree and executed.
 
-**Two obligations name a behaviour that no longer has an implementation.** `TC-0002-0008` and
-`TC-0002-0009` describe a planner-first pass and a planner-first violation. The validator that
-produced them, `discussionDesignHardening`, does not appear anywhere in `packages/qfai/src/**`; the
-pack's own notes record that it was retired together with the exploration-sidecar family. Those two
-rows carry seventeen of the twenty-eight `❌` depth cells the five test-case rows hold, and the
-reason is not thin testing — it is an obligation with no subject left to test.
+**One obligation names a behaviour that no longer has an implementation.** `TC-0002-0009` describes
+a planner-first violation. The validator that produced it, `discussionDesignHardening`, does not
+appear anywhere in `packages/qfai/src/**`; the pack's own notes record that it was retired together
+with the exploration-sidecar family. That row carries nine of the nineteen `❌` depth cells the five
+test-case rows hold, and the reason is not thin testing — it is an obligation with no subject left
+to test. `TC-0002-0008` is not in that position: its steps read the shipped completion conditions,
+and an annotated test does exactly that.
 
-Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 91 of
+Committed, because it is a governance record. Section "Every `❌` cell, named" enumerates all 74 of
 them so that "one justification per `❌`" is checkable rather than asserted, and section "Every `⚠️`
-cell, named" does the same for all 17 partial scores, which the PASS criterion also requires a
+cell, named" does the same for all 27 partial scores, which the PASS criterion also requires a
 rationale for.
 
 ## What was measured, and how
 
-Every test-case score rests on a test run. Six files were located by reading the tests themselves
-rather than the ledger's `Test file` column, and all six were executed:
+Every test-case score rests on a test run. Eight files were located by reading the tests themselves
+rather than the ledger's `Test file` column, and all eight were executed:
 
-| File                                                | Result                                                 |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| `tests/core/sddPreflight.test.ts`                   | 26 passed                                              |
-| `tests/validators/uix/threeLayer.test.ts`           | 10 passed                                              |
-| `tests/assets/sddStage0PrototypingOptional.test.ts` | 12 passed                                              |
-| `tests/assets/designDirectionInterview.test.ts`     | 12 passed                                              |
-| `tests/e2e/discussionHardeningE2E.test.ts`          | 2 passed                                               |
-| `tests/assets/assets.test.ts`                       | 6 passed (`prototyping.yaml`), 2 (`legacy-permissive`) |
+| File                                                           | Result                                                                      |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `tests/core/sddPreflight.test.ts`                              | 26 passed                                                                   |
+| `tests/validators/uix/threeLayer.test.ts`                      | 10 passed                                                                   |
+| `tests/assets/sddStage0PrototypingOptional.test.ts`            | 12 passed                                                                   |
+| `tests/assets/designDirectionInterview.test.ts`                | 12 passed                                                                   |
+| `tests/e2e/discussionHardeningE2E.test.ts`                     | 2 passed                                                                    |
+| `tests/assets/assets.test.ts`                                  | 6 passed (`prototyping.yaml`), 2 (`legacy-permissive`)                      |
+| `tests/integration/discussionSkillTemplateIntegration.test.ts` | 1 passed (`SKILL.md の UI-bearing completion が brand SSOT を要求している`) |
+| `tests/e2e/spec0002PlannerFirstE2E.test.ts`                    | 1 passed                                                                    |
 
 Two negative results are load-bearing and were checked directly rather than inferred:
 
@@ -71,10 +72,11 @@ Two negative results are load-bearing and were checked directly rather than infe
    classification argument and returns a constant `false`, and `inspectLatestDiscussionPack` assigns
    `const prototypingRequired = false`. The rule lives entirely in guidance prose.
 
-The story rows rest on a search rather than on a run, because there is nothing to run: no file under
-`packages/qfai/**` carries a `QFAI:SPEC-0002:US-*` annotation. All seven stories are listed in
-`tests/e2e/qfai-traceability.md`, whose opening line states that it is an annotation carrier and not
-a test.
+Six story rows rest on a search rather than on a run, because there is nothing to run: no file under
+`packages/qfai/**` carries a `QFAI:SPEC-0002:US-*` annotation for them. All seven stories are listed
+in `tests/e2e/qfai-traceability.md`, whose opening line states that it is an annotation carrier and
+not a test. The `US-0002-0005` row rests on a run of `tests/e2e/spec0002PlannerFirstE2E.test.ts`,
+which carries that story's annotation.
 
 ### One test that names a behaviour it does not exercise
 
@@ -100,24 +102,31 @@ this matrix.
 | US-0002-0001 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0002-0002 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0002-0003 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
-| US-0002-0005 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| US-0002-0005 | ⚠️                     | ⚠️          | n/a        | ⚠️         | n/a             | ⚠️             | n/a               | ⚠️            | ⚠️              | ⚠️     |
 | US-0002-0008 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | US-0002-0010 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0001 | ⚠️                     | ✅          | ✅         | ⚠️         | ⚠️              | ❌             | ❌                | ⚠️            | ⚠️              | ⚠️     |
-| TC-0002-0008 | ❌                     | ✅          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
+| TC-0002-0008 | ⚠️                     | ✅          | n/a        | ⚠️         | n/a             | ⚠️             | n/a               | ⚠️            | ⚠️              | ⚠️     |
 | TC-0002-0009 | ❌                     | ❌          | ❌         | ❌         | ❌              | ❌             | ❌                | ❌            | ❌              | ❌     |
 | TC-0002-0010 | ⚠️                     | ✅          | ✅         | ❌         | ❌              | ❌             | ❌                | ⚠️            | ✅              | ⚠️     |
 | TC-0002-0011 | ⚠️                     | ⚠️          | ❌         | ⚠️         | ❌              | ❌             | ❌                | ⚠️            | ⚠️              | ❌     |
 
 Totals across the nine depth columns of 12 rows — 7 stories and 5 test cases, 108 cells:
-**✅ 6 / ⚠️ 12 / ❌ 90**.
+**✅ 6 / ⚠️ 23 / ❌ 73**, with `n/a 6`.
 
 Only the mark cells are scored. `US/TC ID` holds an identifier and `Status` holds the row verdict,
-so neither is in that total. Over the same 12 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 10**.
+so neither is in that total. Over the same 12 rows the verdicts read **✅ 0 / ⚠️ 4 / ❌ 8**.
 
-No row reaches `Status = ✅`. The two `⚠️` rows are the two whose obligations are genuinely
-exercised in both directions; both are capped by the layer defect described under Findings.
+No row reaches `Status = ✅`. Four rows are `⚠️`, and all four are capped by the layer defect
+described under Findings:
+
+- `TC-0002-0001` and `TC-0002-0010` are exercised in both directions.
+- `TC-0002-0008` and `US-0002-0005` are discharged at the level their steps and story name: shipped
+  guidance, read as text. Neither owns a failure case. `US-0002-0005` also leaves the first clause
+  of its story unasserted.
+
+`n/a` appears on those last two rows only, and each is explained under the row's own heading.
 
 ### Business rule coverage
 
@@ -128,12 +137,12 @@ active, so none is omitted. `Covering TC` is derived from each rule's `AC-Refs` 
 | BR ID        | Positive case | Negative case | Conditional branches | Covering TC                | Status |
 | ------------ | ------------- | ------------- | -------------------- | -------------------------- | ------ |
 | BR-0002-0001 | ✅            | ✅            | n/a                  | TC-0002-0001               | ⚠️     |
-| BR-0002-0008 | ⚠️            | ❌            | ⚠️                   | TC-0002-0008, TC-0002-0009 | ❌     |
+| BR-0002-0008 | ✅            | ❌            | ⚠️                   | TC-0002-0008, TC-0002-0009 | ❌     |
 | BR-0002-0009 | ✅            | ✅            | ✅                   | TC-0002-0010               | ⚠️     |
 | BR-0002-0010 | ⚠️            | ⚠️            | ⚠️                   | TC-0002-0011               | ❌     |
 
 Totals across the three scored columns — `Positive case`, `Negative case` and
-`Conditional branches` — over 4 rows, 12 cells: **✅ 5 / ⚠️ 5 / n/a 1 / ❌ 1**.
+`Conditional branches` — over 4 rows, 12 cells: **✅ 6 / ⚠️ 4 / n/a 1 / ❌ 1**.
 
 `BR ID`, `Covering TC` and `Status` hold identifiers and the row verdict, so none of them is in that
 total. Over the same 4 rows the verdicts read **✅ 0 / ⚠️ 2 / ❌ 2**.
@@ -143,23 +152,24 @@ has no branch to cover. It is not used anywhere an obligation exists and is unme
 
 ## Every ❌ cell, named
 
-The matrix carries 90 `❌` depth cells and the business rule table carries 1 in its scored columns —
-91 in all. Each is named below with its own reason.
+The matrix carries 73 `❌` depth cells and the business rule table carries 1 in its scored columns —
+74 in all. Each is named below with its own reason.
 A row's `Status` is `❌` when the obligation is not discharged at the depth the case describes; that
-verdict is the row's own, is stated once per row, and is not one of the 91.
+verdict is the row's own, is stated once per row, and is not one of the 74.
 
-### The seven stories — `US-0002-0001`, `-0002`, `-0003`, `-0005`, `-0008`, `-0009` and `-0010`
+### The six stories — `US-0002-0001`, `-0002`, `-0003`, `-0008`, `-0009` and `-0010`
 
-Every story in this pack is declared by `tests/e2e/qfai-traceability.md` and by nothing else. That
-file says of itself that it is an annotation carrier and not a test, and the tree agrees: a search
-of `packages/qfai/**` returns no `QFAI:SPEC-0002:US-*` annotation at all.
+Each of these six stories is declared by `tests/e2e/qfai-traceability.md` and by nothing else. That
+file says of itself that it is an annotation carrier and not a test. A search of `packages/qfai/**`
+finds one `QFAI:SPEC-0002:US-*` annotation, and it declares `US-0002-0005`, which is scored under
+its own heading in "Every `⚠️` cell, named".
 
 - **Equivalence partitions**, **Normal path**, **Error path**, **Edge cases**, **Boundary values**,
   **Special values**, **State transitions**, **Combinatorial**, **Oracle strength** — nine cells on
-  each of the seven rows, 63 in all, each `❌` because the row has no case at any depth. A list
+  each of the six rows, 54 in all, each `❌` because the row has no case at any depth. A list
   entry supplies no input, takes no path and carries no assertion that can fail, so `⚠️` would
   overstate every one of them.
-- **Status** — `❌` on all seven: the obligation is undischarged at the layer that owes it.
+- **Status** — `❌` on all six: the obligation is undischarged at the layer that owes it.
 
 What stands beside each story, and why it is scored on a `TC-*` row instead:
 
@@ -173,8 +183,6 @@ What stands beside each story, and why it is scored on a `TC-*` row instead:
   stopping this one.
 - `US-0002-0003` — the exploration-first sidecars whose requiredness the story's detection was to
   control were retired. The classification that survives is exercised under `TC-0002-0010`.
-- `US-0002-0005` — the planner-first posture is addressed in shipped wording, scored under
-  `TC-0002-0008` and `TC-0002-0009`.
 - `US-0002-0008` — like `US-0002-0002`, no active `AC-*` names the handoff. `runSddPreflight` is the
   handoff, and the cases that drive it are read under `TC-0002-0001`.
 - `US-0002-0009` — the safe skip is exercised by `it("skips non-UI packs")` and scored under
@@ -201,39 +209,6 @@ fifteen and requires the `必須ファイル不足` blocker to fire. This row ha
   incomplete-to-ready progression to observe, and no case establishes one. The file's run-ordering
   cases (summary directory, latest pointer, an older run not overwriting a newer one) are a state
   machine over the summary artifact, not over this obligation.
-
-### TC-0002-0008 — artifacts omit selected direction, planner-first pass preserved
-
-Addressed only by wording checks over shipped Markdown: `tests/assets/assets.test.ts` requires the
-discussion artifact rules to match `/must not choose a single winner|must not choose a single visual winner/`
-and the discussion `SKILL.md` to match `/planner-first|exploration-first/`;
-`tests/assets/designDirectionInterview.test.ts` requires `SKILL.md` to contain
-`carry the screen explorations unranked` and the completion matrix to contain
-`no single screen exploration is selected`; `tests/e2e/discussionHardeningE2E.test.ts` requires
-`SKILL.md` to match `/planner/i`.
-
-No case feeds a discussion artifact to anything. `Normal path` is `✅` because the case's own
-direction — the completion contract leaving the explorations unranked — is addressed by passing
-assertions on the shipped guidance. Everything else has nothing to score.
-
-- **Equivalence partitions** — no artifact is read by any check, so the partitions the case names,
-  "omits a selected direction" and "declares one", are both unrepresented as inputs.
-- **Error path** — no case supplies an artifact that does declare a selected direction and requires
-  a result. The case that would is `TC-0002-0009`, and it has no implementation to run against.
-- **Edge cases** — a pack with no design artifacts at all, and a pack naming a direction as a
-  candidate rather than as final, are both untested.
-- **Boundary values** — the obligation has no numeric, date, length or ordered domain, and no count
-  of named directions is exercised at any edge, because no count is exercised at all.
-- **Special values** — no empty, absent or malformed artifact is supplied.
-- **State transitions** — unranked to ranked is the pack's central progression and the clearest
-  state obligation in this spec. No case observes any transition.
-- **Combinatorial** — the planner-first posture is never crossed with UI-bearing classification or
-  with completion state.
-- **Oracle strength** — `expect(content).toMatch(/planner/i)` is satisfied by any document that
-  contains the word "planner" anywhere, for any reason. The exact-sentence assertions are stronger
-  as wording pins but certify no behaviour, and there is no `discussionDesignHardening` left in
-  `src/**` for any of them to be sensitive to.
-- **Status** — the case names a pass produced by running readiness over artifacts. Nothing runs.
 
 ### TC-0002-0009 — artifact claims a single final winner, planner-first violation emitted
 
@@ -325,8 +300,9 @@ One scored cell, and the two row verdicts that sit outside the count but still o
   run through something that rejects it. Nothing supplies such an artifact, and nothing would reject
   it if something did.
 - **BR-0002-0008 × Status** — the rule's covering cases are `TC-0002-0008` and `TC-0002-0009`. The
-  first is addressed only in guidance prose; the second names an emission with no emitter. The rule
-  is documented and unenforced.
+  first is discharged at the level its steps name: an annotated test reads the shipped completion
+  conditions and finds the rule stated in them. The second names an emission with no emitter. The
+  positive direction is asserted and the negative is not.
 - **BR-0002-0010 × Status** — the rule's own Notes name "README / SKILL canonical wording" as the
   surface it governs. Both halves of that surface exist and are asserted, so the gap is on the other
   side of the rule: `src/**` never reads `prototyping.yaml`, and
@@ -335,10 +311,132 @@ One scored cell, and the two row verdicts that sit outside the count but still o
 
 ## Every ⚠️ cell, named
 
-12 depth cells in the matrix and 5 scored cells in the business rule table are `⚠️` — 17 in all. The
-PASS criterion requires a documented rationale for each, so each is named here. Four rows also carry
+23 depth cells in the matrix and 4 scored cells in the business rule table are `⚠️` — 27 in all. The
+PASS criterion requires a documented rationale for each, so each is named here. Six rows also carry
 a `⚠️` verdict. Those are outside the count and are named here too, because a verdict weaker than
 the cells beneath it needs a reason of its own.
+
+`US-0002-0005` and `TC-0002-0008` have no `❌` cell, so each is scored in full under its own heading
+below, including its `Status` and the reason for each `n/a`.
+
+### US-0002-0005 — planner-first design authoring
+
+`US-0002-0005` is discharged in part by `tests/e2e/spec0002PlannerFirstE2E.test.ts`, which carries
+`QFAI:SPEC-0002:US-0002-0005`. Its one case runs `qfai init` into a temporary directory and reads
+the discussion `SKILL.md` and `discussion-completion-matrix.md` that init installs. In the matrix's
+`UI-bearing Packs` section it requires:
+
+- the line `Completion is blocked until all are true:`;
+- the condition that carries the explorations unranked, with no single screen exploration selected;
+- the design system left unfinalized;
+- the brand direction recorded at `01_Context.md#Design Direction`, with `chosen_by: assumption` on
+  a direction taken without the user.
+
+In `SKILL.md` it requires the planner-first sentence and the statement that the published theme is
+the user's decision. The case passes. This row has **six `⚠️` cells** and no `❌`.
+
+`US-0002-0005` has three `n/a` cells, each with no obligation behind it:
+
+- **US-0002-0005 × Error path** — `n/a`: the one failure the pack declares for this rule is a pack
+  that marks one screen exploration final and is refused completion, in `EX-0002-0009`. Only
+  `TC-0002-0009`'s `EX-Ref` reaches it, so that row owns it.
+- **US-0002-0005 × Boundary values** — `n/a`: the story has no numeric, date, length or ordered
+  domain.
+- **US-0002-0005 × State transitions** — `n/a`: the story states what discussion carries. Ranking
+  the explorations is prototyping's work, so no transition happens inside this story.
+
+The scored cells:
+
+- **US-0002-0005 × Equivalence partitions** — the UI-bearing pack with a visual prototyping surface
+  is represented: the case reads the `UI-bearing Packs` section. A cli-only pack is UI-bearing too,
+  and `## CLI Packs` keeps the unranked condition for it while dropping the brand direction. The case
+  never reads that section, so the partition in which discussion records no brand direction has no
+  representative.
+- **US-0002-0005 × Normal path** — the story makes three commitments, and two are asserted: the
+  screen explorations are carried unranked, and the only direction recorded is the brand direction
+  the user chose. The first commitment, that discussion defines exploration conditions and
+  anti-goals, has no assertion.
+- **US-0002-0005 × Edge cases** — the edge this layer adds is covered: the case reads the tree
+  `qfai init` writes rather than the package source, so a template that failed to install fails it.
+  A missing `UI-bearing Packs` heading yields an empty section and fails the first assertion rather
+  than passing vacuously. The tree an upgrade rewrites into an existing project is not read.
+- **US-0002-0005 × Special values** — the one variation shipped Markdown is exposed to is
+  rewrapping. The matrix assertions match `\s+` between words, so a rewrapped condition still
+  passes. The two `SKILL.md` assertions match literal spaces, so rewrapping either sentence fails the
+  case with no change of meaning.
+- **US-0002-0005 × Combinatorial** — two documents are crossed: the case requires the skill and the
+  completion matrix to state the same posture. The surface is never crossed with the conditions:
+  which of them a cli-only pack keeps is not asserted.
+- **US-0002-0005 × Oracle strength** — each assertion has a production mutation that reddens it:
+  deleting condition 4 or condition 5 from the shipped completion matrix, or the user's-decision
+  sentence from `SKILL.md`. Three weaknesses keep it off `✅`. Only presence is asserted, so a
+  condition added beside the others that selects one exploration leaves the case green. Apart from
+  the blocking line, the matrix phrases may match anywhere in the section, including the prose after
+  the numbered conditions. And `/Discussion is planner-first/` matches two lines of the installed
+  `SKILL.md`, so deleting either one changes nothing.
+- **US-0002-0005 × Status** — no cell is `❌`. The row is capped at `⚠️` because the story's first
+  commitment has no assertion, and because the case sits under `packages/qfai/tests/e2e/`, outside
+  the scanned `tests/` root, so its annotation discharges nothing in the traceability report
+  (Finding 5).
+
+### TC-0002-0008 — completion conditions leave the explorations unranked
+
+`TC-0002-0008` is discharged by `SKILL.md の UI-bearing completion が brand SSOT を要求している` in
+`tests/integration/discussionSkillTemplateIntegration.test.ts`, annotated
+`QFAI:SPEC-0002:TC-0002-0008`. The case's steps read the shipped discussion completion conditions,
+and that is what the test does. It reads the discussion `SKILL.md` and
+`discussion-completion-matrix.md` from the package source and takes the numbered conditions of the
+matrix's `UI-bearing Packs` section. Those conditions must:
+
+- carry the explorations unranked, with no single screen exploration selected;
+- leave the design system unfinalized;
+- record the brand direction at `01_Context.md#Design Direction`, with `chosen_by: assumption` on a
+  direction taken without the user.
+
+`SKILL.md` must say the published theme is the user's decision. The case passes. Other tests read
+planner-first wording too, in `tests/assets/assets.test.ts`,
+`tests/assets/designDirectionInterview.test.ts` and `tests/e2e/discussionHardeningE2E.test.ts`, but
+none carries this case's annotation, so none is scored on this row. This row has **five `⚠️`
+cells** and no `❌`.
+
+`TC-0002-0008` has three `n/a` cells, each with no obligation behind it:
+
+- **TC-0002-0008 × Error path** — `n/a`: the case's `EX-Ref` is the happy `EX-0002-0008`. The
+  failure the rule declares, a pack that marks one screen exploration final and is refused
+  completion, is `EX-0002-0009`'s, and `TC-0002-0009` owns it.
+- **TC-0002-0008 × Boundary values** — `n/a`: a list of completion conditions has no numeric,
+  date, length or ordered domain.
+- **TC-0002-0008 × State transitions** — `n/a`: the case reads what the conditions contain.
+  Ranking the explorations is prototyping's work, so no transition happens inside this case.
+
+The scored cells:
+
+- **TC-0002-0008 × Equivalence partitions** — the UI-bearing pack with a visual prototyping surface
+  is represented. A cli-only pack is UI-bearing too, and `## CLI Packs` keeps the unranked condition
+  for it while dropping the brand direction. The case never reads that section, so that partition
+  has no representative.
+- **TC-0002-0008 × Edge cases** — the matrix assertions are limited to the numbered conditions, so a
+  phrase moved into the prose around them fails the case. A missing `UI-bearing Packs` heading, or a
+  section with no `1. ` line, yields an empty string that fails every assertion rather than passing
+  vacuously. One edge is untested: a blank line between two conditions ends the collected list at
+  the break, so the case would fail on a reformatted list whose conditions are unchanged.
+- **TC-0002-0008 × Special values** — the matrix assertions match `\s+` between words, so a
+  rewrapped condition still passes. The `SKILL.md` assertion matches literal spaces, so rewrapping
+  that sentence fails the case with no change of meaning.
+- **TC-0002-0008 × Combinatorial** — two documents are crossed: the case requires the completion
+  matrix to record the brand direction and `SKILL.md` to make it the user's decision. The surface is
+  never crossed with the conditions: which of them a cli-only pack keeps is not asserted.
+- **TC-0002-0008 × Oracle strength** — each matrix assertion has a production mutation that reddens
+  it: deleting condition 4 or condition 5 from the shipped completion matrix, or rewording
+  "unranked". Deleting the user's-decision sentence from `SKILL.md` reddens the last one. Two
+  weaknesses keep it off `✅`. Only presence is asserted, so a condition added beside the others that
+  selects one exploration leaves this case green. And the `DESIGN.md`, `40_screen_contracts.md` and
+  `50_review_input_bundle.md` assertions match anywhere in `SKILL.md` rather than in its
+  completion guidance.
+- **TC-0002-0008 × Status** — no cell is `❌`. The row is capped at `⚠️` by the unread cli-only
+  partition and the presence-only oracle, and because the test sits under
+  `packages/qfai/tests/integration/`, outside the scanned `tests/` root, so the obligation is still
+  reported carrier-only (Finding 5).
 
 ### Matrix depth cells
 
@@ -421,13 +519,11 @@ the cells beneath it needs a reason of its own.
 
 ### Business rule table
 
-- **BR-0002-0008 × Positive case** — the planner-first posture is asserted as exact sentences
-  required to be present in the shipped `SKILL.md`, the artifact rules and the completion matrix.
-  No pack is evaluated and found compliant.
-- **BR-0002-0008 × Conditional branches** — the rule has two branches and both are named by
-  assertions: the screen explorations are governed and must be carried unranked, and the brand
-  direction is the stated exception. Neither branch is exercised against a pack; both are addressed
-  at the level of the sentence that describes them.
+- **BR-0002-0008 × Conditional branches** — the rule has two branches, and `TC-0002-0008`'s case
+  asserts both in the numbered completion conditions: the screen explorations are carried unranked,
+  and the brand direction is the user's choice. The rule speaks of the brand direction discussion
+  records, and a cli-only pack records none. That branch is stated in `## CLI Packs` of the
+  completion matrix, which the covering case never reads.
 - **BR-0002-0010 × Positive case** — the requiredness wording is asserted present in every artifact
   the rule names: the skill in both shipped trees, the artifact rules, and `packages/qfai/README.md`
   under two cases. It is `⚠️` because presence is all that is measured. No pack is classified and
@@ -489,7 +585,10 @@ it says so and names what carries it now.
    `prototyping.yaml` requiredness wording its `TC-0002-0011` describes. A `done` over a selector
    that cannot be run, or that runs something else, records a completion that was never measured.
    All four are named in the blocked set of `CR-20260912-0003`, which asks whether the two upstream
-   statements they rest on survive. The rows are untouched until it resolves. Repointing a selector
+   statements they rest on survive. That Change Request is now applied, and for `TDD-0008` the
+   finding has been acted on: the row is at `todo` and names
+   `SKILL.md の UI-bearing completion が brand SSOT を要求している`, the annotated case
+   `TC-0002-0008` is scored against above. Repointing a selector
    at a passing test would resolve the cell while discharging nothing, which is the defect rather
    than its repair; and `done` is not a status a row can be blocked at, so the ledger has no edge
    that records the wait. The Change Request carries it instead.
@@ -500,9 +599,12 @@ it says so and names what carries it now.
    `tests/integration/qfai-traceability.md`, a file that documents itself as an annotation carrier
    and not a test. The cause is structural: the configured `testsDir` is the repository-root
    `tests/`, whose scan matched two files, both of them carriers. The package's real suite lives at
-   `packages/qfai/tests/**` and is not scanned at all. The one annotated file that does carry
-   `SPEC-0002` markers, `tests/validators/uix/threeLayer.test.ts`, is outside the scanned root, so
-   its annotations discharge nothing. Until that is resolved, no amount of testing can move an `L3`
+   `packages/qfai/tests/**` and is not scanned at all. Every file that carries `QFAI:SPEC-0002:`
+   annotations sits there, outside the scanned root — among them
+   `tests/validators/uix/threeLayer.test.ts`,
+   `tests/integration/discussionSkillTemplateIntegration.test.ts`
+   for `TC-0002-0008` and `tests/e2e/spec0002PlannerFirstE2E.test.ts` for `US-0002-0005` — so their
+   annotations discharge nothing. Until that is resolved, no amount of testing can move an `L3`
    obligation in this repository out of carrier-only.
 6. **An annotated file carries test-case IDs that no longer exist.**
    `tests/validators/uix/threeLayer.test.ts` declares `TC-0002-0012` and `TC-0002-0026`. Neither
@@ -517,21 +619,21 @@ it says so and names what carries it now.
    re-verification `CR-20260912-0003` step 7 sets out, which keeps the row at `done` and needs no
    approval from that Change Request: the row's obligation does not move under any of its
    outcomes, so nothing authorises a reset and nothing needs one.
-7. **The ledger is seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
+7. **The ledger was seven rows short of what seeds it.** `qfai-sdd`'s Phase 2b seeds
    `tdd/test-list.md` in four groups, and one of them is "one `Layer = E2E` row per **active**
    `US-*` from `02_User-stories.md` (obligation in `US-Refs`, `TC-Refs` = `-`)"
    (`.qfai/assistant/skills/qfai-sdd/SKILL.md`). The same phase migrates an eight-column ledger by
    adding the `US-Refs` and `CON-API-Refs` columns the E2E and API groups write into. This ledger
-   has neither the column nor a single `Layer = E2E` row, so none of the seven active stories has
-   one. The column has to arrive with the rows: a `Layer = E2E` row put into the table as it stands
-   would have nowhere to record its obligation.
+   had neither the column nor a single `Layer = E2E` row. The finding has been acted on: the ledger
+   now carries the template's fifteen columns and one `Layer = E2E` row per active story,
+   `TDD-0013` to `TDD-0019`. `TDD-0016` carries `US-0002-0005`.
 
 ## Follow-up this matrix does not discharge
 
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 this file and restates the counted totals beside it. Those totals are:
 
-**✅ 11 / ⚠️ 17 / ❌ 91**, with `n/a 1`, across 120 scored cells — 108 matrix depth cells (12 rows ×
+**✅ 12 / ⚠️ 27 / ❌ 74**, with `n/a 7`, across 120 scored cells — 108 matrix depth cells (12 rows ×
 9 columns) and 12 business rule cells (4 rows × 3 columns). The 16 row verdicts are outside them.
 
 Four of the pack's six ledger rows carry no evidence, and none of them can until the row is true.

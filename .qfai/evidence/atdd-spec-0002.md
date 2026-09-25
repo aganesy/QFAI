@@ -2,9 +2,10 @@
 
 ## Objective
 
-Carry the proof for the one `Integration` row of this spec's ledger whose test
-could be identified. The pack's other rows are not backfilled here, and the
-reason is recorded under Gaps.
+Carry the proof for the rows of this spec's ledger whose acceptance test
+exists: `TDD-0001`, and `TDD-0008` and `TDD-0016`, which were reopened from
+`exception` under `DR-0298` to take the reviews that record waived. The rows
+not carried here are listed under Gaps with the reason.
 
 ## Inputs reviewed (files/paths)
 
@@ -65,14 +66,39 @@ test already exists.
 Unchanged by this run. The spec's obligations and their coverage are scored in
 the Coverage Depth Matrix below.
 
+## Grilling Session
+
+### /qfai-atdd — run started 2026-09-25T10:14:58.575Z
+
+Preflight: confidence high
+
+No session opened. The plan fixed the two rows, the test each one names and the
+mutation that falsifies each. Both named lines hold the named text at this
+revision, and nothing surfaced during the run that the spec leaves open.
+
+### /qfai-implement — run started 2026-09-25T10:08:44.375Z
+
+Preflight: confidence high
+
+No session opened. The plan phase fixed the two rows, their order and the
+mutation each one takes, and the `/qfai-atdd` handover names each predicate.
+Nothing surfaced during the run that the spec or the handover leaves open.
+
 ## Ledger rows advanced
 
-No row changed status. The row below was already `done`; this run supplies the
-evidence its cell points at.
+`TDD-0001` was already `done`; its entry supplies the evidence its cell points
+at.
+
+The run started 2026-09-25T10:14:58.575Z hands over `TDD-0008` and `TDD-0016`.
+Both rows were reopened at `todo`, and both cases passed on their first run, so
+both take branch 2. `/qfai-implement` Phase Red step 3c applies each mutation and
+writes the falsifiability trio into the row's entry.
 
 | TDD-ID     | Obligation     | Layer       | RED provenance | Status |
 | ---------- | -------------- | ----------- | -------------- | ------ |
 | `TDD-0001` | `TC-0002-0001` | integration | falsifiability | done   |
+| `TDD-0008` | `TC-0002-0008` | integration | falsifiability | done |
+| `TDD-0016` | `US-0002-0005` | E2E         | falsifiability | review-fix |
 
 ### TDD-0001
 
@@ -119,15 +145,81 @@ did not run.
 
 ### TDD-0008
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0008
 - Layer: integration
-- Reset by: `CR-20260912-0003` (option 1; TC-0002-0008 re-derived to the narrowed direction rule).
-- Test file: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
-- Selector: `SKILL.md の UI-bearing completion が brand SSOT を要求している`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/discussionSkillTemplateIntegration.test.ts --testNamePattern='SKILL.md の UI-bearing completion が brand SSOT を要求している' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The case now reads the UI-bearing completion conditions and asserts the explorations stay unranked, no design system is finalized, and the brand direction is the user's; the shipped matrix and skill already say so, because the change request's product edit landed with its approval.
-- GREEN result: exit 0; 1 passed | 18 skipped (19)
-- Changed files: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
+- Test file: packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
+- Selector: SKILL.md の UI-bearing completion が brand SSOT を要求している
+- TC-ref: TC-0002-0008
+- Branch: falsifiability — the shipped completion matrix already keeps the design system out of the completion conditions, so the case passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md:64, `design system is not finalized here (discussion is planner-first).` — the clause of condition 4 under `## UI-bearing Packs` that leaves the design system unfinalized at discussion
+- Mutation: `design system is not finalized here` to `design system is finalized here`
+- Why it fails: the case collects the ordered list under `## UI-bearing Packs` and matches it against `/design\s+system\s+is\s+not\s+finalized/`. The mutated condition no longer holds that phrase, so `toMatch` fails as an assertion at `tests/integration/discussionSkillTemplateIntegration.test.ts:147`. The assertions before it still pass: the mutation leaves the `SKILL.md` file names and the unranked-exploration clause in place
+- Type check: the mutated file is Markdown, so no type check applies
+- Other rows: `TDD-0016` also fails, at `tests/e2e/spec0002PlannerFirstE2E.test.ts:38`, which matches `/design\s+system\s+is\s+not\s+finalized\s+here/` against the matrix `qfai init` installs from the same asset. `TDD-0009` and `TDD-0012` still pass. `TDD-0009`'s case matches condition 4 only up to `no single screen exploration is selected`, and `TDD-0012`'s case does not read the matrix
+- Classification command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
+- Classification result: Test Files 1 passed (1); Tests 1 passed | 22 skipped (23), at working-tree+847e4e5d2f5a213dee5b863880cbcf058c7a22c470ac65b086a7095d48919fc1
+
+The row was reopened from `exception`, where `DR-0298` had closed it with its
+review waived.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md, condition 4 under `## UI-bearing Packs` — `design system is not finalized here (discussion is planner-first).`, which keeps the design system out of what a UI-bearing pack must settle at discussion
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed | 23 skipped (24). The row's case fails on ``AssertionError: expected '1. Both reference registries in `04_S…' to match /design\s+system\s+is\s+not\s+finalized/`` at `tests/integration/discussionSkillTemplateIntegration.test.ts:147:23`
+
+The edit, the negation dropped from condition 4 at line 64:
+
+```diff
+-   design system is not finalized here (discussion is planner-first).
++   design system is finalized here (discussion is planner-first).
+```
+
+- Round 1: Falsifiability revision: working-tree+9632777761eed227adbe65f43d29600b1de4faeeac8be7f852f6ada5573710b5
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 17c8ef63cde49f3f25f4748631a5dcc373f9afb504c7e7e7265db98382d28079
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts
+```
+
+- Round 1: Re-taken. The round was first observed with the test file at
+  `828fdace78bc09c28b22ec8510653729e75a83da`. A case for another spec has since
+  been added to that file, so a recorded observation over it would describe a
+  tree nobody has. The falsifiability run, the GREEN and the refactor
+  verification were taken again on the merged tree rather than the old values
+  being kept. The mutation still fails this row's case at the same assertion.
+- Round 1: Revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts -t "SKILL.md の UI-bearing completion が brand SSOT を要求している"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed | 23 skipped (24). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 25 passed (25). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
+- Refactor verify revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#4, Round 1 re-taken — RED phase gate on the mutated tree working-tree+9632777761eed227adbe65f43d29600b1de4faeeac8be7f852f6ada5573710b5; qa-gatekeeper#5 — build-phase GREEN and oracle proof at 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4)
+- qa-gatekeeper attempts: qa-gatekeeper#1 PASS and qa-gatekeeper#3 PASS on the round as first taken, before the base changed the test file; both are superseded. qa-gatekeeper#4 PASS — the re-taken RED with the mutation in place; AssertionError at discussionSkillTemplateIntegration.test.ts:147:23 reproduced; RED test hash and Falsifiability revision recomputed. qa-gatekeeper#5 PASS — GREEN re-run, the mutation re-applied and restored byte for byte, the refactor verify reproduced
+
+- Round 1: reviewer verdict: PASS
+- Round 1: Review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Spec review: PASS
+- Spec reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Spec audited evidence hash: 7a84f40edc4630d87a58eded896a748e9772c55f49eead491c24cbbf7c480f00
+- Spec review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Spec review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Code quality review: PASS
+- Code quality reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Code quality audited evidence hash: 7a84f40edc4630d87a58eded896a748e9772c55f49eead491c24cbbf7c480f00
+- Code quality review pack: .qfai/review/review-20260925120442083 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: 4dbb767d111270a93bc790d28a7d6b687d2b291f244a36a80f152530232a2100
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Checkpoint verification result: PASS — Test Files 2 passed (2); Tests 25 passed (25). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 8fd317db52493d9cf213b06d2a26ffb24f6ae0c4
+- Checkpoint verification seal: 983dd8b0961d7889da9423751c97b334f16a46b8d7bf01ce8e45617daa5ebca4
 
 ### TDD-0009
 
@@ -143,20 +235,64 @@ did not run.
 
 ### TDD-0016
 
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- TDD-ID: TDD-0016
 - Layer: E2E
-- Reset by: `CR-20260912-0003` (US-0002-0005 re-derived). The spec's plan names no spec-0018 journey for this story.
-- Test file: `packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts`
-- Selector: `US-0002-0005: the installed discussion skill carries explorations unranked and records the user's brand direction`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0002PlannerFirstE2E.test.ts --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The journey runs `qfai init` into a temp root and reads the installed discussion skill and completion matrix.
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts`
+- Test file: packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Selector: US-0002-0005: the installed discussion skill carries explorations unranked and records the user's brand direction
+- US-ref: US-0002-0005
+- Branch: falsifiability — the completion matrix `qfai init` installs already marks a brand direction taken without the user, so the journey passed on its first run
+- Predicate to break: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md:68, `` user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`. `` — the end of condition 5 under `## UI-bearing Packs`, which begins on line 67 with `A direction taken without the`
+- Mutation: `` carries `chosen_by: assumption` and an open entry `` to `carries no marker and an open entry`, with the line break after `without the` kept
+- Why it fails: the journey runs `qfai init` into a temporary root, which copies the matrix from the package assets, and matches the installed `## UI-bearing Packs` section against `` /taken\s+without\s+the\s+user\s+carries\s+`chosen_by: assumption`/ ``. With the marker gone the pattern has nothing to match, so `toMatch` fails as an assertion at `tests/e2e/spec0002PlannerFirstE2E.test.ts:40`. The assertions on lines 36 to 39 still pass
+- Type check: the mutated file is Markdown, so no type check applies
+- Other rows: `TDD-0008` also fails, at `tests/integration/discussionSkillTemplateIntegration.test.ts:149`, which matches the same pattern against the asset directly. `TDD-0009` and `TDD-0012` still pass, because neither case reads condition 5
+- Classification command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0002PlannerFirstE2E.test.ts -t "US-0002-0005"
+- Classification result: Test Files 1 passed (1); Tests 1 passed (1), at working-tree+847e4e5d2f5a213dee5b863880cbcf058c7a22c470ac65b086a7095d48919fc1
+
+The row was reopened from `exception`, where `DR-0298` had closed it with its
+review waived.
+
+#### Round 1
+
+- Round 1: Satisfied-by: packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md, condition 5 under `## UI-bearing Packs` — ``A direction taken without the user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.``, which requires a brand direction the user did not choose to be marked as an assumption in the matrix `qfai init` installs
+- Round 1: Falsifiability command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0002PlannerFirstE2E.test.ts -t "US-0002-0005"
+- Round 1: Falsifiability result: Test Files 1 failed (1); Tests 1 failed (1). The row's case fails on `AssertionError: expected 'UI-bearing Packs\n\nCompletion is blo…' to match /taken\s+without\s+the\s+user\s+carrie…/` at `tests/e2e/spec0002PlannerFirstE2E.test.ts:40:25`
+
+The edit, the marker dropped from condition 5 at line 68:
+
+```diff
+-   user carries `chosen_by: assumption` and an open entry in `11_OQ-Register.md`.
++   user carries no marker and an open entry in `11_OQ-Register.md`.
+```
+
+- Round 1: Falsifiability revision: working-tree+64c75cd77ebc0efaa7be2cf5ad80c6926bd5ca9d5ed76c0a4196059053ae08c5
+- Round 1: RED failure mode: falsifiability
+- Round 1: RED test hash: 32024a896f6ae95837816ac90b8ff4155c70ea0b1e681ff84ae8501204866041
+- Round 1: RED test manifest:
+
+```text
+packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts
+packages/qfai/tests/helpers/stdout.ts
+```
+
+- Round 1: Revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- Round 1: GREEN command: pnpm -C packages/qfai exec vitest run tests/e2e/spec0002PlannerFirstE2E.test.ts -t "US-0002-0005"
+- Round 1: GREEN result: Test Files 1 passed (1); Tests 1 passed (1). Run after `git checkout -- packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/references/discussion-completion-matrix.md`, which restores the file as it is at that revision
+
+- Refactor verify command: pnpm -C packages/qfai exec vitest run tests/integration/discussionSkillTemplateIntegration.test.ts tests/e2e/spec0002PlannerFirstE2E.test.ts
+- Refactor verify result: Test Files 2 passed (2); Tests 24 passed (24). No production or test file changed in this phase: the row's predicate already existed, so there was nothing to refactor, and the two test files are the suite the shared matrix reaches
+- Refactor verify revision: 828fdace78bc09c28b22ec8510653729e75a83da
+- qa-gatekeeper: PASS x2 (qa-gatekeeper#2, Round 1 — RED phase gate on the mutated tree working-tree+64c75cd77ebc0efaa7be2cf5ad80c6926bd5ca9d5ed76c0a4196059053ae08c5; qa-gatekeeper#3 — build-phase GREEN and oracle proof at 828fdace78bc09c28b22ec8510653729e75a83da)
+- qa-gatekeeper attempts: qa-gatekeeper#2 PASS — RED phase gate with the mutation in place; AssertionError at spec0002PlannerFirstE2E.test.ts:40:25 reproduced; the -t "US-0002-0005" filter selects only this row's case in a one-test file; RED test hash and Falsifiability revision recomputed. Its advisory asked for tests/helpers/stdout.ts in the manifest, which was then added and the hash recomputed; qa-gatekeeper#3 PASS — build-phase GREEN re-run, the mutation re-applied and restored, the refactor verify reproduced, and the widened manifest hash recomputed
+
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: the journey asserts two of the three commitments of US-0002-0005 and none of the first, that discussion defines exploration conditions and anti-goals; implementation-reviewer: PASS. The row moved to review-fix, and the test goes back to /qfai-atdd to assert the first commitment against the tree qfai init writes
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925110715892 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 31e8616f95d222ab8f39bc0cf776cde032a4c2f1b38dc15978990fcf9dc38453
 
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.
-Totals: ✅ 11 / ⚠️ 17 / ❌ 91, with 1 not applicable, across 120 scored cells —
+Totals: ✅ 12 / ⚠️ 27 / ❌ 74, with 7 not applicable, across 120 scored cells —
 108 matrix depth cells (12 rows × 9 columns) and 12 business rule cells
 (4 rows × 3 columns). `Status` is a row verdict, not a mark, and is outside
 every total.
@@ -166,6 +302,36 @@ every total.
 | Role                | Task                                              | Status (PASS/REVISE/PENDING) |
 | ------------------- | ------------------------------------------------- | ---------------------------- |
 | test-design-analyst | Score the twelve obligations and write the matrix | PASS                         |
+
+### Rows for the run started 2026-09-25T10:14:58.575Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 1 | acceptance-test-engineer | acceptance-test-engineer | Hand over `TDD-0008` and `TDD-0016` on the falsifiability branch | both test files, `discussion-completion-matrix.md`, 06_Test-Cases.md `TC-0002-0008`, 02_User-stories.md `US-0002-0005` | #tdd-0008, #tdd-0016 | PASS |
+| 2 | - | n/a | grilling(-@2026-09-25T10:14:58.575Z/none): none | - | - | PASS |
+| 3 | test-design-analyst | test-design-analyst#2 | Rescore `TC-0002-0008` and `US-0002-0005` in the matrix | both test files, 06_Test-Cases.md, 02_User-stories.md, CR-20260912-0003 | coverage-depth-spec-0002.md | PASS |
+
+### Rows for the /qfai-implement run started 2026-09-25T10:08:44.375Z
+
+| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |
+| ---- | ---------------- | -------------- | ---------- | ------------ | ------------- | ---------------------------- |
+| 4 | - | n/a | grilling(-@2026-09-25T10:08:44.375Z/none): none | - | - | PASS |
+| 5 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0008 falsifiability run with condition 4 finalizing the design system, then the revert and the restored GREEN | #tdd-0008, discussion-completion-matrix.md | Round 1 | PASS |
+| 6 | qa-gatekeeper | qa-gatekeeper#1 | /qfai-implement: TDD-0008 RED phase gate on the mutated tree | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 7 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0016 falsifiability run with the chosen_by: assumption marker dropped, then the revert and the restored GREEN | #tdd-0016, discussion-completion-matrix.md | Round 1 | PASS |
+| 8 | qa-gatekeeper | qa-gatekeeper#2 | /qfai-implement: TDD-0016 RED phase gate on the mutated tree | #tdd-0016 | qa-gatekeeper fields | PASS |
+| 9 | backend-engineer | backend-engineer#1 | /qfai-implement: widen both RED test manifests to the imported helper, and the refactor verify | #tdd-0008, #tdd-0016 | Refactor verify fields | PASS |
+| 10 | qa-gatekeeper | qa-gatekeeper#3 | /qfai-implement: TDD-0008 and TDD-0016 build-phase GREEN and oracle proof | #tdd-0008, #tdd-0016 | qa-gatekeeper fields | PASS |
+| 11 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0008 completion review, on the tree before the base branch changed the row's test file; superseded | #tdd-0008 | review-20260925110715891 <!-- qfai:not-a-citation --> | PASS |
+| 12 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0008 code review, on the tree before the base branch changed the row's test file; superseded | #tdd-0008 | review-20260925110715891 <!-- qfai:not-a-citation --> | PASS |
+| 13 | completion-reviewer | completion-reviewer#1 | /qfai-implement: TDD-0016 completion review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | REVISE |
+| 14 | implementation-reviewer | implementation-reviewer#1 | /qfai-implement: TDD-0016 code review, attempt 1 | #tdd-0016 | review-20260925110715892 <!-- qfai:not-a-citation --> | PASS |
+| 15 | backend-engineer | backend-engineer#1 | /qfai-implement: TDD-0008 falsifiability run, GREEN and refactor verify re-taken on the merged base | #tdd-0008, discussion-completion-matrix.md | Round 1 | PASS |
+| 16 | qa-gatekeeper | qa-gatekeeper#4 | /qfai-implement: TDD-0008 re-taken RED phase gate on the mutated tree | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 17 | qa-gatekeeper | qa-gatekeeper#5 | /qfai-implement: TDD-0008 build-phase GREEN and oracle proof on the merged base | #tdd-0008 | qa-gatekeeper fields | PASS |
+| 18 | completion-reviewer | completion-reviewer#2 | /qfai-implement: TDD-0008 completion review on the merged base | #tdd-0008 | review-20260925120442083 <!-- qfai:not-a-citation --> | PASS |
+| 19 | implementation-reviewer | implementation-reviewer#2 | /qfai-implement: TDD-0008 code review on the merged base | #tdd-0008 | review-20260925120442083 <!-- qfai:not-a-citation --> | PASS |
+| 20 | orchestrator | orchestrator | /qfai-implement: TDD-0008 checkpoint verification, off a checkpoint boundary | #tdd-0008 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
@@ -178,17 +344,22 @@ Recorded per row above, and summarized in the table under
 
 ## Gaps / Open risks
 
-Four of the pack's six ledger rows are not backfilled, and none of them can be
-until the row is true.
+Two rows stay at `exception` under `DR-0298`. Each answers an L3 test case with
+a test outside `tests/integration/**`, so neither can be handed over until its
+test is moved. `TDD-0012` also needs its `Layer` corrected.
 
-| Row                    | What stops it                                                                                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TDD-0008`             | `TC-0002-0008` asks that a planner-first pass be preserved. Nothing in the package emits a planner-first finding.                                                                     |
-| `TDD-0009`, `TDD-0010` | `TC-0002-0009` asks that a planner-first violation be emitted. Same: the validator that did so was retired.                                                                           |
-| `TDD-0012`             | `TC-0002-0011` names README and skill wording. The row names `threeLayer.test.ts`, which reads neither. The case that reads both is in `assets.test.ts`, which the row does not name. |
+| Row        | Obligation     | What keeps it at `exception`                                                          |
+| ---------- | -------------- | ------------------------------------------------------------------------------------- |
+| `TDD-0009` | `TC-0002-0009` | Its test is in `tests/e2e/discussionHardeningE2E.test.ts`, with no TC annotation      |
+| `TDD-0012` | `TC-0002-0011` | Its test is in `tests/assets/assets.test.ts`, and its `Layer` cell reads `validators` |
 
-`TDD-0009` and `TDD-0010` also share one obligation with no `Boundary` between
-them, which is a separate finding on the ledger.
+`TDD-0016` is at `review-fix`: its case reaches only part of `US-0002-0005`, and
+the completion review requires the rest before the row closes.
+
+| Reached by the case                                   | Not reached                               |
+| ----------------------------------------------------- | ----------------------------------------- |
+| The screen explorations are carried unranked          | Discussion defines exploration conditions |
+| Only the brand direction the user chooses is recorded | Discussion defines anti-goals             |
 
 One test in the pack's neighbourhood passes without proving anything:
 `packages/qfai/tests/validators/uix/threeLayer.test.ts`, `non-UI skip`. Removing
@@ -198,5 +369,6 @@ discriminate is `skips non-UI packs`, and `TDD-0011` now names it.
 
 ## Final status
 
-PASS for the row recorded here. The pack is not clean; the rows above are
-listed rather than claimed.
+PASS for `TDD-0001` and `TDD-0008`. `TDD-0016` is at `review-fix`, and
+`TDD-0009` and `TDD-0012` stay at `exception`. The pack is not clean; the rows
+above are listed rather than claimed.
