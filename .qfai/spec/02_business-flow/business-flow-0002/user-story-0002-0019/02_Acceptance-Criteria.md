@@ -20,11 +20,14 @@ Scenario: Parallelism becomes explicit per project
 Scenario: One slice name resolves on every surface that declares the slice set
   Given the runner workspace declares one project per slice
   And the package manifest declares a per-slice script for each slice
-  And every CI job that expands over the slice set lists the slices it runs
-  When the three surfaces are compared
-  Then the runner project set, the per-slice script set and the slice list of every CI job that expands over the slice set are equal
-  And each of those sets holds nine names
+  And the test and node-floor CI jobs each declare a slice matrix
+  And the gate-tests and gate-floor release jobs each declare a slice matrix
+  And release verify declares SUITE_SLICES
+  When all seven surfaces are compared
+  Then the runner project set, the per-slice script set, all four matrix lists and SUITE_SLICES are equal
+  And each of those sets holds seven names
   And no declared runner project matches zero files
+  And neither `pr-fix` nor `pr-merge` has a project, script or matrix leg
 
 # AC-0002-0019-03
 # Parent: US-0002-0019

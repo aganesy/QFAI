@@ -170,8 +170,6 @@ describe("BF-0002 CI verdict examples", () => {
         "cli",
         "unit",
         "scripts",
-        "pr-fix",
-        "pr-merge",
       ]);
     }
   });

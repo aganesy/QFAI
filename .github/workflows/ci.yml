@@ -155,37 +155,8 @@ jobs:
           // guessed: every other candidate is read by at least one test file, so
           // classifying it as documentation would skip the lane that guards it.
           //
-          // The agent-integration mirrors USED to be here because the rule names them,
-          // and review finding [12] measured what that cost. A pull request deleting the
-          // default values and the `tmp/pr-fix/` prose from
-          // `.agents/skills/pr-fix/SKILL.md` classified as documentation-only and skipped
-          // the `test` job entirely — while `tests/core/prFixSkillDocs.test.ts` asserts that
-          // prose explicitly.
-          //
-          // `CR-20260820-0004` was raised on exactly that, and the user approved **option A**:
-          // the mirror guards move into the lint lane, which selection never skips, so the
-          // mirrors keep their documentation-only saving without losing their guard. That is
-          // what `BR-0017-0010` and `AC-0017-0005` say, and it is what this list implements.
-          //
-          // A round of this work implemented option B instead — the four members were removed
-          // — on the reasoning that `lint:mirror-surface` did not cover the tests that read the
-          // mirrors. The measurement was right and the conclusion was not: the CR had already
-          // been decided, by the user, the other way. The answer is to finish option A rather
-          // than to substitute another, so the lane now runs every test whose subject is a root
-          // mirror tree — `agentsRulesSurface`, `skillLinkSurface`, `integrationSurface`,
-          // `integrationSurfaceReadErrors`, `reviewerVerdictVocabulary`, and the three that were
-          // missing: `codex/agents`, `core/prFixSkillDocs`, `pr-merge/prMergePlan`.
-          //
-          // `core/prFixSkillDocs` holds only the assertions over that prose. The rest of the
-          // `pr-fix` coverage sits in `pr-fix/prFixMonitor`, spawns a PowerShell process per
-          // case, and reads nothing from a mirror tree but the script — which the narrowing
-          // below already keeps out of this set, so the test job runs for a change to it.
-          //
-          // Which three was measured, not listed from the CR: the test files that resolve the
-          // REPOSITORY ROOT and then enter `.agents/`, `.claude/`, `.codex/` or `.instruction/`.
-          // A grep for the bare directory names matches many more, but most of those read the
-          // SHIPPED copies under `packages/qfai/assets/init/`, which a mirror-only change does
-          // not touch.
+          // Mirror changes are documentation-only because `lint:mirror-surface`
+          // runs the tests that read the root integration trees on every pull request.
           //
           // `packages/qfai/docs/` stays. Its single literal is a FIXTURE in this classifier's
           // own tests (`packages/qfai/docs/anything.md`, a path that does not exist), not a file
@@ -218,18 +189,7 @@ jobs:
             else process.stdout.write(line);
           }
 
-          // An EXECUTABLE inside a documentation directory is not documentation, whatever
-          // directory it sits in. `.agents/` holds `skills/pr-fix/scripts/run-pr-fix.ps1`
-          // and `skills/pr-merge/scripts/run-pr-merge.ps1` — automation, read by
-          // `tests/pr-fix/prFixMonitor.test.ts` and `tests/pr-merge/prMergePlan.test.ts`. Without
-          // this the whole `test` job is skipped for a change to either of them, and ten
-          // test files across five runner projects read something under `.agents/`.
-          //
-          // Narrowing rather than removing the directory: `BR-0017-0010` puts the
-          // agent-integration MIRRORS in the documentation-only set, and a PowerShell
-          // script is not a mirror. Reading the rule as "prose mirrors are documentation,
-          // the automation beside them is not" implements it more closely than treating
-          // every byte under the tree as prose.
+          // Executable files inside a documentation directory still select full CI.
           const EXECUTABLE_SUFFIXES = [".ps1", ".sh", ".mjs", ".cjs", ".js", ".ts", ".py", ".bat", ".cmd"];
           const executable = (file) => EXECUTABLE_SUFFIXES.some((ext) => file.endsWith(ext));
 
@@ -389,7 +349,7 @@ jobs:
           done
           sha256sum -c --quiet <<'PINNED_INPUTS'
           8831fd822ecc4fffebbc7b154cc4e203810c072b4d3b621e81532e9469549682  scripts/check-toolchain-action.sh
-          f9b06f3a7fe9c52b54bff7a4f37b2a39e49ea5192461b35d498102a82a48f89f  .github/pinned-bytes.txt
+          349d8a2b940f7d412082d7c72588dcf7bcaadf2d2b779e822dba123410cf3739  .github/pinned-bytes.txt
           bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
@@ -421,10 +381,8 @@ jobs:
 
   # ── 1b. The mirror-surface lane, in a runner of its own ──────────
   #
-  # A vitest run over eight files, one of which spawns a process in most of its
-  # cases. Inside `pnpm ci:lint` it forked beside the formatter, the linter and two
-  # scan lanes on the same four cores, and it was the longest of the five — so the
-  # lint job's wall clock was this lane's, slowed by the contention it created.
+  # This lane runs the mirror tests on every pull request, including changes
+  # selected as documentation-only.
   #
   # It carries NO condition and appears in no `dependencyConditions` entry, which is
   # what `BR-0017-0011` requires of a lane moved into a job of its own: the surface
@@ -501,10 +459,10 @@ jobs:
   # Over the SAME slice matrix the `test` job declares, and for the same reason it is
   # sliced there: one process pool over the whole suite is the longest job in the run and
   # sets the wall clock for every other lane. The slices partition the suite — the runner
-  # workspace declares exactly these nine projects and every test file lives under one of
+  # workspace declares exactly these seven projects and every test file lives under one of
   # them — so the legs together carry the whole floor claim. Each leg asserts the floor for
   # itself, because a leg running the wrong Node is what that assertion is for and a single
-  # leg checking it would leave the other eight unverified.
+  # leg checking it would leave the other six unverified.
   #
   # Conditional on the same detection output as its neighbours, and DECLARED either
   # way, so its check names persist for branch protection.
@@ -515,14 +473,11 @@ jobs:
     timeout-minutes: 20
     strategy:
       fail-fast: false
-      # `pr-fix` and `pr-merge` are the two suites that spawn a process per case. Sharing a
-      # runner they ask for every core it has, so neither goes faster and both take longer;
-      # a leg each is what puts each on a runner of its own.
       # SHIPPED-CI: not-applicable
       # Because: the shipped test lanes are declared per adopter test layer and run no test
       # of this repository's, so there is no leg on that side for a slice of ours to join.
       matrix:
-        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -568,7 +523,7 @@ jobs:
       # this those legs are structurally ALWAYS RED, and an always-red leg of a required lane
       # conveys no differential signal: a genuine Node 20 break and a missing bundle look identical,
       # so the lane gets un-required or "fixed" by dropping the pin. Same step, same condition, same
-      # reason, as the `test` job's — the other seven legs run pure TS through vitest's loader and
+      # reason, as the `test` job's — the other five legs run pure TS through vitest's loader and
       # would pay for a build nothing in them reads.
       - name: Build qfai (the floor legs that read dist/)
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
@@ -614,7 +569,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slice: [core, validators, integration, e2e, cli, unit, scripts, pr-fix, pr-merge]
+        # SHIPPED-CI: not-applicable
+        # Because: the shipped test lanes use adopter test layers, not this repository's suites.
+        slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -635,15 +592,6 @@ jobs:
       - name: Build qfai (e2e + integration slices)
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
-      - name: Record the runner CPU (pr-fix slice)
-        # The PowerShell host this slice spawns can crash on nearly every case of
-        # a leg, and whether that follows the runner's CPU model is the open
-        # question. The job log carries no hardware detail without this line.
-        # SHIPPED-CI: not-applicable
-        # Because: the shipped test lanes spawn no PowerShell host, so there is
-        # no crash on that side whose runner a CPU line would identify.
-        if: matrix.slice == 'pr-fix'
-        run: lscpu
       - name: Run tests (${{ matrix.slice }})
         # The per-slice script, not the generic runner with a project name.
         # While this read `test -- --project <slice>` a slice with no script of

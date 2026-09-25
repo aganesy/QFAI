@@ -28,7 +28,7 @@ Scenario: The verdict distinguishes "nothing needed running" from "nothing was v
 # Parent: US-0002-0013
 Scenario: A Markdown-only change runs the jobs the pin records, and skips the rest
   Given the repository's duplicate validate workflow has already been retired
-  And every test matrix leg is declared and its job carries a condition derived from the detection output
+  And every retained test matrix leg is declared and its job carries a condition derived from the detection output
   When a pull request touches only Markdown files outside the recognized source directories
   Then the jobs that execute are the ones carrying no condition plus the aggregate verdict, whose condition is always
   And that set, and the sum of its members' declared timeout-minutes, are the values pinned for this path

@@ -159,7 +159,7 @@
 | US-0001-0153 | Discussion-Pack Preflight                                                       | `user-story-0001-0153/` |
 | US-0001-0154 | Required Edge Enforcement                                                       | `user-story-0001-0154/` |
 | US-0001-0155 | Validate Gate Integration                                                       | `user-story-0001-0155/` |
-| US-0001-0156 | Discussion Markdown-Only Preflight                                              | `user-story-0001-0156/` |
+| US-0001-0156 | Optional Side Artifact Neutrality                                               | `user-story-0001-0156/` |
 | US-0001-0157 | DESIGN.md sha256 Lock at Phase 0                                                | `user-story-0001-0157/` |
 | US-0001-0158 | Active Design Contract Surface Reduction                                        | `user-story-0001-0158/` |
 | US-0001-0159 | UI contract `primary_tasks` slot per screen                                     | `user-story-0001-0159/` |

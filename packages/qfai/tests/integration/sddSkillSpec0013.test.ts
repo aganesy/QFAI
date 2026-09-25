@@ -1,9 +1,12 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../src/core/config.js";
+import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateProject } from "../../src/core/validate.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -127,5 +130,45 @@ describe("shipped qfai-sdd story-tree contract", () => {
       expect(content).not.toMatch(/tdd\/test-list\.md/);
       expect(content).not.toMatch(/Contracts-first/i);
     }
+  });
+});
+
+describe("SDD preflight stops only when no usable source exists", () => {
+  const roots: string[] = [];
+
+  afterEach(async () => {
+    while (roots.length > 0) {
+      const root = roots.pop();
+      if (root) await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+    }
+  });
+
+  // QFAI:EX-0001-0153-01
+  it("continues with a selected discussion pack even when it is incomplete", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
+    roots.push(root);
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "06_REQ.md"),
+      "# Requirements\n\n- REQ-0001: Save a draft.\n",
+    );
+
+    const result = await runSddPreflight(root, defaultConfig, { packDir });
+    expect(result.status).toBe("ready");
+    expect(result.selectedInputPath).toBe(packDir);
+    expect(result.packGaps.length).toBeGreaterThan(0);
+  });
+
+  // QFAI:EX-0001-0153-01
+  // QFAI:EX-0001-0156-01
+  it("stops when no usable discussion or import-lite source exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
+    roots.push(root);
+
+    const result = await runSddPreflight(root, defaultConfig);
+    expect(result.status).toBe("blocked");
+    expect(result.selectedInputPath).toBeNull();
+    expect(result.blockers.length).toBeGreaterThan(0);
   });
 });

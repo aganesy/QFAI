@@ -10,12 +10,18 @@ its oracle depends on shared artifacts.
 
 For each manifest entry, hash `path + NUL + kind + NUL + mode + NUL + blob hash`
 in sorted path order. `kind` is `file` or `symlink`; `mode` is the six-digit
-Git tree form read from disk: `120000` for a symlink, `100755` for a file with
-any execute bit set, and `100644` for another file. Do not use the revision
-manifest's full permission bits or `git ls-files -s` for this mode. The hash is
-recomputed on another checkout, where non-execute permission bits may differ.
-An executable file can read as non-executable on Windows, so record its hash
-on the platform that will verify it.
+Git tree form: `120000` for a symlink, `100755` for a file `git add` would
+record as executable, and `100644` for another file. Do not use the revision
+manifest's full permission bits. The hash is recomputed on another checkout,
+where non-execute permission bits may differ.
+
+Read the execute bit where git reads it. Where `core.fileMode` is `false`, as
+in a repository git created on Windows, take it from the index: `100755` when
+`git ls-files -s` says so, and `100644` for a file git does not track.
+Everywhere else, take the owner's execute bit off the disk: a `0654` file is
+`100644`. Two checkouts of one commit then read the same mode on Windows and
+on POSIX. Resolve and stage a merge conflict in a manifest file before
+recording the hash.
 
 ## Observed RED
 
