@@ -84,17 +84,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
-- **Twelve spec-0012 ledger rows no longer claim `done` without a test**
+- **Thirteen spec-0012 ledger rows no longer claim `done` without a test**
   (#2160). Each row's selector selected no test, and the only file naming its
   case was an annotation carrier, which declares none. Under the approved
   `CR-20260925-0002`, nine rows (`TDD-0295`, `0341`, `0346`, `0348`, `0354`,
-  `0356`, `0357`, `0358`, `0362`) are reset to `todo`. Three rows whose case is
-  superseded (`TDD-0349`, `0353`, `0359`) are retired, and the cases of the
-  first and last, `TC-0012-0340` and `TC-0012-0350`, are removed. The spec-0012
-  ledger reports 48 fewer errors under the `tdd` and `full` profiles.
-  `TDD-0340` and `TDD-0351` stay `done`. Each case is the last one for a
-  superseded example or criterion, and removing those needs a request of its
-  own.
+  `0356`, `0357`, `0358`, `0362`) are reset to `todo`. Four rows whose case is
+  superseded (`TDD-0349`, `0351`, `0353`, `0359`) are retired. The superseded
+  cases `TC-0012-0340`, `0342` and `0350` are removed, with `AC-0012-0030`,
+  whose only case was `TC-0012-0342`. `TDD-0340` stays `done` until
+  `CR-20260926-0002` decides the superseded example and rule its case is the last
+  one for.
 
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that

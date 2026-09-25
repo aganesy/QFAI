@@ -165,39 +165,39 @@ six enumerated rows whose TC or parent AC is superseded, followed by `/qfai-sdd 
 
 ## Resolution
 
-Partly applied. `Applied at` is set once actions 1 to 3 are complete: the two
-held retirements and the six held resets below. Action 4, the tests the reset
-rows need, is the downstream work that setting it releases.
+Partly applied. `Applied at` is set once actions 1 to 3 are complete: the
+retirement of `TDD-0340` held below, the resets of the six rows held below, and
+the matrix splits and new boundary rows. Action 4, the tests the reset rows
+need, is the downstream work that setting it releases.
 
-Applied to the twelve rows whose `done` rested only on an annotation carrier:
+Applied to thirteen of the fourteen rows whose `done` rested only on an
+annotation carrier:
 
 - Reset to `todo` with this record in `DR-ID`: `spec-0012/TDD-0295`, `TDD-0341`,
   `TDD-0346`, `TDD-0348`, `TDD-0354`, `TDD-0356`, `TDD-0357`, `TDD-0358`,
   `TDD-0362`.
 - Retired and reserved, with each `Evidence` cell kept verbatim under the
-  ledger's `## TDD-ID reservations`: `spec-0012/TDD-0349`, `TDD-0353`,
-  `TDD-0359`. The cases of `TDD-0349` and `TDD-0359` (`TC-0012-0340`,
-  `TC-0012-0350`) declare `Level: L1`, so each would owe a ledger row. They are
-  removed from `06_Test-Cases.md` and from the integration carrier, which lists
-  them. `TC-0012-0344` declares no `Level`, so it owes no row and stays.
+  ledger's `## TDD-ID reservations`: `spec-0012/TDD-0349`, `TDD-0351`,
+  `TDD-0353`, `TDD-0359`.
+- Removed as retired coverage targets (action 1, `UPDATE/REMOVE`), each with its
+  carrier line in `tests/integration/qfai-traceability.md`:
+  - `TC-0012-0340` and `TC-0012-0350`. Each declares `Level: L1` under a
+    superseded criterion (`AC-0012-0021`, `AC-0012-0028`).
+  - `TC-0012-0342`, already superseded by `TC-0012-0376` and `TC-0012-0377`,
+    with `AC-0012-0030`, already superseded by `AC-0012-0046`. The case was the
+    criterion's only one, and nothing else cites either.
+- `TC-0012-0344` declares no `Level`, so it owes no ledger row and stays.
 - `TDD-0344`, `TDD-0365` and `TDD-0370` were already retired by
   `CR-20260925-0019`.
 
 Held:
 
-- **The retirement of `TDD-0340` and `TDD-0351`.** Their cases, `TC-0012-0330`
-  and `TC-0012-0342`, declare `Level: L1`, so they cannot stay without a row.
-  Each is also the only case left for a superseded item, so removing the case
-  leaves that item with no case, which the `sdd` profile reports as an error:
-  - `TC-0012-0330` is the last case for `EX-0012-0117`. Removing the example
-    edits `05_Examples.md`, which `## Impact scope` does not name.
-  - `TC-0012-0342` is the last case for `AC-0012-0030`. Removing the criterion
-    goes beyond action 3, which retires rows, and beyond this record's statement
-    that no product acceptance is changed.
-
-  Both rows stay `done`. Retiring them needs its own Change Request, naming the
-  example and the criterion.
-
+- **The retirement of `TDD-0340`.** Its case `TC-0012-0330` declares
+  `Level: L1` and is the only case for `EX-0012-0117`, which is the only example
+  for `BR-0012-0019`. Removing the case therefore removes the example and the
+  rule, in `05_Examples.md` and `04_Business-Rules.md`, which `## Impact scope`
+  does not name. `CR-20260926-0002` is raised, `open`, for that chain. The row
+  stays `done` until it is applied.
 - **The resets of the other six rows:** `TDD-0453`, `TDD-0456`, `TDD-0457`,
   `TDD-0459`, `TDD-0465`, `TDD-0486`. They are not among the carrier-only rows
   this pass covers. The owner rerun resets them.

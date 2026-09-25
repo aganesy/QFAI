@@ -64,7 +64,6 @@ const KNOWN_CARRIER_ONLY: readonly string[] = [
   "spec-0012 TDD-0340 TC-0012-0330",
   "spec-0012 TDD-0342 TC-0012-0332",
   "spec-0012 TDD-0342 TC-0012-0333",
-  "spec-0012 TDD-0351 TC-0012-0342",
   "spec-0014 TDD-0033 TC-0014-0033",
 ];
 

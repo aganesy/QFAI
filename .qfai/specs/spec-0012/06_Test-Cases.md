@@ -251,15 +251,6 @@
 - Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
 - Verify `isPivotDirective` accepts only `{continue, refine, pivot}` and rejects other values.
 
-## TC-0012-0342
-
-- Status: superseded — replaced by TC-0012-0376 / TC-0012-0377 (`iter-NN/spec-NNNN/<screen>.review.json` per-spec layout; no PNG/HTML).
-- EX-Ref: EX-0012-0001
-- AC-Refs: AC-0012-0030
-- Level: L1
-- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
-- Verify per-iter evidence path composition: `iter-NN/<screen>.png` / `iter-NN/<screen>.html` / `iter-NN/review.json` (zero-padded index).
-
 ## TC-0012-0343
 
 - Status: superseded — replaced by TC-0012-0366 (`*Feel` fields ≤ 200 words each; legacy 200–500-word `critique` retired).
