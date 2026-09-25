@@ -393,7 +393,7 @@ export type WorkflowMode = (typeof WORKFLOW_MODES)[number];
  */
 export function readWorkflowMode(document: unknown): WorkflowMode | null {
   const workflow = isRecord(document) ? document.workflow : undefined;
-  if (workflow === undefined) return "off";
+  if (workflow === undefined) return "active";
   if (!isRecord(workflow)) return null;
   const mode = workflow.mode;
   if (mode === undefined) return "active";
