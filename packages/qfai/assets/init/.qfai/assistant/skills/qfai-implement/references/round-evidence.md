@@ -34,8 +34,6 @@ report the file** instead of choosing: a guess writes the round into another
 row's `Audited evidence hash`, which is the exact confusion the nesting exists
 to end.
 
-- `Round N: Revision` — the state this round's observations were made
-  against (`evidence-revision.md`)
 - `Round N: RED revision` — the tree that round's RED was observed on, and
   `Round N: RED test hash` with its manifest. Each round's RED is taken on its
   own tree, so holding one of each for the row meant a second round either
@@ -130,6 +128,12 @@ to end.
   (`.qfai/assistant/constitution/references/audited-evidence-hash.md`)
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
+- `Round N: Revision` — the state this round's observations were made
+  against (`evidence-revision.md`). **It goes below the round's RED fields.**
+  The RED audit subject ends at the first field the RED observation could not
+  read, and `Revision` is such a field
+  (`../../../constitution/references/audited-evidence-hash.md`). Written above
+  them, it ends that subject before any RED field
 - `Round N: Oracle proof` — the production mutation that made this round's test
   fail again, taken in Phase: Green step 2a against the code this round wrote
   (`equivalent-mutant` in its place, per `oracle-strength.md`). A later round

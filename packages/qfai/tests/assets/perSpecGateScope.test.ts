@@ -477,6 +477,23 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).not.toContain("one row per residual finding");
   });
 
+  it("gives a sibling's skipped test a row, as it gives a sibling's stub", async () => {
+    // `QFAI-TEST-003` is filed against the test file like `QFAI-TEST-001`, so it
+    // survives `--spec` and exits the scoped gate 1. A `Finding` field that
+    // admitted only the stub code left that residue no sanctioned record.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain(
+      "`QFAI-ATDD-113`, `QFAI-ATDD-115`, `QFAI-TEST-001` or `QFAI-TEST-003`",
+    );
+    expect(obligations).toContain(
+      "`QFAI-TEST-001` and `QFAI-TEST-003` are attributed to the test file",
+    );
+    expect(obligations).toContain("**A sibling's skipped test is the same residue.**");
+
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("`QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` / `-003`");
+  });
+
   it("cites only contract IDs the validator accepts", async () => {
     // `API_CONTRACT_ID_RE` is `^CON-API-\d+$` (`core/atddTraceability.ts`), so
     // a copied `CON-API-0004-002` is declared by nothing and annotates as a

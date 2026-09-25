@@ -234,6 +234,29 @@ describe("the ATDD stage seal has a reference of its own", () => {
       expect(template).toContain("Review pack seal: <sha256>");
     });
 
+    it(`${tree}: the template says to fill the marker's placeholder too`, async () => {
+      // The marker names the pack path. Left holding `<timestamp>` it is not
+      // read as a marker, and the citation scan reports both the filled path and
+      // the placeholder's prefix.
+      const skill = flat(await read(tree, ATDD_SKILL));
+      const seal = flat(await read(tree, ATDD_SEAL));
+      expect(skill).toContain("names the same path: replace `<timestamp>` in both");
+      expect(seal).toContain("Replace `<timestamp>` in the marker as well as in the path.");
+    });
+
+    it(`${tree}: the P8 pack declares a producer of its own`, async () => {
+      // Without an `atdd` producer the stage pack could only omit one, and
+      // `target.kind: "spec"` then placed it under the SDD gate.
+      const seal = flat(await read(tree, ATDD_SEAL));
+      const layout = flat(await read(tree, REVIEW_LAYOUT));
+      expect(seal).toContain("## Declare the P8 pack's producer");
+      expect(seal).toContain('`producer: "atdd"` in its `summary.json`');
+      expect(seal).toContain("a `- Producer: atdd` line in its `review_request.md`");
+      expect(layout).toContain(
+        "The allowed values are `discussion`, `sdd`, `atdd` and `implement`",
+      );
+    });
+
     it(`${tree}: every pack-seal anchor the skill cites resolves to a heading`, async () => {
       const skill = await read(tree, ATDD_SKILL);
       const seal = await read(tree, ATDD_SEAL);

@@ -197,8 +197,8 @@ Use the shared schema.
     to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` it declares owns a row, whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`,
     and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
-  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` is recorded one row per obligation under `## Cross-spec obligations` with a named sibling owner
-    — a contract per row for the first two, a stub file per row for the third. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` / `QFAI-TEST-001` / `-003` is recorded one row per obligation under `## Cross-spec obligations`
+    with a named sibling owner — a contract per row for the first two, a test file per row for the last two. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
   - Matrix production and review carry governing US/AC/BR/TC sections,
     referenced contracts and relevant types/schemas for kept-failure judgments.
     Map each owned contract failure to the row that covers it: a scored US/TC
@@ -658,7 +658,7 @@ Review pack seal: <sha256>
 
 The path in that field is the completion gate's operand, not a pointer a
 reader can follow: the review tree is not tracked, so a clone holds the
-record and not the pack. The marker beside it says so. Everywhere else in
+record and not the pack. The marker beside it says so, and names the same path: replace `<timestamp>` in both. Everywhere else in
 the record, name the run by its id — `review-<timestamp>` — and record what
 a reader needs from it there: the reviewer role, the verdict, the reviewed
 revision and the audited hash. `references/pack-seal.md` holds the rest.

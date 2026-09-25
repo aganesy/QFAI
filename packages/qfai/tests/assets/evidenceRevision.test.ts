@@ -389,6 +389,28 @@ describe("evidence and verdicts carry a revision", () => {
       expect(reference).not.toContain("`Round N: Refactor verify revision`");
     });
 
+    it(`${tree}: the round block lists Revision below the RED fields`, async () => {
+      // The RED audit subject ends at the first field the RED observation could
+      // not read, and `Revision` is one. Listed first in the block, it ended the
+      // RED subject before any RED field.
+      const round = await read(tree, ROUND);
+      const block = round.slice(round.indexOf("## Round block"));
+      const revision = block.indexOf("- `Round N: Revision`");
+      expect(revision).toBeGreaterThan(-1);
+      for (const redField of [
+        "- `Round N: RED revision`",
+        "- `Round N: RED command`",
+        "- `Round N: RED result`",
+        "- `Round N: Satisfied-by`",
+        "- `Round N: GREEN result`",
+      ]) {
+        const at = block.indexOf(redField);
+        expect(at, redField).toBeGreaterThan(-1);
+        expect(at, `${redField} must precede Round N: Revision`).toBeLessThan(revision);
+      }
+      expect(flat(round)).toContain("**It goes below the round's RED fields.**");
+    });
+
     it(`${tree}: a worker's returned done is held at refactor until the re-take passes`, async () => {
       // The reconciliation write happens before the integration verify, so a
       // worker's `done` written verbatim settles completion ahead of the

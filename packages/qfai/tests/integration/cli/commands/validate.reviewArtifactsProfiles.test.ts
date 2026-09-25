@@ -234,6 +234,31 @@ describe("each stage profile gates only the review packs it owns", () => {
     });
   });
 
+  // `/qfai-atdd` P8 opens a stage pack over the spec directory too. Without a
+  // producer value of its own it could only omit one, and `target.kind: "spec"`
+  // then placed it under the SDD gate.
+  it("accepts an ATDD stage pack's producer and keeps it out of the sdd gate", async () => {
+    await withoutCiEnv(async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-producer-atdd-"));
+      try {
+        await seedPack(root, packOf("spec", "atdd"));
+
+        await runValidate({ root, strict: false, profile: "sdd" });
+        expect((await findings(root)).map((entry) => entry.code)).not.toContain(
+          "QFAI-REVIEW-005",
+        );
+
+        await runValidate({ root, strict: false });
+        const all = await findings(root);
+        expect(all.map((entry) => entry.code)).toContain("QFAI-REVIEW-005");
+        // The summary still breaks other schema rules; none of them may be about the producer.
+        expect(all.map((entry) => entry.message).join("\n")).not.toContain("`producer`");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("the full scan still judges both", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-full-"));
     try {

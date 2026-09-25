@@ -53,7 +53,7 @@ QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
 - Say which stage wrote the pack: `producer: "implement"` in `summary.json`, and a
   `- Producer: implement` line in `review_request.md`. Both, because `summary.json` is written
   last — the request line is the only thing that answers the question while the pack is in
-  flight. The allowed values are `discussion`, `sdd` and `implement`; a pack that declares none
+  flight. The allowed values are `discussion`, `sdd`, `atdd` and `implement`; a pack that declares none
   is placed by its `target.kind`, which cannot tell an implementation pack from an SDD one, so
   it is judged by the SDD gate as well.
 - Minimum `summary.json` shape (`version: "2.0"`):
