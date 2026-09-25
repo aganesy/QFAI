@@ -17,6 +17,8 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0026 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0027 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0028 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0029 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0030 | TC-0018-0016 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -1562,6 +1564,26 @@ AssertionError: expected { issued: [ { …(5) }, …(2) ], …(6) } to deeply eq
 ❯ tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:326:18
 Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 ```
+
+### TDD-0029
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/qfaiRunDrivesTheStages.test.ts`
+- Selector: `TC-0018-0016 (TDD-0029): feature`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/qfaiRunDrivesTheStages.test.ts --testNamePattern='TC-0018-0016 \(TDD-0029\): feature' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:665:18` — all four feature work orders were issued in order but each carried `skill: undefined` and `operation: undefined`.
+- GREEN result: exit 0; `✓ ... TC-0018-0016 (TDD-0029): feature`, 1 passed, 3 skipped. Four work orders name the plan's skill and operation in order, each result is accepted, and a fifth `next` returns `workOrder: null`.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (every issued work order copies `executor.skill` and `operation` from its plan stage).
+
+### TDD-0030
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/qfaiRunDrivesTheStages.test.ts`
+- Selector: `TC-0018-0016 (TDD-0030): discovery`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/qfaiRunDrivesTheStages.test.ts --testNamePattern='TC-0018-0016 \(TDD-0030\): discovery' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expect(actual).toEqual(expected)` at `tests/unit/workflow/qfaiRunDrivesTheStages.test.ts:699:18` — `next` refused the discovery plan, so nothing was issued and the run stayed `ready`.
+- GREEN result: exit 0; `✓ ... TC-0018-0016 (TDD-0030): discovery`, 1 passed, 4 skipped. The `discussion` work order names `qfai-discussion` / `resolve-unsettled-product-scope`; accepting its result fires `scope-or-obligation-revision` and returns the run to `routing`. The other four plan selectors still pass after the route checks moved into `routePlanIsInvalid`.
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`routePlanIsInvalid` holds the per-route plan checks and accepts a discovery plan whose stages name a skill and operation; `accept` of the last discovery stage moves `running` to `routing`; feature and discovery stage predicates stay unevaluated under a marked simplification).
 
 ### TDD-0527
 

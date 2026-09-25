@@ -548,3 +548,153 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
   };
   expect(actual).toEqual(expected);
 });
+
+type DecideSnapshot = Parameters<typeof decide>[0];
+
+function driveWithCannedResults(
+  context: Omit<DecideSnapshot, "run" | "acceptedStages" | "outstandingWorkOrder">,
+  start: DecideSnapshot["run"],
+  facts: Parameters<typeof decide>[2],
+) {
+  let run = start;
+  let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
+  const issued: { stageKind: string; skill: string | undefined; operation: string | undefined }[] =
+    [];
+  const acceptEvents: string[] = [];
+  for (let index = 0; index < 10 && run.state === "ready"; index++) {
+    const next = decide({ ...context, run, acceptedStages }, { operation: "next" }, facts);
+    const workOrder = next.verdict.workOrder;
+    if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
+    issued.push({
+      stageKind: workOrder.stageKind,
+      skill: workOrder.executor?.skill,
+      operation: workOrder.operation,
+    });
+    const accepted = decide(
+      { ...context, run: next.verdict.run, acceptedStages, outstandingWorkOrder: workOrder },
+      {
+        operation: "accept",
+        result: {
+          resultId: `result-${workOrder.stageInstanceId}`,
+          workOrderId: workOrder.workOrderId,
+          stageInstanceId: workOrder.stageInstanceId,
+          attempt: workOrder.attempt,
+          expectedSequence: next.verdict.run.sequence,
+          outcome: "accepted",
+        },
+      },
+      facts,
+    );
+    if (!accepted.verdict.ok || !accepted.verdict.run) break;
+    acceptEvents.push(...accepted.events.map((event) => event.type));
+    acceptedStages = [
+      ...acceptedStages,
+      {
+        stageInstanceId: workOrder.stageInstanceId,
+        stageKind: workOrder.stageKind,
+        outcome: "accepted",
+      },
+    ];
+    run = accepted.verdict.run;
+  }
+  const finalNext =
+    run.state === "ready"
+      ? decide({ ...context, run, acceptedStages }, { operation: "next" }, facts)
+      : null;
+  return {
+    issued,
+    acceptEvents,
+    finalState: run.state,
+    finalWorkOrder: finalNext?.verdict.ok ? finalNext.verdict.workOrder : "not-issued",
+  };
+}
+
+it("TC-0018-0016 (TDD-0029): feature", () => {
+  const plan = {
+    route: "feature",
+    stages: [
+      {
+        stageInstanceId: "feature-sdd",
+        stageKind: "sdd",
+        skill: "qfai-sdd",
+        operation: "new-capability",
+        when: "always",
+      },
+      {
+        stageInstanceId: "feature-acceptance",
+        stageKind: "acceptance",
+        skill: "qfai-atdd",
+        operation: "author-acceptance-tests",
+        when: "acceptance_obligations_unmet",
+      },
+      {
+        stageInstanceId: "feature-implement",
+        stageKind: "implement",
+        skill: "qfai-implement",
+        operation: "implement",
+        when: "always",
+      },
+      {
+        stageInstanceId: "feature-verify",
+        stageKind: "verify",
+        skill: "qfai-verify",
+        operation: "verify-full",
+        when: "always",
+      },
+    ],
+  };
+  const approval = {
+    authorizationId: "authorization-4",
+    kind: "human_decision",
+    operation: "CREATE",
+    effect: "proceed",
+    target: { kind: "new_capability", slotId: "slot-3-1" },
+  };
+
+  const actual = driveWithCannedResults(
+    { plan, approval },
+    { id: "run-feature", state: "ready", sequence: 5 },
+    { acceptanceObligationsUnmet: true },
+  );
+  const expected = {
+    issued: plan.stages.map(({ stageKind, skill, operation }) => ({ stageKind, skill, operation })),
+    acceptEvents: plan.stages.map(() => "accept-nonfinal-result"),
+    finalState: "ready",
+    finalWorkOrder: null,
+  };
+  expect(actual).toEqual(expected);
+});
+
+it("TC-0018-0016 (TDD-0030): discovery", () => {
+  const plan = {
+    route: "discovery",
+    stages: [
+      {
+        stageInstanceId: "discovery-discussion",
+        stageKind: "discussion",
+        skill: "qfai-discussion",
+        operation: "resolve-unsettled-product-scope",
+        when: "full_discussion_needed",
+      },
+    ],
+  };
+
+  const actual = driveWithCannedResults(
+    { plan },
+    { id: "run-discovery", state: "ready", sequence: 5 },
+    {},
+  );
+  const expected = {
+    issued: [
+      {
+        stageKind: "discussion",
+        skill: "qfai-discussion",
+        operation: "resolve-unsettled-product-scope",
+      },
+    ],
+    acceptEvents: ["scope-or-obligation-revision"],
+    finalState: "routing",
+    finalWorkOrder: "not-issued",
+  };
+  expect(actual).toEqual(expected);
+});

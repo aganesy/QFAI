@@ -163,6 +163,8 @@ function activeStages(
   diagnosis: WorkflowSnapshot["diagnosis"],
   acceptanceObligationsUnmet: boolean | undefined,
 ): NonNullable<WorkflowSnapshot["plan"]>["stages"] {
+  // SIMPLIFIED: feature and discovery issue every stage; their predicates are not evaluated.
+  // Lift when: the prototype and full-discussion predicates get the facts that decide them.
   if (plan.route !== "bugfix" && plan.route !== "bounded-change") return plan.stages;
   return plan.stages.filter((stage) => {
     switch (stage.when) {
@@ -176,6 +178,74 @@ function activeStages(
         return false;
     }
   });
+}
+
+function routePlanIsInvalid(
+  plan: NonNullable<WorkflowSnapshot["plan"]>,
+  snapshot: WorkflowSnapshot,
+): boolean {
+  const { stages } = plan;
+  const boundToSpec = /^spec-\d{4}$/.test(snapshot.specBinding?.specId ?? "");
+  const approval = snapshot.approval;
+  switch (plan.route) {
+    case "direct":
+      return (
+        stages.length !== 2 ||
+        stages[0]?.stageKind !== "maintenance" ||
+        stages[0].skill !== "qfai-maintain" ||
+        stages[0].operation !== "non-normative-edit" ||
+        stages[1]?.stageKind !== "verify" ||
+        stages[1].skill !== "qfai-verify" ||
+        stages[1].operation !== "verify-full" ||
+        !boundToSpec
+      );
+    case "bugfix":
+      return (
+        stages[0]?.stageKind !== "diagnose" ||
+        stages.at(-1)?.stageKind !== "verify" ||
+        !boundToSpec ||
+        stages.some(
+          (stage) =>
+            !stage.skill ||
+            !stage.operation ||
+            ![
+              "always",
+              "missing_test_row_needed",
+              "acceptance_obligations_unmet",
+              "regression_found",
+              "test_defect_found",
+            ].includes(stage.when ?? ""),
+        )
+      );
+    case "bounded-change":
+      return (
+        stages[0]?.stageKind !== "sdd_delta" ||
+        stages.at(-1)?.stageKind !== "verify" ||
+        !boundToSpec ||
+        stages.some(
+          (stage) =>
+            !stage.skill ||
+            !stage.operation ||
+            (stage.when !== "always" && stage.when !== "acceptance_obligations_unmet"),
+        )
+      );
+    case "feature":
+      return (
+        stages[0]?.stageKind !== "sdd" ||
+        stages.at(-1)?.stageKind !== "verify" ||
+        approval?.kind !== "human_decision" ||
+        approval.operation !== "CREATE" ||
+        approval.effect !== "proceed" ||
+        approval.target?.kind !== "new_capability" ||
+        !approval.target.slotId ||
+        (approval.authorizationId !== undefined &&
+          !/^[A-Za-z0-9_-]{1,64}$/.test(approval.authorizationId))
+      );
+    case "discovery":
+      return stages.some((stage) => !stage.skill || !stage.operation);
+    default:
+      return true;
+  }
 }
 
 export function decide(
@@ -271,51 +341,7 @@ export function decide(
       plan.stages.length === 0 ||
       plan.stages.some((stage) => !stage.stageInstanceId || !stage.stageKind) ||
       new Set(plan.stages.map((stage) => stage.stageInstanceId)).size !== plan.stages.length ||
-      (isDirect
-        ? plan.stages.length !== 2 ||
-          plan.stages[0]?.stageKind !== "maintenance" ||
-          plan.stages[0].skill !== "qfai-maintain" ||
-          plan.stages[0].operation !== "non-normative-edit" ||
-          plan.stages[1]?.stageKind !== "verify" ||
-          plan.stages[1].skill !== "qfai-verify" ||
-          plan.stages[1].operation !== "verify-full" ||
-          !/^spec-\d{4}$/.test(snapshot.specBinding?.specId ?? "")
-        : isBugfix
-          ? plan.stages[0]?.stageKind !== "diagnose" ||
-            plan.stages.at(-1)?.stageKind !== "verify" ||
-            !/^spec-\d{4}$/.test(snapshot.specBinding?.specId ?? "") ||
-            plan.stages.some(
-              (stage) =>
-                !stage.skill ||
-                !stage.operation ||
-                ![
-                  "always",
-                  "missing_test_row_needed",
-                  "acceptance_obligations_unmet",
-                  "regression_found",
-                  "test_defect_found",
-                ].includes(stage.when ?? ""),
-            )
-          : isBounded
-            ? plan.stages[0]?.stageKind !== "sdd_delta" ||
-              plan.stages.at(-1)?.stageKind !== "verify" ||
-              !/^spec-\d{4}$/.test(snapshot.specBinding?.specId ?? "") ||
-              plan.stages.some(
-                (stage) =>
-                  !stage.skill ||
-                  !stage.operation ||
-                  (stage.when !== "always" && stage.when !== "acceptance_obligations_unmet"),
-              )
-            : plan.route !== "feature" ||
-              plan.stages[0]?.stageKind !== "sdd" ||
-              plan.stages.at(-1)?.stageKind !== "verify" ||
-              approval?.kind !== "human_decision" ||
-              approval.operation !== "CREATE" ||
-              approval.effect !== "proceed" ||
-              approval.target?.kind !== "new_capability" ||
-              !approval.target.slotId ||
-              (approval.authorizationId !== undefined &&
-                !/^[A-Za-z0-9_-]{1,64}$/.test(approval.authorizationId))) ||
+      routePlanIsInvalid(plan, snapshot) ||
       !Array.isArray(acceptedStages) ||
       (isBugfix && acceptedStages.length > 0 && !snapshot.diagnosis) ||
       acceptedStages.length > selectedStages.length ||
@@ -344,6 +370,8 @@ export function decide(
       stageInstanceId: stage.stageInstanceId,
       attempt: 1,
       stageKind: stage.stageKind,
+      ...(stage.skill ? { executor: { skill: stage.skill } } : {}),
+      ...(stage.operation ? { operation: stage.operation } : {}),
     };
     if (isDirect || isBugfix || isBounded) {
       const specId = snapshot.specBinding?.specId;
@@ -358,8 +386,6 @@ export function decide(
         };
       }
       nextWorkOrder.target = { kind: "spec", specId };
-      nextWorkOrder.executor = { skill: stage.skill };
-      nextWorkOrder.operation = stage.operation;
     } else if (stage.stageKind === "sdd") {
       const slotId = approval?.target?.slotId;
       if (!slotId) {
@@ -428,6 +454,7 @@ export function decide(
     // Lift when: the stage-result schema and receipt checks are implemented.
     if (
       (plan?.route !== "feature" &&
+        plan?.route !== "discovery" &&
         plan?.route !== "direct" &&
         plan?.route !== "bugfix" &&
         plan?.route !== "bounded-change") ||
@@ -467,11 +494,16 @@ export function decide(
       };
     }
 
+    const endsDiscovery =
+      plan.route === "discovery" && acceptedStages.length + 1 === selectedStages.length;
     return {
-      verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + 1 } },
+      verdict: {
+        ok: true,
+        run: { ...run, state: endsDiscovery ? "routing" : "ready", sequence: run.sequence + 1 },
+      },
       events: [
         {
-          type: "accept-nonfinal-result",
+          type: endsDiscovery ? "scope-or-obligation-revision" : "accept-nonfinal-result",
           resultRef: `results/${result.resultId}.json`,
           stageInstanceId: workOrder.stageInstanceId,
           outcome: result.outcome,
