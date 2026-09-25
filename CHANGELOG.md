@@ -12,6 +12,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The Drift Protocol names review as the detector for a security defect**
+  (#2252). The protocol makes a security or data-integrity finding blocking,
+  and no repository gate scans for one. It now says so, and names the
+  implementation reviewer as the check that finds such a defect and sends it
+  down the same blocking path.
+
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
   more than its pin, the guard now prints each error finding in that file as

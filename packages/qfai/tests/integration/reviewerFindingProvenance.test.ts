@@ -124,6 +124,23 @@ describe("reviewer finding provenance", () => {
     expect(drift).toMatch(wrapTolerant("demonstrable from the changed artifacts", "i"));
   });
 
+  it("names the detector for a security defect, since no gate scans for one", async () => {
+    // The class blocks, so the protocol has to say what finds it. Without this
+    // sentence the class reads as gated when only a reviewer can raise it.
+    const [drift, reviewer] = await Promise.all([
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(path.join(assistantDir, "agents", "implementation-reviewer.md"), "utf-8"),
+    ]);
+    expect(drift).toMatch(wrapTolerant("No repository gate scans for a security defect."));
+    expect(drift).toMatch(
+      wrapTolerant(
+        "`agents/implementation-reviewer.md` checks each change for security and privacy",
+      ),
+    );
+    // The reviewer the protocol names must actually carry that check.
+    expect(reviewer).toMatch(/security\/privacy/);
+  });
+
   it("does not let an advisory that changes an approved obligation reach done", async () => {
     const drift = await readFile(DRIFT_PROTOCOL, "utf-8");
     // The free-to-continue clause must be conditional, not unconditional.
