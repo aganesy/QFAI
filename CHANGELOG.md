@@ -59,6 +59,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `code: message` under the refusal. GitHub caps the annotations a run shows,
   so the findings that changed the count were often not visible anywhere.
 
+- **spec-0005, spec-0007 and spec-0009 have a Coverage Depth Matrix**
+  (#1436). Each pack carried ATDD-owned tests and no matrix, which
+  `QFAI-ATDD-131` reports. Each matrix scores every declared user story, test
+  case and active business rule against the tests that exist today, and names
+  the reason for every uncovered cell. Most cells are uncovered: the annotated
+  cases read a source or skill file for a phrase rather than drive the
+  behaviour. The three packs leave the `full` dogfooding backlog. No ledger
+  row, test or source changes.
+
 - **The test runner moves to its fourth major, and the coverage provider with
   it** (#2173). The two move as a pair: the provider's peer range names the
   runner version exactly, so a provider a major ahead of the runner fails at
