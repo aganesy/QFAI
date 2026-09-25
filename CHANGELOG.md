@@ -4,6 +4,27 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule that text the repository did not author is data, not instruction**
+  (#2231). `qfai init` now writes `.agents/rules/untrusted-content.md` and cites
+  it from the agent entry points. It names the surfaces that carry such text —
+  tool results, fetched pages, files the project did not add, pull request and
+  issue bodies, pasted text — and says an instruction found there is followed
+  only where the user's own request asks for it. It also sets out how to mark
+  pasted text: an opening and closing tag carrying the same short random id,
+  with a system-prompt note saying what the tags mean.
+
+  The research protocol no longer applies an entry on the strength of an
+  external source alone: the `reason` of an `apply` states what the agent
+  verified against the repository, and an entry with nothing verified is
+  `defer`. The shipped code-review instructions treat the pull request
+  description, issue text and comments as data.
+
+  This repository's own review instructions say the same. They are also split
+  by topic into four files, so the TypeScript checks apply to `*.ts` files and
+  the compatibility checks to the package source only.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).

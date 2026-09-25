@@ -1357,8 +1357,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
     // that one item reproduces `cac822f9…` byte for byte.
+    //
+    // Re-pinned for one more bullet on that same list, naming
+    // `.agents/rules/untrusted-content.md` — the rule the run now seeds beside the other masters,
+    // which says text the repository did not author is data, not instruction. Derived by running
+    // `qfai init` into a temp root; dropping that one bullet reproduces `b786f88e…` byte for byte.
     ".github/copilot-instructions.md",
-    "b786f88e7f0ffa81f6cd48808656031968028d3a01cbd5480854810c6c3b2e66",
+    "42737ba460dd2432549806980e32ca5c27a869d79f8b900d6b7bbf7100c37f93",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1527,8 +1532,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // free-text change request to the `qfai-run` skill, and the blank line after it. Derived by
   // running `qfai init` into a temp root; removing those two lines from both written files
   // reproduces `6083825b…` and `fe88c122…` byte for byte.
-  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
-  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/untrusted-content.md`
+  // — the rule the run now seeds beside the other masters, which says text the repository did not
+  // author is data, not instruction. Derived by running `qfai init` into a temp root; dropping
+  // that one bullet from both written files reproduces `51e3e03e…` and `07350d6a…` byte for byte.
+  ["AGENTS.md", "a7336eaa32fae4be4c447913030dbeb1be6141b0bb7eb3179e4bb113974a9fc6"],
+  ["CLAUDE.md", "bfcc38d39527264ea3ce74834574fa7ad3efc1c43c185dec2083eeab241c3e0f"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1722,6 +1732,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/reminders.json",
   "root/.agents/rules/root-additions-policy.md",
   "root/.agents/rules/temporary-files.md",
+  "root/.agents/rules/untrusted-content.md",
   "root/.agents/rules/user-questions.md",
   "root/.agents/rules/version-discipline.md",
   "root/.gitattributes",

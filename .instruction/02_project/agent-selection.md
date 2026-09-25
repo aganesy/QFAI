@@ -52,7 +52,7 @@ QFAI のサブエージェントは、**agent-catalog + agent-routing + review-p
 
 - 実装担当 (`frontend-engineer`, `backend-engineer`) は `.github/instructions/principles.instructions.md` と `.instruction/00_universal/development-principles-checklist.md` の観点を、実装時の判断基準として適用する。
 - 設計担当 (`solution-architect`, `product-experience-architect`) は同じ原則を、構造・契約・UX 方向性の設計基準として適用する。
-- レビュー担当 (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) は `.github/instructions/code-review.instructions.md` と `.github/instructions/principles.instructions.md` をレビュー観点として適用し、指摘時は原則名と改善理由を明示する。
+- Reviewers (`implementation-reviewer`, `architecture-reviewer`, `product-surface-reviewer`) review against `.github/instructions/principles.instructions.md` and the code-review files beside it: `code-review.instructions.md`, `code-review-checklist.instructions.md`, `code-review-typescript.instructions.md` and `code-review-public-api.instructions.md`. A finding names the principle it applies and why the change improves on the code.
 
 ## 迷ったときの基準
 
