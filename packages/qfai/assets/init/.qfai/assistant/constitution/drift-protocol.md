@@ -416,6 +416,10 @@ and show it is wrong on its own terms. Typical shapes:
 - **code quality** — a regression against a gate the repository already runs (lint, types, tests) or
   against a named constitution / catalog rule.
 
+No repository gate scans for a security defect. Review is that class's detector:
+`agents/implementation-reviewer.md` checks each change for security and privacy, and a finding it
+demonstrates traces to `defect:security` and blocks like the other two classes.
+
 These findings are **blocking**. Their provenance is the deliverable plus the defect class, never an
 `AC-*`: requiring an acceptance criterion for them would oblige a reviewer who has just demonstrated
 a bug to pass it.
