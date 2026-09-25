@@ -267,6 +267,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0257 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0258 | TC-0018-0224 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0259 | TC-0018-0225 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0260 | TC-0018-0009 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0261 | TC-0018-0011 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0262 | TC-0018-0017 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0263 | TC-0018-0019 | Closed `exception` under DR-0298; per-row review waived |
@@ -280,6 +281,36 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0271 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0272 | TC-0018-0025 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0273 | TC-0018-0026 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0274 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0275 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0276 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0277 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0278 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0279 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0280 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0281 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0282 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0283 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0284 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0285 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0286 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0287 | TC-0018-0027 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0288 | TC-0018-0028 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0289 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0290 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0291 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0292 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0293 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0294 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0295 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0296 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0297 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0298 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0299 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0300 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0301 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0302 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0308 | TC-0018-0056 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0310 | TC-0018-0065 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
@@ -4463,6 +4494,17 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file`
 - Production files: `packages/qfai/tests/helpers/routingEval.ts`
 
+### TDD-0260
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aDeclineIsAStopWithNothingTracked.test.ts`
+- Selector: `TC-0018-0009 (TDD-0260): Built CLI on a temp repo`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aDeclineIsAStopWithNothingTracked.test.ts --testNamePattern='TC-0018-0009 \(TDD-0260\): Built CLI on a temp repo' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, state: undefined, …(2) } to deeply equal { exit: +0, state: 'cancelled', …(2) }` at `tests/integration/workflow/aDeclineIsAStopWithNothingTracked.test.ts:48`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aDeclineIsAStopWithNothingTracked.test.ts > TC-0018-0009 (TDD-0260): Built CLI on a temp repo`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
 ### TDD-0261
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4598,6 +4640,317 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/sevenOperations.test.ts > TC-0018-0026 (TDD-0273): Built CLI npx qfai workflow --help`
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/cli/main.ts`, `packages/qfai/src/cli/lib/args.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/parse.ts`, `packages/qfai/src/core/workflow/decide.ts`
 - RED note: the built CLI was rebuilt from the committed sources before this change, so the RED run exercised a dist with no `workflow` command; the GREEN run used the dist rebuilt with it.
+
+### TDD-0274
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0274): start-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0274\): start-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: false, ok: undefined } to deeply equal { parsed: true, ok: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0274): start-ok`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0275
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0275): start-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0275\): start-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: false, ok: undefined } to deeply equal { parsed: true, ok: false }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0275): start-error`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0276
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0276): next-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0276\): next-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0276): next-ok`
+- Production files: none beyond TDD-0262's
+
+### TDD-0277
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0277): next-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0277\): next-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: false, ok: undefined } to deeply equal { parsed: true, ok: false }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0277): next-error`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0278
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0278): accept-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0278\): accept-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0278): accept-ok`
+- Production files: none beyond TDD-0262's
+
+### TDD-0279
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0279): accept-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0279\): accept-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0279): accept-error`
+- Production files: none beyond TDD-0262's
+
+### TDD-0280
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0280): decision-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0280\): decision-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0280): decision-ok`
+- Production files: none beyond TDD-0262's
+
+### TDD-0281
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0281): decision-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0281\): decision-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0281): decision-error`
+- Production files: none beyond TDD-0262's
+
+### TDD-0282
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0282): status-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0282\): status-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0282): status-ok`
+- Production files: none beyond TDD-0262's
+
+### TDD-0283
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0283): status-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0283\): status-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: false, ok: undefined } to deeply equal { parsed: true, ok: false }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0283): status-error`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0284
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0284): resume-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0284\): resume-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0284): resume-ok`
+- Production files: none beyond TDD-0262's
+
+### TDD-0285
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0285): resume-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0285\): resume-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0285): resume-error`
+- Production files: none beyond TDD-0262's
+
+### TDD-0286
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0286): finish-ok`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0286\): finish-ok' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: true, ok: false } to deeply equal { parsed: true, ok: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0286): finish-ok`
+- Production files: `packages/qfai/src/core/workflow/observe.ts` (`completionFacts`), `packages/qfai/src/core/gitChanges.ts` (`uncommittedPaths`), `packages/qfai/src/cli/commands/workflow.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `83727b066`, which added the command without this behaviour; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0287
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0027 (TDD-0287): finish-error`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0027 \(TDD-0287\): finish-error' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { parsed: false, ok: undefined } to deeply equal { parsed: true, ok: false }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:117`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0027 (TDD-0287): finish-error`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0288
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0028 (TDD-0288): Built CLI status and next on a run in running`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0028 \(TDD-0288\): Built CLI status and next on a run in running' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0028 (TDD-0288): Built CLI status and next on a run in running`
+- Production files: none beyond TDD-0262's
+
+### TDD-0289
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0289): exit0-blocked`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0289\): exit0-blocked' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0289): exit0-blocked`
+- Production files: none beyond TDD-0262's
+
+### TDD-0290
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0290): exit0-awaiting-input`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0290\): exit0-awaiting-input' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0290): exit0-awaiting-input`
+- Production files: none beyond TDD-0262's
+
+### TDD-0291
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0291): exit0-cancelled`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0291\): exit0-cancelled' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0291): exit0-cancelled`
+- Production files: none beyond TDD-0262's
+
+### TDD-0292
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0292): exit0-replayed-accept`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0292\): exit0-replayed-accept' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0292): exit0-replayed-accept`
+- Production files: none beyond TDD-0262's
+
+### TDD-0293
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0293): exit0-replayed-decision`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0293\): exit0-replayed-decision' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0293): exit0-replayed-decision`
+- Production files: none beyond TDD-0262's
+
+### TDD-0294
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0294): exit0-status-failed`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0294\): exit0-status-failed' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0294): exit0-status-failed`
+- Production files: none beyond TDD-0262's
+
+### TDD-0295
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0295): exit0-start-off`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0295\): exit0-start-off' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, parsed: false } to deeply equal { exit: +0, parsed: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:279`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0295): exit0-start-off`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0296
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0296): exit0-start-shadow`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0296\): exit0-start-shadow' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, parsed: false } to deeply equal { exit: +0, parsed: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:279`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0296): exit0-start-shadow`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0297
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0297): exit1-finish-unmet`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0297\): exit1-finish-unmet' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 2, parsed: true } to deeply equal { exit: 1, parsed: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:279`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0297): exit1-finish-unmet`
+- Production files: `packages/qfai/src/core/workflow/observe.ts` (`completionFacts`), `packages/qfai/src/core/gitChanges.ts` (`uncommittedPaths`), `packages/qfai/src/cli/commands/workflow.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `83727b066`, which added the command without this behaviour; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0298
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0298): exit1-integrity`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0298\): exit1-integrity' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0298): exit1-integrity`
+- Production files: none beyond TDD-0262's
+
+### TDD-0299
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0299): exit2-stale-sequence`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0299\): exit2-stale-sequence' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0299): exit2-stale-sequence`
+- Production files: none beyond TDD-0262's
+
+### TDD-0300
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0300): exit2-lock-held`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0300\): exit2-lock-held' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0300): exit2-lock-held`
+- Production files: none beyond TDD-0262's
+
+### TDD-0301
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0301): exit2-run-active`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0301\): exit2-run-active' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run against the built CLI of commit `83727b066`; already satisfied by TDD-0262, whose change added the command adapter, the journal and the lock this case drives
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0301): exit2-run-active`
+- Production files: none beyond TDD-0262's
+
+### TDD-0302
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/oneJsonDocumentPerCall.test.ts`
+- Selector: `TC-0018-0029 (TDD-0302): exit2-invalid-input`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/oneJsonDocumentPerCall.test.ts --testNamePattern='TC-0018-0029 \(TDD-0302\): exit2-invalid-input' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { exit: 1, parsed: false } to deeply equal { exit: 2, parsed: true }` at `tests/integration/workflow/oneJsonDocumentPerCall.test.ts:279`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/oneJsonDocumentPerCall.test.ts > TC-0018-0029 (TDD-0302): exit2-invalid-input`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
+- RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
+
+### TDD-0308
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0056 (TDD-0308): Built CLI`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0056 \(TDD-0308\): Built CLI' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { replay: [ +0, true ], …(2) } to deeply equal { replay: [ +0, true ], …(2) }` at `tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:45`; the new result was refused `work-order` rather than `stale-sequence`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0056 (TDD-0308): Built CLI`
+- Production files: `packages/qfai/src/core/workflow/decide.ts` (`acceptPreamble` checks the sequence before the work order, as CLI-WF `### accept` orders them)
+- RED note: observed with the built CLI rebuilt from the sources of commit `83727b066`, which added the command without this behaviour; the GREEN run used the dist rebuilt from this change.
 
 ### TDD-0310
 

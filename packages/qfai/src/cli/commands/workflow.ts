@@ -11,7 +11,12 @@ import type {
   WorkflowInput,
   WorkflowSnapshot,
 } from "../../core/workflow/decide.js";
-import { baselineOf, routingFacts, startFacts } from "../../core/workflow/observe.js";
+import {
+  baselineOf,
+  completionFacts,
+  routingFacts,
+  startFacts,
+} from "../../core/workflow/observe.js";
 import {
   decisionInputRefusals,
   isRecord,
@@ -310,7 +315,9 @@ async function inputOf(
   return { input: { ...value, operation } };
 }
 
-async function factsOf(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
+async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
+  const { snapshot } = loaded;
+  if (input.operation === "finish") return completionFacts(root, loaded.runDir, snapshot);
   if (input.operation === "accept" && snapshot.run.state === "routing") {
     return routingFacts(root, input.result?.proposal);
   }
@@ -348,7 +355,7 @@ async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Pr
   const { snapshot } = loaded;
   const read = await inputOf(options, loaded);
   if (isRefusal(read)) return refuse(snapshot.run, read);
-  const facts = await factsOf(options.root, snapshot, read.input);
+  const facts = await factsOf(options.root, loaded, read.input);
   const decision = decide(snapshot, read.input, facts);
   if (decision.events.length > 0) {
     const records = recordsOf(

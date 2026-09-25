@@ -398,6 +398,13 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
     record.binding ? { ...snapshot, specBinding: { specId: record.binding.specId } } : snapshot,
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     record.halt ? { ...snapshot, halt: record.halt } : snapshot,
+  "missing-capability": (snapshot, record) =>
+    record.halt ? { ...snapshot, halt: record.halt } : snapshot,
+  "retry-scheduled": (snapshot, record) => ({
+    ...snapshot,
+    ...(record.workOrder ? { outstandingWorkOrder: record.workOrder } : {}),
+    delegationRetries: (snapshot.delegationRetries ?? 0) + 1,
+  }),
   "blocker-cleared-and-revalidated": (snapshot) => {
     const { halt: _cleared, ...rest } = snapshot;
     return rest;

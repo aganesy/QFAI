@@ -1419,17 +1419,19 @@ function acceptPreamble(
   }
   const carried = carriedAuthorization(result);
   if (carried.length > 0) return refusedWith(run, carried);
+  // The sequence is checked before the payload: a result prepared against an earlier state is
+  // stale whatever it names.
+  if (result.expectedSequence !== run.sequence) {
+    const message =
+      "The run moved on since this result was prepared. Read the run's status and submit again.";
+    return { verdict: { ok: false, run, error: { code: "stale-sequence", message } }, events: [] };
+  }
   if (
     result.workOrderId !== workOrder?.workOrderId ||
     result.stageInstanceId !== workOrder.stageInstanceId ||
     result.attempt !== workOrder.attempt
   ) {
     return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
-  }
-  if (result.expectedSequence !== run.sequence) {
-    const message =
-      "The run moved on since this result was prepared. Read the run's status and submit again.";
-    return { verdict: { ok: false, run, error: { code: "stale-sequence", message } }, events: [] };
   }
   return undefined;
 }

@@ -175,3 +175,73 @@ export async function startRun(root: string, input: unknown = START_INPUT): Prom
   if (typeof id !== "string") throw new Error(`start refused: ${started.stdout}`);
   return id;
 }
+
+/** A routing proposal for the discovery route, which needs no spec and no approval. */
+export const DISCOVERY_PROPOSAL = {
+  requestKind: "change",
+  candidateRoute: "discovery",
+  goal: "Settle what the export should contain.",
+  expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
+  observedRefs: [],
+  affectedSpecIds: [],
+  riskSignals: [],
+  unresolvedQuestions: [],
+  newCapabilities: [],
+  proposedWriteScope: ["docs/**"],
+  protectedTargets: [],
+  requiredStages: ["discussion"],
+};
+
+/** A routing proposal for the feature route, naming one new capability. */
+export const FEATURE_PROPOSAL = {
+  ...DISCOVERY_PROPOSAL,
+  candidateRoute: "feature",
+  goal: "Export an order as CSV.",
+  newCapabilities: [
+    {
+      goal: "CSV export of an order",
+      covers: ["the order lines"],
+      excludes: ["invoices"],
+      evidence: ["No spec names an export."],
+    },
+  ],
+  proposedWriteScope: [".qfai/specs/**", "src/**"],
+  requiredStages: ["sdd", "implement", "verify"],
+};
+
+/** A result for the work order a document names, submitted at the sequence it names. */
+export function resultFor(document: unknown, resultId: string, extra: object = {}) {
+  const workOrder = field(document, "workOrder");
+  return {
+    resultId,
+    workOrderId: field(workOrder, "workOrderId"),
+    stageInstanceId: field(workOrder, "stageInstanceId"),
+    attempt: field(workOrder, "attempt"),
+    expectedSequence: field(workOrder, "expectedSequence"),
+    outcome: "accepted",
+    testObservation: "not_applicable",
+    ...extra,
+  };
+}
+
+/** Submits a payload through the run's inbox with the operation named. */
+let submitted = 0;
+
+export async function submit(root: string, runId: string, operation: string, payload: unknown) {
+  submitted += 1;
+  const file = await inbox(root, runId, `${operation}-${String(submitted)}`, payload);
+  return workflow(root, [operation, "--run", runId, "--in", file]);
+}
+
+/** A started run whose routing result for `proposal` has been submitted. */
+export async function routedRun(root: string, proposal: object = DISCOVERY_PROPOSAL) {
+  const runId = await startRun(root);
+  const routing = workflow(root, ["next", "--run", runId]);
+  const routed = await submit(
+    root,
+    runId,
+    "accept",
+    resultFor(routing.json, "route-1", { proposal }),
+  );
+  return { runId, routing, routed };
+}

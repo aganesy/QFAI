@@ -287,3 +287,25 @@ function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<strin
   }
   return removed;
 }
+
+/**
+ * Every path the working tree holds uncommitted: tracked changes, staged or not, and untracked
+ * files git does not ignore. `null` when `root` is not inside a git repository.
+ *
+ * `-z` for the reason given above, and `--no-renames` so a move reports both endpoints.
+ */
+export function uncommittedPaths(root: string): string[] | null {
+  const output = gitStdout(root, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+    "--no-renames",
+  ]);
+  if (output === null) return null;
+  return output
+    .split("\0")
+    .filter((entry) => entry.length > 3)
+    .map((entry) => normalizeRepoPath(entry.slice(3)))
+    .sort();
+}

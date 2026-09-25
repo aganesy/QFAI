@@ -7,6 +7,7 @@ import fg from "fast-glob";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { loadConfig, resolvePath } from "../config.js";
+import { uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
 import { resolveToolVersion } from "../version.js";
@@ -162,4 +163,63 @@ export async function routingFacts(root: string, proposal: unknown): Promise<Wor
   );
   const [plans, specs] = await Promise.all([planFacts(), specFacts(root)]);
   return { pathExistence: Object.fromEntries(existence), plans, specs, contractIds: [] };
+}
+
+// This run's copy of the verify report, read from the stage that accepted it.
+async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
+  const verifies = (snapshot.acceptedStages ?? []).filter((each) => each.stageKind === "verify");
+  const stage = verifies.at(-1);
+  if (!stage) return undefined;
+  const file = path.join(runDir, "reports", stage.stageInstanceId, "verify.json");
+  const parsed: unknown = JSON.parse(await readFile(file, "utf8").catch(() => "null"));
+  if (!isRecord(parsed)) return undefined;
+  const { status, scope } = parsed;
+  return {
+    runId: snapshot.run.id,
+    stageInstanceId: stage.stageInstanceId,
+    status: typeof status === "string" ? status : "",
+    scope: typeof scope === "string" ? scope : "",
+  };
+}
+
+// What `finish` observes: validate run in process, this run's verify report, the tool and
+// policy it runs under, and the working tree's uncommitted paths.
+// SIMPLIFIED: the run's changed paths are the uncommitted ones, so a change committed during the
+// run is not counted; and under `failOn: never` no finding is reported, so no debt stays open.
+// Lift when: `start` fixes the commit the run began at, and a `never` project runs a workflow.
+export async function completionFacts(
+  root: string,
+  runDir: string,
+  snapshot: WorkflowSnapshot,
+): Promise<WorkflowFacts> {
+  const [result, loaded, toolVersion, entryDigest, policyDigests, verifyReport] = await Promise.all(
+    [
+      validateQuietly(root),
+      loadConfig(root),
+      resolveToolVersion(),
+      cliEntryDigest(),
+      policyDigestsOf(root),
+      verifyReportOf(runDir, snapshot),
+    ],
+  );
+  const failOn = loaded.config.validation.failOn;
+  const findings = result.issues.map((issue) => ({
+    code: issue.code,
+    file: issue.file ?? "",
+    refs: [...(issue.refs ?? [])].sort(),
+    severity: issue.severity,
+  }));
+  const changed = uncommittedPaths(root) ?? [];
+  const validate =
+    failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
+  const completion = {
+    validate,
+    ...(verifyReport ? { verifyReport } : {}),
+    toolVersion,
+    cliEntryDigest: entryDigest,
+    policyDigests,
+    changedPaths: changed,
+    uncommittedPaths: changed,
+  };
+  return { completion };
 }
