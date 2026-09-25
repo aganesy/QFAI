@@ -12,14 +12,12 @@ mode: execution-focused
 
 [DRIFT-PROTOCOL:MANDATORY]
 
-The operator states a change once. This skill fixes the request, proposes the
-route, and hands each stage to the skill that owns it. `qfai workflow` decides
-what happens next; this skill carries its answers.
+The operator states a change once. This skill proposes the route and hands each
+stage to its owning skill; `qfai workflow` decides what happens next.
 
 - Every call and payload shape: `references/payloads.md`.
 - What the operator sees, and how questions are put: `references/operator-screens.md`.
-- Invoke the CLI through the launcher of
-  `.qfai/assistant/constitution/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
+- Invoke the CLI through the launcher of `.qfai/assistant/constitution/shared-skill-operating-baseline.md#canonical-qfai-launcher-mandatory`.
 
 ## What this skill never does
 
@@ -38,8 +36,14 @@ Read the mode from `npx qfai workflow status` first.
 | `shadow` | Propose the stages and the reason. Call no write operation, and say that nothing was written |
 | `off`    | Start no run. The operator invokes the stage skills by name                                  |
 
-When `status` reports a run in progress, the operator's `continue` resumes it
-with `resume`. The request is not classified again.
+## Request kinds
+
+Classify the request before any write call. Only `change` calls `start`.
+
+- `resume`, or `continue` on a run in progress: call `resume`. Do not classify again.
+- `cancel`: call `decision` with `stop`.
+- `explicit_stage`, `plan_only`, `verify_only`: invoke the stage skill by name.
+- `read_only`: answer it in the conversation.
 
 ## The run
 
@@ -62,9 +66,6 @@ with `resume`. The request is not classified again.
    names the delay to wait before handing the same work order over again.
 6. **Finish.** When the target is `qfai_done`, commit the run's changes, then
    call `finish` and give the completion report.
-
-When the run is `awaiting_input`, put the open questions and relay each answer
-with `decision`, as `references/operator-screens.md` sets out.
 
 ## User Questions (AskUserQuestion Protocol)
 

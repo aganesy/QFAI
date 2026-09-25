@@ -267,13 +267,20 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0257 | TC-0018-0223 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0258 | TC-0018-0224 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0259 | TC-0018-0225 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0261 | TC-0018-0011 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0263 | TC-0018-0019 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0264 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0265 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0266 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0267 | TC-0018-0020 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0268 | TC-0018-0024 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0365 | TC-0018-0164 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0366 | TC-0018-0166 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0371 | TC-0018-0168 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0374 | TC-0018-0170 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0389 | TC-0018-0183 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0390 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0391 | TC-0018-0184 | Closed `exception` under DR-0298; per-row review waived |
@@ -293,6 +300,18 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0405 | TC-0018-0185 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0406 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0407 | TC-0018-0186 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0429 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0430 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0431 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0432 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0433 | TC-0018-0218 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0434 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0435 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0436 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0437 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0438 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0439 | TC-0018-0219 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0446 | TC-0018-0229 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0465 | TC-0018-0238 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0466 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0467 | TC-0018-0239 | Closed `exception` under DR-0298; per-row review waived |
@@ -320,6 +339,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0497 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0498 | TC-0018-0250 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0499 | TC-0018-0251 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0502 | TC-0018-0254 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0503 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0504 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0505 | TC-0018-0255 | Closed `exception` under DR-0298; per-row review waived |
@@ -4426,6 +4446,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/evalScoring.test.ts > TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file`
 - Production files: `packages/qfai/tests/helpers/routingEval.ts`
 
+### TDD-0261
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0011 (TDD-0261): Read the shipped qfai-run skill and its references`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0011 \(TDD-0261\): Read the shipped qfai-run skill and its references' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1 on the first run, from a defect in the test: it read only the first line of the two-line announcement step, `→ expected { states: [ true, false ], …(2) } to deeply equal { states: [ true, true ], …(2) }`, `tests/integration/workflow/skillAssets.test.ts:90`. With the step read whole it passed with no asset change: already satisfied by the shipped `qfai-run` announcement and question guidance
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0011 (TDD-0261): Read the shipped qfai-run skill and its references`
+- Production files: none
+
 ### TDD-0263
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4476,6 +4506,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0020 (TDD-0267): feature`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
 
+### TDD-0268
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0024 (TDD-0268): Read the qfai-run routing block and its shipped manifest entry`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0024 \(TDD-0268\): Read the qfai-run routing block and its shipped manifest entry' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` routing entry, which routes only the orchestrator and names no review profile; the role, routing and autopilot validators report nothing for it
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0024 (TDD-0268): Read the qfai-run routing block and its shipped manifest entry`
+- Production files: none
+
 ### TDD-0315
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4486,6 +4526,26 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0094 (TDD-0315): Load the five shipped plans`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
 
+### TDD-0355
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0139 (TDD-0355): Read the recovery guidance of the shipped qfai-run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0139 \(TDD-0355\): Read the recovery guidance of the shipped qfai-run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` halt notice
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0139 (TDD-0355): Read the recovery guidance of the shipped qfai-run`
+- Production files: none
+
+### TDD-0356
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0157 (TDD-0356): Read the request-kind guidance of the shipped qfai-run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0157 \(TDD-0356\): Read the request-kind guidance of the shipped qfai-run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { change: false, resume: false, …(3) } to deeply equal { change: true, resume: true, …(3) }`, `tests/integration/workflow/skillAssets.test.ts:136`; the skill called `start` before classifying the request
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0157 (TDD-0356): Read the request-kind guidance of the shipped qfai-run`
+- Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/SKILL.md`
+
 ### TDD-0365
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4495,6 +4555,36 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `→ expected [] to deeply equal [ [ 'maintenance', …(3) ], …(1) ]`, `tests/integration/workflow/plans.test.ts:182`
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0164 (TDD-0365): Load the shipped direct`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0366
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0166 (TDD-0366): Read the shipped qfai-maintain skill`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0166 \(TDD-0366\): Read the shipped qfai-maintain skill' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-maintain` skill; the role, routing and autopilot validators report nothing for it
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0166 (TDD-0366): Read the shipped qfai-maintain skill`
+- Production files: none
+
+### TDD-0371
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0168 (TDD-0371): Read the shipped qfai-maintain guidance`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0168 \(TDD-0371\): Read the shipped qfai-maintain guidance' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-maintain` edit steps
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0168 (TDD-0371): Read the shipped qfai-maintain guidance`
+- Production files: none
+
+### TDD-0374
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0170 (TDD-0374): Read the mode guidance of the shipped qfai-run`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0170 \(TDD-0374\): Read the mode guidance of the shipped qfai-run' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run` mode table. The route is proposed as its stages in plain words, since the operator never sees a route name
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0170 (TDD-0374): Read the mode guidance of the shipped qfai-run`
+- Production files: none
 
 ### TDD-0389
 
@@ -4685,6 +4775,126 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by TDD-0390 to TDD-0399, whose installed-plan check exempts discovery from the verify-path rule
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/plans.test.ts > TC-0018-0186 (TDD-0407): discovery-ends-routing`
 - Production files: `packages/qfai/src/core/workflow/plans.ts`
+
+### TDD-0429
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0218 (TDD-0429): discovery`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0218 \(TDD-0429\): discovery' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for claude-code, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0218 (TDD-0429): discovery`
+- Production files: none
+
+### TDD-0430
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0218 (TDD-0430): entry-directive`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0218 \(TDD-0430\): entry-directive' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for claude-code, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0218 (TDD-0430): entry-directive`
+- Production files: none
+
+### TDD-0431
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0218 (TDD-0431): one-wrapper-source`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0218 \(TDD-0431\): one-wrapper-source' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for claude-code, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0218 (TDD-0431): one-wrapper-source`
+- Production files: none
+
+### TDD-0432
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0218 (TDD-0432): no-disable-model-invocation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0218 \(TDD-0432\): no-disable-model-invocation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for claude-code, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0218 (TDD-0432): no-disable-model-invocation`
+- Production files: none
+
+### TDD-0433
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0218 (TDD-0433): no-openai-yaml`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0218 \(TDD-0433\): no-openai-yaml' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for claude-code, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0218 (TDD-0433): no-openai-yaml`
+- Production files: none
+
+### TDD-0434
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0434): discovery`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0434\): discovery' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0434): discovery`
+- Production files: none
+
+### TDD-0435
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0435): entry-directive`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0435\): entry-directive' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0435): entry-directive`
+- Production files: none
+
+### TDD-0436
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0436): one-wrapper-source`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0436\): one-wrapper-source' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0436): one-wrapper-source`
+- Production files: none
+
+### TDD-0437
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0437): no-disable-model-invocation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0437\): no-disable-model-invocation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0437): no-disable-model-invocation`
+- Production files: none
+
+### TDD-0438
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0438): no-openai-yaml`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0438\): no-openai-yaml' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0438): no-openai-yaml`
+- Production files: none
+
+### TDD-0439
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0219 (TDD-0439): reviewer-read-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0219 \(TDD-0439\): reviewer-read-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the tree `qfai init` writes for codex, read through `runInit` in a temporary git repository
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0219 (TDD-0439): reviewer-read-only`
+- Production files: none
+
+### TDD-0446
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0229 (TDD-0446): Count the lines of the shipped qfai-run/SKILL`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0229 \(TDD-0446\): Count the lines of the shipped qfai-run/SKILL' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by the shipped `qfai-run/SKILL.md`, then 149 lines. It stays at 150 lines after the request-kind guidance of TDD-0356 was added
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0229 (TDD-0446): Count the lines of the shipped qfai-run/SKILL`
+- Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/SKILL.md`
 
 ### TDD-0465
 
@@ -4959,6 +5169,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aStageWritesOnlyItsOwnRecords.test.ts > TC-0018-0251 (TDD-0499): scope digest leaves recordAreas out`
 - Production files: `packages/qfai/src/core/workflow/decide.ts`
 - Design choice (settled between agents): CLI-WF `### Work order` says `scope.digest` covers `scope` only and CLI-WFFILE names no further inputs, so the digest is the SHA-256, the helper the ledger row-set digest already uses, of the JSON of the other four scope fields in a fixed order: `writeAreas`, `protectedTargets`, `allowedEffects`, `nonGoals`. The scope's `SIMPLIFIED` marker now names only what is still missing: the plan carries no protected targets and nothing supplies non-goals, so the digest reads each as empty until the checked plan keeps them.
+
+### TDD-0502
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/skillAssets.test.ts`
+- Selector: `TC-0018-0254 (TDD-0502): the per-kind write-scope list in the routing reference`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/skillAssets.test.ts --testNamePattern='TC-0018-0254 \(TDD-0502\): the per-kind write-scope list in the routing reference' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `→ expected { …(2) } to deeply equal { perKind: [ true, true, …(2) ], …(1) }`, `tests/integration/workflow/skillAssets.test.ts:214`; the routing reference had no per-kind list and named five of the seven protected paths
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/skillAssets.test.ts > TC-0018-0254 (TDD-0502): the per-kind write-scope list in the routing reference`
+- Production files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-run/references/payloads.md`
 
 ### TDD-0503
 

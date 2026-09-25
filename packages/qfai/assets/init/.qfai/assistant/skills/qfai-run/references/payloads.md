@@ -91,7 +91,15 @@ The routing work order's result carries the proposal.
 - `newCapabilities` holds `{ goal, covers, excludes, evidence }` for each
   capability no spec owns. `evidence` is what shows no spec owns it.
 - `proposedWriteScope` never names `.git/`, `.qfai/runs/`, `.qfai/decisions/`,
-  `.qfai/evidence/decisions/` or `.qfai/evidence/workflow/`.
+  `.qfai/evidence/decisions/`, `.qfai/evidence/workflow/`,
+  `.qfai/evidence/change-request-*.md` or `.qfai/evidence/decision-*.md`, and
+  never overlaps a protected target. The run refuses any of these.
+
+Each stage kind adds only its narrowest set to `proposedWriteScope`:
+`sdd_delta` the spec packs its `affectedSpecIds` name; `sdd` `.qfai/specs/**`
+and `_policies/**`, only for a new capability; `discussion` its tracked records,
+and `DESIGN.md` for a UI-bearing target; a UI-bearing `prototype`
+`.qfai/contracts/design/**`.
 
 ## Question input
 

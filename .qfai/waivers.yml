@@ -454,13 +454,20 @@ waivers:
         - TDD-0257
         - TDD-0258
         - TDD-0259
+        - TDD-0261
         - TDD-0263
         - TDD-0264
         - TDD-0265
         - TDD-0266
         - TDD-0267
+        - TDD-0268
         - TDD-0315
+        - TDD-0355
+        - TDD-0356
         - TDD-0365
+        - TDD-0366
+        - TDD-0371
+        - TDD-0374
         - TDD-0389
         - TDD-0390
         - TDD-0391
@@ -480,6 +487,18 @@ waivers:
         - TDD-0405
         - TDD-0406
         - TDD-0407
+        - TDD-0429
+        - TDD-0430
+        - TDD-0431
+        - TDD-0432
+        - TDD-0433
+        - TDD-0434
+        - TDD-0435
+        - TDD-0436
+        - TDD-0437
+        - TDD-0438
+        - TDD-0439
+        - TDD-0446
         - TDD-0465
         - TDD-0466
         - TDD-0467
@@ -507,6 +526,7 @@ waivers:
         - TDD-0497
         - TDD-0498
         - TDD-0499
+        - TDD-0502
         - TDD-0503
         - TDD-0504
         - TDD-0505
