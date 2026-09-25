@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runReport } from "../../../../src/cli/commands/report.js";
 import { runValidate, scopedReportPath } from "../../../../src/cli/commands/validate.js";
 import { parseArgs } from "../../../../src/cli/lib/args.js";
+import { validateProject } from "../../../../src/core/validate.js";
 
 const roots: string[] = [];
 
@@ -62,6 +63,39 @@ describe("story-tree CLI flow scope", () => {
     expect(await exists(path.join(root, ".qfai/report/validate.flow-0009.json"))).toBe(false);
     expect(await exists(path.join(root, ".qfai/report/validate.json"))).toBe(false);
   });
+
+  it("TC-0004-0111: writes the scoped result when a v1 stateDiagram warning is present", async () => {
+    // Only an unusable `--flow` value withholds the scoped result. A Mermaid
+    // warning in the flow is an ordinary finding and must land in it.
+    const root = await storyRoot();
+    await writeFile(
+      path.join(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
+      "# BF-0001: Flow 0001\n\n```mermaid\nstateDiagram\n  [*] --> Draft\n```\n",
+      "utf8",
+    );
+    await runValidate({ root, strict: false, failOn: "never", flowIds: ["BF-0001"] });
+    const scoped = path.join(root, ".qfai/report/validate.flow-0001.json");
+    expect(await exists(scoped)).toBe(true);
+    const result = JSON.parse(await readFile(scoped, "utf8")) as {
+      issues: Array<{ code: string; severity: string }>;
+    };
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ code: "QFAI-FLOW-001", severity: "warning" }),
+    );
+    expect(result.issues.some((finding) => finding.code === "QFAI-FLOW-005")).toBe(false);
+  });
+
+  it.each(["../outside", "BF-0009"])(
+    "TC-0004-0113: %s is reported as an unusable --flow value",
+    async (value) => {
+      const root = await storyRoot();
+      const result = await validateProject(root, undefined, { profile: "sdd", flowIds: [value] });
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({ code: "QFAI-FLOW-005", severity: "error", refs: [value] }),
+      );
+      expect(result.issues.some((finding) => finding.code === "QFAI-FLOW-001")).toBe(false);
+    },
+  );
 
   it("TC-0004-0112: refuses --spec on a story tree", async () => {
     // QFAI:EX-0001-0097-05

@@ -110,7 +110,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
       "error",
     );
     expect(missingFlow.status).toBe(1);
-    expect(missingFlow.stdout + missingFlow.stderr).toContain("QFAI-FLOW-001");
+    expect(missingFlow.stdout + missingFlow.stderr).toContain("QFAI-FLOW-005");
     expect(await exists(scopedPath)).toBe(false);
 
     // The path and absent flow belong to the story tree; the DG rule belongs
@@ -208,7 +208,7 @@ describe("BF-0003: diagnose and repair a QFAI workspace", () => {
     );
     expect(validated.status).toBe(0);
     const validation = JSON.parse(await readFile(scopedPath, "utf8")) as ValidateResult;
-    expect(validation.issues.some((issue) => issue.code === "QFAI-FLOW-001")).toBe(false);
+    expect(validation.issues.some((issue) => issue.code === "QFAI-FLOW-005")).toBe(false);
     const guardrails = cli(root, "guardrails", "check", "--root", root, "--format", "json");
     expect(guardrails.status).toBe(0);
     expect(JSON.parse(guardrails.stdout)).toMatchObject({ summary: { errors: 0 } });
