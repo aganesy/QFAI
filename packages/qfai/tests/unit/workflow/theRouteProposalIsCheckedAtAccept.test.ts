@@ -211,6 +211,22 @@ it("TC-0018-0012 (TDD-0017): inactive-spec", () => {
   expect(actual).toEqual(refused({ reason: "inactive-spec", subject: "spec-0008" }));
 });
 
+it("TC-0018-0012 (TDD-0018): broken-reference", () => {
+  const actual = acceptRouting(
+    { ...checkedProposal(), affectedSpecIds: ["spec-0007"] },
+    {
+      specs: { "spec-0007": { lifecycle: "active" } },
+      itemReferences: {
+        "spec-0007#AC-0007-0003": "resolved",
+        "spec-0007#BR-0007-0099": "unresolved",
+      },
+    },
+  );
+  expect(actual).toEqual(
+    refused({ reason: "broken-reference", subject: "spec-0007#BR-0007-0099" }),
+  );
+});
+
 it("TC-0018-0012 (TDD-0019): protected-surface", () => {
   const actual = acceptRouting({
     ...checkedProposal(),

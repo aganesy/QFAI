@@ -25,6 +25,7 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0015 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0016 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0017 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0018 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0019 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0020 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0021 | TC-0018-0012 | Closed `exception` under DR-0298; per-row review waived |
@@ -41,6 +42,30 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0032 | TC-0018-0021 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0033 | TC-0018-0022 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0034 | TC-0018-0023 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0056 | TC-0018-0044 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0057 | TC-0018-0045 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0058 | TC-0018-0046 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0059 | TC-0018-0047 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0060 | TC-0018-0048 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0061 | TC-0018-0048 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0062 | TC-0018-0048 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0063 | TC-0018-0048 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0064 | TC-0018-0049 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0065 | TC-0018-0051 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0066 | TC-0018-0052 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0067 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0068 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0069 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0070 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0071 | TC-0018-0053 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0072 | TC-0018-0054 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0073 | TC-0018-0055 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0212 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0213 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0214 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0215 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0216 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0217 | TC-0018-0158 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0527 | TC-0018-0268 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0528 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0529 | TC-0018-0269 | Closed `exception` under DR-0298; per-row review waived |
@@ -1421,6 +1446,17 @@ Each: ok false, proposal-refused, routing sequence 2 and events [] matched the e
 - GREEN result: exit 0; `✓ ... TC-0018-0012 (TDD-0017): inactive-spec`, 1 passed, 2 skipped. `proposal-refused` / `inactive-spec` naming `spec-0008`; state `routing`, no events.
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (an affected spec whose lifecycle fact is not `active` is `inactive-spec`).
 
+### TDD-0018
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts`
+- Selector: `TC-0018-0012 (TDD-0018): broken-reference`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts --testNamePattern='TC-0018-0012 \(TDD-0018\): broken-reference' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: undefined, reasons: [], …(2) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts:225:18`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theRouteProposalIsCheckedAtAccept.test.ts > TC-0018-0012 (TDD-0018): broken-reference`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice: observers report item references as `facts.itemReferences`, a map from the reference to its resolution, `resolved` or `unresolved`. It has the shape `facts.pathExistence` and `facts.receiptValidity` already have: keyed by what was observed, valued by what the observation found. The core refuses every `unresolved` entry `broken-reference`, naming the reference, and reads no spec or contract text itself. Which references an observer reports, and how it spells one, stay the observer's; no later row in this ledger specifies that observer, so the fact carries no further field. Decided between agents.
+
 ### TDD-0019
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -1826,6 +1862,249 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 1; `toEqual(refusedInput("reuse-stale"))` at `tests/unit/workflow/aSkippedStageIsNeverAPass.test.ts:101:5` — a reuse naming a receipt classed `stale` was accepted.
 - GREEN result: exit 0; `✓ ... TC-0018-0023 (TDD-0034): A result with notRun`, 1 passed, 2 skipped.
 - Production files: `packages/qfai/src/core/workflow/decide.ts` (a `reused` entry whose receipt is not classed `valid` in `facts.receiptValidity` is `reuse-stale`; `unknown` counts as not valid).
+
+### TDD-0056
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/debtBlocksCompletion.test.ts`
+- Selector: `TC-0018-0044 (TDD-0056): A result with a debt that has no resolvingOwner`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/debtBlocksCompletion.test.ts --testNamePattern='TC-0018-0044 \(TDD-0056\): A result with a debt that has no resolvingOwner' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, …(4) } to deeply equal { ok: false, …(4) }` at `tests/unit/workflow/debtBlocksCompletion.test.ts:74:18`; the core refused the `accepted_with_debt` outcome with no reasons
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/debtBlocksCompletion.test.ts > TC-0018-0044 (TDD-0056): A result with a debt that has no resolvingOwner`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0057
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/theSeamOnlyRoundTrip.test.ts`
+- Selector: `TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome needs_repair`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/theSeamOnlyRoundTrip.test.ts --testNamePattern='TC-0018-0045 \(TDD-0057\): An acceptance result with seamRequest and outcome needs_repair' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { repairState: 'running', …(3) } to deeply equal { repairState: 'ready', …(3) }` at `tests/unit/workflow/theSeamOnlyRoundTrip.test.ts:139:6`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/theSeamOnlyRoundTrip.test.ts > TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome needs_repair`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice: the snapshot carries the open seam request as `seamRequest` (the acceptance work order it returns to, that stage instance, its attempt and the target test) and the last issued attempt per stage instance as `attempts`. While `seamRequest` is set, `next` issues the seam-only work order: stage kind `implement`, skill `qfai-implement`, operation `seam-only`, `parentWorkOrderId` naming the acceptance work order. Once the snapshot no longer holds it, `next` reissues the acceptance stage instance at the next attempt. How the journal replays into those two fields belongs to persistence.
+
+### TDD-0058
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aSeamNeverPassesTheAssertion.test.ts`
+- Selector: `TC-0018-0046 (TDD-0058): A seam-only result whose seam`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aSeamNeverPassesTheAssertion.test.ts --testNamePattern='TC-0018-0046 \(TDD-0058\): A seam-only result whose seam' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { …(4) } to deeply equal { …(4) }` at `tests/unit/workflow/aSeamNeverPassesTheAssertion.test.ts:80:6`; the seam-only result observing `pass` was accepted
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aSeamNeverPassesTheAssertion.test.ts > TC-0018-0046 (TDD-0058): A seam-only result whose seam`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0059
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts`
+- Selector: `TC-0018-0047 (TDD-0059): An acceptance result with testObservation`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts --testNamePattern='TC-0018-0047 \(TDD-0059\): An acceptance result with testObservation' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on the first run; already satisfied by TDD-0028, whose bounded-change stage driving accepts an acceptance result and issues implement next
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts > TC-0018-0047 (TDD-0059): An acceptance result with testObservation`
+- Production files: none; the test adds the `testObservation` and `red` result fields to the input type in `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0060
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts`
+- Selector: `TC-0018-0048 (TDD-0060): collection`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts --testNamePattern='TC-0018-0048 \(TDD-0060\): collection' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts:121:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts > TC-0018-0048 (TDD-0060): collection`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0061
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts`
+- Selector: `TC-0018-0048 (TDD-0061): import`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts --testNamePattern='TC-0018-0048 \(TDD-0061\): import' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts:126:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts > TC-0018-0048 (TDD-0061): import`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0062
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts`
+- Selector: `TC-0018-0048 (TDD-0062): startup`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts --testNamePattern='TC-0018-0048 \(TDD-0062\): startup' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts:131:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts > TC-0018-0048 (TDD-0062): startup`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0063
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts`
+- Selector: `TC-0018-0048 (TDD-0063): timeout`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts --testNamePattern='TC-0018-0048 \(TDD-0063\): timeout' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { state: 'ready', …(3) } to deeply equal { state: 'running', …(3) }` at `tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts:136:29`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/onlyAnAssertionFailureIsRed.test.ts > TC-0018-0048 (TDD-0063): timeout`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0064
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/outcomeAndObservationStayApart.test.ts`
+- Selector: `TC-0018-0049 (TDD-0064): A result with outcome unrun`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/outcomeAndObservationStayApart.test.ts --testNamePattern='TC-0018-0049 \(TDD-0064\): A result with outcome unrun' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { ok: false, state: 'running', …(1) } to deeply equal { ok: true, state: 'blocked', …(1) }` at `tests/unit/workflow/outcomeAndObservationStayApart.test.ts:57:6`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/outcomeAndObservationStayApart.test.ts > TC-0018-0049 (TDD-0064): A result with outcome unrun`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0065
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0051 (TDD-0065): Resubmit the accepted SDD result with the same resultId after the run moved on, its expected sequence now stale`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0051 \(TDD-0065\): Resubmit the accepted SDD result with the same resultId after the run moved on, its expected sequence now stale' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { verdict: { ok: false, …(2) }, …(1) } to deeply equal { verdict: { ok: true, …(1) }, …(1) }` at `tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:102:62`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0051 (TDD-0065): Resubmit the accepted SDD result with the same resultId after the run moved on, its expected sequence now stale`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Design choice: the snapshot carries `recordedResults`, each accepted result's payload digest and stored verdict keyed by `resultId`, and the input carries `payloadDigest`, which the command adapter computes from the submitted bytes. `accept` looks the `resultId` up before any other check, so a resubmission returns its stored verdict with no events whatever the run's current sequence.
+
+### TDD-0066
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0052 (TDD-0066): The recorded resultId with a different payload digest`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0052 \(TDD-0066\): The recorded resultId with a different payload digest' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:111:27`; the refusal carried no `result-id-reused` reason
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0052 (TDD-0066): The recorded resultId with a different payload digest`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0067
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0053 (TDD-0067): length-1`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0053 \(TDD-0067\): length-1' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied: the running-stage accept path already checked `resultId` against `[A-Za-z0-9._-]{1,64}`, from the checkpoint that preceded these rows
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0053 (TDD-0067): length-1`
+- Production files: none
+
+### TDD-0068
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0053 (TDD-0068): length-64`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0053 \(TDD-0068\): length-64' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on first run; already satisfied: the running-stage accept path already checked `resultId` against `[A-Za-z0-9._-]{1,64}`, from the checkpoint that preceded these rows
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0053 (TDD-0068): length-64`
+- Production files: none
+
+### TDD-0069
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0053 (TDD-0069): empty`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0053 \(TDD-0069\): empty' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:179:37`; the refusal carried no `schema` reason
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0053 (TDD-0069): empty`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0070
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0053 (TDD-0070): length-65`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0053 \(TDD-0070\): length-65' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:183:49`; the refusal carried no `schema` reason
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0053 (TDD-0070): length-65`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0071
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts`
+- Selector: `TC-0018-0053 (TDD-0071): outside-char`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts --testNamePattern='TC-0018-0053 \(TDD-0071\): outside-char' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts:187:48`; the refusal carried no `schema` reason
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRecordedIdReturnsItsVerdictFirst.test.ts > TC-0018-0053 (TDD-0071): outside-char`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0072
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/acceptIsCompareAndSet.test.ts`
+- Selector: `TC-0018-0054 (TDD-0072): A result whose expectedSequence is behind the run's`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/acceptIsCompareAndSet.test.ts --testNamePattern='TC-0018-0054 \(TDD-0072\): A result whose expectedSequence is behind the run's' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { run: { id: 'run-cas', …(2) }, …(2) } to deeply equal { run: { id: 'run-cas', …(2) }, …(2) }` at `tests/unit/workflow/acceptIsCompareAndSet.test.ts:61:6`; the code was `invalid-input`, not `stale-sequence`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/acceptIsCompareAndSet.test.ts > TC-0018-0054 (TDD-0072): A result whose expectedSequence is behind the run's`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0073
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/acceptIsCompareAndSet.test.ts`
+- Selector: `TC-0018-0055 (TDD-0073): A result naming a work order other than the outstanding one`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/acceptIsCompareAndSet.test.ts --testNamePattern='TC-0018-0055 \(TDD-0073\): A result naming a work order other than the outstanding one' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(2) } to deeply equal { code: 'invalid-input', …(2) }` at `tests/unit/workflow/acceptIsCompareAndSet.test.ts:76:6`; the refusal carried no `work-order` reason
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/acceptIsCompareAndSet.test.ts > TC-0018-0055 (TDD-0073): A result naming a work order other than the outstanding one`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0212
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0212): read-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0212\): read-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:64:42`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0212): read-only`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+- Correction: the contract names `scope-escape` for a `requestKind` other than `change`, and the core refused that kind `invalid-input` before any proposal check. The core now refuses a non-`change` kind `proposal-refused` with reason `scope-escape`, naming the kind, and keeps `invalid-input` for a kind outside the seven the contract lists. A proposal with `candidateRoute: null` no longer draws a `stage-set` refusal for omitting `verify`, because it names no change route.
+
+### TDD-0213
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0213): plan-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0213\): plan-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:68:42`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0213): plan-only`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0214
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0214): verify-only`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0214\): verify-only' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:72:44`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0214): verify-only`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0215
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0215): resume`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0215\): resume' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:76:39`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0215): resume`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0216
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0216): cancel`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0216\): cancel' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:80:39`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0216): cancel`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
+
+### TDD-0217
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts`
+- Selector: `TC-0018-0158 (TDD-0217): explicit-stage`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts --testNamePattern='TC-0018-0158 \(TDD-0217\): explicit-stage' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `AssertionError: expected { code: 'invalid-input', …(3) } to deeply equal { code: 'proposal-refused', …(3) }` at `tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts:84:47`
+- GREEN result: exit 0; `✓ |unit| tests/unit/workflow/aRoutingResultForAnotherKindIsRefused.test.ts > TC-0018-0158 (TDD-0217): explicit-stage`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0527
 

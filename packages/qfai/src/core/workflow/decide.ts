@@ -24,6 +24,7 @@ export interface WorkflowEvent {
   binding?: WorkflowBinding;
   plan?: WorkflowPlan;
   notRun?: WorkflowNotRun;
+  seamRequest?: { targetTestId: string };
 }
 
 type WorkflowNotRun =
@@ -44,6 +45,7 @@ interface WorkflowWorkOrder {
   executor?: { skill: string };
   operation?: string;
   authorizationRefs?: string[];
+  parentWorkOrderId?: string;
 }
 
 interface WorkflowAuthorization {
@@ -77,8 +79,9 @@ export interface WorkflowDecision {
       | {
           code: "invalid-input";
           message: string;
-          reasons?: { reason: InputRefusalReason; subject: string }[];
+          reasons?: InputRefusal[];
         }
+      | { code: "stale-sequence"; message: string }
       | {
           code: "proposal-refused";
           message: string;
@@ -88,12 +91,26 @@ export interface WorkflowDecision {
   events: WorkflowEvent[];
 }
 
-type InputRefusalReason = "skip-unexplained" | "reuse-stale";
+type InputRefusalReason =
+  | "skip-unexplained"
+  | "reuse-stale"
+  | "debt-owner-missing"
+  | "seam-passed"
+  | "red-not-assertion"
+  | "schema"
+  | "work-order"
+  | "result-id-reused";
+
+interface InputRefusal {
+  reason: InputRefusalReason;
+  subject: string;
+}
 
 type ProposalRefusalReason =
   | "unknown-path"
   | "unknown-id"
   | "inactive-spec"
+  | "broken-reference"
   | "protected-surface"
   | "scope-escape"
   | "unresolved-approval"
@@ -143,6 +160,16 @@ interface WorkflowSnapshot {
     };
   };
   acceptedStages?: { stageInstanceId: string; stageKind: string; outcome: string }[];
+  seamRequest?: WorkflowSeamRequest;
+  attempts?: Record<string, number>;
+  recordedResults?: Record<string, { payloadDigest: string; verdict: WorkflowDecision["verdict"] }>;
+}
+
+interface WorkflowSeamRequest {
+  parentWorkOrderId: string;
+  stageInstanceId: string;
+  attempt: number;
+  targetTestId: string;
 }
 
 interface WorkflowInput {
@@ -151,6 +178,7 @@ interface WorkflowInput {
   answer?: { optionIds: string[] };
   answeredBy?: string;
   expectedSequence?: number;
+  payloadDigest?: string;
   result?: {
     resultId: string;
     workOrderId: string;
@@ -161,6 +189,11 @@ interface WorkflowInput {
     diagnosis?: { verdict: string; reproductionRef: string; matchedRowIds: string[] };
     bindings?: WorkflowBinding[];
     notRun?: WorkflowNotRun;
+    debts?: WorkflowDebt[];
+    seamRequest?: { targetTestId: string };
+    seam?: { targetTestId: string; observation: string };
+    testObservation?: string;
+    red?: { testId: string; failureKind: string };
     proposal?: {
       requestKind: string;
       candidateRoute: string | null;
@@ -184,6 +217,16 @@ interface WorkflowInput {
   };
 }
 
+interface WorkflowDebt {
+  findingCode: string;
+  path: string;
+  cause: string;
+  owningSpec: string;
+  detectingCommand: string;
+  resolvingOwner?: string;
+  blockingExtent: string;
+}
+
 interface WorkflowFacts {
   now?: string;
   pathExistence?: Record<string, boolean>;
@@ -192,9 +235,22 @@ interface WorkflowFacts {
   specs?: Record<string, { lifecycle: string }>;
   contractIds?: string[];
   receiptValidity?: Record<string, "valid" | "stale" | "unknown">;
+  itemReferences?: Record<string, "resolved" | "unresolved">;
 }
 
 type WorkflowProposal = NonNullable<NonNullable<WorkflowInput["result"]>["proposal"]>;
+
+const REQUEST_KINDS = [
+  "change",
+  "read_only",
+  "plan_only",
+  "verify_only",
+  "resume",
+  "cancel",
+  "explicit_stage",
+];
+
+const RESULT_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
 const PROTECTED_PREFIXES = [
   ".git/",
@@ -263,8 +319,8 @@ function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[
   const omittedAlways = (plan?.stages ?? [])
     .filter((stage) => stage.when === "always" && !required.includes(stage.stageKind))
     .map((stage) => stage.stageKind);
-  const omittedVerify =
-    proposal.candidateRoute !== "discovery" && !required.includes("verify") ? ["verify"] : [];
+  const changeRoute = proposal.candidateRoute !== null && proposal.candidateRoute !== "discovery";
+  const omittedVerify = changeRoute && !required.includes("verify") ? ["verify"] : [];
   const unknown = plan ? required.filter((kind) => !planKinds.includes(kind)) : [];
   return [...new Set([...omittedAlways, ...omittedVerify, ...unknown])];
 }
@@ -293,6 +349,24 @@ function notRunRefusalOf(
   return undefined;
 }
 
+function resultRefusals(
+  result: NonNullable<WorkflowInput["result"]>,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  const refusals: InputRefusal[] = [];
+  const notRun = notRunRefusalOf(result.notRun, facts);
+  if (notRun) refusals.push({ reason: notRun, subject: "notRun" });
+  if (result.testObservation === "expected_red" && result.red?.failureKind !== "assertion") {
+    refusals.push({ reason: "red-not-assertion", subject: "red" });
+  }
+  (result.debts ?? []).forEach((debt, index) => {
+    if (!debt.resolvingOwner?.trim()) {
+      refusals.push({ reason: "debt-owner-missing", subject: `debts[${index}]` });
+    }
+  });
+  return refusals;
+}
+
 function refusalsOf(reason: ProposalRefusalReason, subjects: readonly string[]): ProposalRefusal[] {
   return subjects.map((subject) => ({ reason, subject }));
 }
@@ -316,6 +390,9 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     const lifecycle = facts.specs?.[specId]?.lifecycle;
     return lifecycle !== undefined && lifecycle !== "active";
   });
+  const brokenReferences = Object.entries(facts.itemReferences ?? {})
+    .filter(([, resolution]) => resolution === "unresolved")
+    .map(([reference]) => reference);
   const protectedAreas = (proposal.proposedWriteScope ?? []).filter((area) =>
     touchesProtectedSurface(area, proposal.protectedTargets ?? []),
   );
@@ -323,7 +400,9 @@ function proposalRefusals(proposal: WorkflowProposal, facts: WorkflowFacts): Pro
     ...refusalsOf("unknown-path", unknownPaths),
     ...refusalsOf("unknown-id", unknownIds),
     ...refusalsOf("inactive-spec", inactiveSpecs),
+    ...refusalsOf("broken-reference", brokenReferences),
     ...refusalsOf("protected-surface", protectedAreas),
+    ...refusalsOf("scope-escape", proposal.requestKind === "change" ? [] : [proposal.requestKind]),
     ...refusalsOf("scope-escape", (proposal.proposedWriteScope ?? []).filter(escapesRoot)),
     ...refusalsOf("unresolved-approval", unaskedRiskSignals(proposal)),
     ...refusalsOf("stage-set", stageSetGaps(proposal, facts)),
@@ -486,6 +565,164 @@ function routePlanIsInvalid(
   }
 }
 
+function refusedInput(run: WorkflowSnapshot["run"], message: string): WorkflowDecision {
+  return { verdict: { ok: false, run, error: { code: "invalid-input", message } }, events: [] };
+}
+
+function refusedWith(run: WorkflowSnapshot["run"], reasons: InputRefusal[]): WorkflowDecision {
+  return {
+    verdict: {
+      ok: false,
+      run,
+      error: {
+        code: "invalid-input",
+        message: "The stage result failed a check. Fix it and submit again.",
+        reasons,
+      },
+    },
+    events: [],
+  };
+}
+
+function outcomeIsAcceptable(
+  result: NonNullable<WorkflowInput["result"]>,
+  stageKind: string,
+): boolean {
+  switch (result.outcome) {
+    case "accepted":
+    case "accepted_with_debt":
+    case "unrun":
+      return true;
+    case "needs_repair":
+      return stageKind === "acceptance" && result.seamRequest !== undefined;
+    default:
+      return false;
+  }
+}
+
+// SIMPLIFIED: an unrun result blocks the run without naming a blocker or who can clear it.
+// Lift when: a blocked result's blocker and owner are derived from its delegation and debts.
+function blockOnUnrun(
+  run: WorkflowSnapshot["run"],
+  result: NonNullable<WorkflowInput["result"]>,
+): WorkflowDecision {
+  return {
+    verdict: { ok: true, run: { ...run, state: "blocked", sequence: run.sequence + 1 } },
+    events: [
+      {
+        type: "unrun-or-unresolved-dependency",
+        resultRef: `results/${result.resultId}.json`,
+        stageInstanceId: result.stageInstanceId,
+        outcome: result.outcome,
+      },
+    ],
+  };
+}
+
+function issueWorkOrder(
+  run: WorkflowSnapshot["run"],
+  workOrder: WorkflowWorkOrder,
+): WorkflowDecision {
+  return {
+    verdict: {
+      ok: true,
+      run: { ...run, state: "running", sequence: run.sequence + 2 },
+      workOrder,
+    },
+    events: [{ type: "work-order-issued", workOrder }, { type: "dispatch-work-order" }],
+  };
+}
+
+function issueSeamOnly(snapshot: WorkflowSnapshot, seam: WorkflowSeamRequest): WorkflowDecision {
+  const specId = snapshot.specBinding?.specId;
+  if (!specId) return refusedInput(snapshot.run, "The seam work order is not ready.");
+  return issueWorkOrder(snapshot.run, {
+    workOrderId: `work-order-${seam.stageInstanceId}-seam-${seam.attempt}`,
+    stageInstanceId: `${seam.stageInstanceId}-seam-${seam.attempt}`,
+    attempt: 1,
+    stageKind: "implement",
+    target: { kind: "spec", specId },
+    executor: { skill: "qfai-implement" },
+    operation: "seam-only",
+    parentWorkOrderId: seam.parentWorkOrderId,
+  });
+}
+
+function resultNamesWorkOrder(
+  result: WorkflowInput["result"],
+  workOrder: WorkflowWorkOrder,
+  run: WorkflowSnapshot["run"],
+): result is NonNullable<WorkflowInput["result"]> {
+  return (
+    result?.workOrderId === workOrder.workOrderId &&
+    result.stageInstanceId === workOrder.stageInstanceId &&
+    result.attempt === workOrder.attempt &&
+    result.expectedSequence === run.sequence &&
+    RESULT_ID.test(result.resultId)
+  );
+}
+
+function acceptSeamOnly(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  result: WorkflowInput["result"],
+): WorkflowDecision {
+  const { run, seamRequest } = snapshot;
+  if (
+    !seamRequest ||
+    workOrder.parentWorkOrderId !== seamRequest.parentWorkOrderId ||
+    !resultNamesWorkOrder(result, workOrder, run) ||
+    result.outcome !== "accepted" ||
+    result.seam?.targetTestId !== seamRequest.targetTestId
+  ) {
+    return refusedInput(run, "The stage result is not ready.");
+  }
+  if (result.seam.observation === "pass") {
+    return refusedWith(run, [{ reason: "seam-passed", subject: "seam" }]);
+  }
+  return {
+    verdict: { ok: true, run: { ...run, state: "ready", sequence: run.sequence + 1 } },
+    events: [
+      {
+        type: "accept-nonfinal-result",
+        resultRef: `results/${result.resultId}.json`,
+        stageInstanceId: workOrder.stageInstanceId,
+        outcome: result.outcome,
+      },
+    ],
+  };
+}
+
+function acceptPreamble(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  result: NonNullable<WorkflowInput["result"]>,
+): WorkflowDecision | undefined {
+  const { run, outstandingWorkOrder: workOrder } = snapshot;
+  const recorded = snapshot.recordedResults?.[result.resultId];
+  if (recorded) {
+    return recorded.payloadDigest === input.payloadDigest
+      ? { verdict: recorded.verdict, events: [] }
+      : refusedWith(run, [{ reason: "result-id-reused", subject: "resultId" }]);
+  }
+  if (!RESULT_ID.test(result.resultId)) {
+    return refusedWith(run, [{ reason: "schema", subject: "resultId" }]);
+  }
+  if (
+    result.workOrderId !== workOrder?.workOrderId ||
+    result.stageInstanceId !== workOrder.stageInstanceId ||
+    result.attempt !== workOrder.attempt
+  ) {
+    return refusedWith(run, [{ reason: "work-order", subject: "workOrderId" }]);
+  }
+  if (result.expectedSequence !== run.sequence) {
+    const message =
+      "The run moved on since this result was prepared. Read the run's status and submit again.";
+    return { verdict: { ok: false, run, error: { code: "stale-sequence", message } }, events: [] };
+  }
+  return undefined;
+}
+
 export function decide(
   snapshot: WorkflowSnapshot,
   input: WorkflowInput,
@@ -496,6 +733,11 @@ export function decide(
   const result = input.result;
   const proposal = result?.proposal;
   const capabilities = proposal?.newCapabilities;
+
+  if (input.operation === "accept" && result) {
+    const refused = acceptPreamble(snapshot, input, result);
+    if (refused) return refused;
+  }
 
   if (input.operation === "decision" && run.state === "awaiting_input") {
     const question = snapshot.openQuestions?.find(
@@ -596,13 +838,15 @@ export function decide(
       };
     }
 
+    if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
     const stage = selectedStages[acceptedStages.length];
     if (!stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
 
+    const attempt = (snapshot.attempts?.[stage.stageInstanceId] ?? 0) + 1;
     const nextWorkOrder: WorkflowWorkOrder = {
-      workOrderId: `work-order-${stage.stageInstanceId}-1`,
+      workOrderId: `work-order-${stage.stageInstanceId}-${attempt}`,
       stageInstanceId: stage.stageInstanceId,
-      attempt: 1,
+      attempt,
       stageKind: stage.stageKind,
       ...(stage.skill ? { executor: { skill: stage.skill } } : {}),
       ...(stage.operation ? { operation: stage.operation } : {}),
@@ -651,17 +895,7 @@ export function decide(
       nextWorkOrder.target = { kind: "new_capability", slotId };
       nextWorkOrder.authorizationRefs = [`authorizations/${approval.authorizationId}.json`];
     }
-    return {
-      verdict: {
-        ok: true,
-        run: { ...run, state: "running", sequence: run.sequence + 2 },
-        workOrder: nextWorkOrder,
-      },
-      events: [
-        { type: "work-order-issued", workOrder: nextWorkOrder },
-        { type: "dispatch-work-order" },
-      ],
-    };
+    return issueWorkOrder(run, nextWorkOrder);
   }
 
   if (input.operation === "next" && run.state === "running" && workOrder) {
@@ -680,6 +914,14 @@ export function decide(
       verdict: { ok: true, run: { ...run, sequence: run.sequence + events.length }, workOrder },
       events,
     };
+  }
+
+  if (
+    input.operation === "accept" &&
+    run.state === "running" &&
+    workOrder?.operation === "seam-only"
+  ) {
+    return acceptSeamOnly(snapshot, workOrder, result);
   }
 
   if (input.operation === "accept" && run.state === "running") {
@@ -722,8 +964,8 @@ export function decide(
       result.stageInstanceId !== workOrder.stageInstanceId ||
       result.attempt !== workOrder.attempt ||
       result.expectedSequence !== run.sequence ||
-      !/^[A-Za-z0-9._-]{1,64}$/.test(result.resultId) ||
-      result.outcome !== "accepted" ||
+      !RESULT_ID.test(result.resultId) ||
+      !outcomeIsAcceptable(result, nextStage.stageKind) ||
       result.proposal !== undefined
     ) {
       return {
@@ -736,22 +978,9 @@ export function decide(
       };
     }
 
-    const notRunRefusal = notRunRefusalOf(result.notRun, facts);
-    if (notRunRefusal) {
-      return {
-        verdict: {
-          ok: false,
-          run,
-          error: {
-            code: "invalid-input",
-            message:
-              "The stage result skips its stage without a valid reason. Fix it and submit again.",
-            reasons: [{ reason: notRunRefusal, subject: "notRun" }],
-          },
-        },
-        events: [],
-      };
-    }
+    const inputRefusals = resultRefusals(result, facts);
+    if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
+    if (result.outcome === "unrun") return blockOnUnrun(run, result);
     const approvedCapability = snapshot.approval?.target?.capability;
     if (
       plan.route === "feature" &&
@@ -774,6 +1003,7 @@ export function decide(
         stageInstanceId: workOrder.stageInstanceId,
         outcome: result.outcome,
         ...(result.notRun ? { notRun: result.notRun } : {}),
+        ...(result.seamRequest ? { seamRequest: result.seamRequest } : {}),
       },
       ...(nextStage.stageKind === "sdd" ? (result.bindings ?? []) : []).map((binding) => ({
         type: "binding-recorded",
@@ -804,8 +1034,9 @@ export function decide(
     result.attempt !== workOrder.attempt ||
     result.expectedSequence !== run.sequence ||
     result.outcome !== "accepted" ||
-    proposal?.requestKind !== "change" ||
-    !proposal.candidateRoute ||
+    !proposal ||
+    !REQUEST_KINDS.includes(proposal.requestKind) ||
+    (proposal.requestKind === "change" && !proposal.candidateRoute) ||
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
     !Array.isArray(proposal.requiredStages) ||
