@@ -34,5 +34,8 @@ completion is declared.
 - `record:stale-stage-summary`, `atdd-spec-0013.md`: `## Ledger rows advanced` lists both rows as `todo`, and `## Final status` says their runs are pending.
 - `record:stale-coverage-matrix`, `coverage-depth-spec-0013.md`: the `TC-0013-0010` and `BR-0013-0007` rows still score the case as it was before the two tests. `/qfai-atdd` owns the rescore.
 - `record:unchecked`, the `/qfai-atdd` run started 2026-09-25T01:55:05.779Z: its Work Orders show none of its own mandatory `coverage` and `red` roles.
-- `TDD-0110`: the row-order assertion at test line 275 has never been observed failing. If the proof is revised, split the case into two selector entries, or add a mutation on the positional pairing, and observe each failure on its own.
-- `TC-0013-0010`: the order clause of `AC-0013-0027` is covered only through `TDD-0110`'s row-order fixtures, while `CR-20260925-0008` credits it to `TDD-0010`. `/qfai-sdd` names it in the verify text or corrects the request.
+- `record:unchecked`, `TDD-0110`, Round 1: the row-order assertion at test line 275 has never been observed failing; the entry infers it from the shared check at `specSplitByCapability.ts:552`. The qa-gatekeeper verdict also read the entry before its "Why it fails" sentence was extended; the observed failure at :271:84 is unchanged.
+
+## Handoff to /qfai-sdd
+
+- `TC-0013-0010`: the order clause of `AC-0013-0027` is covered only through `TDD-0110`'s row-order fixtures, while `CR-20260925-0008` credits it to `TDD-0010`. Name the clause in the verify text and credit it to `TDD-0110`, or correct the request.

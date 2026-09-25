@@ -627,9 +627,29 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+18cbf6770ac3e6cd0962f366469fc762609bfce34e23b32efed9d0d3310828dd; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (specSplitByCapability.ts:552 capability check dropped) working-tree+18cbf677… at HEAD b05f9c0ae; AssertionError at sddSkillSpec0013.test.ts:271:84; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
-- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row stays at `refactor` as a member of its T1 group keyed `BR-0013-0007`, and the group is reviewed again once the plan phase is recorded in `implement-spec-0013.md`
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120000000 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal (attempt 1): 2055a3f7fe50cab6c5c9eeb3ca53e37c67b9e039670fd5dfb71205f29ef2dc86
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the ledger moved the row to `review-fix` (56bb4b16c) and back to `refactor` (f06af3786) as a member of its T1 group keyed `BR-0013-0007`, and the group was reviewed again once the plan phase was recorded in `implement-spec-0013.md`
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120100000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4993fe8d2df94d24a308085642eecf00da6b031006307eaaa65720d9853b6737
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Spec review: PASS
+- Spec reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Spec audited evidence hash: d2b5d01d4f740a982a34404f93b2c25022fa3d91f27cb29d4339cae88151a087
+- Spec review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Code quality review: PASS
+- Code quality reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Code quality audited evidence hash: d2b5d01d4f740a982a34404f93b2c25022fa3d91f27cb29d4339cae88151a087
+- Code quality review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification seal: 3130415110be88e4f514d4b5528b21ee49f7d002fe1ad7902e4b6a8277d1acd5
 
 ### TDD-0111
 
@@ -679,9 +699,29 @@ packages/qfai/tests/integration/sddSkillSpec0013.test.ts
 - qa-gatekeeper: PASS x2 (qa-gatekeeper#1, Round 1 — RED phase gate on the rebuilt mutated tree working-tree+398b149532781ef3a2bf447008c3ea8d1a7dec73e9948cebd71ff7cde3ad506e; qa-gatekeeper#2 — build-phase GREEN + oracle proof at b05f9c0ae3653bc56a7cdf7cbc6dbab865361f4a)
 - qa-gatekeeper attempts: qa-gatekeeper#1 PASS — RED phase gate on the rebuilt mutated tree (qfai-sdd SKILL.md:267 bullet deleted) working-tree+398b1495… at HEAD b05f9c0ae; toContain AssertionError at sddSkillSpec0013.test.ts:287:21; RED test hash 3fa41420… recomputes; qa-gatekeeper#2 PASS — build-phase GREEN and oracle proof at b05f9c0ae: selector 1 passed | 23 skipped, file 24/24. Gate taken after the revert, on the rebuilt tree
 
-- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the row stays at `refactor` as a member of its T1 group keyed `BR-0013-0007`, and the group is reviewed again once the plan phase is recorded in `implement-spec-0013.md`
-- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120001000 <!-- qfai:not-a-citation -->
-- Round 1: Review pack seal (attempt 1): fa6264c954fe558af39f9a39202df22e8ab23943a4b6877e2608a7080599717b
+- Round 1: reviewer verdict (attempt 1): REVISE — completion-reviewer: no record that this run's mandatory plan phase ran (delivery-planner, test-design-analyst); the ledger moved the row to `review-fix` (56bb4b16c) and back to `refactor` (f06af3786) as a member of its T1 group keyed `BR-0013-0007`, and the group was reviewed again once the plan phase was recorded in `implement-spec-0013.md`
+- Round 1: Review pack (attempt 1): .qfai/review/review-20260925120100000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 1): 4993fe8d2df94d24a308085642eecf00da6b031006307eaaa65720d9853b6737
+
+- Round 1: reviewer verdict (attempt 2): PASS
+- Round 1: Review pack (attempt 2): .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Round 1: Review pack seal (attempt 2): c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Spec review: PASS
+- Spec reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Spec audited evidence hash: da9c01b0be72f58c63ab7ae2daaa86c36534bed440f3840169e9e1e590e3ec23
+- Spec review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Spec review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Code quality review: PASS
+- Code quality reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Code quality audited evidence hash: da9c01b0be72f58c63ab7ae2daaa86c36534bed440f3840169e9e1e590e3ec23
+- Code quality review pack: .qfai/review/review-20260925120200000 <!-- qfai:not-a-citation -->
+- Code quality review pack seal: c665d461bd5262b0ff8c774484b4b3a2e6643a0a8369fe86ae6cdf78592dd684
+- Prototype parity: n/a (not UI-affecting)
+- Prototype parity reviewed revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification command: pnpm -C packages/qfai exec vitest run tests/integration/sddSkillSpec0013.test.ts
+- Checkpoint verification result: PASS — Test Files 1 passed (1); Tests 24 passed (24). Off a checkpoint boundary, so the narrow suite of the refactor step is the checkpoint and nothing was re-run
+- Checkpoint verification revision: 9cae7bb4b64018c5048704921331e916ad28e4f3
+- Checkpoint verification seal: 3130415110be88e4f514d4b5528b21ee49f7d002fe1ad7902e4b6a8277d1acd5
 
 ## Coverage Depth Matrix
 
@@ -715,8 +755,11 @@ every total.
 | 6 | backend-engineer | backend-engineer | /qfai-implement: TDD-0111 falsifiability run with line 267 deleted, then the revert and the restored GREEN | #tdd-0111, the `qfai-sdd` `SKILL.md` | Round 1 | PASS |
 | 7 | backend-engineer | backend-engineer | /qfai-implement: TDD-0110 and TDD-0111 refactor verify on the committed tree | #tdd-0110, #tdd-0111 | Refactor verify fields | PASS |
 | 8 | qa-gatekeeper | qa-gatekeeper#1, qa-gatekeeper#2 | /qfai-implement: TDD-0110 and TDD-0111 RED phase gate on the rebuilt falsifiability trees, and the build-phase GREEN | #tdd-0110, #tdd-0111 | qa-gatekeeper fields | PASS |
-| 9 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120000000, review-20260925120001000 <!-- qfai:not-a-citation --> | REVISE |
-| 10 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120000000, review-20260925120001000 <!-- qfai:not-a-citation --> | PASS |
+| 9 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120100000 <!-- qfai:not-a-citation --> | REVISE |
+| 10 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 1 | #tdd-0110, #tdd-0111 | review-20260925120100000 <!-- qfai:not-a-citation --> | PASS |
+| 11 | completion-reviewer | completion-reviewer | /qfai-implement: TDD-0110 and TDD-0111 completion review, attempt 2 | #tdd-0110, #tdd-0111 | review-20260925120200000 <!-- qfai:not-a-citation --> | PASS |
+| 12 | implementation-reviewer | implementation-reviewer | /qfai-implement: TDD-0110 and TDD-0111 code review, attempt 2 | #tdd-0110, #tdd-0111 | review-20260925120200000 <!-- qfai:not-a-citation --> | PASS |
+| 13 | orchestrator | orchestrator | /qfai-implement: TDD-0110 and TDD-0111 group checkpoint verification, off a checkpoint boundary | #tdd-0110, #tdd-0111 | Checkpoint verification fields | PASS |
 
 ## Cross-spec obligations
 
