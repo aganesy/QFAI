@@ -140,6 +140,26 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(reference).toContain("an unresolvable edge is unknown reach, not absent reach");
   });
 
+  it("widens per row when the reach is walked forward from each row's test", async () => {
+    // Widening for the whole package whenever one edge is unresolvable blocked
+    // hundreds of rows on a small removal. Walked from each row's own test, an
+    // unresolvable edge leaves only that row's reach unknown.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**Walked forward, the widening is per row.**");
+    expect(reference).toContain("only that row takes the package fallback");
+    expect(reference).toContain("`qfai cross-spec` detects this way.");
+  });
+
+  it("replays the latest round's proof, and names the command that lists it", async () => {
+    // A row reset and completed again, or reworked in a later round, carries
+    // earlier proofs that no longer describe its code.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**The current proof is the latest round's.**");
+    expect(reference).toContain("of the highest `Round N` in the entry the row's `Evidence` cell");
+    expect(reference).toContain("`qfai cross-spec` lists this input for a change");
+    expect(reference).toContain("It runs nothing;");
+  });
+
   it("compares path against path whole, aliasing only for dotted modules", async () => {
     // `src/parser.ts` and `src/parser.py` are two modules two specs may own.
     const reference = await read(tree, REFERENCE);

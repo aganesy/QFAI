@@ -80,6 +80,13 @@ such a file does not require permission — it requires a record and a re-review
      and match `Test file` against that set instead. Incomplete resolution
      widens here for the same reason it widens there: an unresolvable edge is
      unknown reach, not absent reach.
+   - **Walked forward, the widening is per row.** The same question can be
+     asked from the other end: walk forward from each `done` row's `Test file`
+     through the imports it reaches, test helpers included, and match the row
+     when that reach holds the edited file. An unresolvable edge then leaves
+     only that row's reach unknown, so only that row takes the package
+     fallback, and every row whose reach resolved stays matched on its reach.
+     `qfai cross-spec` detects this way.
 
    **Normalize before comparing.** `Owning module` legally holds a
    repo-relative path **or** a dotted module path (`execution-ledger.md`).
@@ -141,6 +148,19 @@ such a file does not require permission — it requires a record and a re-review
    catches, and the row is not re-approved until it is repaired. Same rule, same
    reason as `../../qfai-atdd/references/shared-test-artifacts.md`, which
    imposes it on the stage-level side of the identical edit.
+
+   **The current proof is the latest round's.** A row reset and completed
+   again, or reworked through a later round, carries earlier proofs that no
+   longer describe its code. Replay the `Oracle proof` or
+   `Falsifiability command` of the highest `Round N` in the entry the row's
+   `Evidence` cell points at, whichever evidence file that is. Only an entry
+   with no round prefix falls back to its unprefixed field.
+
+   `qfai cross-spec` lists this input for a change measured from a base
+   revision (`--base`, default `baseBranch`): every blocked row with the
+   changed files that matched it, its `Selector`, the latest round's
+   `GREEN command`, and its current proof. It runs nothing; the selector
+   runs and the replays are still yours to perform and record.
 
 4. **Do not close over it.** An open entry is a completion prohibition
    (`qfai-implement/SKILL.md#completion-prohibition-conditions`).
