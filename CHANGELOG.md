@@ -43,6 +43,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The check for a `done` ledger row that only an annotation carrier covers
+  reads what the runner reads** (#2250). `QFAI-TDDLIST-023` has three fixes:
+  - Where `validation.traceability.testFileGlobs` is set, executable files are
+    read only through those patterns. A test in a file they leave out no longer
+    counts. Markdown and Gherkin carriers are still read from the whole of
+    `paths.testsDir`.
+  - The suggested action names the test case `06_Test-Cases.md` declares. A
+    split ID such as `TC-0001-0001` appears only when the spec declares that ID.
+  - The annotation scan reads a test title passed to a runner bound through a
+    variable, such as `const run = LIVE ? test : test.skip; run("…", …)`. Such
+    a test no longer reads as unannotated.
+
 - **The generated Copilot instructions describe the legacy layout as the
   tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout

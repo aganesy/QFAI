@@ -405,11 +405,35 @@ const TEST_SOURCE_DIALECTS: ReadonlyMap<string, TestSourceDialect> = new Map(
  * line a finding names are unchanged.
  */
 function maskTestSource(file: string, text: string): string {
-  const dialect = TEST_SOURCE_DIALECTS.get(path.extname(file).slice(1).toLowerCase());
+  const extension = path.extname(file).slice(1).toLowerCase();
+  const dialect = TEST_SOURCE_DIALECTS.get(extension);
   if (dialect === undefined) {
     return text;
   }
-  return restoreTestNames(maskJsNonCode(text, dialect.mask), text, dialect.names);
+  const names = COMPUTED_BINDING_EXTENSIONS.has(extension)
+    ? [...dialect.names, ...computedRunnerNamePatterns(text)]
+    : dialect.names;
+  return restoreTestNames(maskJsNonCode(text, dialect.mask), text, names);
+}
+
+/**
+ * The name pattern for a runner bound through a variable.
+ *
+ * `const deployed = LIVE ? test : test.skip` then `deployed("…", …)` declares a
+ * test whose name is the first argument of a call to `deployed`, which
+ * {@link JS_TEST_NAME} does not know. Without this the annotation in that name
+ * was blanked with the fixture data around it.
+ */
+function computedRunnerNamePatterns(text: string): RegExp[] {
+  const bound = computedRunnerNames(text);
+  if (bound.length === 0) return [];
+  const names = bound.map((name) => name.replace(/\$/g, "\\$")).join("|");
+  return [
+    namePattern(
+      String.raw`(?<![\w$.])(?<anchor>${names})\s*\(\s*(?<name>${QUOTED}|` +
+        "`(?:[^`\\\\]|\\\\.)*`)",
+    ),
+  ];
 }
 
 /**
@@ -1182,10 +1206,15 @@ export type TestCaseAnnotationHomes = {
  *
  * The acceptance scan in {@link evaluateAtddCodeTraceability} keeps only the
  * acceptance layers, so it cannot say whether a unit test annotates a case. A
- * ledger row claims a test at every layer, so this reads the same globs plus
- * the whole of `paths.testsDir`, with no layer filter, and splits the files the
- * way `QFAI-ATDD-119` does. The whole directory, because with no project glob
- * the acceptance globs reach none of `unit/` or `component/`.
+ * ledger row claims a test at every layer, so this reads with no layer filter
+ * and splits the files the way `QFAI-ATDD-119` does.
+ *
+ * Where the project names its test files in `testFileGlobs`, executable files
+ * are read through those patterns alone: a file they leave out is one the
+ * runner does not select, so a test in it discharges nothing. Only the
+ * structural carriers are read from the whole of `paths.testsDir` besides.
+ * With no project glob the acceptance globs reach none of `unit/` or
+ * `component/`, so the whole directory is read by the default pattern.
  *
  * `null` when the scan is incomplete — truncated, a pattern could not be
  * walked, or a file could not be read. A test past the gap may annotate the
@@ -1201,11 +1230,15 @@ export async function collectTestCaseAnnotationHomes(
 ): Promise<TestCaseAnnotationHomes | null> {
   const projectGlobs = config.validation.traceability.testFileGlobs;
   const testsRoot = resolvePath(root, config, "testsDir");
-  const filePattern = deriveAtddFilePattern(projectGlobs);
-  const globs = [
-    ...buildAtddScanGlobs(root, testsRoot, filePattern, projectGlobs),
-    `${testsBaseGlob(root, testsRoot)}/${filePattern}`,
-  ];
+  const testsBase = testsBaseGlob(root, testsRoot);
+  const configured = projectGlobs.map((glob) => toPosixPath(glob).trim()).filter(Boolean);
+  const globs =
+    configured.length > 0
+      ? [...configured, `${testsBase}/**/*.{${STRUCTURAL_ANNOTATION_EXTENSIONS.join(",")}}`]
+      : [
+          ...buildAtddScanGlobs(root, testsRoot, DEFAULT_TEST_FILE_GLOB, []),
+          `${testsBase}/${DEFAULT_TEST_FILE_GLOB}`,
+        ];
   const excludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
   let scan: CollectFilesByGlobsResult;
   try {
@@ -2664,15 +2697,20 @@ const COMPUTED_BINDING_EXTENSIONS: ReadonlySet<string> = new Set([
  * before computing one it does would otherwise read as ordinary.
  */
 function hasComputedSuiteBinding(text: string): boolean {
+  return computedRunnerNames(text).length > 0;
+}
+
+/** Each name the file binds to a runner entry point and then calls. */
+function computedRunnerNames(text: string): string[] {
   const code = stripCommentsAndLiterals(text);
-  COMPUTED_SUITE_BINDING_RE.lastIndex = 0;
+  const names = new Set<string>();
   for (const match of code.matchAll(COMPUTED_SUITE_BINDING_RE)) {
     const bound = match[1];
-    if (bound !== undefined && new RegExp(`(?:^|[^\\w$.])${bound}\\s*\\(`).test(code)) {
-      return true;
-    }
+    if (bound === undefined) continue;
+    const escaped = bound.replace(/\$/g, "\\$");
+    if (new RegExp(`(?:^|[^\\w$.])${escaped}\\s*\\(`).test(code)) names.add(bound);
   }
-  return false;
+  return [...names];
 }
 
 /**
