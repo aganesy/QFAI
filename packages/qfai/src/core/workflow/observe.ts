@@ -10,6 +10,7 @@ import { loadConfig, resolvePath } from "../config.js";
 import { uncommittedPaths } from "../gitChanges.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { validateProject } from "../validate.js";
+import { collectLedgerTables, isLedgerRow } from "../tddHelpers.js";
 import { resolveToolVersion } from "../version.js";
 import type { WorkflowFacts, WorkflowSnapshot } from "./decide.js";
 import { isRecord } from "./parse.js";
@@ -165,15 +166,48 @@ export async function routingFacts(root: string, proposal: unknown): Promise<Wor
   return { pathExistence: Object.fromEntries(existence), plans, specs, contractIds: [] };
 }
 
-// This run's copy of the verify report, read from the stage that accepted it.
+// The JSON object the text holds, or an empty one: a report that says nothing passes nothing.
+function parsedRecord(text: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+// The bound spec's ledger rows, read with the ledger parser: each row's ID, status and a digest
+// of its cells. None when the spec has no ledger file.
+export async function ledgerFactsOf(root: string, specId: string) {
+  const { config } = await loadConfig(root);
+  const file = path.join(resolvePath(root, config, "specsDir"), specId, "tdd", "test-list.md");
+  const text = await readFile(file, "utf8").catch(() => undefined);
+  if (text === undefined) return undefined;
+  const rows = collectLedgerTables(text).flatMap((scan) => {
+    const statusIndex = scan.headers.indexOf("Status");
+    return scan.table.rows
+      .filter((row) => isLedgerRow(scan, row))
+      .map((row) => ({
+        rowId: (row[scan.tddIdIndex] ?? "").trim(),
+        status: (row[statusIndex] ?? "").trim(),
+        digest: hashAssistantAssetText(row.map((cell) => cell.trim()).join("|")),
+        layer: (row[scan.layerIndex] ?? "").trim(),
+      }));
+  });
+  return { specId, rows };
+}
+
+// This run's copy of the verify report, read from the stage that accepted it. A copy whose bytes
+// are not the ones that stage recorded is another run's, and counts as no report.
 async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
   const verifies = (snapshot.acceptedStages ?? []).filter((each) => each.stageKind === "verify");
   const stage = verifies.at(-1);
-  if (!stage) return undefined;
-  const file = path.join(runDir, "reports", stage.stageInstanceId, "verify.json");
-  const parsed: unknown = JSON.parse(await readFile(file, "utf8").catch(() => "null"));
-  if (!isRecord(parsed)) return undefined;
-  const { status, scope } = parsed;
+  const copy = `reports/${stage?.stageInstanceId ?? ""}/verify.json`;
+  const recorded = stage?.reports?.find((report) => report.path === copy)?.digest;
+  if (!stage || !recorded) return undefined;
+  const bytes = await readFile(path.join(runDir, ...copy.split("/"))).catch(() => undefined);
+  if (!bytes || createHash("sha256").update(bytes).digest("hex") !== recorded) return undefined;
+  const { status, scope } = parsedRecord(bytes.toString("utf8"));
   return {
     runId: snapshot.run.id,
     stageInstanceId: stage.stageInstanceId,

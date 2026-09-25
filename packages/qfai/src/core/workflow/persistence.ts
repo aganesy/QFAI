@@ -7,7 +7,7 @@ import { scopeDigestOf } from "./decide.js";
 import type { WorkflowDecision, WorkflowEvent, WorkflowSnapshot } from "./decide.js";
 import { isRecord } from "./parse.js";
 
-export type WriteFile = (filePath: string, content: string) => Promise<void>;
+export type WriteFile = (filePath: string, content: string | Buffer) => Promise<void>;
 
 export interface IoRefusal {
   code: "io-error";
@@ -33,7 +33,7 @@ export const writeAtomically: WriteFile = async (filePath, content) => {
 // idempotent, so the harness invoking it again is the retry.
 export async function writeRecord(
   filePath: string,
-  content: string,
+  content: string | Buffer,
   write: WriteFile = writeAtomically,
 ): Promise<IoRefusal | undefined> {
   try {
@@ -195,6 +195,8 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   // On an accepted stage result: the stage kind and the reviews the result carried.
   stageKind?: string;
   reviewResults?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reviewResults"];
+  // On an accepted stage result: each shared report it named, as copied under the stage.
+  reports?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reports"];
   // On an operation's last event: what a replay of that operation returns.
   replay?: WorkflowReplay;
 };
@@ -304,7 +306,14 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const issuedRecordAreas = [
     ...new Set([...(snapshot.issuedRecordAreas ?? []), ...(workOrder.recordAreas ?? [])]),
   ];
-  return { ...snapshot, outstandingWorkOrder: workOrder, attempts, issuedRecordAreas };
+  const { issuedRowSet: _previous, ...rest } = snapshot;
+  return {
+    ...rest,
+    outstandingWorkOrder: workOrder,
+    attempts,
+    issuedRecordAreas,
+    ...(record.rowSet ? { issuedRowSet: record.rowSet } : {}),
+  };
 }
 
 function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
@@ -370,6 +379,7 @@ function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...(record.gateResults ? { gateResults: record.gateResults } : {}),
     ...(record.reviewResults ? { reviewResults: record.reviewResults } : {}),
     ...(record.debts ? { debts: record.debts } : {}),
+    ...(record.reports ? { reports: record.reports } : {}),
   };
   const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
   return { ...rest, acceptedStages: [...(snapshot.acceptedStages ?? []), stage] };

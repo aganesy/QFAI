@@ -14,6 +14,7 @@ import type {
 import {
   baselineOf,
   completionFacts,
+  ledgerFactsOf,
   routingFacts,
   startFacts,
 } from "../../core/workflow/observe.js";
@@ -245,6 +246,54 @@ async function writeReferenced(runDir: string, record: JournalRecord, verdict: V
   );
 }
 
+// A shared report a result names is copied under the stage instance that accepted it.
+// SIMPLIFIED: `verify.json` is the one shared report copied.
+// Lift when: a later stage reads another shared report from its stage copy.
+const SHARED_REPORTS = ["verify.json"];
+
+interface ReportCopy {
+  path: string;
+  digest: string;
+  bytes: Buffer;
+}
+
+function artifactPaths(result: WorkflowInput["result"]): unknown[] {
+  const refs: unknown = result && Reflect.get(result, "artifactRefs");
+  if (refs === undefined) return [];
+  return Array.isArray(refs) ? refs.map((ref) => (isRecord(ref) ? ref.path : undefined)) : [refs];
+}
+
+// Each artifact must be a regular file whose real path stays under the project's real root,
+// checked before it is read.
+async function reportCopiesOf(root: string, result: WorkflowInput["result"], stage: string) {
+  const realRoot = await realpath(root);
+  const copies: ReportCopy[] = [];
+  for (const [index, ref] of artifactPaths(result).entries()) {
+    const real =
+      typeof ref === "string" ? await realpath(path.resolve(root, ref)).catch(() => "") : "";
+    const inside = real.startsWith(`${realRoot}${path.sep}`);
+    if (!inside || !(await stat(real)).isFile()) {
+      return schemaRefusal([{ reason: "schema", subject: `artifactRefs[${String(index)}]` }]);
+    }
+    const name = path.basename(real);
+    if (!SHARED_REPORTS.includes(name)) continue;
+    const bytes = await readFile(real);
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    copies.push({ path: `reports/${stage}/${name}`, digest, bytes });
+  }
+  return copies;
+}
+
+async function writeReportCopies(runDir: string, copies: ReportCopy[]) {
+  for (const copy of copies) {
+    const file = path.join(runDir, ...copy.path.split("/"));
+    await mkdir(path.dirname(file), { recursive: true });
+    const refused = await writeRecord(file, copy.bytes);
+    if (refused) return refused;
+  }
+  return undefined;
+}
+
 // Appends the decision's events and rewrites the snapshot from the whole journal.
 async function publish(
   loaded: LoadedRun,
@@ -322,7 +371,19 @@ async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
     return routingFacts(root, input.result?.proposal);
   }
   if (input.operation === "decision") return { now: new Date().toISOString() };
-  return {};
+  return ledgerFacts(root, snapshot, input);
+}
+
+// The bound spec's ledger, read when a work order is issued against it and when its result is
+// accepted, so the row set can be compared.
+async function ledgerFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
+  const { state } = snapshot.run;
+  const reads =
+    (input.operation === "next" && state === "ready") ||
+    (input.operation === "accept" && state === "running");
+  const specId = snapshot.specBinding?.specId;
+  const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
+  return ledger ? { ledger } : {};
 }
 
 // What a replay of this operation returns, recorded on its last event.
@@ -336,18 +397,40 @@ function replayKey(input: WorkflowInput, decision: WorkflowDecision, digest?: st
   return input.questionId && answer ? { key: `question:${input.questionId}`, answer } : undefined;
 }
 
+const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
+
+// The report copies of a stage result the decision accepts; none for any other operation.
+async function acceptedReportCopies(
+  root: string,
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  decision: WorkflowDecision,
+): Promise<ReportCopy[] | Refusal> {
+  const stage = snapshot.outstandingWorkOrder?.stageInstanceId;
+  const accepted = decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
+  return accepted && stage ? reportCopiesOf(root, input.result, stage) : [];
+}
+
 // What the journal keeps beside an event that the decision does not carry itself.
-function extrasOf(snapshot: WorkflowSnapshot, input: WorkflowInput, decision: WorkflowDecision) {
+function extrasOf(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  decision: WorkflowDecision,
+  copies: ReportCopy[],
+) {
   return (event: WorkflowEvent): Partial<JournalRecord> => {
     if (event.type === "unsettled-material-input" && decision.verdict.plan) {
       return { plan: decision.verdict.plan };
     }
-    if (event.type !== "accept-nonfinal-result" && event.type !== "scope-or-obligation-revision") {
-      return {};
-    }
+    if (!ACCEPTED_EVENTS.includes(event.type)) return {};
     const stageKind = snapshot.outstandingWorkOrder?.stageKind;
     const reviews = input.result?.reviewResults;
-    return { ...(stageKind ? { stageKind } : {}), ...(reviews ? { reviewResults: reviews } : {}) };
+    const reports = copies.map(({ path: file, digest }) => ({ path: file, digest }));
+    return {
+      ...(stageKind ? { stageKind } : {}),
+      ...(reviews ? { reviewResults: reviews } : {}),
+      ...(reports.length > 0 ? { reports } : {}),
+    };
   };
 }
 
@@ -358,12 +441,16 @@ async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Pr
   const facts = await factsOf(options.root, loaded, read.input);
   const decision = decide(snapshot, read.input, facts);
   if (decision.events.length > 0) {
+    const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
+    if (!Array.isArray(copies)) return refuse(snapshot.run, copies);
     const records = recordsOf(
       decision,
       { operation: options.operation, before: snapshot.run },
-      extrasOf(snapshot, read.input, decision),
+      extrasOf(snapshot, read.input, decision, copies),
       replayKey(read.input, decision, read.digest),
     );
+    const unwritten = await writeReportCopies(loaded.runDir, copies);
+    if (unwritten) return refuse(snapshot.run, unwritten);
     const refused = await publish(loaded, records, decision.verdict);
     if (refused) return refuse(snapshot.run, refused);
   }

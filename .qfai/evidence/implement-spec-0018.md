@@ -310,10 +310,16 @@ Verify the control core's routing and feature-plan transitions, one ledger row a
 | TDD-0300 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0301 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0302 | TC-0018-0029 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0304 | TC-0018-0032 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0305 | TC-0018-0039 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0306 | TC-0018-0042 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0307 | TC-0018-0050 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0308 | TC-0018-0056 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0309 | TC-0018-0061 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0310 | TC-0018-0065 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0311 | TC-0018-0070 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0312 | TC-0018-0071 | Closed `exception` under DR-0298; per-row review waived |
+| TDD-0313 | TC-0018-0072 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0315 | TC-0018-0094 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0355 | TC-0018-0139 | Closed `exception` under DR-0298; per-row review waived |
 | TDD-0356 | TC-0018-0157 | Closed `exception` under DR-0298; per-row review waived |
@@ -4943,6 +4949,26 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/observe.ts`
 - RED note: observed with the built CLI rebuilt from the sources of commit `a9a665914`, before the `workflow` command existed; the GREEN run used the dist rebuilt from this change.
 
+### TDD-0304
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/onlyThisRunSVerifyReportCounts.test.ts`
+- Selector: `TC-0018-0032 (TDD-0304): finish offered a verify`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/onlyThisRunSVerifyReportCounts.test.ts --testNamePattern='TC-0018-0032 \(TDD-0304\): finish offered a verify' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { foreign: [], …(1) } to deeply equal { foreign: [ { …(3) } ], …(1) }` at `tests/integration/workflow/onlyThisRunSVerifyReportCounts.test.ts:46:6`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/onlyThisRunSVerifyReportCounts.test.ts > TC-0018-0032 (TDD-0304): finish offered a verify`
+- Production files: `packages/qfai/src/core/workflow/observe.ts`
+
+### TDD-0305
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/finishObservesValidateItself.test.ts`
+- Selector: `TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, asserted first`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/finishObservesValidateItself.test.ts --testNamePattern='TC-0018-0039 \(TDD-0305\): Built CLI on a fixture whose validate is clean, asserted first' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run; already satisfied by TDD-0307 and TDD-0304, whose changes copy the verify report under its stage instance at `accept` and read the gate from that copy at `finish`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/finishObservesValidateItself.test.ts > TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, asserted first`
+- Production files: none beyond TDD-0307 and TDD-0304; the test adds an initialized fixture to `packages/qfai/tests/integration/workflow/workflowProject.ts`
+
 ### TDD-0306
 
 - Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
@@ -4952,6 +4978,16 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by TDD-0286, whose change made `finish` observe the working tree's uncommitted paths and report them under `deliveryUnmet` on a `working_tree` run
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/notCommittingMeansWorkingTree.test.ts > TC-0018-0042 (TDD-0306): Git temp repo with the run's changed paths uncommitted`
 - Production files: none beyond TDD-0286's
+
+### TDD-0307
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/outcomeAndObservationStayApart.test.ts`
+- Selector: `TC-0018-0050 (TDD-0307): Built CLI accept of a verify result naming its verify`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/outcomeAndObservationStayApart.test.ts --testNamePattern='TC-0018-0050 \(TDD-0307\): Built CLI accept of a verify result naming its verify' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { ok: true, copy: null } to deeply equal { ok: true, …(1) }` at `tests/integration/workflow/outcomeAndObservationStayApart.test.ts:38:6`
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/outcomeAndObservationStayApart.test.ts > TC-0018-0050 (TDD-0307): Built CLI accept of a verify result naming its verify`
+- Production files: `packages/qfai/src/cli/commands/workflow.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/core/workflow/decide.ts`
 
 ### TDD-0308
 
@@ -4983,6 +5019,36 @@ Test Files 1 failed (1); Tests 1 failed | 2 skipped (3); exit 1
 - RED result: exit 0 on its first run; already satisfied by TDD-0263, whose plan loader reads the shipped `bugfix.yml` with the stages, predicates and final `verify-full` stage this case names
 - GREEN result: exit 0; `✓ |integration| tests/integration/workflow/theMissingTestBranch.test.ts > TC-0018-0065 (TDD-0310): Load the shipped bugfix`
 - Production files: none; `packages/qfai/src/core/workflow/plans.ts` already loads the plan
+
+### TDD-0311
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/noMoveOffDone.test.ts`
+- Selector: `TC-0018-0070 (TDD-0311): A real ledger file`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/noMoveOffDone.test.ts --testNamePattern='TC-0018-0070 \(TDD-0311\): A real ledger file' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { stageKind: 'implement', …(3) } to deeply equal { stageKind: 'implement', …(3) }` at `tests/integration/workflow/noMoveOffDone.test.ts:29:6` (the result was accepted)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/noMoveOffDone.test.ts > TC-0018-0070 (TDD-0311): A real ledger file`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0312
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/onlySddAppendAddsARow.test.ts`
+- Selector: `TC-0018-0071 (TDD-0312): An implement result after which the ledger holds one more row`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/onlySddAppendAddsARow.test.ts --testNamePattern='TC-0018-0071 \(TDD-0312\): An implement result after which the ledger holds one more row' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1; `expected { stageKind: 'implement', …(1) } to deeply equal { stageKind: 'implement', …(1) }` at `tests/integration/workflow/onlySddAppendAddsARow.test.ts:29:6` (no refusal)
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/onlySddAppendAddsARow.test.ts > TC-0018-0071 (TDD-0312): An implement result after which the ledger holds one more row`
+- Production files: `packages/qfai/src/core/workflow/decide.ts`, `packages/qfai/src/core/workflow/observe.ts`, `packages/qfai/src/core/workflow/persistence.ts`, `packages/qfai/src/cli/commands/workflow.ts`
+
+### TDD-0313
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Test file: `packages/qfai/tests/integration/workflow/onlySddAppendAddsARow.test.ts`
+- Selector: `TC-0018-0072 (TDD-0313): An sdd_append result after which the ledger holds one more row`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/workflow/onlySddAppendAddsARow.test.ts --testNamePattern='TC-0018-0072 \(TDD-0313\): An sdd_append result after which the ledger holds one more row' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 0 on its first run: before TDD-0312 nothing refused an added row, so the normal case held; it was re-run after TDD-0312 added the check, to pin the `sdd_append` exemption
+- GREEN result: exit 0; `✓ |integration| tests/integration/workflow/onlySddAppendAddsARow.test.ts > TC-0018-0072 (TDD-0313): An sdd_append result after which the ledger holds one more row`
+- Production files: none beyond TDD-0312
 
 ### TDD-0315
 

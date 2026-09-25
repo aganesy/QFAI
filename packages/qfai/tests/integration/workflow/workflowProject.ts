@@ -103,6 +103,47 @@ export async function minimalProject(config?: string): Promise<string> {
   return root;
 }
 
+const DISCUSSION_PACK = "discussion-20260923171450572";
+const REPOSITORY_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
+
+/**
+ * A temp git repository after `qfai init`, whose validate reports no error: the steering
+ * placeholders are filled and this repository's own discussion pack is copied in.
+ */
+export async function initProject(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-workflow-"));
+  roots.push(root);
+  git(root, ["init", "-q"]);
+  const init = spawnSync(process.execPath, [CLI, "init", "--yes"], { cwd: root, encoding: "utf8" });
+  if (init.status !== 0) throw new Error(`qfai init: ${init.stderr}`);
+  for (const name of ["manifest", "product", "structure", "tech"]) {
+    const file = path.join(root, ".qfai", "assistant", "catalog", `${name}.md`);
+    await writeFile(file, (await readFile(file, "utf8")).replace(/<[^<>\n]+>/g, "none"));
+  }
+  await cp(
+    path.join(REPOSITORY_ROOT, ".qfai", "discussion", DISCUSSION_PACK),
+    path.join(root, ".qfai", "discussion", DISCUSSION_PACK),
+    { recursive: true },
+  );
+  commitAll(root);
+  return root;
+}
+
+/** Commits every change in `root` that git does not ignore. */
+export function commitAll(root: string): void {
+  git(root, ["add", "-A"]);
+  git(root, [
+    "-c",
+    "user.name=qfai",
+    "-c",
+    "user.email=qfai@example.com",
+    "commit",
+    "--allow-empty",
+    "-qm",
+    "run",
+  ]);
+}
+
 export interface CliRun {
   status: number;
   stdout: string;
@@ -244,4 +285,33 @@ export async function routedRun(root: string, proposal: object = DISCOVERY_PROPO
     resultFor(routing.json, "route-1", { proposal }),
   );
   return { runId, routing, routed };
+}
+
+/** A feature run approved and driven, with canned accepted results, until `next` issues a
+ * work order of `stageKind`. Returns the run and that `next` output. */
+export async function featureRunAt(root: string, stageKind: string) {
+  const { runId, routed } = await routedRun(root, FEATURE_PROPOSAL);
+  const approved = await submit(root, runId, "decision", {
+    questionId: field(routed.json, "questions.0.questionId"),
+    answer: { optionIds: ["create"] },
+    answeredBy: "operator",
+    expectedSequence: field(routed.json, "run.sequence"),
+  });
+  if (field(approved.json, "run.state") !== "ready") throw new Error(approved.stdout);
+  for (let step = 0; step < 8; step += 1) {
+    const issued = workflow(root, ["next", "--run", runId]);
+    const kind = field(issued.json, "workOrder.stageKind");
+    if (kind === stageKind) return { runId, issued };
+    const slotId = field(issued.json, "workOrder.target.slotId");
+    const bindings =
+      typeof slotId === "string" ? [{ slotId, capabilityId: "CAP-0001", specId: "spec-0001" }] : [];
+    const accepted = await submit(
+      root,
+      runId,
+      "accept",
+      resultFor(issued.json, `stage-${String(step)}`, bindings.length > 0 ? { bindings } : {}),
+    );
+    if (field(accepted.json, "ok") !== true) throw new Error(accepted.stdout);
+  }
+  throw new Error(`no ${stageKind} work order`);
 }

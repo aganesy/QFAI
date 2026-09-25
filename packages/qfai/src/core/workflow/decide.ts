@@ -54,6 +54,15 @@ export interface WorkflowEvent {
   // Runtime only: what the run has settled so far, which the tracked summary never copies.
   settled?: WorkflowSettled;
   adjustments?: WorkflowStartAdjustment[];
+  // On an issued work order bound to a spec: that spec's ledger row set as the core read it.
+  rowSet?: WorkflowLedgerRow[];
+}
+
+// One ledger row as the core records it at issue: its ID, its status and a digest of its cells.
+interface WorkflowLedgerRow {
+  rowId: string;
+  status: string;
+  digest: string;
 }
 
 // A path an approved Change Request changed outside the run, admitted into the run change
@@ -251,7 +260,9 @@ type InputRefusalReason =
   | "option"
   | "reviewer-not-independent"
   | "blocked-repairable"
-  | "authorization-kind";
+  | "authorization-kind"
+  | "ledger-done-moved"
+  | "ledger-row-added";
 
 interface InputRefusal {
   reason: InputRefusalReason;
@@ -350,6 +361,8 @@ export interface WorkflowSnapshot {
   halt?: WorkflowHalt;
   // The record areas of every work order the run issued.
   issuedRecordAreas?: string[];
+  // The bound spec's ledger row set, as the outstanding work order was issued against it.
+  issuedRowSet?: WorkflowLedgerRow[];
   // The bounded adjustments `resume` made to the run's starting state.
   startAdjustments?: WorkflowStartAdjustment[];
 }
@@ -365,6 +378,8 @@ interface WorkflowAcceptedStage {
   stageKind: string;
   outcome: string;
   receiptRef?: string;
+  // Each shared report the result named, as copied under this stage instance.
+  reports?: { path: string; digest: string }[];
   gateResults?: WorkflowGateReceipt[];
   reviewResults?: WorkflowReview[];
   debts?: WorkflowDebt[];
@@ -1125,6 +1140,36 @@ function ledgerOf(
   return { specId, rowIds, rowSetDigest };
 }
 
+// The row set of the spec a work order is bound to, as the ledger fact reads it now.
+function rowSetOf(workOrder: WorkflowWorkOrder, facts: WorkflowFacts) {
+  const target = workOrder.target;
+  if (target?.kind !== "spec" || facts.ledger?.specId !== target.specId) return undefined;
+  return facts.ledger.rows.map(({ rowId, status, digest }) => ({ rowId, status, digest }));
+}
+
+// A row that was `done` when the work order was issued stays `done`, and only `sdd_append` adds
+// a row. Any other cell edit is the stage owner's, judged by review.
+function ledgerRefusals(
+  issued: readonly WorkflowLedgerRow[] | undefined,
+  stageKind: string,
+  facts: WorkflowFacts,
+): InputRefusal[] {
+  const now = facts.ledger?.rows;
+  if (!issued || !now) return [];
+  const moved = issued
+    .filter((row) => row.status === "done")
+    .filter((row) => now.find((current) => current.rowId === row.rowId)?.status !== "done")
+    .map((row): InputRefusal => ({ reason: "ledger-done-moved", subject: row.rowId }));
+  const known = new Set(issued.map((row) => row.rowId));
+  const added =
+    stageKind === "sdd_append"
+      ? []
+      : now
+          .filter((row) => !known.has(row.rowId))
+          .map((row): InputRefusal => ({ reason: "ledger-row-added", subject: row.rowId }));
+  return [...moved, ...added];
+}
+
 const AUTHORIZATION_KINDS: unknown[] = ["request_scope", "human_decision", "project_policy"];
 
 // Only the core records an authorization. One a payload carries is refused, and one of a kind
@@ -1309,10 +1354,11 @@ function issueWorkOrder(
   run: WorkflowSnapshot["run"],
   workOrder: WorkflowWorkOrder,
   skipped: WorkflowEvent[] = [],
+  rowSet?: WorkflowLedgerRow[],
 ): WorkflowDecision {
   const events = [
     ...skipped,
-    { type: "work-order-issued", workOrder },
+    { type: "work-order-issued", workOrder, ...(rowSet ? { rowSet } : {}) },
     { type: "dispatch-work-order" },
   ];
   return {
@@ -2379,7 +2425,7 @@ export function decide(
       acceptedStages.at(-1)?.stageInstanceId,
       stage.stageInstanceId,
     );
-    return issueWorkOrder(run, nextWorkOrder, skipped);
+    return issueWorkOrder(run, nextWorkOrder, skipped, rowSetOf(nextWorkOrder, facts));
   }
 
   if (input.operation === "next" && run.state === "running" && workOrder) {
@@ -2454,7 +2500,10 @@ export function decide(
       };
     }
 
-    const inputRefusals = resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []);
+    const inputRefusals = [
+      ...resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []),
+      ...ledgerRefusals(snapshot.issuedRowSet, workOrder.stageKind, facts),
+    ];
     if (inputRefusals.length > 0) return refusedWith(run, inputRefusals);
     const delegated = decideDelegation(snapshot, workOrder, result);
     if (delegated) return delegated;
