@@ -10,5 +10,6 @@ Feature: No Early Winner
 Scenario: AC-0001-0089-01
   Given a UI-bearing discussion pack
   When inspected
-  Then it does not declare a final winner direction or finalized design system.
+  Then its screen explorations are carried unranked and it declares no final design system
+  And the only direction it records is the brand direction the user chose
 ```

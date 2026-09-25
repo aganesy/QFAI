@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a QFAI user, I want discussion to stop short of selecting the winning visual direction, so that breakthrough can still happen inside prototyping.
+As a QFAI user, I want discussion to carry the screen explorations unranked and to record only the brand direction I choose, so that the screen design can still be found inside prototyping.
 
 ## Legacy Source Scope
 
@@ -22,3 +22,5 @@ As a QFAI user, I want discussion to stop short of selecting the winning visual 
 
 - Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
 - Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0008`
+- Restated by the brand-direction change request that `decisions.md#DEC-0683`
+  records; main's text at `origin/main:.qfai/specs/spec-0010/02_User-stories.md`.

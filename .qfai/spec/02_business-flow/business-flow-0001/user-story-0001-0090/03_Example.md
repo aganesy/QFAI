@@ -2,6 +2,7 @@
 
 ## Examples
 
-| EX-ID           | AC-Ref          | Input                                                            | Expected             |
-| --------------- | --------------- | ---------------------------------------------------------------- | -------------------- |
-| EX-0001-0090-01 | AC-0001-0090-01 | UI-bearing run produces root `DESIGN.md` with all 4 token tables | DESIGN.md draft pass |
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                     | Expected                                                                                                                                                                                    |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0090-01 | AC-0001-0090-01 | web-surface run records `adopted_theme` with `chosen_by: user` in `01_Context.md#Design Direction`                                                                                        | handoff pass; discussion wrote no root `DESIGN.md`                                                                                                                                          |
+| EX-0001-0090-02 | AC-0001-0090-02 | `/qfai-sdd` for a web-surface flow whose pack records `adopted_theme` with `chosen_by: user`, and the same run against a web-surface pack whose `01_Context.md#Design Direction` is empty | The first root `DESIGN.md` takes its brand from the recorded theme. The second writes no `DESIGN.md` and asks the user for the brand direction; no archetype is picked on the user's behalf |

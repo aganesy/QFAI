@@ -33,6 +33,8 @@ function envOf(step: Record<string, unknown>): Record<string, unknown> {
 }
 
 describe("the Windows job's suite list", () => {
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-01
   it("The Windows job runs exactly the declared suite list", () => {
     const windows = job(WINDOWS_JOB);
 
@@ -41,6 +43,7 @@ describe("the Windows job's suite list", () => {
     expect([...suiteList()].sort()).toEqual([...DECLARED_SUITES].sort());
   });
 
+  // QFAI:EX-0002-0024-02
   it("The job points TEMP and TMP at a directory with a space", () => {
     const steps = stepsOf(job(WINDOWS_JOB));
     const testAt = firstTestStep(job(WINDOWS_JOB));

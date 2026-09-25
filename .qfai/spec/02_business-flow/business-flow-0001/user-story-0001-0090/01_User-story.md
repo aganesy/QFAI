@@ -1,8 +1,8 @@
-# US-0001-0090: DESIGN.md Draft Authoring
+# US-0001-0090: Design Direction Handoff
 
 ## User Story
 
-As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vision / visual identity become the single source of truth for downstream skills.
+As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` authors root `DESIGN.md` from my choice rather than from an assistant's guess.
 
 ## Legacy Source Scope
 
@@ -22,3 +22,6 @@ As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vis
 
 - Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
 - Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0009`
+- Retitled and restated by the brand-direction change request that
+  `decisions.md#DEC-0683` records; main's text at
+  `origin/main:.qfai/specs/spec-0010/02_User-stories.md`.

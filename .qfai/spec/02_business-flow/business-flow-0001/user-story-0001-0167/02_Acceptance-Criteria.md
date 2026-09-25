@@ -34,4 +34,13 @@ Scenario: Migration Skill Routing
   When the routing for that skill is read,
   Then it has three phases in order: `plan`, with `requirements-analyst` and `solution-architect` mandatory and `solution-architect` blocking; `execution`, with `devops-ci-engineer` mandatory; and `review`, with `completion-reviewer` and `architecture-reviewer` mandatory and both blocking. Its review profile is `architecture-heavy`.
   And the skill's `roles:` names every agent the entry binds and every reviewer `architecture-heavy` selects, and its `routing-profile:` is `architecture-heavy`, so `qfai validate` reports no `QFAI-AGENT-015` to `QFAI-AGENT-019` finding for it.
+
+# AC-0001-0167-05
+# Parent: US-0001-0167
+Scenario: The routing defaults route the two entry skills
+  Given the routing and review-profile defaults built into the package
+  When the entries for `qfai-run` and `qfai-maintain` are read
+  Then `qfai-run` has the orchestrator role and no authoring or reviewing phase
+  And `qfai-maintain` has an authoring phase and an independent reviewer, on the `default` review profile
+  And the review-profile defaults gain no profile
 ```

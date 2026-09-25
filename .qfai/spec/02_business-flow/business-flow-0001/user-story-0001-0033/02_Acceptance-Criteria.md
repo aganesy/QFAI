@@ -26,4 +26,14 @@ Scenario: レガシー管理ブロックからの自動移行
   Then marker 行は 1 件のみ残る
   And レガシー行 `!.qfai/review/review-*/` と `!.qfai/review/review-*/**` は除去される
   And 新しい管理ブロックに置換される
+
+# AC-0001-0033-03
+# Parent: US-0001-0033
+Scenario: The managed block ignores run state and keeps run evidence tracked
+  Given an empty git repository, or one whose managed block an earlier release wrote without the run-state lines
+  When `qfai init` runs, and then runs again
+  Then `git check-ignore` reports `.qfai/run/x` ignored
+  And it reports `.qfai/evidence/workflow/x/summary.json` not ignored
+  And the marker line, `.qfai/run/` and `!.qfai/evidence/workflow/` each occur once
+  And the second run leaves `.gitignore` byte-identical
 ```

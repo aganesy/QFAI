@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 import { WINDOWS_JOB, job, needsOf, verdictExit } from "./ownCi.js";
 
 describe("the Windows job's selection and verdict", () => {
+  // QFAI:AC-0002-0024-02
+  // QFAI:EX-0002-0024-04
   it("The job follows change detection and joins the verdict", () => {
     const windows = job(WINDOWS_JOB);
 
@@ -15,6 +17,7 @@ describe("the Windows job's selection and verdict", () => {
     expect(needsOf(job("ci-pass"))).toContain(WINDOWS_JOB);
   });
 
+  // QFAI:EX-0002-0024-05
   it("A failing Windows job fails the aggregate verdict", () => {
     const needs = Object.fromEntries(
       needsOf(job("ci-pass")).map((name) => [
