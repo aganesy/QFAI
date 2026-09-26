@@ -83,7 +83,8 @@ It is neutral with respect to AI behavior.
 ## Contracts produced (post-loop)
 
 - `<contractsDir>/design/design-system.yaml` — deterministic mirror of
-  DESIGN.md tokens. No HTML extraction. See `handoff.md`.
+  DESIGN.md tokens, written by `iterate` on the cycle that ends the loop.
+  No HTML extraction. See `handoff.md`.
 - `<contractsDir>/design/prototype-handoff.yaml`
 - `.qfai/evidence/prototyping/completion-certificate.json` (records
   `designMdPath` + `designMdSha256`)

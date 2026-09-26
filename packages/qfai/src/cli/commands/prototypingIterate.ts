@@ -12,8 +12,8 @@
  *     `prototyping.json#designMd.sha256`; mismatch => exit 2. Then
  *     checks the latest iteration in `prototyping.json#iterations[]`
  *     against the deterministic stop condition (shouldStop()) and exits
- *     64 (convergence) or 65 (max-iterations) when applicable.
- *     Otherwise assigns paths for the next iteration and exits 0 to
+ *     64 (convergence) or 65 (max-iterations) when applicable, after
+ *     writing `design-system.yaml` from the root DESIGN.md. Otherwise assigns paths for the next iteration and exits 0 to
  *     signal "continue".
  *
  * Exit codes:
@@ -59,6 +59,7 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
+import { writeDesignSystemMirror } from "../../core/prototyping/designSystemMirror.js";
 import {
   PROTOTYPE_REL,
   PROTOTYPING_EVIDENCE_REL,
@@ -3587,6 +3588,26 @@ type CycleGteOneGateInput = {
 type CycleGteOneGateResult = { shortCircuit: true; exitCode: number } | { shortCircuit: false };
 
 /**
+ * The cycle that ends the loop writes `design-system.yaml` from the DESIGN.md
+ * this invocation read, then reports the stop. The gates before it have
+ * already refused a DESIGN.md that differs from its lock or from the cycle-0
+ * record, so the hash it records is the lock's whenever a lock exists.
+ */
+async function endLoop(
+  input: CycleGteOneGateInput,
+  reason: StopReason,
+): Promise<CycleGteOneGateResult> {
+  const written = await writeDesignSystemMirror(
+    input.root,
+    input.config.paths.contractsDir,
+    input.designMd,
+    input.currentSha,
+  );
+  info(`qfai prototyping iterate: wrote ${written} from DESIGN.md.`);
+  return { shortCircuit: true, exitCode: emitStop(reason) };
+}
+
+/**
  * Section 2 of `runPrototypingIterate`: cycle >= 1 gates.
  *
  * Composes (in order) the hash-gate against the lock-anchored cache
@@ -3733,7 +3754,7 @@ async function evaluateCycleGteOneGate(
               `First violation: ${first.kind}=${first.found}. ` +
               "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
           );
-          return { shortCircuit: true, exitCode: emitStop("max-iterations") };
+          return endLoop(input, "max-iterations");
         }
         info(
           "qfai prototyping iterate: review reported convergence but the " +
@@ -3743,10 +3764,10 @@ async function evaluateCycleGteOneGate(
         );
         // Fall through to the next-cycle plan below (no early return).
       } else {
-        return { shortCircuit: true, exitCode: emitStop(stop) };
+        return endLoop(input, stop);
       }
     } else {
-      return { shortCircuit: true, exitCode: emitStop(stop) };
+      return endLoop(input, stop);
     }
   }
   // Defense-in-depth: confirm the recorded loop history is itself
