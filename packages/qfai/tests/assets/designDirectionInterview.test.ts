@@ -36,8 +36,13 @@ const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
 describe("the design direction is the user's decision", () => {
   for (const tree of QFAI_TREES) {
+    // QFAI:EX-0001-0090-01
     it(`${tree}: the pack has a place to record the choice`, async () => {
       const template = await read(tree, CONTEXT_TEMPLATE);
+      const skill = flat(await read(tree, DISCUSSION_SKILL));
+
+      // The record is the handoff; the brand file is not discussion's to write.
+      expect(skill).toContain("Root DESIGN.md is not a discussion output");
 
       expect(template).toContain("## Design Direction");
       for (const field of ["adopted_theme:", "brand_accent:", "conventions_kept:", "chosen_by:"]) {
@@ -93,6 +98,7 @@ describe("the design direction is the user's decision", () => {
       expect(matrix).toContain("nothing downstream reads a theme for a surface that renders");
     });
 
+    // QFAI:EX-0001-0090-02
     it(`${tree}: Phase 0 reads the recorded direction and stops without one`, async () => {
       const authoring = flat(await read(tree, AUTHORING));
 
