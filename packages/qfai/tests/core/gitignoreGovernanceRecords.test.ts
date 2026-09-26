@@ -178,18 +178,20 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     ".qfai/evidence/skeleton.md",
   ];
 
-  // This repository uses its own root `.qfai/` as an installed QFAI tree, and
-  // the skeleton phase writes its evidence there. The generated block and the
-  // per-directory ignore both have to carry the negation here too, or the
-  // record the phase requires in its own commit never enters one.
-  it("this repository's own ignores keep the skeleton evidence trackable", async () => {
+  // This repository uses its own root `.qfai/` as an installed QFAI tree.
+  // Evidence there is a local work area, so nothing under it may reach a commit.
+  it("this repository's own ignores keep every evidence record out of version control", async () => {
     const here = path.dirname(fileURLToPath(import.meta.url));
     const repoRoot = path.resolve(here, "..", "..", "..", "..");
-    expect(await isIgnored(repoRoot, ".qfai/evidence/skeleton.md")).toBe(false);
-    // The negation is scoped to the one file: a stage log beside it, which no
-    // negation names, stays ignored. Not `implement-*` / `atdd-*` — the
-    // completion gate anchors into those, so they carry negations of their own.
-    expect(await isIgnored(repoRoot, ".qfai/evidence/verify-spec-0001.md")).toBe(true);
+    for (const relativePath of [
+      ".qfai/evidence/skeleton.md",
+      ".qfai/evidence/verify-spec-0001.md",
+      ".qfai/evidence/decision/2026-01-01T00-00-00.000Z.json",
+      ".qfai/evidence/workflow/run/summary.json",
+      ".qfai/evidence/migration-spec-to-story/retired/spec-0001/07_Decisions.md",
+    ]) {
+      expect(await isIgnored(repoRoot, relativePath), `${relativePath} must be ignored`).toBe(true);
+    }
   });
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {
