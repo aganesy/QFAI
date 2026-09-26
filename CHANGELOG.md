@@ -363,10 +363,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   never had the handoff's `finalArtifact` and `designSystemMirror` paths
   checked. It now reads `<paths.contractsDir>/design/prototype-handoff.yaml`.
 
-- **The CLI contract template validates as written.** Its `## Rules` table
-  used the columns Rule ID, Rule, Examples and Rule refs, which the
-  business-rule reader rejects. It now uses BR-ID, Statement and Examples.
-
 - **`prototyping.yaml` is offered only to a pack that can use it.** The README
   and the discussion skill offered the file to every UI-bearing discussion
   pack, a cli-only pack included, while the skill forbids the file for one:
