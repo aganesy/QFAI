@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { defaultConfig } from "../../src/core/config.js";
+import { loadLayerPolicy } from "../../src/core/layerPolicy.js";
+import { resolveAllowedLayerTagsFromPolicy } from "../../src/core/specPackParsers.js";
 import { LAYER_TAGS } from "../../src/core/testStrategyTags.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -48,6 +51,38 @@ describe("the layer to CI lane map is part of the layer rule", () => {
       "layer-integration",
       "layer-unit",
     ]);
+  });
+
+  // QFAI:EX-0002-0021-05
+  it("keeps the layer-vocabulary warning count at its baseline and names only catalogued layers", async () => {
+    // The recorded baseline: the shipped policy agrees with the built-in layer set,
+    // so the policy reader reports no layer-vocabulary warning.
+    const RECORDED_WARNING_BASELINE = 0;
+    const policy = await loadLayerPolicy(repoRoot, defaultConfig);
+    expect(policy.source).toBe("policy-file");
+    expect(policy.issues.filter((entry) => entry.severity === "warning")).toHaveLength(
+      RECORDED_WARNING_BASELINE,
+    );
+    expect([...policy.tags].sort()).toEqual([...LAYER_TAGS].sort());
+
+    const rule = read(path.join(assetRoot, ruleName));
+    const section = (rule.split("## CI lane mapping\n")[1] ?? "").split("\n## ")[0] ?? "";
+    expect(section.length).toBeGreaterThan(0);
+    expect(resolveAllowedLayerTagsFromPolicy(section)).toEqual(new Set());
+
+    const catalog = new Set(
+      [...rule.matchAll(/^\|\s*L\d\s*\|\s*([^|]+?)\s*\|\s*`layer-[a-z0-9]+`/gm)].map(
+        (match) => match[1] ?? "",
+      ),
+    );
+    expect(catalog.size).toBe(LAYER_TAGS.size);
+    const named = new Set(
+      [...section.matchAll(/\b([A-Z][A-Za-z0-9]*)(?:\s+and\s+([A-Z][A-Za-z0-9]*))?\s+tests\b/g)]
+        .flatMap((match) => [match[1], match[2]])
+        .filter((name): name is string => name !== undefined),
+    );
+    expect(named.size, "the mapping section must name the layers it routes").toBeGreaterThan(0);
+    expect([...named].filter((name) => !catalog.has(name))).toEqual([]);
   });
 
   // QFAI:EX-0002-0021-06

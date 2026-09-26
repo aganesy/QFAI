@@ -246,11 +246,45 @@ async function planOverrides(root: string): Promise<MigrationOperation | null> {
   return changed ? { kind: "write", target: "qfai.config.yaml", content: String(config) } : null;
 }
 
+/**
+ * Overlays of one name under both `constitution/` and `catalog/` whose master is
+ * under `rule/` and whose place beside it is free. Either could take that place,
+ * so a person chooses before step 3 writes anything.
+ */
+async function contestedOverlays(root: string): Promise<string[]> {
+  const names = async (directory: string): Promise<Set<string>> => {
+    const absolute = path.join(root, ".qfai/assistant", directory);
+    if (!(await exists(absolute))) return new Set();
+    const entries = await readdir(absolute, { withFileTypes: true });
+    return new Set(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".local.md"))
+        .map((entry) => entry.name),
+    );
+  };
+  const catalog = await names("catalog");
+  const contested: string[] = [];
+  for (const name of [...(await names("constitution"))].sort()) {
+    if (!catalog.has(name)) continue;
+    const rule = path.join(root, ".qfai/assistant/rule");
+    if (!(await exists(path.join(rule, name.replace(/\.local\.md$/, ".md"))))) continue;
+    if (await exists(path.join(rule, name))) continue;
+    for (const directory of ["constitution", "catalog"]) {
+      contested.push(
+        `.qfai/assistant/${directory}/${name}: another overlay of this name would take .qfai/assistant/rule/${name}; keep one and run step 3 again.`,
+      );
+    }
+  }
+  return contested;
+}
+
 export const step03: MigrationStep = {
   number: 3,
   writeSet: ["qfai", "specs", "contracts", "config"],
   sections: ["For a person"],
   async plan(context) {
+    const contested = await contestedOverlays(context.root);
+    if (contested.length > 0) return { operations: [], forAPerson: contested };
     const operations: MigrationOperation[] = [];
     const forAPerson: string[] = [];
     const reserved = new Set<string>();

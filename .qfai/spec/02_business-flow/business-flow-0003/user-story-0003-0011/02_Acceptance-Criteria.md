@@ -22,6 +22,7 @@ Scenario: drift finding は advisory であり exit code を変えない (bounda
   Then exit code は 0 のまま変わらない (本 finding 単独では active profile を block しない)
   And finding は "warnings advisory of drift" group (AC-0003-0007-02) に表示される
   And `qfai validate` はこの drift について finding を 1 件も emit しない (diagnostic surface のみ)
+  And as a control, a tree with one `error` finding under `qfai doctor --fail-on error` exits 1
 
 # AC-0003-0011-03
 # Parent: US-0003-0011
@@ -36,7 +37,7 @@ Scenario: repair text は手動手順のみを名指しし、absent / declined /
   And provenance entry を持ち install 後に削除された `declined` state は `absent` とは別 state であり、
     本 AC の対象外である。その報告のされ方は AC-0003-0011-06 が owner である
   And `absent` と `declined` を「不在」として同一視しない。どちらの name を missing / 意図的削除として
-    ownership 上どう扱うかの分類は spec-0003 / REQ-0020 の ownership contract 側の責務であり、本 AC の
+    ownership 上どう扱うかの分類は `.qfai/spec/03_contract/cli/shipped-workflows.md` の ownership contract 側の責務であり、本 AC の
     対象外である
   And install 済み package 側の shipped copy を解決できない場合、check は severity `info` で skip する
 

@@ -446,6 +446,8 @@
     "tests/integration/bf0002DistributedSurfaceParity.test.ts",
     "tests/integration/bf0002PackBoundary.test.ts",
     "tests/integration/bf0003Acceptance.test.ts",
+    "tests/integration/bf0003DoctorExamples.test.ts",
+    "tests/integration/bf0003GuardrailsExamples.test.ts",
     "tests/integration/bf0004Acceptance.test.ts",
     "tests/unit/bf0001Examples.test.ts",
     "tests/unit/bf0001ValidateRegistration.test.ts",

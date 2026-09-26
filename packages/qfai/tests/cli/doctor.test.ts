@@ -265,6 +265,8 @@ describe("doctor", () => {
   });
 
   it("accepts the shipped empty prompt directory but warns when content is added", async () => {
+    // QFAI:EX-0003-0004-02
+    // QFAI:EX-0003-0004-03
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });

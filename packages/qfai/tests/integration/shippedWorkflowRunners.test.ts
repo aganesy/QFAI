@@ -544,6 +544,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
   //   the shipped fall-open literal, which is a fallback choice and not a
   //   support-floor claim.
 
+  // QFAI:EX-0002-0005-02
   it("every shipped header table names the repository variable it reads and that variable's default", async () => {
     const files = await loadShippedWorkflows();
     // Non-vacuity: every shipped file is judged, and there are two or more.
@@ -555,6 +556,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0005-02
   it("every shipped header table states the wrong-value failure mode: no fail fast, the job queues indefinitely", async () => {
     const files = await loadShippedWorkflows();
     expect(files.length).toBeGreaterThanOrEqual(2);
@@ -567,6 +569,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0005-02
   it("every shipped header table states the packageManager precondition, the covered layer, the inertness condition and the fail-open behaviour", async () => {
     const files = await loadShippedWorkflows();
     expect(files.length).toBeGreaterThanOrEqual(2);

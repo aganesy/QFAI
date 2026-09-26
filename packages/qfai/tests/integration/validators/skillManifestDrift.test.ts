@@ -1,5 +1,3 @@
-// QFAI:EX-0003-0010-02
-//
 // Pair III SSOT-sync: when the probe implementation references the
 // canonical manifest field name AND the manifest schema reference does
 // likewise, the pair is symmetric and no finding fires. If one side

@@ -15,7 +15,6 @@
 // QFAI:EX-0003-0006-03
 // QFAI:EX-0003-0006-04
 // QFAI:EX-0003-0007-01
-// QFAI:EX-0003-0007-02
 
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -142,6 +141,7 @@ describe("TC-0006-0013: playwright probe order documented and observable", () =>
 
 describe("TC-0006-0014: playwright-cli triggers D-DEPRECATED-PROBE with sunset 1.10.0", () => {
   it("emits an error finding whose body literally contains `sunset: 1.10.0`", async () => {
+    // QFAI:AC-0003-0006-04
     const root = await newTempDir("tc14");
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await seedLocalPlaywrightCli(root);

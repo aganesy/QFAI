@@ -1196,6 +1196,7 @@ describe("TC-0003-0048 (TDD-0048): write and removal path contains no filesystem
     return resolveWorkflowFileState(entry, diskDigest, packagedDigest);
   }
 
+  // QFAI:EX-0002-0007-04
   it("no filesystem mutation call of its own: the workflow-path functions and the runInit workflows segment use the primitives only", async () => {
     const source = await readInitSource();
 

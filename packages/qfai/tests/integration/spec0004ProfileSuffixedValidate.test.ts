@@ -9,9 +9,6 @@
 // QFAI:EX-0001-0049-01
 // QFAI:EX-0001-0049-02
 // QFAI:EX-0001-0049-02
-// QFAI:EX-0002-0010-01
-// QFAI:EX-0002-0010-01
-// QFAI:EX-0002-0010-01
 // QFAI:EX-0002-0010-02
 // QFAI:EX-0001-0050-01
 // QFAI:EX-0001-0050-01
@@ -218,6 +215,7 @@ async function runCheckScript(
 }
 
 describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () => {
+  // QFAI:EX-0002-0010-01
   it("scanner-only PR emits R-PROMPT-SCANNER-DRIFT naming the scanner and un-paired prompt", async () => {
     const result = await runCheckScript(["--changed", SCANNER_REL]);
     expect(result.code).not.toBe(0);
@@ -230,6 +228,7 @@ describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () =
 });
 
 describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () => {
+  // QFAI:EX-0002-0010-01
   it("prompt-only PR emits R-PROMPT-SCANNER-DRIFT naming the prompt and un-paired scanner", async () => {
     const result = await runCheckScript(["--changed", PROMPT_REL]);
     expect(result.code).not.toBe(0);
@@ -241,6 +240,7 @@ describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () =>
 });
 
 describe("TC-0004-0061: pair-changed lane passes when both halves change", () => {
+  // QFAI:EX-0002-0010-01
   it("both-changed PR passes the lane silently with no drift finding", async () => {
     const result = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
     expect(result.code).toBe(0);
