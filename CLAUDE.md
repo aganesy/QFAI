@@ -38,6 +38,11 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   call for the whole set. The remaining budget is in the response's headers, not
   in a rate-limit endpoint. `scripts/gh-budget.mjs` answers the two questions
   that cost the most when asked the expensive way.
+- Classify an action by how hard it is to undo before it runs, in the classes
+  `.claude/rules/action-reversibility.md` (master:
+  `.agents/rules/action-reversibility.md`) sets out. A destructive,
+  hard-to-reverse or visible action needs the user or a standing instruction.
+  An obstacle is never a reason for a destructive shortcut.
 - All temporary/scratch files go in `tmp/` — working-tree files only; a test's
   `mkdtemp` sandbox under `os.tmpdir()` is out of scope (see
   `.claude/rules/temporary-files.md`, master: `.agents/rules/temporary-files.md`,

@@ -4,6 +4,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- **A rule that classifies an action by how hard it is to undo** (#2232).
+  `action-reversibility.md` sorts an action into four classes before it runs:
+  local and reversible, destructive, hard to reverse, and visible to others.
+  Only the first proceeds on the agent's own judgement; the other three need
+  the user, or a standing instruction that already covers that action. The one
+  exception is an ordinary push, without force, to a branch the agent created
+  for the current task. A standing instruction is the user's request in the
+  current session, a skill the user invoked whose steps include the action, or
+  an instruction recorded in memory or settings that names the action and its
+  context in the user's own words. Under a mode that may not ask, such as
+  `--auto`, the action is not taken: it is recorded as an open question and the
+  rest of the work continues. The rule also states that an obstacle is not a
+  reason for a destructive shortcut. Until
+  now only release operations were bounded this way, by
+  `version-discipline.md`, which is unchanged. `qfai init` seeds the rule and
+  cites it from `AGENTS.md`, `CLAUDE.md` and `.github/copilot-instructions.md`.
+
 ### Removed
 
 - **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
