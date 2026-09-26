@@ -1,0 +1,14 @@
+{
+  "source": ".qfai/specs/spec-0003/02_User-stories.md",
+  "sourceSha256Before": "d8798c572b8a72ad16410ab02d6001bf2d4ae764722888c23854c47e03597665",
+  "sourceSha256After": "3c00288828792fc5c0d7f12c24355b386c472e4535d41891f97a1a189185b85e",
+  "retired": [
+    {
+      "id": "US-0003-0018",
+      "catalog": "- US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成\n",
+      "section": "## US-0003-0018: migration memo authoring\n\n- Parent: CAP-0003\n- Goal: `qfai init --upgrade-assistant-tree` が成功した時点で `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を author し、移行内容の audit trail を残す\n- Non-goals: memo 内容のユーザー編集を許す (memo は OC-53 により commit 後 immutable)\n- Notes: REQ-0021 を実装する。memo は commit に含まれることで初めて confirmed 状態となる\n\n",
+      "authority": "spec-0003/09_delta.md:355",
+      "sha256": "a61c58147042a685ba0a247deef210ca04aa0ba66eb82e44284efb1f86e1dd08"
+    }
+  ]
+}

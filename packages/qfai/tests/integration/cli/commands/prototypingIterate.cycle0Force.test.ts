@@ -14,8 +14,8 @@
  *       same reset fails (REQ-0174).
  */
 
-// QFAI:SPEC-0012:TC-0012-0449
-// QFAI:SPEC-0012:TC-0012-0481
+// QFAI:EX-0001-0140-01
+// QFAI:EX-0001-0140-02
 
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -172,6 +172,13 @@ async function seedProject(root: string): Promise<void> {
       "validation:",
       "  failOn: error",
     ].join("\n"),
+    "utf-8",
+  );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");

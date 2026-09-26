@@ -13,26 +13,11 @@ export function normalizeRepoPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
 }
 
-/** The common ancestor used by the three-dot branch diff. */
-export function mergeBaseRevision(root: string, baseBranch: string): string | null {
+/** File content at the merge base used by branch-drift checks, if available. */
+export function readFileAtBase(root: string, baseBranch: string, file: string): string | null {
   const revision = gitStdout(root, ["merge-base", baseBranch, "HEAD"])?.trim();
-  return revision || null;
-}
-
-/** Read one path at the branch's merge base, distinguishing absence from failure. */
-export function fileAtRevision(
-  root: string,
-  revision: string,
-  file: string,
-):
-  | { readonly kind: "present"; readonly content: string }
-  | { readonly kind: "absent" }
-  | { readonly kind: "unavailable" } {
-  const listed = gitStdout(root, ["ls-tree", "-z", revision, "--", file]);
-  if (listed === null) return { kind: "unavailable" };
-  if (listed.length === 0) return { kind: "absent" };
-  const content = gitStdout(root, ["show", `${revision}:${file}`]);
-  return content === null ? { kind: "unavailable" } : { kind: "present", content };
+  if (!revision) return null;
+  return gitStdout(root, ["show", `${revision}:${normalizeRepoPath(file)}`]);
 }
 
 /** Runs git for its stdout, or returns `null` when the command cannot run. */
@@ -308,4 +293,27 @@ function getRemovedPathsAgainstBase(root: string, baseBranch: string): Set<strin
     }
   }
   return removed;
+}
+
+/**
+ * Every path the working tree holds uncommitted: tracked changes, staged or not, and untracked
+ * files git does not ignore. `null` when `root` is not inside a git repository.
+ *
+ * `-z` keeps a path with a space or a non-ASCII name as git wrote it, and `--no-renames` makes a
+ * move report both of its paths.
+ */
+export function uncommittedPaths(root: string): string[] | null {
+  const output = gitStdout(root, [
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+    "--no-renames",
+  ]);
+  if (output === null) return null;
+  return output
+    .split("\0")
+    .filter((entry) => entry.length > 3)
+    .map((entry) => normalizeRepoPath(entry.slice(3)))
+    .sort();
 }

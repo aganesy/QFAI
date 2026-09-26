@@ -4,11 +4,8 @@
  * Tests canonical UIX aggregator path, exploration-first sidecar expectations,
  * legacy heading rejection, non-UI pack UIX skip, and truthful evidence/browser QA.
  *
- * TC-0004-0023..0031 are backfill trace anchors only (no body tests in this
+ * TC-0004-0023..0026 are backfill trace anchors only (no body tests in this
  * file). The actual tests live in:
- *   - `packages/qfai/tests/validators/worklogSurface.test.ts` —
- *     TC-0004-0027..0031 (worklog schema
- *     date/scope/blocking/links/id-format sub-criteria)
  *   - `packages/qfai/tests/validators/skillDocReferences.test.ts` —
  *     TC-0004-0023 (skill project_memory) /
  *     TC-0004-0024 (W-SKILL-DOC-BROKEN-REF + severity escalation)
@@ -20,17 +17,10 @@
  * (every TC must be referenced at least once from tests/integration/**).
  */
 
-// QFAI:SPEC-0004:TC-0004-0002
-// QFAI:SPEC-0002:TC-0002-0010
-// QFAI:SPEC-0004:TC-0004-0023
-// QFAI:SPEC-0004:TC-0004-0024
-// QFAI:SPEC-0004:TC-0004-0025
-// QFAI:SPEC-0004:TC-0004-0026
-// QFAI:SPEC-0004:TC-0004-0027
-// QFAI:SPEC-0004:TC-0004-0028
-// QFAI:SPEC-0004:TC-0004-0029
-// QFAI:SPEC-0004:TC-0004-0030
-// QFAI:SPEC-0004:TC-0004-0031
+// QFAI:EX-0001-0018-01
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0048-01
+// QFAI:EX-0001-0048-02
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

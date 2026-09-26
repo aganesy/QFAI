@@ -1,13 +1,12 @@
 /**
- * Reviewer-Gate finding-code justification catalog (SSOT for
- * AC-0015-0018).
+ * Reviewer-Gate finding-code justification catalog.
  *
  * The eight registered codes MUST carry a mandatory non-empty
  * `justification:` field when emitted by a Reviewer subagent.
  * `qfai validate` ingestion rejects any catalog finding whose
  * `justification:` is empty / whitespace-only (advisory-failing,
- * mirrors the R-WORKLOG-DRIFT family pattern enforced by
- * `reviewerJustification.ts`).
+ * the same rule `reviewerJustification.ts` enforces for
+ * R-REJECTED-READOPT).
  *
  * IMPORTANT — catalog scope: this is the CLOSED 8-code mandatory-
  * justification set. Warning-class auxiliary codes that share a name

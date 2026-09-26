@@ -7,7 +7,7 @@
  * without Reviewer justification is rejected.
  */
 
-// QFAI:SPEC-0012:TC-0012-0454
+// QFAI:EX-0001-0143-01
 
 import { describe, expect, it } from "vitest";
 

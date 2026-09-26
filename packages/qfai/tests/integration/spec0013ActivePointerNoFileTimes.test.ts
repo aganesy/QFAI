@@ -41,7 +41,7 @@ const { mkdir, mkdtemp, rm } = await import("node:fs/promises");
 const { resolveActiveDiscussionPack } = await import("../../src/core/discussionPack.js");
 const { writeDiscussionCurrentId } = await import("../../src/core/state.js");
 
-// QFAI:SPEC-0013:TC-0013-0028
+// QFAI:EX-0001-0160-01
 describe("TC-0013-0028: active pack resolution does not read file times", () => {
   it("returns the pointed-at older pack without reading file metadata", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-spec0013-pointer-"));

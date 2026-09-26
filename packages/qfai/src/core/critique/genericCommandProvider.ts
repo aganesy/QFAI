@@ -1,6 +1,6 @@
 /**
  * Generic command provider — executes an external process and parses
- * the structured critique response from stdout (BR-0029-0003, BR-0029-0005).
+ * the structured critique response from stdout.
  *
  * Arguments are sanitized to prevent command injection (NFR-0006, POL-001).
  */

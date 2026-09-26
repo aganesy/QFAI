@@ -1,22 +1,4 @@
-/**
- * Integration: cycle-0 `--emit-skeletons` token-driven placeholder
- * coverage.
- *
- * - TC-0012-0471 (normal): `iterate --cycle 0 --emit-skeletons` over
- *   a multi-spec `frozenSurfaceUnion` writes one DESIGN.md-token-styled
- *   placeholder HTML per `screens[].id` with no per-screen LLM
- *   generation call.
- * - TC-0012-0472 (boundary): `iterate --cycle 0` WITHOUT
- *   `--emit-skeletons` emits zero skeleton files. `--skeleton-mode
- *   full` escalates while default `placeholder` does not.
- *
- * The pure helpers are exercised directly so the test is deterministic
- * (no Playwright spawn, no live LLM call). Wiring through the CLI is
- * confirmed via the .skip ATDD skeleton (E2E layer).
- */
-// QFAI:SPEC-0012:TC-0012-0471
-// QFAI:SPEC-0012:TC-0012-0472
-
+/** Verify token-styled skeleton generation and file output across screens. */
 import { mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -56,7 +38,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("TC-0012-0471: --emit-skeletons cross-spec frozenSurfaceUnion coverage", () => {
+describe("--emit-skeletons cross-contract frozenSurfaceUnion helpers", () => {
   it("emits one placeholder HTML per screen, consuming DESIGN.md tokens (default placeholder mode)", async () => {
     // Multi-spec union: spec-A {home, dashboard}, spec-B {settings}.
     const screens = [{ id: "home" }, { id: "dashboard" }, { id: "settings" }] as const;
@@ -124,23 +106,7 @@ describe("TC-0012-0471: --emit-skeletons cross-spec frozenSurfaceUnion coverage"
   });
 });
 
-describe("TC-0012-0472: opt-in default + --skeleton-mode full escalation", () => {
-  it("absence of --emit-skeletons writes zero skeleton files (no regression)", async () => {
-    // The opt-in semantic is encoded at the CLI flag layer: when
-    // emit-skeletons is not set the renderer is never called, so no
-    // files exist under the iter-00 prototypes dir.
-    const outDir = path.join(root, ".qfai", "prototypes", "iter-00");
-    await mkdir(outDir, { recursive: true });
-    // Simulate the "did NOT call the renderer" path.
-    let entries: string[];
-    try {
-      entries = await readdir(outDir);
-    } catch {
-      entries = [];
-    }
-    expect(entries).toEqual([]);
-  });
-
+describe("opt-in default and --skeleton-mode full escalation", () => {
   it("stub mode emits a minimal <!doctype html> marker (no styling)", () => {
     const html = buildSkeletonHtml({ id: "home" }, TOKENS, "stub");
     expect(html).toContain("<!doctype html>");

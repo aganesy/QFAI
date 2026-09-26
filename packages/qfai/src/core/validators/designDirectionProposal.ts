@@ -190,7 +190,7 @@ export async function validateDesignDirectionProposal(
           "designDirection.schema",
           undefined,
           "change",
-          "Restate the direction with keys and values from the DESIGN.md front-matter schema, or record the need as an open question for /qfai-sdd Phase 0.",
+          "Restate the direction with keys and values from the DESIGN.md front-matter schema, or record the need as an open question for the design lock step of /qfai-sdd.",
         ),
       );
     }

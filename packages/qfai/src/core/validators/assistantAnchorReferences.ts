@@ -10,7 +10,7 @@ import { exists, issue } from "./utils.js";
  * Anchor integrity across the assistant tree.
  *
  * The tree is held together by `file.md#anchor` citations: a SKILL delegates to
- * its `references/`, a reference cites a constitution section, an agent cites a
+ * its `references/`, a reference cites a rule section, an agent cites a
  * skill section. Nothing checked that the cited section still exists. A
  * vendored tree refreshed in part leaves a newer rule citing a heading the
  * older document beside it never had, and the failure is silent — not a link an
@@ -22,11 +22,8 @@ import { exists, issue } from "./utils.js";
  * that does name a document inside the tree is held to both halves — the file
  * is there, and the heading is in it.
  *
- * Citations are read out of the tree's Markdown and out of the YAML manifests
- * that carry Markdown bodies. `manifest/agent-catalog.yml` holds every agent's
- * `developer_instructions`, an installed project may let it drift from the
- * canonical agent document, and its citations are runtime instructions like any
- * other.
+ * Citations are read out of Markdown and YAML documents in the assistant tree.
+ * Agent cards carry their own frontmatter and body in one Markdown file.
  */
 
 /** Heading text with the markup GitHub drops before it slugs. */
@@ -261,12 +258,8 @@ function isStructuralDamage(error: unknown): boolean {
 /**
  * The extensions that can hold a citation.
  *
- * `.yml` / `.yaml` is here because `manifest/agent-catalog.yml` carries whole
- * agent bodies in `developer_instructions`, complete with the runtime citations
- * those bodies make. `qfai-configure` edits the manifest, and an installed
- * project is allowed to let it drift from the canonical agent Markdown, so a
- * citation added or changed on the manifest side alone existed in no `.md` file
- * and was checked by nothing.
+ * YAML templates can also contain Markdown citations. Read those references
+ * when they point back into the assistant tree.
  */
 const CITING_EXTENSIONS = new Set([".yml", ".yaml"]);
 
@@ -437,8 +430,8 @@ function owningSkillDir(skillsDir: string, file: string): string | null {
 /**
  * The directory this rule walks.
  *
- * `paths.skillsDir` is configurable, and the canonical `.qfai/assistant/skills`
- * puts the rest of the tree — constitution, catalog, agents — one level above
+ * `paths.skillsDir` is configurable, and the canonical `.qfai/assistant/skill`
+ * puts the rest of the tree — rule, agent and prompt — one level above
  * it. Taking that parent unconditionally handed the walk the repository root
  * for a project that relocates skills to `skills/`, and the directory *above*
  * the repository for `skillsDir: "."`: every spec, README and user document
@@ -499,7 +492,7 @@ const OUTSIDE: Resolution = { kind: "outside" };
  * artifact.
  *
  * A path spelled from the repository root **into** the assistant tree is not
- * ambiguous the way a bare name is: `.qfai/assistant/constitution/missing.md`
+ * ambiguous the way a bare name is: `.qfai/assistant/rule/missing.md`
  * can only be QFAI's own document, so an absent one is reported rather than
  * skipped. Nothing else guarantees it exists — `QFAI-LINK-001` covers the
  * symlinked entrypoints, not every document the tree cites.

@@ -4,7 +4,6 @@
  * test checks the workspace declaration and every include glob directly.
  * Cross-surface alignment is covered by the integration acceptance suite.
  */
-// QFAI:SPEC-0017:TC-0017-0063
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -24,6 +23,7 @@ import { PACKAGE_ROOT, runnerProjects } from "../helpers/spec0017WorkflowSurface
 const DELETED_PROJECT = "compatibility";
 
 describe("TC-0017-0063 (TDD-0063): no declared slice can match zero test files", () => {
+  // QFAI:EX-0002-0019-09
   it("has dropped the zero-file project and leaves no include glob without files", () => {
     // CLAIM 1 — the deleted name is gone from the declaration. This, and not the
     // runner's exit status, is what the deletion actually changed.

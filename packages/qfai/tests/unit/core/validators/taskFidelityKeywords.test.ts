@@ -1,33 +1,24 @@
-/**
- * Unit: `QFAI-CRIT-009` taskFidelity required-keyword surfacing.
- *
- * - TC-0012-0477 (normal): the validator error text MUST name every
- *   required `taskFidelity` keyword (`cta_visibility`, `four_state_check`,
- *   plus any others surfaced by the implementation), AND the expected
- *   document section. The shipped reference doc
- *   `references/evidence-requirements.md` MUST enumerate the same
- *   keyword set with example markdown structure.
- *
- * The SSOT for the keyword set is
- * `src/core/validators/taskFidelityKeywords.ts` exporting
- * `TASK_FIDELITY_REQUIRED_KEYWORDS`. The validator AND the doc
- * cross-check against the same constant.
- */
-// QFAI:SPEC-0012:TC-0012-0477
+/** Unit coverage for required taskFidelity keywords and their guidance. */
 
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { TASK_FIDELITY_REQUIRED_KEYWORDS } from "../../../../src/core/validators/taskFidelityKeywords.js";
+import { loadConfig } from "../../../../src/core/config.js";
+import { validateRenderCritique } from "../../../../src/core/validators/renderCritique.js";
+import {
+  TASK_FIDELITY_REQUIRED_KEYWORDS,
+  TASK_FIDELITY_SECTION_NAME,
+} from "../../../../src/core/validators/taskFidelityKeywords.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(TEST_DIR, "..", "..", "..", "..");
 
-describe("TC-0012-0477: QFAI-CRIT-009 required-keyword set is named in validator + reference doc", () => {
-  it("SSOT keyword list includes cta_visibility and four_state_check (TDD-0524 anchor)", () => {
+describe("QFAI-CRIT-009 required taskFidelity keywords", () => {
+  it("keeps the required keyword set non-empty and unique", () => {
     expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("cta_visibility");
     expect(TASK_FIDELITY_REQUIRED_KEYWORDS).toContain("four_state_check");
     // Sanity: the list is non-empty and unique.
@@ -36,47 +27,59 @@ describe("TC-0012-0477: QFAI-CRIT-009 required-keyword set is named in validator
     expect(unique.size).toBe(TASK_FIDELITY_REQUIRED_KEYWORDS.length);
   });
 
-  it("validator error text names every required keyword (renderCritique.taskFidelityMissing)", async () => {
-    // Read the validator source verbatim and verify each required
-    // keyword appears in the error-text constant (the SSOT). This is
-    // structural: the validator imports TASK_FIDELITY_REQUIRED_KEYWORDS
-    // so an updated SSOT propagates automatically.
-    const validatorAbs = path.join(PACKAGE_ROOT, "src", "core", "validators", "renderCritique.ts");
-    const text = await readFile(validatorAbs, "utf-8");
-    expect(text).toContain("TASK_FIDELITY_REQUIRED_KEYWORDS");
-    // The validator emits the message; the SSOT keywords list is
-    // injected via interpolation so the message includes every keyword
-    // when the validator builds the absent-section error.
-  });
+  // QFAI:EX-0001-0150-01
+  it("names every missing keyword and section in the actual finding and matching guidance", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-task-fidelity-"));
+    try {
+      const evidenceDir = path.join(root, ".qfai", "evidence");
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(
+        path.join(evidenceDir, "prototyping-review.md"),
+        [
+          "# Review",
+          "date: 2026-01-01",
+          "viewport: desktop",
+          "verdict: PASS",
+          "findings: none",
+          "rubric: task fidelity",
+          TASK_FIDELITY_SECTION_NAME,
+          "cta_visibility: visible",
+        ].join("\n"),
+        "utf8",
+      );
+      const { config } = await loadConfig(root);
+      const issues = await validateRenderCritique(root, config);
+      const finding = issues.find(
+        (item) =>
+          item.code === "QFAI-CRIT-009" && item.rule === "renderCritique.taskFidelityMissing",
+      );
+      expect(finding).toBeDefined();
+      expect(finding?.message).toContain("four_state_check");
+      expect(finding?.message).toContain(TASK_FIDELITY_SECTION_NAME);
+      for (const keyword of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+        expect(finding?.message).toContain(keyword);
+      }
 
-  it("references/evidence-requirements.md enumerates every required keyword", async () => {
-    const docAbs = path.join(
-      PACKAGE_ROOT,
-      "assets",
-      "init",
-      ".qfai",
-      "assistant",
-      "skills",
-      "qfai-prototyping",
-      "references",
-      "evidence-requirements.md",
-    );
-    const doc = await readFile(docAbs, "utf-8");
-    for (const keyword of TASK_FIDELITY_REQUIRED_KEYWORDS) {
-      expect(doc).toContain(keyword);
+      const docAbs = path.join(
+        PACKAGE_ROOT,
+        "assets",
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-prototyping",
+        "references",
+        "evidence-requirements.md",
+      );
+      const doc = await readFile(docAbs, "utf8");
+      expect(doc).toContain(TASK_FIDELITY_SECTION_NAME);
+      expect(doc).toMatch(/```/u);
+      const section = doc.split(/^## Required keywords$/mu)[1]?.split(/^## /mu)[0] ?? "";
+      expect(section).not.toBe("");
+      const documented = [...section.matchAll(/^- `([a-z0-9_]+)`/gmu)].map((match) => match[1]);
+      expect([...documented].sort()).toEqual([...TASK_FIDELITY_REQUIRED_KEYWORDS].sort());
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
-    // The doc shows example markdown structure so authors can copy.
-    expect(doc).toMatch(/```/);
-    expect(doc.toLowerCase()).toContain("taskfidelity");
-
-    // Both directions: the doc's `## Required keywords` bullet list must
-    // name the constant's keywords AND nothing else. Containment alone
-    // let a keyword added to the doc only (which the validator never
-    // enforces, because it reads the constant) ship as a silent
-    // divergence between the shipped page and the CLI.
-    const section = doc.split(/^## Required keywords$/m)[1]?.split(/^## /m)[0] ?? "";
-    expect(section).not.toBe("");
-    const documented = [...section.matchAll(/^- `([a-z0-9_]+)`/gm)].map((m) => m[1]);
-    expect([...documented].sort()).toEqual([...TASK_FIDELITY_REQUIRED_KEYWORDS].sort());
   });
 });

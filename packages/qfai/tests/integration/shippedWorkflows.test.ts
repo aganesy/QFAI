@@ -56,7 +56,7 @@ function collectSteps(job: Record<string, unknown>): Array<Record<string, unknow
   return steps.filter(isRecord);
 }
 
-// QFAI:SPEC-0003:TC-0003-0027
+// QFAI:EX-0002-0001-01
 describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permissions block, a timeout and a cancelling concurrency group", () => {
   // One it() per TC-0003-0027 verify bullet, plus the carried advisory-27
   // obligation (SHIPPED/RETIRED disjointness) whose ruled home is this
@@ -110,6 +110,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0001-01
   it("every workflow declares a ref-scoped concurrency group with cancel-in-progress: true", async () => {
     const violations: string[] = [];
     for (const [name, body] of await loadShippedWorkflows()) {
@@ -189,6 +190,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0007-01
   it("the shipped and retired workflow name lists are disjoint", () => {
     // Carried obligation (advisory 27, ruled home): the contract's
     // write/prune sets may never claim the same name — a name moves from
@@ -291,7 +293,7 @@ describe("TC-0003-0028 (TDD-0055): every shipped checkout refuses to persist cre
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0029
+// QFAI:EX-0002-0006-01
 describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile branch survive hardening", () => {
   // Realizes TC-0003-0029 (AC-0003-0026 / BR-0003-0023 "extend, never
   // replace"), one it() per verify bullet. Scoping decisions, disclosed:

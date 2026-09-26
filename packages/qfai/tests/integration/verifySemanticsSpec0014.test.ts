@@ -1,9 +1,9 @@
 /**
  * verify semantics audit tests — spec-0014 migration / compatibility alignment
  *
- * QFAI:SPEC-0014:TC-0014-0009
- * QFAI:SPEC-0014:TC-0014-0018
- * QFAI:SPEC-0014:TC-0014-0019
+ * QFAI:EX-0001-0163-01
+ * QFAI:EX-0001-0162-03
+ * QFAI:EX-0001-0162-02
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -40,7 +40,7 @@ afterEach(async () => {
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 
-// QFAI:SPEC-0014:TC-0014-0009
+// QFAI:EX-0001-0163-01
 describe("TC-0014-0009: stale sidecar migration guidance", () => {
   it("legacy strategy-style filename is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();
@@ -75,7 +75,7 @@ describe("TC-0014-0009: stale sidecar migration guidance", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0018
+// QFAI:EX-0001-0162-03
 describe("TC-0014-0018: canonical UIX in verify path", () => {
   it("validate.ts imports the canonical group and no retired one", async () => {
     // Source text, and only about which symbols are named. Whether the group
@@ -151,7 +151,54 @@ describe("TC-0014-0018: canonical UIX in verify path", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0019
+describe("UI-bearing discussion sidecars in project validation", () => {
+  // QFAI:EX-0001-0019-01
+  it("reports the missing screen contracts file while the review bundle exists", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
+    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
+    await writeFile(path.join(packDir, "uiux", "50_review_input_bundle.md"), "# Review\n", "utf-8");
+
+    const result = await validateProject(root, undefined, { profile: "verify" });
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+          file: "uiux/40_screen_contracts.md",
+        }),
+      ]),
+    );
+  });
+
+  // QFAI:EX-0001-0019-02
+  it("reports legacy evaluation headings inside screen contracts", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(path.join(packDir, "uiux"), { recursive: true });
+    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\n- surface: web\n", "utf-8");
+    await writeFile(path.join(packDir, "uiux", "00_index.md"), "# UI index\n", "utf-8");
+    await writeFile(path.join(packDir, "uiux", "50_review_input_bundle.md"), "# Review\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "uiux", "40_screen_contracts.md"),
+      "# Screen Contracts\n\n## craft\n\n- task_completion: legacy axis\n",
+      "utf-8",
+    );
+
+    const result = await validateProject(root, undefined, { profile: "verify" });
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "UIX-VAL-3LAYER-LEGACY-FORMAT",
+          file: "uiux/40_screen_contracts.md",
+        }),
+      ]),
+    );
+  });
+});
+
+// QFAI:EX-0001-0162-02
 describe("TC-0014-0019: removed compatibility surface", () => {
   it("package surface exposes no legacy namespace or compatibility category", async () => {
     const [validatorsIndexSrc, typesSrc] = await Promise.all([
@@ -169,7 +216,7 @@ describe("TC-0014-0019: removed compatibility surface", () => {
   });
 });
 
-// QFAI:SPEC-0014:TC-0014-0009
+// QFAI:EX-0001-0163-01
 describe("TC-0014-0009: stale sidecar migration errors", () => {
   it("legacy evaluation content is rejected with exploration-first migration guidance", async () => {
     const root = await newTempDir();

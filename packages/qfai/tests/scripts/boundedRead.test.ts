@@ -116,28 +116,19 @@ describe("readBoundedText", () => {
   });
 });
 
-describe("neither root guard keeps a private copy of the posture", () => {
+describe("the root guard reads through the shared bounded reader", () => {
   // A guard that drops the shared reader — back to a private function, or a
   // plain `readFile` on the markdown it parses — would still pass every
-  // behavioural row above, so a comment alone cannot guarantee the two stay
-  // wired to it. Reading each guard's own source and confirming it imports
-  // the shared module is the check that catches that regression.
-  for (const relative of [
-    "scripts/check-workflow-hygiene.mjs",
-    "scripts/check-atdd-annotation-ledger.mjs",
-  ]) {
-    it(`${relative} reads through the shared module`, () => {
-      const source = readFileSync(path.join(REPO_ROOT, relative), "utf-8");
-      expect(source, "the guard must import the shared reader").toContain(
-        'from "./lib/bounded-read.mjs"',
-      );
-      expect(
-        source,
-        "and must not open and read a descriptor of its own — that is the copy this module replaced",
-      ).not.toMatch(/readSync\(/);
-      expect(source, "nor read a path whose bytes it has not bounded").not.toMatch(
-        /readFileSync\(/,
-      );
-    });
-  }
+  // behavioural row above. Check the import and reject private unbounded reads.
+  it("scripts/check-workflow-hygiene.mjs reads through the shared module", () => {
+    const source = readFileSync(
+      path.join(REPO_ROOT, "scripts/check-workflow-hygiene.mjs"),
+      "utf-8",
+    );
+    expect(source, "the guard must import the shared reader").toContain(
+      'from "./lib/bounded-read.mjs"',
+    );
+    expect(source, "and must not read a descriptor of its own").not.toMatch(/readSync\(/);
+    expect(source, "nor read unbounded file bytes").not.toMatch(/readFileSync\(/);
+  });
 });

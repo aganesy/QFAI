@@ -1295,12 +1295,15 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
  * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
  * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
- * rather than drift.
+ * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
+ * joined the ignore lines and `!.qfai/evidence/workflow/` the governance negations, and those two
+ * lines are the whole delta.
  *
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
- * so their bytes are the reviewed surface.
+ * so their bytes are the reviewed surface. Each opens with the entry directive that sends a first
+ * free-text change request to `qfai-run`, then a blank line; below it the bytes are unchanged.
  *
  * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
  * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
@@ -1352,9 +1355,13 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the legacy-layout item, which now says the `steering/` and `instructions/`
     // layout is past its compatibility window and that `qfai init` reports it on stderr as a
     // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
-    // into a temp root; restoring the old item reproduces `754c7708…` byte for byte.
+    // into a temp root; restoring the old item reproduces `12e26902…` byte for byte.
+    //
+    // Re-pinned for the work-log surface item, which the run no longer writes into the list of
+    // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
+    // that one item reproduces `be3d8ce2…` byte for byte.
     ".github/copilot-instructions.md",
-    "cac822f91351a52f063ea26feccbcf2bb610fd6ad6937eafb57f8e5014aa2cfd",
+    "977424d04766292554407b765af218b2b47a3ed500f9c91e94c87b01e60a1a1e",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1460,7 +1467,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived the same way, and checked the way the note below asks: removing
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
-  [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
+  [".gitignore", "d33d2c83ea359d0549bc39260e0bd9d8e94bafa0a8b30383c13ee7e5a6fd17db"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1508,8 +1515,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
-  ["AGENTS.md", "6083825b716db9e5c68b109b417c4108d80c46197eb333b14af35ad2ae89cf30"],
-  ["CLAUDE.md", "fe88c1229496dbd203993d9e79ec7869334fb77512331e0aba0cdcb1a4ed4d8b"],
+  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
+  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1582,7 +1589,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "543f96466f42d2060c7ff63941b9036bc5694ab6d58b579c6a1a8af08fab6e1b"],
+  ["qfai.config.yaml", "a6b03c7ab81d09c94c111814d0c7f112901e83493ae04a25ebae28212f1a25b5"],
 ]);
 
 /**
@@ -1685,13 +1692,9 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * `.github/instructions/`, and no pin walked it. Two files. Enumerating them costs nothing and the
  * absence of the enumeration cost a round.
  *
- * **`.qfai/**` is deliberately not here, and that is a residual rather than a decision to be proud
- * of.** Its 169 entries are mirrored from this repository's own `.qfai/` by `pnpm sync:ssot`, they
- * belong to other specs, and they change on that schedule — a path pin over them would redden on
- * every skill edit, which is the "guard that reddens on the honest edit" hazard this record has been
- * tracking since round 10. What guards them is mirror parity plus the kind rule below. Round 20's
- * gate defeated that pair with a file carrying no shebang, no executable bit and no known name, run
- * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
+ * `.qfai/**` is mirrored by `pnpm sync:ssot`. Its instructions change with the shipped skills, so
+ * the path set excludes them. The kind guard checks every mirrored file, and the migration programs
+ * have individual path and content pins below.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/api-budget.md",
@@ -1721,7 +1724,7 @@ export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
 export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
 
 /**
- * The file extensions `qfai init` may ship, which is the fourth question about who runs a file.
+ * The data extensions `qfai init` may ship. Reviewed migration programs are pinned separately.
  *
  * The other three ask what the bytes say (a shebang), what the filesystem says (an executable bit)
  * and what a tool would know the name for. Round 20's gate beat all three with a file carrying none
@@ -1739,7 +1742,7 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * built on. The dangerous side cannot be enumerated: every extension left off such a list ships
  * unreviewed, and nothing says when the list is finished.
  *
- * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
+ * A legitimate data file with a new extension reddens and is a one-line review. That is the intended cost,
  * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
  * the init payload so the paths its SKILL.md cites resolve in a consumer root, and a TOML config table
  * is read by an MCP host, not executed. Adding one here also means adding it to the leakage smoke
@@ -1772,8 +1775,63 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
  */
 export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".gitattributes"]);
 
+const ALLOWED_INIT_MARKERS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/prompt/.gitkeep",
+    "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+  ],
+]);
+
+/** Migration programs shipped for an explicit user-run migration, pinned by path and bytes. */
+export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/_step.mjs",
+    "77b7286587d152c11456bb339be3414b9be65d554ba387e1008aea587b04a3af",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/01-rename-directories.mjs",
+    "4fd302a1a2e8a352dec294da0373c9bae3300f1d8f7ebafb51758c5fe1bf8fea",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/02-merge-tables.mjs",
+    "e8fa75cb225fdc105143887e93582c9f164106a20b841d8be052cb0d99916e12",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/03-move-catalog.mjs",
+    "016778585862b90683333ced79608aa3717c9731b2932c14b45cf19c91f94a92",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/04-renumber-ids.mjs",
+    "6fd5b63fcfb2a2ab616e90d4e5a03908ce7770bfde4689060ffffeb91e6571be",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/05-cases-to-examples.mjs",
+    "719621709568dbbdc3aad1c069c02153c4df251297a26356902aea1aff45c466",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/06-derive-ac-refs.mjs",
+    "c990cbe393bbb7638c7873e461e165f957bad34503c60f24a08c92543be4994b",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/07-rules-to-contracts.mjs",
+    "2f803f507b74c4179905735a2ebaeb3c2f65532d13c1103092f0a216bd2321a9",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/08-rewrite-annotations.mjs",
+    "2d06b5b9633dbf638dc1d528fbef85162ad5bd4f755cb902ca7755b9b22c0648",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/09-repoint-links.mjs",
+    "6d45380e132bfd0c8811a1996dc24135a6d967c1d234b4cc5f118da3c7f076a3",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/10-update-gitignore.mjs",
+    "209fc3d2f4b7caaf33cba217d20573ad30eab897f1bf4cfbd48ef716a41a5641",
+  ],
+]);
+
 /**
- * Whether an init-source file ships as data — the two sets above asked as one question.
+ * Whether an init-source file is a supported data format or a reviewed migration program.
  *
  * It lives here rather than at the call site so the enumerations and the token that is looked up in
  * them cannot drift: adding a name to one of the sets while the caller derives a different token is
@@ -1781,6 +1839,8 @@ export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".git
  */
 export function initSourceShipsAsData(relativePath: string): boolean {
   return (
+    ALLOWED_MIGRATION_SCRIPTS.has(relativePath) ||
+    ALLOWED_INIT_MARKERS.has(relativePath) ||
     ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
     ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
   );
@@ -1834,6 +1894,7 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  *
  * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
+ * The migration programs are the sole exception, with exact path and byte pins.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
  *
@@ -1923,6 +1984,14 @@ export function initMustNotShip(
   // real. What changed is the claim: on a developer's Windows machine this line is inert, and the
   // shebang question is the one carrying the load. Do not cite a local run as evidence it works.
   if ((mode & 0o100) !== 0) return "arrives executable";
+  const reviewedMarker = ALLOWED_INIT_MARKERS.get(relativePath);
+  if (reviewedMarker !== undefined) {
+    return fileDigest(contents) === reviewedMarker ? undefined : "init marker content differs";
+  }
+  const reviewedScript = ALLOWED_MIGRATION_SCRIPTS.get(relativePath);
+  if (reviewedScript !== undefined) {
+    return fileDigest(contents) === reviewedScript ? undefined : "migration script content differs";
+  }
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;
 }

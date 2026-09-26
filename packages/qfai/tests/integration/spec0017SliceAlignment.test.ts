@@ -1,5 +1,3 @@
-// QFAI:SPEC-0017:TC-0017-0062
-// QFAI:SPEC-0017:TC-0017-0064
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,6 +11,7 @@ import {
 } from "../helpers/spec0017WorkflowSurfaces.js";
 
 describe("spec-0017 slice alignment acceptance", () => {
+  // QFAI:EX-0002-0019-11
   it("TC-0017-0062 (TDD-0062): agrees across the runner, scripts, CI and release declarations", () => {
     const projects = sorted(runnerProjects());
     for (const { workflow, job } of SLICED_JOBS) {
@@ -22,7 +21,8 @@ describe("spec-0017 slice alignment acceptance", () => {
     expect(sorted(perSliceScriptEntries().map((entry) => entry.slice))).toEqual(projects);
   });
 
-  it("TC-0017-0062 (TDD-0105): declares exactly the seven approved names", () => {
+  // QFAI:EX-0002-0019-11
+  it("TC-0017-0062: declares exactly the seven approved names", () => {
     expect(sorted(runnerProjects())).toEqual([
       "cli",
       "core",
@@ -34,6 +34,7 @@ describe("spec-0017 slice alignment acceptance", () => {
     ]);
   });
 
+  // QFAI:EX-0002-0019-10
   it("TC-0017-0064 (TDD-0064): names each script after its selected project", () => {
     const scripts = perSliceScriptEntries();
     for (const slice of ["unit", "scripts"]) {
@@ -44,7 +45,8 @@ describe("spec-0017 slice alignment acceptance", () => {
     }
   });
 
-  it("TC-0017-0064 (TDD-0106): four sliced jobs invoke per-slice scripts", () => {
+  // QFAI:EX-0002-0019-10
+  it("TC-0017-0064: four sliced jobs invoke per-slice scripts", () => {
     for (const { workflow, job } of SLICED_JOBS) {
       const runs = jobSteps(workflow, job)
         .map((step) => step["run"])

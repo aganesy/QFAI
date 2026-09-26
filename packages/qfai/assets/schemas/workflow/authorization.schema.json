@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:authorization",
+  "title": "Authorization record",
+  "description": "One authorization a run recorded. There is no approved field and no confidence value.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["authorizationId", "runId", "kind", "capture", "scopeDigest", "recordedAt"],
+  "properties": {
+    "authorizationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": ["request_scope", "human_decision", "project_policy"]
+    },
+    "capture": {
+      "enum": ["host_observed", "agent_captured"]
+    },
+    "scopeDigest": {
+      "type": "string",
+      "minLength": 1
+    },
+    "recordedAt": {
+      "description": "ISO-8601 UTC.",
+      "type": "string",
+      "minLength": 1
+    },
+    "requestDigest": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "digest", "effects"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "push",
+              "pull-request",
+              "merge",
+              "deploy",
+              "production-migration",
+              "extra-spending"
+            ]
+          }
+        }
+      }
+    },
+    "questionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "options", "selection"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "urn:qfai:workflow:route-proposal#/$defs/option"
+          }
+        },
+        "selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "answer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["optionIds"],
+          "properties": {
+            "optionIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["valueDigest"],
+          "properties": {
+            "valueDigest": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "effect": {
+      "enum": ["proceed", "replan", "stop"]
+    },
+    "answeredBy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": ["CREATE", "CHANGE_REQUEST", null]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "slotId", "story"],
+      "properties": {
+        "kind": {
+          "const": "new_story"
+        },
+        "slotId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "story": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["goal", "covers", "excludes", "flowId"],
+          "properties": {
+            "goal": {
+              "type": "string",
+              "minLength": 1
+            },
+            "covers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excludes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "flowId": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^BF-\\d{4}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "request_scope"
+          }
+        }
+      },
+      "then": {
+        "required": ["requestDigest"],
+        "properties": {
+          "requestDigest": true
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "project_policy"
+          }
+        }
+      },
+      "then": {
+        "required": ["policy"],
+        "properties": {
+          "policy": true
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "human_decision"
+          }
+        }
+      },
+      "then": {
+        "required": ["questionId", "question", "answer", "effect", "answeredBy", "operation"],
+        "properties": {
+          "questionId": true,
+          "question": true,
+          "answer": true,
+          "effect": true,
+          "answeredBy": true,
+          "operation": true
+        }
+      }
+    }
+  ]
+}

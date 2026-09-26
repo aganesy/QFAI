@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/delivery-planner.md
+../../.qfai/assistant/agent/delivery-planner.md

@@ -27,11 +27,11 @@ afterEach(async () => {
   }
 });
 
-/** A project whose `.qfai/contracts/ui/` holds these files. */
+/** A project whose `.qfai/spec/03_contract/ui/` holds these files. */
 async function projectWith(files: Readonly<Record<string, readonly string[]>>): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-"));
   roots.push(root);
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   for (const [name, lines] of Object.entries(files)) {
     await writeFile(path.join(uiDir, name), [...lines, ""].join("\n"), "utf-8");
@@ -72,9 +72,9 @@ describe("a UI contract entry no screen is read from is reported", () => {
     );
     expect(messages).toHaveLength(2);
     expect(messages[0]).toContain(
-      "`screens[1]` in .qfai/contracts/ui/a.yaml (`draft`) has no `route`",
+      "`screens[1]` in .qfai/spec/03_contract/ui/a.yaml (`draft`) has no `route`",
     );
-    expect(messages[1]).toContain("`screens[2]` in .qfai/contracts/ui/a.yaml has no `id`");
+    expect(messages[1]).toContain("`screens[2]` in .qfai/spec/03_contract/ui/a.yaml has no `id`");
   });
 
   it("names an entry that is not a mapping", async () => {
@@ -86,9 +86,9 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(finding?.severity).toBe("error");
     // A contract violation, named by the repository-relative path every finding carries.
     expect(finding?.category).toBe("canonical");
-    expect(finding?.file).toBe(".qfai/contracts/ui/a.yaml");
+    expect(finding?.file).toBe(".qfai/spec/03_contract/ui/a.yaml");
     expect(finding?.message).toContain(
-      "`screens[1]` in .qfai/contracts/ui/a.yaml is not a mapping",
+      "`screens[1]` in .qfai/spec/03_contract/ui/a.yaml is not a mapping",
     );
   });
 
@@ -102,7 +102,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
         "    primary_tasks: []",
       ],
     });
-    const screens = await readUiContractScreenContracts(root);
+    const screens = await readUiContractScreenContracts(root, defaultConfig.paths.contractsDir);
     const findings = await validateUiScreenEntries(root, defaultConfig);
     expect(findings).toHaveLength(1);
     const read = screens.find((item) => item.screenId === "home");
@@ -112,7 +112,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(keptFile).toBeDefined();
     expect(reportedFile).not.toBe(keptFile);
     expect(findings[0]?.message).toContain(
-      "repeats the `id` `home` of `screens[0]` in .qfai/contracts/ui/",
+      "repeats the `id` `home` of `screens[0]` in .qfai/spec/03_contract/ui/",
     );
   });
 
@@ -125,8 +125,8 @@ describe("a UI contract entry no screen is read from is reported", () => {
     });
     const findings = await validateUiScreenEntries(root, defaultConfig);
     expect(findings.map((finding) => finding.message)).toEqual([
-      expect.stringContaining("`screens` in .qfai/contracts/ui/a.yaml is not a list"),
-      expect.stringContaining("`screens` in .qfai/contracts/ui/b.yaml is not a list"),
+      expect.stringContaining("`screens` in .qfai/spec/03_contract/ui/a.yaml is not a list"),
+      expect.stringContaining("`screens` in .qfai/spec/03_contract/ui/b.yaml is not a list"),
     ]);
   });
 
@@ -139,10 +139,12 @@ describe("a UI contract entry no screen is read from is reported", () => {
     });
     expect(await validateUiScreenEntries(root, defaultConfig)).toEqual([]);
 
-    await mkdir(path.join(root, ".qfai", "contracts", "ui", "spec-0003"), { recursive: true });
+    await mkdir(path.join(root, ".qfai", "spec", "03_contract", "ui", "spec-0003"), {
+      recursive: true,
+    });
     for (const name of ["a.yaml", "b.yaml"]) {
       await writeFile(
-        path.join(root, ".qfai", "contracts", "ui", "spec-0003", name),
+        path.join(root, ".qfai", "spec", "03_contract", "ui", "spec-0003", name),
         ["screens:", ...screen("home", "/"), ""].join("\n"),
         "utf-8",
       );
@@ -162,9 +164,9 @@ describe("a UI contract entry no screen is read from is reported", () => {
     });
     const findings = await validateUiScreenEntries(root, defaultConfig);
     expect(findings).toHaveLength(1);
-    expect(findings[0]?.file).toBe(".qfai/contracts/ui/spec-0002.yaml");
+    expect(findings[0]?.file).toBe(".qfai/spec/03_contract/ui/spec-0002.yaml");
     expect(findings[0]?.message).toContain(
-      "with a different `title` and `route` from `screens[0]` in .qfai/contracts/ui/spec-0001.yaml",
+      "with a different `title` and `route` from `screens[0]` in .qfai/spec/03_contract/ui/spec-0001.yaml",
     );
     expect(findings[0]?.suggested_action).toContain("give both the same `title` and `route`");
   });
@@ -194,7 +196,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
     const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-"));
     roots.push(parent);
     const root = path.join(parent, "build[1]");
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "a.yaml"),
@@ -259,7 +261,7 @@ describe("a UI contract entry no screen is read from is reported", () => {
     });
     const [finding] = await validateUiScreenEntries(root, defaultConfig);
     expect(finding?.message).toContain(
-      "`screens[1]` in .qfai/contracts/ui/a.yaml repeats the `id` `home` of `screens[0]` in .qfai/contracts/ui/a.yaml",
+      "`screens[1]` in .qfai/spec/03_contract/ui/a.yaml repeats the `id` `home` of `screens[0]` in .qfai/spec/03_contract/ui/a.yaml",
     );
   });
 

@@ -1101,6 +1101,22 @@ function gitIndexListing(): string {
 const tracked = trackedPaths();
 
 /**
+ * An index holding one discussion pack, for the cases that need a pack citation
+ * to resolve.
+ *
+ * The repository tracks no discussion pack, so against its own index every pack
+ * citation is missing, and a case expecting `false` would pass for any reason.
+ */
+const SAMPLE_PACK = ".qfai/discussion/discussion-20260328212829687";
+const withSamplePack = trackedPaths(
+  [
+    `100644 0000000000000000000000000000000000000000 0\t${SAMPLE_PACK}/01_Context.md`,
+    `100644 0000000000000000000000000000000000000000 0\t${SAMPLE_PACK}/02_Inception-Deck.md`,
+    "",
+  ].join("\0"),
+);
+
+/**
  * Evidence files the repository carries, in path order.
  *
  * Markdown and JSON both: a decision record is written as JSON, its question,
@@ -1114,7 +1130,12 @@ const tracked = trackedPaths();
  * backlog.
  */
 const evidenceFiles = [...tracked.files]
-  .filter((file) => file.startsWith(".qfai/evidence/") && /\.(?:md|jsonl?|ya?ml)$/.test(file))
+  .filter(
+    (file) =>
+      file.startsWith(".qfai/evidence/") &&
+      !file.startsWith(".qfai/evidence/migration-spec-to-story/retired/") &&
+      /\.(?:md|jsonl?|ya?ml)$/.test(file),
+  )
   .sort();
 
 /**
@@ -2099,6 +2120,14 @@ describe("a committed record cites what the repository has", () => {
     // identical to a green run.
     expect(evidenceFiles.length, "git tracks no evidence file").toBeGreaterThan(0);
     expect((await measureCitations()).length, "no citation was measured").toBeGreaterThan(0);
+    expect(evidenceFiles).toContain(
+      ".qfai/evidence/migration-spec-to-story/p7-execution-checklist.md",
+    );
+    expect(
+      evidenceFiles.some((file) =>
+        file.startsWith(".qfai/evidence/migration-spec-to-story/retired/"),
+      ),
+    ).toBe(false);
   });
 
   it("reads every evidence record the tree carries as a file", () => {
@@ -2897,9 +2926,10 @@ describe("a glob is a claim about a set", () => {
   });
 
   it("keeps punctuation a code span closes right after", () => {
-    const pack = ".qfai/discussion/discussion-20260328212829687";
+    const pack = SAMPLE_PACK;
     expect(citationsIn(`see \`${pack}/01_Context.md,\` here`)).toEqual([`${pack}/01_Context.md,`]);
-    expect(resolves(`${pack}/01_Context.md,`)).toBe(false);
+    expect(resolves(`${pack}/01_Context.md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/01_Context.md,`, withSamplePack)).toBe(false);
     // In prose the same punctuation ends the sentence.
     expect(citationsIn(`see ${pack}/01_Context.md. Next`)).toEqual([`${pack}/01_Context.md`]);
   });
@@ -3123,8 +3153,9 @@ describe("a glob is a claim about a set", () => {
     // A `?` glob that names a tracked artifact still has to reach the matcher:
     // falling through to the exact-path lookup reports valid provenance as
     // missing, which is the opposite failure to the one the guard exists for.
-    const pack = ".qfai/discussion/discussion-20260328212829687";
-    expect(resolves(`${pack}/0?_Context.md`)).toBe(resolves(`${pack}/0*_Context.md`));
+    const pack = SAMPLE_PACK;
+    expect(resolves(`${pack}/0*_Context.md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/0?_Context.md`, withSamplePack)).toBe(true);
   });
 
   it("reads an extended glob group as the set it names", () => {
@@ -3141,10 +3172,10 @@ describe("a glob is a claim about a set", () => {
     // A group of literal alternatives carries no `*` or `?`, so a branch keyed
     // on those two fell through to the exact-path lookup and reported a tracked
     // artifact missing.
-    const pack = ".qfai/discussion/discussion-20260328212829687";
-    expect(resolves(`${pack}/@(01_Context|99_missing).md`)).toBe(true);
-    expect(resolves(`${pack}/@(98_missing|99_missing).md`)).toBe(false);
-    expect(resolves(`${pack}/!(01_Context).md`)).toBe(true);
+    const pack = SAMPLE_PACK;
+    expect(resolves(`${pack}/@(01_Context|99_missing).md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/@(98_missing|99_missing).md`, withSamplePack)).toBe(false);
+    expect(resolves(`${pack}/!(01_Context).md`, withSamplePack)).toBe(true);
   });
 
   it("keeps a quantified group whole in the grammar", () => {

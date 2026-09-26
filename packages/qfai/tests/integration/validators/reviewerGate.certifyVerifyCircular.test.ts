@@ -14,7 +14,7 @@
  * `core/validators/reviewerGate.ts`. This file is a re-anchor only.
  */
 
-// QFAI:SPEC-0012:TC-0012-0446
+// QFAI:EX-0001-0137-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

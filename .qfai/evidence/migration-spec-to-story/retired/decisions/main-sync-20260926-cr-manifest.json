@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0007-record-required-decision-seam-exception.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0007-record-required-decision-seam-exception.md",
+      "sha256": "f312ea2ab2e1a2043fc21e9f16cb478a511aaf89976dda7fb765fc0ca3190f2e",
+      "bytes": 4983
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0008-cover-missing-create-authorization.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0008-cover-missing-create-authorization.md",
+      "sha256": "e8b7bd7291aba4359d5076ed62bef1ca845fa55dbf94258ad697759d87d8a73c",
+      "bytes": 11306
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0009-external-effects-through-project-policy-only.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0009-external-effects-through-project-policy-only.md",
+      "sha256": "5d7a1555158c310e23e53f31ba6276e67eecb34bef3f0b793af3957d1071c726",
+      "bytes": 9271
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0012-finish-spawns-no-process-for-validate.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0012-finish-spawns-no-process-for-validate.md",
+      "sha256": "3bd767491dfa5abad99c33dcdf89b9e2ef539f00b1581406dd814bbca9b1b40b",
+      "bytes": 5490
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0013-route-and-discussion-work-orders-carry-no-target.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0013-route-and-discussion-work-orders-carry-no-target.md",
+      "sha256": "fa1a177df409056d4c5cd2ea8e4bcf9e8e39607fa4731309b92d2389c30ab449",
+      "bytes": 4860
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0014-in-scope-config-edits-are-policy-drift-at-accept.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0014-in-scope-config-edits-are-policy-drift-at-accept.md",
+      "sha256": "727a5d36dcc2a6beb07787547ab1e8a907fa1d9bda4567111a9af92583ee2037",
+      "bytes": 4406
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0017-correct-announcement-test-owner.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0017-correct-announcement-test-owner.md",
+      "sha256": "773e95453ed78eedc51788040e79ce91da94dd56309b0dbdb99bd6327f655f6b",
+      "bytes": 4088
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0018-type-route-references.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0018-type-route-references.md",
+      "sha256": "2903a4f5f2dd5a8bd4cbca1a6b61d47aca90771252f4dc56e6d09da35a099992",
+      "bytes": 17620
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0019-reconcile-prototyping-ledger-boundaries.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0019-reconcile-prototyping-ledger-boundaries.md",
+      "sha256": "d698e8fcaebbe1bd335bca3a0dd404d2765f9585e08ae60520d040c0351769f1",
+      "bytes": 29268
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0020-shipped-text-citations-and-completion-owners.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0020-shipped-text-citations-and-completion-owners.md",
+      "sha256": "2fbfcc17bfa5a1d1c20c4af35c66409ab6a946bd19dae256e3aa6f6bdc850bc0",
+      "bytes": 14200
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0021-record-the-intent-driven-sdd-batch-upstream-edits.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0021-record-the-intent-driven-sdd-batch-upstream-edits.md",
+      "sha256": "92abe18c4fbbd7834d220a79e58b29876d22175ebd5fee9bacb3fb7997eac485",
+      "bytes": 3112
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0022-test-fix-refusal-and-restored-authorization-reviewers.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0022-test-fix-refusal-and-restored-authorization-reviewers.md",
+      "sha256": "3af6c1651ef30133b95766ecfa2466c7d4264e42a3e9e714f5d248c13d7984cb",
+      "bytes": 9298
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0023-bind-the-spec-from-one-affected-spec.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0023-bind-the-spec-from-one-affected-spec.md",
+      "sha256": "d3ccb3568ee293ebdbe972afa99ce68c53ebc4fbd0dadb495967e690d9490297",
+      "bytes": 8747
+    },
+    {
+      "oldPath": ".qfai/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/DR-0298-intent-driven-rows-close-without-per-row-review.md",
+      "sha256": "b7ff9d5afe602e15e96c4d10ae5d70d4ef8bbdafcea60b648e84b48bd5d0b6b6",
+      "bytes": 1665
+    }
+  ]
+}

@@ -58,20 +58,28 @@ afterEach(async () => {
 describe("a mode outside the vocabulary", () => {
   it("is reported against the contract that declared it, naming both words", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype("  mode: static"));
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      contractWithPrototype("  mode: static"),
+    );
 
     const issues = await validateUiPrototypeMode(root, defaultConfig);
 
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe(UI_PROTOTYPE_MODE_RULE_ID);
-    expect(issues[0]?.file).toBe(".qfai/contracts/ui/order.yaml");
+    expect(issues[0]?.file).toBe(".qfai/spec/03_contract/ui/order.yaml");
     expect(issues[0]?.message).toContain("static");
     expect(issues[0]?.message).toContain("interactive");
   });
 
   it("reports an unknown mode as an error", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype("  mode: static"));
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      contractWithPrototype("  mode: static"),
+    );
 
     const [finding] = await validateUiPrototypeMode(root, defaultConfig);
 
@@ -80,7 +88,11 @@ describe("a mode outside the vocabulary", () => {
 
   it("is named as written when quoted, so the message matches the file", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype('  mode: "static"'));
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      contractWithPrototype('  mode: "static"'),
+    );
 
     const [finding] = await validateUiPrototypeMode(root, defaultConfig);
 
@@ -89,14 +101,22 @@ describe("a mode outside the vocabulary", () => {
 
   it("is reported once per contract that declares one", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype("  mode: static"));
-    await write(root, ".qfai/contracts/ui/report.yaml", contractWithPrototype("  mode: printed"));
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/order.yaml",
+      contractWithPrototype("  mode: static"),
+    );
+    await write(
+      root,
+      ".qfai/spec/03_contract/ui/report.yaml",
+      contractWithPrototype("  mode: printed"),
+    );
 
     const issues = await validateUiPrototypeMode(root, defaultConfig);
 
     expect(issues.map((i) => i.file)).toEqual([
-      ".qfai/contracts/ui/order.yaml",
-      ".qfai/contracts/ui/report.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/report.yaml",
     ]);
   });
 });
@@ -106,7 +126,7 @@ describe("what the rule declines to ask for", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       contractWithPrototype(
         "  mode: interactive",
         "  mockPaths:",
@@ -122,7 +142,7 @@ describe("what the rule declines to ask for", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       contractWithPrototype('  mode: "interactive"'),
     );
 
@@ -133,7 +153,7 @@ describe("what the rule declines to ask for", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       contractWithPrototype("  mode: interactive # the only value"),
     );
 
@@ -144,7 +164,7 @@ describe("what the rule declines to ask for", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       ["screens:", "  - id: order_create", "    route: /orders/new", ""].join("\n"),
     );
 
@@ -153,7 +173,7 @@ describe("what the rule declines to ask for", () => {
 
   it("leaves an unfilled slot alone, which is drafting rather than a wrong claim", async () => {
     const root = await newRoot();
-    await write(root, ".qfai/contracts/ui/order.yaml", contractWithPrototype("  mode:"));
+    await write(root, ".qfai/spec/03_contract/ui/order.yaml", contractWithPrototype("  mode:"));
 
     expect(await validateUiPrototypeMode(root, defaultConfig)).toEqual([]);
   });
@@ -171,7 +191,7 @@ describe("which mode the rule reads", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       contractWithPrototype(
         "  mockPaths:",
         "    - id: mp_create_to_list",
@@ -187,7 +207,7 @@ describe("which mode the rule reads", () => {
     const root = await newRoot();
     await write(
       root,
-      ".qfai/contracts/ui/order.yaml",
+      ".qfai/spec/03_contract/ui/order.yaml",
       [
         "prototype:",
         "  mockPaths:",

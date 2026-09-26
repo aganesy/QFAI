@@ -11,7 +11,7 @@
  * The two directions are one property: a name the package no longer ships is out of scope, and a name
  * it does ship is in scope whether or not its installed file is still there.
  */
-// QFAI:SPEC-0006:TC-0006-0035
+// QFAI:EX-0003-0011-08
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";

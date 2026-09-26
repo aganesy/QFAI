@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                              | Expected                                                                                                                                                                                                                 |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EX-0001-0101-01 | AC-0001-0101-01 | Given prototyping evidence exists When completion is evaluated                                                     | Then `qfai validate --fail-on error` is required before the run can be accepted                                                                                                                                          |
+| EX-0001-0101-02 | AC-0001-0101-02 | Given `/qfai-verify` leaves a `REVISE` review artifact                                                             | Then prototyping completion remains blocked                                                                                                                                                                              |
+| EX-0001-0101-03 | AC-0001-0101-03 | Given the per-spec time-budget cap is 5 minutes and `SPEC-0007` cycle 4 takes 7 minutes. When the cycle completes. | Then a soft warning is appended to `SPEC-0007/orders-dashboard.review.json` (e.g. `"timeBudgetSoftWarning": "per-spec 5m cap exceeded: 7m"`); the run does NOT hard-fail; only the global 10-cycle budget can hard-fail. |

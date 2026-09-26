@@ -30,6 +30,7 @@ import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { resolvePrimaryPrototypingSpec } from "../prototyping/specResolution.js";
+import { readUiContractsCovered } from "../prototyping/specsCovered.js";
 import {
   EVIDENCE_REF_KINDS,
   MAX_ITERATIONS,
@@ -37,11 +38,13 @@ import {
   isPivotDirective,
   isStopReason,
   isUntouchedCycleZeroSeed,
+  isUxScores,
+  iterationConverged,
   iterationReviewPath,
 } from "../prototyping/iteration.js";
 
 import { validateProseCritiqueBand } from "../prototyping/evaluatorReview.js";
-import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
+import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { loadLayoutAntiPatterns } from "./layoutAntiPatterns.js";
 import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
@@ -76,18 +79,6 @@ function isViolationArray(value: unknown): value is ReadonlyArray<{ kind: string
   return true;
 }
 
-function hasConvergedStopShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  if (!isStringArray(value.blockingFindings)) return false;
-  if (!isStringArray(value.layoutAntiPatternsDetected)) return false;
-  if (!Array.isArray(value.designMdViolations)) return false;
-  return (
-    value.blockingFindings.length === 0 &&
-    value.layoutAntiPatternsDetected.length === 0 &&
-    value.designMdViolations.length === 0
-  );
-}
-
 export async function validatePrototypingEvidence(
   root: string,
   config: QfaiConfig,
@@ -107,7 +98,7 @@ export async function validatePrototypingEvidence(
         issues.push(
           issue(
             "QFAI-PROT-001",
-            "prototyping.json is missing for the primary UI-bearing prototyping spec.",
+            "prototyping.json is missing for the UI contracts with screens[].",
             "error",
             PROTO_JSON_REL,
             "prototypingEvidence.missing",
@@ -143,14 +134,14 @@ export async function validatePrototypingEvidence(
 
   const r = parsed;
 
-  if (!isStringArray(r.specsCovered)) {
+  if (readUiContractsCovered(r).kind !== "ok") {
     issues.push(
       issue(
         "QFAI-PROT-002",
-        "prototyping.json specsCovered[] must be a string array.",
+        "prototyping.json uiContractsCovered[] must contain full CON-UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
         "error",
         PROTO_JSON_REL,
-        "prototypingEvidence.specsCovered",
+        "prototypingEvidence.uiContractsCovered",
       ),
     );
   }
@@ -252,6 +243,17 @@ export async function validatePrototypingEvidence(
           ),
         );
       }
+    }
+    if (!isUxScores(it.scores)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-002",
+          `iterations[${i}].scores must contain exactly informationArchitecture, navigationFlow, usability, and functionality, each weak|acceptable|strong|exceptional.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidence.scores",
+        ),
+      );
     }
     if (!isStringArray(it.blockingFindings)) {
       issues.push(
@@ -369,11 +371,11 @@ export async function validatePrototypingEvidence(
     }
   }
   if (stopReason === "converged" && last) {
-    if (!hasConvergedStopShape(last)) {
+    if (!iterationConverged(last)) {
       issues.push(
         issue(
           "QFAI-PROT-005",
-          `stopReason="converged" requires the latest iter to have blockingFindings=[], layoutAntiPatternsDetected=[] AND designMdViolations=[].`,
+          `stopReason="converged" requires the latest iter to have all four ordinal scores exceptional AND blockingFindings=[], layoutAntiPatternsDetected=[], and designMdViolations=[].`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.stopReasonConsistency",
@@ -455,8 +457,8 @@ async function validateIterationReviewArtifacts(
       // Windows editors defaulting to "UTF-8 with signature", all emit a
       // leading U+FEFF that `JSON.parse` rejects. The payload is valid;
       // reporting it unparseable sends the operator to re-run a reviewer
-      // over a file that is already correct. `designMd.ts` and
-      // `worklogSurface.ts` strip it for the same reason.
+      // over a file that is already correct. `designMd.ts` strips it for the
+      // same reason.
       review = JSON.parse(raw.replace(/^\uFEFF/u, ""));
     } catch {
       issues.push(
@@ -583,6 +585,12 @@ function reviewSchemaIssues(
   }
   reportReviewBlockingFindings(review.blockingFindings, report);
   reportReviewProse(review.proseCritique, report);
+  if (!isUxScores(review.scores)) {
+    report(
+      "scores must contain exactly informationArchitecture, navigationFlow, usability, and functionality, each weak|acceptable|strong|exceptional.",
+      "prototypingEvidence.review.scores",
+    );
+  }
   reportReviewAntiPatterns(review.layoutAntiPatternsDetected, knownLapIds, report);
   reportUnknownReviewKeys(review, report);
   if (!isViolationArray(review.designMdViolations)) {
@@ -597,7 +605,7 @@ function reviewSchemaIssues(
       "prototypingEvidence.review.pivotDirective",
     );
   }
-  reportReviewEvidenceRefs(review.evidenceRefs, report);
+  reportReviewEvidenceRefs(index, review.evidenceRefs, report);
   return issues;
 }
 
@@ -677,16 +685,25 @@ const REVIEW_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
   "reviewerId",
   "blockingFindings",
   "proseCritique",
+  "scores",
   "layoutAntiPatternsDetected",
   "designMdViolations",
   "pivotDirective",
   "evidenceRefs",
 ]);
 
-function reportReviewEvidenceRefs(refs: unknown, report: ReportReviewIssue): void {
+function reportReviewEvidenceRefs(index: number, refs: unknown, report: ReportReviewIssue): void {
   if (!isRecord(refs)) {
     report("evidenceRefs must be an object.", "prototypingEvidence.review.evidenceRefs");
     return;
+  }
+  for (const kind of Object.keys(refs)) {
+    if (!isEvidenceRefKind(kind)) {
+      report(
+        `evidenceRefs has an unknown kind ${JSON.stringify(kind)}.`,
+        "prototypingEvidence.review.evidenceRefs.kind",
+      );
+    }
   }
   for (const kind of EVIDENCE_REF_KINDS) {
     const value = refs[kind];
@@ -695,17 +712,41 @@ function reportReviewEvidenceRefs(refs: unknown, report: ReportReviewIssue): voi
         `evidenceRefs.${kind} must be a non-empty repository-relative artifact path.`,
         `prototypingEvidence.review.evidenceRefs.${kind}`,
       );
+    } else if (!reviewRefRelativePath(value, index, kind)) {
+      report(
+        `evidenceRefs.${kind} must be a repository-relative ${PROTOTYPING_EVIDENCE_REL}/iter-${String(index).padStart(2, "0")}/<screen>.${kind === "html" ? "html" : "png"} path.`,
+        "prototypingEvidence.review.evidenceRefs.path",
+      );
     }
   }
+}
+
+function isEvidenceRefKind(value: unknown): value is (typeof EVIDENCE_REF_KINDS)[number] {
+  return value === "screenshot" || value === "html";
+}
+
+function iterationRefPath(index: number, kind: (typeof EVIDENCE_REF_KINDS)[number]): RegExp {
+  const extension = kind === "screenshot" ? "png" : "html";
+  return new RegExp(`^iter-${String(index).padStart(2, "0")}/[A-Za-z0-9_]+\\.${extension}$`, "u");
+}
+
+function reviewRefRelativePath(
+  value: string,
+  index: number,
+  kind: (typeof EVIDENCE_REF_KINDS)[number],
+): string | undefined {
+  const prefix = `${PROTOTYPING_EVIDENCE_REL}/`;
+  if (!value.startsWith(prefix)) return undefined;
+  const relative = value.slice(prefix.length);
+  return iterationRefPath(index, kind).test(relative) ? relative : undefined;
 }
 
 /**
  * Top-level fields the orchestrator transcribes verbatim from
  * `review.json` into `prototyping.json#iterations[N]`.
  *
- * `evidenceRefs` is compared leaf by leaf instead (see
- * {@link mirrorAgreementIssues}) so the finding names the exact ref kind
- * that diverged rather than dumping both objects.
+ * `evidenceRefs` is compared by kind and path after converting the review's
+ * repository-relative object paths to the persisted array's relative paths.
  */
 const MIRRORED_REVIEW_FIELDS = [
   // `reviewerId` is here because the gate's own control flow reads it.
@@ -719,16 +760,11 @@ const MIRRORED_REVIEW_FIELDS = [
   "reviewerId",
   "blockingFindings",
   "proseCritique",
+  "scores",
   "pivotDirective",
   "layoutAntiPatternsDetected",
   "designMdViolations",
 ] as const;
-
-/**
- * The nested reviewer objects, compared leaf by leaf so a finding names
- * the exact ref kind that diverged instead of dumping both objects.
- */
-const NESTED_MIRRORED_FIELDS = [["evidenceRefs", EVIDENCE_REF_KINDS]] as const;
 
 /**
  * `value` rendered with object keys in a stable order, recursively.
@@ -853,16 +889,89 @@ function mirrorAgreementIssues(
     if (reviewJson !== mirrorJson) report(field, reviewJson, mirrorJson);
   }
 
-  // The nested leaves follow the same rule as the top-level fields.
-  for (const [container, keys] of NESTED_MIRRORED_FIELDS) {
-    const reviewSide = review[container];
-    const mirrorSide = mirror[container];
-    if (!isRecord(reviewSide) || !isRecord(mirrorSide)) continue;
-    for (const key of keys) {
-      if (!(key in reviewSide) || !(key in mirrorSide)) continue;
-      if (reviewSide[key] === mirrorSide[key]) continue;
-      report(`${container}.${key}`, canonicalJson(reviewSide[key]), canonicalJson(mirrorSide[key]));
+  issues.push(...mirrorEvidenceRefIssues(index, review.evidenceRefs, mirror.evidenceRefs, report));
+
+  return issues;
+}
+
+function mirrorEvidenceRefIssues(
+  index: number,
+  reviewValue: unknown,
+  mirrorValue: unknown,
+  report: (field: string, reviewJson: string, mirrorJson: string) => void,
+): Issue[] {
+  const issues: Issue[] = [];
+  if (!Array.isArray(mirrorValue)) {
+    issues.push(
+      issue(
+        "QFAI-PROT-002",
+        `iterations[${index}].evidenceRefs must be an array of {kind, path} entries.`,
+        "error",
+        PROTO_JSON_REL,
+        "prototypingEvidence.evidenceRefs",
+      ),
+    );
+    return issues;
+  }
+  const refs: readonly unknown[] = mirrorValue;
+
+  const paths = new Set<string>();
+  const valid: { kind: (typeof EVIDENCE_REF_KINDS)[number]; path: string }[] = [];
+  for (let i = 0; i < refs.length; i += 1) {
+    const ref = refs[i];
+    const field = `iterations[${index}].evidenceRefs[${i}]`;
+    if (!isRecord(ref) || !isEvidenceRefKind(ref.kind)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-002",
+          `${field}.kind must be screenshot or html.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidence.evidenceRefs.kind",
+        ),
+      );
+      continue;
     }
+    if (typeof ref.path !== "string" || !iterationRefPath(index, ref.kind).test(ref.path)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-002",
+          `${field}.path must be an iter-${String(index).padStart(2, "0")}/<screen>.${ref.kind === "html" ? "html" : "png"} path.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidence.evidenceRefs.path",
+        ),
+      );
+      continue;
+    }
+    const key = `${ref.kind}:${ref.path}`;
+    if (paths.has(key)) {
+      issues.push(
+        issue(
+          "QFAI-PROT-002",
+          `${field} duplicates a ${ref.kind} ref for ${ref.path}.`,
+          "error",
+          PROTO_JSON_REL,
+          "prototypingEvidence.evidenceRefs.duplicate",
+        ),
+      );
+      continue;
+    }
+    paths.add(key);
+    valid.push({ kind: ref.kind, path: ref.path });
+  }
+
+  if (!isRecord(reviewValue)) return issues;
+  for (const kind of EVIDENCE_REF_KINDS) {
+    const raw = reviewValue[kind];
+    if (typeof raw !== "string") continue;
+    const expected = reviewRefRelativePath(raw, index, kind);
+    if (!expected || paths.has(`${kind}:${expected}`)) continue;
+    report(
+      `evidenceRefs.${kind}`,
+      canonicalJson(expected),
+      canonicalJson(valid.filter((ref) => ref.kind === kind).map((ref) => ref.path)),
+    );
   }
 
   return issues;

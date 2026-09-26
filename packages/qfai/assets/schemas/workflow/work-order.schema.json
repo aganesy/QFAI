@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:work-order",
+  "title": "Work order",
+  "description": "One stage's work, as next returns it and the run's work-orders directory holds it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "workOrderId",
+    "stageInstanceId",
+    "attempt",
+    "stageKind",
+    "operation",
+    "executor",
+    "scope",
+    "recordAreas",
+    "inputs",
+    "requiredGates",
+    "requiredReviewerRoles",
+    "actorHistory",
+    "authorizationRefs",
+    "priorStageReceiptRefs",
+    "expectedSequence"
+  ],
+  "if": {
+    "required": ["stageKind"],
+    "properties": {
+      "stageKind": {
+        "enum": ["route", "discussion", "maintenance", "verify"]
+      }
+    }
+  },
+  "then": {
+    "not": {
+      "required": ["target"],
+      "properties": {
+        "target": true
+      }
+    }
+  },
+  "else": {
+    "required": ["target"],
+    "properties": {
+      "target": true
+    }
+  },
+  "properties": {
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workOrderId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stageInstanceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stageKind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill"],
+      "properties": {
+        "skill": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "target": {
+      "description": "Absent only on the routing, discussion, maintenance and verify work orders, which bind no flow and no new story.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "flowId"],
+          "properties": {
+            "kind": {
+              "const": "flow"
+            },
+            "flowId": {
+              "type": "string",
+              "pattern": "^BF-\\d{4}$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "slotId"],
+          "properties": {
+            "kind": {
+              "const": "new_story"
+            },
+            "slotId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "writeAreas", "protectedTargets", "allowedEffects", "nonGoals"],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writeAreas": {
+          "$ref": "#/$defs/strings"
+        },
+        "protectedTargets": {
+          "$ref": "#/$defs/strings"
+        },
+        "allowedEffects": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "push",
+              "pull-request",
+              "merge",
+              "deploy",
+              "production-migration",
+              "extra-spending"
+            ]
+          }
+        },
+        "nonGoals": {
+          "$ref": "#/$defs/strings"
+        }
+      }
+    },
+    "recordAreas": {
+      "description": "The stage's own records for the bound flow, held apart from the scope.",
+      "$ref": "#/$defs/strings"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "digest"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "digest": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "obligations": {
+      "description": "The BF, AC and EX IDs of the bound flow and a digest over them; never whether a test annotates one.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["flowId", "ids", "digest"],
+      "properties": {
+        "flowId": {
+          "type": "string",
+          "pattern": "^BF-\\d{4}$"
+        },
+        "ids": {
+          "$ref": "#/$defs/strings"
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "checkpointRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parentWorkOrderId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requiredGates": {
+      "$ref": "#/$defs/strings"
+    },
+    "requiredReviewerRoles": {
+      "$ref": "#/$defs/strings"
+    },
+    "actorHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "agentInstance"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agentInstance": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageInstanceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "authorizationRefs": {
+      "$ref": "#/$defs/strings"
+    },
+    "priorStageReceiptRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "validity"],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validity": {
+            "enum": ["valid", "stale", "unknown"]
+          }
+        }
+      }
+    },
+    "settled": {
+      "description": "Runtime only: the checked proposal's routing result and every answered question.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["routingResultId", "answers"],
+      "properties": {
+        "routingResultId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "answers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["questionId", "text", "chosen"],
+            "properties": {
+              "questionId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "chosen": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/strings"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

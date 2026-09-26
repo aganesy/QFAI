@@ -1,0 +1,12 @@
+version: 1
+paths:
+  specsDir: .qfai/specs
+  contractsDir: .qfai/contracts
+  skillsDir: .qfai/assistant/skills
+  promptsDir: .qfai/assistant/prompts
+  testsDir: tests
+validation:
+  traceability:
+    testFileGlobs:
+      - tests/**/*.test.ts
+    testFileExcludeGlobs: []

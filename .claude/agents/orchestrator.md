@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/orchestrator.md
+../../.qfai/assistant/agent/orchestrator.md

@@ -5,18 +5,13 @@
  *
  * Covers TC-0004-0055..0066.
  */
-// QFAI:SPEC-0004:TC-0004-0055
-// QFAI:SPEC-0004:TC-0004-0056
-// QFAI:SPEC-0004:TC-0004-0057
-// QFAI:SPEC-0004:TC-0004-0058
-// QFAI:SPEC-0004:TC-0004-0059
-// QFAI:SPEC-0004:TC-0004-0060
-// QFAI:SPEC-0004:TC-0004-0061
-// QFAI:SPEC-0004:TC-0004-0062
-// QFAI:SPEC-0004:TC-0004-0063
-// QFAI:SPEC-0004:TC-0004-0064
-// QFAI:SPEC-0004:TC-0004-0065
-// QFAI:SPEC-0004:TC-0004-0066
+// QFAI:EX-0001-0049-01
+// QFAI:EX-0001-0049-01
+// QFAI:EX-0001-0049-02
+// QFAI:EX-0001-0049-02
+// QFAI:EX-0002-0010-02
+// QFAI:EX-0001-0050-01
+// QFAI:EX-0001-0050-01
 
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
@@ -64,7 +59,7 @@ async function seedReviewerReport(root: string, body: unknown): Promise<void> {
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 const CHECK_SCRIPT = path.resolve(
   __dirname,
@@ -207,6 +202,7 @@ async function runCheckScript(
 }
 
 describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () => {
+  // QFAI:EX-0002-0010-01
   it("scanner-only PR emits R-PROMPT-SCANNER-DRIFT naming the scanner and un-paired prompt", async () => {
     const result = await runCheckScript(["--changed", SCANNER_REL]);
     expect(result.code).not.toBe(0);
@@ -219,6 +215,7 @@ describe("TC-0004-0059: pair-changed lane fails when only scanner changes", () =
 });
 
 describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () => {
+  // QFAI:EX-0002-0010-01
   it("prompt-only PR emits R-PROMPT-SCANNER-DRIFT naming the prompt and un-paired scanner", async () => {
     const result = await runCheckScript(["--changed", PROMPT_REL]);
     expect(result.code).not.toBe(0);
@@ -230,6 +227,7 @@ describe("TC-0004-0060: pair-changed lane fails when only prompt changes", () =>
 });
 
 describe("TC-0004-0061: pair-changed lane passes when both halves change", () => {
+  // QFAI:EX-0002-0010-01
   it("both-changed PR passes the lane silently with no drift finding", async () => {
     const result = await runCheckScript(["--changed", `${SCANNER_REL},${PROMPT_REL}`]);
     expect(result.code).toBe(0);
@@ -269,7 +267,7 @@ describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-D
           code: "R-PROMPT-SCANNER-DRIFT",
           justification:
             "modified=packages/qfai/src/core/prototyping/designMdViolations.ts, " +
-            "un-paired=packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md, " +
+            `un-paired=${PROMPT_REL}, ` +
             "clause=color-literal-ban",
         },
       ],
@@ -284,10 +282,18 @@ describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-D
 // Certify + post-sunset consumer
 // ────────────────────────────────────────────────────────────────────────────
 
-describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () => {
-  it("certify aborts naming observed/expected profiles and prints recovery command", async () => {
-    // Seed minimal prototyping.json + verify.json + DESIGN.md + a
-    // validate.json with the WRONG profile.
+// QFAI:AC-0001-0049-01
+// QFAI:EX-0001-0049-04
+describe("certify reads the prototyping-profile validate report", () => {
+  it("rejects the prototyping report's error even when the latest tdd report passed", async () => {
+    // Seed the same prerequisite evidence as a normal certify invocation.
+    const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
+    await mkdir(uiDir, { recursive: true });
+    await writeFile(
+      path.join(uiDir, "ui-0004.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0004\nscreens:\n  - id: home\n    route: /\n",
+      "utf-8",
+    );
     const protoDir = path.join(root, ".qfai/evidence/prototyping");
     await mkdir(protoDir, { recursive: true });
     await writeFile(
@@ -298,7 +304,8 @@ describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () 
         designMd: { sha256: "0".repeat(64) },
         reviewerGate: { result: "PASS" },
         iterations: [{}],
-        specsCovered: ["0004"],
+        uiContractsCovered: ["CON-UI-0004"],
+        frozenSurfaceUnion: ["CON-UI-0004"],
       }),
       "utf-8",
     );
@@ -312,6 +319,11 @@ describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () 
     await writeFile(
       path.join(root, ".qfai/report/validate.json"),
       JSON.stringify({ counts: { error: 0 }, profile: "tdd" }),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(root, ".qfai/report/validate-prototyping.json"),
+      JSON.stringify({ counts: { error: 1 }, profile: "prototyping" }),
       "utf-8",
     );
 
@@ -333,13 +345,15 @@ describe("TC-0004-0065: certify profile-mismatch surfaces recovery command", () 
 
     expect(exitCode).not.toBe(0);
     const combined = errs.join("");
-    expect(combined).toMatch(/tdd/);
-    expect(combined).toMatch(/prototyping/);
-    expect(combined).toMatch(/qfai validate --profile prototyping --fail-on error/);
+    expect(combined).toContain("validate-prototyping.json");
+    expect(combined).toMatch(/1 error/);
+    expect(combined).not.toMatch(/profile="tdd"/);
   });
 });
 
-describe("TC-0004-0066: legacy validate.json path escalates to error post sunset", () => {
+// QFAI:AC-0001-0049-02
+// QFAI:EX-0001-0049-03
+describe("legacy validate path becomes an error after the sunset", () => {
   it("consumer pointed at legacy path under tool 1.10.0+ surfaces D-DEPRECATED-PATH at error severity", async () => {
     // "Consumer pointed at legacy path" = the legacy file exists on disk
     // (from a prior pre-sunset run OR a manually-managed consumer write).

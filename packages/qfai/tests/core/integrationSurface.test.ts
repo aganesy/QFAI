@@ -45,11 +45,11 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 /** The canonical tree the wrappers point at. */
 async function seedCanonical(root: string, skills: string[], agents: string[]): Promise<void> {
   for (const id of skills) {
-    const dir = path.join(root, ".qfai", "assistant", "skills", id);
+    const dir = path.join(root, ".qfai", "assistant", "skill", id);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "SKILL.md"), "# skill\n", "utf-8");
   }
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
   await mkdir(agentsDir, { recursive: true });
   await writeFile(path.join(agentsDir, "README.md"), "# readme\n", "utf-8");
   for (const name of agents) {
@@ -77,7 +77,7 @@ async function wireAll(root: string, skills: string[], agents: string[]): Promis
     await mkdir(dirAbsolute, { recursive: true });
     for (const name of agents) {
       await symlink(
-        path.relative(dirAbsolute, path.join(root, ".qfai", "assistant", "agents", `${name}.md`)),
+        path.relative(dirAbsolute, path.join(root, ".qfai", "assistant", "agent", `${name}.md`)),
         path.join(dirAbsolute, `${name}${suffix}`),
         "file",
       );
@@ -114,11 +114,11 @@ async function seedInitRecord(
 
 /** The link `init` writes for a skill wrapper, as a relative target. */
 const skillTarget = (dir: string, id: string): string =>
-  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skills", id);
+  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "skill", id);
 
 /** The link `init` writes for an agent wrapper, as a relative target. */
 const agentTarget = (dir: string, name: string): string =>
-  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "agents", `${name}.md`);
+  path.join(...dir.split("/").map(() => ".."), ".qfai", "assistant", "agent", `${name}.md`);
 
 /**
  * Real symlinks need Developer Mode or elevation on Windows. A machine without
@@ -148,7 +148,7 @@ describe("the integration surface is checked for links that did not survive chec
       const claudeSkills = path.join(root, ".claude", "skills");
       await rm(path.join(claudeSkills, "qfai-atdd"), { force: true });
       // Exactly what git writes when core.symlinks is false.
-      const flattened = "../../.qfai/assistant/skills/qfai-atdd";
+      const flattened = "../../.qfai/assistant/skill/qfai-atdd";
       await writeFile(path.join(claudeSkills, "qfai-atdd"), flattened, "utf-8");
 
       const found = await finding(root);
@@ -170,7 +170,7 @@ describe("the integration surface is checked for links that did not survive chec
       await mkdir(claudeSkills, { recursive: true });
       await writeFile(
         path.join(claudeSkills, "web-research"),
-        "../../.qfai/assistant/skills/web-research",
+        "../../.qfai/assistant/skill/web-research",
         "utf-8",
       );
 
@@ -363,7 +363,7 @@ describe("a shipped skill stays in scope when its canonical document is gone", (
       await mkdir(path.dirname(wrapper), { recursive: true });
       await symlink(skillTarget(".claude/skills", "qfai-atdd"), wrapper, "dir");
       // The canonical document is removed; the wrapper stays.
-      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd"), {
+      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd"), {
         recursive: true,
         force: true,
       });
@@ -377,7 +377,7 @@ describe("a shipped skill stays in scope when its canonical document is gone", (
 
 describe("ownership is the roster init ships, not the canonical tree", () => {
   it("ignores a project-owned skill published by hand", async () => {
-    // `.qfai/assistant/skills/<own>/SKILL.md` is an allowed project-owned
+    // `.qfai/assistant/skill/<own>/SKILL.md` is an allowed project-owned
     // location — `skillDocReferences` permits it — and `qfai init` enumerates
     // what to wrap from the package assets, never from the project. Treating
     // every canonical directory as qfai-owned turned a hand-published
@@ -458,10 +458,10 @@ describe("a skill wrapper is only good if it can be loaded", () => {
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
       // The skill keeps its other files; only the entry point goes.
-      await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "references"), {
+      await mkdir(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "references"), {
         recursive: true,
       });
-      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"), {
+      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md"), {
         force: true,
       });
 
@@ -511,7 +511,7 @@ describe("a wrapper has to resolve to the right kind of thing", () => {
     await withProject(async (root) => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, [], ["qa-gatekeeper"]);
-      const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       await rm(canonical, { force: true });
       await mkdir(canonical, { recursive: true });
       // Wired after the swap, and as a directory link, so the link resolves on
@@ -622,7 +622,7 @@ describe("a canonical SKILL.md has to be a file", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
       await rm(doc, { force: true });
       await mkdir(doc, { recursive: true });
 
@@ -758,7 +758,7 @@ describe("a type collision is reported wherever it sits on the path", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
       await rm(skillsDir, { recursive: true, force: true });
       await writeFile(skillsDir, "not a directory\n", "utf-8");
 
@@ -766,7 +766,7 @@ describe("a type collision is reported wherever it sits on the path", () => {
       expect(found?.refs).toContain(".claude/skills/qfai-atdd");
       expect(found?.message).toContain("a canonical ancestor is a file, not a directory");
       // And it names which one, rather than leaving the operator to find it.
-      expect(found?.message).toContain(".qfai/assistant/skills");
+      expect(found?.message).toContain(".qfai/assistant/skill");
     });
   });
 
@@ -783,7 +783,7 @@ describe("a type collision is reported wherever it sits on the path", () => {
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await writeFile(canonical, "# not a directory\n", "utf-8");
 
@@ -895,9 +895,9 @@ describe("a canonical document can be broken rather than absent", () => {
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
-      await symlink(path.join(root, ".qfai", "assistant", "skills", "gone"), canonical, "dir");
+      await symlink(path.join(root, ".qfai", "assistant", "skill", "gone"), canonical, "dir");
       // One wrapper of another shipped skill survives, so init is still proven.
       await seedCanonical(root, ["qfai-verify"], []);
       await wireAll(root, ["qfai-verify"], []);
@@ -923,11 +923,11 @@ describe("a wrapper can spell the right target and land somewhere else", () => {
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
 
-      // A complete decoy: `<outside>/.qfai/assistant/skills/qfai-atdd/SKILL.md`
-      // sits at exactly the offset `../../.qfai/assistant/skills/qfai-atdd`
+      // A complete decoy: `<outside>/.qfai/assistant/skill/qfai-atdd/SKILL.md`
+      // sits at exactly the offset `../../.qfai/assistant/skill/qfai-atdd`
       // names, counted from `<outside>/.claude/skills`.
       const outside = path.join(root, "..", `${path.basename(root)}-outside`);
-      const decoy = path.join(outside, ".qfai", "assistant", "skills", "qfai-atdd");
+      const decoy = path.join(outside, ".qfai", "assistant", "skill", "qfai-atdd");
       await mkdir(decoy, { recursive: true });
       await writeFile(path.join(decoy, "SKILL.md"), "# not ours\n", "utf-8");
       const claudeSkills = path.join(outside, ".claude", "skills");
@@ -998,7 +998,7 @@ describe("the canonical itself has to be in the project", () => {
       const outside = path.join(root, "..", `${path.basename(root)}-theirs`);
       await mkdir(outside, { recursive: true });
       await writeFile(path.join(outside, "qa-gatekeeper.md"), "# theirs\n", "utf-8");
-      const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const canonical = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       try {
         await rm(canonical, { force: true });
         await symlink(path.join(outside, "qa-gatekeeper.md"), canonical, "file");
@@ -1044,7 +1044,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const retiredCanonical = path.join(root, ".qfai", "assistant", "skills", "legacy-research");
+      const retiredCanonical = path.join(root, ".qfai", "assistant", "skill", "legacy-research");
       await mkdir(retiredCanonical, { recursive: true });
       await writeFile(path.join(retiredCanonical, "SKILL.md"), "# retired\n", "utf-8");
       const claudeSkills = path.join(root, ".claude", "skills");
@@ -1067,14 +1067,14 @@ describe("what init wrote is still checked after the roster moves on", () => {
       expect(found?.suggested_action).toContain("`qfai-` で始まる skill wrapper");
       expect(found?.suggested_action).toContain("prune 対象外なので、報告されたパスを手で削除");
       // The agent half of that promise stops at a direct child of
-      // `.qfai/assistant/agents/`: this rule reports anything landing under
+      // `.qfai/assistant/agent/`: this rule reports anything landing under
       // `.qfai/assistant/`, so a nested or cross-kind agent target is reported
       // and never pruned, and the remedy must not send the operator to
       // `--force` for one.
       expect(found?.suggested_action).toContain(
-        "解決先が `.qfai/assistant/agents/` の直下にある agent wrapper",
+        "解決先が `.qfai/assistant/agent/` の直下にある agent wrapper",
       );
-      expect(found?.suggested_action).toContain("`.qfai/assistant/agents/<sub>/…`");
+      expect(found?.suggested_action).toContain("`.qfai/assistant/agent/<sub>/…`");
     });
   });
 
@@ -1115,7 +1115,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
         await seedCanonical(root, ["qfai-atdd"], []);
         await wireAll(root, ["qfai-atdd"], []);
         const unreadable = path.join(root, ".claude", "skills", "legacy-research");
-        await writeFile(unreadable, "../../.qfai/assistant/skills/legacy-research", "utf-8");
+        await writeFile(unreadable, "../../.qfai/assistant/skill/legacy-research", "utf-8");
         await chmod(unreadable, 0o000);
         try {
           await expect(validateIntegrationSurface(root)).rejects.toThrow();
@@ -1138,7 +1138,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
       await wireAll(root, ["qfai-atdd"], []);
       await writeFile(
         path.join(root, ".claude", "skills", "legacy-research"),
-        `../../.qfai/assistant/skills/legacy-research${"x".repeat(8192)}`,
+        `../../.qfai/assistant/skill/legacy-research${"x".repeat(8192)}`,
         "utf-8",
       );
 
@@ -1156,7 +1156,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
       await wireAll(root, ["qfai-atdd"], []);
       await writeFile(
         path.join(root, ".claude", "skills", "note.txt"),
-        "../../.qfai/assistant/skills/legacy-research\n",
+        "../../.qfai/assistant/skill/legacy-research\n",
         "utf-8",
       );
 
@@ -1176,7 +1176,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
       await mkdir(outside, { recursive: true });
       await writeFile(
         path.join(outside, "legacy-research"),
-        "../../.qfai/assistant/skills/legacy-research",
+        "../../.qfai/assistant/skill/legacy-research",
         "utf-8",
       );
       const claudeSkills = path.join(root, ".claude", "skills");
@@ -1201,7 +1201,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
       await wireAll(root, ["qfai-atdd"], []);
       await writeFile(
         path.join(root, ".claude", "skills", "qfai-atdd.qfai-repair-4321"),
-        "../../.qfai/assistant/skills/qfai-atdd",
+        "../../.qfai/assistant/skill/qfai-atdd",
         "utf-8",
       );
 
@@ -1250,7 +1250,7 @@ describe("what init wrote is still checked after the roster moves on", () => {
 
 describe("a link that does not resolve still says why", () => {
   it("names the ancestor symlink when the canonical is not there yet", async () => {
-    // Point `.qfai/assistant/skills` at an existing empty directory and every
+    // Point `.qfai/assistant/skill` at an existing empty directory and every
     // wrapper under it is `ENOENT` — reported as plain `dangling` and skipped
     // before anything looked at the ancestor. The remedy printed for a dangling
     // link is "re-run `qfai init`", which writes the canonical *inside* the
@@ -1260,7 +1260,7 @@ describe("a link that does not resolve still says why", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
       const elsewhere = path.join(root, "elsewhere");
       await mkdir(elsewhere, { recursive: true });
       await rm(skillsDir, { recursive: true, force: true });
@@ -1270,7 +1270,7 @@ describe("a link that does not resolve still says why", () => {
       // damage. The wrappers are still there and the canonical under the link
       // is not, so what is reported is the path they cannot reach.
       const entry = await finding(root);
-      expect(entry?.message).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(entry?.message).toContain(".qfai/assistant/skill/qfai-atdd");
       // The ancestor is not blamed: it resolves, and what it resolves to has
       // no canonical under it, which is what the wrappers report.
       expect(entry?.message).not.toContain("a canonical ancestor");
@@ -1286,10 +1286,10 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
@@ -1313,12 +1313,12 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         await rm(wrapper, { recursive: true, force: true });
         await symlink(skillTarget(dir, "qfai-verify"), wrapper, "dir");
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await writeFile(canonical, "# not a directory\n", "utf-8");
 
       const found = await finding(root);
-      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.refs).toContain(".qfai/assistant/skill/qfai-atdd");
       expect(found?.message).toContain("canonical skill is a file, not a directory");
     });
   });
@@ -1339,12 +1339,12 @@ describe("a resolving link is a finding, not a reason to stop", () => {
           await rm(wrapper, { recursive: true, force: true });
           await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
         }
-        const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+        const skillsDir = path.join(root, ".qfai", "assistant", "skill");
         await rm(skillsDir, { recursive: true, force: true });
         await writeFile(skillsDir, "not a directory\n", "utf-8");
 
         const report = await inspectIntegrationSurface(root);
-        expect(report.unwalkable).toContain(".qfai/assistant/skills");
+        expect(report.unwalkable).toContain(".qfai/assistant/skill");
       });
     },
   );
@@ -1364,12 +1364,12 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         await rm(wrapper, { recursive: true, force: true });
         await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await writeFile(canonical, "# not a directory\n", "utf-8");
 
       const found = await finding(root);
-      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.refs).toContain(".qfai/assistant/skill/qfai-atdd");
       expect(found?.message).toContain("canonical skill is a file, not a directory");
     });
   });
@@ -1410,7 +1410,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       await seedCanonical(root, ["qfai-atdd"], []);
       const elsewhere = path.join(root, "elsewhere");
       await mkdir(elsewhere, { recursive: true });
-      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
       await rm(skillsDir, { recursive: true, force: true });
       await symlink(elsewhere, skillsDir, "dir");
       for (const dir of INTEGRATION_SURFACE_DIRS) {
@@ -1437,11 +1437,11 @@ describe("a resolving link is a finding, not a reason to stop", () => {
           await mkdir(path.join(root, ...dir.split("/")), { recursive: true });
         }
         await seedInitRecord(root);
-        const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+        const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
         await chmod(doc, 0o000);
         try {
           const report = await inspectIntegrationSurface(root);
-          expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+          expect(report.unwalkable).toContain(".qfai/assistant/skill/qfai-atdd");
         } finally {
           await chmod(doc, 0o644);
         }
@@ -1457,12 +1457,12 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
       await rm(doc, { force: true });
       await mkdir(doc, { recursive: true });
 
       const report = await inspectIntegrationSurface(root);
-      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(report.unwalkable).toContain(".qfai/assistant/skill/qfai-atdd");
     });
   });
 
@@ -1472,7 +1472,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      await rm(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"), {
+      await rm(path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md"), {
         force: true,
       });
 
@@ -1495,7 +1495,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         await rm(wrapper, { recursive: true, force: true });
         await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
       }
-      const canonicalDir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonicalDir = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       const doc = path.join(canonicalDir, "SKILL.md");
       const loop = path.join(canonicalDir, "loop.md");
       await rm(doc, { force: true });
@@ -1503,7 +1503,7 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       await symlink(doc, loop, "file");
 
       const report = await inspectIntegrationSurface(root);
-      expect(report.unwalkable).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(report.unwalkable).toContain(".qfai/assistant/skill/qfai-atdd");
     });
   });
 
@@ -1517,11 +1517,11 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         if (!(await canCreateSymlink(root))) return;
         await seedCanonical(root, [], ["completion-reviewer"]);
         await wireAll(root, [], ["completion-reviewer"]);
-        const doc = path.join(root, ".qfai", "assistant", "agents", "completion-reviewer.md");
+        const doc = path.join(root, ".qfai", "assistant", "agent", "completion-reviewer.md");
         await chmod(doc, 0o000);
         try {
           const report = await inspectIntegrationSurface(root);
-          expect(report.unwalkable).toContain(".qfai/assistant/agents/completion-reviewer.md");
+          expect(report.unwalkable).toContain(".qfai/assistant/agent/completion-reviewer.md");
         } finally {
           await chmod(doc, 0o644);
         }
@@ -1538,8 +1538,8 @@ describe("a resolving link is a finding, not a reason to stop", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
-      const loop = path.join(root, ".qfai", "assistant", "skills", "loop");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
+      const loop = path.join(root, ".qfai", "assistant", "skill", "loop");
       await rm(canonical, { recursive: true, force: true });
       await symlink(loop, canonical, "dir");
       await symlink(canonical, loop, "dir");
@@ -1561,14 +1561,14 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         if (!(await canCreateSymlink(root))) return;
         await seedCanonical(root, ["qfai-atdd"], []);
         await wireAll(root, ["qfai-atdd"], []);
-        const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+        const skillsDir = path.join(root, ".qfai", "assistant", "skill");
         await rm(skillsDir, { recursive: true, force: true });
         await writeFile(skillsDir, "not a directory\n", "utf-8");
 
         const report = await inspectIntegrationSurface(root);
         // Named at the component that is not a directory, not at the leaf below
         // it: the leaf is not the path a walk fails on.
-        expect(report.unwalkable).toContain(".qfai/assistant/skills");
+        expect(report.unwalkable).toContain(".qfai/assistant/skill");
       });
     },
   );
@@ -1590,17 +1590,17 @@ describe("a resolving link is a finding, not a reason to stop", () => {
         await rm(wrapper, { recursive: true, force: true });
         await writeFile(wrapper, skillTarget(dir, "qfai-atdd"), "utf-8");
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
 
       const found = await finding(root);
       expect(found?.refs).toContain(".claude/skills/qfai-atdd");
-      expect(found?.refs).toContain(".qfai/assistant/skills/qfai-atdd");
+      expect(found?.refs).toContain(".qfai/assistant/skill/qfai-atdd");
       expect(found?.message).toContain("canonical document is a symlink");
     });
   });
@@ -1638,10 +1638,10 @@ describe("a canonical is checked even with its surface gone", () => {
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/")), { recursive: true, force: true });
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
@@ -1681,7 +1681,7 @@ describe("a broken link on the way to a surface is not an absent surface", () =>
       for (const { dir, suffix } of AGENT_INTEGRATION_CONFIGS) {
         await rm(path.join(root, ...dir.split("/"), "qa-gatekeeper" + suffix), { force: true });
       }
-      const agentsDir = path.join(root, ".qfai", "assistant", "agents");
+      const agentsDir = path.join(root, ".qfai", "assistant", "agent");
       await rm(agentsDir, { recursive: true, force: true });
       await symlink(path.join(root, ".qfai", "assistant", "gone"), agentsDir, "dir");
 
@@ -1728,10 +1728,10 @@ describe("the canonical integrity check does not depend on a wrapper", () => {
       for (const dir of SKILL_INTEGRATION_DIRS) {
         await rm(path.join(root, ...dir.split("/"), "qfai-atdd"), { recursive: true, force: true });
       }
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
@@ -1777,7 +1777,7 @@ describe("a canonical is the document it names, by link or in place", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
       const elsewhere = path.join(root, ".qfai", "assistant", "skills-real");
       await mkdir(path.join(elsewhere, "qfai-atdd"), { recursive: true });
       await writeFile(path.join(elsewhere, "qfai-atdd", "SKILL.md"), "# moved", "utf-8");
@@ -1794,10 +1794,10 @@ describe("a canonical is the document it names, by link or in place", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
       await rm(doc, { force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify", "SKILL.md"),
         doc,
         "file",
       );
@@ -1839,10 +1839,10 @@ describe("a canonical redirected outside the project", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
@@ -1865,7 +1865,7 @@ describe("a nested SKILL.md is in the project too", () => {
       const outside = path.join(root, "..", path.basename(root) + "-doc");
       await mkdir(outside, { recursive: true });
       await writeFile(path.join(outside, "SKILL.md"), "# theirs", "utf-8");
-      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
       try {
         await rm(doc, { force: true });
         await symlink(path.join(outside, "SKILL.md"), doc, "file");
@@ -1912,7 +1912,7 @@ describe("a target can resolve and still be unusable", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, [], ["qa-gatekeeper"]);
       await wireAll(root, [], ["qa-gatekeeper"]);
-      await chmod(path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md"), 0o000);
+      await chmod(path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md"), 0o000);
 
       const found = await finding(root);
       expect(found?.message).toContain("unreadable");
@@ -1933,7 +1933,7 @@ describe("a canonical vendored by link is a layout, not damage", () => {
       const vendored = path.join(root, "vendor", "skills", "qfai-atdd");
       await mkdir(vendored, { recursive: true });
       await writeFile(path.join(vendored, "SKILL.md"), "# qfai-atdd", "utf-8");
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(vendored, canonical, "dir");
 
@@ -1948,7 +1948,7 @@ describe("a canonical vendored by link is a layout, not damage", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd"], []);
       await wireAll(root, ["qfai-atdd"], []);
-      const skillsDir = path.join(root, ".qfai", "assistant", "skills");
+      const skillsDir = path.join(root, ".qfai", "assistant", "skill");
       const vendored = path.join(root, "vendor", "skills");
       await mkdir(path.join(vendored, "qfai-atdd"), { recursive: true });
       await writeFile(path.join(vendored, "qfai-atdd", "SKILL.md"), "# qfai-atdd", "utf-8");
@@ -1966,10 +1966,10 @@ describe("a canonical vendored by link is a layout, not damage", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify"),
         canonical,
         "dir",
       );
@@ -1984,10 +1984,10 @@ describe("a canonical vendored by link is a layout, not damage", () => {
       if (!(await canCreateSymlink(root))) return;
       await seedCanonical(root, ["qfai-atdd", "qfai-verify"], []);
       await wireAll(root, ["qfai-atdd", "qfai-verify"], []);
-      const doc = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md");
+      const doc = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd", "SKILL.md");
       await rm(doc, { force: true });
       await symlink(
-        path.join(root, ".qfai", "assistant", "skills", "qfai-verify", "SKILL.md"),
+        path.join(root, ".qfai", "assistant", "skill", "qfai-verify", "SKILL.md"),
         doc,
         "file",
       );
@@ -2005,7 +2005,7 @@ describe("a canonical vendored by link is a layout, not damage", () => {
       const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
       await mkdir(path.join(outside, "qfai-atdd"), { recursive: true });
       await writeFile(path.join(outside, "qfai-atdd", "SKILL.md"), "# elsewhere", "utf-8");
-      const canonical = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+      const canonical = path.join(root, ".qfai", "assistant", "skill", "qfai-atdd");
       await rm(canonical, { recursive: true, force: true });
       await symlink(path.join(outside, "qfai-atdd"), canonical, "dir");
 

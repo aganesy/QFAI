@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { validateReviewArtifacts } from "../../../src/core/validators/reviewArtifacts.js";
 import { QFAI_GITIGNORE_BLOCK } from "../../../src/core/gitignore.js";
+import { resolveFlowScope } from "../../../src/core/flowScope.js";
+import { buildStoryTreeModel } from "../../../src/core/storyTree/tree.js";
 
 const tempDirs: string[] = [];
 
@@ -709,6 +711,39 @@ describe("validateReviewArtifacts — a target the pack's own path contradicts",
 
     const issues = await validateReviewArtifacts(root, sddSliceScope(root));
     expect(issues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+  });
+
+  it("accepts an SDD flow target and scopes review packs to its flow", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const specsRoot = path.join(root, ".qfai", "spec");
+    const flowOne = path.join(specsRoot, "02_business-flow", "business-flow-0001");
+    const flowTwo = path.join(specsRoot, "02_business-flow", "business-flow-0002");
+    const tree = buildStoryTreeModel(
+      new Map([
+        [path.join(flowOne, "business-flow.md"), "# BF-0001: First"],
+        [path.join(flowTwo, "business-flow.md"), "# BF-0002: Second"],
+      ]),
+      { specsDir: specsRoot },
+    );
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ producer: "sdd", target: { kind: "flow", path: flowOne } }),
+    );
+    const sibling = path.join(root, ".qfai", "review", "review-20260402000000000");
+    await mkdir(sibling, { recursive: true });
+    await writeFile(path.join(sibling, "review_request.md"), `Target: ${flowTwo}\n`, "utf8");
+
+    const findings = await validateReviewArtifacts(root, {
+      specScope: undefined,
+      flowScope: resolveFlowScope(["BF-0001"], tree),
+      specsRoot,
+      discussionRoot: path.join(root, ".qfai", "discussion"),
+      producers: new Set(["sdd"]),
+    });
+    expect(findings.some((entry) => entry.code === "QFAI-REVIEW-007")).toBe(false);
+    expect(findings.some((entry) => entry.code === "QFAI-REVIEW-004")).toBe(false);
   });
 
   it("says nothing about a target outside both configured roots", async () => {

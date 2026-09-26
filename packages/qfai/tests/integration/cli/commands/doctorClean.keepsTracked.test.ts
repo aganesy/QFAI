@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0019
+// QFAI:EX-0003-0008-01
 //
 // Integration: `qfai doctor --clean` archives by RENAMING a stale pack into
 // `.qfai/review/_archive/`. On a repository that COMMITS its review packs and

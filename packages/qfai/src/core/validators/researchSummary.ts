@@ -430,7 +430,7 @@ async function buildMissingSectionIssue(
     "canonical",
     [
       'Add a "## Research Summary" section to a file in the pack (04_Sources.md by default).',
-      "Follow the Output Schema in .qfai/assistant/constitution/research-first-protocol.md.",
+      "Follow the Output Schema in .qfai/assistant/rule/research-first-protocol.md.",
     ].join("\n"),
   );
 }

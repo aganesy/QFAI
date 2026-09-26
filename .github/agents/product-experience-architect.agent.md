@@ -1,1 +1,1 @@
-../../.qfai/assistant/agents/product-experience-architect.md
+../../.qfai/assistant/agent/product-experience-architect.md

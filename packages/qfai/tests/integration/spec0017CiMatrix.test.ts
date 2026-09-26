@@ -1,5 +1,3 @@
-// QFAI:SPEC-0017:TC-0017-0007
-// QFAI:SPEC-0017:TC-0017-0043
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -50,13 +48,15 @@ function checkNames(selection: "full" | "documentation-only"): string[] {
 }
 
 describe("spec-0017 CI matrix acceptance", () => {
+  // QFAI:EX-0002-0013-06
   it("TC-0017-0007 (TDD-0007): keeps every retained matrix leg declared", () => {
     for (const job of ["test", "node-floor"]) {
       expect(sorted(matrixSlices("ci.yml", job)), job).toEqual(RETAINED_SLICES);
     }
   });
 
-  it("TC-0017-0007 (TDD-0102): derives the skip from detection at the job level", () => {
+  // QFAI:EX-0002-0013-06
+  it("TC-0017-0007: derives the skip from detection at the job level", () => {
     for (const name of ["test", "node-floor"]) {
       const job = workflowJobs("ci.yml")[name];
       expect(job, `ci.yml must declare ${name}`).toBeDefined();
@@ -65,7 +65,8 @@ describe("spec-0017 CI matrix acceptance", () => {
     }
   });
 
-  it("TC-0017-0007 (TDD-0103): retires project, script and matrix legs together", () => {
+  // QFAI:EX-0002-0013-06
+  it("TC-0017-0007: retires project, script and matrix legs together", () => {
     const projects = runnerProjects();
     const manifest: unknown = JSON.parse(
       readFileSync(path.join(PACKAGE_ROOT, "package.json"), "utf-8"),
@@ -88,6 +89,7 @@ describe("spec-0017 CI matrix acceptance", () => {
     }
   });
 
+  // QFAI:EX-0002-0017-02
   it("TC-0017-0043 (TDD-0043): reports all expanded check names on full runs", () => {
     expect(checkNames("full")).toEqual([
       "build",
@@ -112,10 +114,12 @@ describe("spec-0017 CI matrix acceptance", () => {
       "test (scripts)",
       "test (unit)",
       "test (validators)",
+      "windows-parity",
     ]);
   });
 
-  it("TC-0017-0043 (TDD-0104): reports bare skipped matrix jobs on documentation-only runs", () => {
+  // QFAI:EX-0002-0017-02
+  it("TC-0017-0043: reports bare skipped matrix jobs on documentation-only runs", () => {
     expect(checkNames("documentation-only")).toEqual([
       "build",
       "check-types",
@@ -127,6 +131,7 @@ describe("spec-0017 CI matrix acceptance", () => {
       "node-floor",
       "scanner-coverage",
       "test",
+      "windows-parity",
     ]);
   });
 });

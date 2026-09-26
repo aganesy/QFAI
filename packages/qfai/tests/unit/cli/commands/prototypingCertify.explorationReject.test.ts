@@ -2,14 +2,12 @@
  * Unit: `qfai prototyping certify` rejects loops containing
  * exploration-mode iterations.
  *
- * - TC-0012-0476: certify rejects sealing with
- *   `R-EXPLORATION-CERTIFY-ATTEMPT` AND `acceptedIterationIndex` MUST
- *   resolve to a convergence-mode iteration only.
+ * The detector emits `R-EXPLORATION-CERTIFY-ATTEMPT` for exploration
+ * iterations, and acceptedIterationIndex resolves to a convergence iteration.
  *
  * The detector lives at `core/validators/prototyping/explorationCertify.ts`
  * (`detectExplorationCertifyAttempt`).
  */
-// QFAI:SPEC-0012:TC-0012-0476
 
 import { describe, expect, it } from "vitest";
 
@@ -19,7 +17,7 @@ import {
 } from "../../../../src/core/validators/prototyping/explorationCertify.js";
 import { extractIterationViewsForCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 
-describe("TC-0012-0476: certify against exploration-mode iterations emits R-EXPLORATION-CERTIFY-ATTEMPT", () => {
+describe("certify exploration iteration detector", () => {
   it("fires (error) when any iteration was produced under exploration mode", () => {
     const issues = detectExplorationCertifyAttempt({
       iterations: [
@@ -53,7 +51,7 @@ describe("TC-0012-0476: certify against exploration-mode iterations emits R-EXPL
   });
 });
 
-describe("TC-0012-0476: acceptedIterationIndex resolves to convergence-mode iterations only", () => {
+describe("acceptedIterationIndex resolves to convergence-mode iterations only", () => {
   it("returns the highest-index convergence iteration when present", () => {
     const idx = resolveCertifyAcceptedIterationIndex([
       { index: 0, mode: "convergence" },

@@ -19,7 +19,7 @@ import {
 } from "../helpers/spec0017Release.js";
 
 describe("spec-0017 release aggregate fallback", () => {
-  // QFAI:SPEC-0017:TC-0017-0091
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0091 (TDD-0100): missing operation scripts retain aggregate checks", () => {
     const root = scriptKeys(currentRoot());
     for (const dropped of operationScripts) {
@@ -35,8 +35,8 @@ describe("spec-0017 release aggregate fallback", () => {
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0109): older and whole-suite tags use the whole aggregate", () => {
+  // QFAI:EX-0002-0017-06
+  it("TC-0017-0091: older and whole-suite tags use the whole aggregate", () => {
     for (const tag of TAGS) {
       const result = classifyTag(tag);
       expect(result.status, `${tag}: ${result.output}`).toBe(0);
@@ -46,8 +46,9 @@ describe("spec-0017 release aggregate fallback", () => {
     expect([whole.shape, whole.checks]).toEqual(["whole", "aggregate"]);
   });
 
-  // QFAI:SPEC-0017:TC-0017-0091
-  it("TC-0017-0091 (TDD-0110): refuses invalid checks outputs", () => {
+  // QFAI:EX-0002-0017-06
+  // QFAI:EX-0002-0017-05
+  it("TC-0017-0091: refuses invalid checks outputs", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
       if (typeof condition !== "string") throw new Error(`${id} has no release condition`);

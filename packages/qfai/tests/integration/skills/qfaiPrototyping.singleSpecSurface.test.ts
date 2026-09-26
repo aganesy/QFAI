@@ -8,7 +8,7 @@
  * single-spec language without naming the multi-spec internal helper.
  */
 
-// QFAI:SPEC-0012:TC-0012-0447
+// QFAI:EX-0001-0138-01
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 
 const SKILL_ROOT = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping",
 );
 
 async function listReferenceFiles(): Promise<string[]> {

@@ -16,9 +16,8 @@
  *      is read from that file rather than restated — `qfai init --force` reads
  *      the same constant to decide what it must not overwrite, and two copies
  *      of that answer is how one of them silently stops matching the other.
- *   2. The path exists here and nowhere in the assets. A migration memo is the
- *      live case: `qfai init --upgrade-assistant-tree` writes one per upgrade,
- *      and they accumulate in the tree that ran it.
+ *   2. The path exists here and nowhere in the assets. This is reported as
+ *      drift so the repository cannot silently use an unshipped instruction.
  *
  * A directory holding neither becomes ONE link. A directory holding either is
  * kept real and its shipped children are linked one at a time, which is the
@@ -80,8 +79,12 @@ function localOnlyUnder(rel, adopterOwned) {
     for (const entry of entries(path.join(TARGET, relDir))) {
       const childRel = relDir === "" ? entry.name : `${relDir}/${entry.name}`;
       const stat = lstatSafe(path.join(TARGET, childRel));
-      if (stat === undefined || stat.isSymbolicLink()) continue;
+      if (stat === undefined) continue;
       const inSource = existsSync(path.join(SOURCE, childRel));
+      if (stat.isSymbolicLink()) {
+        if (!inSource) found.push(childRel);
+        continue;
+      }
       if (stat.isDirectory()) {
         if (inSource) walk(childRel);
         else found.push(childRel);
@@ -102,10 +105,10 @@ function localOnlyUnder(rel, adopterOwned) {
 /**
  * Paths under `.qfai/assistant/` that git tracks, or `null` when git cannot say.
  *
- * Only a tracked path is this repository's to answer for. A suite that writes
- * into the working tree leaves an untracked file behind, and reporting that as
- * an unaccounted path fails a lane for something no commit contains — which is
- * what it did the first time this ran in CI.
+ * Only a tracked regular file is this repository's to answer for. A suite that
+ * writes an untracked file should not fail the lane. Symlinks and directories
+ * with retired layer names are checked even when untracked: either one could
+ * expose instructions the package does not ship.
  */
 function trackedUnderTarget() {
   try {
@@ -130,12 +133,8 @@ function trackedUnderTarget() {
 const TRACKED = trackedUnderTarget();
 
 /**
- * Prefixes under `.qfai/assistant/` this tree may hold alone.
- *
- * Only one: `qfai init --upgrade-assistant-tree` writes a migration memo per
- * upgrade, into the tree that ran it, and other documents cite it by name.
- *
- * Everything else that exists here and nowhere in the assets is REPORTED, and
+ * Nothing under `.qfai/assistant/` may exist only in this repository.
+ * Everything that exists here and nowhere in the assets is REPORTED, and
  * the reason is the incident the previous mechanism was built around: a
  * root-only `assistant/steering/test-layers.md` made `loadLayerPolicy` succeed
  * in this tree and throw in every `qfai init` project, so a consumer-only
@@ -143,10 +142,9 @@ const TRACKED = trackedUnderTarget();
  * but a file the assets never had is still invisible to every adopter — and
  * this tree is the only place the shipped assets are exercised end to end.
  */
-const LOCAL_ONLY_ALLOWED = ["process/migrations/"];
+const RETIRED_LAYERS = ["skills", "agents", "prompts", "constitution", "manifest", "process"];
 
-const isAllowedLocalOnly = (rel, adopterOwned) =>
-  adopterOwned.has(rel) || LOCAL_ONLY_ALLOWED.some((prefix) => rel.startsWith(prefix));
+const isAllowedLocalOnly = (rel, adopterOwned) => adopterOwned.has(rel);
 
 /** `true` when any adopter-owned path sits under `rel`. */
 function ownsSomethingUnder(rel, adopterOwned) {
@@ -201,6 +199,9 @@ function plan(adopterOwned) {
   };
 
   visit("");
+  for (const layer of RETIRED_LAYERS) {
+    if (lstatSafe(path.join(TARGET, layer)) !== undefined) unexpected.push(layer);
+  }
   return {
     links,
     realDirs: [...new Set(realDirs)].sort(),
@@ -284,9 +285,8 @@ function apply(links, realDirs) {
  * at all. The constant is a list of string literals, and parsing it keeps the
  * single source the alternative was for.
  *
- * A rename or a reshape stops the pattern matching, and that throws rather than
- * yielding an empty set: an empty one would link the four documents a project
- * owns over the placeholders it shipped with.
+ * A rename or a reshape stops the pattern matching and throws. An explicitly
+ * empty list is valid once the story tree replaces the four catalog seeds.
  */
 function adopterOwnedAssets() {
   const source = readFileSync(
@@ -301,10 +301,13 @@ function adopterOwnedAssets() {
         "that moved it.",
     );
   }
-  const names = [...(block[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-  if (names.length === 0) {
-    throw new Error("link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES parsed to nothing.");
+  const list = block[1] ?? "";
+  if (!/^\s*(?:"[^"]+"\s*,\s*)*(?:"[^"]+"\s*)?$/.test(list)) {
+    throw new Error(
+      "link-assistant-tree: ADOPTER_OWNED_CATALOG_FILES is not a literal string list.",
+    );
   }
+  const names = [...list.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   return new Set(names.map((name) => `catalog/${name}`));
 }
 

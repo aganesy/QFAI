@@ -1,0 +1,42 @@
+{
+  "source": ".qfai/specs/spec-0001/02_User-stories.md",
+  "sourceSha256Before": "932e5148093e10e0fcf8cdf1fca46b832db1363a99175f13cebaf354e7d69359",
+  "sourceSha256After": "1b754982811f731a00a8c1c4998ff82bae6a76b0fad5886841a79770319c641f",
+  "retired": [
+    {
+      "id": "US-0001-0001",
+      "catalog": "- US-0001-0001: v1421 Layered Spec 必須ファイルセット定義\n",
+      "section": "## US-0001-0001: v1421 Layered Spec 必須ファイルセット定義\n\n- Parent: CAP-0001\n- Goal: spec-XXXX/ に 9 必須ファイル（01_Spec.md, 02_User-stories.md, 03_Acceptance-Criteria.md, 04_Business-Rules.md, 05_Examples.md, 06_Test-Cases.md, 07_Decisions.md, 08_Open-questions.md, 09_delta.md）+ 10_Plan.md を定義し、\\_policies/ に 10 ファイル（01_Objective ~ 10_delta）を定義する\n- Non-goals: spec-pack（v1.4 形式）や legacy 形式の詳細仕様\n- Notes: REQ-0001 準拠。REQUIRED_LAYERED_SPEC_FILES_V1421 および REQUIRED_LAYERED_SHARED_FILES_V1421 として specLayout.ts に実装済み\n\n",
+      "authority": "spec-0001/09_delta.md:154",
+      "sha256": "7207bec76eea1e53cc591637eadcb2025508cb5d50e9275f5c211825bac8012c"
+    },
+    {
+      "id": "US-0001-0002",
+      "catalog": "- US-0001-0002: レイアウト検出ロジック定義\n",
+      "section": "## US-0001-0002: レイアウト検出ロジック定義\n\n- Parent: CAP-0001\n- Goal: spec ディレクトリ内のファイル構成から spec-pack / layered(v1416, v1417, v1421) / legacy を自動判別するロジックを定義する\n- Non-goals: レイアウト変換ツールの実装\n- Notes: REQ-0002 準拠。collectSpecEntries() で実装済み。v1421 判定は 01_Spec.md + 02_User-stories.md + v1421 マーカー（05_Examples.md / 03_Acceptance-Criteria.md / 04_Business-Rules.md / 06_Test-Cases.md）の存在で判定\n\n",
+      "authority": "spec-0001/09_delta.md:155",
+      "sha256": "4ff2030f2da5ad55cd289fec428cfa54394e71ffecb2df32837508d8d1ae87bb"
+    },
+    {
+      "id": "US-0001-0003",
+      "catalog": "- US-0001-0003: ID フォーマットルール定義\n",
+      "section": "## US-0001-0003: ID フォーマットルール定義\n\n- Parent: CAP-0001\n- Goal: US-XXXX-YYYY, AC-XXXX-YYYY, BR-XXXX-YYYY, EX-XXXX-YYYY, TC-XXXX-YYYY の ID 形式ルールを定義し、spec 間での ID 衝突を禁止する\n- Non-goals: ID の自動採番ツール\n- Notes: REQ-0003 準拠。specPackIds.ts で実装済み\n\n",
+      "authority": "spec-0001/09_delta.md:156",
+      "sha256": "356fed448ebdf2899fc6cb530848a670419be89c8e7264da448469b7e79544eb"
+    },
+    {
+      "id": "US-0001-0005",
+      "catalog": "- US-0001-0005: 参照方向ルール定義\n",
+      "section": "## US-0001-0005: 参照方向ルール定義\n\n- Parent: CAP-0001\n- Goal: \\_policies → spec-XXXX 参照を禁止（upper-to-lower）、spec-XXXX → \\_policies/CAP/NFR 参照を許可（lower-to-upper）するルールを定義する\n- Non-goals: 参照方向の自動修正\n- Notes: REQ-0005 準拠。統合元由来\n\n",
+      "authority": "spec-0001/09_delta.md:157",
+      "sha256": "b729164eb98bbbd78fe8ab68b1225d27706acd814b84b2ae7f6450627ca967d5"
+    },
+    {
+      "id": "US-0001-0006",
+      "catalog": "- US-0001-0006: Escalation Hook 定義\n",
+      "section": "## US-0001-0006: Escalation Hook 定義\n\n- Parent: CAP-0001\n- Goal: spec-XXXX/01_Spec.md に配置する Escalation Hook（Ambiguous, Conflict, Missing, Trade-off）とエスカレーション先（\\_policies/ の特定ファイル）を定義する\n- Non-goals: エスカレーションの自動判定ロジック\n- Notes: REQ-0006 準拠。統合元由来\n\n",
+      "authority": "spec-0001/09_delta.md:159",
+      "sha256": "aaa27766bd770e79ec898fd70776abe32737bcbdf436e42c24b44acc408dc8c4"
+    }
+  ]
+}

@@ -7,6 +7,72 @@ import { describe, expect, it } from "vitest";
 
 import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
 
+// QFAI:EX-0001-0038-05
+describe("story-tree default paths", () => {
+  it("resolves both omitted path keys to the story tree", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-story-paths-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "paths:\n  testsDir: checks\n", "utf-8");
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.paths.specsDir).toBe(".qfai/spec");
+      expect(config.paths.contractsDir).toBe(".qfai/spec/03_contract");
+      expect(config.paths.skillsDir).toBe(".qfai/assistant/skill");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("assistant routing overrides", () => {
+  it("loads complete routing entries and review profiles without merging defaults", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "routing:",
+          "  - skill: qfai-sdd",
+          "    phases: []",
+          "reviewProfiles:",
+          "  default:",
+          "    always_required: [completion-reviewer]",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(config.routing).toEqual([{ skill: "qfai-sdd", phases: [] }]);
+      expect(config.reviewProfiles).toEqual({
+        default: { always_required: ["completion-reviewer"] },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects duplicate routing keys and malformed profiles", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "routing:\n  - skill: qfai-sdd\n  - skill: qfai-sdd\nreviewProfiles:\n  default: invalid\n",
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues.map((issue) => issue.code)).toEqual([
+        "QFAI_CONFIG_INVALID",
+        "QFAI_CONFIG_INVALID",
+      ]);
+      expect(config.routing).toEqual([{ skill: "qfai-sdd" }]);
+      expect(config.reviewProfiles).toEqual({});
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-basebranch-"));
@@ -313,8 +379,6 @@ describe("testStrategy key surface", () => {
       expect(issues).toEqual([]);
       expect(Object.keys(config.validation.testStrategy).sort()).toEqual([
         "forbidTestTodoStubs",
-        "maxE2eScenarioCount",
-        "maxE2eScenarioRatio",
         "requireLayerTags",
         "requireSizeTags",
       ]);
@@ -332,8 +396,6 @@ describe("testStrategy key surface", () => {
   // than to `undefined`.
   it("keeps the deprecated keys a required boolean on the public type", async () => {
     const legacy: QfaiValidationConfig["testStrategy"] = {
-      maxE2eScenarioRatio: null,
-      maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
       requireLayerTags: true,
       requireSizeTags: true,
@@ -458,6 +520,8 @@ describe("retired validation.traceability keys", () => {
           "    scNoTestSeverity: warning",
           "    orphanContractsPolicy: allow",
           "    scMustHaveTest: false",
+          "    unknownContractIdSeverity: warning",
+          "    testFileGlobs: [tests/**/*.test.ts]",
           "",
         ].join("\n"),
         "utf-8",
@@ -467,8 +531,20 @@ describe("retired validation.traceability keys", () => {
 
       const deprecated = issues.filter((issue) => issue.code === "QFAI-CFG-001");
       const expected = "error";
-      expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
-      for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
+      expect(deprecated.map((issue) => issue.severity)).toEqual([
+        expected,
+        expected,
+        expected,
+        expected,
+        expected,
+      ]);
+      for (const key of [
+        "brMustHaveSc",
+        "scNoTestSeverity",
+        "orphanContractsPolicy",
+        "scMustHaveTest",
+        "unknownContractIdSeverity",
+      ]) {
         expect(
           deprecated.some((issue) => issue.message.includes(`validation.traceability.${key}`)),
           `expected a deprecation warning naming ${key}`,
@@ -477,7 +553,7 @@ describe("retired validation.traceability keys", () => {
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
       expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
-      expect(config.validation.traceability.scMustHaveTest).toBe(false);
+      expect(config.validation.traceability.testFileGlobs).toEqual(["tests/**/*.test.ts"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -511,7 +587,9 @@ describe("retired validation.traceability keys", () => {
     try {
       await writeFile(
         path.join(root, "qfai.config.yaml"),
-        ["validation:", "  traceability:", "    scMustHaveTest: true", ""].join("\n"),
+        ["validation:", "  traceability:", "    testFileGlobs: [tests/**/*.test.ts]", ""].join(
+          "\n",
+        ),
         "utf-8",
       );
 

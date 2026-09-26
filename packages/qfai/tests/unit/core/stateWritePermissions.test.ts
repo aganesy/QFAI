@@ -18,7 +18,7 @@
  * is hoisted to module scope and would otherwise apply to every case in
  * that file.
  */
-// QFAI:SPEC-0010:TC-0010-0012
+// QFAI:EX-0001-0093-01
 
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";

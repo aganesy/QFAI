@@ -71,7 +71,7 @@ export type SkillValidationResult = {
   requiredSectionsMissing: string[];
   hasCanonicalSurfaces: boolean;
   hasCliSurface: boolean;
-  hasUiBearingFalseExcl: boolean;
+  hasUiContractScope: boolean;
   isStaticFirstAligned: boolean;
   hasDelegationScopeTable: boolean;
   hasMandatoryEvidencePaths: boolean;
@@ -120,11 +120,12 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
   );
 }
 
-export function hasUiBearingFalseExclusion(content: string): boolean {
+export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    (lower.includes("ui_bearing: false") || lower.includes("ui_bearing:false")) &&
-    (lower.includes("not") || lower.includes("exempt") || lower.includes("excluded"))
+    lower.includes("con-ui-nnnn") &&
+    lower.includes("screens[]") &&
+    (lower.includes("only") || lower.includes("excluded"))
   );
 }
 
@@ -241,7 +242,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     checkRequiredSections(content);
   const canonicalSurfaces = hasCanonicalSurfaceDocumentation(content);
   const cliSurface = hasCliSurfaceDocumentation(content);
-  const uiBearingFalseExcl = hasUiBearingFalseExclusion(content);
+  const uiContractScope = hasUiContractScope(content);
   const staticFirst = isStaticFirstAligned(content);
   const delegationScopeTable = hasDelegationScopeTable(content);
   const mandatoryEvidencePaths = hasMandatoryEvidencePaths(content);
@@ -305,13 +306,13 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     );
   }
 
-  if (!uiBearingFalseExcl) {
+  if (!uiContractScope) {
     issues.push(
       skillIssue(
         "UIX-VAL-SKILL-UI-BEARING-FALSE",
-        "Prototyping skill must document that ui_bearing: false specs are excluded from prototyping execution.",
+        "Prototyping skill must limit execution to UI contracts with a full CON-UI-NNNN ID and non-empty screens[].",
         "error",
-        "ui_bearing: false spec は prototyping execution 対象外であることを明記してください。",
+        "State that only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] are eligible.",
       ),
     );
   }
@@ -389,7 +390,7 @@ export function validatePrototypingSkillContent(content: string): SkillValidatio
     requiredSectionsMissing,
     hasCanonicalSurfaces: canonicalSurfaces,
     hasCliSurface: cliSurface,
-    hasUiBearingFalseExcl: uiBearingFalseExcl,
+    hasUiContractScope: uiContractScope,
     isStaticFirstAligned: staticFirst,
     hasDelegationScopeTable: delegationScopeTable,
     hasMandatoryEvidencePaths: mandatoryEvidencePaths,

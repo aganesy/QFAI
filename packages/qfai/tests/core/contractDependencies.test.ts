@@ -36,14 +36,14 @@ async function withContracts<T>(
     os.tmpdir(),
     `qfai-condeps-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  await mkdir(path.join(root, ".qfai", "contracts", "db"), { recursive: true });
-  await mkdir(path.join(root, ".qfai", "contracts", "api"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "db"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "api"), { recursive: true });
   try {
     for (const [name, body] of Object.entries(files.db ?? {})) {
-      await writeFile(path.join(root, ".qfai", "contracts", "db", name), body, "utf-8");
+      await writeFile(path.join(root, ".qfai", "spec", "03_contract", "db", name), body, "utf-8");
     }
     for (const [name, body] of Object.entries(files.api ?? {})) {
-      await writeFile(path.join(root, ".qfai", "contracts", "api", name), body, "utf-8");
+      await writeFile(path.join(root, ".qfai", "spec", "03_contract", "api", name), body, "utf-8");
     }
     return await fn(root);
   } finally {

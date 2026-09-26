@@ -38,17 +38,6 @@
  * which `constitution/drift-protocol.md` forbids. Routed as `CR-20260818-0007`,
  * which names `TDD-0016` as its blocked set.
  */
-// QFAI:SPEC-0017:TC-0017-0014
-// QFAI:SPEC-0017:TC-0017-0019
-// QFAI:SPEC-0017:TC-0017-0021
-// QFAI:SPEC-0017:TC-0017-0022
-// QFAI:SPEC-0017:TC-0017-0024
-// QFAI:SPEC-0017:TC-0017-0015
-// QFAI:SPEC-0017:TC-0017-0017
-// QFAI:SPEC-0017:TC-0017-0018
-// QFAI:SPEC-0017:TC-0017-0020
-// QFAI:SPEC-0017:TC-0017-0023
-
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -260,6 +249,7 @@ function ownUses(): { where: string; uses: string }[] {
   return out;
 }
 
+// QFAI:EX-0002-0014-02
 describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission block", () => {
   it("reaches a permission block from every job, and reachability differs from declaration", () => {
     const jobs = ownJobs();
@@ -304,6 +294,7 @@ describe("TC-0017-0014 (TDD-0014): zero own-CI jobs lack a reachable permission 
   });
 });
 
+// QFAI:EX-0002-0014-05
 describe("TC-0017-0019 (TDD-0019): every checkout step refuses to persist credentials", () => {
   it("sets persist-credentials to false on every checkout step in the own tree", () => {
     const steps = checkoutSteps();
@@ -323,6 +314,7 @@ describe("TC-0017-0019 (TDD-0019): every checkout step refuses to persist creden
   });
 });
 
+// QFAI:EX-0002-0014-06
 describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow default", () => {
   it("requests full history on exactly the jobs that need it", () => {
     const requesting = [
@@ -357,7 +349,9 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
   });
 });
 
+// QFAI:EX-0002-0014-07
 describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", () => {
+  // QFAI:EX-0002-0014-07
   it("resolves every uses value to a forty-hex commit SHA", () => {
     const uses = ownUses();
 
@@ -397,6 +391,7 @@ describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", ()
   });
 });
 
+// QFAI:EX-0002-0014-08
 describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no guard is widened", () => {
   it("passes the leakage guard with version trailers present, because .github is outside its scope", () => {
     // The trailers this row is about look exactly like the version markers the
@@ -453,6 +448,7 @@ describe("TC-0017-0024 (TDD-0024): a readable pin trailer stays legal and no gua
 // inside leaves the repository broken when it crashes between edit and restore.
 // ───────────────────────────────────────────────────────────────────────────
 
+// QFAI:EX-0002-0014-01
 describe("TC-0017-0015 (TDD-0015): reachability and declaration are two different measurements", () => {
   it("accepts an inheriting fixture job that the declaration-only counter rejects", async () => {
     // The lane exports both counters so this row can compare them. Importing the
@@ -489,6 +485,7 @@ describe("TC-0017-0015 (TDD-0015): reachability and declaration are two differen
   });
 });
 
+// QFAI:EX-0002-0014-04
 describe("TC-0017-0017 (TDD-0017): removing both blocks exits 1 naming the workflow and the job", () => {
   it("reports the workflow and the job whose two permission blocks were both removed", () => {
     // `ci-pass` is the job to strip: it is the only one carrying its OWN block
@@ -511,6 +508,7 @@ describe("TC-0017-0017 (TDD-0017): removing both blocks exits 1 naming the workf
   });
 });
 
+// QFAI:EX-0002-0014-04
 describe("TC-0017-0018 (TDD-0018): restoring either one of the two blocks returns exit 0", () => {
   it("exits 0 with only the workflow-level block, and again with only the job-level one", () => {
     // Two trees, each missing ONE of the pair. The TC's point is that either
@@ -546,6 +544,7 @@ describe("TC-0017-0018 (TDD-0018): restoring either one of the two blocks return
   });
 });
 
+// QFAI:EX-0002-0014-05
 describe("TC-0017-0020 (TDD-0020): deleting the flag from one checkout step exits 1", () => {
   it("names the file and the job of the one step that stopped refusing credentials", () => {
     const dir = plantedTree((d) => {
@@ -575,6 +574,7 @@ describe("TC-0017-0020 (TDD-0020): deleting the flag from one checkout step exit
   });
 });
 
+// QFAI:EX-0002-0014-07
 describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is named", () => {
   it("names the reference that was replaced by a floating major-version tag", () => {
     const dir = plantedTree((d) => {
@@ -592,6 +592,33 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
       expect
         .soft(run.output, "and name the offending reference, not merely the file")
         .toContain("actions/upload-artifact");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0002-0014-07
+  it("names a floating major-version reference planted only in the composite setup action", () => {
+    const pinned = "uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0";
+    const floating = "uses: actions/setup-node@" + "v" + "5";
+    const actionRel = path.join(".github", "actions", "setup", "action.yml");
+    const dir = plantedTree((d) => {
+      const actionPath = path.join(d, actionRel);
+      const text = readFileSync(actionPath, "utf-8");
+      if (!text.includes(pinned)) {
+        throw new Error(
+          `${actionRel} no longer carries the pinned setup-node reference to replace`,
+        );
+      }
+      writeFileSync(actionPath, text.replace(pinned, floating), "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the lane must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
+      expect
+        .soft(run.output, "and name the floating reference in the composite action")
+        .toContain("actions/setup-node@" + "v" + "5");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -628,7 +655,7 @@ function manifestScript(manifestPath: string, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
-// QFAI:SPEC-0017:TC-0017-0085
+// QFAI:EX-0002-0013-11
 describe("TC-0017-0085 (TDD-0094): exempt lint hosts cannot be declared skippable", () => {
   it.each(["lint", "mirror-surface"])(
     "rejects a matching condition and declaration on %s",
@@ -677,7 +704,7 @@ describe("TC-0017-0085 (TDD-0094): exempt lint hosts cannot be declared skippabl
   );
 });
 
-// QFAI:SPEC-0017:TC-0017-0057
+// QFAI:EX-0002-0018-06
 describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from the tree", () => {
   it("takes the job name from the file rather than from anything compiled in", () => {
     // The row's real claim is that the declaration is INPUT, not decoration. Asserting the
@@ -752,7 +779,7 @@ describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0058
+// QFAI:EX-0002-0018-07
 describe("TC-0017-0058 (TDD-0058): a declared context resolving to no job exits 1", () => {
   it("reports the workflow and the job when the declared job is absent from it", () => {
     // Distinct from TDD-0057's first case in what it plants: there the DECLARATION moved,
@@ -799,8 +826,8 @@ describe("TC-0017-0058 (TDD-0058): a declared context resolving to no job exits 
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0013
 describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the required job skippable", () => {
+  // QFAI:EX-0002-0018-07
   it("exits 1 for a condition on a job the declared one depends on, not only on itself", () => {
     // The transitive case, and the one worth a row of its own. A job whose dependency is
     // skipped is itself skipped, and a skipped job reports SUCCESS to branch protection —
@@ -889,6 +916,7 @@ describe("the required-context workflow starts on every pull request event, not 
 });
 
 describe("the required-context job may carry always(), and nothing else", () => {
+  // QFAI:EX-0002-0013-12
   it("accepts always() on the declared job", () => {
     // The live tree already declares the verdict, so this asserts the shipped arrangement rather
     // than a fixture: an unplanted run must be green with a conditional job holding the context.
@@ -901,6 +929,7 @@ describe("the required-context job may carry always(), and nothing else", () => 
     }
   });
 
+  // QFAI:EX-0002-0013-12
   it("rejects any other condition on the declared job", () => {
     // The half that keeps the exception from becoming "conditions are fine now". A condition that
     // can evaluate false skips the job, and a skipped job reports SUCCESS to branch protection.
@@ -922,7 +951,7 @@ describe("the required-context job may carry always(), and nothing else", () => 
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0037
+// QFAI:EX-0002-0016-04
 describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is reported", () => {
   it("names the rule and the offending job in both shapes, rather than only exiting 1", () => {
     // `TC-0017-0058` and `TC-0017-0013` assert the exit code; this row asserts the FINDING.
@@ -986,7 +1015,7 @@ describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is 
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0059
+// QFAI:EX-0002-0018-07
 describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk set both exit 1", () => {
   it("checks the third property too, so a shrunk verification set is not a silent pass", () => {
     // The boundary this row exists for. Two of the three properties can hold while the
@@ -1999,6 +2028,7 @@ ${run.output}`,
   // required context stays green over a verification that established nothing. Two shapes,
   // because the second is the one an author would write without meaning anything by it.
   for (const expression of ["${{ true }}", "${{ matrix.experimental }}"]) {
+    // QFAI:EX-0002-0016-05
     it(`treats continue-on-error: ${expression} as shrinking the set`, () => {
       const dir = plantedTree((d) => {
         const declared = firstContext(d);
@@ -2106,7 +2136,7 @@ function raiseBuildTimeout(text: string): string {
   );
 }
 
-// QFAI:SPEC-0017:TC-0017-0084
+// QFAI:EX-0002-0013-07
 describe("TC-0017-0084 (TDD-0093): a committed pin disagreeing with the recomputed value exits 1", () => {
   // What a documentation-only pull request costs is pinned as two figures: the jobs nothing can
   // prevent from running, and the sum of their declared `timeout-minutes`. The rule reads the
@@ -2265,7 +2295,7 @@ describe("TC-0017-0084 (TDD-0093): a committed pin disagreeing with the recomput
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0086
+// QFAI:EX-0002-0017-04
 describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not declare exits 1", () => {
   // The code path runs the whole tree, so its cost is a property of the tree and not of a
   // condition. Four figures are pinned, and each is derivable by READING the tree: the instances
@@ -2282,6 +2312,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
   ] as const;
 
   for (const [figure, planted] of FIGURES) {
+    // QFAI:EX-0002-0017-04
     it(`rejects a pinned ${figure} the workflow does not declare`, () => {
       // One row per figure rather than one row planting all three. A single row would pass against
       // a rule that compared the first and stopped, and that is the failure the loop inside the
@@ -2311,6 +2342,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
     });
   }
 
+  // QFAI:EX-0002-0017-04
   it("rejects a build-declaring job the pin stopped listing", () => {
     // The set half. A build moved out of one job and into another leaves the count unchanged, so
     // the jobs are compared as a set rather than counted.
@@ -2339,6 +2371,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
     }
   });
 
+  // QFAI:EX-0002-0017-04
   it("rejects a declaration that carries no code-path pin at all", () => {
     const dir = plantedTree((d) => {
       editDeclaration(d, (declaration) => {
@@ -3044,8 +3077,9 @@ describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0044
+// QFAI:EX-0002-0018-01
 describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened own tree", () => {
+  // QFAI:EX-0002-0014-07
   it("passes over the real tree with every one of the five rules evaluated", () => {
     const dir = plantedTree(() => {});
     try {
@@ -3066,8 +3100,9 @@ describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened ow
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0045
+// QFAI:EX-0002-0018-01
 describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at exactly five", () => {
+  // QFAI:EX-0002-0018-01
   it("evaluates the five enumerated obligations over the workflows tree and no sixth", () => {
     const dir = plantedTree(() => {});
     try {
@@ -3100,7 +3135,7 @@ describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at ex
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0046
+// QFAI:EX-0002-0018-02
 describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", () => {
   it("prints each rule with a description, and says what it does not cover", () => {
     const dir = plantedTree(() => {});
@@ -3159,7 +3194,7 @@ describe("TC-0017-0046 (TDD-0046): a green run names every rule it evaluated", (
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0047
+// QFAI:EX-0002-0018-02
 describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by the green run", () => {
   it("prints exactly the rules it actually evaluates", () => {
     // The direction that catches a lie in the FLATTERING direction: a lane could print six
@@ -3215,8 +3250,9 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0048
+// QFAI:EX-0002-0018-03
 describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, job and rule", () => {
+  // QFAI:EX-0002-0014-05
   it("falsifies every rule independently, and returns to green when the plant is removed", () => {
     for (const { rule, label, file, plant } of PLANTS) {
       let brokenJob = "";
@@ -3250,7 +3286,7 @@ describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, j
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0049
+// QFAI:EX-0002-0018-04
 describe("TC-0017-0049 (TDD-0049): hygiene findings use the bare lint namespace", () => {
   it("emits every finding under the bare-R code, and no other code", () => {
     // The action-pin plant, chosen rather than taken from the front of the list. This row’s
@@ -3449,7 +3485,7 @@ function findingsOf(output: string): string[] {
   return output.split(/\r?\n/).filter((line) => line.startsWith("R-WORKFLOW-HYGIENE-DRIFT:"));
 }
 
-// QFAI:SPEC-0017:TC-0017-0050
+// QFAI:EX-0002-0018-08
 describe("TC-0017-0050 (TDD-0050): the lane scans both roots and reports shipped paths as such", () => {
   it("reports a violation from each tree in one run, each under its own path", () => {
     // Both plants in ONE run, because that is what "scans both roots" means. Two separate
@@ -3500,7 +3536,7 @@ describe("TC-0017-0050 (TDD-0050): the lane scans both roots and reports shipped
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0051
+// QFAI:EX-0002-0018-08
 describe("TC-0017-0051 (TDD-0051): a shipped-only violation exits 1 naming the shipped path", () => {
   it("exits 1 with no own-CI path in the report when only the shipped tree is broken", () => {
     const dir = plantedTree((d) => {
@@ -3533,7 +3569,7 @@ describe("TC-0017-0051 (TDD-0051): a shipped-only violation exits 1 naming the s
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0053
+// QFAI:EX-0002-0018-10
 describe("TC-0017-0053 (TDD-0053): the shipped third-party rule is allow-list membership", () => {
   it("passes the sanctioned third-party action, which a count of zero could not", () => {
     // The claim `BR-0017-0046` makes by rejecting an alternative: the shipped set keeps one
@@ -3580,7 +3616,7 @@ describe("TC-0017-0053 (TDD-0053): the shipped third-party rule is allow-list me
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0054
+// QFAI:EX-0002-0018-10
 describe("TC-0017-0054 (TDD-0054): an unsanctioned third-party reference exits 1", () => {
   it("rejects a third-party owner that is not in the sanctioned set, and names it", () => {
     const dir = plantedTree((d) => {
@@ -3617,7 +3653,7 @@ describe("TC-0017-0054 (TDD-0054): an unsanctioned third-party reference exits 1
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0055
+// QFAI:EX-0002-0018-05
 describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull requests execute", () => {
   it("appears in the lint aggregate, and that aggregate runs in an unconditional pull-request job", () => {
     const lintAggregate = manifestScript(path.join(REPO_ROOT, "package.json"), "ci:lint");
@@ -3639,7 +3675,7 @@ describe("TC-0017-0055 (TDD-0055): the lane is invoked from an aggregate pull re
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0056
+// QFAI:EX-0002-0018-05
 describe("TC-0017-0056 (TDD-0056): the lane is absent from the release-only aggregate", () => {
   it("stays out of ci:gate, which no pull request invokes", () => {
     const gate = manifestScript(path.join(REPO_ROOT, "package.json"), "ci:gate");

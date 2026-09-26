@@ -128,7 +128,7 @@ type Row = { id: string; cells: Record<string, Score> };
  */
 function parseMatrix(text: string): Row[] {
   const rows: Row[] = [];
-  for (const line of sectionOf(text, "## The matrix").split(/\r?\n/)) {
+  for (const line of text.split(/\r?\n/)) {
     if (!/^\|\s*US-\d{4}-\d{4}\s*\|/.test(line)) continue;
     const fields = line
       .split("|")
@@ -189,156 +189,6 @@ function sectionOf(text: string, heading: string): string {
   return end === -1 ? text.slice(at) : text.slice(at, end);
 }
 
-const CURRENT_COVERAGE_COLUMNS = [
-  "US/TC ID",
-  "Equivalence partitions",
-  "Normal path",
-  "Error path",
-  "Edge cases",
-  "Boundary values",
-  "Special values",
-  "State transitions",
-  "Combinatorial",
-  "Oracle strength",
-  "Status",
-  "Evidence",
-] as const;
-
-const CURRENT_RULE_COLUMNS = [
-  "BR ID",
-  "Positive case",
-  "Negative case",
-  "Conditional branches",
-  "Covering TC",
-  "Status",
-] as const;
-
-type CurrentScore = Score | "n/a";
-
-function currentTable(section: string, columns: readonly string[]): string[][] {
-  const lines = section.split(/\r?\n/).filter((line) => line.startsWith("|"));
-  const fields = lines.map((line) =>
-    line
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim()),
-  );
-  expect(fields[0], "the current matrix must have its declared columns").toEqual(columns);
-  expect(fields[1], "the current matrix must have a Markdown separator row").toHaveLength(
-    columns.length,
-  );
-  expect(fields[1]?.every((cell) => /^:?-{3,}:?$/.test(cell))).toBe(true);
-  const rows = fields.slice(2);
-  for (const row of rows) {
-    expect(row, `a current matrix row has ${String(columns.length)} cells`).toHaveLength(
-      columns.length,
-    );
-  }
-  return rows;
-}
-
-function currentTally(values: readonly string[]): Record<CurrentScore, number> {
-  const tally: Record<CurrentScore, number> = { "✅": 0, "⚠️": 0, "❌": 0, "n/a": 0 };
-  for (const value of values) {
-    expect(Object.hasOwn(tally, value), `unrecognized current score ${value}`).toBe(true);
-    tally[value as CurrentScore] += 1;
-  }
-  return tally;
-}
-
-function currentStatusTally(values: readonly string[]): Record<Score, number> {
-  const tally: Record<Score, number> = { "✅": 0, "⚠️": 0, "❌": 0 };
-  for (const value of values) {
-    expect(Object.hasOwn(tally, value), `unrecognized current status ${value}`).toBe(true);
-    tally[value as Score] += 1;
-  }
-  return tally;
-}
-
-describe("the current spec-0017 acceptance coverage", () => {
-  it("counts every US and TC cell in the current matrix", async () => {
-    const text = await readFile(MATRIX, "utf8");
-    const section = sectionOf(text, "### Current US/TC coverage matrix");
-    const rows = currentTable(section, CURRENT_COVERAGE_COLUMNS);
-    const expectedIds = [
-      ...Array.from({ length: 9 }, (_, index) => `US-0017-${String(index + 1).padStart(4, "0")}`),
-      ...Array.from({ length: 93 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
-    ];
-    expect(
-      rows.map((row) => row[0]).sort(),
-      "the current table must carry each US and TC exactly once",
-    ).toEqual(expectedIds.sort());
-    const localVector = rows.find((row) => row[0] === "TC-0017-0093");
-    expect(localVector?.[11], "the local command vector has its own test case").toContain(
-      "`preserves the ordered operation vector` (TDD-0107",
-    );
-    expect(rows.find((row) => row[0] === "TC-0017-0090")?.[11]).not.toContain("TDD-0107");
-
-    const scored = currentTally(rows.flatMap((row) => row.slice(1, 10)));
-    const status = currentStatusTally(rows.map((row) => row[10] ?? ""));
-    const declared =
-      /Current matrix: \*\*US (\d+) \/ TC (\d+)\*\*; scored cells \*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+) \/ n\/a (\d+)\*\*; status \*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+)\*\*\./.exec(
-        section,
-      );
-    expect(declared, "the current matrix must state its derived totals").not.toBeNull();
-    expect(declared?.slice(1).map(Number)).toEqual([
-      9,
-      93,
-      scored["✅"],
-      scored["⚠️"],
-      scored["❌"],
-      scored["n/a"],
-      status["✅"],
-      status["⚠️"],
-      status["❌"],
-    ]);
-  });
-
-  it("counts every business rule and its coverage cells", async () => {
-    const text = await readFile(MATRIX, "utf8");
-    const section = sectionOf(text, "### Current business rule coverage");
-    const rows = currentTable(section, CURRENT_RULE_COLUMNS);
-    const expectedIds = Array.from(
-      { length: 70 },
-      (_, index) => `BR-0017-${String(index + 1).padStart(4, "0")}`,
-    );
-    expect(
-      rows.map((row) => row[0]).sort(),
-      "the current table must carry each business rule exactly once",
-    ).toEqual(expectedIds);
-    expect(rows.find((row) => row[0] === "BR-0017-0070")?.[4]).toBe("TC-0017-0093");
-
-    const testCaseIds = new Set(
-      Array.from({ length: 93 }, (_, index) => `TC-0017-${String(index + 1).padStart(4, "0")}`),
-    );
-    for (const row of rows) {
-      const coveringCases = (row[4] ?? "").split(",").map((id) => id.trim());
-      expect(coveringCases.length, `${row[0] ?? "BR"} must name a covering TC`).toBeGreaterThan(0);
-      for (const id of coveringCases) {
-        expect(testCaseIds.has(id), `${row[0] ?? "BR"} names an unknown TC ${id}`).toBe(true);
-      }
-    }
-
-    const scored = currentTally(rows.flatMap((row) => row.slice(1, 4)));
-    const status = currentStatusTally(rows.map((row) => row[5] ?? ""));
-    const declared =
-      /Current business rules: \*\*BR (\d+)\*\*; scored cells \*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+) \/ n\/a (\d+)\*\*; status \*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+)\*\*\./.exec(
-        section,
-      );
-    expect(declared, "the business rule table must state its derived totals").not.toBeNull();
-    expect(declared?.slice(1).map(Number)).toEqual([
-      70,
-      scored["✅"],
-      scored["⚠️"],
-      scored["❌"],
-      scored["n/a"],
-      status["✅"],
-      status["⚠️"],
-      status["❌"],
-    ]);
-  });
-});
-
 /**
  * Parse the `Every ❌ cell, named` partition table into one entry per claimed cell.
  *
@@ -375,12 +225,11 @@ function parsePartition(
 describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
   it("declares a Status total the table actually holds", async () => {
     const text = await readFile(MATRIX, "utf8");
-    const historicalMatrix = sectionOf(text, "## The matrix");
 
     // The header first. `parseMatrix` maps cells by position and drops anything past `COLUMNS`, so a
     // column added to the record would carry cells no check here can see — round 5 planted a ninth
     // all-failing depth column and every test stayed green.
-    const header = /^\|\s*US ID\s*\|(.+)\|\s*$/m.exec(historicalMatrix);
+    const header = /^\|\s*US ID\s*\|(.+)\|\s*$/m.exec(text);
     expect(header, "the matrix must keep its pinned header form").not.toBeNull();
     const headings = (header?.[1] ?? "")
       .split("|")
@@ -1042,13 +891,16 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // The claim is restored, and this is the half that stops a restoration being a relapse. The
     // annotation ledger is a bare list of ids — `CR-20260820-0011` is on file about 127 entries in it
     // that no test carries — so a line there is not coverage. Three things must hold together.
-    const ledger = await readFile(
-      path.resolve(__dirname, "../../../../tests/e2e/qfai-traceability.md"),
+    const story = await readFile(
+      path.resolve(
+        __dirname,
+        "../../../../.qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0019/01_User-story.md",
+      ),
       "utf8",
     );
     expect(
-      ledger.includes("QFAI:SPEC-0017:US-0017-0007"),
-      "the restored claim must be registered where the gate reads it",
+      story.includes("Runner parallelism derived from QFAI's own workload"),
+      "the migrated claim must remain in the current story tree",
     ).toBe(true);
 
     const carrier = await readFile(
@@ -1056,8 +908,8 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       "utf8",
     );
     expect(
-      carrier.includes("QFAI:SPEC-0017:US-0017-0007"),
-      "a real test file must carry the annotation, not only the ledger",
+      carrier.includes(["QFAI", "BF-0002"].join(":")),
+      "a real test file must carry the current flow annotation",
     ).toBe(true);
 
     // And the assertion must be over an EFFECT. The claim was withdrawn because its predecessor asserted

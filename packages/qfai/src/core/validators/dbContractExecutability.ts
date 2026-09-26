@@ -24,10 +24,11 @@ import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
 /**
- * Evidence lives at a fixed path — `paths` has no `evidenceDir` key, and every
- * shipped skill writes `.qfai/evidence/<stage>-<spec-id>.md`.
+ * Evidence lives at a fixed path — `paths` has no `evidenceDir` key, and the
+ * SDD skill writes `.qfai/evidence/sdd-BF-NNNN.md`.
  */
 const EVIDENCE_REL_DIR = ".qfai/evidence";
+const SDD_FLOW_EVIDENCE = /^sdd-BF-\d{4}\.md$/;
 
 /** Waivable as `QFAI-CONTRACT-031`; `CONTRACT-031` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const DB_CONTRACT_EXECUTABILITY_RULE_ID = "QFAI-CONTRACT-031";
@@ -49,11 +50,12 @@ const CONTRACT_ID = /\bCON-DB-[A-Za-z0-9_-]+/g;
 async function readAttestedIds(root: string): Promise<Set<string>> {
   const attested = new Set<string>();
   const { files } = await collectFilesByGlobs(root, {
-    globs: [`${EVIDENCE_REL_DIR}/**/*.md`],
+    globs: [`${EVIDENCE_REL_DIR}/*.md`],
     ignore: [],
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
   for (const file of files) {
+    if (!SDD_FLOW_EVIDENCE.test(path.basename(file))) continue;
     const content = await readSafe(file);
     if (!content) {
       continue;
@@ -108,9 +110,9 @@ export async function validateDbContractExecutability(
         "canonical",
         `Apply the contract to a scratch database and drive every declared write path at least twice — ` +
           `the second traversal is what exercises head-advance and expected-version guards — then record it in ` +
-          `${EVIDENCE_REL_DIR}/sdd-<spec-id>.md as a line of the form ` +
+          `${EVIDENCE_REL_DIR}/sdd-BF-NNNN.md as a line of the form ` +
           "`- Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>`. " +
-          `See .qfai/assistant/skills/qfai-sdd/references/contract-artifact-rules.md#executability-must.`,
+          `See .qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md#executability-must.`,
       ),
     );
   }

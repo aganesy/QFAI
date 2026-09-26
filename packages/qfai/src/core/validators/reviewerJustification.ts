@@ -15,20 +15,18 @@ import { exists, issue } from "./utils.js";
 // Empty justification is treated as advisory-failing (error severity).
 //
 // The set is composed from three sources:
-//   1. The historical R-WORKLOG-DRIFT family (REQ-0006 contract).
+//   1. R-REJECTED-READOPT (REQ-0006 contract).
 //   2. Second-wave extensions (R-CERTIFY-VERIFY-CIRCULAR / R-PROMPT-SCANNER-DRIFT).
-//   3. The 8-code spec governance catalog (AC-0015-0018) sourced
+//   3. The 8-code spec governance catalog sourced
 //      from `justificationCatalog.ts`.
 const ADVISORY_FAILING_CODES = new Set<string>([
-  "R-WORKLOG-DRIFT",
   "R-REJECTED-READOPT",
-  "R-HANDOFF-INCOMPLETE",
   // Second-wave Reviewer-Gate findings that MUST carry a non-empty
   // justification. Empty / whitespace-only justifications are treated
-  // as advisory-failing to enforce BR-0004-0028 across spec families.
+  // as advisory-failing to enforce non-empty justifications across spec families.
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-PROMPT-SCANNER-DRIFT",
-  // The 8-code spec governance catalog (AC-0015-0018) is
+  // The 8-code spec governance catalog is
   // merged in via the catalog SSOT so this set stays in lockstep with
   // the catalog by construction. The catalog contributes membership
   // only — it declares no severity, and the ingestion issue below is
@@ -138,8 +136,8 @@ type ReviewerReport = {
 
 /**
  * Scans every `*.json` file under `.qfai/review/**` for findings whose
- * code is on the advisory-failing list (R-WORKLOG-DRIFT,
- * R-REJECTED-READOPT, R-HANDOFF-INCOMPLETE). Each finding with an
+ * code is on the advisory-failing list (R-REJECTED-READOPT, the
+ * second-wave codes and the justification catalog). Each finding with an
  * empty `justification:` field is surfaced as an error at the host
  * code so reviewer drift can be caught by `qfai validate --fail-on
  * error`. The scan is unfiltered — any JSON file in the tree that
@@ -182,7 +180,7 @@ export async function validateReviewerJustification(
       //
       // Emitted at `error`, not `info`. Downgrading the severity here too would
       // let `qfai validate --fail-on error` succeed while holding an ingested
-      // lint failure. `BR-0015-0017` grants ONE
+      // lint failure. The deferred-catalog rule grants ONE
       // exemption and this branch was taking two — it says the gate "does not
       // re-derive, re-word or re-classify" the payload, that both codes are
       // "declared lint-failure codes in `CLI-WFSET`, i.e. error class", and that
@@ -193,13 +191,13 @@ export async function validateReviewerJustification(
         // `file` with the artifact's own path and `rule` with a constant
         // naming this branch would destroy the lane's file and rule, leaving its job
         // no field to survive in — a JSON consumer of `qfai validate` would get the artifact
-        // it came from and nothing about the offending workflow. `BR-0015-0017` says the
-        // gate passes the lane's payload through rather than reconstructing it, and a site
-        // that exists only inside a sentence has been reconstructed.
+        // it came from and nothing about the offending workflow. The gate passes the
+        // lane's payload through rather than reconstructing it, and a site that exists
+        // only inside a sentence has been reconstructed.
         //
         // The artifact path moves to `relatedFiles`, which is where a file that is evidence
         // FOR a finding belongs rather than the file the finding is ABOUT — and it keeps
-        // `--spec` scoping seeing the same path it saw when `file` carried it.
+        // flow-scoped reports seeing the same path it saw when `file` carried it.
         //
         // `detail` is the producer's account of the violation and is reproduced verbatim.
         // Without it the message named a site and never said what was wrong there, so a

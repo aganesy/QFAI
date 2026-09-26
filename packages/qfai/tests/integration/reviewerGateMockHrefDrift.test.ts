@@ -16,7 +16,7 @@
  * (consumer repos installing the npm package lack the validator
  * source, so the contract cannot drift there).
  */
-// QFAI:SPEC-0010:TC-0010-0011
+// QFAI:EX-0001-0092-03
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -114,6 +114,22 @@ describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on templateâ
     expect(f?.message).toMatch(/03_Story-Workshop\.md/);
     expect(f?.message).toMatch(/htmlMockDom\.ts/);
     expect(f?.message).toMatch(/clause=/);
+  });
+
+  it("uses the shipped singular skill template when a legacy plural copy exists", async () => {
+    await seedPair(root, { template: TEMPLATE_PATH_FORM, validator: VALIDATOR_STRICT });
+    const legacyTemplate = path.join(
+      root,
+      "packages/qfai/assets/init/.qfai/assistant/skills/qfai-discussion/templates/03_Story-Workshop.md",
+    );
+    await mkdir(path.dirname(legacyTemplate), { recursive: true });
+    await writeFile(legacyTemplate, TEMPLATE_ANCHOR, "utf-8");
+
+    const issues = await detectMockHrefDrift(root);
+    const findings = issues.filter((i) => i.code === "R-MOCK-HREF-DRIFT");
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain(MOCK_HREF_TEMPLATE_REL);
+    expect(findings[0]?.message).not.toContain("assistant/skills/");
   });
 
   it("does not fire when either source file is absent (consumer repo without validator source)", async () => {

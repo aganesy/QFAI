@@ -1,1154 +1,169 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
-import { runValidate } from "../../src/cli/commands/validate.js";
-import type {
-  Issue,
-  ValidationCounts,
-  ValidationProfile,
-  ValidationResult,
-} from "../../src/core/types.js";
+import { parseArgs } from "../../src/cli/lib/args.js";
+import type { Issue, ValidationResult } from "../../src/core/types.js";
 
-const VALID_PROSE_CRITIQUE = Array.from(
-  { length: 200 },
-  (_, index) => `critique-word-${index}`,
-).join(" ");
+const roots: string[] = [];
 
-/**
- * profile ごとの counts だけが違う、最小限の validate 出力を書き出す。
- * report の読み取り側がどのファイルを選んだかを counts で識別できるようにする。
- */
-async function writeValidationFixture(
-  filePath: string,
-  profile: ValidationProfile,
-  counts: ValidationCounts,
-): Promise<void> {
-  // counts はどのファイルを読んだかの識別子として使う。report は counts を
-  // issues から数え直して gate するようになったので、fixture 側も両者を
-  // 一致させておく — さもないと識別子が 0 に潰れる。
-  const issues: Issue[] = (["info", "warning", "error"] as const).flatMap((severity) =>
-    Array.from({ length: counts[severity] }, (_unused, index) => ({
-      code: `QFAI-FIXTURE-${severity.toUpperCase()}-${index}`,
-      severity,
-      category: "canonical" as const,
-      message: `fixture ${severity} ${index}`,
-    })),
+afterEach(async () => {
+  vi.restoreAllMocks();
+  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+});
+
+async function storyRoot(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-story-"));
+  roots.push(root);
+  const flow = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+  await mkdir(flow, { recursive: true });
+  await writeFile(path.join(flow, "business-flow.md"), "# BF-0001: Checkout\n", "utf8");
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    "utf8",
   );
-  const result: ValidationResult = {
-    toolVersion: "0.0.0-test",
-    profile,
-    issues,
-    counts,
-    traceability: {
-      sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
-      testFiles: {
-        globs: [],
-        excludeGlobs: [],
-        matchedFileCount: 0,
-        truncated: false,
-        limit: 0,
-      },
-    },
-  };
-  await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+  return root;
 }
 
-/**
- * This file inherits the project's `testTimeout` and declares none of its own.
- *
- * It is the heaviest caller of `runInit` and `runReport` in the suite, and
- * under a full run its slowest cases take several times what they take alone.
- * A ceiling below the project value would sit under that cost rather than
- * above it, and would fail for the load rather than for anything in the diff.
- */
-describe("report", () => {
-  it("runs init -> validate(json) -> report(md)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-    });
-
-    const content = await readFile(reportPath, "utf-8");
-    expect(content).toContain("# QFAI Report");
-    expect(content).toContain("## Hotspots");
-    expect(content).toContain("## SC Coverage");
-    expect(content).toContain("## SC → Referenced Tests");
-    expect(content).toContain("## Duplicate SC IDs");
-    expect(content).toContain("## Decision Guardrails");
-  });
-
-  it("guides when validate.json is missing", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-
-    const stderrChunks: string[] = [];
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
-      stderrChunks.push(String(chunk));
-      return true;
-    });
-    try {
-      const exitCode = await runReport({ root, format: "md" });
-
-      expect(exitCode).toBe(2);
-      // AC-0005-0005: the missing-input error is surfaced to the operator.
-      expect(stderrChunks.join("")).toContain("qfai report: input file not found");
-      await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
-    } finally {
-      stderrSpy.mockRestore();
-    }
-  });
-
-  it("runs report with --run-validate", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-    const validatePath = path.join(root, ".qfai", "report", "validate.json");
-
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-      runValidate: true,
-    });
-
-    const report = await readFile(reportPath, "utf-8");
-    const validation = await readFile(validatePath, "utf-8");
-    expect(report).toContain("# QFAI Report");
-    expect(validation).toContain('"toolVersion"');
-  });
-
-  it("runs report with --run-validate --profile sdd", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    const previousCi = process.env.CI;
-    const previousGithubActions = process.env.GITHUB_ACTIONS;
-    process.env.CI = "false";
-    delete process.env.GITHUB_ACTIONS;
-
-    try {
-      const reportPath = path.join(root, ".qfai", "report", "report.md");
-      const validatePath = path.join(root, ".qfai", "report", "validate.json");
-
-      await runReport({
-        root,
-        format: "md",
-        outPath: reportPath,
-        runValidate: true,
-        profile: "sdd",
-      });
-
-      const report = await readFile(reportPath, "utf-8");
-      const validationRaw = await readFile(validatePath, "utf-8");
-      const validation = JSON.parse(validationRaw) as {
-        profile?: string;
-        issues?: Array<{ code?: string }>;
-      };
-      const issueCodes = (validation.issues ?? []).map((item) => item.code);
-
-      expect(report).toContain("# QFAI Report");
-      expect(validation.profile).toBe("sdd");
-      expect(issueCodes).not.toContain("QFAI-ATDD-111");
-      expect(issueCodes).not.toContain("QFAI-PROT-150");
-    } finally {
-      if (previousCi === undefined) {
-        delete process.env.CI;
-      } else {
-        process.env.CI = previousCi;
-      }
-      if (previousGithubActions === undefined) {
-        delete process.env.GITHUB_ACTIONS;
-      } else {
-        process.env.GITHUB_ACTIONS = previousGithubActions;
-      }
-    }
-  });
-
-  it("reports a narrow profile in CI without failing the run", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    const previousCi = process.env.CI;
-    const previousGithubActions = process.env.GITHUB_ACTIONS;
-    const previousExitCode = process.exitCode;
-    process.env.CI = "true";
-    delete process.env.GITHUB_ACTIONS;
-    process.exitCode = undefined;
-
-    try {
-      const reportPath = path.join(root, ".qfai", "report", "report.md");
-      const validatePath = path.join(root, ".qfai", "report", "validate.json");
-      // `discussion` is a representative narrow profile rejected in CI.
-      // (`sdd` is on the CI allow-list; see
-      // packages/qfai/src/core/phasePolicy.ts for the rationale.)
-      const exitCode = await runReport({
-        root,
-        format: "md",
-        outPath: reportPath,
-        runValidate: true,
-        profile: "discussion",
-        // `never` isolates the narrow-profile contract from the fixture's own
-        // findings: a bare `qfai init` tree has no discussion pack, so this
-        // run also carries an unrelated QFAI-DPACK-001 error. Under `never`
-        // the only way to come back non-zero is a hard-coded narrow-profile
-        // failure.
-        failOn: "never",
-      });
-
-      const validationRaw = await readFile(validatePath, "utf-8");
-      const validation = JSON.parse(validationRaw) as {
-        issues?: Array<{ code?: string; severity?: string }>;
-      };
-      // The finding is appended to a real run. Exiting non-zero here made
-      // every stage gate that names a narrow profile unreachable in CI, and
-      // `qfai-discussion` names exactly this one as its only gate.
-      // Asserted on the RETURN VALUE: `runReport` no longer touches
-      // `process.exitCode`, so the old `process.exitCode` assertion passed
-      // even if this contract regressed.
-      expect(exitCode).toBe(0);
-      const narrowProfileIssue = (validation.issues ?? []).find(
-        (item) => item.code === "QFAI-VALIDATE-017",
-      );
-      expect(narrowProfileIssue).toBeDefined();
-      // Severity is the other half of the contract: a warning can never fail
-      // an `--fail-on error` run, so the stage gate stays reachable in CI.
-      expect(narrowProfileIssue?.severity).toBe("warning");
-    } finally {
-      process.exitCode = previousExitCode;
-      if (previousCi === undefined) {
-        delete process.env.CI;
-      } else {
-        process.env.CI = previousCi;
-      }
-      if (previousGithubActions === undefined) {
-        delete process.env.GITHUB_ACTIONS;
-      } else {
-        process.env.GITHUB_ACTIONS = previousGithubActions;
-      }
-    }
-  });
-
-  it("reads validate.json from --in", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    const defaultPath = path.join(root, ".qfai", "report", "validate.json");
-    const customDir = path.join(root, "custom");
-    const customPath = path.join(customDir, "validate.json");
-    await mkdir(customDir, { recursive: true });
-    await writeFile(customPath, await readFile(defaultPath, "utf-8"));
-    await rm(defaultPath, { force: true });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-      inputPath: path.relative(root, customPath),
-    });
-
-    const report = await readFile(reportPath, "utf-8");
-    expect(report).toContain("# QFAI Report");
-  });
-
-  it("reads validate-<profile>.json when --profile is given without --run-validate", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportDir = path.join(root, ".qfai", "report");
-    // 常に最新のポインタは prototyping の実行結果を保持している状態。
-    await writeValidationFixture(path.join(reportDir, "validate.json"), "prototyping", {
-      info: 1,
-      warning: 3,
-      error: 0,
-    });
-    await writeValidationFixture(path.join(reportDir, "validate-sdd.json"), "sdd", {
-      info: 5,
-      warning: 1,
-      error: 0,
-    });
-
-    const reportPath = path.join(reportDir, "report.json");
-    await runReport({
-      root,
-      format: "json",
-      outPath: reportPath,
-      profile: "sdd",
-    });
-
-    const report = JSON.parse(await readFile(reportPath, "utf-8")) as {
-      profile?: string;
-      summary?: { counts?: ValidationCounts };
-    };
-    expect(report.summary?.counts).toEqual({ info: 5, warning: 1, error: 0 });
-    expect(report.profile).toBe("sdd");
-  });
-
-  it("guides toward the profile run when validate-<profile>.json is missing", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportDir = path.join(root, ".qfai", "report");
-    await writeValidationFixture(path.join(reportDir, "validate.json"), "prototyping", {
-      info: 1,
-      warning: 3,
-      error: 0,
-    });
-
-    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      // runReport returns its exit code now; main.ts is what assigns it to
-      // process.exitCode, so a direct call has to read the return value.
-      const exitCode = await runReport({ root, format: "json", profile: "sdd" });
-
-      expect(exitCode).toBe(2);
-      const written = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
-      expect(written).toContain("validate-sdd.json");
-      expect(written).toContain("qfai validate --profile sdd");
-    } finally {
-      process.exitCode = previousExitCode;
-      stderr.mockRestore();
-    }
-  });
-
-  it("warns about a narrow profile in CI without --run-validate", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportDir = path.join(root, ".qfai", "report");
-    await writeValidationFixture(path.join(reportDir, "validate-discussion.json"), "discussion", {
-      info: 0,
-      warning: 0,
-      error: 0,
-    });
-
-    const previousCi = process.env.CI;
-    const previousGithubActions = process.env.GITHUB_ACTIONS;
-    process.env.CI = "true";
-    delete process.env.GITHUB_ACTIONS;
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    try {
-      await runReport({
-        root,
-        format: "json",
-        outPath: path.join(reportDir, "report.json"),
-        profile: "discussion",
-      });
-
-      const written = stdout.mock.calls.map(([chunk]) => String(chunk)).join("");
-      expect(written).toContain("full-scan");
-    } finally {
-      stdout.mockRestore();
-      if (previousCi === undefined) {
-        delete process.env.CI;
-      } else {
-        process.env.CI = previousCi;
-      }
-      if (previousGithubActions === undefined) {
-        delete process.env.GITHUB_ACTIONS;
-      } else {
-        process.env.GITHUB_ACTIONS = previousGithubActions;
-      }
-    }
-  });
-
-  it("warns when --in holds a different profile than --profile", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const customPath = path.join(root, "custom", "validate.json");
-    await writeValidationFixture(customPath, "prototyping", { info: 1, warning: 3, error: 0 });
-
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    try {
-      await runReport({
-        root,
-        format: "json",
-        outPath: path.join(root, ".qfai", "report", "report.json"),
-        inputPath: path.relative(root, customPath),
-        profile: "sdd",
-      });
-
-      const written = stdout.mock.calls.map(([chunk]) => String(chunk)).join("");
-      expect(written).toContain("sdd");
-      expect(written).toContain("prototyping");
-    } finally {
-      stdout.mockRestore();
-    }
-  });
-
-  it("writes validate-<profile>.json on the --run-validate path too", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    const previousCi = process.env.CI;
-    const previousGithubActions = process.env.GITHUB_ACTIONS;
-    process.env.CI = "false";
-    delete process.env.GITHUB_ACTIONS;
-
-    try {
-      const reportDir = path.join(root, ".qfai", "report");
-      await runReport({
-        root,
-        format: "json",
-        outPath: path.join(reportDir, "report.json"),
-        runValidate: true,
-        profile: "sdd",
-      });
-
-      const suffixed = JSON.parse(
-        await readFile(path.join(reportDir, "validate-sdd.json"), "utf-8"),
-      ) as { profile?: string; counts?: ValidationCounts };
-      const latest = JSON.parse(await readFile(path.join(reportDir, "validate.json"), "utf-8")) as {
-        profile?: string;
-        counts?: ValidationCounts;
-      };
-      expect(suffixed.profile).toBe("sdd");
-      expect(suffixed.counts).toEqual(latest.counts);
-
-      // 接尾辞付きを書いたので、後続の読み取り経路が同じ結果を再利用できる。
-      const followUpPath = path.join(reportDir, "report-follow-up.json");
-      const previousExitCode = process.exitCode;
-      process.exitCode = undefined;
-      try {
-        await runReport({ root, format: "json", outPath: followUpPath, profile: "sdd" });
-        expect(process.exitCode).toBeUndefined();
-      } finally {
-        process.exitCode = previousExitCode;
-      }
-      const followUp = JSON.parse(await readFile(followUpPath, "utf-8")) as {
-        profile?: string;
-      };
-      expect(followUp.profile).toBe("sdd");
-    } finally {
-      if (previousCi === undefined) {
-        delete process.env.CI;
-      } else {
-        process.env.CI = previousCi;
-      }
-      if (previousGithubActions === undefined) {
-        delete process.env.GITHUB_ACTIONS;
-      } else {
-        process.env.GITHUB_ACTIONS = previousGithubActions;
-      }
-    }
-  });
-
-  it("bases the CI narrow-profile warning on the loaded profile", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const reportDir = path.join(root, ".qfai", "report");
-    const narrowInput = path.join(reportDir, "validate-prototyping.json");
-    const fullInput = path.join(reportDir, "validate-full.json");
-    await writeValidationFixture(narrowInput, "prototyping", { info: 0, warning: 0, error: 0 });
-    await writeValidationFixture(fullInput, "full", { info: 0, warning: 0, error: 0 });
-
-    const previousCi = process.env.CI;
-    const previousGithubActions = process.env.GITHUB_ACTIONS;
-    process.env.CI = "true";
-    delete process.env.GITHUB_ACTIONS;
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    try {
-      // --profile は allow-list 上だが、実際に読むのは narrow profile の成果物。
-      await runReport({
-        root,
-        format: "json",
-        outPath: path.join(reportDir, "report-narrow.json"),
-        inputPath: path.relative(root, narrowInput),
-        profile: "sdd",
-      });
-      expect(stdout.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain("full-scan");
-
-      // 逆向き: --profile は narrow だが、読むのは full-scan の成果物。
-      stdout.mockClear();
-      await runReport({
-        root,
-        format: "json",
-        outPath: path.join(reportDir, "report-full.json"),
-        inputPath: path.relative(root, fullInput),
-        profile: "discussion",
-      });
-      expect(stdout.mock.calls.map(([chunk]) => String(chunk)).join("")).not.toContain("full-scan");
-    } finally {
-      stdout.mockRestore();
-      if (previousCi === undefined) {
-        delete process.env.CI;
-      } else {
-        process.env.CI = previousCi;
-      }
-      if (previousGithubActions === undefined) {
-        delete process.env.GITHUB_ACTIONS;
-      } else {
-        process.env.GITHUB_ACTIONS = previousGithubActions;
-      }
-    }
-  });
-
-  it("scopes input, output and spec-pack artifacts to --spec", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const specsRoot = path.join(root, ".qfai", "specs");
-    for (const specName of ["spec-0003", "spec-0004"]) {
-      const specDir = path.join(specsRoot, specName);
-      await mkdir(specDir, { recursive: true });
-      await writeFile(path.join(specDir, "01_Spec.md"), `# ${specName}\n`, "utf-8");
-      await writeFile(path.join(specDir, "02_User-Stories.md"), `# ${specName} US\n`, "utf-8");
-    }
-
-    const reportRoot = path.join(root, ".qfai", "report");
-    // Worker 0004's slice: `validate --spec` writes only its own scoped file.
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-      specIds: ["0004"],
-    });
-    await rm(path.join(reportRoot, "validate.json"), { force: true });
-
-    // Sibling worker 0003's artifact. A repo-wide `report` rewrites it.
-    const siblingCoverage = path.join(reportRoot, "spec-0003", "coverage.md");
-    await mkdir(path.dirname(siblingCoverage), { recursive: true });
-    await writeFile(siblingCoverage, "SENTINEL\n", "utf-8");
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runReport({ root, format: "md", specIds: ["0004"] });
-      expect(process.exitCode).not.toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
-
-    // Input defaulted to validate.spec-0004.json, output to the matching name.
-    const scopedReport = await readFile(path.join(reportRoot, "report.spec-0004.md"), "utf-8");
-    expect(scopedReport).toContain("# QFAI Report");
-    await expect(readFile(path.join(reportRoot, "report.md"), "utf-8")).rejects.toThrow();
-
-    // Only the scoped pack's artifacts were rewritten.
-    expect(await readFile(siblingCoverage, "utf-8")).toBe("SENTINEL\n");
-    const ownCoverage = await readFile(path.join(reportRoot, "spec-0004", "coverage.md"), "utf-8");
-    expect(ownCoverage).toContain("# Coverage (spec-0004)");
-  });
-
-  it("keeps sibling specs out of the scoped report body", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const specsRoot = path.join(root, ".qfai", "specs");
-    for (const specName of ["spec-0003", "spec-0004"]) {
-      const specDir = path.join(specsRoot, specName);
-      await mkdir(specDir, { recursive: true });
-      await writeFile(path.join(specDir, "01_Spec.md"), `# ${specName}\n`, "utf-8");
-    }
-
-    const reportRoot = path.join(root, ".qfai", "report");
-    await runReport({
-      root,
-      format: "json",
-      runValidate: true,
-      outPath: path.join(reportRoot, "all.json"),
-    });
-    await runReport({
-      root,
-      format: "json",
-      runValidate: true,
-      specIds: ["0004"],
-      outPath: path.join(reportRoot, "scoped.json"),
-    });
-
-    const unscoped = JSON.parse(await readFile(path.join(reportRoot, "all.json"), "utf-8")) as {
-      summary: { specs: number };
-    };
-    const scoped = JSON.parse(await readFile(path.join(reportRoot, "scoped.json"), "utf-8")) as {
-      summary: { specs: number };
-      issues: Array<{ file?: string }>;
-    };
-
-    // The body is assembled from the scope, not from a fresh repo-wide walk:
-    // before this, `report.spec-0004.*` counted every sibling spec in the repo.
-    expect(scoped.summary.specs).toBe(1);
-    expect(unscoped.summary.specs).toBeGreaterThan(scoped.summary.specs);
-    expect(scoped.issues.some((issue) => (issue.file ?? "").includes("spec-0003"))).toBe(false);
-  });
-
-  it("refuses an --in whose scope does not match --spec", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const specsRoot = path.join(root, ".qfai", "specs");
-    for (const specName of ["spec-0003", "spec-0004"]) {
-      const specDir = path.join(specsRoot, specName);
-      await mkdir(specDir, { recursive: true });
-      await writeFile(path.join(specDir, "01_Spec.md"), `# ${specName}\n`, "utf-8");
-    }
-
-    // A repo-wide validate result: its counts / issues / SC coverage cover
-    // every spec, and `--in` adopts them verbatim.
-    await runValidate({ root, strict: false, failOn: "never", format: "github" });
-
-    const messages: string[] = [];
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
-      messages.push(String(chunk));
-      return true;
-    });
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      // Asserted on the RETURN VALUE: `runReport` reports its outcome through
-      // the return value now, and `main.ts` is what assigns `process.exitCode`.
-      const exitCode = await runReport({
-        root,
-        format: "md",
-        specIds: ["0004"],
-        inputPath: path.join(".qfai", "report", "validate.json"),
-      });
-      expect(exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-      stderrSpy.mockRestore();
-    }
-
-    const combined = messages.join("\n");
-    expect(combined).toContain("validate.spec-0004.json");
-    // The scoped name must not be written from an unscoped body.
-    await expect(
-      readFile(path.join(root, ".qfai", "report", "report.spec-0004.md"), "utf-8"),
-    ).rejects.toThrow();
-  });
-
-  it("accepts a relocated --in that still carries the requested scope", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const specDir = path.join(root, ".qfai", "specs", "spec-0004");
-    await mkdir(specDir, { recursive: true });
-    await writeFile(path.join(specDir, "01_Spec.md"), "# spec-0004\n", "utf-8");
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-      specIds: ["0004"],
-    });
-
-    const reportRoot = path.join(root, ".qfai", "report");
-    const scopedInput = path.join(reportRoot, "validate.spec-0004.json");
-    const relocated = path.join(root, "custom", "validate.spec-0004.json");
-    await mkdir(path.dirname(relocated), { recursive: true });
-    await writeFile(relocated, await readFile(scopedInput, "utf-8"), "utf-8");
-    await rm(scopedInput, { force: true });
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runReport({
-        root,
-        format: "md",
-        specIds: ["0004"],
-        inputPath: path.relative(root, relocated),
-      });
-      expect(process.exitCode).not.toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
-
-    const scopedReport = await readFile(path.join(reportRoot, "report.spec-0004.md"), "utf-8");
-    expect(scopedReport).toContain("# QFAI Report");
-  });
-
-  it("points a missing scoped input at the matching scoped validate command", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const messages: string[] = [];
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
-      messages.push(String(chunk));
-      return true;
-    });
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      const exitCode = await runReport({ root, format: "md", specIds: ["0004"] });
-      expect(exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-      stderrSpy.mockRestore();
-    }
-
-    const combined = messages.join("\n");
-    // Following the old text (`qfai validate`) never produced the scoped input.
-    expect(combined).toContain("validate.spec-0004.json");
-    expect(combined).toContain("qfai validate --spec 0004");
-    expect(combined).toContain("qfai report --spec 0004 --run-validate");
-  });
-
-  it("refuses --run-validate writes when the config still targets the legacy SSOT", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    await writeFile(
-      path.join(root, "qfai.config.yaml"),
-      ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n"),
-      "utf-8",
-    );
-
-    // The refusal is routed through the shared migration gate rather than a
-    // pre-run early return, so the run completes and reports the defect: the
-    // scoped report IS written and carries `D-DEPRECATED-PATH` at `error`,
-    // which is what makes the exit code non-zero. The invariant this case
-    // exists for is unchanged — nothing new is created under the sunset
-    // directory, the scoped `validate.spec-0004.json` least of all.
-    const exitCode = await runReport({
-      root,
-      format: "md",
-      runValidate: true,
-      specIds: ["0004"],
-      failOn: "error",
-      toolVersionOverride: "1.10.0",
-    });
-    expect(exitCode).toBe(1);
-
-    // No new artifact was created under the sunset directory.
-    await expect(
-      readFile(path.join(root, ".qfai", "output", "validate.spec-0004.json"), "utf-8"),
-    ).rejects.toThrow();
-    await expect(
-      readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
-    ).rejects.toThrow();
-
-    const report = await readFile(
-      path.join(root, ".qfai", "report", "report.spec-0004.md"),
-      "utf-8",
-    );
-    expect(report).toContain("D-DEPRECATED-PATH");
-  });
-
-  it("refuses an unresolvable --spec value instead of writing a shared name", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    await runValidate({ root, strict: false, failOn: "never", format: "github" });
-
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      const exitCode = await runReport({ root, format: "md", specIds: ["../outside"] });
-      expect(exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
-
-    await expect(
-      readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8"),
-    ).rejects.toThrow();
-  });
-
-  it("links file paths with --base-url", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-      baseUrl: "https://example.com/repo/",
-    });
-
-    const report = await readFile(reportPath, "utf-8");
-    expect(report).toContain("- ルート: [.](https://example.com/repo)");
-    expect(report).toContain(
-      "- 設定: [qfai.config.yaml](https://example.com/repo/qfai.config.yaml)",
-    );
-  });
-
-  it("includes v2.0 prototyping summary from prototyping.json", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-    const evidenceDir = path.join(root, ".qfai", "evidence", "prototyping");
-    await mkdir(evidenceDir, { recursive: true });
-    await writeFile(
-      path.join(evidenceDir, "prototyping.json"),
-      `${JSON.stringify(
-        {
-          specsCovered: ["SPEC-0001"],
-          iterations: [
-            {
-              index: 0,
-              commitSha: "a".repeat(40),
-              blockingFindings: ["home: the empty state is not represented"],
-              proseCritique: VALID_PROSE_CRITIQUE,
-              layoutAntiPatternsDetected: [],
-              designMdViolations: [],
-              pivotDirective: "continue",
-              evidenceRefs: {
-                screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
-                html: ".qfai/evidence/prototyping/iter-00/home.html",
-              },
-            },
-          ],
-          acceptedIterationIndex: 0,
-          stopReason: null,
-        },
-        null,
-        2,
-      )}\n`,
-      "utf-8",
-    );
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.md");
-    await runReport({
-      root,
-      format: "md",
-      outPath: reportPath,
-    });
-
-    const report = await readFile(reportPath, "utf-8");
-    expect(report).toContain("### prototyping.lifecycle");
-    expect(report).toContain("- iterations: 1");
-    expect(report).toContain("- effective: single-thread-loop");
-    expect(report).toContain("- obligation profile: single-thread-loop");
-  });
-
-  it("scopes prototyping spec coverage to the primary prototyping spec", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    const primarySpecDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(primarySpecDir, { recursive: true });
-    await writeFile(
-      path.join(primarySpecDir, "01_Spec.md"),
-      "# Primary UI spec\n\nsurface_type: ui-bearing\n",
-      "utf-8",
-    );
-    const extraSpecDir = path.join(root, ".qfai", "specs", "spec-0002");
-    await mkdir(extraSpecDir, { recursive: true });
-    await writeFile(path.join(extraSpecDir, "01_Spec.md"), "# Secondary API spec\n", "utf-8");
-
-    const evidenceDir = path.join(root, ".qfai", "evidence", "prototyping");
-    const iterDir = path.join(evidenceDir, "iter-00");
-    await mkdir(evidenceDir, { recursive: true });
-    await mkdir(iterDir, { recursive: true });
-    await writeFile(path.join(iterDir, "home.png"), "png", "utf-8");
-    await writeFile(path.join(iterDir, "home.html"), "<html></html>", "utf-8");
-    await writeFile(
-      path.join(evidenceDir, "prototyping.json"),
-      `${JSON.stringify(
-        {
-          specsCovered: ["SPEC-0001"],
-          iterations: [
-            {
-              index: 0,
-              commitSha: "a".repeat(40),
-              blockingFindings: ["home: the empty state is not represented"],
-              proseCritique: VALID_PROSE_CRITIQUE,
-              layoutAntiPatternsDetected: [],
-              designMdViolations: [],
-              pivotDirective: "continue",
-              evidenceRefs: {
-                screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
-                html: ".qfai/evidence/prototyping/iter-00/home.html",
-              },
-            },
-          ],
-          acceptedIterationIndex: 0,
-          stopReason: null,
-        },
-        null,
-        2,
-      )}\n`,
-      "utf-8",
-    );
-
-    await runValidate({
-      root,
-      strict: false,
-      failOn: "never",
-      format: "github",
-    });
-
-    const reportPath = path.join(root, ".qfai", "report", "report.json");
-    await runReport({
-      root,
-      format: "json",
-      outPath: reportPath,
-    });
-
-    const report = JSON.parse(await readFile(reportPath, "utf-8")) as {
-      prototyping?: {
-        evidence?: {
-          specsCoverage?: {
-            expectedSpecIds: string[];
-            missingSpecIds: string[];
-          };
-          specsCoverageStatus?: string;
-        };
-      };
-    };
-    expect(report.prototyping?.evidence?.specsCoverage?.expectedSpecIds).toEqual(["0001"]);
-    expect(report.prototyping?.evidence?.specsCoverage?.missingSpecIds).toEqual([]);
-    expect(report.prototyping?.evidence?.specsCoverageStatus).toBe("complete");
-  });
-});
-
-describe("report exit code", () => {
-  type SeedCounts = { info: number; warning: number; error: number };
-
-  /** Build the `issues[]` a given `counts` claims, so the two never disagree. */
-  function issuesFor(counts: SeedCounts): Array<Record<string, string>> {
-    const severities: Array<keyof SeedCounts> = ["info", "warning", "error"];
-    return severities.flatMap((severity) =>
-      Array.from({ length: counts[severity] }, (_unused, index) => ({
-        code: `QFAI-SEED-${severity.toUpperCase()}`,
-        severity,
-        category: "canonical",
-        message: `seeded ${severity} #${index}`,
-      })),
-    );
+function issue(severity: Issue["severity"]): Issue {
+  return { code: "QFAI-TEST-001", severity, category: "canonical", message: "fixture finding" };
+}
+
+async function writeValidation(
+  root: string,
+  issues: Issue[],
+  file = "validate.json",
+): Promise<void> {
+  const result: ValidationResult = {
+    toolVersion: "2.0.0-test",
+    profile: "full",
+    issues,
+    counts: { info: 0, warning: 0, error: 0 },
+  };
+  const output = path.join(root, ".qfai/report", file);
+  await mkdir(path.dirname(output), { recursive: true });
+  await writeFile(output, `${JSON.stringify(result)}\n`, "utf8");
+}
+
+async function exists(file: string): Promise<boolean> {
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
   }
+}
 
-  /**
-   * Seed a `--in` file whose `issues` really carry the requested severities.
-   * Replacing `counts` alone would leave the fixture's own bare-init findings
-   * in `issues`, and the gate now recounts from `issues` — so a counts-only
-   * fixture would assert against a number nothing in the report agrees with.
-   */
-  async function seedValidation(
-    counts: SeedCounts,
-    overrides: { keepIssues?: boolean } = {},
-  ): Promise<{ root: string; inputPath: string }> {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-gate-"));
-    await runInit({ dir: root, force: false, dryRun: false, yes: true });
-    await runValidate({ root, strict: false, failOn: "never", format: "github" });
-
-    const validatePath = path.join(root, ".qfai", "report", "validate.json");
-    const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
-    const inputPath = path.join(root, ".qfai", "report", "validate.seeded.json");
-    const seeded = overrides.keepIssues
-      ? { ...parsed, counts }
-      : { ...parsed, issues: issuesFor(counts), counts };
-    await writeFile(inputPath, `${JSON.stringify(seeded, null, 2)}\n`, "utf-8");
-    return { root, inputPath };
-  }
-
-  it("exits 1 when the report carries an error and failOn defaults to error", async () => {
-    const { root, inputPath } = await seedValidation({ info: 4, warning: 5, error: 1 });
-
-    const exitCode = await runReport({ root, format: "md", inputPath });
-
-    expect(exitCode).toBe(1);
+describe("qfai report on a story tree", () => {
+  it("reads validation findings and writes a story-tree Markdown report", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [issue("warning")]);
+    expect(await runReport({ root, format: "md", failOn: "never" })).toBe(0);
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain("BF-0001");
+    expect(output).toContain("QFAI-TEST-001");
+    expect(output).not.toContain("SC Coverage");
+    expect(output).not.toContain("TC coverage");
+    expect(await exists(path.join(root, ".qfai/report/business-flow-0001/coverage.md"))).toBe(true);
   });
 
-  it("honours --fail-on never on a report that carries an error", async () => {
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 1 });
-
-    const exitCode = await runReport({ root, format: "md", inputPath, failOn: "never" });
-
-    expect(exitCode).toBe(0);
-  });
-
-  it("honours --strict on a report that carries only warnings", async () => {
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 2, error: 0 });
-
-    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
-    expect(await runReport({ root, format: "md", inputPath, strict: true })).toBe(1);
-  });
-
-  it("still writes the report artifact when the gate fails", async () => {
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 3 });
-    const reportPath = path.join(root, ".qfai", "report", "gated.md");
-
-    const exitCode = await runReport({ root, format: "md", inputPath, outPath: reportPath });
-
-    expect(exitCode).toBe(1);
-    await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
-  });
-
-  it("recounts from issues when the input's counts are stale", async () => {
-    // `--in` reads a file the gate does not own: a stale or hand-edited
-    // `counts` block that zeroes out errors the `issues[]` still lists would
-    // otherwise print those errors in the report and exit 0 anyway.
-    const { root, inputPath } = await seedValidation(
-      { info: 0, warning: 0, error: 0 },
-      { keepIssues: true },
+  it("links finding paths when --base-url is set", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [{ ...issue("warning"), file: ".qfai/spec/decisions.md" }]);
+    await runReport({ root, format: "md", failOn: "never", baseUrl: "https://example.test/repo" });
+    const output = await readFile(path.join(root, ".qfai/report/report.md"), "utf8");
+    expect(output).toContain(
+      "[.qfai/spec/decisions.md](https://example.test/repo/.qfai/spec/decisions.md)",
     );
-    const seeded = JSON.parse(await readFile(inputPath, "utf-8")) as {
-      issues: Array<{ severity: string; suppressed?: boolean }>;
+  });
+
+  it("includes policy guardrails in the JSON report", async () => {
+    const root = await storyRoot();
+    const policy = path.join(root, ".qfai/spec/01_policy/policy.md");
+    await mkdir(path.dirname(policy), { recursive: true });
+    await writeFile(
+      policy,
+      "## Decision Guardrails\n### DG-0001: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n",
+      "utf8",
+    );
+    await writeValidation(root, []);
+    expect(await runReport({ root, format: "json", failOn: "never" })).toBe(0);
+    const output = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/report.json"), "utf8"),
+    ) as {
+      guardrails: { total: number; items: Array<{ id: string }> };
     };
-    expect(
-      seeded.issues.some((issue) => issue.severity === "error" && issue.suppressed !== true),
-    ).toBe(true);
-
-    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
-    expect(await runReport({ root, format: "md", inputPath, failOn: "never" })).toBe(0);
+    expect(output.guardrails.total).toBe(1);
+    expect(output.guardrails.items.map((item) => item.id)).toContain("DG-0001");
   });
 
-  it("rejects an input whose issues carry an unknown severity", async () => {
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
-    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
-    await writeFile(
-      inputPath,
-      `${JSON.stringify(
-        {
-          ...parsed,
-          issues: [
-            { code: "QFAI-SEED-BOGUS", severity: "fatal", category: "canonical", message: "x" },
-          ],
-        },
-        null,
-        2,
-      )}\n`,
-      "utf-8",
-    );
-
-    // Counting an unrecognised severity would quietly drop it from the gate.
-    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
-      /validate\.json has an invalid shape/,
-    );
-  });
-
-  it("rejects an input whose suppressed flag is not a boolean", async () => {
-    // `countIssues` tests `suppressed` for truthiness, so the string "false"
-    // suppresses. An error carrying one drops out of the recount and takes the
-    // gate's only reason to fail with it — a bypass spelled in the very field
-    // that is supposed to be an explicit, auditable decision.
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
-    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
-    const bogus = {
-      code: "QFAI-SEED-ERROR",
-      severity: "error",
-      category: "canonical",
-      message: "should gate",
-      suppressed: "false",
+  it("uses loaded findings for the exit gate even when stored counts are stale", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [issue("error")]);
+    expect(await runReport({ root, format: "json" })).toBe(1);
+    const output = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/report.json"), "utf8"),
+    ) as {
+      summary: { counts: { error: number } };
     };
-    await writeFile(
-      inputPath,
-      `${JSON.stringify({ ...parsed, issues: [bogus] }, null, 2)}\n`,
-      "utf-8",
-    );
-
-    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
-      /validate\.json has an invalid shape/,
-    );
+    expect(output.summary.counts.error).toBe(1);
   });
 
-  it("keeps an honest boolean suppression working", async () => {
-    // The rejection above must not cost the field its actual purpose: a real
-    // `suppressed: true` still keeps its issue out of the gate.
-    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
-    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
-    const issue = (suppressed: boolean): Record<string, unknown> => ({
-      code: "QFAI-SEED-ERROR",
-      severity: "error",
-      category: "canonical",
-      message: "waived",
-      suppressed,
-    });
-
-    await writeFile(
-      inputPath,
-      `${JSON.stringify({ ...parsed, issues: [issue(true)] }, null, 2)}\n`,
-      "utf-8",
-    );
-    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
-
-    await writeFile(
-      inputPath,
-      `${JSON.stringify({ ...parsed, issues: [issue(false)] }, null, 2)}\n`,
-      "utf-8",
-    );
-    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
+  it("rejects a malformed validate result before writing output", async () => {
+    const root = await storyRoot();
+    await mkdir(path.join(root, ".qfai/report"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/report/validate.json"), '{"issues":[]}', "utf8");
+    await expect(runReport({ root, format: "md" })).rejects.toThrow("invalid shape");
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
   });
-});
 
-describe("report --run-validate shares the validate migration gate", () => {
-  /**
-   * `report --run-validate` is the documented single-step CI usage, so it owes
-   * the operator the same legacy-path migration gate `qfai validate` applies.
-   * Before the gate was shared it ran `validateProject` alone: the
-   * `D-DEPRECATED-PATH` finding never reached the report, and the writer
-   * re-created the deprecated `.qfai/output/validate.json` that validate
-   * refuses post-sunset.
-   */
-  async function seedLegacyConfig(root: string): Promise<void> {
-    const yaml = ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n");
-    await writeFile(path.join(root, "qfai.config.yaml"), yaml, "utf-8");
-  }
+  it("rejects a legacy validate result with SC traceability", async () => {
+    const root = await storyRoot();
+    const input = path.join(root, ".qfai/report/validate.json");
+    await writeValidation(root, []);
+    const parsed = JSON.parse(await readFile(input, "utf8")) as Record<string, unknown>;
+    parsed.traceability = { sc: { total: 0 } };
+    await writeFile(input, JSON.stringify(parsed), "utf8");
+    await expect(runReport({ root, format: "md" })).rejects.toThrow("invalid shape");
+    expect(await exists(path.join(root, ".qfai/report/report.md"))).toBe(false);
+  });
 
-  it("AT sunset: refuses the legacy write and carries D-DEPRECATED-PATH as an error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedLegacyConfig(root);
-      const outPath = path.join(root, ".qfai", "report", "report.json");
+  it("rejects an invalid issue severity rather than dropping the gate", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, [{ ...issue("error"), severity: "invalid" } as unknown as Issue]);
+    await expect(runReport({ root, format: "json" })).rejects.toThrow("invalid shape");
+  });
 
-      const exitCode = await runReport({
-        root,
-        format: "json",
-        outPath,
-        runValidate: true,
-        failOn: "error",
-        toolVersionOverride: "1.10.0",
-      });
+  it("requires a scoped input file for --flow", async () => {
+    const root = await storyRoot();
+    await writeValidation(root, []);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(2);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+      "qfai validate --flow BF-0001",
+    );
+    await writeValidation(root, [], "validate.flow-0001.json");
+    expect(await runReport({ root, format: "md", flowIds: ["BF-0001"] })).toBe(0);
+    expect(await exists(path.join(root, ".qfai/report/report.flow-0001.md"))).toBe(true);
+  });
 
-      expect(exitCode).toBe(1);
-      // The writer refused: the deprecated path must not be re-created.
-      await expect(
-        readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
-      ).rejects.toThrow();
-      const report = JSON.parse(await readFile(outPath, "utf-8")) as {
-        issues: Array<{ code: string; severity: string; message: string }>;
-      };
-      const deprecation = report.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
-      expect(deprecation?.severity).toBe("error");
-      expect(deprecation?.message).toContain("REFUSED");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+  it("refuses --spec with an actionable replacement", async () => {
+    const root = await storyRoot();
+    const parsed = parseArgs(["report", "--spec", "0001"], root);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.invalidReason).toContain("--flow BF-NNNN");
+    expect(await exists(path.join(root, ".qfai/report/report.spec-0001.md"))).toBe(false);
+  });
+
+  it("refuses a legacy spec layout", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacy-"));
+    roots.push(root);
+    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await writeFile(path.join(root, ".qfai/specs/spec-0001/01_Spec.md"), "# Legacy\n", "utf8");
+    expect(await runReport({ root, format: "md" })).toBe(2);
   });
 });

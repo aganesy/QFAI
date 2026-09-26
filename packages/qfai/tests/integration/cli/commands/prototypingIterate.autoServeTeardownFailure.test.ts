@@ -1,5 +1,5 @@
 /**
- * `--auto-serve` teardown that rejects (TC-0012-0490).
+ * `--auto-serve` teardown that rejects.
  *
  * When the teardown the server runner returns rejects, iterate prints
  * `qfai prototyping iterate --auto-serve: teardown failed (<reason>)` on
@@ -8,7 +8,8 @@
  * compares the two.
  */
 
-// QFAI:SPEC-0012:TC-0012-0490
+// QFAI:AC-0001-0135-02
+// QFAI:EX-0001-0135-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -95,6 +96,13 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -135,7 +143,7 @@ function teardownFailureLines(stdout: string): string[] {
 }
 
 describe("iterate --auto-serve teardown that rejects", () => {
-  // QFAI:SPEC-0012:TC-0012-0490
+  // QFAI:EX-0001-0135-02
   it("reports a rejected auto-serve teardown on stdout and keeps the exit code of a resolving teardown", async () => {
     const resolved = await runCycle(async () => {});
     const rejected = await runCycle(() => Promise.reject(new Error("port 3000 still bound")));

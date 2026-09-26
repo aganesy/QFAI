@@ -231,7 +231,7 @@ function lanesOf(run: ShellRun): unknown {
   return JSON.parse(run.outputs["lanes"] ?? "null");
 }
 
-// QFAI:SPEC-0003:TC-0003-0038
+// QFAI:EX-0002-0004-01
 describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, source diff selects the full one", () => {
   // One it() per TC-0003-0038 verify bullet. The detection shell is the
   // REAL shipped run: body, executed against real git repos; the minimal
@@ -385,7 +385,7 @@ describe("TC-0003-0038 (TDD-0038): docs-only diff selects the minimal lane set, 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0039
+// QFAI:EX-0002-0004-02
 describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail open with a warning annotation", () => {
   // One it() per TC-0003-0039 verify bullet, each judging the SAME three
   // degraded fixtures: a --depth 1 clone, an unreachable base sha, and a
@@ -464,6 +464,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     return cases;
   };
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases emit a warning annotation", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -474,6 +475,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases select the full lane superset", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -485,6 +487,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases exit 0 — fail open stays green because the superset claim holds", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -496,7 +499,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0040
+// QFAI:EX-0002-0004-03
 describe("TC-0003-0040 (TDD-0040): verdict exits 0 on an empty matrix and carries an empty permission map", () => {
   // One it() per TC-0003-0040 verify bullet. The verdict body is the REAL
   // shipped run: block, executed via bash with env stubs. This

@@ -10,7 +10,7 @@
  *
  * Both findings carry a 3-part justification embedded directly in
  * the issue `message` so downstream `qfai validate` ingestion can
- * assert against BR-0004-0028's non-empty justification contract.
+ * assert against the non-empty justification requirement.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -29,7 +29,7 @@ import {
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 // Verify.json scopes that pull in /qfai-atdd or /qfai-implement
 // artifacts. Reading them at the prototyping phase forms the

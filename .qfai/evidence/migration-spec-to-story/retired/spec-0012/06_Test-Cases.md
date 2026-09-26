@@ -1,0 +1,1490 @@
+# 06 Test Cases
+
+## Retained Baseline Cases
+
+## TC-0012-0285
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0001, AC-0012-0004
+- Delegation Scope Table lists the required categories and valid roles.
+
+## TC-0012-0286
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0001, AC-0012-0004
+- Level: L1
+- Invalid delegation role is surfaced as a violation.
+
+## TC-0012-0289
+
+- EX-Ref: EX-0012-0086
+- AC-Refs: AC-0012-0001
+- Step 0 planning fields are documented before the first iteration.
+
+## TC-0012-0290
+
+- Status: superseded — replaced by TC-0012-0376 (per-spec iter-dir `.review.json`-only layout).
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0002
+- Canonical evidence paths are documented for screenshot and HTML capture.
+
+## TC-0012-0291
+
+- Status: superseded — replaced by TC-0012-0377 (no PNG/HTML written; Reviewer-driven Playwright replaces capture step).
+- EX-Ref: EX-0012-0002, EX-0012-0003
+- AC-Refs: AC-0012-0003
+- `capture-screenshots.js` fails closed instead of generating fake PNG evidence.
+
+## TC-0012-0292
+
+- EX-Ref: EX-0012-0086
+- AC-Refs: AC-0012-0001
+- Skill documents the iteration cycle.
+
+## TC-0012-0293
+
+- EX-Ref: EX-0012-0098
+- AC-Refs: AC-0012-0001, AC-0012-0004
+- Level: L1
+- Invalid delegation map entries are surfaced as findings.
+
+## TC-0012-0294
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0005
+- Level: L1
+- Evaluator input protocol names the required input classes.
+
+## TC-0012-0295
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0005
+- Level: L1
+- Reviewer guidance detects missing evaluator inputs.
+
+## TC-0012-0296
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0005
+- Visual quality checklist enumerates structural categories.
+
+## TC-0012-0310
+
+- EX-Ref: EX-0012-0099
+- AC-Refs: AC-0012-0006
+- `qfai validate --fail-on error` is documented as the completion-time machine gate.
+
+## TC-0012-0311
+
+- EX-Ref: EX-0012-0100
+- AC-Refs: AC-0012-0007
+- `/qfai-verify` blocking `REVISE` posture is documented as part of completion.
+
+## TC-0012-0312
+
+- EX-Ref: EX-0012-0101
+- AC-Refs: AC-0012-0009
+- non-UI specs are excluded from prototyping execution and UI evidence overfire is avoided.
+
+## TC-0012-0313
+
+- EX-Ref: EX-0012-0102
+- AC-Refs: AC-0012-0008, AC-0012-0010
+- legacy identifier space is retained without reviving weighted-total narratives, and the legacy validation slice (executionPlan / Lighthouse / designSystemCompliance / calibration overrides) remains validator/reference behavior only.
+
+## v2.0 / UX-Loop Active Cases
+
+## TC-0012-0319
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `"converged"` when the latest iter has `blockingFindings.length === 0`, `layoutAntiPatternsDetected.length === 0`, and `designMdViolations.length === 0`.
+
+## TC-0012-0320
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0024
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `null` when `layoutAntiPatternsDetected: ["lap-007-state-not-represented"]` is non-empty.
+
+## TC-0012-0321
+
+- Status: superseded — replaced by TC-0012-0357 (`index === 9` terminator under 10-cycle budget).
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0029
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([iter])` returns `"max-iterations"` when the latest iter has `index === 14`.
+
+## TC-0012-0322
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate({cycle: 0, targetUrl: "http://localhost:5000"})` returns 0 and creates `iter-00/`.
+
+## TC-0012-0323
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate({cycle: 0})` (without `--target-url`) exits 2 with input-validation error.
+
+## TC-0012-0324
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028, AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exits 64 when convergence (4 axes exceptional + lap=0 + designMdViolations=0) is detected.
+
+## TC-0012-0325
+
+- Status: superseded — replaced by TC-0012-0358 (exit 65 when latest iter index reaches 9 under 10-cycle budget).
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0029, AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exits 65 when the latest iter index reaches 14.
+
+## TC-0012-0326
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 records `prototyping.json#designMdSha256` matching `sha256(DESIGN.md)` and `.qfai/contracts/design/DESIGN.md.lock.yaml#sha256`.
+
+## TC-0012-0327
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0035
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle ≥1 exits 2 with stderr `"DESIGN.md hash mismatch"` when on-disk sha256 has drifted from the recorded value.
+
+## TC-0012-0328
+
+- EX-Ref: EX-0012-0113
+- AC-Refs: AC-0012-0028
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/designMdViolations.test.ts`
+- Verify `findDesignMdViolations(html, designMd)` is pure (no I/O, no clock) and deterministic — same input yields same output across repeated invocations.
+
+## TC-0012-0329
+
+- EX-Ref: EX-0012-0113
+- AC-Refs: AC-0012-0028
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify convergence is blocked when `designMdViolations.length > 0` even with `blockingFindings: []` and `layoutAntiPatternsDetected: []`.
+
+## TC-0012-0330
+
+- Status: superseded — replaced by TC-0012-0364 / TC-0012-0365 (new payload: 6 `*Feel` fields + 4 ordinal axes).
+- EX-Ref: EX-0012-0110, EX-0012-0117
+- AC-Refs: AC-0012-0021
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review.json schema enforces exactly the 4 UX axis keys (informationArchitecture / navigationFlow / usability / functionality) with ordinal values.
+
+## TC-0012-0331
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0025
+- Level: L1
+- Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
+- Verify `layoutAntiPatternsDetected[]` schema accepts only identifiers the registry declares; a token it does not declare raises `QFAI-PROT-002`.
+
+## TC-0012-0332
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0026
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify `computePivotDirective(history)` returns `"pivot"` when the latest 3 iters have low IA AND the latest iter has non-empty `layoutAntiPatternsDetected`.
+
+## TC-0012-0333
+
+- EX-Ref: EX-0012-0111, EX-0012-0119
+- AC-Refs: AC-0012-0027
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify `computePivotDirective(history)` returns `"continue"` when ≥ 2 of the 4 UX axes strictly improve by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter; otherwise returns `"refine"` (when not `pivot`).
+
+## TC-0012-0334
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0033
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify completion certificate v2.0 round-trip: parse → serialize yields byte-equivalent output for the v2.0 schema.
+
+## TC-0012-0335
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `design-system.yaml` post-handoff content is byte-equivalent to root `DESIGN.md` token tables (color / typography / radius / shadow).
+
+## TC-0012-0336
+
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0021
+- Level: L1
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify the reviewer prompt frames root `DESIGN.md` as the brand SSOT and references the lap-\* catalog.
+
+## TC-0012-0337
+
+- EX-Ref: EX-0012-0098, EX-0012-0121
+- AC-Refs: AC-0012-0031
+- Level: L1
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify SKILL.md ≤ 130 lines and the 5 reference files combined ≤ 410 lines.
+
+## TC-0012-0338
+
+- Status: superseded — replaced by TC-0012-0359 (`MAX_ITERATIONS === 10` / `MAX_ITERATION_INDEX === 9` SSOT).
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0020
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `MAX_ITERATIONS === 15` and `MAX_ITERATION_INDEX === 14` are exported code constants.
+
+## TC-0012-0339
+
+- EX-Ref: EX-0012-0110, EX-0012-0116
+- AC-Refs: AC-0012-0020
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `acceptedIterationIndex === iterations.length - 1` always holds (no best-of-history selection).
+
+## TC-0012-0340
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0021
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `isOrdinalScore` accepts only `{weak, acceptable, strong, exceptional}` and rejects other values.
+
+## TC-0012-0341
+
+- EX-Ref: EX-0012-0111
+- AC-Refs: AC-0012-0023
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `isPivotDirective` accepts only `{continue, refine, pivot}` and rejects other values.
+
+## TC-0012-0342
+
+- Status: superseded — replaced by TC-0012-0376 / TC-0012-0377 (`iter-NN/spec-NNNN/<screen>.review.json` per-spec layout; no PNG/HTML).
+- EX-Ref: EX-0012-0001
+- AC-Refs: AC-0012-0030
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify per-iter evidence path composition: `iter-NN/<screen>.png` / `iter-NN/<screen>.html` / `iter-NN/review.json` (zero-padded index).
+
+## TC-0012-0343
+
+- Status: superseded — replaced by TC-0012-0366 (`*Feel` fields ≤ 200 words each; legacy 200–500-word `critique` retired).
+- EX-Ref: EX-0012-0089
+- AC-Refs: AC-0012-0022
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review.json `critique` field is rejected when length is < 200 words or > 500 words.
+
+## TC-0012-0344
+
+- Status: superseded — replaced by TC-0012-0360 (at most 10 entries, monotonic 0..9, single lineage).
+- EX-Ref: EX-0012-0098, EX-0012-0115
+- AC-Refs: AC-0012-0020
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify single-thread serial iteration: `prototyping.json#iterations[]` has at most 15 entries with monotonic `index` values 0..14, and only one lineage exists (no parallel `candidates/` directory).
+
+## TC-0012-0345
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0033
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `qfai prototyping certify --check` exit code 0 when convergence artifact exists; non-zero otherwise.
+
+## TC-0012-0346
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Level: L1
+- Test file: `packages/qfai/tests/core/validators/designContractReadiness.test.ts`
+- Verify DESIGN.md token mirror integrity: drift between `design-system.yaml` and root `DESIGN.md` raises a design-contract validator finding.
+
+## TC-0012-0347
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 fails with exit 2 when `.qfai/contracts/design/DESIGN.md.lock.yaml` is absent.
+
+## TC-0012-0348
+
+- EX-Ref: EX-0012-0112
+- AC-Refs: AC-0012-0034
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 fails with exit 2 when `sha256(DESIGN.md)` does not match the lock file value.
+
+## TC-0012-0349
+
+- EX-Ref: EX-0012-0111, EX-0012-0118
+- AC-Refs: AC-0012-0024
+- Level: L1
+- Test file: `packages/qfai/tests/core/validators/layoutAntiPatterns.test.ts`
+- Verify validator emits `QFAI-PROT-021` when `layoutAntiPatternsDetected` is non-empty AND `informationArchitecture` is `strong` or `exceptional`.
+
+## TC-0012-0350
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0028
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `allFourAxesExceptional` returns `true` only for the canonical new-shape converged iteration and `false` for old-shape iteration objects.
+
+## TC-0012-0351
+
+- EX-Ref: EX-0012-0098, EX-0012-0120
+- AC-Refs: AC-0012-0020
+- Level: L1
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify the qfai-prototyping skill asset declares product-experience-architect (generator) and product-surface-reviewer (evaluator) as separate sub-agent identities.
+
+## TC-0012-0352
+
+- EX-Ref: EX-0012-0110
+- AC-Refs: AC-0012-0032
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exit code 0 (continue) is emitted when neither convergence nor max-iterations is reached and no input error occurred.
+
+## TC-0012-0353
+
+- EX-Ref: EX-0012-0114
+- AC-Refs: AC-0012-0036
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `prototype-handoff.yaml` post-loop schema contains exactly `{finalIterIndex, finalArtifact, extractedDesignSystem, implementationNotes}` keys; legacy `mustPreserve` / `mayAdapt` / `mustNotCopy` fields are absent.
+
+## v2.1 / Multi-Spec Reviewer-Driven Loop Cases
+
+> AC-Refs in this block target `AC-0012-0037..AC-0012-0051` (the v2.1
+> redefinition block authored in this delta). Stitched 2026-05-18 per
+> CHG-002 integration.
+
+## TC-0012-0354
+
+- EX-Ref: EX-0012-0122
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify `resolveAllUiBearingSpecs()` returns every UI-bearing spec in the consumer project in one call (3 UI-bearing + 2 non-UI fixture → 3 specs).
+
+## TC-0012-0355
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify zero UI-bearing specs → `runPrototypingIterate` exit code 0 (deterministic no-op), no `iter-NN/` directory is created, and stderr/log states "no UI-bearing specs resolved".
+
+## TC-0012-0356
+
+- EX-Ref: EX-0012-0122
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/skill/prototypingSkill.test.ts`
+- Verify the SKILL.md / iteration-loop reference no longer contains a per-invocation primary-spec selection prompt (literal absence assertion + presence of `resolveAllUiBearingSpecs` wiring).
+
+## TC-0012-0357
+
+- EX-Ref: EX-0012-0124
+- AC-Refs: AC-0012-0038
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `shouldStop([…, {index: 9}])` returns `"max-iterations"`; `shouldStop([…, {index: 8}])` returns `null` (boundary at index === 9).
+
+## TC-0012-0358
+
+- EX-Ref: EX-0012-0124
+- AC-Refs: AC-0012-0038
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` exits 65 when the latest iter index reaches 9 under the 10-cycle budget; exits 0 when index ≤ 8 without convergence.
+
+## TC-0012-0359
+
+- EX-Ref: EX-0012-0125
+- AC-Refs: AC-0012-0038
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify `MAX_ITERATIONS === 10` and `MAX_ITERATION_INDEX === 9` are exported from `core/prototyping/iteration.ts`.
+
+## TC-0012-0360
+
+- EX-Ref: EX-0012-0125
+- AC-Refs: AC-0012-0038
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify single-thread serial iteration with 10-cycle budget: `prototyping.json#iterations[]` has at most 10 entries with monotonic `index` values 0..9; no parallel `candidates/` directory exists.
+
+## TC-0012-0361
+
+- EX-Ref: EX-0012-0125
+- AC-Refs: AC-0012-0039
+- Type: unit
+- Test file: `packages/qfai/tests/core/validators/prototypingEvidence.test.ts`
+- Verify validators `QFAI-PROT-005` and `QFAI-PROT-006` reference `index === 9` (10-cycle terminator) — repo-wide grep + validator behavior on fixture with index 9 vs index 10.
+
+## TC-0012-0362
+
+- EX-Ref: EX-0012-0126
+- AC-Refs: AC-0012-0040
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/reviewerDispatch.test.ts`
+- Verify the Reviewer sub-agent IS the one calling Playwright (not a separate orchestrator-driven capture step): orchestrator dispatch trace shows Playwright invocation occurs inside Reviewer sub-agent boundary; no orchestrator-side `captureScreenshots()` call exists in the dispatch path.
+
+## TC-0012-0363
+
+- EX-Ref: EX-0012-0127
+- AC-Refs: AC-0012-0040
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/reviewerDispatch.test.ts`
+- Verify after a Reviewer-driven cycle completes, the iter-dir contains zero `.png`, zero `.html`, and zero `interaction.json` files for any spec × screen.
+
+## TC-0012-0364
+
+- EX-Ref: EX-0012-0128
+- AC-Refs: AC-0012-0041
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review payload schema accepts a payload with all 6 `*Feel` fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`) AND all 4 ordinal axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`) AND `layoutAntiPatternsDetected[]` AND `designMdViolations[]`.
+
+## TC-0012-0365
+
+- EX-Ref: EX-0012-0128
+- AC-Refs: AC-0012-0041
+- Type: contract
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify review payload schema rejects (with named field path in error) when any of the 6 `*Feel` fields is missing, when an ordinal axis is missing, or when an extra unknown top-level key is present.
+
+## TC-0012-0366
+
+- EX-Ref: EX-0012-0129
+- AC-Refs: AC-0012-0041
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify each `*Feel` field is rejected when its word count exceeds 200; accepted at exactly 200 words; accepted at 1 word.
+
+## TC-0012-0367
+
+- EX-Ref: EX-0012-0130
+- AC-Refs: AC-0012-0042
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify global convergence requires AND across every spec × screen pair: when 2 of 3 pairs have all three arrays empty and the 3rd carries one blocking finding, `shouldStop` returns `null`; when all 3 pairs have all three arrays empty, `shouldStop` returns `"converged"`.
+
+## TC-0012-0368
+
+- EX-Ref: EX-0012-0131
+- AC-Refs: AC-0012-0042
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify aggregated cycle record names every lagging spec (spec where any pair is below `exceptional`) under a `laggingSpecs[]` field when convergence is not achieved.
+
+## TC-0012-0369
+
+- EX-Ref: EX-0012-0131
+- AC-Refs: AC-0012-0042
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify no quantitative AC-pass% / transition-pass% threshold gate exists in convergence logic — `shouldStop` decision depends only on ordinal axes + lap empty + designMdViolations empty (no numeric pass-rate field consulted).
+
+## TC-0012-0370
+
+- EX-Ref: EX-0012-0132
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify `licenseVerify(imageSources)` returns success when every `imageSources[]` entry has `source` in `["unsplash", "pexels"]` with a known license string in the cycle-0 frozen catalog.
+
+## TC-0012-0371
+
+- EX-Ref: EX-0012-0133
+- AC-Refs: AC-0012-0043
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `runPrototypingIterate` hard-stops with exit code 66 when any `imageSources[]` entry has `source: "pinterest"` or `license: "unknown"`; stderr names the offending image URL.
+
+## TC-0012-0372
+
+- EX-Ref: EX-0012-0132
+- AC-Refs: AC-0012-0043
+- Type: contract
+- Test file: `packages/qfai/tests/core/prototyping/handoff.test.ts`
+- Verify `prototype-handoff.yaml#imageSources[]` schema requires exactly `{url, license, attribution, source}` per entry; missing any field is rejected with named-field validation error.
+
+## TC-0012-0373
+
+- EX-Ref: EX-0012-0134
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify lock drift at cycle ≥1: `runPrototypingIterate` exits 2 with stderr matching `/DESIGN\.md hash mismatch.*re-run from cycle 0/` when on-disk DESIGN.md sha256 differs from cycle-0-recorded `designMdSha256`; no review payloads are written for the failed cycle.
+
+## TC-0012-0374
+
+- EX-Ref: EX-0012-0135
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/reviewerDispatch.test.ts`
+- Verify Reviewer Playwright-session failure hard-stop: when all Reviewer attempts for a `(spec, screen)` pair fail, the run exits non-zero, names the pair in stderr, and does NOT declare convergence.
+
+## TC-0012-0375
+
+- EX-Ref: EX-0012-0123, EX-0012-0134, EX-0012-0135, EX-0012-0140
+- AC-Refs: AC-0012-0044
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify autonomous run cycle 0..9 produces zero per-cycle interactive prompts: stdin is closed and the run completes through all hard-stop classes deterministically.
+
+## TC-0012-0376
+
+- EX-Ref: EX-0012-0136
+- AC-Refs: AC-0012-0046
+- Type: unit
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Verify per-iter / per-spec evidence path composition: `iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")` equals `.qfai/evidence/prototyping/iter-02/spec-0007/orders-dashboard.review.json` (zero-padded index, `spec-NNNN` namespace).
+
+## TC-0012-0377
+
+- EX-Ref: EX-0012-0137
+- AC-Refs: AC-0012-0046
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify after any completed cycle, the iter-dir tree contains only `<spec-NNNN>/<screen>.review.json` files — no `.png`, `.html`, or `interaction.json` anywhere under `iter-NN/`.
+
+## TC-0012-0378
+
+- EX-Ref: EX-0012-0137
+- AC-Refs: AC-0012-0046
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
+- Verify `iterationDirPerSpec(2, "spec-0007")` returns `.qfai/evidence/prototyping/iter-02/spec-0007` and `iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")` builds on top of it.
+
+## TC-0012-0379
+
+- EX-Ref: EX-0012-0137
+- AC-Refs: AC-0012-0046
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
+- Verify `findIterationReviewFiles(2)` globs across `iter-02/spec-*/<screen>.review.json` and returns sorted absolute paths; ignores `.png` / `.html` even if mistakenly present.
+
+## TC-0012-0380
+
+- EX-Ref: EX-0012-0137
+- AC-Refs: AC-0012-0046
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
+- Verify `findStaleIterDirs` matches only `/^iter-\d{2,}$/` directory names (not `iter-bad` / `iter-1`); `deleteStaleIterDirs` removes only matched dirs and preserves unrelated siblings.
+
+## TC-0012-0381
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify `qfai prototyping certify` rejects (non-zero exit) when any spec in the cycle-0 frozen set lacks any declared screen's `<screen>.review.json` at the accepted iter; stderr names the missing `(spec, screen)` pair.
+
+## TC-0012-0382
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify `readFrozenSpecsCovered()` reads the cycle-0 frozen spec set from cycle-0 evidence and drives the per-spec aggregation loop in certify (mock fixture confirms iteration order matches frozen-set order).
+
+## TC-0012-0383
+
+- EX-Ref: EX-0012-0139
+- AC-Refs: AC-0012-0048
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/reviewerDispatch.test.ts`
+- Verify the Reviewer's Playwright session attempts navigation to every primary menu entry (sidebar / topbar / bottombar) declared in the prototype harness fixture; navigation attempt count equals total menu entry count.
+
+## TC-0012-0384
+
+- EX-Ref: EX-0012-0139
+- AC-Refs: AC-0012-0048
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify when `menuReachabilityFeel` describes unreachable entries, the cycle exit status remains success (no hard-fail); unreachable findings surface as qualitative critique only.
+
+## TC-0012-0385
+
+- EX-Ref: EX-0012-0140
+- AC-Refs: AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify mid-run spec-set change detection: when a new UI-bearing spec appears on disk at cycle ≥1, `runPrototypingIterate` exits non-zero, names the new spec in stderr, and the run does NOT restart at cycle 0; the new spec is deferred for the next invocation.
+
+## TC-0012-0386
+
+- EX-Ref: EX-0012-0141
+- AC-Refs: AC-0012-0049
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify `specsCovered` drift check reads the cycle-0 frozen set (not live filesystem) as its baseline — fixture mutates filesystem mid-test and asserts the comparison uses the frozen value.
+
+## TC-0012-0387
+
+- EX-Ref: EX-0012-0142
+- AC-Refs: AC-0012-0050
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify per-spec time-budget overrun appends a soft-warning field (e.g. `timeBudgetSoftWarning`) to the per-spec review payload; the run continues normally; only the global 10-cycle budget hard-fails.
+
+## TC-0012-0388
+
+- EX-Ref: EX-0012-0143
+- AC-Refs: AC-0012-0051
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 writes the frozen UI contract set into `uiContractsCovered[]` for a two-contract fixture.
+
+## TC-0012-0389
+
+- EX-Ref: EX-0012-0144
+- AC-Refs: AC-0012-0083
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify cycle 0 writes the stock-photo license-class catalog into cycle-0 evidence (`frozenLicenseCatalog: { sources: ["unsplash", "pexels"], licenseTiers: {…} }`).
+
+## TC-0012-0390
+
+- EX-Ref: EX-0012-0143, EX-0012-0144
+- AC-Refs: AC-0012-0051, AC-0012-0083
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify cycle-0 frozen UI contract set and license catalog are the SSOT consumed by subsequent cycles — mutating in-memory live values does not affect cycle ≥1 behavior, only cycle-0 recorded values are read.
+
+## TC-0012-0391
+
+- EX-Ref: EX-0012-0122
+- AC-Refs: AC-0012-0037
+- Type: property
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify property: for every consumer project fixture, `resolveAllUiBearingSpecs(project)` ≡ `project.specs.filter(s => s.ui_bearing === true)` (set equality, order-insensitive).
+
+## TC-0012-0392
+
+- EX-Ref: EX-0012-0136
+- AC-Refs: AC-0012-0046
+- Type: property
+- Test file: `packages/qfai/tests/core/prototyping/iterationPaths.test.ts`
+- Verify property: for every `(idx ∈ 0..99, spec ∈ specIdStrings, screen ∈ screenNames)`, `parseIterationReviewPath(iterationReviewPathPerSpec(idx, spec, screen)) === {idx, spec, screen}` (round-trip identity).
+
+## TC-0012-0393
+
+- EX-Ref: EX-0012-0124
+- AC-Refs: AC-0012-0038, AC-0012-0039
+- Type: e2e
+- Test file: `packages/qfai/tests/e2e/prototypingFullLoop.test.ts`
+- Verify a full 10-cycle e2e run that never converges hard-stops at the end of cycle 9 with exit 65 and `prototyping.json#stopReason === "max-iterations"`; exactly 10 iter-dirs `iter-00..iter-09` exist.
+
+## TC-0012-0394
+
+- EX-Ref: EX-0012-0126
+- AC-Refs: AC-0012-0040
+- Type: e2e
+- Test file: `packages/qfai/tests/e2e/prototypingFullLoop.test.ts`
+- Verify an e2e cycle where the Reviewer sub-agent launches Playwright against a localhost prototype harness and writes `iter-NN/spec-NNNN/<screen>.review.json` containing all 6 `*Feel` fields + 4 ordinal axes.
+
+## TC-0012-0395
+
+- EX-Ref: EX-0012-0133
+- AC-Refs: AC-0012-0043
+- Type: contract
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify `licenseVerify` contract rejects every source NOT in the cycle-0 frozen allowlist with a structured error `{code: "license-not-allowlisted", source, url}`; exit code mapping to 66 is the caller's responsibility.
+
+## CHG-002 Cascade — Cycle-0 Bypass Regression + Traceability Stitch
+
+> Authored 2026-05-19 to register the CHG-002 cascade fixes. See
+> `09_delta.md` CHG-002 cascade for the delta note.
+
+## TC-0012-0396
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle-0 no-op gate is bypassed when `qfai.config.yaml#prototyping.primarySpecId` is configured AND the spec dir exists on disk, even if the spec carries no `surface_type: ui-bearing` marker and no UI contract.
+
+## TC-0012-0397
+
+- EX-Ref: EX-0012-0140, EX-0012-0143
+- AC-Refs: AC-0012-0049, AC-0012-0051
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify primarySpecId-only config — cycle 1 does NOT trip the spec-set drift check (cycle 0 must seed `frozenSpecsCovered: [primary]` rather than `[]`, so cycle ≥1 live comparison does not surface a `removed: [primary]` drift).
+
+## TC-0012-0398
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle-0 no-op gate is bypassed when `01_Spec.md` carries the legacy `# … Prototyping …` title marker, even with no `surface_type: ui-bearing` frontmatter, no UI contract, and no primarySpecId pin.
+
+## TC-0012-0399
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify certify iterates the cycle-0-frozen `frozenSpecsCovered` set (multi-spec) when both `frozenSpecsCovered` and the legacy single-spec `specsCovered` are present on prototyping.json; the per-(spec × screen) presence gate must catch a frozen-set secondary spec with no review.json files.
+
+## TC-0012-0400
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify certify falls back to legacy `specsCovered` for legacy evidence that lacks `frozenSpecsCovered`; the per-(spec × screen) presence gate must still flag every missing pair.
+
+## TC-0012-0401
+
+- EX-Ref: EX-0012-0123
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the title-marker bypass (TC-0012-0398) is symmetric with the primarySpecId bypass at cycle ≥1: seed a spec whose only UI-bearing signal is the legacy `# … Prototyping …` title marker, run cycle 0 (which must seed `frozenSpecsCovered` with the title-marker spec id, not `[]`), then run cycle 1 and assert stderr does NOT contain `spec-set drift detected` / `removed=[NNNN]`. Pre-fix the title-marker bypass would have suffered the same cycle-1 drift trip as the primarySpecId bypass did before TC-0012-0397; this case pins the symmetric coverage.
+
+## TC-0012-0402
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify that a single-spec flat iter goes through the per-(spec × screen) gate like any other: certify with `frozenSpecsCovered: ["0012"]` (single spec), a declared UI screen and no per-spec subdirs at the accepted iter must exit 64 with a diagnostic naming the missing `(spec, screen)` pair. The info-skip this case once codified sealed a certificate over zero per-screen review evidence whenever the frozen set held one spec, which is the same hole TC-0012-0403 closes for a multi-spec set. A project that declares no UI screens has nothing to require and still seals on the flat layout.
+
+## TC-0012-0403
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the multi-spec flat-iter hard error: certify with `frozenSpecsCovered: ["0012","0007"]` (multi-spec) and no per-spec subdirs at the accepted iter must exit non-zero with an error message naming the multi-spec/per-spec incompatibility (`multi-spec frozen set requires per-spec`) AND the deferred-migration hint (`flat-iter migration deferred`). Closes the TDD-0387 vulnerability re-opened by the unconditional flat-iter skip — pre-fix a frozen secondary spec could ship a sealed cert with zero review.json files.
+
+## TC-0012-0404
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify that cycle 0 computes the union of (strict frontmatter scan) + (legacy title-marker scan) + (configured `prototyping.primarySpecId` on disk) independently of which sub-scan finds anything, and freezes the single primary spec out of it: seed spec-0003 with `surface_type: ui-bearing` (strict), pin `primarySpecId: "0002"` (no strict signal on spec-0002), run cycle 0 with `--target-url`, and assert `prototyping.json#frozenSpecsCovered === ["0002"]`. The union is what the bypass and drift signals read; writing it into the frozen field instead is what made every ordinary multi-spec run uncertifiable, because the certify gate hard-fails a multi-spec frozen set on the flat-iter layout while the per-spec layout migration is deferred (TC-0012-0403, OQ-0012-0006). The multi-spec baseline the drift gate compares against is `frozenSurfaceUnion` (AC-0012-0049), not this field.
+
+## TC-0012-0405
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the POSITIVE side of the `readFrozenSpecsCoveredMultiSpec ?? readFrozenSpecsCovered` precedence at the certify call-site: when `prototyping.json` carries BOTH `specsCovered: ["0007"]` (legacy single-spec primary) AND `frozenSpecsCovered: ["0007","0012"]` (multi-spec frozen set) and every (spec, screen) pair has its review.json under the accepted iter, certify exits 0 AND the sealed `completion-certificate.json#specsCovered` records the multi-spec scope `["0007","0012"]` (the frozen field wins). Pre-existing TC-0012-0399 covers the NEGATIVE side (reject when secondary missing); this case pins the happy-path sealed-cert shape at the call-site.
+
+## TC-0012-0406
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the POSITIVE side of the fallback arm: when `prototyping.json` carries ONLY legacy `specsCovered: ["0007"]` (no `frozenSpecsCovered` field, legacy evidence) and the single (spec, screen) pair has its review.json, certify exits 0 AND `completion-certificate.json#specsCovered` records `["0007"]`. Pre-existing TC-0012-0400 covers the NEGATIVE side (reject on missing review.json under the fallback scope); this case pins the happy-path sealed-cert shape so a future refactor that hard-removes the legacy read is caught by a green-path regression in addition to the red-path one.
+
+## TC-0012-0407
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify per-spec UI contract scoping at the per-(spec × screen) presence gate: seed a multi-spec frozen set `["0001","0002"]` with per-spec contracts (`.qfai/contracts/ui/spec-0001.yaml` declares ONLY `home`; `.qfai/contracts/ui/spec-0002.yaml` declares ONLY `settings`); seed only the per-spec-scoped review.json files (`spec-0001/home.review.json` + `spec-0002/settings.review.json`); assert certify exits 0 — the legacy cross-product would have demanded `spec-0001/settings.review.json` + `spec-0002/home.review.json` that should never exist per the per-spec contract. Companion negative `it` confirms presence is still enforced WITHIN each spec's declared set (spec-0001 declares two screens; missing one still fails). Pre-fix `prototypingCertify.ts` always iterated the project-wide `screenContracts` for every frozen spec, producing spurious cross-product rejections for projects with non-uniform per-spec screen sets.
+
+## TC-0012-0408
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0037
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify `resolvePrimaryPrototypingSpec` returns the UI-contract-only spec when neither the strict `surface_type: ui-bearing` marker, the legacy `# … Prototyping …` title heading, nor `qfai.config.yaml#prototyping.primarySpecId` is set — the spec is located by a matching `.qfai/contracts/ui/<spec-id>*.yaml`. Pre-fix the primary resolver returned `undefined` for contract-only projects, so iterate exited 2 with "no primary UI-bearing prototyping spec found" right after the multi-spec precheck cleared. The contract fallback exists for this; this TC pins the spec → test traceability for the previously-unannotated describe block (the source label is `"contract-fallback"`).
+
+## TC-0012-0409
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the `resolveSurfaceUnion` helper (extracted from `evaluateZeroUiBearingPrecheck`) composes the deterministic UNION of every UI-bearing surface signal (strict `surface_type: ui-bearing` frontmatter / UI-contract-only fallback / legacy title-marker / configured-`primarySpecId`-on-disk) and returns it sorted lexicographically + deduplicated. Five `it` blocks cover: (a) empty result when no signal exists; (b) UNION composition across strict + title-marker + primarySpecId-on-disk; (c) UI-contract-only surface recognised via `resolveAllUiBearingSpecs`; (d) deduplication when the same spec id appears via multiple signals; (e) primarySpecId pin ignored when the spec dir is absent. This TC pins the spec → test traceability for the previously-unannotated describe block.
+
+## TC-0012-0410
+
+- EX-Ref: EX-0012-0123, EX-0012-0140
+- AC-Refs: AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle ≥1 mid-loop spec-set drift detector observes the live multi-spec UNION (via `resolveSurfaceUnion`) and not just the resolved primary, so a new strict-marker spec planted mid-loop with a LARGER id than the frozen primary (which keeps the primary resolver's pick stable) is still caught as drift with `new=[<new-id>]`. Comparing frozen=[primary] vs live=[primary] (same single-spec input passed twice) would miss the addition silently. Frozen set is preserved (no rewrite); drift is deferred to the next `--cycle 0` invocation.
+
+## TC-0012-0411
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify per-source URL host binding: when the catalog declares `sourceHosts[source]`, an `imageSources[]` entry whose URL host (`new URL(url).hostname`) is not in the per-source allowlist is rejected with `{code: "license-host-mismatch", source, expectedHosts, url}`. Three `it` blocks cover: (a) rejection of an unapproved host even when the source label is allowlisted (e.g. `source: "unsplash"` + `url: "https://unapproved.example/img.jpg"`); (b) acceptance of a URL whose host is in the per-source allowlist; (c) case-insensitive host comparison. Closes the source-label-only bypass.
+
+## TC-0012-0412
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify backward compatibility of the host-binding feature: catalogs that do not declare `sourceHosts` (pre-host-pinning shape) continue to validate every `imageSources[]` entry on the existing source-allowlist + tier-membership rules alone, regardless of host. Pins the migration contract so an older `frozenLicenseCatalog` round-trips cleanly through cycle ≥1 license verify.
+
+## TC-0012-0413
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the iterate command hard-stops with exit 2 when `prototyping.json#imageSources[]` contains a malformed entry (missing or non-string `url` / `source` / `license`). Pre-fix the malformed entries were silently dropped by `collectImageSources`, and when every entry was malformed the array reduced to `[]`, skipping the exit-66 license gate entirely. Two `it` blocks cover: (a) entry missing `license`; (b) entry whose `url` is a number. Each must surface stderr naming the offending index (`imageSources[0]`) and the offending field. AC-0012-0043 enumerates the malformed-imageSources exit-2 class alongside the license-verify exit-66 class so the AC surface matches the implemented + tested behavior.
+
+## TC-0012-0414
+
+- EX-Ref: EX-0012-0138
+- AC-Refs: AC-0012-0043
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/licenseVerify.test.ts`
+- Verify attribution is required at the runtime license gate. `licenseVerify` emits `{code: "license-missing-attribution", source, url}` when an `imageSources[]` entry's `attribution` field is undefined or an empty string. The new error code maps to exit 66 alongside the existing license-class rejections. `ImageSource.attribution?: string` is optional at the type level so older fixtures continue to compile; the runtime gate enforces non-empty. Two `it` blocks cover: (a) undefined attribution; (b) empty-string attribution.
+
+## TC-0012-0415
+
+- EX-Ref: EX-0012-0145
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the cycle ≥ 1 spec-set drift gate compares the live UI-bearing UNION against the cycle-0 frozen UNION (`frozenSurfaceUnion`) — apples-to-apples — instead of the single-spec `frozenSpecsCovered`. A baseline with two strict-marker UI-bearing specs (spec-0001 + spec-0002) seeded with `frozenSpecsCovered=["0001"]` + `frozenSurfaceUnion=["0001","0002"]` must NOT trip the drift gate at cycle 1; the run proceeds with exit 0 and `frozenSurfaceUnion` is preserved unchanged. Comparing `frozenSet=["0001"]` against `live=["0001","0002"]` directly would false-positive-fire `added=[0002]` → exit 2, making convergence unreachable for any multi-UI-bearing baseline.
+
+## TC-0012-0416
+
+- EX-Ref: EX-0012-0145
+- AC-Refs: AC-0012-0038
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify that a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` emits exit 65 directly rather than via the cycle-mismatch path (where `expectedNextCycle` becomes 10 and is capped at 9). Implementation correctness relies on `shouldStop` (last.index >= MAX_ITERATION_INDEX → "max-iterations") running BEFORE the expectedNextCycle gate; this regression pins both the exit code AND the stderr discriminator (`/max iterations \(10\) reached/` present in info channel; `/expected --cycle 10/` absent from error channel). The expectedNextCycle gate firing first would give exit 2 cycle-mismatch instead. SKILL.md already drops the stateful re-run workaround. AC-Ref is AC-0012-0038: cycle-9 idempotency is a 10-cycle terminator-routing concern, not an autonomous-run / no-prompts concern. Body landed in v1.9.0 (TDD-0436 done).
+
+## TC-0012-0417
+
+- EX-Ref: EX-0012-0146
+- AC-Refs: AC-0012-0041
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/evaluatorReview.test.ts`
+- Verify the `parseEvaluatorReview — new required fields (cycle / retryCount / wallTimeSec)` describe block. Closed-schema validation covers the 4 missing-field rejections (`cycle` / `retryCount` / `wallTimeSec` / `softWarnings`), the integer / range / non-finite / string-type rejections, a boundary regression (`rejects when cycle exceeds MAX_ITERATION_INDEX` — exercises `cycle: 10 / 99 / 100`, closing the closed-schema upper-bound gap that would otherwise let `cycle: 99` pass), and the SSOT-compliant positive case (`accepts a full SSOT-compliant payload with all 11 required fields`).
+
+## TC-0012-0418
+
+- EX-Ref: EX-0012-0147
+- AC-Refs: AC-0012-0046
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the four-`it` cluster on the per-spec UI contract resolver `readPerSpecScreens`: `respects the bare-numeric canonical layout (candidate #2: <bare>.yaml)`, `respects the ui-prefixed canonical layout (candidate #3: ui-<bare>.yaml)`, `respects the recursive subdir layout (candidate #5: <spec-id>/<sub>.yaml)`, and `uses candidate #1 only when both #1 and #3 exist on disk (true first-hit-wins)`. Pairs with the `indexPerSpecScreens` per-spec re-parse fix (`parseUiScreenFile` per-spec winning file) and the multi-file aggregation extension (`chooseWinningFiles`) — those fixes preserve the TC-0012-0418 assertions while closing the cross-spec dedup false-negative and the multi-file null-return waste.
+
+## TC-0012-0419
+
+- EX-Ref: EX-0012-0148
+- AC-Refs: AC-0012-0037, AC-0012-0045, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the zero-UI precheck short-circuit branches. Four `it` blocks: (1) `cycle 0 + zero UI-bearing live + no frozen union still exits 0 (no-op semantic preserved)` — pins that the no-op is cycle-0 only (AC-0012-0037); (2) `cycle ≥ 1 + zero UI-bearing live + non-empty frozenSurfaceUnion exits 2 with 'no longer reachable'` (genuine UI-removed-mid-loop hard-stop — AC-0012-0045 class (d) and AC-0012-0049 mid-run spec-set freeze); (3) `cycle ≥ 1 + zero UI-bearing live + missing prototyping.json exits 2 with 'Seed the loop first'` (fresh-project diagnostic — AC-0012-0045 class (e)); (4) `cycle ≥ 1 + zero UI-bearing live + prototyping.json missing frozenSurfaceUnion exits 2 with 'Seed the loop first'` (legacy record path — AC-0012-0045 class (e)). AC-Refs are `AC-0012-0037` + `AC-0012-0045` + `AC-0012-0049`, not `AC-0012-0044` (autonomous-run / no-prompts is the wrong axis).
+
+## TC-0012-0420
+
+- EX-Ref: EX-0012-0149
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the legacy-record hard-fail — AC-0012-0045 hard-stop class (e). Fixture: `prototyping.json` with `frozenSpecsCovered: ["0001"]` but NO `frozenSurfaceUnion` field. Expectation: `runPrototypingIterate({cycle: 1})` returns 2; stderr names the missing `frozenSurfaceUnion` field and gives a `--cycle 0` re-seed instruction. CRITICAL: the stderr MUST NOT mention `spec-set drift detected` — a silent fallback to `frozenSpecsCovered` is exactly the bug this hard-fail prevents.
+
+## TC-0012-0421
+
+- EX-Ref: EX-0012-0150
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the `frozenLicenseCatalog` drift gate — AC-0012-0045 hard-stop class (f). Three `it` blocks: (a) tampered `allowedSources` (`pinterest` added) → exit 2 + stderr `drifted from the cycle-0 frozen license catalog`; (b) `sourceHosts` removed entirely (malformed shape) → exit 2; (c) order-permuted catalog → set-equality semantic via `licenseCatalogsEqual` / `recordOfStringArraysEqual` / `stringArraysSetEqual` MUST NOT trip the gate (assertion is the negative — `stderr` does NOT match the drift diagnostic). Pins the in-memory `DEFAULT_LICENSE_CATALOG` SSOT contract: byte-different but semantically equal catalogs MUST NOT trip the gate; any semantic difference MUST. AC-Ref is AC-0012-0045 class (f), not AC-0012-0043 (exit-66 license-verify is the wrong axis).
+
+## TC-0012-0422
+
+- EX-Ref: EX-0012-0151
+- AC-Refs: AC-0012-0052
+- Type: integration
+- Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
+- Verify the cumulative semantic changes on the `show-spec` JSON payload — AC-0012-0052 `show-spec` JSON contract. Three `it` blocks: (a) legacy record without `frozenSpecsCovered` (only `specsCovered`) emits `frozenSpecsCoveredSource: "specsCovered"`; (b) record with `frozenSpecsCovered` emits `frozenSpecsCoveredSource: "frozenSpecsCovered"`; (c) `liveUiBearing` is a `string[]` (contract alignment after the resolver swap to `resolveSurfaceUnion`). AC-Ref is the new AC-0012-0052 (`show-spec` JSON contract), not AC-0012-0044 (autonomous-run is the wrong axis).
+
+## TC-0012-0423
+
+- EX-Ref: EX-0012-0152
+- AC-Refs: AC-0012-0037, AC-0012-0049
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify the `hasMatchingUiContract` per-spec subdirectory fallback. Five `it` blocks: (a) `accepts the per-spec subdirectory contract fallback (spec-<id>/<sub>.yaml)` — a resolver without this fallback would return empty / no-op; (b) `recursively accepts a per-spec subdirectory contract nested in a child folder (1 level deep)`; (c) `recursively accepts a per-spec subdirectory contract nested two levels deep` — pins the unbounded-DFS contract so a future single-level scan cannot regress green; (d) `does NOT match a per-spec subdirectory that contains no .yaml files`; (e) `does NOT match a per-spec subdirectory whose only file is *.yml (single-l)` — confirms the policy that the subdir branch accepts arbitrary `*.yaml` basenames but `.yml` (single-l) is excluded for parity with the top-level anchored regex.
+
+## TC-0012-0424
+
+- EX-Ref: EX-0012-0153
+- AC-Refs: AC-0012-0045, AC-0012-0049
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the drift-gate ordering fix. Fixture: multi-UI project where `frozenSurfaceUnion = ["0001", "0002"]` records the cycle-0 set but spec-0002's UI marker was removed mid-loop. The recorded iter is fully converged (4 axes exceptional + empty lap + empty dmv), so running `shouldStop` before the drift gate would return exit 64 instead. The drift gate fires first → exit 2 with `spec-set drift detected mid-loop` + `removed=[0002]`. Pins the ordering contract: lock-drift classes (designMd hash, frozen union presence + spec-set drift) MUST win over convergence / budget signals. Companion `it` block covers hard-stop class (e) — converged loop with `frozenSurfaceUnion` field OMITTED must also exit 2 (`frozenSurfaceUnion is missing or malformed` diagnostic) instead of returning convergence exit 64, closing the branch-coverage gap where only the `drift.drifted` reorder was pinned.
+
+## TC-0012-0425
+
+- EX-Ref: EX-0012-0154
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the certify-side canonical-id validation gate. Fixture: `prototyping.json#frozenSpecsCovered[]` carries a non-canonical id (path-traversal `../../../etc/passwd`, slash-injected `spec-0001/../../escape`, trailing-whitespace (`"0001 "`), leading-whitespace (`" 0001"`), tab-whitespace (`"\t0001"`), non-numeric `spec-abcd`, or wrong-digit-count `spec-001`). `normalizeSpecDirName` prepending `spec-` alone, with the raw string flowing into `path.join(root, "iter-NN", id, "<screen>.review.json")`, would let the per-(spec × screen) gate probe outside the intended `iter-NN/spec-NNNN/` subtree. Certify instead exits 2 with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit) named in stderr — refusing to construct any review path from unvalidated input. Companion happy-path it block verifies that canonical bare `0012` and fully-qualified `spec-0007` ids coexist in the same frozen set without false rejection.
+
+## TC-0012-0426
+
+- EX-Ref: EX-0012-0155
+- AC-Refs: AC-0012-0045
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the certify-side absent-vs-malformed `frozenSpecsCovered` discrimination. Collapsing "missing" and "present-but-malformed" into a single null branch via `readFrozenSpecsCoveredMultiSpec(...) ?? readFrozenSpecsCovered(...)` would, on a partially-corrupt record, silently fall back to legacy `specsCovered` — downgrading the per-(spec × screen) gate AND cert-sealing scope to the primary spec only. A SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` instead returns `{kind: "absent" / "malformed" / "ok"}`; certify exits 2 on `malformed`. Explicit `null` / `undefined` on a present key are classified as `malformed`, not `absent` — falling back for those would re-open the same evidence gap. Six parametrized `it` blocks (non-array object / non-array string / empty array / non-string entry / empty-string entry / explicit null) + absent-fallback companion. Companion unit suite covers the classifier with 9 `it` blocks.
+
+## TC-0012-0427
+
+- EX-Ref: EX-0012-0156
+- AC-Refs: AC-0012-0047
+- Type: integration
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the per-spec screens partial-set bug fix. AC-Ref is AC-0012-0047 (certify per-spec presence aggregation), not AC-0012-0046 (per-spec iter-dir namespacing) — the regression pins `readPerSpecScreens()` enumeration semantics on the certify side, not the iter-dir layout regulation that AC-0012-0046 owns. Fixture: multi-file subdir layout where two specs declare the SAME `screenId` (each subdir's own `home.yaml` declaring `home`) plus a unique screen on the second spec (its own `settings.yaml` declaring `settings`). A per-spec map pre-built from project-wide `screenContracts.sourceRef` with cross-spec dedup would keep only ONE sourceRef path for the shared `home`, so the indexed re-parse would miss the other spec's `home.yaml` — the gate would pass without requiring that spec's `home.review.json`. Certify instead calls `readPerSpecScreens()` unconditionally; the helper's authoritative `fg()` discovery returns both files for the second spec, so omitting the shared-screenId review.json is correctly rejected.
+
+## TC-0012-0428
+
+- EX-Ref: EX-0012-0157
+- AC-Refs: AC-0012-0052
+- Type: integration
+- Test file: `packages/qfai/tests/cli/prototypingCertify.test.ts`
+- Verify the show-spec absent-vs-malformed fix. AC-Ref is AC-0012-0052 (show-spec JSON contract), not AC-0012-0045 — AC-0012-0052 carries a sub-clause mirroring AC-0012-0045 class (h) onto the show-spec surface so the absent-vs-malformed contract holds across all three CLI surfaces. `runPrototypingShowSpec` using `readStringArrayField(...) ?? readStringArrayField(specsCovered)` would collapse "absent" and "present-but-invalid" into one null fallback that lets a hand-edited multi-spec record silently downgrade to legacy `specsCovered`. show-spec instead consumes the SSOT classifier and exits 2 with a "present but malformed" diagnostic. Fixture: `specsCovered: ["0012"]` + `frozenSpecsCovered: null`. Assertion: show-spec exits 2 and does NOT fall back.
+
+## TC-0012-0429
+
+- EX-Ref: EX-0012-0158
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Verify the `specDirExists` absolute-path fix. Building the probe path with `path.join(root, specsDir, dirName)` would silently concatenate an absolute `specsDir` onto root rather than resolving to the absolute path directly. For consumer projects whose `qfai.config.yaml` carries an absolute `paths.specsDir` override and a `prototyping.primarySpecId` pin, that would miss the on-disk spec dir entirely — `resolveSurfaceUnion()` would then drop the pin and `prototyping iterate --cycle 0` would hit the zero-UI short-circuit (exit 0) instead of running the loop. `path.resolve()` correctly resets to the latter absolute segment when one is supplied, so the probe finds the spec dir regardless of whether `specsDir` is relative or absolute. Fixture uses `mkdtemp(os.tmpdir())` for the absolute `specsDir`, so the CI matrix exercises POSIX (`/abs/...`) on Linux / macOS lanes and Windows drive-letter (`C:\...`) on the Windows lane — `path.resolve` is platform-aware and treats either as absolute. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+
+## TC-0012-0430
+
+- EX-Ref: EX-0012-0159
+- AC-Refs: AC-0012-0047
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the `readPerSpecScreens` absolute-path fix. Building the per-spec UI contract probe path with `path.join(root, contractsDirRelative, "ui")` would, when `qfai.config.yaml` carries an absolute `paths.contractsDir` override, concatenate root + absolute rather than resetting, so per-spec contract files at `<absoluteContractsDir>/ui/spec-NNNN.yaml` would never be discovered — the helper would return `null` and certify's per-(spec × screen) gate would silently fall back to the project-wide screen list, enforcing the wrong `(spec, screen)` coverage. `path.resolve()` resets to the absolute segment when one is supplied, mirroring the same `specDirExists` fix. Fixture: writes the per-spec contract at an absolute `contractsDir` pointing OUTSIDE `root`; assertion is that `readPerSpecScreens()` returns the declared `home` screen rather than `null`. Cross-platform coverage same as TC-0012-0429 (POSIX / drive-letter via OS-native tmp dir). AC anchor: AC-0012-0047 (certify per-spec presence aggregation).
+
+## TC-0012-0431
+
+- EX-Ref: EX-0012-0160
+- AC-Refs: AC-0012-0047
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/cli/commands/prototypingCertify.test.ts`
+- Verify the partner-helper symmetry regression for `readUiContractScreenContracts`. The `path.join` → `path.resolve` switch in `readUiContractScreenContracts`, made for partner-helper consistency with the `readPerSpecScreens` fix, needs a regression test: without one, the two helpers' absolute-path symmetry stays structurally unpinned — a future `path.join` regression in the project-wide reader would silently break certify on explicit-contracts-dir workflows (project-wide pass returns empty while per-spec pass returns full set → asymmetric screen discovery between the two passes). Fixture: project-wide UI contract file `screens.yaml` written at an absolute `contractsDir` pointing OUTSIDE `root`, with two screens (`home`, `settings`). Assertion: `readUiContractScreenContracts(root, externalContractsDir)` returns both screens (sorted-equal). AC anchor: AC-0012-0047 (certify per-spec presence aggregation — same anchor as TC-0012-0430 to pin the partner-helper symmetry).
+
+## TC-0012-0432
+
+- EX-Ref: EX-0012-0161
+- AC-Refs: AC-0012-0037
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/core/prototyping/specResolution.test.ts`
+- Verify the `hasMatchingUiContract` file-vs-directory discrimination fix. A direct-match arm using `access(<uiDir>/<specId>.yaml)` to confirm existence would not distinguish file from directory. A misauthored project that created `<contractsDir>/ui/0007.yaml/` (a DIRECTORY) would then falsely classify spec-0007 as UI-bearing, driving `resolveSurfaceUnion()` / `resolvePrimaryPrototypingSpec()` to report a phantom UI surface and the iterate / drift gates to run against it instead of taking the documented no-op path. The direct-match arm instead uses `stat().isFile()`, consistent with the entries-walk branch's `entry.isFile()` filter for the spec-prefixed / ui-prefixed candidates. Fixture: UI-only spec (no surface marker, no title marker, no primarySpecId pin) + a directory named `0007.yaml` at the canonical UI-contract path. Assertion: `resolveAllUiBearingSpecs()` returns `[]`. AC anchor: AC-0012-0037 (cycle-0 zero-UI precheck input candidates).
+
+## v1.9.1 Defect Remediation Test Cases (CHG-005)
+
+## TC-0012-0433
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdViolations.tailwindAllowlist.test.ts`
+- Verify OQ-0103 = β + γ remedy: a fixture HTML loading Tailwind CDN preflight plus `--tw-*` properties and alpha-modifier `rgba()` literals produces `designMdViolations[]` length 0 after `findDesignMdViolations(html, designMd)` runs with body-scope. Async fixture-loading path uses `await fs.readFile(...).catch(throw)` to propagate read errors explicitly. Pinned to AC-0012-0053; preflight-allowlist + body-scope are the SSOT pair.
+
+## TC-0012-0434
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/tailwindContractConvergence.test.ts`
+- Verify NFR-0102: with the v1.9.1 generator-prompt + scanner pair, the canonical fixture pack converges within 3 cycles on the p95 lane. Asserts `iterations.length ≤ 3 AND stopReason === "converged"`. Integration-level because it spans iterate + scanner + generator-prompt SSOT pair.
+
+## TC-0012-0435
+
+- EX-Ref: EX-0012-0163
+- AC-Refs: AC-0012-0054
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/unwrapVar.test.ts`
+- Verify REQ-0012-0056 / BR-0012-0042: parametrised across `scanFonts` / `scanRadius` / `scanShadow`, asserts each scanner calls `unwrapVarReference(declarationValue, rootDeclarations)` and yields the resolved value before SAFE_LITERALS judgment. Fixture matches source-pack §5 canonical `:root` block. Floors towards NFR-0110 (≥ 30 scanner unit tests).
+
+## TC-0012-0436
+
+- EX-Ref: EX-0012-0164
+- AC-Refs: AC-0012-0055
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/safeLiterals.test.ts`
+- Verify REQ-0012-0057: `it.each` matrix across `5 keywords × 4 scanners = 20 cells`, asserts every cell produces `designMdViolations[] === []`. Failures emit `expected scanner=<name> keyword=<keyword> to pass; got violation=<entry>`.
+
+## TC-0012-0437
+
+- EX-Ref: EX-0012-0165
+- AC-Refs: AC-0012-0056
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/shadowDeclStrip.test.ts`
+- Verify OQ-0104 Option B: `SHADOW_DECL_STRIP_RE` matches `--shadow-sm:`, `--card-shadow:`, `--btn-shadow-hover:`, `--ring-shadow-1:` (each carrying `rgba()` literals) and strips them before `scanColors` sees them. 6 `it` blocks cover `--*-shadow*:` × {`rgba` / `rgb`}. Asserts zero color violations naming the stripped values.
+
+## TC-0012-0438
+
+- EX-Ref: EX-0012-0166
+- AC-Refs: AC-0012-0057
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.cjk.test.ts`
+- Verify the unit selection and the cap: a Japanese-only fixture (1200 chars, no whitespace) passes, an English fixture (350 words) passes, and an over-cap Japanese critique (3000 chars) is rejected with error text naming the count form ("characters"), the cap ("2500") and the actual count (3000). An over-cap English critique is measured in words, not characters, which is what selecting the unit rather than accepting either one buys.
+
+## TC-0012-0439
+
+- EX-Ref: EX-0012-0167
+- AC-Refs: AC-0012-0058
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.browserTool.test.ts`
+- Verify REQ-0012-0060: 2 `it` blocks — `browserTool: "playwright"` accepted with no warning; `browserTool: "playwright-cli"` accepted with `D-DEPRECATED-PROBE` warning emitted to stderr. Integration because it spans CLI arg parsing + config loader + doctor probe.
+
+## TC-0012-0440
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.capture.test.ts`
+- Verify REQ-0012-0061 / BR-0012-0047: 3 `it` blocks — (a) default invocation writes zero `.png` / `.html` (DR-0012-0029 preserved; `DR-0012-0031` amendment pinned), (b) `--capture` writes per `iterate-plan.json#screens[]`, (c) `htmlSourceCopy: true` produces byte-equivalent .html to `.qfai/prototypes/iter-NN/<screen-id>.html`. Async capture errors caught with `try/catch` and re-thrown with per-screen context.
+
+## TC-0012-0441
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.capture.budget.test.ts`
+- Verify NFR-0107: `--capture` per-screen budget 30s emits soft warning when exceeded; does NOT hard-fail the run. Uses a deliberately-slow Playwright fixture (4s delay) AND a fixture that exceeds the cap (forces 32s via fake timer).
+
+## TC-0012-0442
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.test.ts`
+- Verify REQ-0012-0062 + NFR-0106: 4 `it` blocks verify the runner contract with an injected runner — (a) without `--auto-serve`, iterate calls no runner (DR-0012-0029 preserved), (b) with `--auto-serve`, iterate calls the runner once and invokes the teardown it returns at cycle end, (c) a runner that reports a recovered prior owner lets the cycle complete, (d) a runner that refuses makes iterate exit 2 with the runner's reason on stderr.
+
+## TC-0012-0443
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.validateConformant.test.ts`
+- Verify REQ-0012-0063: a converged iterate run writes `prototyping.json` and the test pipes the file directly to `qfai validate --profile prototyping --fail-on error` (subprocess), asserting exit 0 WITHOUT any orchestrator post-processing. Fixture asserts `commitSha === "uncommitted"` sentinel acceptance on a HEAD-less clone.
+
+## TC-0012-0444
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/iteration.evidenceRefs.test.ts`
+- Verify REQ-0012-0063 evidenceRefs shape: every `iterations[i].evidenceRefs[]` entry matches `{ kind: "screenshot" | "html", path: "iter-NN/<screen-id>.<ext>" }` and the set is a bijection with `screens[].id`.
+
+## TC-0012-0445
+
+- EX-Ref: EX-0012-0171
+- AC-Refs: AC-0012-0062
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.scopePrototyping.test.ts`
+- Verify OQ-0107 Option B: 3 `it` blocks — (a) `verify.json#scope: "prototyping"` satisfies certify with no ATDD/implement artifacts present, (b) `scope: "full"` rejected when those artifacts are missing, (c) `completion-certificate.json#scope === "prototyping"` after certify exit 0. Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR` regression check exercised in a separate test (TC-0012-0446).
+
+## TC-0012-0446
+
+- EX-Ref: EX-0012-0171
+- AC-Refs: AC-0012-0062
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/reviewerGate.certifyVerifyCircular.test.ts`
+- Verify REQ-0012-0064 Reviewer-Gate `R-CERTIFY-VERIFY-CIRCULAR`: structural assertion that (a) certify reads no validator output whose profile requires `/qfai-atdd` or `/qfai-implement` artifacts OR (b) the scoped-verify path is used. Finding severity = error on violation.
+
+## TC-0012-0447
+
+- EX-Ref: EX-0012-0172
+- AC-Refs: AC-0012-0063
+- Type: integration
+- Test file: `packages/qfai/tests/integration/skills/qfaiPrototyping.singleSpecSurface.test.ts`
+- Verify OQ-0108 Option A: `grep -rn "resolveSurfaceUnion" assets/init/.qfai/assistant/skills/qfai-prototyping/` returns zero hits in SKILL.md / references/ at HEAD; the helper remains as `core/prototyping/specResolution.ts` internal export. Documentation lint also asserts zero remaining multi-spec public-surface mentions.
+
+## TC-0012-0448
+
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0064
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.aggregateMirror.test.ts`
+- Verify OQ-0110 Option A: converged iter with `screens[].id = ["home_page", "settings_panel"]` mirrors to `.qfai/evidence/prototyping/screenshots/<id>.png` and `html/<id>.html`. Hyphen-form variant fixture (`home-page`) rejected by validator with explicit naming error.
+
+## TC-0012-0449
+
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0065
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0Force.test.ts`
+- Verify REQ-0012-0067 + NFR-0114: 3 `it` blocks — (a) without `--force` and non-empty `iter-00/`, iterate refuses with recovery snippet text, (b) with `--force`, `iter-00/` → `iter-00.backup-<ISO>/` move happens BEFORE `clearEvidenceIterDirs`, (c) backup byte-equivalence verified (sha256 over file set matches pre-move set). Async I/O errors propagated.
+
+## TC-0012-0450
+
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0066
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.test.ts`
+- Verify REQ-0012-0068 + NFR-0103: stdout contains the literal `[BLOCKED] exit-64 prevented by:` line with the top-3 category counts and first-offender details. Snapshot tests pin the stable category identifier set (additive-only invariant).
+
+## TC-0012-0451
+
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0067
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.primarySpecIdError.test.ts`
+- Verify REQ-0012-0069 base error: input `"abc"` produces literal `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received abc`. Six `it.each` rows cover empty / whitespace / negative / float / hex / SQL-injection inputs.
+
+## TC-0012-0452
+
+- EX-Ref: EX-0012-0176
+- AC-Refs: AC-0012-0067
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.primarySpecIdNormalise.test.ts`
+- Verify OQ-0112 SHOULD normalisation: `1` / `"1"` / `"01"` / `"0001"` normalise to `spec-0001`; `10000` rejected (exceeds 9999); `0` rejected (positive-integer requirement). 7 `it.each` rows.
+
+## TC-0012-0453
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.lap009.test.ts`
+- Verify REQ-0012-0070 lap-009 + NFR-0113: 3 `it` blocks — (a) ≥ 2 distinct `screens[].id` with matching md5 surface `lap-009`, (b) override without Reviewer `justification:` rejected by validator, (c) determinism — re-running on the same screen set produces the identical finding set.
+
+## TC-0012-0454
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.lap010.test.ts`
+- Verify REQ-0012-0070 lap-010 missing-route: 3 `it` blocks — (a) SPA missing hashchange / path-based route for declared `screens[].id` surfaces `lap-010`, (b) `targetUrl#/<route>` form accepted, (c) `targetUrl/<route>` form accepted; missing override justification rejected.
+
+## TC-0012-0455
+
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0069
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.licensePatch.test.ts`
+- Verify REQ-0012-0071 SHOULD: 4 `it` blocks — (a) add-only patch applied successfully, (b) `licensePatchAudit[]` row written with `{appliedAt, patchSha256, addedSources[]}`, (c) deletion attempt rejected with cycle-0-restart hint, (d) modification attempt rejected. Async patch I/O errors surface explicit `ENOENT` text.
+
+## TC-0012-0456
+
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0070
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.iterContextHint.test.ts`
+- Verify REQ-0012-0072 SHOULD: `iter-03/iterate-context.json` written with `{priorCycle, priorScores, openBlockers, priorTailwindContract}`. Companion test asserts certify ignores presence/absence (advisory-only).
+
+## TC-0012-0457
+
+- EX-Ref: EX-0012-0180
+- AC-Refs: AC-0012-0071
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.cycleOutOfRange.test.ts`
+- Verify REQ-0012-0073 SHOULD: 4 `it.each` rows cover `--cycle 10` / `--cycle -1` / `--cycle 100` / `--cycle abc`; each produces the literal `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` (with the actual value substituted) AND recommends `--cycle 9 --check-convergence`.
+
+## TC-0012-0458
+
+- EX-Ref: EX-0012-0162
+- AC-Refs: AC-0012-0053
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/reviewerGate.promptScannerDrift.test.ts`
+- Verify REQ-0012-0055 SSOT-sync invariant: structural assertion that any modification to `findDesignMdViolations.ts` MUST be accompanied by a matching modification to `generator-prompt.md` (Reviewer-Gate `R-PROMPT-SCANNER-DRIFT` severity: error on violation, with mandatory `justification:` text per source pack REQ-0125).
+
+## TC-0012-0459
+
+- EX-Ref: EX-0012-0163
+- AC-Refs: AC-0012-0054
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/scanners/coverage.test.ts`
+- Verify NFR-0110 floor: scanner module statement-coverage ≥ 90% asserted via `c8`-reported summary; unit-test count across the scanner suite ≥ 30 (read from `vitest` collected-tests output).
+
+## TC-0012-0460
+
+- EX-Ref: EX-0012-0166
+- AC-Refs: AC-0012-0057
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/proseCritique/countWords.boundary.test.ts`
+- Verify REQ-0012-0059 boundary: 4 `it.each` rows cover `199 words` (pass), `200 words` (pass), `500 words` (pass), `501 words` (fail) for the word-measured path AND `599 chars` (pass), `600 chars` (pass), `2500 chars` (pass), `2501 chars` (fail) for the character-measured path. Only the upper edge of each unit rejects; the rows below the old floor pass, and so do a one-sentence critique and an empty string.
+
+## TC-0012-0461
+
+- EX-Ref: EX-0012-0168
+- AC-Refs: AC-0012-0059
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.captureHtmlSource.test.ts`
+- Verify REQ-0012-0061 htmlSourceCopy: when `htmlSourceCopy: true`, the written `iter-NN/<id>.html` is byte-equivalent (sha256-match) to `.qfai/prototypes/iter-NN/<id>.html` and contains zero runtime-injected style blocks (`<style>` count in source vs output equal).
+
+## TC-0012-0462
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServe.sigint.test.ts`
+- Verify REQ-0012-0062 SIGINT path: iterate installs its SIGINT handler after the runner returns and removes it at the end of the cycle; the teardown runs and the handler is removed even when the cycle fails; and a SIGINT during the cycle invokes the runner's teardown once, within the NFR-0106 bound.
+
+## TC-0012-0463
+
+- EX-Ref: EX-0012-0170
+- AC-Refs: AC-0012-0061
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.stopReason.test.ts`
+- Verify REQ-0012-0063 stopReason coverage: 4 `it` blocks exercise each `stopReason` value (`converged` / `max-iterations` / `license-verify-fail` / `input-error`); each fixture writes the corresponding top-level field and passes `qfai validate --profile prototyping`.
+
+## TC-0012-0464
+
+- EX-Ref: EX-0012-0173
+- AC-Refs: AC-0012-0064
+- Type: integration
+- Test file: `packages/qfai/tests/integration/validators/prototypingEvidence.screenIdCasing.test.ts`
+- Verify OQ-0110 Option A end-to-end: validator rejects hyphen-form `screens[].id` ("home-page"), accepts underscore-form ("home_page"). 2 `it.each` rows.
+
+## TC-0012-0465
+
+- EX-Ref: EX-0012-0174
+- AC-Refs: AC-0012-0065
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0BackupOrdering.test.ts`
+- Verify REQ-0012-0067 ordering: fixture uses `vi.spyOn(fs, "rename")` and `vi.spyOn(clearEvidenceIterDirs)` to assert the `rename(iter-00, iter-00.backup-<ISO>)` call resolves BEFORE the first `clearEvidenceIterDirs` call; failure path (move error) aborts the run without clearing.
+
+## TC-0012-0466
+
+- EX-Ref: EX-0012-0175
+- AC-Refs: AC-0012-0066
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.blockedSummary.categories.test.ts`
+- Verify NFR-0103 category-name stability: snapshot test pins the exact identifier set `["designMdViolations", "layoutAntiPatternsDetected", "blockingFindings"]`; additive-only invariant enforced via the snapshot mismatch on accidental rename.
+
+## TC-0012-0467
+
+- EX-Ref: EX-0012-0177
+- AC-Refs: AC-0012-0068
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/captureMd5.test.ts`
+- Verify NFR-0113 md5 determinism: pure-fn unit covering md5 computation over a fixed PNG byte buffer asserts identical output across 100 invocations. Independent of integration TC-0012-0453.
+
+## TC-0012-0468
+
+- EX-Ref: EX-0012-0178
+- AC-Refs: AC-0012-0069
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/licensePatchAudit.test.ts`
+- Verify REQ-0012-0071 audit-row shape: pure-fn test on the patch-applier asserts the returned audit row carries exactly `{appliedAt, patchSha256, addedSources[]}` (no other fields) and `patchSha256` is the sha256 of the patch file bytes.
+
+## TC-0012-0469
+
+- EX-Ref: EX-0012-0179
+- AC-Refs: AC-0012-0070
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/iterateContextJson.test.ts`
+- Verify REQ-0012-0072 SHOULD schema: pure-fn test on the context-writer asserts the JSON shape `{priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..."}` and that no other top-level keys leak in.
+
+## TC-0012-0470
+
+- EX-Ref: EX-0012-0180
+- AC-Refs: AC-0012-0071
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.cycleOutOfRange.peekMode.test.ts`
+- Verify REQ-0012-0073 SHOULD peek-mode recommendation: the rejection error text MUST end with the recommendation line `Hint: use --cycle 9 --check-convergence to peek the final cycle without re-running the loop.` Snapshot-pinned to prevent accidental wording drift.
+
+## TC-0012-0471
+
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0072, AC-0012-0073
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/emitSkeletonsCoverage.test.ts`
+- Verify REQ-0150 normal path: `iterate --cycle 0 --emit-skeletons` over a multi-spec `frozenSurfaceUnion` writes one DESIGN.md-token-styled placeholder HTML per `screens[].id` with no per-screen LLM generation call (DR-0261), and after convergence every union screen carries both `{kind:"screenshot"}` and `{kind:"html"}` in `evidenceRefs[]` cross-spec.
+
+## TC-0012-0472
+
+- EX-Ref: EX-0012-0181
+- AC-Refs: AC-0012-0073
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/emitSkeletonsCoverage.test.ts`
+- Verify REQ-0150 boundary: `iterate --cycle 0` WITHOUT `--emit-skeletons` emits zero skeleton files and matches v1.9.1 behavior (no regression); `--skeleton-mode full` (DR-0273) escalates to per-screen generation while default `placeholder` does not.
+
+## TC-0012-0473
+
+- EX-Ref: EX-0012-0182
+- AC-Refs: AC-0012-0074
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdPatchZone.test.ts`
+- Verify REQ-0151 normal path: an edit fully contained in the front-matter `patch_zone:` block updates only `patchHash`; `majorHash` is byte-stable and prototyping evidence stays valid (DR-0262).
+
+## TC-0012-0474
+
+- EX-Ref: EX-0012-0182
+- AC-Refs: AC-0012-0075
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/prototyping/designMdPatchZone.test.ts`
+- Verify REQ-0151 error path: an out-of-zone edit (or removal of the `patch_zone:` block) invalidates evidence and emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+
+## TC-0012-0475
+
+- EX-Ref: EX-0012-0183
+- AC-Refs: AC-0012-0076
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.modeDiscriminator.test.ts`
+- Verify REQ-0152 normal path: `--mode exploration` overrides `qfai.config.yaml#prototyping.mode: convergence`; absence of both defaults to `convergence`; `prototyping.json#mode` records the per-iteration mode; under exploration `QFAI-CRIT-008` + design-compliance error downgrade to warning while schema / path / license (exit 66) gates stay hard error (DR-0263 medium).
+
+## TC-0012-0476
+
+- EX-Ref: EX-0012-0183
+- AC-Refs: AC-0012-0077
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingCertify.explorationReject.test.ts`
+- Verify REQ-0152 error path: `certify` against a loop containing an exploration-mode iteration rejects with `R-EXPLORATION-CERTIFY-ATTEMPT`; `acceptedIterationIndex` resolves only to a convergence-mode iteration.
+
+## TC-0012-0477
+
+- EX-Ref: EX-0012-0184
+- AC-Refs: AC-0012-0078
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/validators/taskFidelityKeywords.test.ts`
+- Verify REQ-0162 normal path: `QFAI-CRIT-009` error text names every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the implementation) and the expected document section; `references/evidence-requirements.md` enumerates the same keywords.
+
+## TC-0012-0478
+
+- EX-Ref: EX-0012-0184
+- AC-Refs: AC-0012-0079
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/cli/commands/prototypingIterate.captureTemplate.test.ts`
+- Verify REQ-0162 template emission: `iterate --capture` emits an evidence template skeleton whose placeholders include every required `taskFidelity` keyword.
+
+## TC-0012-0479
+
+- EX-Ref: EX-0012-0185
+- AC-Refs: AC-0012-0080
+- Type: integration
+- Test file: `packages/qfai/tests/integration/prototyping/mutationLog.test.ts`
+- Verify REQ-0165 normal path: a destructive mutation under `iter-NN/*` (including each file moved by `--cycle 0 --force`) appends a `.qfai/evidence/prototyping/mutation-log.jsonl` line shaped `{ts,caller,path,action,priorSize,newSize}`; the log is git-ignored.
+
+## TC-0012-0480
+
+- EX-Ref: EX-0012-0185
+- AC-Refs: AC-0012-0081
+- Type: unit
+- Level: L1
+- Test file: `packages/qfai/tests/unit/core/validators/evidenceMutationUnlogged.test.ts`
+- Verify REQ-0165 error path: a code path mutating iter-NN evidence without a mutation-log call surfaces `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+
+## TC-0012-0481
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cycle0Force.test.ts`
+- Verify REQ-0174: a cycle-0 run with and without `--force` moves `screenshots/` and `html/` into `aggregate.backup-<ISO>/` before clearing, logs each moved file, and puts them back when a later step fails.
+
+## TC-0012-0482
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/core/prototyping/certificate.test.ts`
+- Verify REQ-0174: the completion certificate's digest tree leaves a cycle-0 reset's backups out, so removing one after the certificate is written does not read as this loop's evidence changing.
+
+## TC-0012-0483
+
+- EX-Ref: EX-0012-0186
+- AC-Refs: AC-0012-0082
+- Type: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingCertify.validateFreshness.test.ts`
+- Verify REQ-0174: the freshness scan skips a cycle-0 reset's backups, so a file inside one that is newer than the run still seals.
+
+## TC-0012-0489
+
+- EX-Ref: EX-0012-0169
+- AC-Refs: AC-0012-0060
+- Type: integration
+- Level: integration
+- Test file: `packages/qfai/tests/integration/cli/commands/prototypingIterate.cliAutoServe.test.ts`
+- Verify REQ-0012-0076: with no runner injected and the target port held by another process, the default runner refuses the port. The listener holding the port is still listening afterwards, no other port is bound, and iterate exits 2 with a reason on stderr naming the held port.
+
+## Legacy Coverage Continuity
+
+- The legacy baseline test-case identifier space remains reserved for existing implementation/test slices.
+- The legacy v1.x test cases (executionPlan / Lighthouse / designSystemCompliance / calibration overrides / fullHarness / scoringTrace / iterationBudget / perfect-100 / hard-floor) were purged 2026-05-06 in the v2.0 / UX-loop adoption (see `09_delta.md` CHG-001 OP-PURGE-040..042); their pre-v2.0 narratives are no longer part of the active spec surface.
+- Pre-v1.8.1 weighted-total narratives are superseded by the current v2.0 / UX-loop execution model.

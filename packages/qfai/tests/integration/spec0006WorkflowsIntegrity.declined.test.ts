@@ -51,8 +51,8 @@
  * The round-by-round derivation — RED output, the production change, mutations as
  * needle text — is in `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:SPEC-0006:TC-0006-0034
-// QFAI:SPEC-0006:TC-0006-0035
+// QFAI:EX-0003-0011-07
+// QFAI:EX-0003-0011-08
 
 import { describe, expect, it } from "vitest";
 

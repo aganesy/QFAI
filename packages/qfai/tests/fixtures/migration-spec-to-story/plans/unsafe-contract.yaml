@@ -1,0 +1,7 @@
+flows:
+  - title: Place an order
+    stories:
+      - id: US-0001-0001
+rules:
+  - id: BR-0001-0001
+    contract: ../outside.yaml

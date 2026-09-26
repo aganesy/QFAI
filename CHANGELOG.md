@@ -4,21 +4,230 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-### Removed
+### Added
 
-- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
-  dedicated test suites. CI and release checks now run seven test slices. An
-  older tag with the retired slices uses the whole-suite release gate.
+- **A change can be asked for in your own words.** The new `qfai-run` skill
+  takes a request stated in free text, proposes a route, and runs each stage of
+  it through the skill that owns the stage. The operator types no stage name.
+  The run stops only for a decision the agent cannot take: whether to create a
+  new story, whether to approve a change to the story tree, whether to accept
+  a material risk such as data loss, a broken public contract or a production
+  effect, or a fact only the operator holds.
+
+  - `npx qfai workflow` is the run control the skill calls. It has seven
+    operations — `start`, `next`, `accept`, `decision`, `status`, `resume` and
+    `finish` — and each prints one JSON document. It starts no agent and runs
+    no repository command.
+  - A run follows one of five built-in plans — `direct`, `bugfix`,
+    `bounded-change`, `feature` and `discovery` — and binds at most one
+    business flow. The plans ship in the package and are not installed into
+    the project.
+  - A result that writes outside the checked scope, rewrites a row of
+    `decisions.md` or `open-questions.md`, drops the test of an annotated
+    example, or claims an approval the operator did not give is refused.
+  - A story-tree change is made only by the stage attempt that holds the
+    operator's answer. It appends the `Change request:` row citing that
+    answer as `<runId>/<authorizationId>`, and the row stands at DONE once
+    every change it names is written.
+  - Only `finish` reports a run complete. It runs `validate` itself, reads
+    only this run's `verify.json`, and needs an independent `qa-gatekeeper`
+    pass. A run whose operator said not to commit completes as a verified
+    working tree, never as done.
+  - Asking to resume or continue picks up the worktree's one open run where
+    it stopped, and asking to cancel stops it.
+  - `workflow.mode` in `qfai.config.yaml` is `active` (the default), `shadow`,
+    which proposes the route and writes nothing, or `off`. Any other value is
+    a configuration error.
+  - Runtime state lives under the git-ignored `.qfai/run/`. A run's summary
+    and the answers it recorded are tracked under
+    `.qfai/evidence/workflow/<runId>/`, with the request text kept only as a
+    keyed digest.
+  - `qfai-maintain` fixes a typo or other non-normative text inside a run, and
+    stops before an edit that would change behaviour.
+  - A run starts only on a host whose capability report covers what a run
+    needs. No host is declared supported in this release; that needs a
+    recorded evaluation of the host.
+  - `qfai init` opens `AGENTS.md` and `CLAUDE.md` with a line that sends a
+    first free-text change request to `qfai-run`, and adds it to an existing
+    file that lacks it. Its summary names the workflow mode in force.
+
+- **Story-tree checks.** `qfai validate` reads the story tree through two new
+  rule families.
+
+  - `QFAI-LAYOUT-001` (`error`) stops validation when the configured spec
+    directory, or `.qfai/specs/`, still holds a `spec-*` pack or `_policies/`.
+    Its fix names the `/qfai-migration-spec-to-story` skill.
+  - `QFAI-STORY-001` to `-005` and `-011` check the tree itself: the required
+    policy and contract files exist; IDs are well formed, unique, listed in
+    their index and agree with their directories; the decisions and
+    open-questions tables hold valid rows; each story has acceptance criteria
+    and examples with valid references; every business-rule and contract
+    reference resolves; and every business-flow file holds a Mermaid flowchart
+    or sequence diagram.
+  - `QFAI-STORY-006` to `-009` check test annotations. Business flows and
+    acceptance criteria need an annotated test in the `atdd` profile, and
+    examples in the `tdd` profile. Each annotation sits in its layer, names a
+    declared ID, and a test exception cites a declared ID and a decision row
+    in force.
+  - `QFAI-STORY-010`, run by the drift guard, refuses a change to a protected
+    story-tree file that no change request in force authorizes, and an edit
+    to an existing decision row.
+
+- **The `qfai-migration-spec-to-story` skill and a migration guide.**
+  `qfai init` installs the skill. Its ten scripts move a 1.x project to the
+  story tree, each with a `--dry-run` mode and a report. The scripts load the
+  `qfai` package, so install it as a project dependency first
+  (`npm install --save-dev qfai`); a download through `npx` is not enough.
+  The package ships the guide as `docs/MIGRATION-2.0.0.md`. There is no
+  `qfai migrate` command. On a project that still has the spec-pack layout,
+  `qfai init` installs the skill and does not seed a story tree beside the old
+  one.
+
+- **Project overrides for agent routing and review profiles.** The defaults
+  ship inside the package, in `assets/defaults/agent-routing.yml` and
+  `assets/defaults/review-profiles.yml`. A `routing:` or `reviewProfiles:`
+  entry in `qfai.config.yaml` replaces the default entry of the same name as a
+  whole, and a new name adds one. Migration step 3 turns the entries a project
+  had edited in `.qfai/assistant/manifest/` into these overrides.
+
+- **`qfai atdd scaffold --flow <BF-ID>`** writes an end-to-end test skeleton
+  for a business flow. `--story <US-ID>` writes one skeleton per acceptance
+  criterion of a story.
+
+- **`/qfai-sdd` checks its business rules against its examples.** After it
+  writes the rules, an agent that did not write them reads the rules and the
+  examples they cite. It raises findings on the flows, stories, criteria and
+  examples: a case a rule implies that no example states, a redundant example,
+  an example no rule explains, a rule its examples do not support, and a flow,
+  story or criterion split the rules show to be wrong.
+
+  - Each finding is adopted or rejected. A finding that rests on product intent
+    nothing written states goes to the user.
+  - Adopted findings are applied, and the affected rules are rewritten from
+    the updated examples. At most two cycles run.
+  - A rejected finding is recorded in `decisions.md` and is not raised again.
+  - The flow's SDD evidence records each cycle, and the completion reviewer
+    checks that record.
 
 ### Changed
 
-- **The thinking article states what a stage records, not how to reason**
-  (#2236). Its five-step working method is replaced by four things the stage
-  records: the evidence it read, the decision and its grounds, the residual
-  risk, and the rollback path. Restating the goal and enumerating unknowns
-  are dropped: current models reason before every reply and choose the depth
-  themselves, so walking them through those steps adds tokens and nothing
-  else. The principles and the stop-and-ask list are unchanged.
+- **Breaking: specs move to the story tree.** A project's specifications live
+  under `.qfai/spec/`: policy in `01_policy/`, business flows with their
+  stories, acceptance criteria and examples in `02_business-flow/`, contracts
+  and the business rules they enforce in `03_contract/`, and one
+  `decisions.md` and one `open-questions.md` at the root. `qfai init` seeds
+  that tree. A project on the former `.qfai/specs/spec-*` layout must run the
+  bundled `qfai-migration-spec-to-story` skill before adopting this release,
+  or stay on QFAI 1.x until migration is complete.
+
+  Migration step 1 moves these directories:
+
+  - `.qfai/specs/` to `.qfai/spec/`;
+  - `.qfai/contracts/` to `.qfai/spec/03_contract/`;
+  - `.qfai/assistant/skills/`, `agents/` and `prompts/` to `skill/`, `agent/`
+    and `prompt/`, and `skills.local/` to `skill.local/`;
+  - `.qfai/prototypes/` to `.qfai/prototype/`;
+  - `.qfai/evidence/decisions/`, which `qfai audit log` reads, to
+    `.qfai/evidence/decision/`;
+  - `.qfai/report/specs-coverage/` to `.qfai/report/spec-coverage/`.
+
+  It rewrites `paths.specsDir`, `paths.contractsDir`, `paths.skillsDir` and
+  `paths.promptsDir` in `qfai.config.yaml` where they hold the old default; an
+  unset key takes the new default. `.qfai/specs/` and `.qfai/contracts/` move
+  only where their key is unset or holds the old default.
+
+  The shipped rules from `.qfai/assistant/constitution/`, except
+  `requirements-decomposition.md`, and the shipped references
+  `test-layers.md`, `ui-definition-protocol.md` and `ui-procurement.md` from
+  `.qfai/assistant/catalog/`, are now in `.qfai/assistant/rule/`. Migration
+  step 3 moves a project's own catalog content into the story tree:
+
+  - `product.md` into `01_policy/objective.md`, with its `Milestones` section
+    into `01_policy/initiative.md`;
+  - `manifest.md` into `01_policy/principle.md`;
+  - `tech.md` and `structure.md` into `03_contract/`.
+
+  Step 3 archives everything else in `constitution/`, `catalog/`, `manifest/`
+  and `process/` under `.qfai/evidence/migration-spec-to-story/retired/`. The
+  exception is a `*.local.md` overlay whose rule still exists, which moves to
+  `rule/`. `requirements-decomposition.md` from `constitution/` is now a
+  reference of the `/qfai-sdd` skill. `qfai init` no longer writes
+  `review-gate.rules.yml`, `spec_required_files.json` or
+  `test-layers-ci-lanes.md`.
+
+  `qfai init --upgrade-assistant-tree` migrates a legacy assistant tree to
+  `rule/`, `skill/`, `agent/` and `prompt/`.
+
+- **Breaking: tests annotate story-tree IDs.** An end-to-end test carries
+  `QFAI:BF-NNNN`, an integration or API test `QFAI:AC-NNNN-NNNN-NN`, and a
+  test in any other layer `QFAI:EX-NNNN-NNNN-NN`. Migration step 8 rewrites
+  the annotations its ID map resolves. ATDD evidence is kept per business flow,
+  in `.qfai/evidence/atdd-BF-NNNN.md` and
+  `.qfai/evidence/coverage-depth-BF-NNNN.md`, which `QFAI-ATDD-131` to `-133`
+  now read.
+
+- **Breaking: `qfai report` reports per business flow.** It writes
+  `<outDir>/business-flow-NNNN/coverage.md` and `traceability-graph.json` in
+  place of the per-spec directories. `--flow` on `validate` and `report`
+  scopes a run to one or more flows, and a scoped `report` reads
+  `validate.flow-<ids>.json` and writes `report.flow-<ids>.md`. On
+  `validate`, a `--flow` value that names no business flow is reported as
+  `QFAI-FLOW-005` (`error`) and no scoped result is written; `report` refuses
+  it. `QFAI-FLOW-001` remains the Mermaid `stateDiagram` warning.
+
+- **Breaking: agent routing no longer lives in the project.** `qfai init` no
+  longer writes `.qfai/assistant/manifest/agent-catalog.yml`,
+  `agent-routing.yml` or `review-profiles.yml`. Each agent card's frontmatter
+  is its definition, and the routing defaults come from the installed package.
+
+- **`qfai validate` no longer requires a discussion pack on the story tree.**
+  `/qfai-sdd` may start from an explicit user requirement, so a story-tree
+  project with no discussion pack of any name no longer gets
+  `QFAI-DPACK-001`. A misnamed pack still reports `QFAI-DPACK-005` or
+  `QFAI-DPACK-006`, and `QFAI-DPACK-001` with it.
+
+- **Breaking: `qfai doctor` checks the story tree.** The `spec.layout` and
+  `spec.capCatalogSpecColumn` checks are gone, and `prototyping.primarySpec`
+  is now `prototyping.primaryUiContract`.
+
+- **Shipped rules and messages name the story-tree locations.** The rules
+  `qfai init` copies into `.agents/rules/` name `.qfai/assistant/rule/` and
+  `.qfai/spec/`, and state the traceability chain as business flow, story,
+  acceptance criterion, example, test and code, with each business rule in
+  the contract that enforces it. The same change reaches:
+
+  - the `expected` text of `QFAI-CFG-LINK-001`, which names
+    `prototyping.primaryUiContract`;
+  - the `expected` text of `QFAI-UIE-001` and `QFAI-UIE-002`, which name
+    `<paths.contractsDir>/ui/`;
+  - the design-lock messages of `qfai prototyping iterate`,
+    `qfai prototyping certify` and the design validators, which send the
+    operator to the design lock step of `/qfai-sdd`;
+  - the `--force` entry of `qfai --help`, the sample `prototype-handoff.yaml`,
+    the example in the seeded `waivers.yml`, and the sample `DESIGN.md`
+    comment.
+
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states
+  when a host is declared supported, and declares none in this release.
+
+- **`qfai init` says how many shipped skills it left unchanged.** A plain run
+  keeps a shipped skill whose project copy differs from this release. It now
+  prints how many it kept, and that `qfai init --force` replaces them with the
+  shipped versions, overwriting local edits.
+
+- **The migration skill's guide covers the former migration memos.** The
+  `.qfai/assistant/process/` directory is gone, and `qfai init` writes no
+  migration memo. Migration step 3 moves the memos a 1.x release wrote to
+  `.qfai/evidence/migration-spec-to-story/retired/assistant/process/migrations/`,
+  where nothing reads them. Upgrade notes live in this changelog.
+  `## Former migration memos` in the skill's `references/migration-guide.md`
+  lists the three forms a project upgrading from a release before 1.10.0 meets
+  as errors for the first time: the `playwright-cli` browser wrapper, readers
+  of `.qfai/output/validate.json`, and hand-written per-skill handoff files.
 
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
@@ -35,152 +244,190 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a pool block, and `vite` is declared as the peer the runner requires
   instead of being resolved for it. The supported Node range is unchanged.
 
-- **The type checker moves to TypeScript 6.** The seventh major ships the
-  compiler as a native binary and no longer exposes the classic compiler API
-  from its main entry, which the test tree and the declaration build both read;
-  the linter refuses to load against it at all. The sixth is the newest release
-  every part of this toolchain supports, and it reports the deprecations the
-  seventh turns into errors. The forward lane keeps type-checking against the
-  seventh, so nothing stops tracking it.
+- **The type checker moves to TypeScript 6.** TypeScript 7 ships the compiler
+  as a native binary and no longer exposes the classic compiler API from its
+  main entry, which the test tree and the declaration build both read; the
+  linter refuses to load against it at all. TypeScript 6 is the newest release
+  every part of this toolchain supports, and it reports the deprecations
+  TypeScript 7 turns into errors. A separate CI job keeps type-checking
+  against TypeScript 7, so nothing stops tracking it.
 
   One deprecation is silenced, inside the declaration rollup only: the bundler
   builds that rollup with `baseUrl` whatever the project declares, and this
-  package declares neither `baseUrl` nor `paths`. The lifting condition is
-  written beside it, and the forward lane now names any such exemption on a
-  passing run instead of reading only the compiler configuration.
+  package declares neither `baseUrl` nor `paths`. The condition for removing
+  the exemption is written beside it, and the TypeScript 7 job now names any
+  such exemption on a passing run instead of reading only the compiler
+  configuration.
+
+- **`qfai prototyping iterate` writes `design-system.yaml` when the loop
+  ends.** The cycle that stops the loop, on convergence (exit 64) or on the
+  cycle budget (exit 65), writes `<paths.contractsDir>/design/design-system.yaml`
+  from the root `DESIGN.md`: its token tables, `source: DESIGN.md`, and the
+  file's sha256 as `designMdSha256`. The same `DESIGN.md` always gives the
+  same bytes. The `/qfai-prototyping` skill no longer asks the agent to write
+  the file by hand.
+
+### Removed
+
+- **Breaking: the spec-pack layout and every check that read it.** `qfai`
+  no longer reads `.qfai/specs/spec-*` packs, the shared `_policies/` pack,
+  the `tdd/test-list.md` ledger, triage tables, delta files or test-case
+  tables. These rule families are gone:
+
+  - spec-pack structure and content: `QFAI-SPACK` except `QFAI-SPACK-102`,
+    `QFAI-SPECSECTION`, `QFAI-AC`, `QFAI-EX`, `QFAI-TC`, `QFAI-TCLEVEL`,
+    `QFAI-ID`, `QFAI-TABLE`, `QFAI-BRREF`, `QFAI-BFLOW`, `QFAI-DENSITY`,
+    `QFAI-DECISION`, `QFAI-STATUS`, `QFAI-STATUSLEAK`, `QFAI-LEDGER`,
+    `QFAI-MMD`, `QFAI-NAV`, and the `E_*` codes;
+  - the TDD ledger: `QFAI-TDDLIST`, `TDDLIST-*` and `TDDLIST_*`;
+  - traceability and coverage along the spec chain: `QFAI-TRACE`, `TRACE_*`,
+    `QFAI-LAYER`, `QFAI-PLAN`, `QFAI-COV` and `QFAI-ORPHAN`;
+  - triage, splitting, change types and intake: `QFAI-TRIAGE`, `QFAI-SPLIT`,
+    `QFAI-CTYPE`, `QFAI-SCOPE` and `QFAI-IMPLITE`;
+  - the per-spec ATDD checks: `QFAI-ATDD` except `QFAI-ATDD-131` to `-133`.
+
+  Single codes also go from families that remain: `QFAI-AGENT-004`, `-006`
+  and `-014`; `QFAI-CONTRACT-030`, `-032`, `-033`, `-035` and `-043`;
+  `QFAI-PROT-251` to `-253` and `-273` to `-276`; `QFAI-SCAN-001`;
+  `QFAI-WAIVER-005`; `D-SURFACE-TYPE-MISSING` and `D-SCAFFOLD-FOREIGN-HOME`.
+  A waiver that names a removed code is reported as naming an unknown rule
+  (`QFAI-WAIVER-004`) and applies to nothing; delete it.
+
+- **Breaking: spec-chain fields in the JSON output and the package API.**
+
+  - `validate.json` no longer carries `traceability` (`sc` and `testFiles`),
+    and an issue no longer carries `dl_id`.
+  - `report.json` has a new shape. Its `summary` counts `flows`, `stories`,
+    `acceptanceCriteria`, `examples`, `rules` and `contracts`, and a new
+    `flows` list names each flow's members. `root`, `configPath`, `ids`,
+    `traceability`, `testStrategy`, `tddCoverage` and `changeType` are gone.
+    `waivers` appears only when validate recorded waivers, and carries no
+    `expired` list.
+  - The package entry no longer exports the spec-chain validators from
+    `validators/ids`, `traceability`, `layeredTraceability`,
+    `orphanProhibition`, `atddCodeTraceability` and `specSplitByCapability`.
+
+- **Breaking: `match.dl_ids` in `waivers.yml`.** A waiver that uses it is
+  refused as `QFAI-WAIVER-001` (`error`) and applies to nothing. Name the
+  files it covers in `scope.paths` instead.
+
+- **Breaking: options and settings that named a spec.** Each is refused. The
+  replacement is:
+
+  - for `--spec` on `qfai validate` and `qfai report`, `--flow BF-NNNN`;
+  - for `--spec` on `qfai atdd scaffold`, `--story US-NNNN-NNNN` or
+    `--flow BF-NNNN`;
+  - for `qfai prototyping show-spec`, `qfai prototyping show-ui-contract`;
+  - for `--primary-spec-id` on `qfai prototyping iterate`,
+    `--primary-ui-contract CON-UI-NNNN`;
+  - for `prototyping.primarySpecId` in `qfai.config.yaml`,
+    `prototyping.primaryUiContract: CON-UI-NNNN`. The old key is a
+    configuration error, and migration leaves it in place.
+
+- **Breaking: the prototyping loop covers UI contracts, not a primary spec.**
+  `qfai prototyping iterate` evaluates every UI contract and each screen it
+  declares. `prototyping.json` records `uiContractsCovered` in place of
+  `specsCovered` and `frozenSpecsCovered`, the completion certificate records
+  `convergedUiContracts` and `laggingUiContracts` in place of `convergedSpecs`
+  and `laggingSpecs`, and each review is written to
+  `iter-NN/CON-UI-NNNN/<screen>.review.json`. A `prototyping.json` from 1.x
+  is reported as `QFAI-PROT-008` (`error`), and a 1.x certificate is not
+  accepted; re-seed the loop with `qfai prototyping iterate --cycle 0`.
+
+- **Breaking: four configuration keys that governed spec-pack checks.**
+  `validation.traceability.scMustHaveTest` and
+  `validation.traceability.unknownContractIdSeverity` are retired and reported
+  as `QFAI-CFG-001` errors until deleted. The configuration `qfai init` wrote
+  in 1.x set both, and migration leaves them in place.
+  `validation.testStrategy.maxE2eScenarioRatio` and `maxE2eScenarioCount` are
+  no longer read.
+
+- **Breaking: the AI work-log surface `.qfai/steering/`** (#2221). QFAI no
+  longer creates, reads or checks the directory.
+
+  - `qfai init` no longer seeds `.qfai/steering/`, and the
+    `.github/copilot-instructions.md` it writes no longer names it. An
+    existing instructions file keeps the line until `qfai init --force`
+    rewrites it.
+  - `qfai validate` no longer reports `W-WORKLOG-SCHEMA`,
+    `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` or
+    `R-HANDOFF-INCOMPLETE`. A reviewer finding coded `R-WORKLOG-DRIFT` no
+    longer needs a `justification`.
+  - The shipped `worklog-entry.schema.md` is withdrawn, and the skills no
+    longer describe work-log entries.
+
+  Records go where the skills now send them:
+
+  - A decision goes to a row of `decisions.md`.
+  - A question for the user, or an out-of-scope discovery, goes to a row of
+    `open-questions.md`. `/qfai-atdd` and `/qfai-implement` send each to
+    `/qfai-sdd` as a change request.
+  - A stage that stops says what it waits on in its report.
+
+  What to do in an existing project:
+
+  - Files under `.qfai/steering/` are left untouched, and the migration skill
+    does not move or rewrite them. Nothing reads them or reacts to them, so
+    they can be deleted.
+  - In a 1.x project the file is
+    `.qfai/assistant/catalog/worklog-entry.schema.md`, and migration step 3
+    archives it under `.qfai/evidence/migration-spec-to-story/retired/` with
+    the rest of `catalog/`.
+
+- **`cli-ux-guidelines.md`.** `qfai init` no longer writes it to
+  `.qfai/assistant/catalog/` or anywhere else. The `--format text` grammar it
+  described is part of the `qfai validate` contract, and the rule that
+  operator-facing messages are English is part of QFAI's own repository
+  language rule.
+
+- The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
+  dedicated test suites. CI and release checks now run seven test slices.
+  Releasing from an older tag that still has the retired slices runs that
+  tag's whole test suite instead.
+
+- The distributed-surface guards no longer exempt the version in a migration
+  memo's file name. `qfai init` writes no migration memo, so a name such as
+  `.qfai/assistant/process/migrations/v1.4.27-notes.md` in the package is now
+  reported as a version marker, like any other file name.
 
 ### Fixed
 
-- **The generated Copilot instructions describe the legacy layout as the
-  tool treats it** (#2214). The `.github/copilot-instructions.md` that
+- **A work order that binds nothing now refuses a target.** The shipped
+  `work-order.schema.json` required a `target` on every other stage kind but
+  accepted one on the `route`, `discussion`, `maintenance` and `verify` work
+  orders, which carry none.
+
+- **The prototyping reference check reads the handoff from the configured
+  contracts directory.** It read `prototype-handoff.yaml` only from
+  `.qfai/contracts/design/`, so a project with another `paths.contractsDir`
+  never had the handoff's `finalArtifact` and `designSystemMirror` paths
+  checked. It now reads `<paths.contractsDir>/design/prototype-handoff.yaml`.
+
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack.
+
+- **The generated Copilot instructions describe the legacy assistant layout
+  as the tool treats it** (#2214). The `.github/copilot-instructions.md` that
   `qfai init` writes called the legacy `.qfai/assistant/steering/` layout
   read-compatible and `D-DEPRECATED-PATH` a warning. The compatibility window
   has closed, and `qfai init` reports the layout on stderr as an error. The
   line now says so, names `.qfai/assistant/instructions/` as well, and still
   names `qfai init --upgrade-assistant-tree`. A file that already exists is
-  rewritten only by `qfai init --force`. A new case, `TC-0003-0059`, and a
-  ledger row, `TDD-0094`, carry it. spec-0003 also stops describing a README
-  the tool does not write.
+  rewritten only by `qfai init --force`.
 
-- **A review pack's request may list its `TDD-ID`s under a heading, and a
-  response's hash may carry a `sha256:` prefix.** `QFAI-TDDLIST-008` read the
-  round's ids only from one `TDD-ID:` line, so a `review_request.md` naming
-  them as a `## TDD IDs` bullet list was refused although the review-artifact
-  layout asks for a list. The heading must appear once, and every item under
-  it must be one `TDD-NNNN` id. The per-id `Audited evidence hash` in a
-  response was also compared as raw text, so `sha256:<hex>` failed against the
-  row's bare hex. It is now compared with the prefix and case removed, as the
-  gate's other hash checks already were.
-- **A ledger row that owes a test case and names none is reported**
-  (#2156). `QFAI-TDDLIST-022` (`error`) reports a ledger row whose `TC-Refs`
-  holds no `TC-*` id: an empty cell, a `-`, `n/a` or a requirement id such as
-  `REQ-0012-0075 (REQ-0109 follow-up)`. The other checks on the column read
-  only the ids it holds, so such a row passed them all. Every row is read
-  except `E2E` and `API` rows and an `Integration` row carrying a `CON-DB-*`
-  contract, which record their obligation in another column.
-  The seven spec-0012 rows it reported now name a case or are retired:
-  `TDD-0420` and `TDD-0496` duplicated other rows and are removed, and the
-  other five name new cases `TC-0012-0484` to `TC-0012-0488` and return to
-  `todo` (`CR-20260923-0001`, `CR-20260923-0012`).
-
-- **spec-0012 states what `--auto-serve` does when its teardown fails**
-  (#2208). A case once required a failed teardown to be reported, and that
-  clause was lost when the case was rewritten, so the report could be removed
-  with no test failing. `REQ-0012-0062` now states it as the product behaves:
-  iterate prints a line on stdout naming the `--auto-serve` teardown and the
-  reason it failed, and returns the exit code the cycle would otherwise have
-  returned. A new case, `TC-0012-0490`, and a ledger row, `TDD-0577`, carry
-  it.
-
-- **A `done` row whose test case only an annotation carrier names is
-  reported** (#2160). A carrier such as `tests/integration/qfai-traceability.md`
-  lists obligations and declares no test, so no runner selects a case named
-  only there. `QFAI-TDDLIST-023` (`error`) reports each such case on a `done`
-  row whose `Layer` owns `TC-Refs`. A row with a test for any of its cases is
-  not reported, and neither is an `exception` row. The finding names the row,
-  the case and the carrier. The fix is to annotate the test that discharges the
-  case. Where no test does, the row leaves `done` only through an upstream
-  reset approved by a Change Request. A test scan that passes its file limit or
-  cannot read a file is reported under the same code rather than read as a
-  pass. The 33 existing findings are carried as a backlog in
-  `scripts/dogfood-backlog.json`: spec-0002 3, spec-0003 2, spec-0004 5,
-  spec-0010 3, spec-0012 19 and spec-0014 1, in the `tdd` and `full` profiles.
-
-- **A `done` row goes stale only when something its test reached changed**
-  (#2219). `QFAI-TDDLIST-009` counted every file under `srcDir` as covered by
-  every observation. In an active repository every completed row therefore went
-  stale within hours, whatever changed, and full-history validation failed on
-  rows whose test and module had not moved. A `done` row is now measured over
-  its test file, the files its newest `RED test manifest` lists, and the files
-  under `srcDir` those import, directly or transitively. Relative imports are
-  followed, and so are path aliases such as `@/lib/x`, through the `paths` and
-  `baseUrl` of the root `tsconfig.json` or `jsconfig.json`. Built-ins and
-  installed packages are outside the project. Where an import cannot be
-  followed — an alias no pattern resolves, a computed `import()` or
-  `require()`, a relative path that names no file, or a test file that is not
-  JavaScript or TypeScript — the row is measured over all of `srcDir` as before,
-  and the finding says why. The finding now names the covered set it measured.
-  `evidence-revision.md` states the at-rest scope; the in-flight check before
-  submitting still covers the whole source directory.
-
-- **A blocked ledger row whose Change Request is settled is reported**
-  (#2015). A `blocked` row that named a Change Request stayed `blocked` after
-  the request was decided, and nothing said so. `validate` now warns with
-  `QFAI-TDDLIST-021` when the row's `Blocked-By` cell names only Change
-  Requests — or, with no blocker there, its `Evidence` cell names some — and
-  each is `rejected`, `superseded`, or `approved` with `Applied at` filled. The
-  finding sends the row back through `/qfai-implement`, where `blocked -> todo`
-  is the resumption edge. An open request, an approved one not yet applied, an
-  id with no record in `.qfai/decisions/`, and a `Blocked-By` that names
-  another blocker as well report nothing.
-
-- **The rest of spec-0003 states what `qfai init` and the shipped workflows
-  do now** (#2203). Sixteen more statements still described the product before
-  a deliberate change. They said init creates the artifact directories and a
-  steering README, and that the `.gitignore` block carries README negations.
-  They also said a legacy layout only warns on stdout, two jobs install, one
-  job requests full history, the shape pins nine dimensions, and a second
-  runner tier is deferred. Each now says what the tests and the source do. The
-  one ledger row whose test case moved, `TDD-0001`, is reopened: its test
-  never asserted that init leaves the artifact directories out.
-
-- **The `/qfai-atdd` skill spells the RED test hash's `mode` the way the gate
-  hashes it** (#2256). The skill said the hash took the revision manifest's
-  shape, whose `mode` is four octal digits. The gate hashes six digits spelled
-  like git's tree mode — `100644`, `100755` or `120000` — so a hash computed as
-  the skill said never matched, and `validate` refused evidence that was
-  complete. The six-digit form is the intended one: the gate recomputes the
-  hash on whichever checkout runs it, and every permission bit but the execute
-  bits follows that checkout's umask. The skill now names the three values and
-  says where the execute bit is read from. The revision manifest keeps its own
-  four digits.
-
-- **The RED test hash reads the execute bit where git reads it** (#2257).
-  `validate` took a manifest file's execute bit off the disk. Windows has none,
-  so a file git marks executable hashed as `100644` on a Windows checkout and
-  `100755` on a POSIX one, and evidence recorded on one was refused on the
-  other. The gate now reads the bit the way `git add` does: from the index where
+- **The RED test hash in the `/qfai-atdd` skill is the same on every checkout
+  of one commit** (#2256, #2257). The skill said the hash took the revision
+  manifest's `mode`, four octal digits that follow each checkout's umask. It
+  now names git's six-digit tree mode — `100644`, `100755` or `120000` — and
+  says to read the execute bit the way `git add` does: from the index where
   `core.fileMode` is `false`, as in a repository git created on Windows, and
-  from the owner's execute bit on disk everywhere else. An execute bit held
-  only by the group or others no longer selects `100755`; git never recorded
-  it either.
-
-  Two kinds of recorded evidence now hash differently, and `validate` refuses
-  them until their `RED test hash` is recorded again: evidence recorded on
-  Windows whose manifest names a file git marks executable, and evidence whose
-  manifest names a file executable by the group or others but not its owner.
-  POSIX checkouts already refused the first kind.
-
-- **A BR or AC heading is read with or without a title after a colon.** The
-  check that compares a spec's rules and criteria with their merge-base copy
-  accepted `## AC-0001: Title` but not `## AC-0001`, nor the `# AC-0001` comment
-  the shipped template opens each Gherkin scenario with. A file written only in
-  those shapes therefore held no obligations. Editing it raised
-  `QFAI-TRACE-003` ("could not be compared") instead of `QFAI-TRACE-001` for
-  the criterion that changed. Both shapes are read now. A `# AC-0001` comment
-  inside a `## AC-0001` section still counts as part of that criterion, not as
-  a second copy of it. Only a spec whose rules or criteria changed on the
-  branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+  from the owner's execute bit on disk everywhere else. Evidence recorded on
+  Windows and on POSIX then hashes alike. The revision manifest keeps its own
+  four digits.
 
 ## [1.12.3] - 2026-09-24
 

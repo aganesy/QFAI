@@ -4,7 +4,7 @@
  * gen-codex-agents.mjs
  *
  * Rewrites every `.codex/agents/<id>.toml` from the canonical agent body in
- * `.qfai/assistant/agents/<id>.md`, using the same renderer `qfai init` uses.
+ * `.qfai/assistant/agent/<id>.md`, using the same renderer `qfai init` uses.
  *
  * `tests/integration/codexAgentWrappers.test.ts` asserts these files ARE
  * generator output — "not a hand-maintained tree: an edit that lands in the
@@ -16,9 +16,7 @@
  * to hand-edit a file it says is not hand-edited, or to copy the expected bytes
  * out of its failure message.
  *
- * The markdown is the source; the TOML is derived. Runs after
- * `gen-agent-catalog.mjs` in the `sync:ssot` chain, because the kind of each
- * agent is read from the catalog that script rewrites.
+ * The markdown frontmatter and body are the source; the TOML is derived.
  *
  * Usage:
  *   node scripts/gen-codex-agents.mjs          # rewrite and report
@@ -35,8 +33,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 register("./lib/ts-specifier-hook.mjs", import.meta.url);
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const AGENTS_DIR = path.join(repoRoot, ".qfai", "assistant", "agents");
-const CATALOG = path.join(repoRoot, ".qfai", "assistant", "manifest", "agent-catalog.yml");
+const AGENTS_DIR = path.join(repoRoot, ".qfai", "assistant", "agent");
 const CODEX_DIR = path.join(repoRoot, ".codex", "agents");
 
 const check = process.argv.includes("--check");
@@ -48,24 +45,30 @@ async function main() {
   const source = pathToFileURL(
     path.join(repoRoot, "packages", "qfai", "src", "core", "codexAgentToml.ts"),
   ).href;
-  const { renderCodexAgentToml, parseAgentCatalogKinds } = await import(source);
-
-  const kinds = parseAgentCatalogKinds(await readFile(CATALOG, "utf-8"));
+  const { renderCodexAgentToml, parseAgentCardKind } = await import(source);
+  const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));
   const existing = new Set(
     (await readdir(CODEX_DIR)).filter((name) => name.endsWith(".toml")).map((name) => name),
   );
 
   const stale = [];
   const skipped = [];
+  const invalid = [];
   let written = 0;
 
-  for (const [name, kind] of kinds) {
-    const canonical = await readFile(path.join(AGENTS_DIR, `${name}.md`), "utf-8");
+  for (const card of cards) {
+    const name = card.slice(0, -3);
+    const canonical = await readFile(path.join(AGENTS_DIR, card), "utf-8");
+    const kind = parseAgentCardKind(canonical, name);
+    if (kind === null) {
+      invalid.push(`${name}: invalid card frontmatter or name`);
+      continue;
+    }
     const rendered = renderCodexAgentToml(canonical, kind, name);
     if (!rendered.ok) {
       // A body the renderer declines is a defect in the markdown, not something
       // to paper over by leaving the previous TOML in place.
-      skipped.push(`${name}: ${rendered.reason ?? "did not render"}`);
+      invalid.push(`${name}: ${rendered.error}`);
       continue;
     }
     const target = path.join(CODEX_DIR, `${name}.toml`);
@@ -80,12 +83,15 @@ async function main() {
   }
 
   for (const orphan of existing) {
-    // Reported, never deleted: the catalog is the roster, but removing a file
+    // Reported, never deleted: the card directory is the roster, but removing a file
     // this script does not own is a bigger claim than "it is not generated".
-    skipped.push(`${orphan}: no agent of that name in the catalog`);
+    skipped.push(`${orphan}: no card of that name`);
   }
 
   for (const note of skipped) console.log(`skipped ${note}`);
+  if (invalid.length > 0) {
+    throw new Error(`Cannot generate Codex agents: ${invalid.join("; ")}`);
+  }
 
   if (check) {
     if (stale.length > 0) {
@@ -95,11 +101,11 @@ async function main() {
       console.error("Run `pnpm sync:ssot` and commit the result.");
       process.exit(1);
     }
-    console.log(`gen-codex-agents: ${String(kinds.size)} profile(s) already current.`);
+    console.log(`gen-codex-agents: ${String(cards.length)} profile(s) already current.`);
     return;
   }
   console.log(
-    `gen-codex-agents: rewrote ${String(written)} of ${String(kinds.size)} profile(s) from the canonical agents.`,
+    `gen-codex-agents: rewrote ${String(written)} of ${String(cards.length)} profile(s) from the canonical agents.`,
   );
 }
 

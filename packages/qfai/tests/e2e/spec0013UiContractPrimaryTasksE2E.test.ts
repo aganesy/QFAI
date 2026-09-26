@@ -8,7 +8,7 @@
  * primary_tasks. The reverse path (populated primary_tasks) emits zero
  * QFAI-AUD-001 errors.
  */
-// QFAI:SPEC-0013:US-0013-0011
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -28,7 +28,7 @@ const TEMPLATE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "contracts",
@@ -57,19 +57,15 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/report",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  traceability:",
-      "    scMustHaveTest: false",
-      "    unknownContractIdSeverity: warning",
       "uiux:",
       "  audit:",
       "    enabled: true",
@@ -78,13 +74,14 @@ async function seedWorkspace(root: string, uiContract: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(path.join(uiDir, "sample.yaml"), uiContract, "utf-8");
 }
 
 function emptyPrimaryTasksContract(): string {
   return [
+    "# QFAI-CONTRACT-ID: CON-UI-0001",
     "screens:",
     "  - id: order_create",
     "    title: Create Order",
@@ -96,6 +93,7 @@ function emptyPrimaryTasksContract(): string {
 
 function populatedPrimaryTasksContract(): string {
   return [
+    "# QFAI-CONTRACT-ID: CON-UI-0001",
     "screens:",
     "  - id: order_create",
     "    title: Create Order",
