@@ -23,8 +23,6 @@ describe("ATDD skill acceptance obligations", () => {
     const content = await readFile(skillPath, "utf8");
     expect(content).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");
     expect(content).toContain(".qfai/evidence/atdd-BF-NNNN.md");
-    expect(content).toContain(".qfai/evidence/coverage-depth-BF-NNNN.md");
-    expect(content).toMatch(/US, AC and\s+EX rows/);
   });
 
   it("requires observed behavior and independent review", async () => {

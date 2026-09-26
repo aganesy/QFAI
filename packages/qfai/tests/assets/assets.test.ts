@@ -1402,14 +1402,6 @@ describe("assets guardrails", () => {
       "rcp_footer.md",
     );
     const approvedJapanesePaths = new Set([
-      path.resolve(
-        templateQfaiDir,
-        "assistant",
-        "skill",
-        "qfai-atdd",
-        "references",
-        "test-case-depth-checklist.md",
-      ),
       path.resolve(templateQfaiDir, "assistant", "rule", "research-first-protocol.md"),
     ]);
     const matches: string[] = [];

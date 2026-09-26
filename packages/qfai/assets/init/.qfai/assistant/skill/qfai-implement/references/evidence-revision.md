@@ -22,7 +22,7 @@ SHA-256 of its bytes. Normalize Markdown and HTML first: LF line endings, no tra
 trailing blank lines, and one final newline. Hash other file types as raw bytes. Sort these records by path, join with
 LF, and SHA-256 the joined bytes.
 
-Write the pack path and seal outside the pack under the example's current round. A later attempt receives a new pack and a new seal. Recompute every recorded seal when the pack is present; a changed response, summary, or request invalidates its original verdict. A pack absent from a fresh clone leaves the committed path, seal, verdict, and reviewed revision to audit.
+Write the pack path and seal outside the pack under the example's current round. A later attempt receives a new pack and a new seal. Recompute every recorded seal before accepting a verdict; a changed response, summary, or request invalidates its original verdict. The seal is recorded in local evidence, so this check runs during the work.
 
 ## Which tree an observation addresses
 

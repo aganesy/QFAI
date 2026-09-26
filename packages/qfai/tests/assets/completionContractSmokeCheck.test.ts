@@ -33,7 +33,7 @@ describe("completion smoke checks", () => {
   it("ATDD checks current BF tests and evidence before completion", async () => {
     const atdd = await read("skill/qfai-atdd/SKILL.md");
     expect(atdd).toContain("Every BF and AC obligation");
-    expect(atdd).toContain("current, committed");
+    expect(atdd).toContain("The flow's ATDD evidence is current");
     expect(atdd).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");
   });
 

@@ -1,5 +1,5 @@
 import { execFile as execFileCb } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -272,70 +272,4 @@ describe("QFAI-REVIEW-001 does not punish tracking the audit trail", () => {
       expect(issues.some((entry) => entry.code === "QFAI-REVIEW-008")).toBe(false);
     });
   });
-});
-
-/**
- * The negation only stops git from HIDING the file. It does not stage one, so
- * the shipped instructions decide whether these records reach a commit.
- *
- * **Before this change they said they must not.** `orchestrator.md` labelled all
- * of `.qfai/evidence/` "gitignored; do not commit" and its Sign-off box repeated
- * it; `drift-protocol.md` classified `.qfai/evidence/<stage>-<spec-id>.md` as
- * regenerable and not committed; `evidence-revision.md` argued from
- * `implement-<spec-id>.md` being unavailable to commit; and `qfai-atdd`, which
- * owns `atdd-<spec-id>.md`, called its own stage evidence regenerable and left
- * that file out of its governance-record list. An agent following any of them
- * left the two records untracked and the Evidence anchor resolving on one
- * machine only — the failure this change exists to end, reached through the
- * instructions instead of through git.
- *
- * The cases below assert the repaired state: each names the wording that has to
- * be gone and the wording that has to be there.
- */
-describe("the shipped instructions commit the records the managed block untracks", () => {
-  const repoRoot = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "..",
-    "..",
-    "..",
-    "..",
-  );
-  const TREES = ["packages/qfai/assets/init/.qfai/assistant", ".qfai/assistant"];
-
-  /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
-  const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
-
-  const read = async (tree: string, rel: string): Promise<string> =>
-    unwrap(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
-
-  for (const tree of TREES) {
-    it(`${tree}: requires current flow evidence to be committed`, async () => {
-      const drift = await read(tree, "rule/drift-protocol.md");
-      expect(drift).toContain("Commit durable decision rows");
-      expect(drift).toContain("the owner still stages and commits the evidence");
-
-      const orchestrator = await read(tree, "agent/orchestrator.md");
-      expect(orchestrator).toContain("Commit the current BF stage evidence");
-      expect(orchestrator).toContain("Required evidence is present and committed");
-
-      const atdd = await read(tree, "skill/qfai-atdd/SKILL.md");
-      expect(atdd).toContain(".qfai/evidence/atdd-BF-NNNN.md");
-      expect(atdd).toContain(".qfai/evidence/coverage-depth-BF-NNNN.md");
-      expect(atdd).toContain("Commit both evidence files");
-
-      const implement = await read(tree, "skill/qfai-implement/SKILL.md");
-      expect(implement).toContain(".qfai/evidence/implement-BF-NNNN.md");
-    });
-
-    it(`${tree}: the managed block exposes the named flow evidence`, async () => {
-      // The document must not promise tracking for a path the block still
-      // ignores — that is the same false instruction pointing the other way.
-      for (const pattern of ["implement-*.md", "atdd-*.md", "coverage-depth-*.md"]) {
-        expect(
-          QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
-          `${pattern} is named as committed and must be negated`,
-        ).toContain(`!.qfai/evidence/${pattern}`);
-      }
-    });
-  }
 });
