@@ -31,7 +31,7 @@ describe("Stage 1 approvals inside a run", () => {
       /checks the `human_decision` the work order's `authorizationRefs` cite for its `new_story` slot, instead of asking/i,
     );
     expect(text).toMatch(
-      /its Approach cites the record as `<runId>\/<authorizationId>` and names its `answeredBy`/i,
+      /its Approach cites the record as `<runId>\/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and the label of each chosen option exactly as the record holds them/i,
     );
     expect(text).toMatch(/the row is then raised to WIP/i);
     expect(text).toMatch(/the table keeps exactly its four columns/i);
@@ -60,7 +60,7 @@ describe("Stage 1 approvals inside a run", () => {
       /opens the row's approval question as a `decision` question of its stage result, with outcome `awaiting_input`, and appends no row/i,
     );
     expect(text).toMatch(
-      /the attempt that receives the answer through `authorizationRefs` appends the row/i,
+      /the attempt that receives the answer through `authorizationRefs` appends the row at TODO, cites that `human_decision` the same way/i,
     );
   });
 
@@ -179,6 +179,9 @@ describe("qfai-sdd as a stage of a run", () => {
     );
     expect(text).toMatch(
       /appends one `decisions\.md` row at WIP whose Content opens `Change request:`/i,
+    );
+    expect(text).toMatch(
+      /Approach cites that answer as `<runId>\/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and the label of each chosen option exactly as the run's authorization record holds them/i,
     );
     expect(text).toMatch(
       /names every story-tree and contract file it changed, and `decisions\.md` when it appended any other row/i,

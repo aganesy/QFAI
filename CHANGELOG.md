@@ -39,9 +39,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     which proposes the route and writes nothing, or `off`. Any other value is
     a configuration error.
   - Runtime state lives under the git-ignored `.qfai/run/`. A run's summary
-    and the answers it recorded are tracked under
-    `.qfai/evidence/workflow/<runId>/`, with the request text kept only as a
-    keyed digest.
+    and the answers it recorded are written under
+    `.qfai/evidence/workflow/<runId>/`, which stays local and is never
+    committed. The request text is kept there only as a keyed digest. An
+    answer that approves a change is written into the `decisions.md` row the
+    run appends.
   - `qfai-maintain` fixes a typo or other non-normative text inside a run, and
     stops before an edit that would change behaviour.
   - A run starts only on a host whose capability report covers what a run
@@ -189,9 +191,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI:BF-NNNN`, an integration or API test `QFAI:AC-NNNN-NNNN-NN`, and a
   test in any other layer `QFAI:EX-NNNN-NNNN-NN`. Migration step 8 rewrites
   the annotations its ID map resolves. ATDD evidence is kept per business flow,
-  in `.qfai/evidence/atdd-BF-NNNN.md` and
-  `.qfai/evidence/coverage-depth-BF-NNNN.md`, which `QFAI-ATDD-131` to `-133`
-  now read.
+  in the local `.qfai/evidence/atdd-BF-NNNN.md`, which `qfai validate` does
+  not read.
 
 - **Breaking: `qfai report` reports per business flow.** It writes
   `<outDir>/business-flow-NNNN/coverage.md` and `traceability-graph.json` in
@@ -294,17 +295,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   same bytes. The `/qfai-prototyping` skill no longer asks the agent to write
   the file by hand.
 
-- **`.qfai/evidence/` is local and never committed.** `qfai init` ignores the
-  whole directory, and a rerun strips the evidence negations earlier releases
-  wrote into the managed `.gitignore` block. Stage evidence, run records and
-  decision records stay in the working tree for review; what has to last goes
-  into the story tree, the `decisions.md` rows and the tests.
-  - `qfai validate` no longer reads evidence. QFAI-ATDD-131, QFAI-ATDD-132,
-    QFAI-ATDD-133, QFAI-GRILL-001, QFAI-GRILL-002, QFAI-CONTRACT-031 and
-    QFAI-DCON-019 are removed.
-  - A `decisions.md` row that records a workflow approval states who answered,
-    when, and what was chosen.
-  - The prototyping checks run locally only. No CI lane runs them.
+- **Breaking: `.qfai/evidence/` is local and never committed.** `qfai init`
+  ignores the whole directory, and a rerun strips the evidence negations
+  earlier releases wrote into the managed `.gitignore` block. Stage evidence,
+  run records and decision records stay in the working tree for review; what
+  has to last goes into the story tree, the `decisions.md` rows and the tests.
+  - **Breaking:** `qfai validate` no longer reads evidence. `QFAI-ATDD-131`,
+    `QFAI-ATDD-132`, `QFAI-ATDD-133`, `QFAI-GRILL-001`, `QFAI-GRILL-002`,
+    `QFAI-CONTRACT-031` and `QFAI-DCON-019` are removed. A waiver that names
+    one of them is reported as naming an unknown rule (`QFAI-WAIVER-004`).
+  - **Breaking:** a `decisions.md` row that records a workflow approval cites
+    the answer as `<runId>/<authorizationId>` and writes who answered, when
+    the answer was recorded, and the label of each chosen option, exactly as
+    the run's authorization record holds them. A row that names only who
+    answered is refused.
+  - A local import-lite record under `.qfai/evidence/` no longer suppresses
+    `QFAI-DPACK-001`.
+  - No CI lane runs the prototyping profile.
 
 ### Removed
 
@@ -323,7 +330,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `QFAI-LAYER`, `QFAI-PLAN`, `QFAI-COV` and `QFAI-ORPHAN`;
   - triage, splitting, change types and intake: `QFAI-TRIAGE`, `QFAI-SPLIT`,
     `QFAI-CTYPE`, `QFAI-SCOPE` and `QFAI-IMPLITE`;
-  - the per-spec ATDD checks: `QFAI-ATDD` except `QFAI-ATDD-131` to `-133`.
+  - the per-spec ATDD checks: `QFAI-ATDD`. `QFAI-ATDD-131` to `-133`, which
+    read evidence, go with the entry on `.qfai/evidence/` above.
 
   Single codes also go from families that remain: `QFAI-AGENT-004`, `-006`
   and `-014`; `QFAI-CONTRACT-030`, `-032`, `-033`, `-035` and `-043`;

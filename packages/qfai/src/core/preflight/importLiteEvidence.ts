@@ -9,8 +9,8 @@ import { collectSpecEntries } from "../specLayout.js";
 
 /**
  * Import-lite evidence lives at the canonical `<root>/.qfai/evidence`, the same
- * place every other writer uses (`init` seeds `.qfai/evidence/.gitignore`,
- * prototyping writes `.qfai/evidence/prototyping/**`, `audit log` reads
+ * place every other writer uses (prototyping writes
+ * `.qfai/evidence/prototyping/**`, `audit log` reads
  * `.qfai/evidence/decision/**`). It is deliberately NOT derived from
  * `paths.discussionDir`: a project that relocates its discussion packs (e.g.
  * `requirements/discussion`) would otherwise have the preflight look for

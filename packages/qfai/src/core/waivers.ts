@@ -327,7 +327,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-STORY-006'、'QFAI-STORY-008'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
+          `${label}: rule must be the code a finding reports, as written (for example 'QFAI-STORY-006' or 'QFAI-STORY-008'). Accepted form: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
           "error",
           waiverPath,
           "WAIVER-001",

@@ -22,7 +22,7 @@ const read = async (rel: string): Promise<string> =>
   (await readFile(path.join(assistant, rel), "utf-8")).replace(/\s*\n\s*/g, " ");
 
 describe("shipped instructions keep evidence local", () => {
-  // QFAI:EX-0001-0002-03
+  // QFAI:EX-0001-0002-13
   it("states the rule once, in the drift protocol", async () => {
     const drift = await read("rule/drift-protocol.md");
     expect(drift).toContain("## Evidence stays local");
@@ -31,7 +31,7 @@ describe("shipped instructions keep evidence local", () => {
     expect(drift).toContain("goes into the story tree");
   });
 
-  // QFAI:EX-0001-0002-03
+  // QFAI:EX-0001-0002-13
   it("points the orchestrator at the rule", async () => {
     const orchestrator = await read("agent/orchestrator.md");
     expect(orchestrator).toContain("rule/drift-protocol.md#evidence-stays-local");
@@ -45,20 +45,20 @@ describe("shipped instructions keep evidence local", () => {
     expect(atdd).toContain("The annotated tests carry the coverage");
   });
 
-  // QFAI:EX-0001-0002-03
+  // QFAI:EX-0001-0002-13
   it("lets implement find the acceptance tests without the local handoff", async () => {
     const implement = await read("skill/qfai-implement/SKILL.md");
     expect(implement).toContain("where this checkout lacks it, find the tests by their");
   });
 
-  // QFAI:EX-0001-0002-03
+  // QFAI:EX-0001-0002-13
   it("keeps prototyping outputs and checks local", async () => {
     const prototyping = await read("skill/qfai-prototyping/SKILL.md");
     expect(prototyping).toContain("it stays local and is never committed");
     expect(prototyping).toContain("CI does not run them");
   });
 
-  // QFAI:EX-0001-0002-03
+  // QFAI:EX-0001-0002-13
   it("records an approval in the decision row, not in a committed run record", async () => {
     const payloads = await read("skill/qfai-run/references/payloads.md");
     expect(payloads).toContain("is written into the `decisions.md` row the run appends");

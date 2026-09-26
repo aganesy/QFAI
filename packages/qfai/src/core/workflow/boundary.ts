@@ -4,15 +4,8 @@ import path from "node:path";
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import { isEnoent } from "../fs/errno.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
+import { isRunChange } from "./common.js";
 import type { WorkflowBoundaryStart } from "./types.js";
-
-// The runtime tree and the runs' own records are local, so nothing under them is a run change,
-// whether or not git ignores them.
-const LOCAL_TREES = [".qfai/run/", ".qfai/evidence/workflow/"];
-
-export function isRunChange(file: string): boolean {
-  return !LOCAL_TREES.some((tree) => file.startsWith(tree));
-}
 
 // What a path holds, as the boundary compares it: a regular file's content digest after CRLF
 // normalization, a link's target, the type of anything else, or `null` when nothing is there.

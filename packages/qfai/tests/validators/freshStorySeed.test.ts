@@ -98,7 +98,7 @@ describe("fresh story seed validation", () => {
       const evidenceDir = path.join(root, ".qfai", "evidence");
       await mkdir(evidenceDir, { recursive: true });
       await writeFile(
-        path.join(evidenceDir, "import-lite-20260401000000000.md"),
+        path.join(evidenceDir, "import-lite.md"),
         [
           "# Import-lite evidence",
           "",

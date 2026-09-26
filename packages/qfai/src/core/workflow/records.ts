@@ -80,6 +80,11 @@ function namesWhole(text: string, name: string): boolean {
 // the answer was recorded, and the label of every option it chose. The run's own record is the
 // only copy of the answer, and it stays local, so the row has to say what was approved. A
 // CREATE row of a new-story work order cites the approval of that work order's own slot.
+// SIMPLIFIED: each value is found as a bounded substring of Approach; a label the answer did not
+// choose, stated beside every label it did, is not refused, and a label holding `|` cannot be
+// written into a table cell.
+// Lift when: a row is found stating a label its answer did not choose, or an option label needs
+// a `|`.
 function citesAnswer(
   snapshot: WorkflowSnapshot,
   row: RecordRow,

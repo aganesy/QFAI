@@ -12,8 +12,8 @@ import { assistantLayerDir } from "../paths/assistantPaths.js";
 import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import { validateProject } from "../validate.js";
 import { resolveToolVersion } from "../version.js";
-import { changedSinceStart, isRunChange } from "./boundary.js";
-import { areaCovers, everyStageResult } from "./common.js";
+import { changedSinceStart } from "./boundary.js";
+import { areaCovers, everyStageResult, isRunChange } from "./common.js";
 import { isRecord } from "./parse.js";
 import {
   checkPlans,
