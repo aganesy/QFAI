@@ -1176,6 +1176,9 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /\|\s*Destructive\s*\|\s*Deleting a file or a branch, dropping a table/,
         /\|\s*Hard to reverse\s*\|\s*A force push, a hard reset, amending a published commit, restoring a file that holds uncommitted work/,
         /\|\s*Visible to others\s*\|\s*Pushing, commenting on a pull request or issue, sending a message, changing shared infrastructure/,
+        // The one push that needs neither, and the pushes that stay classified.
+        /an\s+ordinary\s+push,\s+without\s+force,\s+to\s+a\s+branch\s+the\s+agent\s+created\s+for\s+the\s+current\s+task/,
+        /to\s+a\s+protected\s+branch\s+or\s+to\s+someone\s+else's\s+branch,\s+and\s+every\s+force\s+push/,
         // The class follows the effect, which is what the two examples show.
         /Classify\s+by\s+the\s+effect,\s+not\s+by\s+what\s+the\s+command\s+looks\s+like/,
         /Probing\s+which\s+flags\s+a\s+command\s+accepts\s+by\s+running\s+it\s+runs\s+the\s+command/,
@@ -1183,6 +1186,14 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
         /the\s+user's\s+explicit\s+request,\s+in\s+the\s+current\s+session,\s+for\s+that\s+action/,
         /a\s+skill\s+the\s+user\s+invoked,\s+whose\s+documented\s+steps\s+include\s+that\s+action/,
         /A\s+request\s+to\s+push\s+a\s+branch\s+does\s+not\s+cover\s+a\s+force\s+push/,
+        // A recorded instruction counts only when it is specific and the user's own.
+        /an\s+instruction\s+recorded\s+in\s+memory\s+or\s+settings\s+that\s+names\s+the\s+action\s+and\s+its\s+context/,
+        /was\s+written\s+from\s+the\s+user's\s+own\s+words/,
+        /covers\s+the\s+push,\s+and\s+not\s+a\s+merge\s+or\s+a\s+force\s+push/,
+        // A run that may not ask leaves the action undone and opens a question.
+        /Under\s+a\s+mode\s+that\s+may\s+not\s+ask\s+the\s+user/,
+        /Record\s+it\s+as\s+an\s+open\s+question\s+where\s+the\s+run's\s+gates\s+read\s+it/,
+        /carry\s+on\s+with\s+the\s+rest\s+of\s+the\s+work/,
         // An obstacle is found, not destroyed.
         /An\s+obstacle\s+is\s+not\s+a\s+reason\s+for\s+a\s+destructive\s+shortcut/,
         /skipping\s+a\s+hook\s+to\s+get\s+a\s+commit\s+through/,
