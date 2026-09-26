@@ -130,6 +130,7 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(combined).toMatch(/qfai discussion use <id>/);
   });
 
+  // QFAI:EX-0001-0093-03
   it("exits non-zero when currentId resolves to a missing pack with multiple candidates", async () => {
     await makePack("discussion-20260101000000000");
     await makePack("discussion-20260202000000000");

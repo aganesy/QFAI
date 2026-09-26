@@ -54,6 +54,12 @@ describe("web-research security", () => {
     expect(content).toMatch(/aria[_\s-]?hidden/i);
   });
 
+  // QFAI:EX-0001-0186-05
+  it("control characters removed, except TAB, LF and CR", async () => {
+    const content = await readSkill();
+    expect(content).toMatch(/U\+0000[–-]U\+001F except TAB\/LF\/CR/);
+  });
+
   // QFAI:EX-0001-0186-03  TDD-0015
   it("legitimate content preserved unchanged", async () => {
     const content = await readSkill();
@@ -85,6 +91,12 @@ describe("web-research security", () => {
     const content = await readSkill();
     expect(content).toMatch(/redirect/i);
     expect(content).toMatch(/block|deny|reject/i);
+  });
+
+  // QFAI:EX-0001-0187-05
+  it("redirect chain followed only while every hop stays on the allowlist", async () => {
+    const content = await readSkill();
+    expect(content).toContain("followed only while all hops remain on allowlisted domains");
   });
 
   // ── Sandbox Enforcement ────────────────────────────────────────────

@@ -334,6 +334,7 @@ describe("a retired line inside the block does not truncate it", () => {
     });
   });
 
+  // QFAI:EX-0001-0033-08
   it("still leaves a project line written under the block outside it", async () => {
     // The protection the old walk bought, kept. Widening it to tolerate unknown lines INSIDE
     // the block must not swallow the lines a project appended directly under it with no blank

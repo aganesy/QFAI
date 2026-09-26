@@ -90,7 +90,6 @@
 | US-0001-0086 | Evaluator Calibration                                                                  | `user-story-0001-0086/` |
 | US-0001-0087 | Screen Contracts                                                                       | `user-story-0001-0087/` |
 | US-0001-0088 | Review Input Bundle                                                                    | `user-story-0001-0088/` |
-| US-0001-0089 | No Early Winner                                                                        | `user-story-0001-0089/` |
 | US-0001-0090 | Design Direction Handoff                                                               | `user-story-0001-0090/` |
 | US-0001-0091 | Legacy Sidecar Drop                                                                    | `user-story-0001-0091/` |
 | US-0001-0092 | Mock template emits anchor-form hrefs by default                                       | `user-story-0001-0092/` |

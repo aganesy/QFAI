@@ -341,7 +341,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:EX-0001-0020-02
+  // QFAI:EX-0001-0024-02
   // QFAI:EX-0001-0025-01
   it("creates template additions with symlinks", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -1460,6 +1460,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0023-02
   it("reports legacy cleanup as planned in dry-run and keeps files", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -1721,7 +1722,7 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:EX-0001-0020-03
+  // QFAI:EX-0001-0028-03
   it("stays silent about core.symlinks outside a git repository", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -2148,6 +2149,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0031-03
   it("--force replaces an instructions symlink instead of writing through it", async () => {
     // `writeFile` follows a symlink, so refreshing without unlinking first
     // would rewrite the link's target — a file outside the project that init
@@ -2182,6 +2184,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0031-02
   it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
     // `lstat` only answers about the last path component, so with
     // `.github/instructions` pointing at a shared directory the destination
@@ -3024,6 +3027,7 @@ describe("qfai init", () => {
     }
   });
 
+  // QFAI:EX-0001-0034-01
   it("seeds the singular assistant tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-singular-"));
     try {
@@ -3033,7 +3037,7 @@ describe("qfai init", () => {
           (await readdir(path.join(root, ".qfai", "assistant", layer))).length,
         ).toBeGreaterThan(0);
       }
-      for (const retired of ["constitution", "manifest", "process"]) {
+      for (const retired of ["constitution", "manifest", "catalog", "process", "steering"]) {
         await expect(readdir(path.join(root, ".qfai", "assistant", retired))).rejects.toMatchObject(
           { code: "ENOENT" },
         );

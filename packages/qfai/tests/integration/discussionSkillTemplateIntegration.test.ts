@@ -307,6 +307,7 @@ describe("discussion skill template integration", () => {
   // classification (`detection/surfaceType.ts#readValidatedClassificationBlock`),
   // and it still ships a visual surface. A carve-out written against
   // `primary_surface` alone would drop the token SSOT for that product.
+  // QFAI:EX-0001-0090-03
   it("DESIGN.md carve-out が secondary_surfaces も判定に含めている", async () => {
     const skill = await readFile(skillPath, "utf-8");
     const playbook = await readFile(uiBearingPlaybookPath, "utf-8");
