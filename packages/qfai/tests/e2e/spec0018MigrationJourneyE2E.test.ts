@@ -43,7 +43,7 @@ const CONVERTIBLE_CRITERIA = path.join(
 );
 const SKILL_SCRIPTS = path.join(
   PACKAGE_ROOT,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const CLI = path.join(PACKAGE_ROOT, "dist/cli/index.mjs");
 const RESOLUTION = path.join(

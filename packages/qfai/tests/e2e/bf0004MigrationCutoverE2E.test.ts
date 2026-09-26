@@ -54,7 +54,7 @@ const migratedE2e = path.join(
 );
 const scripts = path.join(
   packageRoot,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const cli = path.join(packageRoot, "dist/cli/index.mjs");
 const names = [

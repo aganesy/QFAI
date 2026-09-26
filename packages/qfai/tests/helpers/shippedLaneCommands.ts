@@ -1785,47 +1785,47 @@ const ALLOWED_INIT_MARKERS: ReadonlyMap<string, string> = new Map([
 /** Migration programs shipped for an explicit user-run migration, pinned by path and bytes. */
 export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/_step.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/_step.mjs",
     "77b7286587d152c11456bb339be3414b9be65d554ba387e1008aea587b04a3af",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/01-rename-directories.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs",
     "4fd302a1a2e8a352dec294da0373c9bae3300f1d8f7ebafb51758c5fe1bf8fea",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/02-merge-tables.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/02-merge-tables.mjs",
     "e8fa75cb225fdc105143887e93582c9f164106a20b841d8be052cb0d99916e12",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/03-move-catalog.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/03-move-catalog.mjs",
     "016778585862b90683333ced79608aa3717c9731b2932c14b45cf19c91f94a92",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/04-renumber-ids.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/04-renumber-ids.mjs",
     "6fd5b63fcfb2a2ab616e90d4e5a03908ce7770bfde4689060ffffeb91e6571be",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/05-cases-to-examples.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/05-cases-to-examples.mjs",
     "719621709568dbbdc3aad1c069c02153c4df251297a26356902aea1aff45c466",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/06-derive-ac-refs.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/06-derive-ac-refs.mjs",
     "c990cbe393bbb7638c7873e461e165f957bad34503c60f24a08c92543be4994b",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/07-rules-to-contracts.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/07-rules-to-contracts.mjs",
     "2f803f507b74c4179905735a2ebaeb3c2f65532d13c1103092f0a216bd2321a9",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/08-rewrite-annotations.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/08-rewrite-annotations.mjs",
     "2d06b5b9633dbf638dc1d528fbef85162ad5bd4f755cb902ca7755b9b22c0648",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/09-repoint-links.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/09-repoint-links.mjs",
     "6d45380e132bfd0c8811a1996dc24135a6d967c1d234b4cc5f118da3c7f076a3",
   ],
   [
-    ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/10-update-gitignore.mjs",
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/10-update-gitignore.mjs",
     "209fc3d2f4b7caaf33cba217d20573ad30eab897f1bf4cfbd48ef716a41a5641",
   ],
 ]);

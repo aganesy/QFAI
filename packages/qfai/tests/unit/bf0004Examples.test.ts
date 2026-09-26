@@ -115,13 +115,13 @@ describe("BF-0004 migration examples", () => {
     await put(legacy, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
     for (const root of [fresh, legacy]) {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const skill = path.join(root, ".qfai/assistant/skill/qfai-migration-spec-to-story");
+      const skill = path.join(root, ".qfai/assistant/skill/qfai-migration-v1-to-v2");
       expect(await readFile(path.join(skill, "SKILL.md"), "utf8")).toContain(
-        "qfai-migration-spec-to-story",
+        "qfai-migration-v1-to-v2",
       );
       expect(await readdir(path.join(skill, "scripts"))).toContain("01-rename-directories.mjs");
       for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
-        expect(await realpath(path.join(root, host, "qfai-migration-spec-to-story"))).toBe(
+        expect(await realpath(path.join(root, host, "qfai-migration-v1-to-v2"))).toBe(
           await realpath(skill),
         );
       }
@@ -170,9 +170,9 @@ describe("BF-0004 migration examples", () => {
       expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
       expect(result.issues[0]?.severity).toBe("error");
       expect(result.issues[0]?.message).toContain(path.join(context.root, ".qfai/spec"));
-      expect(result.issues[0]?.message).toContain("/qfai-migration-spec-to-story");
+      expect(result.issues[0]?.message).toContain("/qfai-migration-v1-to-v2");
       expect(result.issues[0]?.message).toMatch(
-        /; run \/qfai-migration-spec-to-story before validation\.$/,
+        /; run \/qfai-migration-v1-to-v2 before validation\.$/,
       );
       expect(result.issues[0]?.message).not.toContain("03_Example.md");
     }
@@ -200,12 +200,9 @@ describe("BF-0004 migration examples", () => {
     // QFAI:EX-0004-0003-04
     const context = await fixture();
     await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
-    const installedSkill = path.join(
-      context.root,
-      ".qfai/assistant/skill/qfai-migration-spec-to-story",
-    );
+    const installedSkill = path.join(context.root, ".qfai/assistant/skill/qfai-migration-v1-to-v2");
     await cp(
-      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-spec-to-story"),
+      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2"),
       installedSkill,
       { recursive: true },
     );
@@ -619,7 +616,7 @@ describe("BF-0004 migration examples", () => {
   it("ships the plan, dry-run, evidence, deduplication and validation procedure in order", async () => {
     // QFAI:EX-0004-0012-01
     const skill = await readFile(
-      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-spec-to-story/SKILL.md"),
+      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
     );
     const markers = [
@@ -657,7 +654,7 @@ describe("BF-0004 migration examples", () => {
     const guide = await readFile(
       path.join(
         getInitAssetsDir(),
-        ".qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md",
+        ".qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
       ),
       "utf8",
     );

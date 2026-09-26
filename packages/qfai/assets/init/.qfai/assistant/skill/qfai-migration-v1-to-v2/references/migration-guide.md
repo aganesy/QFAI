@@ -17,9 +17,9 @@ the 2.x validation and authoring workflow.
 3. Run `npx qfai init` from the local dependency (or `yarn exec qfai init` for Plug'n'Play), without `--force`. On an old-layout
    project it installs and links the migration skill without seeding a second
    spec tree.
-4. Open `/qfai-migration-spec-to-story`. Work from the project root. The
+4. Open `/qfai-migration-v1-to-v2`. Work from the project root. The
    installed skill is under
-   `.qfai/assistant/skill/qfai-migration-spec-to-story/`.
+   `.qfai/assistant/skill/qfai-migration-v1-to-v2/`.
 
 Do not run `npx qfai init --force` to migrate. It can write beyond the migration
 scripts' allowed paths and replace local edits.
@@ -81,8 +81,8 @@ evidence. The scripts write no report file themselves.
 Run a row from the project root in this form:
 
 ```text
-node .qfai/assistant/skill/qfai-migration-spec-to-story/scripts/01-rename-directories.mjs --dry-run
-node .qfai/assistant/skill/qfai-migration-spec-to-story/scripts/01-rename-directories.mjs
+node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs --dry-run
+node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs
 ```
 
 The shared `scripts/_step.mjs` loads the locally installed package for each

@@ -73,7 +73,7 @@ describe("story-tree layout dispatch", () => {
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
       expect(result.issues[0]?.message).toContain(path.join(root, specs));
-      expect(result.issues[0]?.message).toContain("/qfai-migration-spec-to-story");
+      expect(result.issues[0]?.message).toContain("/qfai-migration-v1-to-v2");
     }
   });
 

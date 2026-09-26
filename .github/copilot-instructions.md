@@ -17,7 +17,7 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - Routing defaults: `packages/qfai/assets/defaults/` in this source repository.
 - Edit shipped assistant content under `packages/qfai/assets/init/.qfai/assistant/`;
   the matching `.qfai/assistant/` tree in this repository is generated.
-- Use `/qfai-migration-spec-to-story` to migrate a project with the former
+- Use `/qfai-migration-v1-to-v2` to migrate a project with the former
   `.qfai/specs/` layout. Validation reports that layout as an error.
 - When asked to perform QFAI workflow tasks, prefer using the QFAI skill symlinks in `.github/skills/`.
   - These symlinks resolve to `.qfai/assistant/skill/<skill-name>/`.

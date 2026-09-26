@@ -56,7 +56,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   - `QFAI-LAYOUT-001` (`error`) stops validation when the configured spec
     directory, or `.qfai/specs/`, still holds a `spec-*` pack or `_policies/`.
-    Its fix names the `/qfai-migration-spec-to-story` skill.
+    Its fix names the `/qfai-migration-v1-to-v2` skill.
   - `QFAI-STORY-001` to `-005` and `-011` check the tree itself: the required
     policy and contract files exist; IDs are well formed, unique, listed in
     their index and agree with their directories; the decisions and
@@ -73,7 +73,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     story-tree file that no change request in force authorizes, and an edit
     to an existing decision row.
 
-- **The `qfai-migration-spec-to-story` skill and a migration guide.**
+- **The `qfai-migration-v1-to-v2` skill and a migration guide.**
   `qfai init` installs the skill. Its ten scripts move a 1.x project to the
   story tree, each with a `--dry-run` mode and a report. The scripts load the
   `qfai` package, so install it as a project dependency first
@@ -111,13 +111,22 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
+  name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
+  removes the host links of the old name and moves
+  `.qfai/assistant/skill/qfai-migration-spec-to-story/` whole to
+  `.qfai/evidence/migration-spec-to-story/legacy/skill/`, so an edited copy is
+  kept and `qfai validate` no longer reports it. A migration under way
+  continues under the new name from the step it reached: the plan, the ID map
+  and the archives stay in `.qfai/evidence/migration-spec-to-story/`.
+
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
   stories, acceptance criteria and examples in `02_business-flow/`, contracts
   and the business rules they enforce in `03_contract/`, and one
   `decisions.md` and one `open-questions.md` at the root. `qfai init` seeds
   that tree. A project on the former `.qfai/specs/spec-*` layout must run the
-  bundled `qfai-migration-spec-to-story` skill before adopting this release,
+  bundled `qfai-migration-v1-to-v2` skill before adopting this release,
   or stay on QFAI 1.x until migration is complete.
 
   Migration step 1 moves these directories:

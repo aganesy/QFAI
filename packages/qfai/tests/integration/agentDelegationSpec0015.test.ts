@@ -140,9 +140,7 @@ describe("routing defaults are package data", () => {
         review_profile: string;
       }>;
     };
-    const migration = routing.routing.find(
-      (entry) => entry.skill === "qfai-migration-spec-to-story",
-    );
+    const migration = routing.routing.find((entry) => entry.skill === "qfai-migration-v1-to-v2");
     expect(migration?.phases.map((phase) => phase.id)).toEqual(["plan", "execution", "review"]);
     expect(migration?.phases[0]?.mandatory_agents).toEqual([
       "requirements-analyst",

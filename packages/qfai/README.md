@@ -110,7 +110,7 @@ Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
     | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                         |
     | `--force`                  | Refresh shipped skills and agents, their host wrappers, and generated Copilot instructions. Shipped rules are refreshed only when their provenance shows they are unedited. Project content and routing overrides are preserved. The managed `.gitignore` block and `core.symlinks` setting are repaired on every non-dry-run. |
     | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                     |
-    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-spec-to-story`. Unrecognized assistant files stay in place.                                                                                                 |
+    | `--upgrade-assistant-tree` | Copy recognized legacy assistant files into the singular tree without deleting a source or overwriting a destination. Migrate old spec packs with `/qfai-migration-v1-to-v2`. Unrecognized assistant files stay in place.                                                                                                      |
     | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                       |
     | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.            |
     | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                 |
@@ -258,10 +258,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
   each AC of the selected flow.
 - **qfai-implement**: Implement a BF through EX tests and a Red, Green,
   Refactor cycle for each example.
-- **qfai-migration-spec-to-story**: Move an existing spec-pack project to the
+- **qfai-migration-v1-to-v2**: Move an existing spec-pack project to the
   story tree with ten bundled scripts. Preview and apply each step, then resolve
   items retained in the migration reports. The installed
-  `.qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md`
+  `.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md`
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).
 - **qfai-verify**: Run documented quality gates and produce reviewer-approved evidence under `.qfai/evidence/`.
@@ -415,7 +415,7 @@ To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage
     cite every EX from a BR in its enforcing contract. List every contract
     file in the contract index at `<paths.contractsDir>/contracts.md`.
 - Q: An old spec-pack project reports `QFAI-LAYOUT-001`.
-  - A: Run `/qfai-migration-spec-to-story`. The detector reads the configured
+  - A: Run `/qfai-migration-v1-to-v2`. The detector reads the configured
     `paths.specsDir`. Set that path to the old tree when the project has no
     existing setting; the new default is `.qfai/spec/`.
 - Q: `/qfai-sdd` requires approval for a proposed change.
@@ -556,7 +556,7 @@ package does not refresh what a previous one already wrote. Only
 `npx qfai init --force` does that.
 
 Moving a project from the spec-pack layout to the story tree also requires
-`/qfai-migration-spec-to-story`. `init --force` refreshes shipped assets; the
+`/qfai-migration-v1-to-v2`. `init --force` refreshes shipped assets; the
 migration skill moves project content and reports items that need a person.
 
 Merging the bump on its own leaves the repository claiming a version whose
@@ -618,7 +618,7 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   │   ├── constitution.md
 │   │   │   └── test-layers.md
 │   │   └── skill
-│   │       ├── qfai-migration-spec-to-story
+│   │       ├── qfai-migration-v1-to-v2
 │   │       │   └── SKILL.md
 │   │       └── <other QFAI skills>
 │   ├── spec

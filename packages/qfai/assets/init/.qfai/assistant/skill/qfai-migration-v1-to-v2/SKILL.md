@@ -1,6 +1,6 @@
 ---
-name: qfai-migration-spec-to-story
-title: QFAI Spec-to-Story Migration
+name: qfai-migration-v1-to-v2
+title: QFAI 1.x to 2.x Migration
 description: "Move an existing QFAI spec-pack project to the story-based spec tree using the bundled steps."
 allowed-tools: [Read, Glob, Write, Edit, Bash]
 roles:
@@ -15,7 +15,7 @@ roles:
 routing-profile: architecture-heavy
 ---
 
-## /qfai-migration-spec-to-story
+## /qfai-migration-v1-to-v2
 
 [DRIFT-PROTOCOL:MANDATORY]
 
