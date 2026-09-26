@@ -7,7 +7,7 @@
  * Converted from `.skip` test-first skeleton to deterministic helper
  * exercises of the SSOT keyword list + the shipped reference doc.
  */
-// QFAI:SPEC-0012:US-0012-0141
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,7 +33,7 @@ const ASSET_REF_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-prototyping",
   "references",
   "evidence-requirements.md",

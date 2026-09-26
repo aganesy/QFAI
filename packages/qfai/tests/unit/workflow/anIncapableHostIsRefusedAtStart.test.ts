@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0187
-// QFAI:SPEC-0018:TC-0018-0188
+// QFAI:EX-0001-0200-01
 
 import { expect, it } from "vitest";
 
@@ -24,7 +23,7 @@ const startFacts: Facts = {
     qfaiVersion: "2.0.0",
     digestKey: "b".repeat(64),
     policyDigests: {},
-    manifestDigests: {},
+
     planDigests: {},
   },
 };
@@ -58,23 +57,23 @@ const refused = {
   events: [],
 };
 
-it("TC-0018-0187 (TDD-0228): host-copilot", () => {
+it("host-copilot", () => {
   expect(refusal(start("copilot"))).toEqual(refused);
 });
 
-it("TC-0018-0187 (TDD-0229): host-unlisted", () => {
+it("host-unlisted", () => {
   expect(refusal(start("gemini-cli"))).toEqual(refused);
 });
 
 const gaps: [string, string][] = [
-  ["TC-0018-0187 (TDD-0230): fetch-skill-body", "fetchSkillBody"],
-  ["TC-0018-0187 (TDD-0231): invoke-stage", "invokeStage"],
-  ["TC-0018-0187 (TDD-0232): delegate-sub-agent", "delegateSubAgent"],
-  ["TC-0018-0187 (TDD-0233): relay-question", "relayQuestion"],
-  ["TC-0018-0187 (TDD-0234): run-shell-and-tests", "runShellAndTests"],
-  ["TC-0018-0187 (TDD-0235): write-project-root", "writeProjectRoot"],
-  ["TC-0018-0187 (TDD-0236): keep-run-record", "keepRunRecord"],
-  ["TC-0018-0187 (TDD-0237): resume", "resume"],
+  ["fetch-skill-body", "fetchSkillBody"],
+  ["invoke-stage", "invokeStage"],
+  ["delegate-sub-agent", "delegateSubAgent"],
+  ["relay-question", "relayQuestion"],
+  ["run-shell-and-tests", "runShellAndTests"],
+  ["write-project-root", "writeProjectRoot"],
+  ["keep-run-record", "keepRunRecord"],
+  ["resume", "resume"],
 ];
 
 for (const [title, capability] of gaps) {
@@ -84,8 +83,8 @@ for (const [title, capability] of gaps) {
 }
 
 for (const [title, host] of [
-  ["TC-0018-0188 (TDD-0238): claude-code", "claude-code"],
-  ["TC-0018-0188 (TDD-0239): codex", "codex"],
+  ["claude-code", "claude-code"],
+  ["codex", "codex"],
 ] satisfies [string, string][]) {
   it(title, () => {
     const started = start(host);

@@ -1,6 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0135
-// QFAI:SPEC-0018:TC-0018-0136
-// QFAI:SPEC-0018:TC-0018-0137
+// QFAI:EX-0001-0196-14
 // Fault seeds: FAULT-021
 
 import { expect, it } from "vitest";
@@ -24,19 +22,19 @@ function runIn(state: string): Snapshot {
   return {
     run: { id: "run-stop", state, sequence: 7 },
     plan: finishPlan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
     ...(state === "running" ? { outstandingWorkOrder: workOrder } : {}),
   };
 }
 
 const states: [string, string][] = [
-  ["TC-0018-0135 (TDD-0149): created", "created"],
-  ["TC-0018-0135 (TDD-0150): routing", "routing"],
-  ["TC-0018-0135 (TDD-0151): ready", "ready"],
-  ["TC-0018-0135 (TDD-0152): running", "running"],
-  ["TC-0018-0135 (TDD-0153): awaiting-input", "awaiting_input"],
-  ["TC-0018-0135 (TDD-0154): blocked", "blocked"],
-  ["TC-0018-0135 (TDD-0155): interrupted", "interrupted"],
+  ["created", "created"],
+  ["routing", "routing"],
+  ["ready", "ready"],
+  ["running", "running"],
+  ["awaiting-input", "awaiting_input"],
+  ["blocked", "blocked"],
+  ["interrupted", "interrupted"],
 ];
 
 for (const [title, state] of states) {
@@ -58,7 +56,7 @@ function cancelled(): Snapshot {
   return { ...runIn("running"), run, stopVerdict: first.verdict };
 }
 
-it("TC-0018-0136 (TDD-0156): A second stop on a run a stop cancelled", () => {
+it("A second stop on a run a stop cancelled", () => {
   const snapshot = cancelled();
   const again = decide(snapshot, stop, {});
   expect({ same: again.verdict === snapshot.stopVerdict, events: again.events }).toEqual({
@@ -69,7 +67,7 @@ it("TC-0018-0136 (TDD-0156): A second stop on a run a stop cancelled", () => {
 
 const afterStop: [string, Input][] = [
   [
-    "TC-0018-0137 (TDD-0157): accept",
+    "accept",
     {
       operation: "accept",
       result: {
@@ -82,9 +80,9 @@ const afterStop: [string, Input][] = [
       },
     },
   ],
-  ["TC-0018-0137 (TDD-0158): next", { operation: "next" }],
+  ["next", { operation: "next" }],
   [
-    "TC-0018-0137 (TDD-0159): decision",
+    "decision",
     {
       operation: "decision",
       questionId: "question-7-1",
@@ -93,8 +91,8 @@ const afterStop: [string, Input][] = [
       expectedSequence: 8,
     },
   ],
-  ["TC-0018-0137 (TDD-0160): resume", { operation: "resume" }],
-  ["TC-0018-0137 (TDD-0161): finish", { operation: "finish" }],
+  ["resume", { operation: "resume" }],
+  ["finish", { operation: "finish" }],
 ];
 
 for (const [title, input] of afterStop) {

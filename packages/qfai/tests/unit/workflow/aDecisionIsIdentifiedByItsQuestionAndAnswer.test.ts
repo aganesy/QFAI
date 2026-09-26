@@ -1,6 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0099
-// QFAI:SPEC-0018:TC-0018-0100
-// QFAI:SPEC-0018:TC-0018-0101
+// QFAI:EX-0001-0195-10
 
 import { expect, it } from "vitest";
 
@@ -76,7 +74,7 @@ function isReplay({ recorded, repeated }: ReturnType<typeof answerTwice>) {
   };
 }
 
-it("TC-0018-0099 (TDD-0139): The same question and the same answer submitted twice", () => {
+it("The same question and the same answer submitted twice", () => {
   const twice = answerTwice(choice, { optionIds: ["csv"] }, { optionIds: ["csv"] });
   expect({
     ...isReplay(twice),
@@ -86,7 +84,7 @@ it("TC-0018-0099 (TDD-0139): The same question and the same answer submitted twi
   }).toEqual({ sameVerdict: true, events: [], humanDecisions: 1 });
 });
 
-it("TC-0018-0100 (TDD-0140): A different answer to the answered question", () => {
+it("A different answer to the answered question", () => {
   const { repeated } = answerTwice(choice, { optionIds: ["csv"] }, { optionIds: ["json"] });
   expect({ code: repeated?.verdict.error?.code, events: repeated?.events }).toEqual({
     code: "answer-conflict",
@@ -95,14 +93,9 @@ it("TC-0018-0100 (TDD-0140): A different answer to the answered question", () =>
 });
 
 const sameAnswers: [string, Question, Answer, Answer][] = [
-  ["TC-0018-0101 (TDD-0141): nfd", fact, { value: "Café" }, { value: "Café" }],
-  ["TC-0018-0101 (TDD-0142): white-space", fact, { value: "exports" }, { value: "  exports\n" }],
-  [
-    "TC-0018-0101 (TDD-0143): option-order",
-    choice,
-    { optionIds: ["csv", "json"] },
-    { optionIds: ["json", "csv"] },
-  ],
+  ["nfd", fact, { value: "Café" }, { value: "Café" }],
+  ["white-space", fact, { value: "exports" }, { value: "  exports\n" }],
+  ["option-order", choice, { optionIds: ["csv", "json"] }, { optionIds: ["json", "csv"] }],
 ];
 
 for (const [title, question, first, second] of sameAnswers) {

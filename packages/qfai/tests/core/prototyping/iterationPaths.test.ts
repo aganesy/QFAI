@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   findIterationReviewFiles,
   findStaleIterDirs,
-  iterationDirPerSpec,
-  iterationReviewPathPerSpec,
+  iterationDirPerUiContract,
+  iterationReviewPathPerUiContract,
   parseIterationReviewPath,
   deleteStaleIterDirs,
 } from "../../../src/core/prototyping/iterationPaths.js";
@@ -46,66 +46,70 @@ afterEach(async () => {
   }
 });
 
-describe("iterationDirPerSpec / iterationReviewPathPerSpec path composition", () => {
-  // QFAI:SPEC-0012:TC-0012-0378
+describe("iterationDirPerUiContract / iterationReviewPathPerUiContract path composition", () => {
+  // QFAI:EX-0001-0123-02
   it("composes zero-padded iter dir + screen review path for a (idx, spec, screen) triple", () => {
-    expect(iterationDirPerSpec(2, "spec-0007")).toBe(
-      ".qfai/evidence/prototyping/iter-02/spec-0007",
+    expect(iterationDirPerUiContract(2, "CON-UI-0007")).toBe(
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0007",
     );
-    expect(iterationReviewPathPerSpec(2, "spec-0007", "orders-dashboard")).toBe(
-      ".qfai/evidence/prototyping/iter-02/spec-0007/orders-dashboard.review.json",
+    expect(iterationReviewPathPerUiContract(2, "CON-UI-0007", "orders-dashboard")).toBe(
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0007/orders-dashboard.review.json",
     );
   });
 
-  // QFAI:SPEC-0012:TC-0012-0378
+  // QFAI:EX-0001-0123-02
   it("zero-pads single-digit indices and respects two-digit indices", () => {
-    expect(iterationDirPerSpec(0, "spec-0001")).toBe(
-      ".qfai/evidence/prototyping/iter-00/spec-0001",
+    expect(iterationDirPerUiContract(0, "CON-UI-0001")).toBe(
+      ".qfai/evidence/prototyping/iter-00/CON-UI-0001",
     );
-    expect(iterationDirPerSpec(9, "spec-0009")).toBe(
-      ".qfai/evidence/prototyping/iter-09/spec-0009",
+    expect(iterationDirPerUiContract(9, "CON-UI-0009")).toBe(
+      ".qfai/evidence/prototyping/iter-09/CON-UI-0009",
     );
-    expect(iterationDirPerSpec(14, "spec-0014")).toBe(
-      ".qfai/evidence/prototyping/iter-14/spec-0014",
+    expect(iterationDirPerUiContract(14, "CON-UI-0014")).toBe(
+      ".qfai/evidence/prototyping/iter-14/CON-UI-0014",
     );
   });
 });
 
 describe("findIterationReviewFiles", () => {
-  // QFAI:SPEC-0012:TC-0012-0379
-  it("globs across iter-NN/spec-*/<screen>.review.json and returns sorted absolute paths, ignoring .png/.html siblings", async () => {
+  // QFAI:EX-0001-0123-02
+  it("globs across iter-NN/CON-UI-*/<screen>.review.json and returns sorted absolute paths, ignoring .png/.html siblings", async () => {
     const root = await newTempDir();
 
     // Real review files spanning multiple specs.
     const a = await seedFile(
       root,
-      ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.review.json",
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0007/dashboard.review.json",
       '{"a":1}',
     );
     const b = await seedFile(
       root,
-      ".qfai/evidence/prototyping/iter-02/spec-0007/detail.review.json",
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0007/detail.review.json",
       '{"b":1}',
     );
     const c = await seedFile(
       root,
-      ".qfai/evidence/prototyping/iter-02/spec-0011/list.review.json",
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0011/list.review.json",
       '{"c":1}',
     );
 
     // Distractor files in the same dirs — must be ignored.
-    await seedFile(root, ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.png", "PNGDATA");
-    await seedFile(root, ".qfai/evidence/prototyping/iter-02/spec-0007/dashboard.html", "<html/>");
+    await seedFile(root, ".qfai/evidence/prototyping/iter-02/CON-UI-0007/dashboard.png", "PNGDATA");
     await seedFile(
       root,
-      ".qfai/evidence/prototyping/iter-02/spec-0011/notes.json",
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0007/dashboard.html",
+      "<html/>",
+    );
+    await seedFile(
+      root,
+      ".qfai/evidence/prototyping/iter-02/CON-UI-0011/notes.json",
       '{"not":"a review"}',
     );
 
     // Other iteration — must not appear in iter-02 query.
     await seedFile(
       root,
-      ".qfai/evidence/prototyping/iter-03/spec-0007/dashboard.review.json",
+      ".qfai/evidence/prototyping/iter-03/CON-UI-0007/dashboard.review.json",
       '{"d":1}',
     );
 
@@ -118,7 +122,7 @@ describe("findIterationReviewFiles", () => {
     }
   });
 
-  // QFAI:SPEC-0012:TC-0012-0379
+  // QFAI:EX-0001-0123-02
   it("returns [] when the iteration directory does not exist", async () => {
     const root = await newTempDir();
     const result = await findIterationReviewFiles(root, 5);
@@ -127,7 +131,7 @@ describe("findIterationReviewFiles", () => {
 });
 
 describe("findStaleIterDirs / deleteStaleIterDirs", () => {
-  // QFAI:SPEC-0012:TC-0012-0380
+  // QFAI:EX-0001-0123-02
   it("matches only /^iter-\\d{2,}$/ directories and leaves unrelated siblings intact", async () => {
     const root = await newTempDir();
 
@@ -164,7 +168,7 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
     expect(remaining.sort()).toEqual(["iter-1", "iter-bad", "prototyping.json", "sandbox"].sort());
   });
 
-  // QFAI:SPEC-0012:TC-0012-0380
+  // QFAI:EX-0001-0123-02
   it("returns [] when the prototyping evidence root does not exist", async () => {
     const root = await newTempDir();
     const matched = await findStaleIterDirs(root);
@@ -175,35 +179,35 @@ describe("findStaleIterDirs / deleteStaleIterDirs", () => {
 });
 
 describe("parseIterationReviewPath round-trip", () => {
-  // QFAI:SPEC-0012:TC-0012-0392
-  it("is a left-inverse of iterationReviewPathPerSpec across representative (idx, spec, screen) triples", () => {
+  // QFAI:EX-0001-0123-01
+  it("is a left-inverse of iterationReviewPathPerUiContract across representative (idx, spec, screen) triples", () => {
     const indices = [0, 1, 9, 10, 99];
-    const specs = ["spec-0007", "spec-0012"];
+    const uiContractIds = ["CON-UI-0007", "CON-UI-0012"];
     const screens = ["dashboard", "list", "settings"];
 
     for (const idx of indices) {
-      for (const spec of specs) {
+      for (const uiContractId of uiContractIds) {
         for (const screen of screens) {
-          const built = iterationReviewPathPerSpec(idx, spec, screen);
+          const built = iterationReviewPathPerUiContract(idx, uiContractId, screen);
           const parsed = parseIterationReviewPath(built);
-          expect(parsed).toEqual({ idx, spec, screen });
+          expect(parsed).toEqual({ idx, uiContractId, screen });
         }
       }
     }
   });
 
-  // QFAI:SPEC-0012:TC-0012-0392
+  // QFAI:EX-0001-0123-01
   it("returns null on malformed inputs", () => {
     expect(parseIterationReviewPath("")).toBeNull();
     expect(parseIterationReviewPath("not/a/path.json")).toBeNull();
     expect(
-      parseIterationReviewPath(".qfai/evidence/prototyping/iter-2/spec-0007/x.review.json"),
+      parseIterationReviewPath(".qfai/evidence/prototyping/iter-2/CON-UI-0007/x.review.json"),
     ).toBeNull();
     expect(
-      parseIterationReviewPath(".qfai/evidence/prototyping/iter-02/spec-7/x.review.json"),
+      parseIterationReviewPath(".qfai/evidence/prototyping/iter-02/CON-UI-7/x.review.json"),
     ).toBeNull();
     expect(
-      parseIterationReviewPath(".qfai/evidence/prototyping/iter-02/spec-0007/x.png"),
+      parseIterationReviewPath(".qfai/evidence/prototyping/iter-02/CON-UI-0007/x.png"),
     ).toBeNull();
   });
 });

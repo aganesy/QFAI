@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0265
+// QFAI:EX-0001-0192-41
 
 import { expect, it } from "vitest";
 
@@ -22,13 +22,10 @@ function finishWithUncommitted(path: string) {
 }
 
 const uncommitted: [string, string][] = [
-  ["TC-0018-0265 (TDD-0522): uncommitted tracked stage change", "src/notify/email.ts"],
+  ["uncommitted tracked stage change", "src/notify/email.ts"],
+  ["uncommitted tracked summary", `.qfai/evidence/workflow/${RUN_ID}/summary.json`],
   [
-    "TC-0018-0265 (TDD-0523): uncommitted tracked summary",
-    `.qfai/evidence/workflow/${RUN_ID}/summary.json`,
-  ],
-  [
-    "TC-0018-0265 (TDD-0524): uncommitted authorization file",
+    "uncommitted authorization file",
     `.qfai/evidence/workflow/${RUN_ID}/authorizations/authorization-5.json`,
   ],
 ];

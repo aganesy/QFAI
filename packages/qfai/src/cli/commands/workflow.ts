@@ -3,24 +3,21 @@ import { mkdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
+import { boundaryStartOf } from "../../core/workflow/boundary.js";
 import { decide, workOrderDocument } from "../../core/workflow/decide.js";
-import type {
-  WorkflowDecision,
-  WorkflowDependency,
-  WorkflowEvent,
-  WorkflowFacts,
-  WorkflowInput,
-  WorkflowSnapshot,
-} from "../../core/workflow/decide.js";
+import {
+  journalExtrasOf,
+  recordsOf,
+  snapshotOf,
+  TRACKED_DIR,
+  writeSnapshot,
+  writeTracked,
+} from "../../core/workflow/fold.js";
 import {
   baselineOf,
-  completionFacts,
   identityOf,
-  ledgerFactsOf,
-  policyNowOf,
   receiptDependenciesOf,
-  receiptValidityOf,
-  routingFacts,
+  routingDependenciesOf,
   startFacts,
 } from "../../core/workflow/observe.js";
 import {
@@ -34,33 +31,31 @@ import {
   appendRecords,
   createRunDir,
   freeRunId,
+  ioRefusalOf,
   isRunId,
   listRuns,
   readJournal,
-  recordsOf,
   releaseLock,
   RUNS_DIR,
-  snapshotOf,
-  TRACKED_DIR,
   writeRecord,
-  writeSnapshot,
-  writeTracked,
 } from "../../core/workflow/persistence.js";
 import type { JournalRecord } from "../../core/workflow/persistence.js";
+import { obligationFilesOf } from "../../core/workflow/storyFacts.js";
+import type {
+  WorkflowDecision,
+  WorkflowDependency,
+  WorkflowFacts,
+  WorkflowInput,
+  WorkflowResult,
+  WorkflowSnapshot,
+} from "../../core/workflow/types.js";
 import { resolveToolVersion } from "../../core/version.js";
 import type { WorkflowOperation } from "../lib/args.js";
 import { EXIT_CODES } from "../lib/exitCodes.js";
+import { factsOf, isRefusal, parsePayload, readPayload, type Refusal } from "./workflowFacts.js";
 
 type Verdict = WorkflowDecision["verdict"];
 type Run = Verdict["run"];
-
-// One refusal of the adapter's own, in the shape of the output document's `error`.
-interface Refusal {
-  code: string;
-  message: string;
-  reasons?: { reason: string; subject: string }[];
-  cause?: string;
-}
 
 const EXIT_ONE = ["io-error", "torn-event", "sequence-gap", "hash-mismatch"];
 
@@ -111,10 +106,26 @@ interface LoadedRun {
 
 type Loaded = { ok: true; run: LoadedRun } | { ok: false; run: Run; error: Refusal };
 
+const UNKNOWN_RUN = "No run has that ID. Read the status to find the run in progress.";
+const INTEGRITY = "The run's record is damaged, so the run has failed. Start a new run.";
+const LEGACY = "This run was recorded in a format this version cannot read. Start a new run.";
+const NEWER_RECORD = "A newer version of qfai wrote this run. Upgrade qfai to continue it.";
+
 async function digestKeyOf(runDir: string): Promise<string | undefined> {
   const text = await readFile(path.join(runDir, "request.private.json"), "utf8").catch(() => "");
-  const parsed: unknown = text ? JSON.parse(text) : undefined;
-  return isRecord(parsed) && typeof parsed.digestKey === "string" ? parsed.digestKey : undefined;
+  const parsed = parsePayload(text);
+  if (isRefusal(parsed)) return undefined;
+  const key = parsed.value.digestKey;
+  return typeof key === "string" ? key : undefined;
+}
+
+// Whether a recorded package version is later than the running one, by MAJOR.MINOR.PATCH.
+function isNewer(recorded: string | undefined, running: string): boolean {
+  const parts = (version: string) => version.split(/[.+-]/).slice(0, 3).map(Number);
+  const [left, right] = [parts(recorded ?? ""), parts(running)];
+  if (left.some(Number.isNaN) || right.some(Number.isNaN)) return false;
+  const index = left.findIndex((part, at) => part !== right[at]);
+  return index >= 0 && (left[index] ?? 0) > (right[index] ?? 0);
 }
 
 // The run as its journal holds it. A journal that fails its integrity check derives `failed`.
@@ -133,29 +144,14 @@ async function loadRun(runsDir: string, runId: string): Promise<Loaded> {
     return { ok: false, run, error: { code: journal.fault, message: INTEGRITY } };
   }
   const folded = snapshotOf(journal.records);
-  if (!folded) {
+  if (!folded)
     return { ok: false, run: null, error: { code: "unknown-run", message: UNKNOWN_RUN } };
-  }
   if (isNewer(folded.executionContext?.qfaiVersion, await resolveToolVersion())) {
     return { ok: false, run: folded.run, error: { code: "newer-record", message: NEWER_RECORD } };
   }
   const digestKey = await digestKeyOf(runDir);
   const snapshot = digestKey ? { ...folded, digestKey } : folded;
   return { ok: true, run: { runId, runDir, ...journal, snapshot } };
-}
-
-const UNKNOWN_RUN = "No run has that ID. Read the status to find the run in progress.";
-const INTEGRITY = "The run's record is damaged, so the run has failed. Start a new run.";
-const LEGACY = "This run was recorded in a format this version cannot read. Start a new run.";
-const NEWER_RECORD = "A newer version of qfai wrote this run. Upgrade qfai to continue it.";
-
-// Whether a recorded package version is later than the running one, by MAJOR.MINOR.PATCH.
-function isNewer(recorded: string | undefined, running: string): boolean {
-  const parts = (version: string) => version.split(/[.+-]/).slice(0, 3).map(Number);
-  const [left, right] = [parts(recorded ?? ""), parts(running)];
-  if (left.some(Number.isNaN) || right.some(Number.isNaN)) return false;
-  const index = left.findIndex((part, at) => part !== right[at]);
-  return index >= 0 && (left[index] ?? 0) > (right[index] ?? 0);
 }
 
 // The worktree's one run that has not ended, or none. A run a newer package wrote is refused.
@@ -172,31 +168,6 @@ async function activeRun(runsDir: string): Promise<LoadedRun | Refusal | undefin
 async function modeOf(root: string) {
   const { document } = await loadConfig(root);
   return readWorkflowMode(document);
-}
-
-async function status(root: string, runsDir: string, runId: string | undefined): Promise<number> {
-  const mode = await modeOf(root);
-  if (runId === undefined) {
-    const active = await activeRun(runsDir);
-    if (active && "code" in active) return refuse(null, active);
-    if (!active) {
-      emit({ ok: true, run: null, mode });
-      return EXIT_CODES.ok;
-    }
-    return reportStatus(active.snapshot, mode);
-  }
-  const loaded = await loadRun(runsDir, runId);
-  if (loaded.ok) return reportStatus(loaded.run.snapshot, mode);
-  if (loaded.run?.state === "legacy") {
-    emit({ ok: true, run: loaded.run, mode });
-    return EXIT_CODES.ok;
-  }
-  if (loaded.run && EXIT_ONE.includes(loaded.error.code)) {
-    emit({ ok: true, run: loaded.run, mode, cause: loaded.error.code });
-    return EXIT_CODES.ok;
-  }
-  emit({ ok: false, run: loaded.run, mode, error: loaded.error });
-  return workflowExitCode(loaded.error);
 }
 
 function reportStatus(snapshot: WorkflowSnapshot, mode: string | null): number {
@@ -216,41 +187,32 @@ function reportStatus(snapshot: WorkflowSnapshot, mode: string | null): number {
   return EXIT_CODES.ok;
 }
 
-type Payload = { ok: true; value: Record<string, unknown>; digest: string } | Refusal;
-
-// An `--in` file: a regular file whose real path lies under the inbox it belongs to.
-async function readPayload(root: string, inPath: string | undefined, inbox: string) {
-  const refusal: Refusal = {
-    code: "invalid-input",
-    message: "The input file must sit in the run's inbox under .qfai/runs. Write it there.",
-    reasons: [{ reason: "in-path", subject: "--in" }],
-  };
-  if (!inPath) return refusal;
-  const real = await realpath(path.resolve(root, inPath)).catch(() => "");
-  const realInbox = await realpath(path.join(root, inbox)).catch(() => "");
-  const inside = realInbox !== "" && real.startsWith(`${realInbox}${path.sep}`);
-  if (!inside || !(await stat(real)).isFile()) return refusal;
-  const text = await readFile(real, "utf8");
-  return parsePayload(text);
+async function statusOfRun(runsDir: string, runId: string, mode: string | null) {
+  const loaded = await loadRun(runsDir, runId);
+  if (loaded.ok) return reportStatus(loaded.run.snapshot, mode);
+  if (loaded.run?.state === "legacy") {
+    emit({ ok: true, run: loaded.run, mode });
+    return EXIT_CODES.ok;
+  }
+  if (loaded.run && EXIT_ONE.includes(loaded.error.code)) {
+    emit({ ok: true, run: loaded.run, mode, cause: loaded.error.code });
+    return EXIT_CODES.ok;
+  }
+  emit({ ok: false, run: loaded.run, mode, error: loaded.error });
+  return workflowExitCode(loaded.error);
 }
 
-function parsePayload(text: string): Payload {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    parsed = undefined;
+// `status` reads the published journal and writes nothing.
+async function status(root: string, runsDir: string, runId: string | undefined): Promise<number> {
+  const mode = await modeOf(root);
+  if (runId !== undefined) return statusOfRun(runsDir, runId, mode);
+  const active = await activeRun(runsDir);
+  if (active && "code" in active) return refuse(null, active);
+  if (!active) {
+    emit({ ok: true, run: null, mode });
+    return EXIT_CODES.ok;
   }
-  if (!isRecord(parsed)) {
-    const message = "The input file is not a JSON object. Write the payload again.";
-    return { code: "invalid-input", message, reasons: [{ reason: "schema", subject: "--in" }] };
-  }
-  const digest = createHash("sha256").update(JSON.stringify(parsed)).digest("hex");
-  return { ok: true, value: parsed, digest };
-}
-
-function isRefusal(value: object): value is Refusal {
-  return "code" in value && "message" in value;
+  return reportStatus(active.snapshot, mode);
 }
 
 // The document a processed operation prints: the verdict, with a work order in full.
@@ -272,10 +234,8 @@ async function writeReferenced(runDir: string, record: JournalRecord, verdict: V
   const dir = path.join(runDir, "work-orders");
   await mkdir(dir, { recursive: true });
   const document = workOrderDocument(verdict.run.id, verdict.run.sequence, workOrder);
-  return writeRecord(
-    path.join(dir, `${workOrder.workOrderId}.json`),
-    `${JSON.stringify(document, null, 2)}\n`,
-  );
+  const file = path.join(dir, `${workOrder.workOrderId}.json`);
+  return writeRecord(file, `${JSON.stringify(document, null, 2)}\n`);
 }
 
 // A shared report a result names is copied under the stage instance that accepted it.
@@ -289,15 +249,21 @@ interface ReportCopy {
   bytes: Buffer;
 }
 
-function artifactPaths(result: WorkflowInput["result"]): unknown[] {
+function artifactPaths(result: WorkflowResult | undefined): unknown[] {
   const refs: unknown = result && Reflect.get(result, "artifactRefs");
   if (refs === undefined) return [];
   return Array.isArray(refs) ? refs.map((ref) => (isRecord(ref) ? ref.path : undefined)) : [refs];
 }
 
+function schemaRefusal(reasons: { reason: string; subject: string }[]): Refusal {
+  const message =
+    "The input file does not have the fields this operation takes. Fix it and try again.";
+  return { code: "invalid-input", message, reasons };
+}
+
 // Each artifact must be a regular file whose real path stays under the project's real root,
 // checked before it is read.
-async function reportCopiesOf(root: string, result: WorkflowInput["result"], stage: string) {
+async function reportCopiesOf(root: string, result: WorkflowResult | undefined, stage: string) {
   const realRoot = await realpath(root);
   const copies: ReportCopy[] = [];
   for (const [index, ref] of artifactPaths(result).entries()) {
@@ -331,13 +297,14 @@ async function writeReportCopies(runDir: string, copies: ReportCopy[]) {
 async function rebuildStaleSnapshot(loaded: LoadedRun) {
   const text = await readFile(path.join(loaded.runDir, "snapshot.json"), "utf8").catch(() => "");
   const parsed = parsePayload(text);
-  if (!isRefusal(parsed) && parsed.value.reflects === loaded.snapshot.run.sequence)
+  if (!isRefusal(parsed) && parsed.value.reflects === loaded.snapshot.run.sequence) {
     return undefined;
+  }
   return writeSnapshot(loaded.runDir, loaded.snapshot);
 }
 
-// Step 7: once tracked evidence has begun, the tracked files follow the journal. `finish` and a
-// run that had already ended leave them as they are.
+// Once tracked evidence has begun, the tracked files follow the journal. `finish` and a run that
+// had already ended leave them as they are.
 async function syncTracked(options: WorkflowOptions, loaded: LoadedRun) {
   if (options.operation === "finish" || TERMINAL.includes(loaded.snapshot.run.state)) return;
   const journal = await readJournal(loaded.runDir);
@@ -364,38 +331,10 @@ async function publish(
   return snapshot ? writeSnapshot(loaded.runDir, snapshot) : undefined;
 }
 
-type StageResult = NonNullable<WorkflowInput["result"]>;
-
-function isStageResult(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & StageResult {
-  return stageResultRefusals(value).length === 0;
-}
-
-type DecisionInput = Omit<WorkflowInput, "operation">;
-
-function isDecisionInput(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & DecisionInput {
-  return decisionInputRefusals(value).length === 0;
-}
-
-function isStartInput(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & DecisionInput {
-  return startInputRefusals(value).length === 0;
-}
-
-function schemaRefusal(reasons: { reason: string; subject: string }[]): Refusal {
-  const message =
-    "The input file does not have the fields this operation takes. Fix it and try again.";
-  return { code: "invalid-input", message, reasons };
-}
-
 const MISSING_RUN: Refusal = {
   code: "invalid-input",
   message: "Name the run with --run.",
-  reasons: [{ reason: "argument", subject: "--run" }],
+  reasons: [{ reason: "schema", subject: "--run" }],
 };
 
 // The operation's input, read from its `--in` file where it takes one.
@@ -410,66 +349,45 @@ async function inputOf(
   if (isRefusal(payload)) return payload;
   const { value, digest } = payload;
   if (operation === "accept") {
-    if (!isStageResult(value)) return schemaRefusal(stageResultRefusals(value));
+    const reasons = stageResultRefusals(value);
+    if (reasons.length > 0 || !isStageResult(value)) return schemaRefusal(reasons);
     return { input: { operation, result: value, payloadDigest: digest }, digest };
   }
-  if (!isDecisionInput(value)) return schemaRefusal(decisionInputRefusals(value));
-  return { input: { ...value, operation } };
+  const reasons = decisionInputRefusals(value);
+  if (reasons.length > 0) return schemaRefusal(reasons);
+  return { input: { ...decisionInputOf(value), operation } };
 }
 
-async function factsOf(root: string, loaded: LoadedRun, input: WorkflowInput) {
-  const { snapshot } = loaded;
-  if (input.operation === "finish") return completionFacts(root, loaded.runDir, snapshot);
-  if (input.operation === "decision") return { now: new Date().toISOString() };
-  const [identity, policyNow] = await Promise.all([identityOf(root), policyNowOf(root)]);
-  const facts =
-    input.operation === "accept" && snapshot.run.state === "routing"
-      ? await routingFacts(root, input.result?.proposal)
-      : await stageFacts(root, snapshot, input);
-  return { ...facts, identity, policyNow };
+// A stage result whose identity fields `stageResultRefusals` has checked.
+function isStageResult(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & WorkflowResult {
+  return stageResultRefusals(value).length === 0;
 }
 
-// The bound spec's ledger, read when a work order is issued against it and when its result is
-// accepted, so the row set can be compared; and at `accept`, where each changed path really is.
-async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: WorkflowInput) {
-  const { state } = snapshot.run;
-  const reads =
-    (input.operation === "next" && state === "ready") ||
-    (input.operation === "accept" && state === "running") ||
-    input.operation === "resume";
-  const specId = snapshot.specBinding?.specId;
-  const ledger = reads && specId ? await ledgerFactsOf(root, specId) : undefined;
-  const accepting = input.operation === "accept" && state === "running";
-  const changedRealPaths = accepting ? await realPathsOf(root, input.result) : undefined;
-  const receiptValidity =
-    input.operation === "resume" ? await receiptValidityOf(root, snapshot) : undefined;
+// The fields of a decision input `decisionInputRefusals` has checked.
+function decisionInputOf(value: Record<string, unknown>): Omit<WorkflowInput, "operation"> {
+  const answer = isRecord(value.answer) ? value.answer : undefined;
+  const optionIds = Array.isArray(answer?.optionIds)
+    ? answer.optionIds.filter((id): id is string => typeof id === "string")
+    : undefined;
   return {
-    ...(ledger ? { ledger } : {}),
-    ...(changedRealPaths ? { changedRealPaths } : {}),
-    ...(receiptValidity ? { receiptValidity } : {}),
+    ...(typeof value.questionId === "string" ? { questionId: value.questionId } : {}),
+    ...(answer
+      ? {
+          answer: {
+            ...(optionIds ? { optionIds } : {}),
+            ...(typeof answer.value === "string" ? { value: answer.value } : {}),
+          },
+        }
+      : {}),
+    ...(typeof value.answeredBy === "string" ? { answeredBy: value.answeredBy } : {}),
+    ...(typeof value.expectedSequence === "number"
+      ? { expectedSequence: value.expectedSequence }
+      : {}),
+    ...(value.stop === true ? { stop: true } : {}),
+    ...(value.authorization !== undefined ? { authorization: value.authorization } : {}),
   };
-}
-
-// Where each submitted changed path really is: a link or a case variant is judged by the file it
-// names, and a path that resolves outside the project's real root is `null`.
-async function realPathsOf(
-  root: string,
-  result: WorkflowInput["result"],
-): Promise<Record<string, string | null>> {
-  const realRoot = await realpath(root);
-  const changed: unknown = result?.changedFiles;
-  const submitted = (Array.isArray(changed) ? changed : [])
-    .map((entry: unknown) => (isRecord(entry) ? entry.path : undefined))
-    .filter((each): each is string => typeof each === "string");
-  const entries = await Promise.all(
-    submitted.map(async (each): Promise<[string, string | null][]> => {
-      const real = await realpath(path.resolve(root, each)).catch(() => undefined);
-      if (real === undefined) return [];
-      const inside = real.startsWith(`${realRoot}${path.sep}`);
-      return [[each, inside ? path.relative(realRoot, real).split(path.sep).join("/") : null]];
-    }),
-  );
-  return Object.fromEntries(entries.flat());
 }
 
 // What a replay of this operation returns, recorded on its last event.
@@ -485,6 +403,16 @@ function replayKey(input: WorkflowInput, decision: WorkflowDecision, digest?: st
 
 const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
 
+function routingSettled(decision: WorkflowDecision): boolean {
+  return decision.events.some(
+    (event) => event.type === "plan-accepted" || event.type === "unsettled-material-input",
+  );
+}
+
+function acceptsResult(decision: WorkflowDecision): boolean {
+  return decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
+}
+
 // The report copies of a stage result the decision accepts; none for any other operation.
 async function acceptedReportCopies(
   root: string,
@@ -493,8 +421,7 @@ async function acceptedReportCopies(
   decision: WorkflowDecision,
 ): Promise<ReportCopy[] | Refusal> {
   const stage = snapshot.outstandingWorkOrder?.stageInstanceId;
-  const accepted = decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
-  return accepted && stage ? reportCopiesOf(root, input.result, stage) : [];
+  return acceptsResult(decision) && stage ? reportCopiesOf(root, input.result, stage) : [];
 }
 
 // What the receipt of a stage result the decision accepts depends on; none for anything else.
@@ -505,58 +432,48 @@ async function acceptedDependencies(
   decision: WorkflowDecision,
 ): Promise<WorkflowDependency[]> {
   const workOrder = snapshot.outstandingWorkOrder;
-  const accepted = decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
-  if (!accepted || !workOrder || !input.result) return [];
+  if (routingSettled(decision)) return routingDependenciesOf(root, input.result?.proposal);
+  if (!acceptsResult(decision) || !workOrder || !input.result) return [];
   const target = workOrder.target;
-  const specId = target?.kind === "spec" ? target.specId : snapshot.specBinding?.specId;
-  return receiptDependenciesOf(root, workOrder, input.result, specId);
+  const flowId = target?.kind === "flow" ? target.flowId : snapshot.flowBinding?.flowId;
+  const { config } = await loadConfig(root);
+  const obligation = flowId ? await obligationFilesOf(root, config, flowId) : [];
+  return receiptDependenciesOf(root, workOrder, input.result, obligation);
 }
 
-// What the journal keeps beside an event that the decision does not carry itself.
-function extrasOf(
-  snapshot: WorkflowSnapshot,
-  input: WorkflowInput,
+// The decision's events, the files they reference, and the journal records that publish them.
+async function persistDecision(
+  options: WorkflowOptions,
+  loaded: LoadedRun,
+  read: { input: WorkflowInput; digest?: string },
   decision: WorkflowDecision,
-  accepted: { copies: ReportCopy[]; dependencies: WorkflowDependency[] },
-) {
-  return (event: WorkflowEvent): Partial<JournalRecord> => {
-    if (event.type === "unsettled-material-input" && decision.verdict.plan) {
-      return { plan: decision.verdict.plan };
-    }
-    if (!ACCEPTED_EVENTS.includes(event.type)) return {};
-    const stageKind = snapshot.outstandingWorkOrder?.stageKind;
-    const reviews = input.result?.reviewResults;
-    const reports = accepted.copies.map(({ path: file, digest }) => ({ path: file, digest }));
-    const testObservation = input.result?.testObservation;
-    return {
-      ...(stageKind ? { stageKind } : {}),
-      ...(testObservation ? { testObservation } : {}),
-      ...(reviews ? { reviewResults: reviews } : {}),
-      ...(reports.length > 0 ? { reports } : {}),
-      dependencies: accepted.dependencies,
-    };
-  };
+): Promise<Refusal | undefined> {
+  const { snapshot } = loaded;
+  const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
+  if (!Array.isArray(copies)) return copies;
+  const dependencies = await acceptedDependencies(options.root, snapshot, read.input, decision);
+  const records = recordsOf(
+    decision,
+    { operation: options.operation, before: snapshot.run },
+    journalExtrasOf(snapshot, read.input, decision, {
+      reports: copies.map(({ path: file, digest }) => ({ path: file, digest })),
+      dependencies,
+    }),
+    replayKey(read.input, decision, read.digest),
+  );
+  const unwritten = await writeReportCopies(loaded.runDir, copies);
+  if (unwritten) return unwritten;
+  return publish(loaded, records, decision.verdict);
 }
 
 async function decideAndPublish(options: WorkflowOptions, loaded: LoadedRun): Promise<number> {
   const { snapshot } = loaded;
   const read = await inputOf(options, loaded);
   if (isRefusal(read)) return refuse(snapshot.run, read);
-  const facts = await factsOf(options.root, loaded, read.input);
+  const facts = await factsOf(options.root, loaded.runDir, snapshot, read.input);
   const decision = decide(snapshot, read.input, facts);
   if (decision.events.length > 0) {
-    const copies = await acceptedReportCopies(options.root, snapshot, read.input, decision);
-    if (!Array.isArray(copies)) return refuse(snapshot.run, copies);
-    const dependencies = await acceptedDependencies(options.root, snapshot, read.input, decision);
-    const records = recordsOf(
-      decision,
-      { operation: options.operation, before: snapshot.run },
-      extrasOf(snapshot, read.input, decision, { copies, dependencies }),
-      replayKey(read.input, decision, read.digest),
-    );
-    const unwritten = await writeReportCopies(loaded.runDir, copies);
-    if (unwritten) return refuse(snapshot.run, unwritten);
-    const refused = await publish(loaded, records, decision.verdict);
+    const refused = await persistDecision(options, loaded, read, decision);
     if (refused) return refuse(snapshot.run, refused);
   }
   const untracked = await syncTracked(options, loaded);
@@ -623,6 +540,11 @@ function completionTargetOf(value: Record<string, unknown>): CompletionTarget | 
   return COMPLETION_TARGETS.find((known) => known === target);
 }
 
+async function readJournalRecords(runDir: string) {
+  const journal = await readJournal(runDir);
+  return journal.ok ? journal.records : undefined;
+}
+
 // Step 7 of `start`: the run directory, the private request copy and the first two events.
 async function createRun(
   root: string,
@@ -630,20 +552,17 @@ async function createRun(
   input: Record<string, unknown>,
   facts: WorkflowFacts,
 ): Promise<number> {
-  const runsDir = path.join(root, RUNS_DIR);
   const runId = facts.start?.runId ?? "";
-  const completionTarget = completionTargetOf(input) ?? "qfai_done";
   const start = {
-    completionTarget,
+    completionTarget: completionTargetOf(input) ?? "qfai_done",
     baseline: await baselineOf(root),
     identity: await identityOf(root),
+    boundary: await boundaryStartOf(root),
   };
-  const runDir = await createRunDir(runsDir, runId);
+  const runDir = await createRunDir(path.join(root, RUNS_DIR), runId);
   const request = { request: input.request, digestKey: facts.start?.digestKey, answers: [] };
-  const refused = await writeRecord(
-    path.join(runDir, "request.private.json"),
-    `${JSON.stringify(request, null, 2)}\n`,
-  );
+  const privateFile = path.join(runDir, "request.private.json");
+  const refused = await writeRecord(privateFile, `${JSON.stringify(request, null, 2)}\n`);
   if (refused) return refuse(null, refused);
   const records = recordsOf(decision, { operation: "start", before: null }, (event) =>
     event.type === "run-created" ? { start } : {},
@@ -656,9 +575,36 @@ async function createRun(
   return EXIT_CODES.ok;
 }
 
-async function readJournalRecords(runDir: string) {
-  const journal = await readJournal(runDir);
-  return journal.ok ? journal.records : undefined;
+function startInputOf(value: Record<string, unknown>): WorkflowInput {
+  const request =
+    isRecord(value.request) && typeof value.request.text === "string"
+      ? { text: value.request.text }
+      : undefined;
+  const harness = isRecord(value.harness) ? value.harness : undefined;
+  const capabilities = isRecord(harness?.capabilities) ? harness.capabilities : {};
+  const extras = Object.fromEntries(
+    Object.entries(value).filter(
+      ([key]) => !["request", "completionTarget", "harness"].includes(key),
+    ),
+  );
+  return {
+    ...extras,
+    operation: "start",
+    ...(request ? { request } : {}),
+    ...(typeof value.completionTarget === "string"
+      ? { completionTarget: value.completionTarget }
+      : {}),
+    ...(harness
+      ? {
+          harness: {
+            host: typeof harness.host === "string" ? harness.host : "",
+            capabilities: Object.fromEntries(
+              Object.entries(capabilities).map(([name, reported]) => [name, reported === true]),
+            ),
+          },
+        }
+      : {}),
+  };
 }
 
 async function startUnderLock(options: WorkflowOptions): Promise<number> {
@@ -671,9 +617,10 @@ async function startUnderLock(options: WorkflowOptions): Promise<number> {
   const { value } = payload;
   const reasons = startInputRefusals(value);
   if (!completionTargetOf(value)) reasons.push({ reason: "schema", subject: "completionTarget" });
-  if (!isStartInput(value) || reasons.length > 0) return refuse(null, schemaRefusal(reasons));
-  const facts = await startFacts(options.root, await freeRunId(runsDir, new Date()));
-  const decision = decide(null, { ...value, operation: "start" }, facts);
+  if (reasons.length > 0) return refuse(null, schemaRefusal(reasons));
+  const { config } = await loadConfig(options.root);
+  const facts = await startFacts(options.root, config, await freeRunId(runsDir, new Date()));
+  const decision = decide(null, { ...startInputOf(value), operation: "start" }, facts);
   if (!decision.verdict.ok) {
     emit(decision.verdict);
     return exitOf("start", decision.verdict);
@@ -694,9 +641,27 @@ async function start(options: WorkflowOptions): Promise<number> {
 
 // One operation of `qfai workflow`, printing one JSON document and returning its exit code.
 export async function runWorkflow(options: WorkflowOptions): Promise<number> {
-  if (options.operation === "status") {
-    return status(options.root, path.join(options.root, RUNS_DIR), options.runId);
+  try {
+    if (options.operation === "status") {
+      return await status(options.root, path.join(options.root, RUNS_DIR), options.runId);
+    }
+    if (options.operation === "start") return await start(options);
+    return await writeOperation(options);
+  } catch (thrown: unknown) {
+    // A busy or refused file still answers with one JSON document, naming the run it concerns;
+    // any other failure is a defect and keeps its stack.
+    const refusal = ioRefusalOf(thrown);
+    if (!refusal) throw thrown;
+    return refuse(await runNamed(options), refusal);
   }
-  if (options.operation === "start") return start(options);
-  return writeOperation(options);
+}
+
+// The current state and sequence of the run an operation named, where it can be read.
+export async function runNamed(options: Pick<WorkflowOptions, "root" | "runId">): Promise<Run> {
+  if (!options.runId) return null;
+  const loaded = await loadRun(path.join(options.root, RUNS_DIR), options.runId).catch(
+    () => undefined,
+  );
+  if (!loaded) return null;
+  return loaded.ok ? loaded.run.snapshot.run : loaded.run;
 }

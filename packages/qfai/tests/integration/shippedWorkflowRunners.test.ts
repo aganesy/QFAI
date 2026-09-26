@@ -286,7 +286,7 @@ const PRIVATE_LABEL_PLANTS: readonly SelectorPlant[] = [
   },
 ];
 
-// QFAI:SPEC-0003:TC-0003-0041
+// QFAI:EX-0002-0005-01
 describe("TC-0003-0041 (TDD-0041): planted organization-private label literal is rejected", () => {
   // One it() per TC-0003-0041 verify bullet. Scope notes, disclosed:
   // - The TC's Setup is a REPLICA of the shipped set ("配布 set の複製"), so
@@ -522,7 +522,7 @@ async function declaredNodeFloor(): Promise<string> {
   return floor;
 }
 
-// QFAI:SPEC-0003:TC-0003-0042
+// QFAI:EX-0002-0005-02
 describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and claims no undeclared Node floor", () => {
   // One it() per TC-0003-0042 verify bullet. Scope notes, disclosed:
   // - The required-field list above is the closed set BR-0003-0036 names, and
@@ -577,6 +577,7 @@ describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and cla
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0001-03
   it("no shipped header claims a Node support floor the package's engines field does not declare", async () => {
     const floor = await declaredNodeFloor();
     const files = await loadShippedWorkflows();

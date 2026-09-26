@@ -1,9 +1,8 @@
-// QFAI:SPEC-0018:TC-0018-0220
-// QFAI:SPEC-0018:TC-0018-0221
-// QFAI:SPEC-0018:TC-0018-0222
-// QFAI:SPEC-0018:TC-0018-0226
-// QFAI:SPEC-0018:TC-0018-0227
-// QFAI:SPEC-0018:TC-0018-0228
+// QFAI:AC-0001-0201-03
+// QFAI:AC-0001-0201-04
+// QFAI:EX-0001-0201-09
+// QFAI:EX-0001-0201-11
+// QFAI:EX-0001-0201-12
 
 import { spawnSync } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
@@ -62,7 +61,7 @@ async function claimingCopies(): Promise<Record<string, string>> {
   return Object.fromEntries(copies);
 }
 
-it("TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the eval records for packages/qfai/package", async () => {
+it("The READMEs claim exactly the hosts with a passing eval record for this version: none", async () => {
   const current = await version();
   const all = await readmes();
 
@@ -73,7 +72,7 @@ it("TC-0018-0220 (TDD-0440): Read both READMEs' ## Agent integrations and the ev
   }).toEqual({ claimed: [[], []], recorded: [], problems: [] });
 });
 
-it("TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has no record", async () => {
+it("A copy of the READMEs claiming a host that has no record fails the check", async () => {
   const current = await version();
 
   expect(claimProblems(await claimingCopies(), [], current)).toEqual([
@@ -82,7 +81,7 @@ it("TC-0018-0221 (TDD-0441): A temp copy of the READMEs claiming a host that has
   ]);
 });
 
-it("TC-0018-0222 (TDD-0442): A record for an older package version", async () => {
+it("A record for an older package version supports no claim, and one for this version does", async () => {
   const current = await version();
   const older = { host: "claude-code", version: "0.0.1", verdict: { blocked: false } };
   const recorded = { ...older, version: current };
@@ -99,7 +98,7 @@ it("TC-0018-0222 (TDD-0442): A record for an older package version", async () =>
   });
 });
 
-it("TC-0018-0226 (TDD-0443): Read both READMEs", async () => {
+it("Both READMEs put the free-text entry first and name the words the operator types", async () => {
   const all = await readmes();
   const alignment = spawnSync(process.execPath, ["scripts/check-readme-alignment.mjs"], {
     cwd: REPOSITORY_ROOT,
@@ -116,12 +115,12 @@ it("TC-0018-0226 (TDD-0443): Read both READMEs", async () => {
   }).toEqual({ alignment: 0, stageFirst: [[], []], missing: [[], []] });
 });
 
-it("TC-0018-0227 (TDD-0444): Read the operating-model sequence diagram and the tutorial of both READMEs", async () => {
+it("Neither the operating-model sequence diagram nor the tutorial has the operator typing a stage", async () => {
   expect(Object.values(await readmes()).map((readme) => typedStageSteps(readme))).toEqual([[], []]);
 });
 
-it("TC-0018-0228 (TDD-0445): A temp copy with a tutorial step telling the operator to type /qfai-sdd", async () => {
-  const step = "2. Run `/qfai-sdd` to write the specification.";
+it("A copy with a tutorial step telling the operator to type /qfai-sdd is caught", async () => {
+  const step = "2. Run `/qfai-sdd` to write the story tree.";
   const copies = Object.values(await readmes()).map((readme) =>
     readme.split("## Minimal tutorial\n\n").join(`## Minimal tutorial\n\n${step}\n`),
   );

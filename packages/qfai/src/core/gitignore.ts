@@ -38,20 +38,19 @@ export const QFAI_STATE_SCRATCH_SUFFIX = ".qfai-state.tmp";
 export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
 
 /**
+ * The run state `qfai workflow` keeps under `.qfai/run/`: the journal, the lock and each run's
+ * snapshot. It is per-checkout and rebuilt from the journal, so it never belongs in a commit, and
+ * init adds it to an existing block that lacks it.
+ */
+export const QFAI_RUN_STATE_IGNORE = ".qfai/run/";
+
+/**
  * The Article XI recommendation, as it is named in a finding's `refs`.
  *
  * Held here rather than written twice: the list below advertises it and
  * {@link missingRecommendedGitignoreEntries} decides it, and those two spellings
  * drifting is how the entry would be advertised and never checked.
  */
-/**
- * The run state `qfai workflow` keeps under `.qfai/runs/`: the journal, the lock
- * and each run's snapshot. It is per-checkout and rebuilt from the journal, so it
- * never belongs in a commit. Unlike the other ignores, init adds it to an
- * existing block that lacks it: run state is never a record a project tracks.
- */
-export const QFAI_RUN_STATE_IGNORE = ".qfai/runs/";
-
 export const ARTICLE_XI_TMP_ENTRY = "tmp/";
 
 /**
@@ -119,24 +118,22 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   //   `.qfai/`          excludes `.qfai` itself -> `!.qfai/` is required
   //   `.qfai/*`         excludes `.qfai/evidence` -> `!.qfai/evidence/` too
   //   `.qfai/evidence/` excludes the directory   -> `!.qfai/evidence/` too
-  // Measured with `git check-ignore -v .qfai/evidence/decisions/a.json`: without
+  // Measured with `git check-ignore -v .qfai/evidence/decision/a.json`: without
   // these two lines all three shapes still report the broad rule as the winner.
   // Neither line widens the managed block. `!.qfai/` and `!.qfai/evidence/`
   // match the directories only, so the `.qfai/<subtree>/*` ignores above still
   // win for every generated file (evidence/prototyping, report, discussion,
-  // review); the only paths they re-expose are the ones QFAI already expects to
-  // be tracked (`specs/`, `contracts/`, `assistant/`).
+  // review); the only paths they re-expose are governed files elsewhere under
+  // `.qfai/`.
   "!.qfai/",
   "!.qfai/evidence/",
-  "!.qfai/decisions/",
-  "!.qfai/decisions/**",
   // The real durable-decision write target: `writeDecisionRecord` persists
-  // `.qfai/evidence/decisions/<ISO8601-stamp>.json` (see
+  // `.qfai/evidence/decision/<ISO8601-stamp>.json` (see
   // `core/decisionRecord.ts#DECISIONS_REL`). Git never descends into an
   // ignored directory, so `.qfai/evidence/*` must be undone for the directory
   // itself before its contents can be re-included.
-  "!.qfai/evidence/decisions/",
-  "!.qfai/evidence/decisions/**",
+  "!.qfai/evidence/decision/",
+  "!.qfai/evidence/decision/**",
   // The prototyping session record: what the user said the prototype is for,
   // what counts as better, and what is out of bounds. Every later generator and
   // reviewer is required to read it, and nothing regenerates it — a re-run
@@ -145,9 +142,9 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // a later checkout grades against none of the user's decisions.
   "!.qfai/evidence/prototyping/",
   "!.qfai/evidence/prototyping/grilling.md",
-  // A workflow run's tracked evidence: its summary and the authorization
-  // records a triage row cites. The whole directory is re-included, because
-  // `qfai validate` reads those files from a fresh clone.
+  // A workflow run's tracked evidence: its summary and the authorization records a
+  // `decisions.md` row cites. The whole directory is re-included, so the citation resolves from
+  // a fresh clone.
   "!.qfai/evidence/workflow/",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
@@ -216,7 +213,7 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // `Phase: Skeleton` records here: the smoke run that proved the program
   // starts, the `qa-gatekeeper` verdict on it, and the enumerated `Skeleton
   // debt` whose rows a Change Request asks for, all defined in
-  // `.qfai/assistant/skills/qfai-implement/references/walking-skeleton.md#evidence`.
+  // `.qfai/assistant/skill/qfai-implement/references/walking-skeleton.md#evidence`.
   // That phase requires the debt to be written back *in the skeleton's own
   // commit*, and every later invocation decides whether an entrypoint is
   // already proven by reading this file. Left ignored, both requirements hold
@@ -302,6 +299,10 @@ export const QFAI_GITIGNORE_LEGACY_LINES: readonly string[] = [
   // decides every path inside.
   "!.qfai/review/.legacy-packs",
   "!.qfai/review/",
+  "!.qfai/evidence/decisions/",
+  "!.qfai/evidence/decisions/**",
+  "!.qfai/decisions/",
+  "!.qfai/decisions/**",
 ] as const;
 
 export const QFAI_GITIGNORE_BLOCK = [

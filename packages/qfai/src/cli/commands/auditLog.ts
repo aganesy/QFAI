@@ -1,11 +1,11 @@
 /**
- * `qfai audit log` — list `.qfai/evidence/decisions/<ts>.json` records.
+ * `qfai audit log` — list `.qfai/evidence/decision/<ts>.json` records.
  *
- * AC-0015-0019: SHOULD-level CLI; lists records newest-first and
+ * Audit-log CLI: lists records newest-first and
  * supports `--scope` / `--operator` / `--clause` filters plus
  * `--format table|json` (table is the default).
  *
- * An empty / absent decisions directory yields an empty result without
+ * An empty / absent decision directory yields an empty result without
  * error (exit 0). Filter values are AND-composed; passing multiple
  * filters narrows the result.
  */
@@ -105,7 +105,7 @@ export async function runAuditLog(options: AuditLogOptions): Promise<number> {
     }));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    writeErr(`qfai audit log: failed to read decisions/: ${message}`);
+    writeErr(`qfai audit log: failed to read decision/: ${message}`);
     return 1;
   }
   const filtered = applyFilters(records, {

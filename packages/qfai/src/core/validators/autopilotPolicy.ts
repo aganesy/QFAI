@@ -15,7 +15,7 @@
  * other two buckets carry per-skill entries, so their contract is
  * enforced by review.
  *
- * Scoping: only `qfai-*` skills under `.qfai/assistant/skills/` are
+ * Scoping: only `qfai-*` skills under `.qfai/assistant/skill/` are
  * checked. User-authored non-qfai-* skills are intentionally exempt
  * (mirrors `validateSkillDocReferences` scoping).
  */
@@ -28,7 +28,7 @@ import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const SKILL_DIR_REL = path.join(".qfai", "assistant", "skills");
+const SKILL_DIR_REL = path.join(".qfai", "assistant", "skill");
 const QFAI_SKILL_ID_RE = /^qfai-/;
 const SECTION_HEADING_RE = /^##\s+Default Autopilot Policy\s*$/im;
 
@@ -53,16 +53,14 @@ export const AUTO_DECIDE_ALLOWED_TOKENS: readonly string[] = [
 /**
  * The hard-required entries every skill may carry.
  *
- * `brand intent` reaches root `DESIGN.md` front-matter through qfai-sdd Phase 0;
- * `primarySpecId` selects the spec a skill operates on. Both have a consumer in
- * the shipped tree.
+ * `brand intent` reaches root `DESIGN.md` front-matter through qfai-sdd Phase 0.
  *
  * Stored already normalized (see {@link normalizeHardRequiredEntry}).
  *
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
-export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", "primaryspecid"];
+export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent"];
 
 /**
  * Inputs a single skill reads, keyed by skill id, declared here so that adding
@@ -82,7 +80,10 @@ export const HARD_REQUIRED_COMMON_ENTRIES: readonly string[] = ["brand intent", 
  * public surface.
  */
 export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly string[]>> = {
-  "qfai-configure": ["testfileglobs", "tooling choice"],
+  "qfai-configure": ["business-flow id", "testfileglobs", "tooling choice"],
+  "qfai-discussion": ["requirement source", "affected bf"],
+  "qfai-sdd": ["requirement source", "affected flow"],
+  "qfai-verify": ["con-ui-nnnn", "story source", "affected bf-nnnn"],
   // A grilling session interrogates one subject, and that subject is the root
   // of the decision tree the whole method reads. There is no default for what a
   // design conversation is about: picking one would be the skill answering the
@@ -108,7 +109,7 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
  * @internal Exported for direct unit-testing — not part of the package's
  * public surface.
  */
-export const RETIRED_HARD_REQUIRED_ENTRIES: readonly string[] = ["companyname"];
+export const RETIRED_HARD_REQUIRED_ENTRIES: readonly string[] = ["companyname", "primaryspecid"];
 
 const BUCKET_HEADERS = {
   autoDecide: /^\s*[-*]\s*auto-decide\s*:/im,
@@ -147,7 +148,7 @@ export function decorationOnly(bullet: string): string {
  * against the allowed entries reads the name and not the decoration around it.
  *
  * Decoration is backticks and emphasis; a qualifier is a trailing parenthetical
- * or a trailing dash clause, and both attach to ONE entry — `` `primarySpecId`
+ * or a trailing dash clause, and both attach to ONE entry — `` `business-flow ID`
  * (when absent from inputs) ``. Parentheses go first: a qualifier may hold a
  * dash of its own, and dropping from that dash leaves an unclosed parenthesis
  * behind.
@@ -272,13 +273,12 @@ export function collectHardRequiredEntries(content: string): string[] {
  * declares an input nothing has approved and reads as clean. Each piece
  * answering for itself is what closes that.
  *
- * A dash joins too, because {@link normalizeHardRequiredEntry} keeps a one-word
- * dash clause: that clause is a name rather than a condition, and left inside
- * its neighbour it would be carried in by an allowed-name search that only asks
- * whether SOME permitted name is present.
+ * A spaced dash joins too, because {@link normalizeHardRequiredEntry} keeps a
+ * one-word dash clause. A dash inside an identifier such as `CON-UI-NNNN` is
+ * part of that name.
  *
  * Parentheses are skipped because a qualifier is prose and may hold any of
- * these characters: `primarySpecId (absent from inputs, and no default)` is one
+ * these characters: `business-flow ID (absent from inputs, and no default)` is one
  * entry with one qualifier rather than two entries.
  *
  * @internal Exported for direct unit-testing — not part of the package's
@@ -293,13 +293,16 @@ export function splitJoinedEntries(normalized: string): string[] {
   const pieces: string[] = [];
   let depth = 0;
   let current = "";
-  for (const char of normalized) {
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i];
+    if (char === undefined) continue;
     if (char === "(") {
       depth += 1;
     } else if (char === ")") {
       depth = Math.max(0, depth - 1);
     }
-    if (depth === 0 && (char === "/" || char === "+" || char === "," || isDash(char))) {
+    const spacedDash = isDash(char) && normalized[i - 1] === " " && normalized[i + 1] === " ";
+    if (depth === 0 && (char === "/" || char === "+" || char === "," || spacedDash)) {
       pieces.push(current);
       current = "";
       continue;
@@ -349,7 +352,9 @@ export function classifyHardRequiredEntries(
   // syntax — a silently wrong match, or a thrown SyntaxError.
   const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const named = (normalized: string, names: readonly string[]): boolean =>
-    names.some((name) => new RegExp(`(^|[^a-z0-9])${escape(name)}([^a-z0-9]|$)`).test(normalized));
+    names.some((name) =>
+      new RegExp(`(^|[^a-z0-9-])${escape(name)}([^a-z0-9-]|$)`).test(normalized),
+    );
 
   const allowed = [
     ...HARD_REQUIRED_COMMON_ENTRIES,
@@ -526,8 +531,8 @@ export async function validateAutopilotPolicy(
   // Honor `config.paths.skillsDir` via the canonical `resolvePath`
   // helper (SSOT) so a project that relocates its skills tree
   // (relative OR absolute) is still scanned. When no config is
-  // supplied, fall back to the legacy hardcoded
-  // `.qfai/assistant/skills` so single-arg test callers keep
+  // supplied, fall back to the canonical
+  // `.qfai/assistant/skill` so single-arg test callers keep
   // working. Pre-fix the scan was hardcoded to the default path,
   // so a relocated skillsDir would silently SKIP every qfai-*
   // SKILL.md and let missing / widened Default Autopilot Policy

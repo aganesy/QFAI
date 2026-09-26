@@ -13,7 +13,6 @@ import {
   classifyAssistantAsset,
   collectGovernedAssistantFiles,
   collectRegeneratedAssistantFiles,
-  governedLayerOf,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLockStatus,
@@ -32,6 +31,8 @@ import { parseHeadings } from "../parse/markdown.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
+import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
+import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
 import type { Issue } from "../types.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
@@ -48,7 +49,7 @@ const ANY_MARKDOWN_HEADING_PATTERN = /^\s*#{1,6}\s+/m;
  * told to take every Test / Lint / Typecheck / Build command from
  * `tech.md#standard-commands-copy-paste` rather than inventing one — so an
  * unreplaced `<test command>` is a gate that cannot run, which the
- * constitution classes as UNRUN rather than passed.
+ * rule classes as UNRUN rather than passed.
  */
 const STEERING_CATALOG_FILES = ADOPTER_OWNED_CATALOG_FILES;
 
@@ -233,26 +234,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantDir = path.dirname(skillsDir);
 
-  // Post-recut: drift-protocol.md is canonically located at
-  // .qfai/assistant/constitution/drift-protocol.md. Fall back to the
-  // legacy instructions/ path during the compatibility window so
-  // projects that have not yet run `qfai init --upgrade-assistant-tree`
-  // still pass.
-  const canonicalDriftProtocolPath = path.join(assistantDir, "constitution", "drift-protocol.md");
-  const legacyDriftProtocolPath = path.join(assistantDir, "instructions", "drift-protocol.md");
-  const driftProtocolPath = (await exists(canonicalDriftProtocolPath))
-    ? canonicalDriftProtocolPath
-    : legacyDriftProtocolPath;
-  // Post-recut: test-layers.md is canonically located at
-  // .qfai/assistant/catalog/test-layers.md. Fall back to the legacy
-  // steering/ path during the compatibility window so projects that
-  // have not yet run `qfai init --upgrade-assistant-tree` are not
-  // double-penalized (D-DEPRECATED-PATH + QFAI-ASSETS-002).
-  const canonicalTestLayersPath = path.join(assistantDir, "catalog", "test-layers.md");
-  const legacyTestLayersPath = path.join(assistantDir, "steering", "test-layers.md");
-  const testLayersPath = (await exists(canonicalTestLayersPath))
-    ? canonicalTestLayersPath
-    : legacyTestLayersPath;
+  const driftProtocolPath = path.join(assistantDir, "rule", "drift-protocol.md");
+  const testLayersPath = path.join(assistantDir, "rule", "test-layers.md");
 
   const issues: Issue[] = [];
 
@@ -260,9 +243,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-001",
-        "必須ファイル .qfai/assistant/constitution/drift-protocol.md (legacy fallback: .qfai/assistant/instructions/drift-protocol.md) が見つかりません。",
+        `Required file ${toRepoRelative(root, driftProtocolPath)} is missing.`,
         "error",
-        canonicalDriftProtocolPath,
+        driftProtocolPath,
         "assistantAssets.driftProtocol",
       ),
     );
@@ -272,9 +255,9 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     issues.push(
       issue(
         "QFAI-ASSETS-002",
-        "必須ファイル .qfai/assistant/catalog/test-layers.md (legacy fallback: .qfai/assistant/steering/test-layers.md) が見つかりません。",
+        `Required file ${toRepoRelative(root, testLayersPath)} is missing.`,
         "error",
-        canonicalTestLayersPath,
+        testLayersPath,
         "assistantAssets.testLayers",
       ),
     );
@@ -282,7 +265,18 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 
   issues.push(...(await validateAssistantAssetProvenance(root, assistantDir)));
   issues.push(...(await collectRegeneratedLayerIssues(root, assistantDir)));
-  issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
+  const specsDir = resolvePath(root, config, "specsDir");
+  let specsEntries: string[] = [];
+  try {
+    specsEntries = await readdir(specsDir);
+  } catch (error) {
+    if (!isEnoent(error)) throw error;
+  }
+  issues.push(
+    ...(hasLegacySpecPackEntries(specsEntries)
+      ? await collectSteeringPlaceholderIssues(root, assistantDir)
+      : await validateStorySteeringPlaceholders(root, config)),
+  );
 
   // The crawl reads the skill tree once, here, and every later check works from
   // the map it returns. A document is read a second time by nothing: the
@@ -492,7 +486,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 }
 
 /**
- * Compares the vendored `constitution/` and `catalog/` layers against the
+ * Compares the vendored `rule/` and interim `catalog/` layers against the
  * release that is actually installed.
  *
  * Before this check the only coverage of qfai's own normative tree was two
@@ -541,7 +535,7 @@ async function validateAssistantAssetProvenance(
   // Every component from the project root down, not just the layer directory.
   // `lstat` declines to resolve only the path it is given, so a `.qfai` — or a
   // `.qfai/assistant` — that is a symlink out of the repository still reported a
-  // real `constitution/` on the far side: `validate` would walk and hash an
+  // real `rule/` on the far side: `validate` would walk and hash an
   // external tree, pass in silence whenever it matched the release, and take as
   // long as that tree was big. The same guard `init` applies before it writes.
   if (!(await hasRealGovernedAssistantParents(root, `${ASSISTANT_DIR}/probe`))) {
@@ -591,10 +585,8 @@ async function validateAssistantAssetProvenance(
   );
 
   // An absence is only reportable inside a layer the project actually has. A
-  // consumer that never ran `init` here, or one still on the pre-recut
-  // `instructions/` + `steering/` layout, is not missing files — it has no
-  // governed layer at all, and reporting every shipped rule at it would be
-  // noise, not governance.
+  // consumer that never ran `init` here has no governed layer at all, and
+  // reporting every shipped rule at it would be noise, not governance.
   const presentLayers = new Set<string>();
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     if (await isDirectory(path.join(assistantDir, layer))) {
@@ -603,19 +595,13 @@ async function validateAssistantAssetProvenance(
   }
 
   // …unless the record says the project once had it. The exclusion above is
-  // about a project that never received a layer, and it read a *deleted* one
-  // the same way: with the layer gone, every shipped file under it was skipped
-  // before `coveredByExistenceProbe` could see it, and QFAI-ASSETS-001/002 were
-  // satisfied by the legacy fallback that `runUpgradeAssistantTree` leaves
-  // behind — so on exactly the layout the upgrade path produces, deleting a
-  // whole layer of normative rules passed `validate` in silence. A lock entry
-  // under that layer is the evidence that qfai did put files there, and the
-  // disappearance is reported once, against the layer, rather than once per
-  // shipped file it used to hold.
+  // about a project that never received a layer. A deleted layer otherwise
+  // looks the same when the per-file loop skips every absent path. A lock entry
+  // under it proves qfai populated that layer, so its disappearance is reported
+  // once against the layer instead of once per shipped file.
   const recordedLayers = new Set<string>();
   for (const key of Object.keys(lock?.files ?? {})) {
-    const layer = governedLayerOf(key);
-    if (layer !== null) recordedLayers.add(layer);
+    recordedLayers.add(key.split("/")[0] ?? "");
   }
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     if (!presentLayers.has(layer) && recordedLayers.has(layer)) {
@@ -630,13 +616,12 @@ async function validateAssistantAssetProvenance(
       shipped[relative],
       lock?.files[relative],
     );
-    if (status === "missing" && !presentLayers.has(governedLayerOf(relative) ?? "")) {
+    if (status === "missing" && !presentLayers.has(relative.split("/")[0] ?? "")) {
       continue;
     }
     if (status === "missing" && (await coveredByExistenceProbe(assistantDir, relative))) {
-      // QFAI-ASSETS-001/002 already own these two: reporting the absence again
-      // here would duplicate the finding. They only cover it while the legacy
-      // fallback is *also* absent, though — see `coveredByExistenceProbe`.
+      // QFAI-ASSETS-001/002 already own these two canonical paths. Reporting
+      // the same absence here would duplicate their findings.
       continue;
     }
     if (ADOPTER_OWNED_DIVERGENCE.has(status) && ADOPTER_OWNED_ASSETS.has(relative)) {
@@ -666,7 +651,7 @@ export const NAMED_STALE_FILES = 3;
 /**
  * `QFAI-ASSETS-009` — a regenerated layer behind the installed release.
  *
- * `skills/**` and `agents/**` are copied into the project once and refreshed
+ * `skill/**` and `agent/**` are copied into the project once and refreshed
  * only by an explicit `qfai init --force`, so an upgraded project keeps running
  * the skill bodies and agent definitions it initialised with. A `SKILL.md`
  * several releases behind describes a workflow the installed validators no
@@ -711,8 +696,7 @@ async function collectRegeneratedLayerIssues(root: string, assistantDir: string)
 
   const issues: Issue[] = [];
   for (const layer of REGENERATED_ASSISTANT_LAYERS) {
-    // A project that never ran `init` here, or one still on the pre-recut
-    // layout, has no such layer — it is not behind, it has nothing. Reporting
+    // A project that never ran `init` here has no such layer. Reporting
     // every shipped file at it would be noise rather than governance.
     if (!(await isDirectory(path.join(assistantDir, layer)))) {
       continue;
@@ -811,7 +795,7 @@ async function regeneratedLayerIssue(
  * Stage 0 is outstanding, and it clears when Stage 0 is done.
  *
  * A missing file is skipped: this rule is about unfilled content, and the
- * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
+ * retired `steering/` layout is reported by `D-DEPRECATED-PATH`.
  */
 async function collectSteeringPlaceholderIssues(
   root: string,
@@ -848,6 +832,38 @@ async function collectSteeringPlaceholderIssues(
   return issues;
 }
 
+/** The story layout stores adopter-owned steering in the contract layer. */
+export async function validateStorySteeringPlaceholders(
+  root: string,
+  config: QfaiConfig,
+): Promise<Issue[]> {
+  if (await isPristineStorySeed(root, config)) return [];
+  const contractsDir = resolvePath(root, config, "contractsDir");
+  const issues: Issue[] = [];
+  for (const fileName of ["tech.md", "structure.md"]) {
+    const filePath = path.join(contractsDir, fileName);
+    const content = await readSteeringFile(filePath);
+    if (content === null) continue;
+    const sections = collectSteeringPlaceholders(content);
+    if (sections.length === 0) continue;
+    const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
+    issues.push(
+      issue(
+        "QFAI-ASSETS-003",
+        `Steering file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
+        "error",
+        filePath,
+        "assistantAssets.steeringPlaceholder",
+        sections.map((entry) => entry.section),
+        "canonical",
+        "Fill in the contract-layer tech and structure settings, including Standard commands.",
+        { loc: { line: sections[0]?.firstLine ?? 1 } },
+      ),
+    );
+  }
+  return issues;
+}
+
 /**
  * A governed layer the record says qfai populated, which is no longer a
  * directory at all.
@@ -874,26 +890,14 @@ function missingGovernedLayerIssue(
 }
 
 /**
- * Governed paths the existence probes above also check, mapped to the legacy
- * pre-recut path each one falls back to.
+ * Governed paths the existence probes above also check.
  */
-const EXISTENCE_CHECKED_ELSEWHERE = new Map([
-  ["constitution/drift-protocol.md", path.join("instructions", "drift-protocol.md")],
-  ["catalog/test-layers.md", path.join("steering", "test-layers.md")],
-]);
+const EXISTENCE_CHECKED_ELSEWHERE = new Set(["rule/drift-protocol.md", "rule/test-layers.md"]);
 
 /**
  * True when QFAI-ASSETS-001/002 would report this absence itself.
  *
- * Those probes accept the legacy pre-recut path, so they report the canonical
- * file's absence only when the legacy one is missing too. A project part-way
- * through the recut — which `runUpgradeAssistantTree` produces deliberately,
- * since it leaves the legacy file behind — has both layouts at once, and
- * deleting the canonical rule there satisfied the probe from the legacy copy
- * while this exclusion silenced the provenance check. Removing a normative rule
- * was reportable in every layout but the one the upgrade path creates.
- *
- * The canonical path is checked for the same reason, and the two probes ask a
+ * The probes ask a
  * weaker question than this one: `access` answers "something is reachable
  * there", while provenance requires a readable **regular file**. A canonical
  * path left as a symlink, a directory or a FIFO therefore satisfies the probe
@@ -901,12 +905,11 @@ const EXISTENCE_CHECKED_ELSEWHERE = new Map([
  * the absence would go unreported by both.
  */
 async function coveredByExistenceProbe(assistantDir: string, relative: string): Promise<boolean> {
-  const legacy = EXISTENCE_CHECKED_ELSEWHERE.get(relative);
-  if (legacy === undefined) {
+  if (!EXISTENCE_CHECKED_ELSEWHERE.has(relative)) {
     return false;
   }
   const canonical = path.join(assistantDir, ...relative.split("/"));
-  return !(await exists(canonical)) && !(await exists(path.join(assistantDir, legacy)));
+  return !(await exists(canonical));
 }
 
 /**
@@ -920,7 +923,7 @@ function unverifiableProvenanceIssue(
   assetProvenanceSeverity: ProvenanceSeverity,
   // Which layers went unverified. Defaulted to the governed ones so the
   // provenance callers read as they did; the regenerated layers pass their own,
-  // because a message naming `constitution/ / catalog/` for a `skills/` failure
+  // because a message naming `rule/ / catalog/` for a `skill/` failure
   // sends the reader to the wrong directory.
   layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS,
 ): Issue {
@@ -2276,7 +2279,7 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
 
 /**
  * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
- * `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
+ * `.qfai/assistant/skill/qfai-sdd/references/rcp_footer.md`.
  *
  * The name classes are Unicode and the extension is matched case-insensitively
  * because that is how the files themselves are collected: `collectFiles`

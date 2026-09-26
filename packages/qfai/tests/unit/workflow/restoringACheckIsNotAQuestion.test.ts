@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0085
+// QFAI:EX-0001-0195-02
 
 import { expect, it } from "vitest";
 
@@ -31,7 +31,7 @@ const bugfixStages = [
 const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
 const facts = {
   plans: { bugfix: { route: "bugfix", stages: bugfixStages } },
-  specs: { "spec-0007": { lifecycle: "active" } },
+  flows: ["BF-0007"],
   acceptanceObligationsUnmet: true,
   reviewerRoles: {
     "qfai-implement": runtimeHeavy,
@@ -39,11 +39,11 @@ const facts = {
     "qfai-verify": runtimeHeavy,
   },
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 const diagnosis = {
   verdict: "regression",
   reproductionRef: "evidence/regression.json",
-  matchedRowIds: ["TDD-0004"],
+  matchedIds: ["EX-0007-0002-01"],
 };
 
 function routeRestoringACheck() {
@@ -72,10 +72,10 @@ function routeRestoringACheck() {
           goal: "Restore the permission check on the export endpoint.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: ["spec-0007"],
+          affectedFlowIds: ["BF-0007"],
           riskSignals: ["authorization-restored"],
           unresolvedQuestions: [],
-          newCapabilities: [],
+          newStories: [],
           proposedWriteScope: ["src/export/**"],
           protectedTargets: [],
           requiredStages: ["diagnose", "verify"],
@@ -86,7 +86,7 @@ function routeRestoringACheck() {
   );
 }
 
-it("TC-0018-0085 (TDD-0111): A bugfix routing result whose only risk signal is authorization-restored", () => {
+it("A bugfix routing result whose only risk signal is authorization-restored", () => {
   const routed = routeRestoringACheck();
   expect(routed.verdict.run?.state).toBe("ready");
   expect(routed.verdict.questions).toBeUndefined();
@@ -104,7 +104,7 @@ it("TC-0018-0085 (TDD-0111): A bugfix routing result whose only risk signal is a
       {
         run,
         plan,
-        specBinding,
+        flowBinding,
         diagnosis: count > 0 ? diagnosis : null,
         acceptedStages: accepted.slice(0, count),
       },

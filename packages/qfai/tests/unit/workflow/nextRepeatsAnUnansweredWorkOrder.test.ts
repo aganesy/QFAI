@@ -1,10 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0018
+// QFAI:EX-0001-0192-12
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-it("TC-0018-0018 (TDD-0031): next twice on a run in running, then resume twice, with no result between", () => {
+it("next twice on a run in running, then resume twice, with no result between", () => {
   const plan = {
     route: "direct",
     stages: [
@@ -22,9 +22,9 @@ it("TC-0018-0018 (TDD-0031): next twice on a run in running, then resume twice, 
       },
     ],
   };
-  const specBinding = { specId: "spec-0007" };
+  const flowBinding = { flowId: "BF-0007" };
   const issued = decide(
-    { run: { id: "run-direct", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-direct", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -32,7 +32,7 @@ it("TC-0018-0018 (TDD-0031): next twice on a run in running, then resume twice, 
   const running = issued.verdict.run;
   const ids: (string | undefined)[] = [];
   if (outstanding && running) {
-    let snapshot = { run: running, plan, specBinding, outstandingWorkOrder: outstanding };
+    let snapshot = { run: running, plan, flowBinding, outstandingWorkOrder: outstanding };
     for (const operation of ["next", "next", "resume", "resume"]) {
       const decision = decide(snapshot, { operation }, {});
       ids.push(decision.verdict.workOrder?.workOrderId);

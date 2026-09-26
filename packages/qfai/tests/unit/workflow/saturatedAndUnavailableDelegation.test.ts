@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0151
-// QFAI:SPEC-0018:TC-0018-0152
+// QFAI:EX-0001-0196-18
 // Fault seeds: FAULT-020
 
 import { expect, it } from "vitest";
@@ -11,13 +10,13 @@ import { finishPlan } from "./finishFixture.js";
 type Snapshot = Parameters<typeof decide>[0];
 type WorkOrder = NonNullable<WorkflowDecision["verdict"]["workOrder"]>;
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function running(acceptedStages: NonNullable<Snapshot["acceptedStages"]> = []) {
   const ready: Snapshot = {
     run: { id: "run-delegation", state: "ready", sequence: 4 },
     plan: finishPlan,
-    specBinding,
+    flowBinding,
     acceptedStages,
   };
   const issued = decide(ready, { operation: "next" }, {});
@@ -42,7 +41,7 @@ function delegationResult(workOrder: WorkOrder, sequence: number, status: string
   };
 }
 
-it("TC-0018-0151 (TDD-0205): Four results in turn with delegation", () => {
+it("Four results in turn with delegation", () => {
   let snapshot: Snapshot & { outstandingWorkOrder: WorkOrder } = running();
   const workOrderId = snapshot.outstandingWorkOrder.workOrderId;
   const seen: unknown[] = [];
@@ -81,7 +80,7 @@ it("TC-0018-0151 (TDD-0205): Four results in turn with delegation", () => {
   ]);
 });
 
-it("TC-0018-0152 (TDD-0206): A delegation unavailable on a stage after the first delegated one", () => {
+it("A delegation unavailable on a stage after the first delegated one", () => {
   const snapshot = running([
     { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
   ]);

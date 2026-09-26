@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0040
-// QFAI:SPEC-0018:TC-0018-0041
+// QFAI:EX-0001-0192-24
 
 import { expect, it } from "vitest";
 
@@ -15,7 +14,7 @@ function uncommittedFacts() {
 
 const uncommitted = { condition: "uncommitted", subject: "src/notify/email.ts", owner: "operator" };
 
-it("TC-0018-0040 (TDD-0053): Decide finish on a working_tree run whose conditions hold except uncommitted", () => {
+it("Decide finish on a working_tree run whose conditions hold except uncommitted", () => {
   const snapshot: ReturnType<typeof readySnapshot> = {
     ...readySnapshot(),
     completionTarget: "working_tree",
@@ -29,7 +28,7 @@ it("TC-0018-0040 (TDD-0053): Decide finish on a working_tree run whose condition
   expect(JSON.stringify(decision)).not.toContain("qfai_done");
 });
 
-it("TC-0018-0041 (TDD-0054): Decide finish on a qfai_done run whose only unmet condition is uncommitted", () => {
+it("Decide finish on a qfai_done run whose only unmet condition is uncommitted", () => {
   const snapshot = readySnapshot();
   const decision = finish(snapshot, uncommittedFacts());
 

@@ -1,21 +1,22 @@
 import path from "node:path";
+import { readdir } from "node:fs/promises";
 
 import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
+import {
+  resolveFlowScope,
+  flowScopeContainsFile,
+  flowScopeContainsId,
+  type FlowScope,
+} from "./flowScope.js";
+import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
+import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
+import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
+import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
+import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
+import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
+import { validateStoryTreeDrift } from "./validators/upstreamSsotGuard.js";
 import { runSaasPackageProfile } from "./saasPackage/profile.js";
-import { activeScenarioFiles, collectScenarioFiles } from "./discovery.js";
-import { collectSpecEntries } from "./specLayout.js";
 import { issue } from "./validators/utils.js";
-import {
-  isFindingInSpecScope,
-  isPathInSpecScope,
-  resolveSpecScope,
-  type SpecScope,
-} from "./specScope.js";
-import {
-  buildScCoverage,
-  collectScIdsFromScenarioFiles,
-  collectScTestReferences,
-} from "./traceability.js";
 import type {
   Issue,
   ValidationCounts,
@@ -28,23 +29,19 @@ import { applyWaivers } from "./waivers.js";
 import { validateContracts, validateUiContractParse } from "./validators/contracts.js";
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
+import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
+import { validateStoryTreeCoverageDepth } from "./validators/storyTreeCoverageDepth.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
-import { validateDefinedIds } from "./validators/ids.js";
 import {
   DISCUSSION_PACK_PRODUCERS,
   SDD_PACK_PRODUCERS,
   validateReviewArtifacts,
   type ReviewArtifactsScope,
 } from "./validators/reviewArtifacts.js";
-import { validateSpecPacks } from "./validators/specPack.js";
-import { validateTraceability } from "./validators/traceability.js";
-import { atddTestOwnerProbe, evaluateAtddCodeTraceability } from "./atddTraceability.js";
-import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
-import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
 import {
   scaffoldPlaceholderReportedFilter,
   validateScaffoldPlaceholder,
@@ -53,19 +50,12 @@ import {
   detectPlatform,
   validateAgentDefinition,
   validateBpApDb,
-  validateContractReferences,
   validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
-  validateDensityHints,
   validateHtmlMock,
-  validateLayerCoverage,
-  validateLayeredTraceability,
   validateMermaidScreenFlow,
-  validateMermaidEnforcement,
-  validateBusinessFlowTraceability,
-  validateOrphanProhibition,
   validatePrototypingEvidence,
   validateScreenIdCasing,
   validateCompletionCertificateIssues,
@@ -73,27 +63,16 @@ import {
   validateConfigReferenceIntegrity,
   validatePrototypingArtifactRefIntegrity,
   validateSpecIdLinkage,
+  validateFrozenSurfaceReachability,
   validateResearchSummary,
   validateRepositoryHygiene,
-  validateSpecSections,
-  validateSpecSplitByCapability,
-  validateStatusInSpecs,
-  validateTddList,
-  validateTddListSeedShape,
   validateUiDefinitionConsistency,
   validateDesignAudit,
-  validateNavigationFlow,
   validateRenderCritique,
-  validateFrozenSurfaceReachability,
   validatePrototypingDesignContractReadiness,
   validateRootDesignMdParse,
-  validateSddDesignContractReadiness,
   validatePrototypingSkillContent,
   runCanonicalUixValidators,
-  validateSpecRequiredFilesCatalog,
-  validateMarkdownTableArity,
-  validateTraceabilityIntegrity,
-  validateUpstreamSsotGuard,
   validateUiEvidenceArtifacts,
   validateTestTodoStubs,
   validateAssistantTreeMigration,
@@ -101,14 +80,12 @@ import {
   validateReviewerJustification,
   validateReviewerGate,
   detectMockHrefDrift,
-  validateSurfaceTypeDrift,
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
   validateGrillingTrace,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
-  validateImportLiteEvidencePresence,
   stubSourceFilePattern,
 } from "./validators/index.js";
 import type { TestTodoStubOptions } from "./validators/testTodoStubs.js";
@@ -132,12 +109,7 @@ type TimingsSink = { timings?: ValidationTimings };
 export type ValidationOptions = {
   profile?: ValidationProfile;
   platform?: string;
-  /**
-   * Restrict the run to the named specs (`--spec`). Repo-level findings are
-   * always kept; only findings owned by an out-of-scope `spec-NNNN` directory
-   * are dropped, and per-spec report writes are skipped for them.
-   */
-  specIds?: readonly string[];
+  flowIds?: readonly string[];
 };
 
 export async function validateProject(
@@ -150,26 +122,49 @@ export async function validateProject(
   const profile: ValidationProfile = options.profile ?? "full";
 
   const specsRoot = resolvePath(root, config, "specsDir");
-  // `testsRoot` as well as `specsRoot`: a file under the canonical test layout
-  // is owned by the spec whose directory it sits in, so a scoped run drops a
-  // sibling's stub the way it already drops a sibling's broken reference.
-  const scopeRoots = {
-    root,
-    specsRoot,
-    testsRoot: resolvePath(root, config, "testsDir"),
-    testOwner: atddTestOwnerProbe(root, config),
-  };
-  const { scope: requestedScope, invalid: invalidSpecValues } = resolveSpecScope(options.specIds);
-  const scopeIssues = await buildSpecScopeIssues(
-    specsRoot,
-    requestedScope,
-    invalidSpecValues,
-    options.specIds,
-  );
-  // A `--spec` that resolves to nothing must not silently widen to the whole
-  // repo: keep the (possibly unsatisfiable) scope so no spec-owned finding
-  // slips through while `QFAI-SCOPE-00x` reports the misuse.
-  const specScope = requestedScope;
+  let oldLayoutRoot: string | undefined;
+  for (const candidate of new Set([specsRoot, path.join(root, ".qfai", "specs")])) {
+    let entries: string[] = [];
+    try {
+      entries = await readdir(candidate);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (hasLegacySpecPackEntries(entries)) {
+      oldLayoutRoot = candidate;
+      break;
+    }
+  }
+  if (oldLayoutRoot) {
+    const layoutIssue = issue(
+      "QFAI-LAYOUT-001",
+      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-spec-to-story before validation.`,
+      "error",
+      oldLayoutRoot,
+      "storyTree.oldLayout",
+    );
+    return {
+      toolVersion: await resolveToolVersion(),
+      generatedAt: new Date().toISOString(),
+      profile,
+      profileValidatorsRan: false,
+      issues: [layoutIssue],
+      counts: countIssues([layoutIssue]),
+    };
+  }
+  const storyModel = await readStoryTreeModel(root, config);
+  const flowScope = options.flowIds ? resolveFlowScope(options.flowIds, storyModel) : undefined;
+  const scopeIssues =
+    flowScope?.invalidValues.map((value) =>
+      issue(
+        "QFAI-FLOW-005",
+        `Unusable --flow value: ${value}`,
+        "error",
+        specsRoot,
+        "flowScope.value",
+        [value],
+      ),
+    ) ?? [];
 
   const timingsSink: TimingsSink = {};
   const profileRun = await runProfileValidators(
@@ -178,35 +173,12 @@ export async function validateProject(
     profile,
     timingsSink,
     options.platform,
-    specScope,
+    storyModel,
+    flowScope,
   );
   const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
-  const scopedFindings = findings.filter((finding) =>
-    isFindingInSpecScope(finding, scopeRoots, specScope),
-  );
+  const scopedFindings = findings.filter((finding) => isFindingInFlowScope(finding, flowScope));
   const { issues, waivers } = await applyWaivers(root, scopedFindings);
-
-  // Traceability is part of the same scoped answer: leaving every spec's
-  // Examples in would report a sibling's SC totals, missing IDs and refs as the
-  // coverage of the requested slice.
-  //
-  // A retired spec is out of the answer for the same reason. Its findings are
-  // already demoted and `qfai report` drops its scenarios from every other
-  // aggregate; counting its SC IDs here put them back into SC Coverage's total
-  // and `missingIds` while `scSources`, built from the active list, could name
-  // no file they came from. `activeScenarioFiles` is the one filter both
-  // commands use, so they cannot drift apart.
-  const scenarioFiles = activeScenarioFiles(
-    await collectScenarioFiles(specsRoot),
-    await collectSpecEntries(specsRoot),
-  ).filter((file) => isPathInSpecScope(file, scopeRoots, specScope));
-  const scIds = await collectScIdsFromScenarioFiles(scenarioFiles);
-  const { refs: scTestRefs, scan: testFiles } = await collectScTestReferences(
-    root,
-    config.validation.traceability.testFileGlobs,
-    config.validation.traceability.testFileExcludeGlobs,
-  );
-  const scCoverage = buildScCoverage(scIds, scTestRefs);
 
   const toolVersion = await resolveToolVersion();
   return {
@@ -221,72 +193,18 @@ export async function validateProject(
     profileValidatorsRan: profileRun.ranProfileValidators,
     issues,
     counts: countIssues(issues),
-    traceability: {
-      sc: scCoverage,
-      testFiles,
-    },
     waivers,
     ...(timingsSink.timings ? { timings: timingsSink.timings } : {}),
   };
 }
 
-/**
- * Reports a `--spec` that cannot select anything.
- *
- * Without this, `--spec nope` collapsed to "no scoping" and validated the whole
- * repo, and `--spec 9999` produced an empty target set — both exiting 0 while
- * never looking at the spec the operator named. Both are `error`, so a gate
- * fails instead of reporting a green run on the wrong thing.
- */
-async function buildSpecScopeIssues(
-  specsRoot: string,
-  scope: SpecScope | undefined,
-  invalid: readonly string[],
-  requested: readonly string[] | undefined,
-): Promise<Issue[]> {
-  if (requested === undefined || requested.length === 0) {
-    return [];
+function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
+  if (!scope || finding.code === "QFAI-FLOW-005") return true;
+  if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
+    return true;
   }
-  const issues: Issue[] = [];
-  if (invalid.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-SCOPE-001",
-        `--spec の値を spec 番号として解釈できません: ${invalid.join(", ")}`,
-        "error",
-        specsRoot,
-        "specScope.value",
-        Array.from(invalid),
-        "canonical",
-        "`--spec 0003` / `--spec spec-0003` のように 1-4 桁の spec 番号を指定してください。",
-      ),
-    );
-  }
-  if (scope === undefined || scope.size === 0) {
-    return issues;
-  }
-  const entries = await collectSpecEntries(specsRoot);
-  const existing = new Set(entries.map((entry) => entry.specNumber));
-  const missing = Array.from(scope)
-    .filter((specNumber) => !existing.has(specNumber))
-    .sort();
-  if (missing.length > 0) {
-    issues.push(
-      issue(
-        "QFAI-SCOPE-002",
-        `--spec で指定された spec ディレクトリが存在しません: ${missing
-          .map((specNumber) => `spec-${specNumber}`)
-          .join(", ")}`,
-        "error",
-        specsRoot,
-        "specScope.exists",
-        missing.map((specNumber) => `spec-${specNumber}`),
-        "canonical",
-        "spec ディレクトリ名を確認してください。存在しない spec を指定した run は対象を1件も検証しません。",
-      ),
-    );
-  }
-  return issues;
+  if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
+  return finding.file ? flowScopeContainsFile(scope, finding.file) : false;
 }
 
 /**
@@ -307,7 +225,7 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
     // `validateSkillsIntegrity` and `validateAssistantAssets` walk the
     // **skills** directory the configuration names — the same one `sdd` walks,
     // and nothing wider. Returning its parent matched a sibling's damage too:
-    // a regular file at `.qfai/assistant/agents` stopped `full` on a tree those
+    // a regular file at `.qfai/assistant/agent` stopped `full` on a tree those
     // validators never open, while `validateAgentDefinition` turns a missing
     // agent into an ordinary finding rather than an exception. The extra
     // profiles here differ in what else they run, not in how far into the
@@ -335,7 +253,7 @@ function assistantPathsWalkedBy(profile: ValidationProfile, skillsRelative: stri
 }
 
 /** The canonical agent tree, which `validateAgentDefinition` opens by pathname. */
-const AGENTS_RELATIVE = ".qfai/assistant/agents";
+const AGENTS_RELATIVE = ".qfai/assistant/agent";
 
 /** Whether `candidate` is `base` itself or sits under it, both repo-relative POSIX. */
 function isUnder(base: string, candidate: string): boolean {
@@ -498,7 +416,8 @@ async function runProfileValidators(
   profile: ValidationProfile,
   timings: TimingsSink,
   platformOption?: string,
-  specScope?: SpecScope,
+  storyModel?: StoryTreeModel,
+  flowScope?: FlowScope,
 ): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
@@ -526,9 +445,8 @@ async function runProfileValidators(
   // profile's name: `sdd` reads the configured skills directory from three of
   // its own validators, so a name-based exclusion left one of them raising
   // `ENOTDIR` / `ELOOP` and losing the finding above. Damage elsewhere in the
-  // tree stops nothing for `sdd`, and damage anywhere in it stops nothing for
-  // `discussion`, `atdd` or `tdd`, whose findings on discussion packs, spec
-  // packs, traceability and the ledger are independent of it.
+  // tree stops nothing for `sdd`; the other profiles can still report findings
+  // from the inputs they can read.
   const walked = assistantPathsWalkedBy(
     profile,
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
@@ -563,26 +481,121 @@ async function runProfileValidators(
   };
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
-    switch (profile) {
-      case "discussion":
-        return runDiscussionValidators(root, config, specScope);
-      case "sdd":
-        return runSddValidators(root, config, false, true, specScope);
-      case "prototyping":
-        return runPrototypingProfileValidators(root, config, timings, platformOption);
-      case "atdd":
-        return runAtddValidators(root, config, specScope);
-      case "tdd":
-        return runTddValidators(root, config, true, true, true, true, true, true, specScope);
-      case "verify":
-      case "full":
-        return runFullValidators(root, config, timings, platformOption, specScope);
-      case "saas-package":
-        return runSaasPackage(root, config, timings, platformOption);
-      case "drift":
-        return validateUpstreamSsotGuard(root, config);
-    }
+    if (!storyModel) return [];
+    return runStoryProfileValidators(
+      root,
+      config,
+      profile,
+      storyModel,
+      timings,
+      platformOption,
+      flowScope,
+    );
   }
+}
+
+async function runStoryProfileValidators(
+  root: string,
+  config: ConfigLoadResult["config"],
+  profile: ValidationProfile,
+  model: StoryTreeModel,
+  timings: TimingsSink,
+  platformOption?: string,
+  flowScope?: FlowScope,
+): Promise<Issue[]> {
+  const sdd = async (includeSteering = true): Promise<Issue[]> => [
+    ...(await validateStoryTreeStructure(root, config, model)),
+    ...(await validateStoryTreeContractReferences(root, config, model)),
+    ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
+    ...(await validateContracts(root, config)),
+    ...(await validateSddDesignContractReadiness(root, config)),
+    ...(await validateGrillingTrace(root, {
+      subjects: ["flow"],
+      flowScope: flowScope ? new Set(flowScope.flowIds) : undefined,
+    })),
+    ...(await validateContractSsotModules(root, config)),
+    ...(await validateAssistantTreeMigration(root, config)),
+    ...(await validateSkillDocReferences(root, config)),
+    ...(await validateReviewerJustification(root, config)),
+    ...(await validateReviewerGate(root, config)),
+    ...(await validateAutopilotPolicy(root, { config })),
+    ...(await runPackageSelfGovernanceValidators(root)),
+    ...(await validateStaleReferences(root, { config })),
+    ...(await validateReviewArtifacts(root, {
+      specScope: undefined,
+      specsRoot: resolvePath(root, config, "specsDir"),
+      flowScope,
+      producers: SDD_PACK_PRODUCERS,
+    })),
+  ];
+  const atdd = async (): Promise<Issue[]> => [
+    ...(await validateStoryTreeObligations(root, config, "atdd", model)),
+    ...(await validateStoryTreeCoverageDepth(
+      root,
+      model,
+      flowScope,
+      resolvePath(root, config, "testsDir"),
+    )),
+    ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
+    ...(await validateTestTodoStubs(root, config, {
+      ...acceptanceStubScan(root, config),
+      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
+    })),
+  ];
+  const tdd = async (includeContracts = true, includeDrift = true): Promise<Issue[]> => [
+    ...(await validateStoryTreeObligations(root, config, "tdd", model)),
+    ...(includeDrift ? await validateStoryTreeDrift(root, config, "tdd") : []),
+    ...(await validateTestTodoStubs(root, config)),
+    ...(includeContracts ? await validateContracts(root, config) : []),
+    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
+  ];
+  switch (profile) {
+    case "sdd":
+      return sdd();
+    case "atdd":
+      return atdd();
+    case "tdd":
+      return tdd();
+    case "drift":
+      return validateStoryTreeDrift(root, config, "drift");
+    case "verify":
+    case "full":
+      return dedupeStubFindings(
+        dedupeStoryFindings([
+          ...(await validateRepositoryHygiene(root, config)),
+          ...(await validateSkillsIntegrity(root, config)),
+          ...(await validateAssistantAssets(root, config)),
+          ...(await runDiscussionValidators(root, config, "all")),
+          ...(await sdd(false)),
+          ...(await runPrototypingValidators(root, config, timings, platformOption)),
+          ...(await atdd()),
+          ...(await tdd(false, false)),
+          ...(await validatePrototypingSkill(root, config)),
+        ]),
+      );
+    case "discussion":
+      return runDiscussionValidators(root, config);
+    case "prototyping":
+      return runPrototypingProfileValidators(root, config, timings, platformOption);
+    case "saas-package":
+      return runSaasPackage(root, config, timings, platformOption);
+  }
+}
+
+function dedupeStoryFindings(findings: Issue[]): Issue[] {
+  const seen = new Set<string>();
+  return findings.filter((finding) => {
+    if (
+      finding.code !== "QFAI-STORY-008" &&
+      finding.code !== "QFAI-STORY-009" &&
+      finding.code !== "QFAI-SCAN-002"
+    )
+      return true;
+    const key = [finding.code, finding.file ?? "", ...(finding.refs ?? [])].join("\0");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 async function runSaasPackage(
@@ -603,7 +616,6 @@ async function runSaasPackage(
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
-  specScope?: SpecScope,
   // Which review packs this run owns. The discussion profile is the gate for
   // its own cycle only; `full` composes this runner and passes `"all"` so the
   // repo-wide scan keeps judging every pack.
@@ -628,8 +640,7 @@ async function runDiscussionValidators(
     // `QFAI-GRILL-001` (warning) on this run's own session record. The stage
     // names `--profile discussion` as its completion gate, so a run that wrote
     // no record could otherwise finish its own gate without the finding. The
-    // stage is named because `runSddValidators` dispatches this too and a full
-    // run calls both.
+    // The discussion profile and full run both inspect discussion evidence.
     ...(await validateGrillingTrace(root, {
       subjects: ["discussion"],
       discussionDir: config.paths.discussionDir,
@@ -640,7 +651,7 @@ async function runDiscussionValidators(
     // artifacts it prescribes, so an incomplete pack passed the gate silently.
     ...(await validateReviewArtifacts(
       root,
-      reviewArtifactsScope(root, config, specScope, reviewPackProducers),
+      reviewArtifactsScope(root, config, reviewPackProducers),
     )),
   ];
 }
@@ -651,169 +662,20 @@ type ReviewPackProducers = ReadonlySet<string> | "all";
 /**
  * Scope handed to `validateReviewArtifacts`.
  *
- * Two narrowings, both so that one owner's in-flight pack cannot fail another
- * owner's gate. A review-pack finding names no spec, so `isFindingInSpecScope`
- * keeps it in every `--spec` run — the validator narrows itself instead, by the
- * target each pack records (a discussion pack, which no spec owns, stays in:
- * the scope contract keeps repo-level findings in every slice). And `sdd` /
- * `discussion` are each the hard gate for their own review cycle, so each
- * judges only the packs their own stage produced; a pack that names no owner at
- * all is still judged by both, since no one else would.
+ * `sdd` and `discussion` are each the hard gate for their own review cycle,
+ * so each judges the packs its stage produced. A full run judges every pack.
  */
 function reviewArtifactsScope(
   root: string,
   config: ConfigLoadResult["config"],
-  specScope: SpecScope | undefined,
   reviewPackProducers: ReviewPackProducers,
 ): ReviewArtifactsScope {
   return {
-    specScope,
+    specScope: undefined,
     specsRoot: resolvePath(root, config, "specsDir"),
     discussionRoot: resolvePath(root, config, "discussionDir"),
     producers: reviewPackProducers === "all" ? undefined : reviewPackProducers,
   };
-}
-
-async function runSddValidators(
-  root: string,
-  config: ConfigLoadResult["config"],
-  includeCodeReferences = false,
-  enforceNoPrematurePrototypingContracts = true,
-  specScope?: SpecScope,
-  // `full` runs the discussion profile too, which already carries the same
-  // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
-  includeReviewArtifacts = true,
-  // `full` also runs the tdd profile, which calls the whole of
-  // `validateTddList`, so it opts out here rather than reporting the
-  // seed-shape codes twice.
-  includeTddListSeedShape = true,
-  // `full` is the repo-wide audit and covers the downstream stage too, so it
-  // opts into the history-based `QFAI-TRACE-001` here — `runTddValidators`
-  // opts out in exchange, so the ledger is still read exactly once.
-  // `--profile sdd` on its own must never ask for it: see below.
-  includeImplementationDrift = false,
-): Promise<Issue[]> {
-  return [
-    // `/qfai-sdd` Phase 2b writes `tdd/test-list.md`, and `--profile sdd` is
-    // the only gate it stops on — so the profile has to be able to read back
-    // the shape it just wrote. Only the seed-shape half: the rest of
-    // `validateTddList` reports execution state that exists after
-    // `/qfai-implement`, which the SDD stage cannot clear.
-    // The scope is passed, not left to the run-level `--spec` filter: every
-    // `/qfai-sdd` slice gate is a `--spec` run, so an unscoped walk would read
-    // and `stat` every sibling ledger once per slice.
-    //
-    // That same equivalence places the gate: a `--spec` run of this profile IS
-    // the Phase 2 slice gate, and the Required Process runs Phase 2b — the
-    // phase that writes the ledger — only after it. Reconciling the ledger
-    // against `06_Test-Cases.md` there asks the writing stage for a file it
-    // has not reached yet, and a new spec declaring a Unit or Component TC got
-    // `TDDLIST_TC_NOT_COVERED` (error) on the very gate that has to pass
-    // before Phase 2b can run. The unscoped stop gate is the post-Phase-2b
-    // one, and it still evaluates the whole seed-shape set.
-    //
-    // The equivalence is one-way, though, and `beforeLedgerSeed` is read as a
-    // permission rather than an assertion for that reason: `--spec` is
-    // documented as a scope filter, so a `--spec` run is *also* how an author
-    // re-checks a single spec after Phase 2b. Treating the flag as the verdict
-    // let that run pass with rows missing. The validator drops the
-    // reconciliation codes only where the ledger really is absent.
-    ...(includeTddListSeedShape
-      ? await validateTddListSeedShape(root, config, {
-          ...(specScope ? { specScope } : {}),
-          beforeLedgerSeed: specScope !== undefined,
-        })
-      : []),
-    ...(await validateMermaidEnforcement(root)),
-    // The business-flow document's ids, and the `- Flow:` citations that reach
-    // them. Beside the mermaid rules because they read the same file: those ask
-    // whether the diagram is there, this asks whether anything can point at
-    // what it draws.
-    ...(await validateBusinessFlowTraceability(root, config)),
-    // Preflight input source: a project that has spec packs must be able to
-    // point at what they were derived from — a discussion pack `06_REQ.md` or
-    // an `.qfai/evidence/import-lite-*.md`. The check was written but never
-    // dispatched, so `QFAI-IMPLITE-001` could not fire and a project with
-    // specs and no input source passed preflight silently.
-    ...(await validateImportLiteEvidencePresence(root, config)),
-    ...(await validateSpecPacks(root, config)),
-    // The catalog wins over the in-code required-file sets, so a divergence
-    // silently changes which files are mandatory. Report it.
-    ...(await validateSpecRequiredFilesCatalog(root, config)),
-    // One central arity check for every spec-pack table. Without it a stray
-    // pipe silently shifts the columns every other validator reads.
-    ...(await validateMarkdownTableArity(root, config)),
-    ...(await validateStatusInSpecs(root, config)),
-    // `validation.require.specSections` is the operator's own strict
-    // required-heading list. It ships empty, so this is a no-op until it is
-    // set; once it is set the list has to bind, or `qfai.config.yaml` records
-    // a gate nothing applies.
-    ...(await validateSpecSections(root, config)),
-    ...(await validateDensityHints(root, config)),
-    ...(await validateSpecSplitByCapability(root, config)),
-    ...(await validateLayeredTraceability(root, config)),
-    ...(await validateOrphanProhibition(root, config)),
-    ...(await validateLayerCoverage(root, config, { specScope })),
-    ...(await validateContractReferences(root, config)),
-    // Contract → implementation routing: every `- SSOT modules:` entry under
-    // `.qfai/contracts/**` must resolve on disk, so a renamed or never-written
-    // module cannot keep being asserted by the contract that documents it.
-    ...(await validateContractSsotModules(root, config)),
-    ...(await validateSddDesignContractReadiness(root, config, {
-      enforceNoPrematurePrototypingContracts,
-    })),
-    ...(await validateTraceability(root, config, { includeCodeReferences })),
-    // `16_Traceability-ledger.md` is an artifact `/qfai-sdd` writes, and
-    // `--profile sdd` is that skill's completion gate — so the profile that
-    // owns the file is the one that must hear `QFAI-TRACE-002` about it.
-    //
-    // Presence and shape only for `--profile sdd`. `/qfai-sdd` updates BR/AC
-    // and the ledger and leaves the implementation to `/qfai-implement`, so the
-    // linked code is untouched *by design* when that gate runs; asking for the
-    // history-based `QFAI-TRACE-001` there would fail the mandatory
-    // `--profile sdd --fail-on error` run on the flow the profile exists to
-    // certify. `QFAI-TRACE-001` gates the downstream profiles, which run after
-    // the code exists.
-    ...(await validateTraceabilityIntegrity(root, config, {
-      includeImplementationDiff: includeImplementationDrift,
-    })),
-    ...(await validateDefinedIds(root, config)),
-    ...(await validateContracts(root, config)),
-    ...(await validateNavigationFlow(root, config)),
-    ...(await validateAssistantTreeMigration(root, config)),
-    ...(await validateSkillDocReferences(root, config)),
-    ...(await validateReviewerJustification(root, config)),
-    ...(await validateReviewerGate(root, config)),
-    ...(await validateSurfaceTypeDrift(root, config)),
-    // Skill governance: `R-AUTOPILOT-POLICY-MISSING` on a qfai-*
-    // SKILL.md that lacks the `## Default Autopilot Policy` section.
-    // SKILL.md governance lives in the sdd profile.
-    ...(await validateAutopilotPolicy(root, { config })),
-    // `QFAI-GRILL-001` (warning) on a stage whose mandatory grilling session left
-    // no trace in the evidence it wrote. Warning because it reads a record the
-    // agent wrote about its own run: it establishes that the record exists, not
-    // that a session happened, and an error would claim the second.
-    ...(await validateGrillingTrace(root, { specScope, subjects: ["spec"] })),
-    // Self-governance group: Pair IV (`R-HANDOFF-SCHEMA-DRIFT`, schema ↔
-    // writer) and Pair III (`R-SKILL-MANIFEST-DRIFT`, probe-impl ↔
-    // manifest-schema). Both are skill-governance surfaces so they live
-    // in sdd, but both read qfai's own package sources — outside this
-    // repo the group is a declared no-op and the profile-coverage notice
-    // names its finding codes as unevaluated.
-    ...(await runPackageSelfGovernanceValidators(root)),
-    // Doc governance — surface pre-implementation tokens in
-    // `references/*.md` and `SKILL.md`.
-    ...(await validateStaleReferences(root, { config })),
-    // `rcp_footer.md` states both halves of the review-cycle contract — the
-    // mandatory pack files and `qfai validate --profile sdd` as the gate — so
-    // the gate has to be able to observe them.
-    ...(includeReviewArtifacts
-      ? await validateReviewArtifacts(
-          root,
-          reviewArtifactsScope(root, config, specScope, SDD_PACK_PRODUCERS),
-        )
-      : []),
-  ];
 }
 
 /**
@@ -845,11 +707,6 @@ async function runPrototypingValidators(
     ...(await validateDesignMdPatchZone(root, config)),
     ...(await detectEvidenceMutationUnlogged(root)),
     ...(await validatePrototypingEvidence(root, config)),
-    // A screen retired mid-loop leaves `frozenSurfaceUnion` naming a spec that
-    // no longer resolves, and nothing said so: `iterate`'s drift hard-stop only
-    // fires when EVERY UI signal is gone, so the partial case reported
-    // `error=0` over a loop describing a screen that does not exist.
-    ...(await validateFrozenSurfaceReachability(root, config)),
     ...(await validateScreenIdCasing(root, config.paths.contractsDir)),
     ...(await validateUiEvidenceArtifacts(root, config)),
     ...(await validateRenderCritique(root, config)),
@@ -857,11 +714,12 @@ async function runPrototypingValidators(
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validateSpecIdLinkage(root, config)),
+    ...(await validateFrozenSurfaceReachability(root, config)),
     // `QFAI-PROT-311` — delegationMap entries must name a role from the
     // SKILL.md Delegation Scope Table. No-ops when prototyping.json has no
     // executionPlan, so bootstrap projects are unaffected.
     ...(await validatePrototypingDelegationMap(root)),
-    ...(await validateSpecIdLinkage(root, config)),
   ];
 }
 
@@ -910,63 +768,6 @@ async function relaxPrototypingIssuesIfExploration(
   return notice === null ? relaxed : [...relaxed, notice];
 }
 
-async function runAtddValidators(
-  root: string,
-  config: ConfigLoadResult["config"],
-  specScope?: SpecScope,
-): Promise<Issue[]> {
-  // Evaluated once and shared: the Coverage Depth Matrix gate needs the same
-  // "which specs have ATDD-owned tests" answer the traceability gate computes,
-  // and walking the test tree twice per run buys nothing.
-  const evaluated = await evaluateAtddCodeTraceability(root, config);
-  return [
-    ...(await validateAtddCodeTraceability(root, config, {
-      evaluated,
-      ...(specScope ? { specScope } : {}),
-    })),
-    // The Coverage Depth Matrix is a Mandatory Output of this stage that no
-    // rule ever opened; scoping is left to `isFindingInSpecScope`, which reads
-    // the spec directory each finding is attributed to.
-    ...(await validateAtddCoverageDepth(root, evaluated)),
-    // D-SCAFFOLD-PLACEHOLDER (BR-0008-0008): surface unfilled
-    // `qfai atdd scaffold` skeletons at severity warning until the
-    // operator implements a real assertion. Wired into atdd + full
-    // profiles so the documented escalation path is reachable from
-    // the validate command surface.
-    // Scoped: this validator writes `.qfai/state.json` escalation counters, so
-    // an unscoped scan under `--spec` mutated sibling specs' state.
-    ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
-    // QFAI-TEST-001. `qfai-atdd` names `--profile atdd` as its completion gate
-    // and owns `tests/e2e/**`, `tests/api/**` and `tests/integration/**`. An
-    // acceptance test written as a silent stub still satisfies QFAI-ATDD-111 /
-    // -112 / -113 — those count the annotation, not the assertion — and carries
-    // no scaffold marker, so D-SCAFFOLD-PLACEHOLDER does not see it either.
-    // Without this the stage's own gate went green on a suite whose tests do
-    // not run, and the repo-wide profiles that do catch it are not what the
-    // skill instructs the operator to run. Unscoped like the contract rules:
-    // the finding names a test file, which no spec owns.
-    //
-    // Selection is the stage's own, and the stage reads two glob sets: the
-    // three layer directories under `paths.testsDir`, and the project's own
-    // `validation.traceability.testFileGlobs`, which is where a monorepo's other
-    // packages keep their acceptance suites. The second set also matches unit
-    // and component files, and a unit test's stub must not block a gate that
-    // owns none of it — so the layer filter, not the globs, is what keeps them
-    // out. Neither set suffices alone: the configured globs reach unit suites,
-    // and the shipped `qfai.config.yaml` leaves them empty, where the layer
-    // directories are the only acceptance tests there are.
-    //
-    // The marker exemption is handed the same stage's scan boundary. A marked
-    // skeleton under `paths.testsDir` is `D-SCAFFOLD-PLACEHOLDER`'s to report;
-    // one in a package-local suite is outside that validator, so exempting it
-    // here would leave it reported by neither.
-    ...(await validateTestTodoStubs(root, config, {
-      ...acceptanceStubScan(root, config),
-      placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-    })),
-  ];
-}
-
 /**
  * The selection the ATDD stage's stub scan reads: the layer directories under
  * `paths.testsDir` and the project's own `testFileGlobs`, kept to the
@@ -988,119 +789,6 @@ function acceptanceStubScan(root: string, config: ConfigLoadResult["config"]): T
     projectGlobs: config.validation.traceability.testFileGlobs,
     fileFilter: atddAcceptanceLayerFilter(root, config),
   };
-}
-
-/**
- * The TDD profile's acceptance stub selection: the ATDD stage's, plus the
- * legacy `<testsDir>/atdd/` scaffold directory.
- *
- * Older `qfai atdd scaffold` runs wrote their skeletons there, and it is no
- * acceptance layer, so the ATDD selection passes it over. Under `full` the
- * placeholder validator reads it; `--profile tdd` runs no such validator, so a
- * skeleton there, one for an L1/L2 test case above all, whose placement is
- * deliberately not reported, was read by nothing in the stage's completion gate.
- */
-function tddAcceptanceStubScan(
-  root: string,
-  config: ConfigLoadResult["config"],
-): TestTodoStubOptions {
-  const scan = acceptanceStubScan(root, config);
-  const legacyDir = path.join(resolvePath(root, config, "testsDir"), "atdd");
-  const relative = path.relative(root, legacyDir);
-  const base =
-    relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative)
-      ? relative
-      : legacyDir;
-  const pattern = stubSourceFilePattern(config.validation.traceability.testFileGlobs);
-  const inLegacyDir = (relativePath: string): boolean => {
-    const inside = path.relative(legacyDir, path.resolve(root, relativePath));
-    return inside.length > 0 && !inside.startsWith("..") && !path.isAbsolute(inside);
-  };
-  return {
-    ...scan,
-    globs: [...(scan.globs ?? []), `${base.replace(/\\/g, "/")}/${pattern}`],
-    fileFilter: (relativePath) =>
-      (scan.fileFilter?.(relativePath) ?? true) || inLegacyDir(relativePath),
-  };
-}
-
-async function runTddValidators(
-  root: string,
-  config: ConfigLoadResult["config"],
-  includeTraceability = true,
-  // `full` already runs the ATDD profile, so it opts out here to avoid
-  // emitting every QFAI-ATDD-* finding twice.
-  includeAtddCodeTraceability = true,
-  // The upstream-ownership guard binds the *downstream* stage. `full` is a
-  // repo-wide audit that also covers the SDD profile — the owner of these
-  // files — so it opts out rather than flagging every legitimate spec edit.
-  includeUpstreamGuard = true,
-  // `full` runs the sdd profile, which already calls `validateContracts`.
-  includeContracts = true,
-  // `full` runs the sdd profile, which already calls
-  // `validateMarkdownTableArity`.
-  includeTableArity = true,
-  // Same reason: the sdd profile owns the traceability ledger and now runs
-  // `validateTraceabilityIntegrity` itself — under `full` with the
-  // implementation-drift check switched on — so `full` opts out here.
-  includeTraceabilityIntegrity = true,
-  specScope?: SpecScope,
-): Promise<Issue[]> {
-  return [
-    // The arity check exists for this ledger: every `validateTddList` row check
-    // resolves its column with `headers.indexOf(name)` and `continue`s on the
-    // empty string a truncated row produces, so a row cut before `Status` is
-    // not merely unflagged — it is unread. Running it here first means the
-    // profile `qfai-implement` gates on can see the corruption at all.
-    ...(includeTableArity ? await validateMarkdownTableArity(root, config) : []),
-    ...(await validateTddList(root, config)),
-    // A marked skeleton is left to `D-SCAFFOLD-PLACEHOLDER` only in a run that
-    // has that validator. `full` runs the ATDD profile beside this one, which is
-    // what the opt-out above says; `--profile tdd` runs no such validator, so
-    // there a skeleton whose tests never run is this gate's to report.
-    //
-    // `--profile tdd` also runs the acceptance check below, which reads the
-    // acceptance directories whatever `testFileGlobs` holds, so a skeleton's
-    // annotation there clears a missing reference. Those directories are read
-    // here as well: the configured globs alone never reach them where the
-    // shipped config lists none. `full` reads them in the ATDD profile.
-    ...(includeAtddCodeTraceability
-      ? dedupeStubFindings([
-          ...(await validateTestTodoStubs(root, config)),
-          ...(await validateTestTodoStubs(root, config, tddAcceptanceStubScan(root, config))),
-        ])
-      : await validateTestTodoStubs(root, config, {
-          placeholderReported: scaffoldPlaceholderReportedFilter(root, config),
-        })),
-    // `qfai-implement` names `--profile tdd` as its only completion gate, and
-    // it is the stage that creates test-routing obligations. Without this the
-    // profile was structurally incapable of observing QFAI-ATDD-111/112/113/
-    // 121/122 — the US -> tests/e2e/**, TC -> tests/integration/** and
-    // CON-API -> tests/api/** gates it is supposed to satisfy.
-    ...(includeAtddCodeTraceability
-      ? await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})
-      : []),
-    ...(includeTraceability
-      ? await validateTraceability(root, config, { includeCodeReferences: true })
-      : []),
-    ...(includeTraceabilityIntegrity ? await validateTraceabilityIntegrity(root, config) : []),
-    // The drift protocol names `--profile tdd` as the downstream completion
-    // gate, so the downstream-only ownership rule is enforced here and nowhere
-    // else: `/qfai-sdd` owns these files and edits them legitimately.
-    ...(includeUpstreamGuard ? await validateUpstreamSsotGuard(root, config) : []),
-    // The implementation stage executes against the contracts; its gate should
-    // cover them. `--profile tdd` is what `qfai-implement` names as its
-    // completion gate, and it ran no contract check at all — so a DB contract
-    // that cannot be applied was invisible to the only profile the stage runs.
-    // `full` opts out below because `runSddValidators` already includes it.
-    ...(includeContracts ? await validateContracts(root, config) : []),
-    // Same reasoning for the contract -> implementation routing block: the
-    // implementation stage is the one that moves and renames those modules, so
-    // `--profile tdd` — the gate `qfai-implement` names — has to see a
-    // `- SSOT modules:` entry it just made dead. It rides `includeContracts`
-    // so `full` does not report it twice.
-    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
-  ];
 }
 
 /**
@@ -1143,34 +831,6 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
     seen.add(key);
     return true;
   });
-}
-
-async function runFullValidators(
-  root: string,
-  config: ConfigLoadResult["config"],
-  timings: TimingsSink,
-  platformOption?: string,
-  specScope?: SpecScope,
-): Promise<Issue[]> {
-  return dedupeStubFindings([
-    ...(await validateRepositoryHygiene(root, config)),
-    ...(await validateSkillsIntegrity(root, config)),
-    ...(await validateAssistantAssets(root, config)),
-    // `"all"`: the full scan owns every review pack, not only the discussion
-    // ones this runner gates inside its own profile.
-    ...(await runDiscussionValidators(root, config, specScope, "all")),
-    // Review artifacts come in with the discussion profile above, and the tdd
-    // profile below carries the whole of `validateTddList`, so the sdd profile
-    // opts out of both rather than reporting QFAI-REVIEW-* and the ledger
-    // seed-shape codes twice. The trailing `true` is the opposite trade:
-    // `full` covers the downstream stage, so it opts INTO the history-based
-    // implementation-drift check here and `runTddValidators` opts out below.
-    ...(await runSddValidators(root, config, true, false, specScope, false, false, true)),
-    ...(await runPrototypingValidators(root, config, timings, platformOption)),
-    ...(await runAtddValidators(root, config, specScope)),
-    ...(await runTddValidators(root, config, false, false, false, false, false, false)),
-    ...(await validatePrototypingSkill(root, config)),
-  ]);
 }
 
 async function runUiuxValidators(

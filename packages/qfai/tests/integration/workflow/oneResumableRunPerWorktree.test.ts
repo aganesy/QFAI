@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0111
+// QFAI:AC-0001-0196-02
+// QFAI:EX-0001-0196-06
 
 import { afterEach, expect, it } from "vitest";
 
@@ -14,7 +15,7 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0111 (TDD-0329): second start refused run-active, continue resumes the one run", async () => {
+it("second start refused run-active, continue resumes the one run", async () => {
   const root = await minimalProject();
   const { runId } = await routedRun(root);
   const issued = workflow(root, ["next", "--run", runId]);

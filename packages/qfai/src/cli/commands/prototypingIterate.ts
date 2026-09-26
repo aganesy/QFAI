@@ -21,7 +21,7 @@
  *   64  STOP: blockingFindings=[] + lap=[] + dmv=[] in the latest iter
  *   65  STOP: latest iter index === MAX_ITERATION_INDEX (9)
  *   2   input error (--cycle out of range, missing --target-url at cycle 0,
- *       no UI-bearing specs found, DESIGN.md missing/malformed/changed,
+ *       DESIGN.md missing/malformed/changed,
  *       prototyping.json#designMd missing on cycle >= 1, etc.)
  *
  * Per-cycle artifact: writes `iter-NN/iterate-plan.json` so the capture
@@ -33,6 +33,7 @@
 import type { Dirent } from "node:fs";
 import {
   copyFile,
+  cp,
   lstat,
   mkdir,
   readdir,
@@ -48,7 +49,7 @@ import path from "node:path";
 
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../lib/logger.js";
-import { loadConfig } from "../../core/config.js";
+import { loadConfig, type QfaiConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
@@ -58,14 +59,19 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
+import {
+  PROTOTYPE_REL,
+  PROTOTYPING_EVIDENCE_REL,
+  PROTOTYPING_JSON_REL,
+} from "../../core/prototyping/paths.js";
 import {
   resolvePrimaryPrototypingSpec,
   resolveSurfaceUnion,
+  readUiContractInventory,
 } from "../../core/prototyping/specResolution.js";
 import {
-  checkSpecsCoveredDrift,
-  readFrozenSpecsCovered,
+  checkUiContractsCoveredDrift,
+  readUiContractsCovered,
 } from "../../core/prototyping/specsCovered.js";
 import {
   licenseVerify,
@@ -105,7 +111,7 @@ import {
   findMissingRoutes,
   type Lap010Input,
 } from "../../core/prototyping/layoutAntiPatternsAdvisory.js";
-import { parsePrimarySpecId } from "../../core/prototyping/primarySpecIdParse.js";
+import { parsePrimaryUiContract } from "../../core/prototyping/primarySpecIdParse.js";
 import {
   buildScreenSignals,
   formatScreenSignalsBlock,
@@ -119,7 +125,7 @@ import { runAccessibilityPhase } from "../../core/browserQa/phases/accessibility
  *
  * One entry per screen the operator wants captured this cycle. The
  * `htmlSourceCopy` flag, when true, instructs iterate to copy the
- * source HTML at `.qfai/prototypes/iter-NN/<id>.html` byte-for-byte
+ * source HTML at `.qfai/prototype/iter-NN/<id>.html` byte-for-byte
  * into the evidence iter dir (no runtime style injection from
  * `page.content()`). Default is false: HTML is produced by the
  * injected {@link CaptureScreenFn} just like the PNG.
@@ -128,6 +134,8 @@ export type IterateCaptureScreen = {
   readonly id: string;
   readonly url?: string;
   readonly htmlSourceCopy?: boolean;
+  /** Every UI contract declaring this screen; shared screens are captured once. */
+  readonly uiContractIds?: readonly string[];
 };
 
 /**
@@ -247,12 +255,10 @@ export type RunPrototypingIterateOptions = {
    */
   licensePatch?: string;
   /**
-   * Operator-supplied primary spec id (`--primary-spec-id`). Normalised
-   * via {@link parsePrimarySpecId}; rejects unparseable / out-of-range
-   * input with exit 2 + the canonical error message. Overrides config
-   * + marker resolution when set.
+   * Full UI contract ID supplied by `--primary-ui-contract`. This pin
+   * takes precedence over the configured primary contract.
    */
-  primarySpecId?: string | number;
+  primaryUiContract?: string;
   /**
    * Cycle-0 placeholder HTML emission. When true and `cycle === 0`,
    * iterate renders one HTML per `screens[].id` resolved from the
@@ -316,7 +322,7 @@ export type DesignTokens = {
 
 export type IteratePlan = {
   cycle: number;
-  specs: string[];
+  uiContracts: string[];
   paths: {
     iterationDir: string;
     reviewJson: string;
@@ -341,6 +347,7 @@ export type IteratePlan = {
 };
 
 const ROOT_DESIGN_MD_REL = "DESIGN.md";
+const LEGACY_SPEC_EVIDENCE_DIR = /^spec-\d{4}$/u;
 
 type DesignMdRecord = {
   path: string;
@@ -351,13 +358,12 @@ type PrototypingJsonShape = {
   iterations?: unknown[];
   designMd?: DesignMdRecord;
   runId?: string;
-  specsCovered?: unknown;
+  uiContractsCovered?: unknown;
   reviewerGate?: unknown;
   acceptedIterationIndex?: unknown;
   stopReason?: unknown;
   fullHarness?: unknown;
   executionPlan?: unknown;
-  frozenSpecsCovered?: unknown;
   frozenSurfaceUnion?: unknown;
   frozenLicenseCatalog?: unknown;
   imageSources?: unknown;
@@ -508,17 +514,15 @@ export async function runPrototypingIterate(
   const convergedRefusal = await refuseWhenLoopConverged(options.root, options.cycle);
   if (convergedRefusal !== null) return convergedRefusal;
 
-  // Normalise --primary-spec-id if provided. SHOULD-normalisation of
-  // `1 / '1' / '01' / '0001'` to canonical `"0001"`; rejection emits the
-  // canonical error message anchored by the unit ledger.
-  let normalisedPrimarySpecId: string | undefined;
-  if (options.primarySpecId !== undefined) {
-    const parsed = parsePrimarySpecId(options.primarySpecId);
+  // The CLI pin accepts only the full UI contract ID.
+  let primaryUiContract: string | undefined;
+  if (options.primaryUiContract !== undefined) {
+    const parsed = parsePrimaryUiContract(options.primaryUiContract);
     if (!parsed.ok) {
       error(`qfai prototyping iterate: ${parsed.error}`);
       return 2;
     }
-    normalisedPrimarySpecId = parsed.normalised;
+    primaryUiContract = parsed.uiContractId;
   }
 
   // 0) Zero UI-bearing pre-check → deterministic no-op (exit 0) when
@@ -556,18 +560,18 @@ export async function runPrototypingIterate(
           : readFrozenSurfaceUnionField(protoRecordForPrecheck);
       if (frozenUnionForPrecheck !== null) {
         error(
-          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+          "qfai prototyping iterate: zero UI-bearing contracts resolved on cycle " +
             `${options.cycle}, but the cycle-0 frozen union recorded in ` +
             `prototyping.json#frozenSurfaceUnion (${JSON.stringify(frozenUnionForPrecheck)}) ` +
-            "is non-empty. All UI markers / contracts appear to have been " +
+            "is non-empty. The declared UI contracts appear to have been " +
             "removed mid-loop, which is a hard-stop drift class — the cycle-0 " +
             "frozen scope is no longer reachable. Re-run with " +
             "`--cycle 0 --target-url <url>` to refreeze the loop or restore the " +
-            "removed UI signals before continuing.",
+            "removed contracts before continuing.",
         );
       } else {
         error(
-          "qfai prototyping iterate: zero UI-bearing specs resolved on cycle " +
+          "qfai prototyping iterate: zero UI-bearing contracts resolved on cycle " +
             `${options.cycle}, and prototyping.json has no cycle-0 ` +
             "`frozenSurfaceUnion` snapshot to drift against (either the file " +
             "does not exist yet or it is a legacy record without the " +
@@ -579,14 +583,7 @@ export async function runPrototypingIterate(
     }
     return precheck.exitCode;
   }
-  // The precheck returns both `earlyConfig` and `unionSpecs` on the
-  // continue path. `unionSpecs` is the cycle-0 UI-bearing UNION —
-  // cycle 0 persists it as `frozenSurfaceUnion` in prototyping.json and
-  // the cycle ≥ 1 drift gate compares the live UNION against THAT
-  // frozen UNION (apples-to-apples) instead of against the single-spec
-  // `frozenSpecsCovered` — comparing a single-spec frozen set against the
-  // multi-spec live union would false-positive-fire `added=[secondaries...]`
-  // for any project whose baseline already carries ≥ 2 UI-bearing specs.
+  // The precheck provides the UI contract set frozen at cycle 0.
   const { earlyConfig, unionSpecs: cycleZeroUnion } = precheck;
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
@@ -621,7 +618,7 @@ export async function runPrototypingIterate(
     error(
       "qfai prototyping iterate: DESIGN.md.lock.yaml exists but " +
         "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run /qfai-sdd Phase 0 to regenerate the lock.",
+        "Re-run the design lock step of /qfai-sdd to regenerate the lock.",
     );
     return 2;
   }
@@ -640,35 +637,31 @@ export async function runPrototypingIterate(
     error(
       "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
         `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
-        "DESIGN.md was edited after the SDD freeze; re-run /qfai-sdd Phase 0 to refreeze.",
+        "DESIGN.md was edited after the SDD freeze; re-run the design lock step of /qfai-sdd to refreeze.",
     );
     return 2;
   }
 
-  // Operator-supplied `--primary-spec-id` overrides config + marker
-  // resolution when set. The override is normalised through
-  // `parsePrimarySpecId` (above), so any non-conformant input has
-  // already been rejected with exit 2 + the canonical error string.
+  // The CLI pin takes precedence over the configured primary UI contract.
   const effectiveConfig =
-    normalisedPrimarySpecId !== undefined
+    primaryUiContract !== undefined
       ? {
           ...configResult.config,
           prototyping: {
             ...(configResult.config.prototyping ?? {}),
-            primarySpecId: normalisedPrimarySpecId,
+            primaryUiContract,
           },
         }
       : configResult.config;
   const resolved = await resolvePrimaryPrototypingSpec(options.root, effectiveConfig);
   if (!resolved) {
     error(
-      "qfai prototyping iterate: no primary UI-bearing prototyping spec found. " +
-        "Set qfai.config.yaml: prototyping.primarySpecId, or add `surface_type: ui-bearing` " +
-        "to one of your specs' 01_Spec.md.",
+      "qfai prototyping iterate: no UI contract with a CON-UI-NNNN declaration and " +
+        "at least one screens[] entry was found under contractsDir/ui.",
     );
     return 2;
   }
-  const specs = [resolved.specId];
+  const specs = [...cycleZeroUnion];
 
   const protoJsonAbs = path.join(options.root, PROTOTYPING_JSON_REL);
 
@@ -733,17 +726,33 @@ export async function runPrototypingIterate(
   if (options.cycle === 0) {
     const evidenceRootAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL);
     const iter00Abs = path.join(evidenceRootAbs, "iter-00");
-    if (await entryExists(iter00Abs)) {
-      if (!options.force) {
-        error(
-          "qfai prototyping iterate --cycle 0: an existing iter-00 was found at " +
-            `${PROTOTYPING_EVIDENCE_REL}/iter-00. Re-running cycle 0 will overwrite the prior loop's seed. ` +
-            "Re-invoke with `--force` to back up iter-00 to iter-00.backup-<ISO> before clearing, " +
-            "or delete it manually if the prior loop is no longer needed.",
+    const iter00Entry = await lstat(iter00Abs).catch((cause: unknown) => {
+      if (isEnoent(cause)) return null;
+      throw cause;
+    });
+    if (iter00Entry !== null) {
+      // A file or link is itself the entry the reset must preserve. Only a
+      // directory can contain legacy spec evidence that may stay in place.
+      const hasCurrentEvidence =
+        !iter00Entry.isDirectory() ||
+        (await readdir(iter00Abs, { withFileTypes: true })).some(
+          (entry) => !(entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name)),
         );
-        return 2;
+      if (!hasCurrentEvidence) {
+        // Old spec-scoped evidence is historical input. A new UI-contract
+        // cycle can be seeded beside it without rewriting those files.
+      } else {
+        if (!options.force) {
+          error(
+            "qfai prototyping iterate --cycle 0: an existing iter-00 was found at " +
+              `${PROTOTYPING_EVIDENCE_REL}/iter-00. Re-running cycle 0 will overwrite the prior loop's seed. ` +
+              "Re-invoke with `--force` to back up iter-00 to iter-00.backup-<ISO> before clearing, " +
+              "or delete it manually if the prior loop is no longer needed.",
+          );
+          return 2;
+        }
+        cycleZeroReset = { evidenceRootAbs, iter00Abs };
       }
-      cycleZeroReset = { evidenceRootAbs, iter00Abs };
     }
     aggregateDirsToMove = await presentAggregateDirs(evidenceRootAbs);
   }
@@ -751,7 +760,7 @@ export async function runPrototypingIterate(
   // 3c) `--dry-run` stops here, the last point before any write.
   //     Everything above is a read: the zero-UI-bearing precheck, the
   //     DESIGN.md read and hash, the lock gate, the converged-loop
-  //     refusal, `--primary-spec-id` normalisation, the cycle-range gate
+  //     refusal, primary UI contract validation, the cycle-range gate
   //     and the destructive-rerun refusal. The first mutation is the
   //     mutation-log write in the reset block below.
   if (options.dryRun === true) {
@@ -970,11 +979,7 @@ export async function runPrototypingIterate(
   //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
   //    - runId: the canonical loop identifier consumed by `certify`.
   //      The legacy `fullHarness.runId` shape is no longer written.
-  //    - specsCovered: the spec IDs the loop will exercise, seeded
-  //      from the resolved primary prototyping spec so that
-  //      `validatePrototypingEvidence` (QFAI-PROT-002) does not
-  //      emit a phantom missing-specsCovered error before the loop
-  //      completes.
+  //    - uiContractsCovered: every UI-bearing contract resolved at cycle 0.
   if (options.cycle === 0) {
     // Every step from here to the end of the reset puts the moves back on its
     // own failure. A run that stopped after them left the previous loop's
@@ -983,25 +988,8 @@ export async function runPrototypingIterate(
     const seeded = await writeSeedMetadata(protoJsonAbs, {
       designMd: { path: ROOT_DESIGN_MD_REL, sha256: currentSha },
       runId: buildRunId(currentSha),
-      specsCovered: specs,
-      // cycle-0 SSOT for the spec set under review. Kept single-spec
-      // (mirrors the legacy `specsCovered` field) until the per-spec
-      // iter-NN/spec-NNNN/<screen>.review.json layout migration lands;
-      // certify already hard-fails any multi-spec frozen set on the
-      // flat-iter layout, so persisting the full UI-bearing union here
-      // would render every normal multi-spec run uncertifiable. The
-      // multi-spec UNION is still computed in
-      // `evaluateZeroUiBearingPrecheck` for the no-op short-circuit
-      // signal, and at the cycle ≥ 1 drift gate via `resolveSurfaceUnion`
-      // re-resolution against `frozenSurfaceUnion`; only the multi-spec
-      // scope stays unfrozen here (below).
-      frozenSpecsCovered: specs,
-      // cycle-0 SSOT for the multi-spec UI-bearing UNION. The drift
-      // gate at cycle ≥ 1 compares the live UNION against THIS field
-      // (apples-to-apples). Without this field the drift gate would
-      // compare the single-spec frozen scope against the live UNION
-      // and false-positive any project whose baseline already carries
-      // ≥ 2 UI-bearing specs.
+      uiContractsCovered: specs,
+      // The same complete set anchors cycle drift and certification.
       frozenSurfaceUnion: [...cycleZeroUnion],
       // cycle-0 SSOT for the license-class catalog. Recording it here
       // means cycle >= 1 license-verify reads the FROZEN catalog
@@ -1048,6 +1036,30 @@ export async function runPrototypingIterate(
           " certify is anchored to prototyping.json#iterations[]; if surviving files were sealed into a prior " +
           "completion-certificate.json the new runId will replace it on the next certify pass.",
       );
+    }
+    if (iter00Backup !== null && (await lstat(iter00Backup.to)).isDirectory()) {
+      const legacyDirs = (await readdir(iter00Backup.to, { withFileTypes: true })).filter(
+        (entry) => entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name),
+      );
+      if (legacyDirs.length > 0) {
+        let createdLegacyTarget = false;
+        try {
+          await mkdir(iter00Backup.from);
+          createdLegacyTarget = true;
+          for (const entry of legacyDirs) {
+            await cp(
+              path.join(iter00Backup.to, entry.name),
+              path.join(iter00Backup.from, entry.name),
+              { recursive: true, errorOnExist: true },
+            );
+          }
+        } catch (cause) {
+          if (createdLegacyTarget) {
+            await rm(iter00Backup.from, { recursive: true, force: true });
+          }
+          return await undoReset("could not preserve legacy spec evidence", cause);
+        }
+      }
     }
     // Stale `completion-certificate.json` from a prior loop will be
     // overwritten on the next `qfai prototyping certify` run (the new
@@ -1226,16 +1238,13 @@ export async function runPrototypingIterate(
     if (options.screens !== undefined) {
       resolvedCaptureScreens = options.screens;
     } else {
-      resolvedCaptureScreens = await collectScreensForCapture(
-        options.root,
-        configResult.config.paths.contractsDir,
-      );
+      resolvedCaptureScreens = await collectScreensForCapture(options.root, configResult.config);
     }
   }
 
   const plan: IteratePlan = {
     cycle: options.cycle,
-    specs,
+    uiContracts: specs,
     paths: {
       iterationDir: iterationDir(options.cycle),
       reviewJson: iterationReviewPath(options.cycle),
@@ -1395,7 +1404,7 @@ export async function runPrototypingIterate(
 
   info(
     `qfai prototyping iterate: iter-${String(options.cycle).padStart(2, "0")} ready ` +
-      `(specs=${specs.length}, plan at ${plan.paths.iterationDir}/iterate-plan.json).`,
+      `(uiContracts=${specs.length}, plan at ${plan.paths.iterationDir}/iterate-plan.json).`,
   );
   return 0;
 }
@@ -1465,7 +1474,8 @@ async function writeScreenSignals(
   dir: string,
   screens: readonly IterateCaptureScreen[],
 ): Promise<void> {
-  const contracts = await readUiContractScreenContracts(root);
+  const { config } = await loadConfig(root);
+  const contracts = await readUiContractScreenContracts(root, config.paths.contractsDir);
   const tasksByScreen = new Map(contracts.map((c) => [c.screenId, c.primaryTasks.length]));
 
   const { countScreenElements } = await import("../../core/uiux/htmlMockDom.js");
@@ -1552,8 +1562,7 @@ async function runCapturePath(
   const budgetMs = options.captureBudgetMs ?? 30_000;
   const prototypesIterDir = path.join(
     options.root,
-    ".qfai",
-    "prototypes",
+    PROTOTYPE_REL,
     `iter-${String(options.cycle).padStart(2, "0")}`,
   );
   for (const screen of screens) {
@@ -1839,10 +1848,18 @@ export function composeCaptureUrl(
  */
 async function collectScreensForCapture(
   root: string,
-  contractsDir: string,
+  config: QfaiConfig,
 ): Promise<readonly IterateCaptureScreen[]> {
-  const canonical = await readUiContractScreenContracts(root, contractsDir);
-  return canonical.map((entry) => ({ id: entry.screenId, url: entry.route }));
+  const canonical = await readUiContractScreenContracts(root, config.paths.contractsDir);
+  const inventory = await readUiContractInventory(root, config);
+  return canonical.map((entry) => ({
+    id: entry.screenId,
+    url: entry.route,
+    uiContractIds: inventory
+      .filter((contract) => contract.screenIds.includes(entry.screenId))
+      .map((contract) => contract.uiContractId)
+      .sort(),
+  }));
 }
 
 type DesignMdReadResult =
@@ -1972,13 +1989,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * length ≥ 1 with non-empty string entries — callers can branch on
  * `!== null` alone without re-checking `length > 0`.
  *
- * The cycle ≥ 1 drift gate must not fall back to `frozenSpecsCovered`
- * when this field is absent: a legacy single-spec `frozenSpecsCovered`,
- * compared against the live multi-spec UNION, produces a false
- * positive (TC-0012-0415). Falling back would silently restore that
- * bug. Callers must instead hard-fail at cycle ≥ 1 when
- * `null` is returned and instruct the operator to re-seed via
- * `--cycle 0` so a fresh UNION snapshot is written.
+ * Missing or malformed scope requires a cycle-0 re-seed. It cannot be
+ * inferred from an older record.
  */
 function readFrozenSurfaceUnionField(record: PrototypingJsonShape): string[] | null {
   const raw = record.frozenSurfaceUnion;
@@ -2261,8 +2273,7 @@ function arraysShallowEqual(a: readonly string[], b: readonly string[]): boolean
 type SeedMetadata = {
   designMd: DesignMdRecord;
   runId: string;
-  specsCovered: readonly string[];
-  frozenSpecsCovered: readonly string[];
+  uiContractsCovered: readonly string[];
   /**
    * Cycle-0 UI-bearing UNION snapshot. Persisted in prototyping.json
    * as `frozenSurfaceUnion` and consumed by the cycle ≥ 1 drift gate
@@ -2323,6 +2334,12 @@ function buildSeedIterations(mode?: "convergence" | "exploration"): unknown[] {
       commitSha: SEED_COMMIT_SHA,
       proseCritique: SEED_PROSE_CRITIQUE_PLACEHOLDER,
       blockingFindings: [SEED_BLOCKING_FINDING],
+      scores: {
+        informationArchitecture: "weak",
+        navigationFlow: "weak",
+        usability: "weak",
+        functionality: "weak",
+      },
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
       pivotDirective: "continue",
@@ -2417,7 +2434,7 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // QFAI-PROT-329 etc.), `executionPlan` (legacy pre-UX-loop plan block
   // consumed by QFAI-PROT-311), `completionClaimed` / `phase` / `completionCertificate`
   // (the completion-claim trio read by `validateCompletionCertificateIssues`),
-  // `designMd`, `runId`, `specsCovered`. Adding a new per-loop field
+  // `designMd`, `runId`, `uiContractsCovered`. Adding a new per-loop field
   // requires updating BOTH this list AND the comment.
   //
   // Validate-conformance note: iterations[] is seeded with a single
@@ -2466,19 +2483,14 @@ async function writeSeedMetadata(protoJsonAbs: string, seed: SeedMetadata): Prom
   // loop's image fills must not leak into the new run's license
   // verify. The frozen catalog is re-seeded below.
   delete body.imageSources;
-  // Cycle 0 always re-anchors designMd, runId, and specsCovered.
-  // specsCovered is sourced from resolvePrimaryPrototypingSpec on every
-  // cycle 0 — it is a per-loop slot, not an operator-defined one.
+  // Cycle 0 re-anchors designMd, runId, and the complete UI contract set.
   body.designMd = seed.designMd;
   body.runId = seed.runId;
-  body.specsCovered = [...seed.specsCovered];
-  // Persist the cycle-0 SSOT fields. `frozenSpecsCovered` is the
-  // single-spec scope under review (mirrors `specsCovered`);
-  // `frozenSurfaceUnion` is the multi-spec UI-bearing UNION that the
-  // cycle ≥ 1 drift gate compares the live UNION against;
-  // `frozenLicenseCatalog` is the stock-photo allowlist used by
-  // `licenseVerify` in every subsequent cycle.
-  body.frozenSpecsCovered = [...seed.frozenSpecsCovered];
+  delete body.specsCovered;
+  delete body.frozenSpecsCovered;
+  body.uiContractsCovered = [...seed.uiContractsCovered];
+  // The frozen union equals uiContractsCovered. The license catalog is
+  // reused by licenseVerify in every subsequent cycle.
   body.frozenSurfaceUnion = [...seed.frozenSurfaceUnion];
   body.frozenLicenseCatalog = {
     allowedSources: [...seed.frozenLicenseCatalog.allowedSources],
@@ -2516,24 +2528,6 @@ type ClearEvidenceIterDirsResult =
  * summary for the multi-spec migration helpers. The two contracts are
  * not unified yet.
  */
-/**
- * Whether an entry is present at `absPath`, read as the entry itself rather
- * than as what it points at.
- *
- * A link counts, dangling or not, as aggregate discovery already counts one:
- * the cycle-0 reset moves the entry aside and then creates the directory, so an
- * entry left in place is one the create fails on, after the reset has already
- * moved the aggregates. Distinguishes absence (false) from other I/O failures
- * (re-thrown, so the caller fails closed).
- */
-async function entryExists(absPath: string): Promise<boolean> {
-  const entry = await lstat(absPath).catch((cause: unknown) => {
-    if (isEnoent(cause)) return null;
-    throw cause;
-  });
-  return entry !== null;
-}
-
 /**
  * Recursively list every entry under `absDir` that is not a directory it
  * descends into (post-order): files, and links, which move and are removed as
@@ -2882,44 +2876,58 @@ async function clearEvidenceIterDirs(
       return { ok: false, failedDir: abs, cause: err, removed };
     }
     if (!isDir) continue;
-    // Walk the iter-NN/ tree BEFORE the destructive rm so each removed
-    // file is recorded with its prior size. The walk is best-effort:
-    // a failure here logs zero entries but still proceeds with the
-    // structural mutation (the SSOT-sync pair scan is the backstop).
-    if (root !== undefined && logEvidenceDelete !== null) {
-      try {
-        const removedFiles = await collectFilesRecursively(abs);
-        for (const fileAbs of removedFiles) {
-          const rel = path.relative(root, fileAbs).replace(/\\/g, "/");
-          let priorSize = 0;
-          try {
-            priorSize = (await lstat(fileAbs)).size;
-          } catch {
-            // best-effort size capture
+    const children = await readdir(abs, { withFileTypes: true });
+    const hasLegacyEvidence = children.some(
+      (entry) => entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name),
+    );
+    const clearTargets = hasLegacyEvidence
+      ? children
+          .filter((entry) => !(entry.isDirectory() && LEGACY_SPEC_EVIDENCE_DIR.test(entry.name)))
+          .map((entry) => path.join(abs, entry.name))
+      : [abs];
+    for (const target of clearTargets) {
+      // Walk the iter-NN/ tree BEFORE the destructive rm so each removed
+      // file is recorded with its prior size. The walk is best-effort:
+      // a failure here logs zero entries but still proceeds with the
+      // structural mutation (the SSOT-sync pair scan is the backstop).
+      if (root !== undefined && logEvidenceDelete !== null) {
+        try {
+          const targetStat = await lstat(target);
+          const removedFiles = targetStat.isDirectory()
+            ? await collectFilesRecursively(target)
+            : [target];
+          for (const fileAbs of removedFiles) {
+            const rel = path.relative(root, fileAbs).replace(/\\/g, "/");
+            let priorSize = 0;
+            try {
+              priorSize = (await lstat(fileAbs)).size;
+            } catch {
+              // best-effort size capture
+            }
+            await logEvidenceDelete(root, "iterate-clearEvidence", rel, priorSize);
           }
-          await logEvidenceDelete(root, "iterate-clearEvidence", rel, priorSize);
+        } catch (logCause) {
+          warn(
+            `qfai prototyping iterate --cycle 0: mutation-log walk failed for ${name} (${String(logCause)}); proceeding with rm.`,
+          );
         }
-      } catch (logCause) {
-        warn(
-          `qfai prototyping iterate --cycle 0: mutation-log walk failed for ${name} (${String(logCause)}); proceeding with rm.`,
-        );
       }
-    }
-    try {
-      await rm(abs, { recursive: true, force: true });
-      removed.push(name);
-    } catch (err) {
-      // Fails closed here: surface the rm failure as a hard error so
-      // the operator clears the lock (Windows file lock / EACCES /
-      // EBUSY) before iterate writes the new plan. The hint at the
-      // call site names the offending dir + cause so the operator can
-      // act immediately. Logging and continuing instead would not help
-      // — the new loop reuses the same iter-NN/ dir, `certify` only
-      // treats dirs whose index is >= iterations.length as stale, and
-      // any file that survives INSIDE a reused iter-00/ (capture writes
-      // only the screens it knows about, so extra files persist) would
-      // get sealed into the new certificate's evidenceDigests.
-      return { ok: false, failedDir: abs, cause: err, removed };
+      try {
+        await rm(target, { recursive: true, force: true });
+        removed.push(hasLegacyEvidence ? `${name}/${path.basename(target)}` : name);
+      } catch (err) {
+        // Fails closed here: surface the rm failure as a hard error so
+        // the operator clears the lock (Windows file lock / EACCES /
+        // EBUSY) before iterate writes the new plan. The hint at the
+        // call site names the offending dir + cause so the operator can
+        // act immediately. Logging and continuing instead would not help
+        // — the new loop reuses the same iter-NN/ dir, `certify` only
+        // treats dirs whose index is >= iterations.length as stale, and
+        // any file that survives INSIDE a reused iter-00/ (capture writes
+        // only the screens it knows about, so extra files persist) would
+        // get sealed into the new certificate's evidenceDigests.
+        return { ok: false, failedDir: target, cause: err, removed };
+      }
     }
   }
   return { ok: true };
@@ -3343,7 +3351,7 @@ function emitStop(reason: StopReason): number {
   }
   if (reason === "input-error") {
     // Input-error class stops are emitted at the CLI boundary (cycle
-    // out-of-range, primarySpecId malformed, etc.); this branch is
+    // out-of-range, malformed primary UI contract, etc.); this branch is
     // retained for completeness so the enum is exhaustive.
     return 2;
   }
@@ -3524,33 +3532,21 @@ type ZeroUiBearingPrecheckResult =
       shortCircuit: false;
       earlyConfig: ConfigLoadResult;
       /**
-       * The cycle-0 UI-bearing UNION (all specs the project carries
-       * with `surface_type: ui-bearing` / matching UI contract / title
-       * marker / pinned primarySpecId). Exposed on the continue path
-       * so the caller can persist it as `frozenSurfaceUnion` in
-       * prototyping.json — the cycle ≥ 1 drift gate then compares the
-       * live UNION against this frozen UNION (apples-to-apples) instead
-       * of against the single-spec `frozenSpecsCovered`.
+       * All declared UI contracts with screens. The caller freezes this
+       * set and uses it as the baseline for later drift checks.
        */
       unionSpecs: readonly string[];
     };
 
 /**
- * Section 0 of `runPrototypingIterate`: zero UI-bearing spec → no-op.
+ * Section 0 of `runPrototypingIterate`: zero UI-bearing contracts → no-op.
  *
- * Loads config + resolves the UI-bearing spec set once and decides
+ * Loads config + resolves the UI-bearing contract set once and decides
  * whether the iterate command should short-circuit with exit 0 (no
  * UI surface to drive) or fall through to the DESIGN.md / cycle
  * pipeline. The pre-check intentionally runs BEFORE the DESIGN.md
  * gate so a project with no UI surface is never blocked on a missing
  * or unfrozen DESIGN.md.
- *
- * The `prototyping.primarySpecId` config escape hatch is honoured:
- * if the multi-spec resolver returns zero specs (because none carry
- * `surface_type: ui-bearing` and none ship a matching UI contract)
- * but the operator has pinned a primary spec that exists on disk,
- * the no-op short-circuit is skipped and the legacy
- * `resolvePrimaryPrototypingSpec` lineage drives the loop.
  *
  * On the continue path, the loaded config snapshot is returned so the
  * caller can reuse it without re-IO'ing the YAML file.
@@ -3560,9 +3556,8 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
   const unionSpecs = await resolveSurfaceUnion(root, earlyConfig.config);
   if (unionSpecs.length === 0) {
     info(
-      "qfai prototyping iterate: no UI-bearing specs resolved — deterministic no-op " +
-        "(no spec carries `surface_type: ui-bearing` and no matching `.qfai/contracts/ui/*.yaml`). " +
-        "Add the marker or contract to enable the prototyping loop.",
+      "qfai prototyping iterate: no UI-bearing contracts resolved — deterministic no-op. " +
+        "Declare a CON-UI-NNNN contract with a non-empty screens[] under contractsDir/ui to enable the loop.",
     );
     return { shortCircuit: true, exitCode: 0 };
   }
@@ -3574,13 +3569,7 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
 }
 
 /**
- * @internal Back-compat re-export only. The canonical export lives at
- * `core/prototyping/specResolution.ts`. New call sites MUST import
- * from the core module directly; this re-export exists only so the
- * unit tests in `tests/cli/commands/prototypingIterate.test.ts` that
- * still resolve against the CLI-layer path keep working.
- * `prototypingCertify.ts` already imports from the core module
- * directly, keeping the CLI → core dependency DAG one-directional.
+ * @internal Compatibility re-export. New call sites import from the core module.
  */
 export { resolveSurfaceUnion };
 
@@ -3603,7 +3592,7 @@ type CycleGteOneGateResult = { shortCircuit: true; exitCode: number } | { shortC
  * Composes (in order) the hash-gate against the lock-anchored cache
  * in prototyping.json, the convergence/max-budget stop, the
  * history-monotonicity check, the expected-next-cycle check, the
- * frozen `specsCovered` equality check, and the mid-run spec-set
+ * frozen UI contract equality check, and the mid-run scope
  * drift check. Each sub-gate either returns `{shortCircuit: true,
  * exitCode}` to abort iterate immediately or falls through.
  *
@@ -3675,18 +3664,11 @@ async function evaluateCycleGteOneGate(
         "malformed. Re-run with `--cycle 0 --target-url <url>` to refreeze " +
         "the loop with a current UNION snapshot.",
     );
-    error("");
-    error(
-      "  Reason: the cycle ≥ 1 drift gate requires a cycle-0-frozen multi-spec " +
-        "UI-bearing UNION snapshot; the gate does not fall back to the " +
-        "single-spec `frozenSpecsCovered` because that fallback would compare " +
-        "a single-spec frozen scope against the live multi-spec union and " +
-        "false-positive-fire for any project with ≥ 2 UI-bearing specs.",
-    );
+    error("  The cycle ≥ 1 drift gate requires the complete cycle-0 UI contract set.");
     return { shortCircuit: true, exitCode: 2 };
   }
   const liveUiBearing = await resolveSurfaceUnion(input.root, input.config);
-  const drift = checkSpecsCoveredDrift(frozenUnion, liveUiBearing);
+  const drift = checkUiContractsCoveredDrift(frozenUnion, liveUiBearing);
   if (drift.drifted) {
     const parts: string[] = [];
     if (drift.added.length > 0) {
@@ -3696,12 +3678,11 @@ async function evaluateCycleGteOneGate(
       parts.push(`removed=[${drift.removed.join(", ")}]`);
     }
     error(
-      "qfai prototyping iterate: spec-set drift detected mid-loop — " +
+      "qfai prototyping iterate: UI contract scope drift detected mid-loop — " +
         `${parts.join(" ")}. The cycle-0 frozen UI-bearing union is ${JSON.stringify(frozenUnion)}; ` +
         `the live UI-bearing union is ${JSON.stringify(liveUiBearing)}. ` +
-        "The drifted spec(s) are deferred to the next `--cycle 0` invocation. " +
-        "Continue this loop with the frozen spec set, or restart with " +
-        "`--cycle 0 --target-url <url>` to pick up the new spec set.",
+        "Restore the declared UI contracts or restart with " +
+        "`--cycle 0 --target-url <url>` to freeze the new set.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }
@@ -3806,44 +3787,22 @@ async function evaluateCycleGteOneGate(
     );
     return { shortCircuit: true, exitCode: 2 };
   }
-  // Cycles >= 1 must reuse the frozen `specsCovered` from cycle 0.
-  // If `prototyping.primarySpecId` or a UI-bearing marker has shifted
-  // mid-loop, the resolved primary spec here would differ from the
-  // recorded one, and iter-plan would write the NEW spec into
-  // `iterate-plan.json#specs` while certify keeps reporting the
-  // FROZEN one — meaning iterations can exercise spec B while the
-  // certificate still claims spec A. Fail fast at the boundary.
-  const frozenSpecs = readFrozenSpecsCovered(protoRecord);
-  // `null` means the frozen seed is missing or malformed (absent
-  // `specsCovered`, empty array, or non-string entries). Cycle 0
-  // is responsible for writing the seed; if a cycle >= 1 invocation
-  // arrives without one, the file was hand-edited or partially
-  // corrupted between cycles. Proceeding silently would let
-  // iterate write a spec id into `iterate-plan.json` that is never
-  // anchored against the cycle-0 seed — and certify (which reads
-  // `specsCovered` for the certificate body) would later block on
-  // the same gap. Fail fast here so the operator hits a single,
-  // clear error pointing at the right remediation.
-  if (frozenSpecs === null) {
+  // Cycles >= 1 must reuse the full UI contract set frozen at cycle 0.
+  const coveredResult = readUiContractsCovered(protoRecord);
+  if (coveredResult.kind !== "ok") {
     error(
-      "qfai prototyping iterate: prototyping.json#specsCovered is missing or " +
-        "malformed (must be a non-empty array of non-empty strings, seeded by " +
-        "cycle 0). Re-run with `--cycle 0 --target-url <url>` to refreeze the loop.",
+      "qfai prototyping iterate: prototyping.json#uiContractsCovered is missing, legacy, " +
+        "or malformed. Re-seed with `qfai prototyping iterate --cycle 0`.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }
-  // Compare element-wise. Today `specs` is always a single-element
-  // array (resolved primary spec id), but `specsCovered` is a
-  // multi-element array per the prototyping.json schema, and the
-  // contract is "every covered spec must match across cycles". A
-  // first-element-only check (`frozenSpecs[0] !== specs[0]`) would
-  // silently let a future multi-spec loop drift on non-zero indices.
-  if (!arraysShallowEqual(frozenSpecs, input.specs)) {
+  const frozenContracts = coveredResult.value;
+  if (!arraysShallowEqual(frozenContracts, input.specs)) {
     error(
-      "qfai prototyping iterate: prototyping.json#specsCovered (" +
-        `${JSON.stringify(frozenSpecs)}) differs from the currently-resolved ` +
-        `primary spec (${JSON.stringify(input.specs)}). ` +
-        "The primary spec changed mid-loop; re-run with `--cycle 0 --target-url <url>` to refreeze.",
+      "qfai prototyping iterate: prototyping.json#uiContractsCovered (" +
+        `${JSON.stringify(frozenContracts)}) differs from the live UI contract set ` +
+        `(${JSON.stringify(input.specs)}). Re-seed with ` +
+        "`qfai prototyping iterate --cycle 0`.",
     );
     return { shortCircuit: true, exitCode: 2 };
   }

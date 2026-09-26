@@ -1,9 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0256
-// QFAI:SPEC-0018:TC-0018-0257
-// QFAI:SPEC-0018:TC-0018-0258
-// QFAI:SPEC-0018:TC-0018-0259
-// QFAI:SPEC-0018:TC-0018-0260
-// QFAI:SPEC-0018:TC-0018-0261
+// QFAI:EX-0001-0195-12
 
 import { expect, it } from "vitest";
 
@@ -14,7 +9,7 @@ type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Debt = NonNullable<Result["debts"]>[number];
 
 const stages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
+  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
   ["bounded-implement", "implement", "qfai-implement", "implement"],
   ["bounded-verify", "verify", "qfai-verify", "verify-full"],
 ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -26,24 +21,18 @@ const stages = [
 }));
 const plan = {
   route: "bounded-change",
-  writeScope: ["src/notify/**", ".qfai/specs/spec-0001/**"],
+  writeScope: ["src/notify/**", ".qfai/specs/BF-0001/**"],
   stages,
 };
-const facts = {
-  specs: {
-    "spec-0001": { lifecycle: "active" },
-    "spec-0002": { lifecycle: "active" },
-    "spec-0003": { lifecycle: "active" },
-  },
-};
+const facts = { flows: ["BF-0001", "BF-0002", "BF-0003"] };
 
-// A run of the bounded-change plan bound to spec-0001, with its first `accepted` stages done
+// A run of the bounded-change plan bound to BF-0001, with its first `accepted` stages done
 // and the next one issued.
 function issued(accepted: number, extra: Partial<Snapshot> = {}): Snapshot {
   const ready: Snapshot = {
     run: { id: "run-drift", state: "ready", sequence: 10 },
     plan,
-    specBinding: { specId: "spec-0001" },
+    flowBinding: { flowId: "BF-0001" },
     acceptedStages: stages.slice(0, accepted).map(({ stageInstanceId, stageKind }) => ({
       stageInstanceId,
       stageKind,
@@ -75,20 +64,20 @@ function accept(snapshot: Snapshot, fields: Partial<Result>) {
   return decide(snapshot, { operation: "accept", result: resultFor(snapshot, fields) }, facts);
 }
 
-function debt(owningSpec: string, path: string, resolvingOwner: string): Debt {
+function debt(owningFlow: string, path: string, resolvingOwner: string): Debt {
   return {
     findingCode: "QFAI-AC-DRIFT",
     path,
     cause: "The acceptance criterion changed after its test was written.",
-    owningSpec,
+    owningFlow,
     detectingCommand: "qfai validate",
     resolvingOwner,
     blockingExtent: "run",
   };
 }
 
-const spec2Drift = debt("spec-0002", ".qfai/specs/spec-0002/03_Acceptance-Criteria.md", "qfai-sdd");
-const spec3Drift = debt("spec-0003", ".qfai/specs/spec-0003/03_Acceptance-Criteria.md", "qfai-sdd");
+const spec2Drift = debt("BF-0002", ".qfai/specs/BF-0002/03_Acceptance-Criteria.md", "qfai-sdd");
+const spec3Drift = debt("BF-0003", ".qfai/specs/BF-0003/03_Acceptance-Criteria.md", "qfai-sdd");
 
 function outcomeOf(decision: ReturnType<typeof decide>) {
   const error = decision.verdict.error;
@@ -100,7 +89,7 @@ function outcomeOf(decision: ReturnType<typeof decide>) {
   };
 }
 
-it("TC-0018-0256 (TDD-0507): blocked debts outside the scope name scope-dependency and every finding", () => {
+it("blocked debts outside the scope name scope-dependency and every finding", () => {
   const verifying = issued(2);
   const shared = outcomeOf(
     accept(verifying, { outcome: "blocked", debts: [spec2Drift, spec3Drift] }),
@@ -112,8 +101,8 @@ it("TC-0018-0256 (TDD-0507): blocked debts outside the scope name scope-dependen
     }),
   );
   const subjects = [
-    "QFAI-AC-DRIFT@.qfai/specs/spec-0002/03_Acceptance-Criteria.md",
-    "QFAI-AC-DRIFT@.qfai/specs/spec-0003/03_Acceptance-Criteria.md",
+    "QFAI-AC-DRIFT@.qfai/specs/BF-0002/03_Acceptance-Criteria.md",
+    "QFAI-AC-DRIFT@.qfai/specs/BF-0003/03_Acceptance-Criteria.md",
   ];
 
   expect([shared, mixed]).toEqual([
@@ -132,9 +121,9 @@ it("TC-0018-0256 (TDD-0507): blocked debts outside the scope name scope-dependen
   ]);
 });
 
-it("TC-0018-0257 (TDD-0508): drift inside the checked scope goes to qfai-sdd", () => {
+it("drift inside the checked scope goes to qfai-sdd", () => {
   const verifying = issued(2);
-  const inside = debt("spec-0001", ".qfai/specs/spec-0001/03_Acceptance-Criteria.md", "qfai-sdd");
+  const inside = debt("BF-0001", ".qfai/specs/BF-0001/03_Acceptance-Criteria.md", "qfai-sdd");
   const repair = accept(verifying, { outcome: "needs_repair", debts: [inside] });
   const run = repair.verdict.run;
   if (!run) throw new Error("the repair is accepted");
@@ -151,7 +140,7 @@ it("TC-0018-0257 (TDD-0508): drift inside the checked scope goes to qfai-sdd", (
   });
 });
 
-it("TC-0018-0258 (TDD-0509): a CR under .qfai/decisions refused write-scope", () => {
+it("a CR under .qfai/decisions refused write-scope", () => {
   const path = ".qfai/decisions/CR-20260924-0001.md";
   const implementing = issued(1);
 
@@ -166,18 +155,12 @@ it("TC-0018-0258 (TDD-0509): a CR under .qfai/decisions refused write-scope", ()
 });
 
 const repairable: [string, Debt][] = [
+  ["in-scope-skill-owner", debt("BF-0001", "src/notify/send.ts", "qfai-implement")],
   [
-    "TC-0018-0259 (TDD-0510): in-scope-skill-owner",
-    debt("spec-0001", "src/notify/send.ts", "qfai-implement"),
+    "owning-spec-unknown",
+    debt("BF-0099", ".qfai/specs/BF-0099/03_Acceptance-Criteria.md", "operator"),
   ],
-  [
-    "TC-0018-0259 (TDD-0511): owning-spec-unknown",
-    debt("spec-0099", ".qfai/specs/spec-0099/03_Acceptance-Criteria.md", "operator"),
-  ],
-  [
-    "TC-0018-0259 (TDD-0512): owning-spec-false",
-    debt("spec-0002", "src/notify/send.ts", "operator"),
-  ],
+  ["owning-spec-false", debt("BF-0002", "src/notify/send.ts", "operator")],
 ];
 
 for (const [title, finding] of repairable) {
@@ -191,7 +174,7 @@ for (const [title, finding] of repairable) {
   });
 }
 
-// A run blocked on the spec-0002 drift, resumed: resume reissues the verify work order.
+// A run blocked on the BF-0002 drift, resumed: resume reissues the verify work order.
 function resumedAfterScopeDependency() {
   const verifying = { ...issued(2), attempts: { "bounded-verify": 1 } };
   const blocked = accept(verifying, { outcome: "blocked", debts: [spec2Drift] });
@@ -207,7 +190,7 @@ function resumedAfterScopeDependency() {
   };
 }
 
-it("TC-0018-0260 (TDD-0513): still-blocked", () => {
+it("still-blocked", () => {
   const { snapshot, workOrder } = resumedAfterScopeDependency();
   const again = accept(snapshot, { outcome: "blocked", debts: [spec2Drift] });
 
@@ -224,7 +207,7 @@ it("TC-0018-0260 (TDD-0513): still-blocked", () => {
   });
 });
 
-it("TC-0018-0260 (TDD-0514): cleared", () => {
+it("cleared", () => {
   const { snapshot, workOrder } = resumedAfterScopeDependency();
   const cleared = accept(snapshot, { outcome: "accepted" });
 
@@ -235,7 +218,7 @@ it("TC-0018-0260 (TDD-0514): cleared", () => {
   }).toEqual({ stageInstanceId: "bounded-verify", attempt: 2, state: "ready" });
 });
 
-it("TC-0018-0261 (TDD-0515): delegation-unavailable comes before listed debts", () => {
+it("delegation-unavailable comes before listed debts", () => {
   const decision = accept(issued(2), {
     outcome: "blocked",
     debts: [spec2Drift],

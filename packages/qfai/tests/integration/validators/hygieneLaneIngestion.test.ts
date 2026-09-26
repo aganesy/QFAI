@@ -20,8 +20,8 @@
  * row below, and must still be rejected in the same run. A blanket relaxation
  * passes every other assertion here and fails that one.
  */
-// QFAI:SPEC-0015:TC-0015-0035
-// QFAI:SPEC-0015:TC-0015-0036
+// QFAI:EX-0001-0182-01
+// QFAI:EX-0001-0182-01
 
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";

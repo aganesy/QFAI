@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0032
+// QFAI:AC-0001-0192-06
+// QFAI:EX-0001-0192-20
 // Fault seeds: FAULT-009
 
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
@@ -18,10 +19,10 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0032 (TDD-0304): finish offered a verify", async () => {
+it("finish offered a verify", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");
-  const runs = path.join(root, ".qfai", "runs");
+  const runs = path.join(root, ".qfai", "run");
   await mkdir(path.join(root, ".qfai", "report"), { recursive: true });
   await writeFile(path.join(root, ".qfai", "report", "verify.json"), '{"status":"FAIL"}\n');
   const accepted = await submit(

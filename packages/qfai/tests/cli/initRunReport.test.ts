@@ -173,7 +173,7 @@ describe("qfai init run report", () => {
       const listed = pathsUnder(output, "  would write paths:");
       // POSIX-joined, because that is what the report writes. `path.join` here would
       // build `\`-separated on Windows and never match a `/`-separated entry.
-      const migrated = ".qfai/assistant/constitution/quality.md";
+      const migrated = ".qfai/assistant/rule/quality.md";
       expect(listed.filter((entry) => entry === migrated)).toHaveLength(1);
       expect(new Set(listed).size).toBe(listed.length);
       expect(output).toContain(`  would write: ${listed.length}`);
@@ -217,15 +217,11 @@ describe("qfai init run report", () => {
     }
   });
 
-  // A migrated legacy file's name is chosen by the repository being upgraded,
-  // not by qfai. Printed verbatim, a newline in it forges the report's own
-  // headings and an ANSI escape drives the terminal — in the one mode whose
-  // purpose is reviewing changes before they are made.
-  // NTFS forbids a newline or an escape character in a file name, so this fixture
-  // cannot be built on Windows: `writeFile` fails with ENOENT before anything is
-  // asserted. The escaping it checks is platform-independent; only the fixture is not.
+  // The migration accepts only known legacy file names. An unknown name with
+  // control characters remains in place and must not enter the run report.
+  // NTFS forbids these characters in a file name, so this fixture is Unix-only.
   it.skipIf(process.platform === "win32")(
-    "escapes and quotes a control character in a migrated file name",
+    "does not migrate or report an unknown file with control characters in its name",
     async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
       try {
@@ -244,19 +240,13 @@ describe("qfai init run report", () => {
           });
         });
 
-        // Neither the raw newline nor the raw escape reaches stdout.
+        // The unknown file is untouched and cannot forge a report entry.
+        expect(await readFile(path.join(legacy, hostile), "utf-8")).toBe("# hostile\n");
         expect(output).not.toContain(hostile);
         expect(output).not.toContain("\u001b[31m");
-        expect(output).toContain("\\x0a");
-        expect(output).toContain("\\x1b");
-        // The forged bullet is not a list entry of its own.
+        expect(output).not.toContain("\\x0a");
+        expect(output).not.toContain("\\x1b");
         expect(pathsUnder(output, "  would write paths:")).not.toContain("forged-entry.md");
-        // The escaped form is quoted, so the escapes read as one token.
-        const quoted = pathsUnder(output, "  would write paths:").filter((entry) =>
-          entry.startsWith('"'),
-        );
-        expect(quoted).toHaveLength(1);
-        expect(quoted[0]?.endsWith('"')).toBe(true);
       } finally {
         await rm(root, { recursive: true, force: true });
       }
@@ -332,7 +322,7 @@ describe("qfai init run report", () => {
       const written = pathsUnder(output, "  written paths:");
       const skipped = pathsUnder(output, "  skipped paths:");
       // POSIX-joined for the same reason as the row above: the report writes `/`.
-      const migrated = ".qfai/assistant/constitution/quality.md";
+      const migrated = ".qfai/assistant/rule/quality.md";
 
       // The migration really wrote the file — this is not a dry run.
       await expect(readFile(path.join(root, migrated), "utf-8")).resolves.toContain(

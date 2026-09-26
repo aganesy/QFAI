@@ -1,110 +1,31 @@
 /**
- * Integration: init and upgrade give the same result on a CRLF checkout as on Linux.
+ * Integration: init and upgrade give the same result on a CRLF checkout, and through the built
+ * CLI under a root whose name contains a space, as they do in process on Linux.
  *
  * CRLF comes from the fixture, never from `core.autocrlf`.
  */
-// QFAI:SPEC-0003:TC-0003-0092
-// QFAI:SPEC-0003:TC-0003-0076
-// QFAI:SPEC-0003:TC-0003-0080
-// QFAI:SPEC-0003:TC-0003-0088
+// QFAI:AC-0001-0203-06
+// QFAI:EX-0001-0203-16
+// QFAI:EX-0001-0203-17
+// QFAI:EX-0001-0203-18
 import { spawnSync } from "node:child_process";
 import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { QFAI_GITIGNORE_MARKER } from "../../../src/core/gitignore.js";
+import { hashAssistantAssetFile } from "../../../src/core/assistantAssetProvenance.js";
 import {
+  HOST_SKILL_DIRS,
   initQuietly,
-  isIgnored,
-  lockConflicts,
   modeLines,
   readLock,
   withEmptyRepo,
   withInstall,
 } from "./upgradeStates.js";
 
-async function toCrlf(file: string): Promise<void> {
-  const text = await readFile(file, "utf-8");
-  await writeFile(file, text.replace(/\r?\n/g, "\r\n"), "utf-8");
-}
-
-describe("windows parity", () => {
-  it("TC-0003-0092: The previous managed block in a CRLF .gitignore", async () => {
-    await withInstall(["older-gitignore"], async (root) => {
-      const file = path.join(root, ".gitignore");
-      await toCrlf(file);
-      await initQuietly(root);
-
-      const lines = (await readFile(file, "utf-8")).split(/\r?\n/).filter((line) => line !== "");
-      expect(lines.filter((line) => line === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
-      const duplicated = lines.filter((line, index) => lines.indexOf(line) !== index);
-      expect(duplicated, "no block line is duplicated").toEqual([]);
-      expect(isIgnored(root, ".qfai/runs/x")).toBe(true);
-      expect(isIgnored(root, ".qfai/evidence/workflow/x/summary.json")).toBe(false);
-    });
-  });
-
-  it("TC-0003-0076: A CRLF copy of an unmodified plan is not a conflict", async () => {
-    await withInstall(["crlf-plan"], async (root) => {
-      const output = await initQuietly(root);
-
-      expect(await lockConflicts(root)).toEqual([]);
-      expect(modeLines(output)).toEqual(["Workflow mode: active"]);
-    });
-  });
-
-  it("TC-0003-0080: Every provenance lock key is a slash-separated path", async () => {
-    await withEmptyRepo(async (root) => {
-      await initQuietly(root);
-      const keys = Object.keys((await readLock(root)).files);
-
-      expect(keys.length).toBeGreaterThan(0);
-      for (const key of keys) {
-        expect(key, "no backslash").not.toContain("\\");
-        expect(path.posix.isAbsolute(key) || path.win32.isAbsolute(key), `${key} is relative`).toBe(
-          false,
-        );
-        expect(
-          key.split("/").every((segment) => segment !== "" && segment !== ".."),
-          key,
-        ).toBe(true);
-      }
-      expect(
-        keys.some((key) => key.split("/").length > 2),
-        "a nested key uses /",
-      ).toBe(true);
-    });
-  });
-
-  it("TC-0003-0088: Built CLI init and upgrade under a root with a space", async () => {
-    const spawned: RunView[] = [];
-    await withEmptyRepo(async (root) => {
-      for (let run = 0; run < 2; run += 1) {
-        const result = spawnSync(process.execPath, [CLI, "init", "--yes"], {
-          cwd: root,
-          encoding: "utf-8",
-        });
-        expect(result.status, result.stderr).toBe(0);
-        spawned.push(await viewOf(root, result.stdout));
-      }
-    });
-    const inProcess: RunView[] = [];
-    await withEmptyRepo(async (root) => {
-      for (let run = 0; run < 2; run += 1)
-        inProcess.push(await viewOf(root, await initQuietly(root)));
-    });
-
-    expect(spawned).toEqual(inProcess);
-    expect(spawned.map((view) => view.modeLines)).toEqual([
-      ["Workflow mode: active"],
-      ["Workflow mode: active"],
-    ]);
-  });
-});
-
 const CLI = path.resolve(import.meta.dirname, "../../../dist/cli/index.mjs");
-const HOST_SKILL_DIRS = [".agents/skills", ".claude/skills", ".codex/skills", ".github/skills"];
+const RULE = "rule/quality.md";
 
 type RunView = { modeLines: string[]; lock: unknown; wrappers: string[] };
 
@@ -121,3 +42,69 @@ async function viewOf(root: string, output: string): Promise<RunView> {
   }
   return { modeLines: modeLines(output), lock: (await readLock(root)).lock, wrappers };
 }
+
+describe("windows parity", () => {
+  it("Every provenance lock key is a slash-separated relative path", async () => {
+    await withEmptyRepo(async (root) => {
+      await initQuietly(root);
+      const keys = Object.keys((await readLock(root)).files);
+
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(key, "no backslash").not.toContain("\\");
+        expect(path.posix.isAbsolute(key) || path.win32.isAbsolute(key), `${key} is relative`).toBe(
+          false,
+        );
+        expect(
+          key.split("/").every((segment) => segment !== "" && segment !== ".."),
+          key,
+        ).toBe(true);
+      }
+      expect(
+        keys.some((key) => key.includes("/")),
+        "a nested key uses /",
+      ).toBe(true);
+    });
+  });
+
+  it("Built CLI init and upgrade under a root with a space", async () => {
+    const spawned: RunView[] = [];
+    await withEmptyRepo(async (root) => {
+      for (let run = 0; run < 2; run += 1) {
+        const result = spawnSync(process.execPath, [CLI, "init", "--yes"], {
+          cwd: root,
+          encoding: "utf-8",
+        });
+        expect(result.status, result.stderr).toBe(0);
+        spawned.push(await viewOf(root, result.stdout));
+      }
+    });
+    const inProcess: RunView[] = [];
+    await withEmptyRepo(async (root) => {
+      for (let run = 0; run < 2; run += 1) {
+        inProcess.push(await viewOf(root, await initQuietly(root)));
+      }
+    });
+
+    expect(spawned).toEqual(inProcess);
+    expect(spawned.map((view) => view.modeLines)).toEqual([
+      ["Workflow mode: active"],
+      ["Workflow mode: active"],
+    ]);
+  });
+
+  it("A CRLF copy of an unmodified shipped rule is treated as unmodified", async () => {
+    await withInstall([], async (root) => {
+      const file = path.join(root, ".qfai", "assistant", ...RULE.split("/"));
+      await writeFile(file, (await readFile(file, "utf-8")).replace(/\r?\n/g, "\r\n"), "utf-8");
+      const crlf = await readFile(file);
+
+      const output = await initQuietly(root);
+
+      expect(await hashAssistantAssetFile(file)).toBe((await readLock(root)).files[RULE]);
+      expect(await readFile(file), "the CRLF copy is left as it is").toEqual(crlf);
+      const notes = output.split("\n").filter((line) => line.includes("quality.md"));
+      expect(notes, "no manual-merge note names the rule").toEqual([]);
+    });
+  });
+});

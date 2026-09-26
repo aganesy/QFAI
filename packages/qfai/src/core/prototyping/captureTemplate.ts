@@ -41,9 +41,9 @@ import {
 export const TASK_FIDELITY_TEMPLATE_FILE = "task-fidelity-template.md";
 
 /**
- * Build the template text. The body includes a single
- * `## taskFidelity` section with one TODO bullet per required
- * keyword. Authors fill in the value bytes; the validator
+ * Build the template text. The body includes `## taskFidelity` and
+ * a named section with a TODO bullet for each required keyword.
+ * Authors fill in the value bytes; the validator
  * (`QFAI-CRIT-009`) then accepts the recorded evidence.
  */
 export function buildTaskFidelityTemplate(): string {
@@ -57,9 +57,11 @@ export function buildTaskFidelityTemplate(): string {
   lines.push(TASK_FIDELITY_SECTION_NAME);
   lines.push("");
   for (const keyword of TASK_FIDELITY_REQUIRED_KEYWORDS) {
+    lines.push(`## ${keyword}`);
+    lines.push("");
     lines.push(`- ${keyword}: TODO`);
+    lines.push("");
   }
-  lines.push("");
   return lines.join("\n");
 }
 

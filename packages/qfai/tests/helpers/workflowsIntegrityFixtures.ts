@@ -97,7 +97,8 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
 }
 
 /**
- * The subset of the bare-install warnings a caller may ask to LEAVE standing.
+ * The subset of the bare-install path and traceability warnings a caller may
+ * ask to LEAVE standing.
  *
  * Narrower than the full five, and not by preference. `output.validateJson`
  * resolves under `paths.outDir`, so quieting the former creates the directory the
@@ -105,24 +106,25 @@ export async function deleteShippedWorkflow(dir: string, name: string): Promise<
  * `paths.outDir` here would hand back a tree with a warning count the caller did
  * not ask for. These three each answer a distinct probe with no shared operand.
  *
- * A `BARE_INIT_WARNING_IDS` constant stood here listing all five, with a docblock
- * arguing that a literal list makes a sixth default warning break a caller's
+ * A `BARE_INIT_WARNING_IDS` constant stood here listing the original five, with a docblock
+ * arguing that a literal list makes another default warning break a caller's
  * guard. It was deleted: nothing read it, `quietUnrelatedWarnings` hard-codes its
- * five repairs, and the guard that would actually break is the callers'
+ * repairs, and the guard that would actually break is the callers'
  * `failingIdsOtherThanDrift(...)` assertion, which never referenced it. The
  * argument was sound and the code did not implement it, which is worse than not
- * making the argument. The measured list survives as prose below.
+ * making the argument.
  */
 export type LeavableWarningId = "paths.srcDir" | "paths.testsDir" | "traceability.testGlobs";
 
 /**
- * Brings a seeded adopter tree to `summary.warning === 0`, optionally leaving
- * exactly ONE named warning standing.
+ * Repairs unrelated fixture warnings, optionally leaving exactly ONE named
+ * path or traceability warning standing. Callers verify the final set: a
+ * shipped asset over the line budget remains a product warning to fix.
  *
- * The five warnings a bare `qfai init` tree leaves at `warning`, MEASURED on a
- * freshly seeded tree rather than reasoned about: `paths.srcDir`,
+ * The path and traceability warnings a bare `qfai init` tree leaves at
+ * `warning` include `paths.srcDir`,
  * `paths.testsDir`, `paths.outDir`, `output.validateJson` and
- * `traceability.testGlobs` — on an install that reported success. They matter
+ * `traceability.testGlobs`. They matter
  * because `--fail-on warning` reads `summary.warning + summary.error`, a whole-run
  * total with no per-check exclusions, so a row asserting exit 0 on that flag needs
  * every OTHER warning gone. `qfai init` alone does not deliver that state, which
@@ -158,6 +160,14 @@ export async function quietUnrelatedWarnings(
   if (leave !== "paths.testsDir") {
     await mkdir(path.join(dir, "tests"), { recursive: true });
   }
+
+  // This fixture measures workflow drift. The retired prompt directory is
+  // installed by init but is unrelated to that check and warns in doctor.
+  const deprecatedPromptsDir = path.resolve(dir, ".qfai", "assistant", "prompt");
+  if (path.relative(dir, deprecatedPromptsDir).startsWith("..")) {
+    throw new Error("quietUnrelatedWarnings: prompt path escaped the adopter fixture");
+  }
+  await rm(deprecatedPromptsDir, { recursive: true, force: true });
 
   // `paths.outDir` and `output.validateJson` in one step, in that order: the
   // second cannot be satisfied without the first, which is why neither is

@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0061
+// QFAI:AC-0001-0192-11
+// QFAI:EX-0001-0192-35
 // Fault seeds: FAULT-024
 
 import { writeFile } from "node:fs/promises";
@@ -17,7 +18,7 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0061 (TDD-0309): Built CLI", async () => {
+it("Built CLI", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   const proposal = { ...DISCOVERY_PROPOSAL, proposedWriteScope: ["qfai.config.yaml"] };
   const { runId, routed } = await routedRun(root, proposal);

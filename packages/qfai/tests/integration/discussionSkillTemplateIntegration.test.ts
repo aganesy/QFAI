@@ -1,16 +1,13 @@
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
-import os from "node:os";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
 import { VISUAL_BROWSER_SURFACES } from "../../src/core/detection/surfaceType.js";
 import {
   CANONICAL_REQUIRED_SIDECAR_FILES,
   FORBIDDEN_LEGACY_PATTERNS,
 } from "../../src/core/validators/uix/threeLayer.js";
-import { captureStdout } from "../helpers/stdout.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateBase = path.join(
@@ -21,7 +18,7 @@ const templateBase = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
 );
 const assistantBase = path.join(
@@ -33,8 +30,7 @@ const assistantBase = path.join(
   ".qfai",
   "assistant",
 );
-const agentsDir = path.join(assistantBase, "agents");
-const agentCatalogPath = path.join(assistantBase, "manifest", "agent-catalog.yml");
+const agentsDir = path.join(assistantBase, "agent");
 const skillPath = path.join(templateBase, "SKILL.md");
 const uiuxTemplateDir = path.join(templateBase, "templates", "uiux");
 const completionMatrixPath = path.join(
@@ -43,10 +39,6 @@ const completionMatrixPath = path.join(
   "discussion-completion-matrix.md",
 );
 const uiBearingPlaybookPath = path.join(templateBase, "references", "ui-bearing-playbook.md");
-const sddExecutionPlaybookPath = path.join(
-  repoRoot,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md",
-);
 
 // Shared vocabulary between the matrix and the Reviewer Gate templates. The
 // matrix wraps the phrase across two lines, so match on whitespace not a space.
@@ -128,26 +120,12 @@ describe("discussion skill template integration", () => {
     expect(files).not.toContain("34_evaluator_calibration.md");
   });
 
-  // QFAI:SPEC-0002:TC-0002-0008
+  // QFAI:EX-0001-0016-01
   it("SKILL.md の UI-bearing completion が brand SSOT を要求している", async () => {
     const content = await readFile(skillPath, "utf-8");
     expect(content).toMatch(/DESIGN\.md/);
     expect(content).toMatch(/40_screen_contracts\.md/);
     expect(content).toMatch(/50_review_input_bundle\.md/);
-
-    // No completion condition selects a screen exploration or finalizes a design system: the
-    // explorations stay unranked. The brand direction is the one visual decision recorded, and it
-    // is the user's.
-    const matrix = await readFile(completionMatrixPath, "utf-8");
-    const uiBearing = collectOrderedList(
-      matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
-    );
-    expect(uiBearing).toMatch(/carried\s+unranked/);
-    expect(uiBearing).toMatch(/no\s+single\s+screen\s+exploration\s+is\s+selected/);
-    expect(uiBearing).toMatch(/design\s+system\s+is\s+not\s+finalized/);
-    expect(uiBearing).toMatch(/01_Context\.md#Design Direction/);
-    expect(uiBearing).toMatch(/taken\s+without\s+the\s+user\s+carries\s+`chosen_by: assumption`/);
-    expect(content).toMatch(/published theme the product is built on is the user's decision/);
   });
 
   // SKILL.md is the only file the skill is guaranteed to load; references are
@@ -252,7 +230,7 @@ describe("discussion skill template integration", () => {
   // tells a reviewer to reconcile a `selected anchor` sidecar sends it after an
   // artifact `ui_ux_best_practices.md` forbids the pack from containing.
   it("配布 agent 定義が retired discussion concept を参照していない", async () => {
-    const files = [...(await collectMarkdownFiles(agentsDir)), agentCatalogPath];
+    const files = await collectMarkdownFiles(agentsDir);
     const offenders: string[] = [];
     for (const file of files) {
       const content = await readFile(file, "utf-8");
@@ -309,7 +287,7 @@ describe("discussion skill template integration", () => {
     // SKILL.md states the same requirement independently; if it still demands
     // brand answers from every UI-bearing pack the carve-out is unreachable.
     const skill = await readFile(skillPath, "utf-8");
-    expect(skill).toMatch(/authored by `\/qfai-sdd` Phase 0/);
+    expect(skill).toMatch(/`03_contract` step skips the freeze/);
     expect(skill).toMatch(/the brand questions do not apply to it/);
     expect(skill).toMatch(/skip for cli-only and non-ui targets/);
 
@@ -369,73 +347,7 @@ describe("discussion skill template integration", () => {
     }
   });
 
-  // A cli-only pack finishes SDD and enters `/qfai-implement`, whose Visual
-  // Review Guard read order lists root DESIGN.md, its lock, design-system.yaml
-  // and prototype-handoff.yaml. None of those exist for a cli-only target, so
-  // the guard must name the reduced read order or implementation is blocked on
-  // inputs this carve-out guarantees will never be produced.
-  it("qfai-implement の Visual Review Guard が cli-only の read order を持つ", async () => {
-    const implementSkill = await readFile(
-      path.join(
-        repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-      ),
-      "utf-8",
-    );
-    const guard =
-      implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
-    expect(guard, "no Visual Review Guard section").not.toBe("");
-    expect(guard).toMatch(/cli-only/);
-    // The configured directory, not the default spelled out. A project that
-    // repoints `paths.contractsDir` has no `.qfai/contracts/ui`, so a guard
-    // naming that path sends its review at a directory that is not there.
-    expect(guard).toMatch(/<contractsDir>\/ui\/\*\*/);
-    expect(guard).not.toMatch(/`\.qfai\/contracts\/ui\//);
-  });
-
-  // `/qfai-implement` takes ONE spec from an argument or the queue, while
-  // `.qfai/state.json#discussion.currentId` is repository-wide. Deciding
-  // cli-only from the active pointer alone would strip a web spec of its
-  // DESIGN.md / lock / prototype inputs whenever someone left the pointer on a
-  // CLI pack — and demand them of a CLI spec whenever it points at a web pack.
-  it("qfai-implement の cli-only 判定が実装対象 spec の provenance に紐づく", async () => {
-    const implementSkill = await readFile(
-      path.join(
-        repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-      ),
-      "utf-8",
-    );
-    const guard =
-      implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
-    expect(guard, "the cli-only test is not scoped to one spec").toMatch(/per implemented spec/i);
-    // The persisted spec -> pack correspondence is the `Source:` provenance the
-    // spec templates carry, not the runtime pointer.
-    expect(guard).toMatch(/02_User-stories\.md/);
-    expect(guard).toMatch(/Source: discussion-/);
-  });
-
-  // `/qfai-prototyping` rejects `cli`, so a cli item can never produce the
-  // prototype the parity gate compares against. Left unscoped, the completion
-  // checklist makes every cli UI-affecting row permanently un-`done`-able.
-  it("qfai-implement の parity gate が cli を prototype 比較から外している", async () => {
-    const implementSkill = await readFile(
-      path.join(
-        repoRoot,
-        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
-      ),
-      "utf-8",
-    );
-    const parityLines = implementSkill
-      .split("\n")
-      .filter((line) => /product-surface-reviewer/.test(line) && /parity/i.test(line));
-    expect(parityLines.length, "no product-surface-reviewer parity line").toBeGreaterThan(0);
-    for (const line of parityLines) {
-      expect(line, `unconditional prototype parity gate -> ${line}`).toMatch(/cli-only/);
-    }
-  });
-
-  // Root DESIGN.md is written at `/qfai-sdd` Phase 0, after discussion ends.
+  // Root DESIGN.md is written by `/qfai-sdd` after discussion ends.
   // A discussion review line that asks for it can be satisfied by no pack at
   // all, so the gates check the direction record the pack does produce.
   it("Reviewer Gate と review bundle が DESIGN.md ではなく記録された設計方針を見ている", async () => {
@@ -496,26 +408,6 @@ describe("discussion skill template integration", () => {
       .find((line) => /^\d+\. Generate `prototyping\.yaml`/.test(line));
     expect(generationStep, "SKILL.md lost its prototyping.yaml step").toBeDefined();
     expect(generationStep).toMatch(/cli-only pack emits none/);
-  });
-
-  // A cli-only pack deliberately emits no `prototyping.yaml`, so the next
-  // stage must not stop on its absence. `/qfai-sdd` Stage 0 is the first thing
-  // that pack meets after discussion completes — an unconditional stop there
-  // simply moves the blocker one skill downstream.
-  it("SDD Stage 0 preflight が cli-only pack に prototyping.yaml を要求しない", async () => {
-    const playbook = await readFile(sddExecutionPlaybookPath, "utf-8");
-    const stageZero = playbook.split(/^## /m).find((s) => s.startsWith("Stage 0: Preflight")) ?? "";
-    expect(stageZero, "no Stage 0: Preflight section").not.toBe("");
-    expect(stageZero).toMatch(/prototyping\.yaml/);
-    // The stop condition survives — but only for the surfaces that produce the
-    // file. `VISUAL_BROWSER_SURFACES` is the code SSOT for that set.
-    expect(stageZero).toMatch(/visual-prototyping/i);
-    for (const surface of VISUAL_BROWSER_SURFACES) {
-      expect(stageZero, `Stage 0 does not name the '${surface}' surface`).toContain(
-        `\`${surface}\``,
-      );
-    }
-    expect(stageZero).toMatch(/cli-only/);
   });
 
   // `screenContract.ts` requires a non-empty `route`, never a URL. Telling
@@ -610,100 +502,19 @@ async function collectMarkdownFiles(dir: string): Promise<string[]> {
   return out;
 }
 
-/** The numbered completion conditions of the matrix's `UI-bearing Packs` section. */
-async function uiBearingConditions(): Promise<string> {
-  const matrix = await readFile(completionMatrixPath, "utf-8");
-  return collectOrderedList(
-    matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
-  );
-}
-
-/** Every line of `text` that names a design direction. */
-function directionLines(text: string): string[] {
-  return text.split("\n").filter((line) => /direction/i.test(line));
-}
-
-const USER_BRAND_DIRECTION = /01_Context\.md#Design Direction/;
-
-describe("discussion carries no early winner", () => {
-  // QFAI:SPEC-0010:TC-0010-0006
-  it("TC-0010-0006: the screen-contract template ranks no exploration and names only the user's brand direction", async () => {
+describe("the screen-contract template names only the user's brand direction", () => {
+  it("ranks no exploration, and every direction it names is the one in 01_Context.md", async () => {
     const template = await readFile(path.join(uiuxTemplateDir, "40_screen_contracts.md"), "utf-8");
     expect(template).not.toMatch(/\b(selected|winner|finali[sz]ed?)\b/i);
-    const named = directionLines(template);
+    const named = template.split("\n").filter((line) => /direction/i.test(line));
     expect(named.length).toBeGreaterThan(0);
     for (const line of named) {
       expect(line, `a direction other than the user's brand direction: ${line}`).toMatch(
-        USER_BRAND_DIRECTION,
+        /01_Context\.md#Design Direction/,
       );
     }
-  });
-
-  // QFAI:SPEC-0010:TC-0010-0006
-  it("TC-0010-0006: the completion conditions keep explorations unranked and finalize no design system", async () => {
-    const conditions = await uiBearingConditions();
-    expect(conditions).toMatch(/carried\s+unranked/);
-    expect(conditions).toMatch(/no\s+single\s+screen\s+exploration\s+is\s+selected/);
-    expect(conditions).toMatch(/design\s+system\s+is\s+not\s+finalized/);
-    // A condition wraps across lines, so each numbered condition is read whole.
-    const named = conditions
-      .split(/^(?=\d+\. )/m)
-      .filter((condition) => /direction/i.test(condition))
-      .filter((condition) => !/^\d+\. Exploration directions are carried unranked/.test(condition));
-    expect(named.length).toBeGreaterThan(0);
-    for (const condition of named) {
-      expect(condition, `a direction other than the user's brand direction`).toMatch(
-        USER_BRAND_DIRECTION,
-      );
-    }
-  });
-
-  // QFAI:SPEC-0010:TC-0010-0006
-  it("TC-0010-0006: the skill's planner-first guidance ranks no exploration and keeps the brand direction the user's", async () => {
-    const content = await readFile(skillPath, "utf-8");
-    const guidance = content.split("\n").filter((line) => /planner-first/.test(line));
-
-    expect(guidance.length).toBeGreaterThan(0);
-    for (const line of guidance) {
-      expect(line).toMatch(/unranked|never pick a single visual winner|did not choose a single/);
-    }
-    expect(content).toMatch(/do not finalize the design system here/);
-    expect(content).toMatch(/The brand direction is the exception/);
-    expect(content).toMatch(/published theme the product is built on is the user's decision/);
-  });
-
-  // QFAI:SPEC-0010:TC-0010-0006
-  it("TC-0010-0006: the tree qfai init writes carries the same planner-first discussion guidance", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-planner-first-"));
-    try {
-      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
-      const installed = path.join(root, ".qfai", "assistant", "skills", "qfai-discussion");
-      for (const relative of [
-        "SKILL.md",
-        path.join("references", "discussion-completion-matrix.md"),
-        path.join("templates", "uiux", "40_screen_contracts.md"),
-      ]) {
-        const shipped = await readFile(path.join(templateBase, relative), "utf-8");
-        expect(await readFile(path.join(installed, relative), "utf-8"), relative).toBe(shipped);
-      }
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // QFAI:SPEC-0010:TC-0010-0007
-  it("TC-0010-0007: the brand direction is recorded in 01_Context.md and Phase 0 authors DESIGN.md", async () => {
-    const skill = await readFile(skillPath, "utf-8");
-    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
-    const direction = context.split(/^## /m).find((s) => s.startsWith("Design Direction")) ?? "";
-    expect(direction).toMatch(/`web`, `mobile`, `desktop` or `mixed`/);
-    expect(direction).toMatch(/^- adopted_theme:/m);
-    expect(direction).toMatch(/^- chosen_by: \[user\|assumption\]$/m);
-    expect(direction).toMatch(/`\/qfai-sdd` Phase 0 authors root `DESIGN\.md` from it/);
-    expect(await uiBearingConditions()).toMatch(USER_BRAND_DIRECTION);
-    expect(skill).toMatch(
-      /Root DESIGN\.md is not a discussion output: \/qfai-sdd Phase 0 authors it/,
+    expect(template).toContain(
+      "Reference registries (product intent, brand signals, anti-goals): `../04_Sources.md`",
     );
-    expect(skill).toMatch(/Discussion authors no design artifact outside its own pack/);
   });
 });

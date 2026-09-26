@@ -1,7 +1,7 @@
 /**
  * A feature run driven through the built CLI to a recorded RED receipt, and optionally a GREEN
- * one, over a spec pack, a test file and a production file that exist on disk. Every stage before
- * acceptance is accepted with a canned result.
+ * one, over a story tree, a test file and a production file that exist on disk. Every stage
+ * before acceptance is accepted with a canned result.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,25 +17,46 @@ import {
   workflow,
 } from "./workflowProject.js";
 
-export const PACK = ".qfai/specs/spec-0001";
-export const AC_FILE = `${PACK}/03_Acceptance-Criteria.md`;
-export const LEDGER_FILE = `${PACK}/tdd/test-list.md`;
+export const FLOW = ".qfai/spec/02_business-flow/business-flow-0001";
+export const STORY = `${FLOW}/user-story-0001-0001`;
+export const AC_FILE = `${STORY}/02_Acceptance-Criteria.md`;
 export const TEST_FILE = "src/export.test.ts";
 export const PRODUCTION_FILE = "src/export.ts";
 export const RED_RECEIPT = "results/red-1.json";
 export const GREEN_RECEIPT = "results/green-1.json";
 
-const FILES: Record<string, string> = {
-  [`${PACK}/02_User-stories.md`]: "# User stories\n\nUS-0001-0001: export an order.\n",
-  [AC_FILE]: "# Acceptance criteria\n\nAC-0001-0001: the order lines are exported as CSV.\n",
-  [`${PACK}/04_Business-Rules.md`]: "# Business rules\n\nBR-0001-0001: one line per order line.\n",
-  [`${PACK}/05_Examples.md`]: "# Examples\n\nEX-0001-0001: two lines give two rows.\n",
-  [LEDGER_FILE]: [
-    "# TDD Test List",
+/** The criterion file, stating the export as `format`. */
+export function criteria(format: string): string {
+  return [
+    "# Acceptance Criteria",
     "",
-    "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
-    "| TDD-0001 | TC-0001-0001 | Unit | src/export.test.ts | TC-0001-0001 (TDD-0001) | todo | - | - |",
+    "## Criteria",
+    "",
+    "```gherkin",
+    "Feature: Export an order",
+    "",
+    "# AC-0001-0001-01",
+    "Scenario: Export the order lines",
+    "  Given an order with two lines",
+    "  When the order is exported",
+    `  Then the lines are exported as ${format}`,
+    "```",
+    "",
+  ].join("\n");
+}
+
+const FILES: Record<string, string> = {
+  [`${FLOW}/business-flow.md`]: "# BF-0001: Export orders\n",
+  [`${STORY}/01_User-story.md`]: "# US-0001-0001: Export an order\n",
+  [AC_FILE]: criteria("CSV"),
+  [`${STORY}/03_Example.md`]: [
+    "# Examples",
+    "",
+    "## Examples",
+    "",
+    "| EX-ID | AC-Ref | Input | Expected |",
+    "| --- | --- | --- | --- |",
+    "| EX-0001-0001-01 | AC-0001-0001-01 | An order with two lines | Two rows |",
     "",
   ].join("\n"),
   [TEST_FILE]: "it('exports two rows', () => expect(exportCsv(order)).toHaveLength(2));\n",
@@ -54,12 +75,12 @@ async function changed(root: string, file: string) {
   };
 }
 
-/** Writes spec-0001's pack, its ledger, a test file and a production file into `root`. */
+/** Writes BF-0001's story tree, a test file and a production file into `root`. */
 export async function writeReceiptFiles(root: string): Promise<void> {
   for (const [file, text] of Object.entries(FILES)) await write(root, file, text);
 }
 
-/** A minimal project holding spec-0001's pack, its ledger, a test file and a production file. */
+/** A minimal project holding BF-0001's story tree, a test file and a production file. */
 export async function receiptProject(): Promise<string> {
   const root = await minimalProject();
   await writeReceiptFiles(root);
@@ -84,7 +105,7 @@ export async function runWithReceipts(root: string, green: boolean) {
   const { runId, issued } = await featureRunAt(root, "acceptance");
   const red = {
     testObservation: "expected_red",
-    red: { testId: "TC-0001-0001", failureKind: "assertion" },
+    red: { testId: "EX-0001-0001-01", failureKind: "assertion" },
     changedFiles: [await changed(root, TEST_FILE)],
   };
   const implement = await accepted(root, runId, issued.json, "red-1", red);

@@ -1,0 +1,780 @@
+# 03 Acceptance Criteria
+
+## AC-0012-0001
+
+```gherkin
+Scenario: AC-0012-0001
+  Given a prototyping run is being planned
+  When the skill prepares execution before the first capture or evaluation cycle
+  Then `/qfai-prototyping` documents Step 0 execution planning before the first capture/evaluation cycle.
+  And Step 0 names `targetIterations`, `evaluationAxesSource`, `delegationMap`, and `plannedAt`.
+  And Delegation scope and invalid role handling are documented in the same execution-planning posture.
+```
+
+## AC-0012-0002
+
+```gherkin
+Scenario: AC-0012-0002
+  Given declared screens require evidence
+  When the evidence paths are documented
+  Then Declared screen evidence uses the canonical screenshot and HTML snapshot paths.
+  And Documentation names the canonical paths explicitly.
+```
+
+## AC-0012-0004
+
+```gherkin
+Scenario: AC-0012-0004
+  Given a prototyping run delegates work
+  When the skill documents role ownership
+  Then Evaluator/reviewer role ownership is documented.
+  And The skill spells out which roles own implementation, screenshot capture, evaluation scoring, and build.
+```
+
+## AC-0012-0005
+
+```gherkin
+Scenario: AC-0012-0005
+  Given reviewers prepare to evaluate a prototype
+  When evaluator input guidance is read
+  Then Evaluator input guidance names screenshots, HTML snapshots, rubric/calibration inputs, prior reviewer-score context, and design-system input.
+  And Review guidance also names the visual checklist categories used during scoring.
+```
+
+## AC-0012-0006
+
+```gherkin
+Scenario: AC-0012-0006
+  Given a prototyping run approaches completion
+  When the skill documents its machine gate
+  Then `qfai validate --fail-on error` is documented as the machine gate before completion.
+```
+
+## AC-0012-0007
+
+```gherkin
+Scenario: AC-0012-0007
+  Given a prototyping run approaches final review
+  When the skill documents its review gate
+  Then `/qfai-verify` is documented as the final review gate.
+  And Completion remains blocked on `REVISE`.
+```
+
+## AC-0012-0009
+
+- US-Refs: US-0012-0109
+
+```gherkin
+Scenario: AC-0012-0009
+  Given a story-tree project contains non-UI work and a UI contract file without a `CON-UI-NNNN` ID or a `screens[]` entry
+  When prototyping scope is resolved
+  Then the file is excluded from the UI-bearing contract set and no spec-level marker is read
+  And missing screen contracts do not trigger UI-only requirements for the non-UI work
+```
+
+## AC-0012-0023: pivotDirective Enum
+
+```gherkin
+Scenario: pivotDirective Enum
+  Given any `iter-NN/review.json`,
+  When validated,
+  Then `pivotDirective` is exactly one of `"continue" | "refine" | "pivot"`. Other values raise `QFAI-PROT-023`.
+```
+
+## AC-0012-0024: Layout-Anti-Pattern IA Cap
+
+```gherkin
+Scenario: Layout-Anti-Pattern IA Cap
+  Given any `iter-NN/review.json` where `layoutAntiPatternsDetected.length > 0`,
+  When validated,
+  Then `scores.informationArchitecture` is in `{weak, acceptable}`. `strong` or `exceptional` raises `QFAI-PROT-021`.
+```
+
+## AC-0012-0025: lap-\* Whitelist
+
+```gherkin
+Scenario: lap-\* Whitelist
+  Given any `iter-NN/review.json`,
+  When validated,
+  Then every entry in `layoutAntiPatternsDetected[]` is an identifier declared in `packages/qfai/assets/validators/layoutAntiPatterns.json`, which is what `loadKnownLapIds` reads. A token no entry declares raises `QFAI-PROT-002`. The registry is the list: writing it out here is a second copy that goes stale the next time an entry is added or retired.
+```
+
+## AC-0012-0026: pivotDirective Rule — pivot
+
+```gherkin
+Scenario: pivotDirective Rule — pivot
+  Given the latest 3 iters each have `informationArchitecture ∈ {weak, acceptable}` and the latest iter has `layoutAntiPatternsDetected.length > 0`,
+  When `computePivotDirective(history)` runs,
+  Then it returns `"pivot"`.
+```
+
+## AC-0012-0027: pivotDirective Rule — continue
+
+```gherkin
+Scenario: pivotDirective Rule — continue
+  Given the latest iter has `≥ 2` of the 4 UX axes strictly improved by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter,
+  When `computePivotDirective(history)` runs,
+  Then it returns `"continue"`. Otherwise (and not `pivot`) it returns `"refine"`.
+```
+
+## AC-0012-0032: CLI iterate exit codes
+
+```gherkin
+Scenario: CLI iterate exit codes
+  Given `qfai prototyping iterate --cycle <n>` runs,
+  When the cycle completes,
+  Then exit code is one of `0` (continue, read pivotDirective), `64` (convergence), `65` (max-iterations reached), `2` (input error or DESIGN.md hash mismatch). No other exit codes are emitted.
+```
+
+## AC-0012-0034: Cycle 0 Records designMdSha256
+
+```gherkin
+Scenario: Cycle 0 Records designMdSha256
+  Given `qfai prototyping iterate --cycle 0`,
+  When it completes,
+  Then `prototyping.json#designMdSha256` is set to `sha256(DESIGN.md bytes)` and matches `<paths.contractsDir>/design/DESIGN.md.lock.yaml#sha256` exactly.
+```
+
+## AC-0012-0035: Cycle ≥1 hash gate
+
+```gherkin
+Scenario: Cycle ≥1 hash gate
+  Given `prototyping.json#designMdSha256 === H_recorded`,
+  When `qfai prototyping iterate --cycle <n>` (n ≥ 1) runs and on-disk `sha256(DESIGN.md) !== H_recorded`,
+  Then it exits with code `2` and stderr contains `"DESIGN.md hash mismatch"`. The user must restore `DESIGN.md` or re-run the SDD freeze and restart from cycle 0.
+  And On the story tree the SDD freeze is the one at the `/qfai-sdd` 03-contract step.
+```
+
+## AC-0012-0036: design-system as DESIGN.md Mirror
+
+```gherkin
+Scenario: design-system as DESIGN.md Mirror
+  Given `<paths.contractsDir>/design/design-system.yaml` is generated post-loop,
+  When its token tables are compared to root `DESIGN.md`,
+  Then color / typography / radius / shadow are byte-equivalent. Drift raises `QFAI-DCON-032`.
+```
+
+## AC-0012-0037: Multi-spec resolver covers every UI-bearing spec per invocation
+
+- US-Refs: US-0012-0109
+
+```gherkin
+Scenario: Multi-spec resolver covers every UI-bearing spec per invocation (case 1)
+  Given a consumer project with N UI-bearing specs (N ≥ 1; each spec EITHER (a) carries `surface_type: ui-bearing` in its `01_Spec.md` frontmatter OR (b) ships a matching `.qfai/contracts/ui/<spec-id>.yaml` contract (also accepted: any of the documented 5 candidate layouts in `.qfai/contracts/ui/README.md` — including the per-spec subdirectory layout `<contractsDir>/ui/spec-<id>/<sub>.yaml`, candidate #5, treated as UI-bearing when the subdir contains at least one `*.yaml` file; `*.yml` single-l is excluded for parity with the top-level convention) — the two signals are OR-ed; legacy `01_Context.md ui_bearing: true` is superseded by these per CHG-002),
+  When `/qfai-prototyping` is invoked exactly once,
+  Then `resolveAllUiBearingSpecs()` returns every UI-bearing spec ID, the previous primary-spec selection prompt is not emitted, and cycle-0 evidence records the resolved spec set verbatim.
+
+Scenario: Multi-spec resolver covers every UI-bearing spec per invocation (case 2)
+  Given a consumer project with zero UI-bearing specs **at cycle 0** (no in-progress `prototyping.json#frozenSurfaceUnion` recorded yet),
+  When `/qfai-prototyping` is invoked at cycle 0,
+  Then the run exits 0 deterministically as a no-op (not an error).
+  And the legacy `01_Context.md ui_bearing: false` exclusion guidance (AC-0012-0009) is retained as a non-detection-source convenience marker; the new detection signal set above is the SSOT.
+  And at cycle ≥ 1 the zero-UI-bearing live result is a hard-stop drift class (see AC-0012-0045 class (d) for the "UI markers removed mid-loop" path and class (e) for the "missing cycle-0 seed" path), NOT a no-op. The no-op semantic is intentionally scoped to cycle 0 only.
+  And On the story tree the resolved unit is the UI contract: a file under `<paths.contractsDir>/ui/` is UI-bearing when it declares a `CON-UI-NNNN` ID and at least one `screens[]` entry, and nothing read from `01_Spec.md` or from a contract file named after a spec counts. The resolver returns every UI-bearing `CON-UI-NNNN` ID, cycle-0 evidence records them in `uiContractsCovered[]`, and zero UI-bearing UI contracts at cycle 0 is the same no-op.
+```
+
+## AC-0012-0038: 10-cycle iteration budget — terminator index === 9
+
+- US-Refs: US-0012-0118
+
+```gherkin
+Scenario: 10-cycle iteration budget — terminator index === 9
+  Given `MAX_ITERATIONS = 10` and `MAX_ITERATION_INDEX = 9` in `core/prototyping/iteration.ts`,
+  When the iteration loop runs,
+  Then the run executes cycle 0 plus cycles 1..9 (max 10 iterations) on a single per-spec lineage (per UI contract on the story tree) and writes the terminator at `index === 9` when convergence is not reached earlier.
+  And a single `--cycle 9` invocation on a non-converged loop whose `iterations.length === 10` MUST surface exit 65 directly (max-iterations terminator) without routing through the `expectedNextCycle === 10` cycle-mismatch path (cycle-9 idempotency is a terminator-routing concern, not an autonomous-run / no-prompts concern, so it belongs here rather than under AC-0012-0044).
+```
+
+## AC-0012-0039: Validators reject out-of-range cycle index
+
+- US-Refs: US-0012-0118
+
+```gherkin
+Scenario: Validators reject out-of-range cycle index
+  Given any evidence pack written by `/qfai-prototyping`,
+  When `QFAI-PROT-005` / `QFAI-PROT-006` runs,
+  Then any cycle index > 9 or any cycle count ≠ recorded `MAX_ITERATIONS` raises a non-zero validator finding.
+```
+
+## AC-0012-0040: Reviewer-driven Playwright session per spec × screen
+
+- US-Refs: US-0012-0110
+
+```gherkin
+Scenario: Reviewer-driven Playwright session per spec × screen
+  Given a per-cycle per-spec × screen evaluation (per UI contract × screen on the story tree),
+  When the Reviewer sub-agent is invoked,
+  Then the Reviewer itself launches Playwright (or equivalent harness), performs human-like operation (click / type / navigate / scroll) on the live prototype, and writes a single `<screen>.review.json`; no scripted interaction transcript file is produced and no AC selector / assertion is required.
+```
+
+## AC-0012-0041: Qualitative review payload schema per spec × screen
+
+- US-Refs: US-0012-0111
+
+```gherkin
+Scenario: Qualitative review payload schema per spec × screen
+  Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` (`iter-NN/CON-UI-NNNN/<screen>.review.json` on the story tree),
+  When validated,
+  Then it contains exactly the 4 ordinal UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`, each in `{weak, acceptable, strong, exceptional}`) AND the six qualitative `*Feel` prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`), each bounded ≤ 200 words, AND `layoutAntiPatternsDetected[]` AND `designMdViolations[]`.
+```
+
+## AC-0012-0042: Convergence AND across spec × screen pairs (no quantitative thresholds)
+
+- US-Refs: US-0012-0111
+
+```gherkin
+Scenario: Convergence AND across spec × screen pairs (no quantitative thresholds)
+  Given the cycle-0 frozen spec set S and the union of declared screens per spec,
+  When the aggregator evaluates convergence at the end of any cycle,
+  Then the run converges ONLY when, for every `(spec, screen)` pair: all 4 ordinal UX axes are `exceptional` AND `layoutAntiPatternsDetected[]` is empty AND `designMdViolations[]` is empty.
+  And no quantitative AC-pass% / transition-pass% threshold is consulted.
+  And on hard-fail at cycle 9, the aggregated convergence record names every lagging spec ID.
+  And On the story tree S is the cycle-0 frozen `uiContractsCovered[]`, each pair is `(UI contract, screen)`, and the record names every lagging UI contract ID.
+```
+
+## AC-0012-0043: License-permitted stock-photo fill recorded per image
+
+- US-Refs: US-0012-0112
+
+```gherkin
+Scenario: License-permitted stock-photo fill recorded per image
+  Given every image slot referenced by the prototype set,
+  When the slot is filled at any cycle,
+  Then the image source is drawn from the cycle-0 frozen license catalog (allowlist: Unsplash, Pexels per OQ-0002 / SRC-0005 / SRC-0006), AND a row `{url, license, attribution, source}` is written to `prototype-handoff.yaml#imageSources[]` for every fill, AND license-verify failure (unknown license / non-allowlisted source / non-https url / missing attribution) hard-stops the run with exit 66, AND a malformed `imageSources[]` entry (missing or non-string `url`/`source`/`license`) hard-stops the run with exit 2 (input-shape class) at the iterate boundary before the license-verify gate runs.
+```
+
+## AC-0012-0044: Autonomous run from cycle 0 to cycle 9 — no per-cycle prompts
+
+- US-Refs: US-0012-0113
+
+```gherkin
+Scenario: Autonomous run from cycle 0 to cycle 9 — no per-cycle prompts
+  Given `/qfai-prototyping` is invoked,
+  When the run executes cycle 0 through cycle 9,
+  Then no per-cycle stdin read or interactive prompt occurs between cycle 0 start and exit, AND the CI fixture asserting `stdin closed → exit 0/non-zero` succeeds without `ENOENT` / `EBADF` / `EINTR` on stdin. (Cycle-9 idempotency is specified under AC-0012-0038: terminator routing is an iteration-budget concern, not an autonomous-run concern.)
+```
+
+## AC-0012-0045: Deterministic hard-stop classes
+
+- US-Refs: US-0012-0113
+
+```gherkin
+Scenario: Deterministic hard-stop classes
+  Given the hard-stop catalog is fixed at (a) lock drift, (b) Reviewer Playwright-session failure across all reviewers for a spec × screen, (c) license-verify failure, (d) mid-run spec-set change detection (any added / removed UI-bearing spec, including the special case of every UI marker / contract being removed mid-loop so the live UI-bearing union shrinks to `[]`), (e) cycle ≥ 1 invocation without a recorded cycle-0 `frozenSurfaceUnion` seed, (f) cycle ≥ 1 detection of `prototyping.json#frozenLicenseCatalog` drift (set-equality semantic via `licenseCatalogsEqual`), (g) certify-side detection of non-canonical `prototyping.json#frozenSpecsCovered[]` entries (any value that is not bare 4-digit `NNNN` or fully-qualified `spec-NNNN`), (h) certify-side present-but-malformed `prototyping.json#frozenSpecsCovered` field (key on the record but value is non-array / empty / non-string / empty-string entry / explicit `null` / `undefined` — rejected by the SSOT classifier instead of silently falling back to legacy `specsCovered`),
+  When any class triggers,
+  Then the run exits non-zero deterministically with the documented exit code per class:
+  And (a) lock drift → exit `2` (per AC-0012-0035; same class as DESIGN.md hash mismatch and any cache-vs-lock drift),
+  And (b) Reviewer Playwright-session failure → exit `64` with `sessionStatus ∈ {retryExhausted, launchFailed}` recorded on the per-`(spec, screen)` review payload so the orchestrator can disambiguate from converged-exit-64,
+  And (c) license-verify failure → exit `66`,
+  And (d) mid-run spec-set change detection → exit `2` (same class as lock drift; new / removed spec deferred to next invocation per the business-rule layer),
+  And (e) cycle ≥ 1 without a cycle-0 seed → exit `2` with the operator instructed to run `--cycle 0 --target-url <url>` first (the "Seed the loop first" branch of the zero-UI precheck; also covers the legacy-shape variant where `prototyping.json` exists but the `frozenSurfaceUnion` field is missing),
+  And (f) `frozenLicenseCatalog` drift → exit `2` with a re-seed instruction (set-equality semantic: order-permuted catalogs MUST NOT trip the gate, semantic differences MUST; SSOT is the in-memory `DEFAULT_LICENSE_CATALOG` constant, which cycle 0 mirrors into `prototyping.json#frozenLicenseCatalog`),
+  And (g) certify-side non-canonical `frozenSpecsCovered[]` entry → exit `2` with the malformed id echoed verbatim and the canonical shape (`spec-NNNN` / 4-digit `NNNN`) named in stderr; operator is directed to re-run `qfai prototyping iterate --cycle 0` to regenerate the record (the certify per-(spec × screen) gate refuses to build paths from unvalidated input — feeding unvalidated strings into `path.join(root, "iter-NN", id, "<screen>.review.json")` would allow path-traversal probes outside the intended subtree),
+  And (h) certify-side present-but-malformed `prototyping.json#frozenSpecsCovered` field (key IS on the record, but value fails the string-array validation contract — non-array, empty array, non-string entry, empty-string entry, OR an explicit `null` / `undefined` on a present key) → exit `2` with a "present but malformed" diagnostic naming the rejection reason. The SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "absent" | "malformed" | "ok"}`: `absent` still legitimately falls back to legacy `specsCovered` for legacy evidence compatibility, but `malformed` (including explicit `null` / `undefined`) fails closed so a partially-corrupt multi-spec record cannot silently downgrade certification scope and let missing secondary-spec review evidence ship a sealed certificate.
+  And **Cross-class postcondition: no user prompt is emitted.** This is the original CHG-002 scope, binding ALL hard-stop classes (a)-(h). The hard-stop catalog runs in fully autonomous mode: when ANY class triggers, the run exits non-zero deterministically WITHOUT emitting a user prompt. This clause applies cross-class to the full hard-stop catalog (a)-(h), not only to class (h); the autonomous-run semantic is further reinforced by AC-0012-0044.
+  And **Ordering invariant.** This is a sibling of the When / Then clauses above, not a continuation of class (h)'s Then block. Hard-stop classes (a)-(h) MUST be evaluated BEFORE convergence / budget-exhaustion signals (i.e. before `shouldStop()` in iterate's cycle ≥ 1 path, and before any per-(spec × screen) coverage-rejection class on the certify side). When a hard-stop class AND a convergence / coverage signal both fire in the same invocation, the hard-stop class wins and the convergence / coverage signal MUST be suppressed. Rationale: a partial / corrupt lock or a mid-loop drift cannot be "resolved" by satisfying convergence axes or exhausting the iteration budget; honouring `shouldStop`-first would let a mid-loop UI marker removal ship as a successful exit-64 / exit-65 outcome and bypass the lock-drift remediation path entirely. This clause applies cross-class to the full hard-stop catalog (a)-(h); it is not a postcondition of any single class.
+  And **On the story tree** (`.qfai/contracts/cli/qfai-prototyping.md#story-tree-layout`): (b) records `sessionStatus` on the per-`(UI contract, screen)` review payload; (d) is any added or removed UI-bearing UI contract; (g) and (h) read `prototyping.json#uiContractsCovered`, (g) rejects any entry that is not a canonical `CON-UI-NNNN` before a review path is built from it, and (h) has no `absent` fallback because there is no second field. A `prototyping.json` that carries `specsCovered` or `frozenSpecsCovered`, or lacks `uiContractsCovered`, is exit `2` on `iterate` at cycle ≥ 1, on `certify` and on `show-ui-contract`, with a message saying to re-seed with `qfai prototyping iterate --cycle 0`. The postcondition and the ordering invariant above bind this class too.
+```
+
+## AC-0012-0046: Per-spec iter-dir namespacing — review.json only
+
+- US-Refs: US-0012-0114
+
+```gherkin
+Scenario: Per-spec iter-dir namespacing — review.json only
+  Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/`,
+  When listed,
+  Then it contains exactly files matching `<screen>.review.json` (one per declared screen). No `.png`, no `.html`, no `.interaction.json`, no other sidecar.
+  And path helpers (`iterationDirPerSpec`, `iterationReviewPathPerSpec`, `findIterationReviewFiles`, `findStaleIterDirs`, `deleteStaleIterDirs`) descend into `spec-NNNN` while preserving `/^iter-\d{2,}$/` cleanup semantics.
+  And On the story tree the directory is `iter-NN/CON-UI-NNNN/` with the same contents, and the path helpers descend into `CON-UI-NNNN` with the same cleanup semantics.
+```
+
+## AC-0012-0047: Certify aggregates per-spec presence
+
+- US-Refs: US-0012-0115
+
+```gherkin
+Scenario: Certify aggregates per-spec presence
+  Given `qfai prototyping certify --check`,
+  When run after the loop terminates,
+  Then certify iterates the cycle-0 frozen spec set via `readFrozenSpecsCovered()`, asserts that every declared screen of every covered spec has a `<screen>.review.json` at the accepted iter, and exits 0 on full coverage / non-zero with a diagnostic naming the missing `(spec, screen)` pair on any miss.
+  And On the story tree certify iterates the cycle-0 frozen `uiContractsCovered[]`, and the diagnostic names the missing `(UI contract, screen)` pair.
+```
+
+## AC-0012-0048: Menu reachability exercised at least once per Reviewer session
+
+- US-Refs: US-0012-0111
+
+```gherkin
+Scenario: Menu reachability exercised at least once per Reviewer session
+  Given a spec × screen (UI contract × screen on the story tree) with declared primary menu entry points (sidebar / topbar / bottombar as system-appropriate),
+  When the Reviewer's Playwright session runs,
+  Then the Reviewer SHOULD exercise every primary menu entry point at least once and reflect findings in the `menuReachabilityFeel` prose field; unreachable entries surface as qualitative critique and do NOT hard-fail the cycle.
+```
+
+## AC-0012-0049: Spec set frozen at cycle 0; mid-run additions deferred
+
+- US-Refs: US-0012-0116
+
+```gherkin
+Scenario: Spec set frozen at cycle 0; mid-run additions deferred
+  Given the cycle-0 frozen spec set is persisted in cycle-0 evidence,
+  When a new UI-bearing spec is added to disk after cycle 0 starts,
+  Then `/qfai-prototyping` MUST detect the change, MUST NOT restart cycle 0, MUST defer the new spec to the next invocation, AND the cycle ≥ 1 drift gate reads the cycle-0 frozen UI-bearing UNION snapshot — `prototyping.json#frozenSurfaceUnion` — as its baseline and compares it set-equal against the live `resolveSurfaceUnion(root, config)` result (not live FS). The legacy single-spec `specsCovered` / `frozenSpecsCovered` fields are NOT the drift baseline; they remain as the primary-spec scope under review and shallow-equal compared to the currently-resolved primary, but are unrelated to multi-spec drift detection. A missing or malformed `frozenSurfaceUnion` snapshot on cycle ≥ 1 is itself a hard-stop and instructs the operator to re-seed via `--cycle 0`.
+  And On the story tree the frozen set is `uiContractsCovered[]`, a UI-bearing UI contract added mid-run is deferred the same way, and the drift gate compares the live union of UI-bearing UI contracts set-equal against `frozenSurfaceUnion`, which holds `CON-UI-NNNN` IDs. The shallow-equal check reads `uiContractsCovered` in place of the two legacy fields.
+```
+
+## AC-0012-0050: Per-spec time-budget soft warning
+
+- US-Refs: (REQ-0012)
+
+```gherkin
+Scenario: Per-spec time-budget soft warning
+  Given the per-spec time-budget cap is 5 min/spec per cycle (OQ-0004) (5 min per UI contract per cycle on the story tree),
+  When a spec × cycle exceeds the cap,
+  Then the Reviewer payload records a `softWarnings.timeBudget` entry; the aggregator does NOT gate on it; only the global 10-cycle budget can hard-fail the run.
+```
+
+## AC-0012-0051: Cycle-0 freezes the UI contract set
+
+- US-Refs: US-0012-0116
+
+```gherkin
+Scenario: Cycle-0 freezes the UI contract set
+  Given cycle 0 runs,
+  When it completes,
+  Then cycle-0 evidence persists the resolved UI contract set in `uiContractsCovered[]` on the story tree
+  And every subsequent cycle reads that frozen set as the resolver and aggregator baseline
+```
+
+## AC-0012-0052: `show-spec` JSON payload contract (operator drift-analysis surface)
+
+- US-Refs: US-0012-0116
+
+```gherkin
+Scenario: `show-spec` JSON payload contract (operator drift-analysis surface)
+  Given any seeded `prototyping.json` record,
+  When `qfai prototyping show-spec` runs,
+  Then it emits a JSON payload that carries (a) `frozenSpecsCovered: string[]` (cycle-0 frozen primary spec ids), (b) `frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered"` discriminant so operators can detect legacy seed records without re-reading the file, (c) `frozenSurfaceUnion: string[] | null` (cycle-0 multi-spec UI-bearing UNION snapshot or `null` on legacy records), (d) `liveUiBearing: string[]` of bare spec IDs resolved by the same `resolveSurfaceUnion()` the cycle ≥ 1 drift gate consumes so the live scope is apples-to-apples with iterate's enforcement, and (e) an optional `primary?: {specId, specMdPath, source}` block present iff a primary spec resolves.
+  And operator tooling that grepped the previous top-level keys (`.specId` / `.specMdPath` / `.source`) MUST migrate to the `primary` block (or to `liveUiBearing[]` for the bare ID list); the BREAKING migration is documented in the v1.8.10 CHANGELOG.
+  And a present-but-malformed `prototyping.json#frozenSpecsCovered` field (the SSOT classifier `classifyFrozenSpecsCoveredMultiSpec()` returns `{kind: "malformed", reason}` — non-array, empty array, non-string entry, empty-string entry, OR explicit `null` / `undefined` on a present key) → `show-spec` exits `2` with a "present but malformed" diagnostic naming the rejection reason. show-spec MUST NOT silently fall back to legacy `specsCovered`: certify already treats the same input as a hard error per AC-0012-0045 class (h), and reporting a downgraded scope from show-spec would mislead recovery decisions. (iterate-side handles present-but-malformed `frozenSpecsCovered` via a different mechanism — the legacy `specsCovered` reader for the cycle ≥ 1 shallow-equal check, plus the `frozenSurfaceUnion` drift baseline — so the cross-surface symmetry required here is certify ↔ show-spec, not all three commands.) Absent key (no `frozenSpecsCovered` on the record) still falls back to legacy `specsCovered` for legacy evidence compatibility.
+  And On the story tree the command is `qfai prototyping show-ui-contract`. Its payload carries `uiContractsCovered: string[]`, `frozenSurfaceUnion: string[]` of `CON-UI-NNNN` IDs, `liveUiBearing: string[]` from the resolver the cycle ≥ 1 drift gate uses, and an optional `primary?: {uiContractId, contractPath, source}` block, present iff a primary UI contract resolves, whose `source` is `config` or `contract-fallback` and whose `contractPath` is repo-root-relative POSIX. `frozenSpecsCoveredSource` is not emitted. A malformed `uiContractsCovered` is exit `2` with the same "present but malformed" diagnostic, and the exit codes are unchanged.
+```
+
+## v1.9.1 Defect Remediation ACs (CHG-005)
+
+## AC-0012-0053: Tailwind ↔ gate alignment (preflight allowlist + body-scope)
+
+- US-Refs: US-0012-0119
+- REQ-Refs: REQ-0012-0055
+
+```gherkin
+Scenario: Tailwind ↔ gate alignment (preflight allowlist + body-scope)
+  Given an iter authored faithfully to the shipped `generator-prompt.md`,
+  When `findDesignMdViolations(html, designMd)` runs with OQ-0103 = β (preflight literal allowlist) + γ (gate scope narrowed to `<body>`),
+  Then `designMdViolations[]` MUST be empty for every preflight literal enumerated in the source pack §B-4 / §3 (Tailwind CDN preflight literals, internal `--tw-*` custom properties, alpha-modifier `rgba()`, standard utility shorthand names).
+  And async fixture loading paths in the scanner unit tests MUST propagate read errors explicitly (no silent swallow).
+```
+
+## AC-0012-0054: `var()` unwrap across scanFonts / scanRadius / scanShadow
+
+- US-Refs: US-0012-0120
+- REQ-Refs: REQ-0012-0056
+
+```gherkin
+Scenario: `var()` unwrap across scanFonts / scanRadius / scanShadow
+  Given a fixture with `:root { --font-sans: system-ui; }` and a declaration `font-family: var(--font-sans)` (analogous fixtures for `--radius-*` / `--shadow-*`),
+  When `scanFonts` / `scanRadius` / `scanShadow` evaluate the declaration,
+  Then the scanner MUST resolve via `unwrapVarReference(declarationValue, rootDeclarations)` before safety judgment and MUST emit zero `designMdViolations[]` entries for the unwrapped safe value.
+```
+
+## AC-0012-0055: SAFE_LITERALS covers CSS-wide keywords
+
+- US-Refs: US-0012-0121
+- REQ-Refs: REQ-0012-0057
+
+```gherkin
+Scenario: SAFE_LITERALS covers CSS-wide keywords
+  Given a declaration whose value is any of `inherit`, `initial`, `unset`, `revert`, `currentColor`,
+  When any of the four scanners (`scanColors` / `scanFonts` / `scanRadius` / `scanShadow`) inspects the declaration,
+  Then `designMdViolations[]` MUST NOT contain an entry naming that keyword.
+  And the unit test matrix MUST assert `5 keywords × 4 scanners = 20` pass cells.
+```
+
+## AC-0012-0056: `--*-shadow*:` declaration strip (OQ-0104 Option B)
+
+- US-Refs: US-0012-0122
+- REQ-Refs: REQ-0012-0058
+
+```gherkin
+Scenario: `--*-shadow*:` declaration strip (OQ-0104 Option B)
+  Given a fixture with `--shadow-sm: 0 1px 2px rgba(15,23,42,0.05);` AND a parallel `--card-shadow: 0 4px 8px rgba(0,0,0,0.1);`,
+  When the input filter into `scanColors` runs,
+  Then the broader `--*-shadow*:` pattern MUST strip both declarations before color scanning and `designMdViolations[]` MUST NOT contain entries naming those rgba values.
+```
+
+## AC-0012-0057: proseCritique cap, unit selected by the text
+
+- US-Refs: US-0012-0123
+- REQ-Refs: REQ-0012-0059
+
+```gherkin
+Scenario: proseCritique cap, unit selected by the text
+  Given a Japanese-only `proseCritique` of 800–1500 characters, an English critique of 200–500 words, and a short critique in either language,
+  When QFAI-PROT-002 evaluates the prose, selecting CJK characters as the unit where the text carries CJK and whitespace-separated words otherwise,
+  Then all three MUST pass: the cap binds only above it, and neither unit has a lower bound.
+  And over the cap the error text MUST name (a) the count form measured (words or characters), (b) the cap, (c) the actual count.
+```
+
+## AC-0012-0058: `browserTool` accepts `"playwright"` and `"playwright-cli"`
+
+- US-Refs: US-0012-0124
+- REQ-Refs: REQ-0012-0060
+
+```gherkin
+Scenario: `browserTool` accepts `"playwright"` and `"playwright-cli"`
+  Given `prototyping.execution.browserTool` set to `"playwright"` OR `"playwright-cli"` during the deprecation window,
+  When `qfai prototyping iterate` reads the config,
+  Then both values MUST be accepted; `"playwright-cli"` MUST emit `D-DEPRECATED-PROBE` (severity: warning during window, error at sunset).
+  And the documented default in `assets/init/qfai.config.example.yaml` MUST be `"playwright"`.
+```
+
+## AC-0012-0059: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
+
+- US-Refs: US-0012-0125
+- REQ-Refs: REQ-0012-0061
+
+```gherkin
+Scenario: `iterate --capture` opt-in flag (default OFF; preserves DR-0012-0029)
+  Given `qfai prototyping iterate` invoked WITHOUT `--capture`,
+  When the loop runs,
+  Then no PNG / HTML artifacts MUST be written (the existing DR-0012-0029 no-capture posture is preserved; amendment pinned by `DR-0012-0031`).
+  And when invoked WITH `--capture`, iterate MUST drive Playwright per the Capture contract in `iterate-plan.json` and write `iter-NN/<screen-id>.{png,html}` for every `screens[]` entry, copying source HTML from `.qfai/prototypes/iter-NN/<screen-id>.html` (`.qfai/prototype/iter-NN/<screen-id>.html` with the `rule/ skill/ agent/ prompt/` assistant tree) when `htmlSourceCopy: true`.
+  And async capture errors MUST be surfaced with explicit per-screen error context (no silent skip).
+```
+
+## AC-0012-0060: `iterate --auto-serve` opt-in flag with foreign-process protection
+
+- US-Refs: US-0012-0126
+- REQ-Refs: REQ-0012-0062
+
+```gherkin
+Scenario: `iterate --auto-serve` opt-in flag with foreign-process protection
+  Given `qfai prototyping iterate` invoked WITHOUT `--auto-serve`,
+  When the loop runs,
+  Then no HTTP server MUST be spawned (DR-0012-0029 default posture preserved; amendment pinned by `DR-0012-0031`).
+  And when invoked WITH `--auto-serve`, iterate MUST call the server runner once, invoke the teardown it returns at cycle end and on SIGINT, continue when the runner reports a recovered prior owner, and exit 2 reporting the runner's reason when the runner refuses.
+  And the default runner, used when no runner is injected, MUST serve in-process and MUST refuse a port another process holds, naming the port, rather than pick another one.
+```
+
+## AC-0012-0061: `prototyping.json` validate-conformant emit
+
+- US-Refs: US-0012-0127
+- REQ-Refs: REQ-0012-0063
+
+```gherkin
+Scenario: `prototyping.json` validate-conformant emit
+  Given a converged `iterate` invocation,
+  When `iterate` writes `prototyping.json`,
+  Then `iterations[i]` MUST carry non-null `commitSha` (sentinel `"uncommitted"` permitted), non-empty `proseCritique`, `scores`, `layoutAntiPatternsDetected`, `designMdViolations`, `pivotDirective`, `reviewerId`, AND `evidenceRefs[]` with one entry per `screens[].id`.
+  And on convergence the top-level MUST carry `acceptedIterationIndex` AND `stopReason ∈ {"converged", "max-iterations", "license-verify-fail", "input-error"}`.
+  And `qfai validate --profile prototyping --fail-on error` MUST PASS without orchestrator post-processing.
+```
+
+## AC-0012-0062: Self-completable certify via verify.json#scope (OQ-0107 Option B)
+
+- US-Refs: US-0012-0128
+- REQ-Refs: REQ-0012-0064
+
+```gherkin
+Scenario: Self-completable certify via verify.json#scope (OQ-0107 Option B)
+  Given a `verify.json` carrying `scope: "prototyping"`,
+  When `qfai prototyping certify --check` runs,
+  Then certify MUST return exit 0 WITHOUT requiring `/qfai-atdd` or `/qfai-implement` artifacts.
+  And the resulting `completion-certificate.json` MUST explicitly record `scope: "prototyping"` and MUST NOT claim full DONE.
+  And Reviewer-Gate finding `R-CERTIFY-VERIFY-CIRCULAR` (severity: error) MUST fire when a future PR reintroduces the cycle "certify requires full verify PASS AND full verify requires ATDD/implement artifacts".
+```
+
+## AC-0012-0063: Single-spec public skill surface (OQ-0108 Option A)
+
+- US-Refs: US-0012-0129
+- REQ-Refs: REQ-0012-0065
+
+```gherkin
+Scenario: Single-spec public skill surface (OQ-0108 Option A)
+  Given the v1.9.1 ship,
+  When the public skill surface is read (SKILL.md + the public references list),
+  Then `resolveSurfaceUnion()` MUST NOT appear on the public skill surface (kept internal-only for the cycle ≥ 1 drift gate) AND SKILL.md language MUST be single-spec.
+  And the doc-vs-impl drift identified across SKILL.md / certify / iterate MUST resolve to zero remaining multi-spec public surface mentions at HEAD.
+  And On the story tree the unit SKILL.md names is the UI contract (`CON-UI-NNNN`) rather than the spec.
+```
+
+## AC-0012-0064: Aggregate-dir mirror with underscore casing (OQ-0110 Option A)
+
+- US-Refs: US-0012-0130
+- REQ-Refs: REQ-0012-0066
+
+```gherkin
+Scenario: Aggregate-dir mirror with underscore casing (OQ-0110 Option A)
+  Given a converged iter with N declared screens,
+  When `iterate` mirrors accepted-iter content,
+  Then `.qfai/evidence/prototyping/screenshots/<screen-id>.png` AND `.qfai/evidence/prototyping/html/<screen-id>.html` MUST exist for every `screens[]` entry.
+  And screen-id casing MUST be normalised to underscore form end-to-end (iterate emit → validator expectation → contract `screens[].id` → aggregate-dir filename); hyphen-form is rejected at validate time.
+```
+
+## AC-0012-0065: `--cycle 0 --force` backup safety
+
+- US-Refs: US-0012-0131
+- REQ-Refs: REQ-0012-0067
+
+```gherkin
+Scenario: `--cycle 0 --force` backup safety
+  Given `.qfai/evidence/prototyping/iter-00/` is non-empty AND `qfai prototyping iterate --cycle 0` is invoked WITHOUT `--force`,
+  When the command runs,
+  Then iterate MUST refuse and the error MUST name the existing evidence path AND the recovery snippet `cp -r iter-00 iter-00.backup-<ISO> && qfai prototyping iterate --cycle 0 --force`.
+  And when `--force` is passed, iterate MUST move existing `iter-00/` to `iter-00.backup-<ISO>/` BEFORE invoking `clearEvidenceIterDirs`; the backup MUST be byte-equivalent to the pre-move `iter-00/`.
+  And On the story tree a `--cycle 0` re-seed over a `prototyping.json` that carries `specsCovered` or `frozenSpecsCovered`, or lacks `uiContractsCovered`, deletes none of the evidence under `iter-NN/spec-NNNN/`.
+```
+
+## AC-0012-0066: Exit-64 blocking-cause summary
+
+- US-Refs: US-0012-0132
+- REQ-Refs: REQ-0012-0068
+
+```gherkin
+Scenario: Exit-64 blocking-cause summary
+  Given a non-converged cycle,
+  When `iterate` emits its cycle-end summary,
+  Then stdout MUST contain a one-screen `[BLOCKED]` line naming the top-3 categories (`designMdViolations` / `layoutAntiPatternsDetected` / `blockingFindings`) with concrete counts AND first-offender details (e.g. `color=#fff at iter-NN/scr_001.html:97`, `lap-008-no-back-affordance`, the first line the reviewer wrote).
+  And category names MUST be stable identifiers — additive only across versions.
+```
+
+## AC-0012-0067: `primarySpecId` error text + (SHOULD) input normalisation
+
+- US-Refs: US-0012-0133
+- REQ-Refs: REQ-0012-0069
+
+```gherkin
+Scenario: `primarySpecId` error text + (SHOULD) input normalisation
+  Given any non-conforming input for `primarySpecId`,
+  When iterate validates the input,
+  Then the error text MUST read literally `primarySpecId must be a 4-digit zero-padded string (e.g. "0001"); received <input>` (the literal-quote example matches the source pack §REQ-0119 wording).
+  And (SHOULD per OQ-0112) `1` / `"1"` / `"01"` / `"0001"` MUST be normalised internally to `spec-0001`; when normalisation is shipped, the error appears only for inputs wholly unparseable as a positive integer ≤ 9999.
+  And On the story tree the input is `prototyping.primaryUiContract` or `--primary-ui-contract`, and the flag takes precedence. Only the full `CON-UI-NNNN` form is accepted: any other input, a bare `NNNN` included, is exit `2` with an error naming the `CON-UI-NNNN` shape and the input received, and no input is normalised.
+```
+
+## AC-0012-0068: md5 duplicate-capture + missing-route advisory-failing detection (OQ-0109)
+
+- US-Refs: US-0012-0134
+- REQ-Refs: REQ-0012-0070
+
+```gherkin
+Scenario: md5 duplicate-capture + missing-route advisory-failing detection (OQ-0109)
+  Given a post-capture iter with ≥ 2 distinct declared `screens[].id` entries whose PNG md5 hashes match,
+  When `iterate` runs duplicate detection,
+  Then `lap-009: duplicate-capture` MUST be surfaced in `layoutAntiPatternsDetected[]` with severity `error` and mandatory Reviewer `justification:` for any override.
+  And for every `screens[].id`, iterate MUST verify the generated HTML SPA contains a reachable hashchange or path-based route (`targetUrl#/<route>` or `targetUrl/<route>`); missing routes surface `lap-010: missing-route` with the same advisory-failing posture.
+  And the md5 detection MUST be deterministic across re-runs on the same screen set.
+```
+
+## AC-0012-0069: `--license-patch` add-only path (SHOULD)
+
+- US-Refs: US-0012-0135
+- REQ-Refs: REQ-0012-0071
+
+```gherkin
+Scenario: `--license-patch` add-only path (SHOULD)
+  Given `qfai prototyping iterate --license-patch <file>` invoked with an add-only diff,
+  When the patch is applied,
+  Then the new frozen catalog MUST be written AND an audit row MUST be appended to `prototyping.json#licensePatchAudit[]` carrying `{appliedAt, patchSha256, addedSources[]}`.
+  And deletions or modifications MUST be rejected with the hint to use the cycle-0-restart path.
+  And async patch I/O errors MUST be surfaced with explicit operator-facing diagnostic.
+```
+
+## AC-0012-0070: Subagent iter-context hint (SHOULD)
+
+- US-Refs: US-0012-0136
+- REQ-Refs: REQ-0012-0072
+
+```gherkin
+Scenario: Subagent iter-context hint (SHOULD)
+  Given a cycle ≥ 1 invocation,
+  When `iterate` finalises the cycle,
+  Then `iter-NN/iterate-context.json` SHOULD be written with shape `{ priorCycle: N, priorScores: {...}, openBlockers: [...], priorTailwindContract: "..." }`.
+  And the file is advisory and orthogonal to `prototyping.json` (REQ-0012-0063); absence MUST NOT fail certify.
+```
+
+## AC-0012-0071: `--cycle N` out-of-range error clarity (SHOULD)
+
+- US-Refs: US-0012-0137
+- REQ-Refs: REQ-0012-0073
+
+```gherkin
+Scenario: `--cycle N` out-of-range error clarity (SHOULD)
+  Given `iterate --cycle N` invoked with N outside `0..9`,
+  When iterate validates the argument,
+  Then the error MUST read literally `--cycle accepts 0..9 (=10 cycles total). --cycle 10 would be the 11th cycle and is not supported.` and SHOULD recommend `--cycle 9 --check-convergence` or the equivalent peek mode.
+```
+
+## AC-0012-0072: Cycle-0 `--emit-skeletons` frozenSurfaceUnion coverage (DR-0261, DR-0273)
+
+- US-Refs: US-0012-0138
+- REQ-Refs: REQ-0150
+
+```gherkin
+Scenario: Cycle-0 `--emit-skeletons` frozenSurfaceUnion coverage (DR-0261, DR-0273)
+  Given `qfai prototyping iterate --cycle 0 --emit-skeletons` invoked over a `frozenSurfaceUnion` resolved from multiple specs,
+  When cycle 0 runs,
+  Then iterate MUST emit one placeholder HTML per `screens[].id` in `frozenSurfaceUnion`, consuming DESIGN.md tokens (color / font / radius / shadow) for default styling and making no per-screen LLM generation call (token-driven placeholder per DR-0261).
+  And the default skeleton mode is `placeholder`; `--skeleton-mode full|placeholder|stub` (DR-0273) overrides it per-run with no config key added.
+  And after convergence, every `frozenSurfaceUnion` screen MUST carry at least one `evidenceRefs[]` entry per kind (`screenshot` AND `html`) regardless of which spec it belongs to.
+  And On the story tree `frozenSurfaceUnion` holds `CON-UI-NNNN` IDs, and the coverage holds regardless of which UI contract a screen belongs to.
+```
+
+## AC-0012-0073: `--emit-skeletons` opt-in default unchanged (DR-0261)
+
+- US-Refs: US-0012-0138
+- REQ-Refs: REQ-0150
+
+```gherkin
+Scenario: `--emit-skeletons` opt-in default unchanged (DR-0261)
+  Given `qfai prototyping iterate --cycle 0` invoked WITHOUT `--emit-skeletons`,
+  When cycle 0 runs,
+  Then behavior MUST match v1.9.1 bit-for-bit with no skeleton emission and no regression (opt-in posture during the deprecation window).
+```
+
+## AC-0012-0074: DESIGN.md patch-zone in-zone edit preserves evidence (DR-0262)
+
+- US-Refs: US-0012-0139
+- REQ-Refs: REQ-0151
+
+```gherkin
+Scenario: DESIGN.md patch-zone in-zone edit preserves evidence (DR-0262)
+  Given DESIGN.md with a front-matter `patch_zone:` block declaring editable line ranges / token names,
+  When an edit whose diff is fully contained in the patch zone is made,
+  Then only a new `patchHash` field MUST be updated; `frozenDesignMdHash#majorHash` MUST remain stable and prototyping evidence MUST remain valid.
+```
+
+## AC-0012-0075: DESIGN.md out-of-zone edit invalidates evidence (DR-0262)
+
+- US-Refs: US-0012-0139
+- REQ-Refs: REQ-0151
+
+```gherkin
+Scenario: DESIGN.md out-of-zone edit invalidates evidence (DR-0262)
+  Given DESIGN.md with a front-matter `patch_zone:` block,
+  When an edit touches any line / token outside the zone (or removes the `patch_zone:` block itself),
+  Then evidence MUST be invalidated as today AND Reviewer Gate MUST emit `R-DESIGN-MD-PATCH-OUT-OF-ZONE` (severity warning).
+```
+
+## AC-0012-0076: `prototyping.mode` discriminator + `--mode` override (DR-0263)
+
+- US-Refs: US-0012-0140
+- REQ-Refs: REQ-0152
+
+```gherkin
+Scenario: `prototyping.mode` discriminator + `--mode` override (DR-0263)
+  Given `qfai.config.yaml#prototyping.mode` and the `qfai prototyping iterate --mode <convergence|exploration>` flag,
+  When iterate resolves the effective mode,
+  Then `--mode` MUST override the config value; absence of both MUST default to `convergence` (backwards-compatible).
+  And `prototyping.json#mode` MUST record the per-iteration mode.
+  And under `mode: exploration`, `QFAI-CRIT-008` (convergence) AND the design-compliance error MUST downgrade error → warning while structural / schema / path / license (exit 66) gates remain hard error (medium relaxation per DR-0263).
+```
+
+## AC-0012-0077: Certify rejects exploration-mode iterations (DR-0263)
+
+- US-Refs: US-0012-0140
+- REQ-Refs: REQ-0152
+
+```gherkin
+Scenario: Certify rejects exploration-mode iterations (DR-0263)
+  Given a loop where one or more iterations were produced under `mode: exploration`,
+  When `qfai prototyping certify` runs,
+  Then certify MUST reject sealing with `R-EXPLORATION-CERTIFY-ATTEMPT` AND `acceptedIterationIndex` MUST reference a convergence-mode iteration only.
+```
+
+## AC-0012-0078: `taskFidelity` keyword documentation + error text (REQ-0162)
+
+- US-Refs: US-0012-0141
+- REQ-Refs: REQ-0162
+
+```gherkin
+Scenario: `taskFidelity` keyword documentation + error text (REQ-0162)
+  Given the `QFAI-CRIT-009` validator and `references/evidence-requirements.md`,
+  When `taskFidelity` evidence is missing a required keyword,
+  Then `QFAI-CRIT-009` error text MUST name every required keyword (`cta_visibility`, `four_state_check`, plus any others surfaced by the current implementation) and the expected document section.
+  And `references/evidence-requirements.md` MUST enumerate the keywords with example markdown structure.
+```
+
+## AC-0012-0079: `iterate --capture` emits `taskFidelity` template skeleton (REQ-0162)
+
+- US-Refs: US-0012-0141
+- REQ-Refs: REQ-0162
+
+```gherkin
+Scenario: `iterate --capture` emits `taskFidelity` template skeleton (REQ-0162)
+  Given `qfai prototyping iterate --capture`,
+  When the evidence template skeleton is emitted,
+  Then the skeleton MUST include every required `taskFidelity` keyword as a placeholder so the keyword set cannot be silently forgotten.
+```
+
+## AC-0012-0080: iter-NN evidence mutation audit-log (REQ-0165)
+
+- US-Refs: US-0012-0142
+- REQ-Refs: REQ-0165
+
+```gherkin
+Scenario: iter-NN evidence mutation audit-log (REQ-0165)
+  Given `iterate` or `certify` performing a destructive mutation (delete / overwrite) on any path under `.qfai/evidence/prototyping/iter-NN/*`,
+  When the mutation occurs,
+  Then a `.qfai/evidence/prototyping/mutation-log.jsonl` JSON-Lines entry shaped `{ ts, caller, path, action, priorSize, newSize }` MUST be appended for every such mutation, including each file moved by `iterate --cycle 0 --force`.
+  And the mutation-log MUST be git-ignored by default.
+```
+
+## AC-0012-0081: Unlogged iter-NN mutation reviewer-gate finding (REQ-0165)
+
+- US-Refs: US-0012-0142
+- REQ-Refs: REQ-0165
+
+```gherkin
+Scenario: Unlogged iter-NN mutation reviewer-gate finding (REQ-0165)
+  Given a PR introducing a code path that mutates iter-NN evidence,
+  When the path does not call the mutation-log writer,
+  Then Reviewer Gate MUST emit `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
+```
+
+## AC-0012-0082: Cycle-0 reset moves the aggregate capture mirrors aside (REQ-0174)
+
+- US-Refs: US-0012-0131
+- REQ-Refs: REQ-0174
+
+```gherkin
+Scenario: Cycle-0 reset moves the aggregate capture mirrors aside (REQ-0174)
+  Given a prototyping evidence tree holding `screenshots/` or `html/` from a previous loop,
+  When `qfai prototyping iterate --cycle 0` runs, with or without `--force`,
+  Then both directories MUST be moved into `aggregate.backup-<ISO>/` before any iteration directory is cleared, each moved file MUST appear in `mutation-log.jsonl`, and the backups MUST be left out of the completion certificate's evidence digests and of its freshness scan.
+```
+
+## AC-0012-0083: Cycle-0 freezes the stock-photo license catalog
+
+- US-Refs: US-0012-0117
+
+```gherkin
+Scenario: Cycle-0 freezes the stock-photo license catalog
+  Given cycle 0 runs with the accepted stock-photo sources and license tiers
+  When it completes
+  Then cycle-0 evidence persists the license catalog and attribution format chosen under OQ-0002 Option A
+  And every subsequent cycle reads that frozen catalog for license verification
+```
+
+## Completion Gate
+
+- `/qfai-prototyping` completion requires `qfai validate --fail-on error` pass.
+- Declared screen evidence must include both screenshot and HTML snapshot.
+- `/qfai-verify` must leave a review artifact with `PASS` or `REVISE`.
+
+## Superseded Contract Notes
+
+- Active docs must not present `qfai prototyping` as a valid public orchestration command (only `iterate` / `certify` / `show-spec` are public).
+- Active docs must not present weighted-total scoring or `allReviewerAxesPerfect100` as the current evidence contract.
+- Internal mode helpers / fullHarness / scoringTrace / iterationBudget references have been purged from the active spec surface (see `09_delta.md` CHG-001).

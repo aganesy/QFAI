@@ -1,0 +1,13 @@
+# Document schema: 02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/01_User-story.md
+structure:
+  - heading:
+      pattern: "^# US-[0-9]{4}-[0-9]{4}: .+"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## User Story$"
+          regex: true
+        description: User Story section.
+        allow_additional: true

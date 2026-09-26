@@ -1,13 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0141
-// QFAI:SPEC-0018:TC-0018-0142
-// QFAI:SPEC-0018:TC-0018-0143
-// QFAI:SPEC-0018:TC-0018-0144
-// QFAI:SPEC-0018:TC-0018-0145
-// QFAI:SPEC-0018:TC-0018-0146
-// QFAI:SPEC-0018:TC-0018-0147
-// QFAI:SPEC-0018:TC-0018-0148
-// QFAI:SPEC-0018:TC-0018-0149
-// QFAI:SPEC-0018:TC-0018-0150
+// QFAI:EX-0001-0196-17
 
 import { expect, it } from "vitest";
 
@@ -18,7 +9,7 @@ import { finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 const harness = {
   host: "claude-code",
@@ -40,7 +31,7 @@ const startFacts: Facts = {
     qfaiVersion: "2.0.0",
     digestKey: "b".repeat(64),
     policyDigests: {},
-    manifestDigests: {},
+
     planDigests: {},
   },
 };
@@ -54,14 +45,16 @@ const routingWorkOrder = {
 
 const routingFacts: Facts = {
   plans: { "bounded-change": { route: "bounded-change", stages: finishPlan.stages } },
+  flows: ["BF-0001"],
 };
 
 function routingProposal(
-  newCapabilities: {
+  newStories: {
     goal: string;
     covers: string[];
     excludes: string[];
     evidence: string[];
+    flowId: string | null;
   }[] = [],
 ) {
   return {
@@ -70,10 +63,10 @@ function routingProposal(
     goal: "Return 404 for a missing export.",
     expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
     observedRefs: [],
-    affectedSpecIds: [],
+    affectedFlowIds: ["BF-0001"],
     riskSignals: [],
     unresolvedQuestions: [],
-    newCapabilities,
+    newStories,
     proposedWriteScope: ["src/notify/**"],
     protectedTargets: [],
     requiredStages: ["sdd_delta", "implement", "verify"],
@@ -103,7 +96,7 @@ function acceptRouting(outcome: string, proposal?: ReturnType<typeof routingProp
 }
 
 function readyRun(sequence = 4): Snapshot {
-  return { run: { id: "run-edge", state: "ready", sequence }, plan: finishPlan, specBinding };
+  return { run: { id: "run-edge", state: "ready", sequence }, plan: finishPlan, flowBinding };
 }
 
 // The bounded plan's first work order, issued, and the run that holds it.
@@ -164,7 +157,7 @@ function answer(optionId: string) {
     {
       run: { id: "run-answer", state: "awaiting_input", sequence: 5 },
       plan: finishPlan,
-      specBinding,
+      flowBinding,
       scopeDigest: "d".repeat(64),
       openQuestions: [proceedOrReplan],
     },
@@ -183,7 +176,7 @@ function edge(decision: WorkflowDecision) {
   return { state: decision.verdict.run?.state, events: decision.events.map((event) => event.type) };
 }
 
-it("TC-0018-0141 (TDD-0163): capture-request", () => {
+it("capture-request", () => {
   const started = decide(
     null,
     { operation: "start", request: { text: "Fix it." }, harness },
@@ -201,35 +194,36 @@ it("TC-0018-0141 (TDD-0163): capture-request", () => {
   ]);
 });
 
-it("TC-0018-0141 (TDD-0164): plan-accepted", () => {
+it("plan-accepted", () => {
   expect(edge(acceptRouting("accepted", routingProposal()))).toEqual({
     state: "ready",
-    events: ["plan-accepted"],
+    events: ["binding-recorded", "plan-accepted"],
   });
 });
 
-it("TC-0018-0141 (TDD-0165): unsettled-material-input", () => {
-  const capability = {
+it("unsettled-material-input", () => {
+  const story = {
     goal: "Export retries",
     covers: ["Retry a failed export"],
     excludes: [],
     evidence: ["request"],
+    flowId: "BF-0001",
   };
 
-  expect(edge(acceptRouting("accepted", routingProposal([capability])))).toEqual({
+  expect(edge(acceptRouting("accepted", routingProposal([story])))).toEqual({
     state: "awaiting_input",
     events: ["question-opened", "unsettled-material-input"],
   });
 });
 
-it("TC-0018-0141 (TDD-0166): missing-capability", () => {
+it("missing-capability", () => {
   expect(edge(acceptRouting("blocked"))).toEqual({
     state: "blocked",
     events: ["missing-capability"],
   });
 });
 
-it("TC-0018-0141 (TDD-0167): dispatch-work-order", () => {
+it("dispatch-work-order", () => {
   const issued = ["work-order-issued", "dispatch-work-order"];
 
   expect([
@@ -241,7 +235,7 @@ it("TC-0018-0141 (TDD-0167): dispatch-work-order", () => {
   ]);
 });
 
-it("TC-0018-0141 (TDD-0168): required-plan-revision", () => {
+it("required-plan-revision", () => {
   const snapshot = { ...readyRun(), routingReceiptRef: "receipts/routing-1.json" };
   const facts: Facts = { receiptValidity: { "receipts/routing-1.json": "stale" } };
   const revised = { state: "routing", events: ["required-plan-revision"] };
@@ -252,21 +246,21 @@ it("TC-0018-0141 (TDD-0168): required-plan-revision", () => {
   ]).toEqual([revised, revised]);
 });
 
-it("TC-0018-0141 (TDD-0169): validated-final-result-and-target", () => {
+it("validated-final-result-and-target", () => {
   expect(edge(decide(readySnapshot(), { operation: "finish" }, metFacts()))).toEqual({
     state: "completed",
     events: ["validated-final-result-and-target"],
   });
 });
 
-it("TC-0018-0141 (TDD-0170): accept-nonfinal-result", () => {
+it("accept-nonfinal-result", () => {
   expect(edge(acceptStage("accepted"))).toEqual({
     state: "ready",
     events: ["accept-nonfinal-result"],
   });
 });
 
-it("TC-0018-0141 (TDD-0171): material-decision", () => {
+it("material-decision", () => {
   const featurePlan = {
     route: "feature",
     stages: [
@@ -279,9 +273,14 @@ it("TC-0018-0141 (TDD-0171): material-decision", () => {
     operation: "CREATE",
     effect: "proceed",
     target: {
-      kind: "new_capability",
+      kind: "new_story",
       slotId: "slot-3-1",
-      capability: { goal: "Export retries", covers: ["Retry a failed export"], excludes: [] },
+      story: {
+        goal: "Export retries",
+        covers: ["Retry a failed export"],
+        excludes: [],
+        flowId: "BF-0001",
+      },
     },
   };
   const atIssue = decide(
@@ -300,20 +299,20 @@ it("TC-0018-0141 (TDD-0171): material-decision", () => {
   expect([edge(atIssue), edge(atAccept)]).toEqual([waiting, waiting]);
 });
 
-it("TC-0018-0141 (TDD-0172): unrun-or-unresolved-dependency", () => {
+it("unrun-or-unresolved-dependency", () => {
   const blocked = { state: "blocked", events: ["unrun-or-unresolved-dependency"] };
 
   expect([edge(acceptStage("unrun")), edge(acceptStage("blocked"))]).toEqual([blocked, blocked]);
 });
 
-it("TC-0018-0141 (TDD-0173): observed-session-interruption", () => {
+it("observed-session-interruption", () => {
   expect(edge(decide(runningRun(), { operation: "resume" }, {}))).toEqual({
     state: "running",
     events: ["observed-session-interruption", "reconciled-resume", "dispatch-work-order"],
   });
 });
 
-it("TC-0018-0141 (TDD-0174): scope-or-obligation-revision", () => {
+it("scope-or-obligation-revision", () => {
   const bugfixPlan = {
     route: "bugfix",
     stages: [
@@ -331,7 +330,7 @@ it("TC-0018-0141 (TDD-0174): scope-or-obligation-revision", () => {
   const ready = {
     run: { id: "run-bugfix", state: "ready", sequence: 4 },
     plan: bugfixPlan,
-    specBinding,
+    flowBinding,
   };
   const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;
@@ -351,7 +350,7 @@ it("TC-0018-0141 (TDD-0174): scope-or-obligation-revision", () => {
         diagnosis: {
           verdict: "expectation-differs",
           reproductionRef: "evidence/reproduction.json",
-          matchedRowIds: ["TDD-0004"],
+          matchedIds: ["EX-0007-0002-01"],
         },
       },
     },
@@ -361,21 +360,21 @@ it("TC-0018-0141 (TDD-0174): scope-or-obligation-revision", () => {
   expect(edge(accepted)).toEqual({ state: "routing", events: ["scope-or-obligation-revision"] });
 });
 
-it("TC-0018-0141 (TDD-0175): valid-answer-no-replan", () => {
+it("valid-answer-no-replan", () => {
   expect(edge(answer("keep"))).toEqual({
     state: "ready",
     events: ["authorization-recorded", "valid-answer-no-replan"],
   });
 });
 
-it("TC-0018-0141 (TDD-0176): answer-changes-scope", () => {
+it("answer-changes-scope", () => {
   expect(edge(answer("narrow"))).toEqual({
     state: "routing",
     events: ["authorization-recorded", "answer-changes-scope"],
   });
 });
 
-it("TC-0018-0141 (TDD-0177): blocker-cleared-and-revalidated", () => {
+it("blocker-cleared-and-revalidated", () => {
   const blocked = {
     ...readyRun(),
     run: { id: "run-edge", state: "blocked", sequence: 7 },
@@ -390,7 +389,7 @@ it("TC-0018-0141 (TDD-0177): blocker-cleared-and-revalidated", () => {
   });
 });
 
-it("TC-0018-0141 (TDD-0178): reconciled-resume", () => {
+it("reconciled-resume", () => {
   const resumed = decide(runningRun(), { operation: "resume" }, {});
 
   expect(edge(resumed).events.slice(0, 2)).toEqual([
@@ -399,7 +398,7 @@ it("TC-0018-0141 (TDD-0178): reconciled-resume", () => {
   ]);
 });
 
-it("TC-0018-0141 (TDD-0179): reconciled-with-blocker", () => {
+it("reconciled-with-blocker", () => {
   const resumed = decide(runningRun(), { operation: "resume" }, { cause: "policy-drift" });
 
   expect({ ...edge(resumed), workOrder: resumed.verdict.workOrder }).toEqual({
@@ -484,27 +483,27 @@ function operate(snapshot: Snapshot, operation: string) {
 }
 
 const noEdge: [string, string, string, string[]][] = [
-  ["TC-0018-0142 (TDD-0180): next", "created", "next", ["invalid-input"]],
-  ["TC-0018-0142 (TDD-0181): accept", "created", "accept", ["invalid-input", "work-order"]],
-  ["TC-0018-0142 (TDD-0182): decision-answer", "created", "decision", ["no-open-question"]],
-  ["TC-0018-0142 (TDD-0183): finish", "created", "finish", ["verify-missing"]],
-  ["TC-0018-0143 (TDD-0184): decision-answer", "routing", "decision", ["no-open-question"]],
-  ["TC-0018-0143 (TDD-0185): resume", "routing", "resume", ["invalid-input"]],
-  ["TC-0018-0143 (TDD-0186): finish", "routing", "finish", ["verify-missing"]],
-  ["TC-0018-0144 (TDD-0187): accept", "ready", "accept", ["invalid-input", "work-order"]],
-  ["TC-0018-0144 (TDD-0188): decision-answer", "ready", "decision", ["no-open-question"]],
-  ["TC-0018-0145 (TDD-0189): decision-answer", "running", "decision", ["no-open-question"]],
-  ["TC-0018-0145 (TDD-0190): finish", "running", "finish", ["work-order-outstanding"]],
-  ["TC-0018-0146 (TDD-0191): accept", "awaiting_input", "accept", ["invalid-input", "work-order"]],
-  ["TC-0018-0146 (TDD-0192): resume", "awaiting_input", "resume", ["invalid-input"]],
-  ["TC-0018-0146 (TDD-0193): finish", "awaiting_input", "finish", ["run-waiting"]],
-  ["TC-0018-0147 (TDD-0194): accept", "blocked", "accept", ["invalid-input", "work-order"]],
-  ["TC-0018-0147 (TDD-0195): decision-answer", "blocked", "decision", ["no-open-question"]],
-  ["TC-0018-0147 (TDD-0196): finish", "blocked", "finish", ["run-waiting"]],
-  ["TC-0018-0148 (TDD-0197): next", "interrupted", "next", ["invalid-input"]],
-  ["TC-0018-0148 (TDD-0198): accept", "interrupted", "accept", ["invalid-input"]],
-  ["TC-0018-0148 (TDD-0199): decision-answer", "interrupted", "decision", ["no-open-question"]],
-  ["TC-0018-0148 (TDD-0200): finish", "interrupted", "finish", ["stage-unaccepted"]],
+  ["next", "created", "next", ["invalid-input"]],
+  ["accept", "created", "accept", ["invalid-input", "work-order"]],
+  ["decision-answer", "created", "decision", ["no-open-question"]],
+  ["finish", "created", "finish", ["verify-missing"]],
+  ["decision-answer", "routing", "decision", ["no-open-question"]],
+  ["resume", "routing", "resume", ["invalid-input"]],
+  ["finish", "routing", "finish", ["verify-missing"]],
+  ["accept", "ready", "accept", ["invalid-input", "work-order"]],
+  ["decision-answer", "ready", "decision", ["no-open-question"]],
+  ["decision-answer", "running", "decision", ["no-open-question"]],
+  ["finish", "running", "finish", ["work-order-outstanding"]],
+  ["accept", "awaiting_input", "accept", ["invalid-input", "work-order"]],
+  ["resume", "awaiting_input", "resume", ["invalid-input"]],
+  ["finish", "awaiting_input", "finish", ["run-waiting"]],
+  ["accept", "blocked", "accept", ["invalid-input", "work-order"]],
+  ["decision-answer", "blocked", "decision", ["no-open-question"]],
+  ["finish", "blocked", "finish", ["run-waiting"]],
+  ["next", "interrupted", "next", ["invalid-input"]],
+  ["accept", "interrupted", "accept", ["invalid-input"]],
+  ["decision-answer", "interrupted", "decision", ["no-open-question"]],
+  ["finish", "interrupted", "finish", ["stage-unaccepted"]],
 ];
 
 for (const [title, state, operation, named] of noEdge) {
@@ -528,9 +527,9 @@ const terminalStop: Parameters<typeof decide>[1] = {
 };
 
 for (const [title, state] of [
-  ["TC-0018-0149 (TDD-0201): completed", "completed"],
-  ["TC-0018-0149 (TDD-0202): cancelled", "cancelled"],
-  ["TC-0018-0149 (TDD-0203): failed", "failed"],
+  ["completed", "completed"],
+  ["cancelled", "cancelled"],
+  ["failed", "failed"],
 ] satisfies [string, string][]) {
   it(title, () => {
     const snapshot = inState(state);
@@ -549,7 +548,7 @@ for (const [title, state] of [
   });
 }
 
-it("TC-0018-0150 (TDD-0204): Decide finish on a run in running", () => {
+it("Decide finish on a run in running", () => {
   const snapshot = { ...runningRun(), completionTarget: "qfai_done" as const };
   const finished = decide(snapshot, { operation: "finish" }, metFacts());
   const outstanding = (finished.verdict.unmet ?? []).filter(

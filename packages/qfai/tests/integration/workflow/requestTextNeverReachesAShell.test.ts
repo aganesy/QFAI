@@ -1,6 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0161
-// QFAI:SPEC-0018:TC-0018-0162
-// QFAI:SPEC-0018:TC-0018-0163
+// QFAI:AC-0001-0197-02
+// QFAI:EX-0001-0197-05
 
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -34,13 +33,13 @@ async function namesUnder(dir: string): Promise<string[]> {
   return entries.map((entry) => entry.name);
 }
 
-it("TC-0018-0161 (TDD-0359): Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job", async () => {
+it("Built CLI start with the request of EX-0018-0086, on the Linux and the Windows job", async () => {
   const root = await minimalProject();
   const text =
     "Export it $(touch pwned) `touch pwned`; touch pwned & echo | more > pwned %PATH% ^pwned";
   const runId = await startRun(root, { ...START_INPUT, request: { text } });
   const privateCopy: unknown = JSON.parse(
-    await readFile(path.join(root, ".qfai", "runs", runId, "request.private.json"), "utf8"),
+    await readFile(path.join(root, ".qfai", "run", runId, "request.private.json"), "utf8"),
   );
 
   expect({
@@ -52,7 +51,7 @@ it("TC-0018-0161 (TDD-0359): Built CLI start with the request of EX-0018-0086, o
 // `start` naming `inPath`, and the run directories it left behind.
 async function startNaming(root: string, inPath: string) {
   const started = workflow(root, ["start", "--in", inPath]);
-  const runs = (await readdir(path.join(root, ".qfai", "runs")).catch(() => [])).filter((name) =>
+  const runs = (await readdir(path.join(root, ".qfai", "run")).catch(() => [])).filter((name) =>
     name.startsWith("run-"),
   );
   return {
@@ -68,41 +67,41 @@ const IN_PATH_REFUSED = {
   runs: [],
 };
 
-it("TC-0018-0162 (TDD-0360): outside-runs", async () => {
+it("outside-runs", async () => {
   const root = await minimalProject();
   await writeFile(path.join(root, "start.json"), JSON.stringify(START_INPUT));
 
   expect(await startNaming(root, "start.json")).toEqual(IN_PATH_REFUSED);
 });
 
-it("TC-0018-0162 (TDD-0361): dotdot-escape", async () => {
+it("dotdot-escape", async () => {
   const root = await minimalProject();
   await inbox(root, null, "start", START_INPUT);
   await writeFile(path.join(root, "start.json"), JSON.stringify(START_INPUT));
 
-  expect(await startNaming(root, ".qfai/runs/inbox/../../../start.json")).toEqual(IN_PATH_REFUSED);
+  expect(await startNaming(root, ".qfai/run/inbox/../../../start.json")).toEqual(IN_PATH_REFUSED);
 });
 
-it("TC-0018-0162 (TDD-0362): link-escape", async () => {
+it("link-escape", async () => {
   const root = await minimalProject();
   const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
   await writeFile(path.join(outside, "start.json"), JSON.stringify(START_INPUT));
-  await mkdir(path.join(root, ".qfai", "runs", "inbox"), { recursive: true });
-  await symlink(outside, path.join(root, ".qfai", "runs", "inbox", "linked"), "junction");
-  const refused = await startNaming(root, ".qfai/runs/inbox/linked/start.json");
+  await mkdir(path.join(root, ".qfai", "run", "inbox"), { recursive: true });
+  await symlink(outside, path.join(root, ".qfai", "run", "inbox", "linked"), "junction");
+  const refused = await startNaming(root, ".qfai/run/inbox/linked/start.json");
   await rm(outside, { recursive: true, force: true });
 
   expect(refused).toEqual(IN_PATH_REFUSED);
 });
 
-it("TC-0018-0162 (TDD-0363): directory", async () => {
+it("directory", async () => {
   const root = await minimalProject();
-  await mkdir(path.join(root, ".qfai", "runs", "inbox", "start.json"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "run", "inbox", "start.json"), { recursive: true });
 
-  expect(await startNaming(root, ".qfai/runs/inbox/start.json")).toEqual(IN_PATH_REFUSED);
+  expect(await startNaming(root, ".qfai/run/inbox/start.json")).toEqual(IN_PATH_REFUSED);
 });
 
-it("TC-0018-0163 (TDD-0364): Scan the sources under core/workflow/ and the workflow command", async () => {
+it("Scan the sources under core/workflow/ and the workflow command", async () => {
   const files = [
     ...(await readdir(path.join(SOURCE_ROOT, "core", "workflow"))).map((name) =>
       path.join(SOURCE_ROOT, "core", "workflow", name),

@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0066
+// QFAI:EX-0001-0193-02
 
 import { expect, it } from "vitest";
 
@@ -12,10 +12,10 @@ const plan = {
       "bugfix-sdd-append",
       "sdd_append",
       "qfai-sdd",
-      "defect-row-seeding",
-      "missing_test_row_needed",
+      "defect-example-seeding",
+      "missing_example_needed",
     ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "missing_test_row_needed"],
+    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
     ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
   ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
     stageInstanceId,
@@ -29,13 +29,13 @@ const plan = {
 const reproductionRef = "evidence/empty-value-reproduction.json";
 const reproductionDigest = "a".repeat(64);
 
-it("TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-test diagnosis", () => {
+it("Issue the sdd_append work order after a missing-test diagnosis", () => {
   const decision = decide(
     {
       run: { id: "run-append", state: "ready", sequence: 7 },
       plan,
-      specBinding: { specId: "spec-0007" },
-      diagnosis: { verdict: "missing-test", reproductionRef, matchedRowIds: [] },
+      flowBinding: { flowId: "BF-0007" },
+      diagnosis: { verdict: "missing-test", reproductionRef, matchedIds: [] },
       acceptedStages: [
         { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
       ],
@@ -49,16 +49,12 @@ it("TC-0018-0066 (TDD-0083): Issue the sdd_append work order after a missing-tes
   expect({
     stageKind: workOrder?.stageKind,
     inputs: workOrder?.inputs,
-    changeRequestWritable: writable.some(
-      (area) => area.startsWith(".qfai/decisions") || area.includes("change-request"),
-    ),
-    stageKindsWritingChangeRequests: plan.stages.filter((stage) =>
-      /change[-_]?request/i.test(`${stage.stageKind} ${stage.operation}`),
+    statementWritable: writable.some((area) =>
+      /(?:01_User-story|02_Acceptance-Criteria).md$/.test(area),
     ),
   }).toEqual({
     stageKind: "sdd_append",
     inputs: [{ path: reproductionRef, digest: reproductionDigest }],
-    changeRequestWritable: false,
-    stageKindsWritingChangeRequests: [],
+    statementWritable: false,
   });
 });

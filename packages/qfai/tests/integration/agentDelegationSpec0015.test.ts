@@ -1,421 +1,162 @@
 /**
- * Integration: Agent Delegation Framework
- *
- * Validates that the agent delegation framework (spec-0015) requirements
- * are covered by the agent catalog, routing, concrete-pattern review bounds,
- * adopter-profile preservation, agent definition validator, and real-delegation
- * capability and hard-stop contracts.
+ * Integration coverage for agent card definitions, package routing defaults,
+ * and delegation behavior.
  */
-// QFAI:SPEC-0015:TC-0015-0001
-// QFAI:SPEC-0015:TC-0015-0002
-// QFAI:SPEC-0015:TC-0015-0003
-// QFAI:SPEC-0015:TC-0015-0004
-// QFAI:SPEC-0015:TC-0015-0005
-// QFAI:SPEC-0015:TC-0015-0006
-// QFAI:SPEC-0015:TC-0015-0007
-// QFAI:SPEC-0015:TC-0015-0008
-// QFAI:SPEC-0015:TC-0015-0009
-// QFAI:SPEC-0015:TC-0015-0010
-// QFAI:SPEC-0015:TC-0015-0011
-// QFAI:SPEC-0015:TC-0015-0012
-import { access, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+// QFAI:AC-0001-0167-01
+// QFAI:EX-0001-0169-01
+// QFAI:EX-0001-0169-02
+import { mkdtemp, readdir, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
-import { isMap, parseDocument, parse as parseYaml } from "yaml";
+import { parse as parseYaml } from "yaml";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { parseAgentFrontmatter } from "../../src/core/agentFrontmatter.js";
-import {
-  hashAssistantAssetText,
-  readAssistantAssetsLock,
-  writeAssistantAssetsLock,
-} from "../../src/core/assistantAssetProvenance.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
-const AGENTS_DIR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
+const ASSETS = path.resolve(__dirname, "..", "..", "assets");
+const AGENTS_DIR = path.join(ASSETS, "init", ".qfai", "assistant", "agent");
+const DEFAULTS_DIR = path.join(ASSETS, "defaults");
+const SHARED_DELEGATION_BASELINE = path.join(
+  ASSETS,
   "init",
   ".qfai",
   "assistant",
-  "agents",
-);
-
-// Post-recut: agent-catalog.yml / agent-routing.yml / review-profiles.yml
-// live in manifest/, review-gate.rules.yml lives in catalog/. Tests
-// resolve per-file paths below.
-const MANIFEST_DIR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "manifest",
-);
-const CATALOG_DIR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "catalog",
-);
-
-const AGENT_VALIDATOR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "src",
-  "core",
-  "validators",
-  "agentDefinition.ts",
-);
-
-const SHARED_DELEGATION_BASELINE = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "constitution",
+  "rule",
   "shared-skill-delegation-baseline.md",
 );
-
-const QFAI_IMPLEMENT_SKILL = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
+const QFAI_IMPLEMENT_SKILL = path.join(
+  ASSETS,
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
-
 const LIVE_SHARED_DELEGATION_BASELINE = path.resolve(
   __dirname,
-  "..",
-  "..",
-  "..",
-  "..",
+  "../../../..",
   ".qfai",
   "assistant",
-  "constitution",
+  "rule",
   "shared-skill-delegation-baseline.md",
 );
-
 const LIVE_QFAI_IMPLEMENT_SKILL = path.resolve(
   __dirname,
-  "..",
-  "..",
-  "..",
-  "..",
+  "../../../..",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
 
-const PATTERN_REVIEW_BOUND =
-  "This catalog bound overrides numeric targets, including default_target, " +
-  "in preserved review-profiles.yml. Independently required gates and product " +
-  "obligations still apply. N/A never excuses a missing mandatory pairing.";
-
-async function readAsset(filePath: string) {
+async function readAsset(filePath: string): Promise<string> {
   return readFile(filePath, "utf-8");
 }
 
-type ReviewGateRules = {
-  quality_gates?: { defaults?: Array<{ id?: string; role?: string }> };
-  optional_review_modes?: { supported?: string[] };
-};
-
-async function readReviewGateRules(): Promise<ReviewGateRules> {
-  return readYamlMapping(path.join(CATALOG_DIR, "review-gate.rules.yml"));
-}
-
-function yamlMapping(value: unknown, label: string): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${label} is not a YAML mapping`);
-  }
-  return Object.fromEntries(Object.entries(value));
-}
-
-async function readYamlMapping(filePath: string): Promise<Record<string, unknown>> {
-  const parsed: unknown = parseYaml(await readAsset(filePath));
-  return yamlMapping(parsed, path.basename(filePath));
-}
-
-function getSection(content: string, heading: string) {
+function getSection(content: string, heading: string): string {
   const start = content.indexOf(heading);
   expect(start).toBeGreaterThanOrEqual(0);
-
   const afterHeading = content.slice(start + heading.length);
   const nextHeadingOffset = afterHeading.search(/\n### |\n## /);
-
-  if (nextHeadingOffset === -1) {
-    return afterHeading.trim();
-  }
-
-  return afterHeading.slice(0, nextHeadingOffset).trim();
+  return (
+    nextHeadingOffset === -1 ? afterHeading : afterHeading.slice(0, nextHeadingOffset)
+  ).trim();
 }
 
-// TC-0015-0001: Agent Catalog 19 Entries
-describe("TC-0015-0001: Agent Catalog 19 Entries", () => {
-  it("agent-catalog.yml exists in assistant/manifest", async () => {
-    const catalogPath = path.join(MANIFEST_DIR, "agent-catalog.yml");
-    await expect(access(catalogPath)).resolves.toBeUndefined();
-  });
-});
+const MANIFEST_FILE_NAMES = new Set([
+  "agent-catalog.yml",
+  "agent-routing.yml",
+  "review-profiles.yml",
+  "review-gate.rules.yml",
+]);
 
-// TC-0015-0002: Standard Contract Structure
-describe("TC-0015-0002: Standard Contract Structure", () => {
-  it("agentDefinition validator checks required sections", async () => {
-    const content = await readFile(AGENT_VALIDATOR, "utf-8");
-    expect(content).toContain("Mission");
-  });
+/** Every file below `dir`, at any depth, whose name is one of the former manifest files. */
+async function manifestFilesUnder(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { recursive: true });
+  return entries.filter((entry) => MANIFEST_FILE_NAMES.has(path.basename(entry)));
+}
 
-  it("canonical agent markdown files include Claude/GitHub Copilot-compatible frontmatter", async () => {
-    const files = (await readdir(AGENTS_DIR)).filter((fileName) => fileName.endsWith(".md"));
-    for (const fileName of files) {
-      const content = await readFile(path.join(AGENTS_DIR, fileName), "utf-8");
-      const parsed = parseAgentFrontmatter(content);
-      expect(parsed.ok, `${fileName}: invalid frontmatter`).toBe(true);
-      if (!parsed.ok) {
-        continue;
-      }
-      expect(parsed.frontmatter.name, `${fileName}: wrong name`).toBe(
-        fileName.replace(/\.md$/, ""),
-      );
-      expect(
-        parsed.frontmatter.description.length,
-        `${fileName}: missing description`,
-      ).toBeGreaterThan(0);
-      expect(parsed.frontmatter.tools.length, `${fileName}: missing tools`).toBeGreaterThan(0);
-    }
-  });
-});
-
-// TC-0015-0003: Orchestrator No Direct Generation
-describe("TC-0015-0003: Orchestrator No Direct Generation", () => {
-  it("orchestrator agent defines delegation-only protocol", async () => {
-    const orchestratorPath = path.join(AGENTS_DIR, "orchestrator.md");
-    const content = await readFile(orchestratorPath, "utf-8");
-    expect(content).toMatch(/MUST NOT.*generat|delegat/i);
-  });
-});
-
-// TC-0015-0004: Devils-Advocate Concrete Alternative
-describe("TC-0015-0004: Devils-Advocate Concrete Alternative", () => {
-  it("review-gate rules declare the reviewer gate defaults and optional review modes", async () => {
-    // Asserted against the parsed document, not the raw text: a substring
-    // check passes on a key that only appears in a comment, and breaks on a
-    // reflow that changes nothing semantically.
-    const rules = await readReviewGateRules();
-    expect(Object.keys(rules)).toEqual(expect.arrayContaining(["quality_gates"]));
-    expect(rules.quality_gates?.defaults?.map((entry) => entry.id)).toContain(
-      "completion-reviewer",
-    );
-    expect(rules.optional_review_modes?.supported).toBeInstanceOf(Array);
-  });
-});
-
-// TC-0015-0005: Devils-Advocate 3-FAIL Demotion
-describe("TC-0015-0005: Devils-Advocate 3-FAIL Demotion", () => {
-  it("review-gate rules support devils-advocate review mode", async () => {
-    const rules = await readReviewGateRules();
-    expect(rules.optional_review_modes?.supported).toContain("devils-advocate");
-  });
-});
-
-// TC-0015-0006: Pattern-Doubler Rationale Required
-describe("TC-0015-0006: Pattern-Doubler Rationale Required", () => {
-  it("keeps concrete-pattern review advisory with rationale and no numeric target", async () => {
-    const profilesPath = path.join(MANIFEST_DIR, "review-profiles.yml");
-    const profiles = await readYamlMapping(profilesPath);
-    const modes = yamlMapping(profiles.optional_modes, "optional_modes");
-    const patternDoubler = yamlMapping(modes["pattern-doubler"], "pattern-doubler");
-
-    expect(patternDoubler.kind).toBe("advisory");
-    expect(patternDoubler.rationale_required).toBe(true);
-    expect(patternDoubler).not.toHaveProperty("default_target");
-    expect(patternDoubler.description).toBe(
-      "Propose missing concrete business-flow, US, AC, EX or TC coverage with rationale; " +
-        "do not demand more abstract rules or numeric targets.",
-    );
-  });
-});
-
-// TC-0015-0007: Pattern-Doubler N/A Default
-describe("TC-0015-0007: Pattern-Doubler N/A Default", () => {
-  it("bounds more requests to concrete artifacts and overrides preserved numeric targets", async () => {
-    const rules = await readYamlMapping(path.join(CATALOG_DIR, "review-gate.rules.yml"));
-    const modes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
-    expect(modes).toHaveProperty("pattern-doubler");
-    const patternDoubler = yamlMapping(modes["pattern-doubler"], "pattern-doubler");
-
-    expect(modes.supported).toContain("pattern-doubler");
-    expect(patternDoubler.more_scope).toEqual(["business-flow", "US", "AC", "EX", "TC"]);
-    expect(patternDoubler.excluded_more_scope).toEqual([
-      "BR",
-      "nonfunctional-floor",
-      "policy",
-      "decision",
-      "architecture",
-    ]);
-    expect(patternDoubler.abstract_only_result).toBe("N/A");
-    expect(patternDoubler.numeric_targets).toBe("ignored");
-    expect(patternDoubler.missing_mandatory_pairing).toBe("required");
-    expect(patternDoubler.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
-  });
-
-  it("preserves adopter profiles on both init paths while emitting the canonical target bound", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-pattern-review-"));
-    try {
-      await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      const assistantDir = path.join(root, ".qfai", "assistant");
-      const catalogPath = path.join(assistantDir, "catalog", "review-gate.rules.yml");
-      const currentCatalog = await readAsset(catalogPath);
-      const catalog = parseDocument(currentCatalog);
-      expect(catalog.getIn(["optional_review_modes", "pattern-doubler", "numeric_targets"])).toBe(
-        "ignored",
-      );
-      expect(
-        catalog.getIn([
-          "optional_review_modes",
-          "pattern-doubler",
-          "preserved_manifest_precedence",
-        ]),
-      ).toBe(PATTERN_REVIEW_BOUND);
-      const profilesPath = path.join(assistantDir, "manifest", "review-profiles.yml");
-      const profiles = parseDocument(await readAsset(profilesPath));
-      const modes = profiles.get("optional_modes");
-      if (!isMap(modes)) throw new Error("optional_modes is not a YAML mapping");
-      const profile = modes.get("pattern-doubler");
-      if (!isMap(profile)) throw new Error("pattern-doubler is not a YAML mapping");
-      profile.set("default_target", "2x current ID-bearing items");
-      profile.set("description", "Project-specific pattern review guidance.");
-      const adopterProfiles = profiles.toString({ lineWidth: 0 });
-      await writeFile(profilesPath, adopterProfiles, "utf-8");
-
-      await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      expect(await readAsset(profilesPath)).toBe(adopterProfiles);
-      expect(await readAsset(catalogPath)).toBe(currentCatalog);
-
-      catalog.set("optional_review_modes", {
-        review_profiles_ssot: ".qfai/assistant/manifest/review-profiles.yml",
-        supported: ["devils-advocate", "pattern-doubler"],
-      });
-      const olderCatalog = catalog.toString({ lineWidth: 0 });
-      await writeFile(catalogPath, olderCatalog, "utf-8");
-      expect(
-        yamlMapping(
-          (await readYamlMapping(catalogPath)).optional_review_modes,
-          "optional_review_modes",
-        ),
-      ).not.toHaveProperty("pattern-doubler");
-      const previousReceipt = await readAssistantAssetsLock(assistantDir);
-      if (previousReceipt === null) throw new Error("initializer wrote no asset receipt");
-      const olderCatalogHash = hashAssistantAssetText(olderCatalog);
-      previousReceipt.files["catalog/review-gate.rules.yml"] = olderCatalogHash;
-      await writeAssistantAssetsLock(assistantDir, previousReceipt);
-      expect(
-        (await readAssistantAssetsLock(assistantDir))?.files["catalog/review-gate.rules.yml"],
-      ).toBe(olderCatalogHash);
-
-      for (const force of [false, true]) {
-        await captureStdout(async () => {
-          await runInit({ dir: root, force, dryRun: false, yes: true });
-        });
-        expect(await readAsset(profilesPath), `force=${force}: adopter profiles changed`).toBe(
-          adopterProfiles,
-        );
-        if (!force) {
-          expect(await readAsset(catalogPath)).toBe(olderCatalog);
+describe("agent cards are the only definitions", () => {
+  it("ships nineteen complete cards without project manifest copies", async () => {
+    const cards = (await readdir(AGENTS_DIR)).filter((name) => name.endsWith(".md"));
+    expect(cards).toHaveLength(19);
+    const repeatedMissions: string[] = [];
+    for (const fileName of cards) {
+      const parsed = parseAgentFrontmatter(await readAsset(path.join(AGENTS_DIR, fileName)));
+      expect(parsed.ok, fileName).toBe(true);
+      if (parsed.ok) {
+        expect(parsed.frontmatter.name).toBe(fileName.slice(0, -3));
+        expect(parsed.frontmatter.mission.length).toBeGreaterThan(0);
+        if (parsed.frontmatter.mission === parsed.frontmatter.description) {
+          repeatedMissions.push(fileName);
         }
       }
-      const rules = await readYamlMapping(catalogPath);
-      const reviewModes = yamlMapping(rules.optional_review_modes, "optional_review_modes");
-      expect(reviewModes).toHaveProperty("pattern-doubler");
-      const bound = yamlMapping(reviewModes["pattern-doubler"], "pattern-doubler");
-      expect(bound.numeric_targets).toBe("ignored");
-      expect(bound.missing_mandatory_pairing).toBe("required");
-      expect(bound.preserved_manifest_precedence).toBe(PATTERN_REVIEW_BOUND);
-      expect(await readAsset(catalogPath)).toBe(currentCatalog);
-      expect(yamlMapping(rules.required, "required").spec).toEqual(
-        expect.arrayContaining(["UserStories", "AcceptanceCriteria", "Examples", "TestCases"]),
-      );
-      expect(yamlMapping(rules.quality_gates, "quality_gates").defaults).toEqual(
-        expect.arrayContaining([
-          { id: "completion-reviewer", role: "Completion Reviewer" },
-          { id: "qa-gatekeeper", role: "QA Gatekeeper" },
-        ]),
-      );
-      expect(
-        (await readAssistantAssetsLock(assistantDir))?.files["catalog/review-gate.rules.yml"],
-      ).toBe(hashAssistantAssetText(currentCatalog));
+    }
+    expect(
+      repeatedMissions,
+      "mission must state the role's purpose separately from description",
+    ).toEqual([]);
+    const assistant = path.join(ASSETS, "init", ".qfai", "assistant");
+    expect(await manifestFilesUnder(assistant)).toEqual([]);
+  });
 
-      await writeFile(catalogPath, olderCatalog, "utf-8");
-      await captureStdout(async () => {
-        await runInit({ dir: root, force: true, dryRun: false, yes: true });
-      });
-      expect(await readAsset(catalogPath), "mismatching receipt: catalog refreshed").toBe(
-        olderCatalog,
-      );
-      expect(await readAsset(profilesPath), "mismatching receipt: adopter profiles changed").toBe(
-        adopterProfiles,
-      );
+  it("does not write routing or review-profile files during init", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-init-"));
+    try {
+      await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+      expect(await manifestFilesUnder(path.join(root, ".qfai", "assistant"))).toEqual([]);
     } finally {
       await removeTempTree(root);
     }
   });
 });
 
-// TC-0015-0008: All-Reviewer FAIL Obligation
-describe("TC-0015-0008: All-Reviewer FAIL Obligation", () => {
-  it("review-gate rules require completion-reviewer", async () => {
-    const rulesPath = path.join(CATALOG_DIR, "review-gate.rules.yml");
-    const content = await readFile(rulesPath, "utf-8");
-    expect(content).toContain("completion-reviewer");
-    expect(content).toContain("reviewers");
+describe("routing defaults are package data", () => {
+  it("keeps routing and review profiles together outside init assets", async () => {
+    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
+      routing: Array<{ skill: string; phases: Array<{ id: string }>; review_profile: string }>;
+    };
+    const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
+      profiles: Record<string, unknown>;
+      optional_modes: Record<string, unknown>;
+    };
+    expect(routing.routing.some((entry) => entry.skill === "qfai-sdd")).toBe(true);
+    expect(Object.keys(profiles.profiles)).not.toContain("full-harness");
+    expect(profiles.optional_modes).toHaveProperty("pattern-doubler");
+    expect(profiles.optional_modes).toHaveProperty("devils-advocate");
+  });
+
+  it("routes the migration skill through the required three phases", async () => {
+    const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
+      routing: Array<{
+        skill: string;
+        phases: Array<{ id: string; mandatory_agents: string[]; blocking_agents: string[] }>;
+        review_profile: string;
+      }>;
+    };
+    const migration = routing.routing.find(
+      (entry) => entry.skill === "qfai-migration-spec-to-story",
+    );
+    expect(migration?.phases.map((phase) => phase.id)).toEqual(["plan", "execution", "review"]);
+    expect(migration?.phases[0]?.mandatory_agents).toEqual([
+      "requirements-analyst",
+      "solution-architect",
+    ]);
+    expect(migration?.phases[0]?.blocking_agents).toEqual(["solution-architect"]);
+    expect(migration?.phases[1]?.mandatory_agents).toEqual(["devops-ci-engineer"]);
+    expect(migration?.phases[2]?.blocking_agents).toEqual([
+      "completion-reviewer",
+      "architecture-reviewer",
+    ]);
+    expect(migration?.review_profile).toBe("architecture-heavy");
   });
 });
-
-// TC-0015-0009: Routing SSOT
-describe("TC-0015-0009: Routing SSOT", () => {
-  it("agent-routing.yml exists and defines routing", async () => {
-    const routingPath = path.join(MANIFEST_DIR, "agent-routing.yml");
-    const content = await readFile(routingPath, "utf-8");
-    expect(content).toMatch(/routing|reviewer|skill/i);
-  });
-});
-
-// TC-0015-0010: Specialist Responsibilities Preserved
-describe("TC-0015-0010: Specialist Responsibilities Preserved", () => {
-  it("agent-catalog.yml contains agent definitions", async () => {
-    const catalogPath = path.join(MANIFEST_DIR, "agent-catalog.yml");
-    const content = await readFile(catalogPath, "utf-8");
-    expect(content).toMatch(/agent|role|mission/i);
-  });
-});
-
 // TC-0015-0011: Delegation Failure Hard Stop Reporting
 describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
   it("stops the stage and reports hard-stop remediation details", async () => {
@@ -432,7 +173,7 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       baselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
+    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(capabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(capabilitySection).toContain(
@@ -447,20 +188,13 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
       "Retry condition: rerun after the required delegation succeeds",
     );
 
-    expect(skillHardStopSection).toContain("No additional overrides.");
-    expect(skillHardStopSection).toContain("Do not simulate roles.");
-    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
-
     // Live operational files must satisfy the same hard-stop reporting contract
     const liveCapabilitySection = getSection(liveBaselineContent, "### Capability Probe (MUST)");
     const liveBaselineHardStopSection = getSection(
       liveBaselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const liveSkillHardStopSection = getSection(
-      liveSkillContent,
-      "### Delegation Failure (Hard Stop)",
-    );
+    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(liveCapabilitySection).toContain("If the delegation fails, classify the failure first");
     expect(liveCapabilitySection).toContain(
@@ -473,12 +207,6 @@ describe("TC-0015-0011: Delegation Failure Hard Stop Reporting", () => {
     expect(liveBaselineHardStopSection).toContain("User action needed:");
     expect(liveBaselineHardStopSection).toContain(
       "Retry condition: rerun after the required delegation succeeds",
-    );
-
-    expect(liveSkillHardStopSection).toContain("No additional overrides.");
-    expect(liveSkillHardStopSection).toContain("Do not simulate roles.");
-    expect(liveSkillHardStopSection).toContain(
-      "Classify the failure per the baseline taxonomy first",
     );
   });
 });
@@ -499,8 +227,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       baselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const skillCapabilitySection = getSection(skillContent, "### Capability Probe (MUST)");
-    const skillHardStopSection = getSection(skillContent, "### Delegation Failure (Hard Stop)");
+    expect(skillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(baselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       baselineContent.indexOf("### Delegation Failure (Hard Stop)"),
@@ -514,13 +241,6 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     expect(baselineCapabilitySection).toContain(
       "If the delegation fails, classify the failure first",
     );
-
-    expect(skillCapabilitySection).toContain("No additional overrides.");
-    expect(skillCapabilitySection).not.toMatch(/preflight|synthetic/i);
-    expect(skillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      skillContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(skillHardStopSection).toContain("Classify the failure per the baseline taxonomy first");
 
     expect(baselineHardStopSection).toContain("Delegation failure:");
     expect(baselineHardStopSection).toContain("Attempted role:");
@@ -542,11 +262,7 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
       liveBaselineContent,
       "### Delegation Failure (Hard Stop)",
     );
-    const liveSkillCapabilitySection = getSection(liveSkillContent, "### Capability Probe (MUST)");
-    const liveSkillHardStopSection = getSection(
-      liveSkillContent,
-      "### Delegation Failure (Hard Stop)",
-    );
+    expect(liveSkillContent).toContain("rule/shared-skill-delegation-baseline.md");
 
     expect(liveBaselineContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
       liveBaselineContent.indexOf("### Delegation Failure (Hard Stop)"),
@@ -559,15 +275,6 @@ describe("TC-0015-0012: Capability Probe First Real Delegation Contract", () => 
     );
     expect(liveBaselineCapabilitySection).toContain(
       "If the delegation fails, classify the failure first",
-    );
-
-    expect(liveSkillCapabilitySection).toContain("No additional overrides.");
-    expect(liveSkillCapabilitySection).not.toMatch(/preflight|synthetic/i);
-    expect(liveSkillContent.indexOf("### Capability Probe (MUST)")).toBeLessThan(
-      liveSkillContent.indexOf("### Delegation Failure (Hard Stop)"),
-    );
-    expect(liveSkillHardStopSection).toContain(
-      "Classify the failure per the baseline taxonomy first",
     );
 
     expect(liveBaselineHardStopSection).toContain("Delegation failure:");
@@ -605,7 +312,7 @@ describe("delegation failure taxonomy is actionable", () => {
       "init",
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       skillId,
       "SKILL.md",
     );
@@ -640,20 +347,29 @@ describe("delegation failure taxonomy is actionable", () => {
       // the code span `Status (PASS/REVISE)` and the bare Work Orders table
       // header `| ... | Status (PASS/REVISE) |`.
       expect(content).not.toContain("Status (PASS/REVISE)");
-      expect(content).toContain("Status (PASS/REVISE/PENDING)");
+      expect(content).toContain("shared-skill-delegation-baseline.md");
     }
   });
 
-  it("keeps spec-0015 obligations aligned with the two-class contract", async () => {
-    const specDir = path.resolve(__dirname, "..", "..", "..", "..", ".qfai", "specs", "spec-0015");
-    const [ac, br] = await Promise.all([
-      readAsset(path.join(specDir, "03_Acceptance-Criteria.md")),
-      readAsset(path.join(specDir, "04_Business-Rules.md")),
-    ]);
-    for (const content of [ac, br]) {
-      expect(content).toContain("`unavailable`");
-      expect(content).toContain("`saturated`");
-    }
-    expect(br).toContain("classify it before responding");
+  it("keeps the active routing contract aligned with the two failure classes", async () => {
+    const contract = await readAsset(
+      path.resolve(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "..",
+        ".qfai",
+        "spec",
+        "03_contract",
+        "cli",
+        "assistant-routing.md",
+      ),
+    );
+    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0344 |"));
+    expect(rule).toBeDefined();
+    expect(rule).toContain("`unavailable`");
+    expect(rule).toContain("`saturated`");
+    expect(rule).toContain("classify it before responding");
   });
 });

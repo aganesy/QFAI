@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0175
+// QFAI:AC-0001-0199-02
+// QFAI:EX-0001-0199-05
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -16,10 +17,10 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0175 (TDD-0378): Built CLI start with workflow", async () => {
+it("Built CLI start with workflow", async () => {
   const root = await minimalProject("workflow:\n  mode: always\n");
   const started = workflow(root, ["start", "--in", await inbox(root, null, "start", START_INPUT)]);
-  const entries = await readdir(path.join(root, ".qfai", "runs"));
+  const entries = await readdir(path.join(root, ".qfai", "run"));
 
   expect({
     exit: started.status,

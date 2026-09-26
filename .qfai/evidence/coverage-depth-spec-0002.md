@@ -492,7 +492,7 @@ it says so and names what carries it now.
    statements they rest on survive. The rows are untouched until it resolves. Repointing a selector
    at a passing test would resolve the cell while discharging nothing, which is the defect rather
    than its repair; and `done` is not a status a row can be blocked at, so the ledger has no edge
-   that records the wait. The Change Request carries it instead.
+   that records the wait. The Change Request and its work-log entry carry it instead.
 5. **Every obligation in this pack is reported carrier-only.** All five `TC-0002-*` appear under
    `coveredByCarrierOnly.tc` of the report `qfai validate --profile atdd` writes at
    `.qfai/report/atdd-traceability/summary.json`, generated and not carried here. <!-- qfai:not-a-citation .qfai/report/atdd-traceability/summary.json -->

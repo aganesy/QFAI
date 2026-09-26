@@ -10,7 +10,7 @@
  * not this test's subject. It ships filled entries, because a template that
  * emits an empty list hands the author a document that does not validate.
  */
-// QFAI:SPEC-0013:TC-0013-0025
+// QFAI:EX-0001-0159-01
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,7 +26,7 @@ const TEMPLATE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "contracts",
@@ -41,7 +41,7 @@ const AGENT_GUIDE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "agents",
+  "agent",
   "requirements-analyst.md",
 );
 

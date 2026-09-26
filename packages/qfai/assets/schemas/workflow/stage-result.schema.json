@@ -12,14 +12,30 @@
     "attempt",
     "expectedSequence",
     "outcome",
-    "testObservation"
+    "testObservation",
+    "actor"
   ],
   "properties": {
-    "resultId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
-    "workOrderId": { "type": "string", "minLength": 1 },
-    "stageInstanceId": { "type": "string", "minLength": 1 },
-    "attempt": { "type": "integer", "minimum": 1 },
-    "expectedSequence": { "type": "integer", "minimum": 0 },
+    "resultId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,64}$"
+    },
+    "workOrderId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stageInstanceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expectedSequence": {
+      "type": "integer",
+      "minimum": 0
+    },
     "outcome": {
       "enum": [
         "accepted",
@@ -30,9 +46,33 @@
         "unrun"
       ]
     },
-    "testObservation": { "enum": ["pass", "expected_red", "fail", "unrun", "not_applicable"] },
-    "changedFiles": { "type": "array", "items": { "$ref": "#/$defs/fileRef" } },
-    "artifactRefs": { "type": "array", "items": { "$ref": "#/$defs/fileRef" } },
+    "testObservation": {
+      "enum": ["pass", "expected_red", "fail", "unrun", "not_applicable"]
+    },
+    "actor": {
+      "description": "The agent instance that produced the result: the author of a stage's work, the recommender of a routing result.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentInstance"],
+      "properties": {
+        "agentInstance": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "changedFiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileRef"
+      }
+    },
+    "artifactRefs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileRef"
+      }
+    },
     "gateResults": {
       "type": "array",
       "items": {
@@ -40,8 +80,14 @@
         "additionalProperties": false,
         "required": ["gateId", "verdict"],
         "properties": {
-          "gateId": { "type": "string", "minLength": 1 },
-          "verdict": { "type": "string", "minLength": 1 }
+          "gateId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verdict": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -52,17 +98,36 @@
         "additionalProperties": false,
         "required": ["role", "agentInstance", "verdict", "reportRef"],
         "properties": {
-          "role": { "type": "string", "minLength": 1 },
-          "agentInstance": { "type": "string", "minLength": 1 },
-          "verdict": { "type": "string", "minLength": 1 },
-          "reportRef": { "type": "string", "minLength": 1 }
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agentInstance": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verdict": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reportRef": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
-    "debts": { "type": "array", "items": { "$ref": "#/$defs/debt" } },
+    "debts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/debt"
+      }
+    },
     "questions": {
       "type": "array",
-      "items": { "$ref": "urn:qfai:workflow:route-proposal#/$defs/question" }
+      "items": {
+        "$ref": "urn:qfai:workflow:route-proposal#/$defs/question"
+      }
     },
     "notRun": {
       "oneOf": [
@@ -71,8 +136,13 @@
           "additionalProperties": false,
           "required": ["kind", "reason"],
           "properties": {
-            "kind": { "const": "not_applicable" },
-            "reason": { "type": "string", "minLength": 1 }
+            "kind": {
+              "const": "not_applicable"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         {
@@ -80,8 +150,13 @@
           "additionalProperties": false,
           "required": ["kind", "receiptRef"],
           "properties": {
-            "kind": { "const": "reused" },
-            "receiptRef": { "type": "string", "minLength": 1 }
+            "kind": {
+              "const": "reused"
+            },
+            "receiptRef": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       ]
@@ -91,8 +166,13 @@
       "additionalProperties": false,
       "required": ["testId", "failureKind"],
       "properties": {
-        "testId": { "type": "string", "minLength": 1 },
-        "failureKind": { "enum": ["assertion", "collection", "import", "startup", "timeout"] }
+        "testId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failureKind": {
+          "enum": ["assertion", "collection", "import", "startup", "timeout"]
+        }
       }
     },
     "seam": {
@@ -100,47 +180,119 @@
       "additionalProperties": false,
       "required": ["targetTestId", "observation"],
       "properties": {
-        "targetTestId": { "type": "string", "minLength": 1 },
-        "observation": { "type": "string", "minLength": 1 }
+        "targetTestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observation": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "seamRequest": {
       "type": "object",
       "additionalProperties": false,
       "required": ["targetTestId"],
-      "properties": { "targetTestId": { "type": "string", "minLength": 1 } }
+      "properties": {
+        "targetTestId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "testFix": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["citedBefore", "citedAfter", "reviewRef", "rerunRef"],
+      "required": ["citedBefore", "citedAfter"],
       "properties": {
-        "citedBefore": { "type": "string" },
-        "citedAfter": { "type": "string" },
-        "reviewRef": { "type": "string", "minLength": 1 },
-        "rerunRef": { "type": "string", "minLength": 1 }
+        "citedBefore": {
+          "description": "The BF, AC and EX IDs the test annotates, and a digest of the text of those items and of the rules that cite them.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ids", "digest"],
+          "properties": {
+            "ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "digest": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "citedAfter": {
+          "description": "The BF, AC and EX IDs the test annotates, and a digest of the text of those items and of the rules that cite them.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ids", "digest"],
+          "properties": {
+            "ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "digest": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "reviewRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rerunRef": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "regressionFix": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["testId", "rerunRef", "reviewRef"],
+      "required": ["testId"],
       "properties": {
-        "testId": { "type": "string", "minLength": 1 },
-        "rerunRef": { "type": "string", "minLength": 1 },
-        "reviewRef": { "type": "string", "minLength": 1 }
+        "testId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rerunRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewRef": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "diagnosis": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["verdict", "reproductionRef", "matchedRowIds"],
+      "required": ["verdict", "reproductionRef", "matchedIds"],
       "properties": {
         "verdict": {
           "enum": ["missing-test", "defective-test", "regression", "expectation-differs"]
         },
-        "reproductionRef": { "type": "string", "minLength": 1 },
-        "matchedRowIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        "reproductionRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matchedIds": {
+          "description": "BF, AC or EX IDs of the bound flow; the first decides the next stage.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(BF-\\d{4}|AC-\\d{4}-\\d{4}-\\d{2}|EX-\\d{4}-\\d{4}-\\d{2})$"
+          }
+        }
       }
     },
     "bindings": {
@@ -148,11 +300,23 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["slotId", "capabilityId", "specId"],
+        "required": ["slotId", "flowId", "storyIds"],
         "properties": {
-          "slotId": { "type": "string", "minLength": 1 },
-          "capabilityId": { "type": "string", "minLength": 1 },
-          "specId": { "type": "string", "minLength": 1 }
+          "slotId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "flowId": {
+            "type": "string",
+            "pattern": "^BF-\\d{4}$"
+          },
+          "storyIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^US-\\d{4}-\\d{4}$"
+            }
+          }
         }
       }
     },
@@ -161,8 +325,13 @@
       "additionalProperties": false,
       "required": ["status", "attempt"],
       "properties": {
-        "status": { "enum": ["saturated", "unavailable"] },
-        "attempt": { "type": "integer", "minimum": 1 }
+        "status": {
+          "enum": ["saturated", "unavailable"]
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "measurement": {
@@ -181,18 +350,38 @@
         "reworkCount"
       ],
       "properties": {
-        "inputTokens": { "type": ["number", "null"] },
-        "outputTokens": { "type": ["number", "null"] },
-        "cachedTokens": { "type": ["number", "null"] },
-        "subAgentTokens": { "type": ["number", "null"] },
-        "toolDefinitionBytes": { "type": ["number", "null"] },
-        "referenceBytesRead": { "type": ["number", "null"] },
-        "wallClockMs": { "type": ["number", "null"] },
-        "questionsPut": { "type": ["number", "null"] },
-        "reworkCount": { "type": ["number", "null"] }
+        "inputTokens": {
+          "type": ["number", "null"]
+        },
+        "outputTokens": {
+          "type": ["number", "null"]
+        },
+        "cachedTokens": {
+          "type": ["number", "null"]
+        },
+        "subAgentTokens": {
+          "type": ["number", "null"]
+        },
+        "toolDefinitionBytes": {
+          "type": ["number", "null"]
+        },
+        "referenceBytesRead": {
+          "type": ["number", "null"]
+        },
+        "wallClockMs": {
+          "type": ["number", "null"]
+        },
+        "questionsPut": {
+          "type": ["number", "null"]
+        },
+        "reworkCount": {
+          "type": ["number", "null"]
+        }
       }
     },
-    "proposal": { "$ref": "urn:qfai:workflow:route-proposal" }
+    "proposal": {
+      "$ref": "urn:qfai:workflow:route-proposal"
+    }
   },
   "$defs": {
     "fileRef": {
@@ -200,8 +389,14 @@
       "additionalProperties": false,
       "required": ["path", "digest"],
       "properties": {
-        "path": { "type": "string", "minLength": 1 },
-        "digest": { "type": "string", "minLength": 1 }
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "debt": {
@@ -211,19 +406,40 @@
         "findingCode",
         "path",
         "cause",
-        "owningSpec",
+        "owningFlow",
         "detectingCommand",
         "resolvingOwner",
         "blockingExtent"
       ],
       "properties": {
-        "findingCode": { "type": "string", "minLength": 1 },
-        "path": { "type": "string", "minLength": 1 },
-        "cause": { "type": "string", "minLength": 1 },
-        "owningSpec": { "type": "string", "minLength": 1 },
-        "detectingCommand": { "type": "string", "minLength": 1 },
-        "resolvingOwner": { "type": "string", "minLength": 1 },
-        "blockingExtent": { "type": "string", "minLength": 1 }
+        "findingCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cause": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owningFlow": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "detectingCommand": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolvingOwner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockingExtent": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }

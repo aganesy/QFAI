@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0108
+// QFAI:AC-0001-0196-02
+// QFAI:EX-0001-0196-04
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -6,8 +7,9 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import {
-  LEDGER_FILE,
   RED_RECEIPT,
+  STORY,
+  TEST_FILE,
   receiptProject,
   receiptsOf,
   runWithReceipts,
@@ -16,16 +18,29 @@ import { field, removeProjects, workflow } from "./workflowProject.js";
 
 afterEach(removeProjects);
 
-it("TC-0018-0108 (TDD-0327): Built CLI", async () => {
+// The bytes of the story's examples and the test that annotates them.
+async function readRecords(root: string): Promise<Buffer[]> {
+  return Promise.all(
+    [`${STORY}/03_Example.md`, TEST_FILE].map((file) => readFile(path.join(root, file))),
+  );
+}
+
+it("Built CLI", async () => {
   const root = await receiptProject();
   const { runId } = await runWithReceipts(root, false);
-  const ledger = await readFile(path.join(root, LEDGER_FILE));
+  const before = await readRecords(root);
   const resumed = workflow(root, ["resume", "--run", runId]);
+  const after = await readRecords(root);
 
   expect({
     stageKind: field(resumed.json, "workOrder.stageKind"),
-    rows: field(resumed.json, "workOrder.ledger.rowIds"),
+    obligations: field(resumed.json, "workOrder.obligations.ids"),
     red: receiptsOf(resumed.json)[RED_RECEIPT],
-    ledger: (await readFile(path.join(root, LEDGER_FILE))).equals(ledger),
-  }).toEqual({ stageKind: "implement", rows: ["TDD-0001"], red: "valid", ledger: true });
+    untouched: before.every((bytes, index) => after[index]?.equals(bytes)),
+  }).toEqual({
+    stageKind: "implement",
+    obligations: ["AC-0001-0001-01", "BF-0001", "EX-0001-0001-01"],
+    red: "valid",
+    untouched: true,
+  });
 }, 120_000);

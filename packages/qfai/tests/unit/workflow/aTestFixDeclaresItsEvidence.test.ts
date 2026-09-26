@@ -1,5 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0078
-// QFAI:SPEC-0018:TC-0018-0083
+// QFAI:EX-0001-0194-02
+// QFAI:EX-0001-0194-07
 
 import { expect, it } from "vitest";
 
@@ -25,27 +25,15 @@ const workOrder = {
   stageInstanceId: "bugfix-test-fix",
   attempt: 1,
   stageKind: "test_fix",
-  target: { kind: "spec" as const, specId: "spec-0007" },
+  target: { kind: "flow" as const, flowId: "BF-0007" },
   executor: { skill: "qfai-implement" },
   operation: "test-fix",
 };
-const facts = {
-  ledger: {
-    specId: "spec-0007",
-    rows: [
-      {
-        rowId: "TDD-0004",
-        status: "done",
-        digest: "4".repeat(64),
-        layer: "Unit",
-        tcLevels: ["L1"],
-      },
-    ],
-  },
-};
+// An example ID first: the test fix goes to `qfai-implement`.
+const facts = {};
 const completeFix = {
-  citedBefore: "AC-0007-0002: an empty value is refused with 400",
-  citedAfter: "AC-0007-0002: an empty value is refused with 400",
+  citedBefore: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "a".repeat(64) },
+  citedAfter: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "a".repeat(64) },
   reviewRef: "evidence/test-fix-review.json",
   rerunRef: "evidence/test-fix-rerun.json",
 };
@@ -55,11 +43,11 @@ function acceptTestFix(testFix: Partial<typeof completeFix>) {
     {
       run,
       plan,
-      specBinding: { specId: "spec-0007" },
+      flowBinding: { flowId: "BF-0007" },
       diagnosis: {
         verdict: "defective-test",
         reproductionRef: "evidence/defective-test.json",
-        matchedRowIds: ["TDD-0004"],
+        matchedIds: ["EX-0007-0002-01"],
       },
       acceptedStages: [
         { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
@@ -99,7 +87,7 @@ const refused = {
   events: [],
 };
 
-it("TC-0018-0078 (TDD-0097): A test_fix result with citedBefore equal to citedAfter, a review receipt and a re-run receipt", () => {
+it("A test_fix result with citedBefore equal to citedAfter, a review receipt and a re-run receipt", () => {
   const decision = acceptTestFix(completeFix);
 
   expect({
@@ -113,13 +101,13 @@ it("TC-0018-0078 (TDD-0097): A test_fix result with citedBefore equal to citedAf
   });
 });
 
-it("TC-0018-0083 (TDD-0102): no-review-ref", () => {
+it("no-review-ref", () => {
   const { reviewRef: _omitted, ...withoutReview } = completeFix;
 
   expect(refusalOf(acceptTestFix(withoutReview))).toEqual(refused);
 });
 
-it("TC-0018-0083 (TDD-0103): no-rerun-ref", () => {
+it("no-rerun-ref", () => {
   const { rerunRef: _omitted, ...withoutRerun } = completeFix;
 
   expect(refusalOf(acceptTestFix(withoutRerun))).toEqual(refused);

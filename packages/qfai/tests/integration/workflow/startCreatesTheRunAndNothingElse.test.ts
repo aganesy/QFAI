@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0017
+// QFAI:AC-0001-0192-05
+// QFAI:EX-0001-0192-11
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,14 +19,14 @@ import {
 afterEach(removeProjects);
 
 async function eventOf(root: string, runId: string, name: string): Promise<unknown> {
-  const text = await readFile(path.join(root, ".qfai", "runs", runId, "journal", name), "utf8");
+  const text = await readFile(path.join(root, ".qfai", "run", runId, "journal", name), "utf8");
   return field(JSON.parse(text), "event");
 }
 
-it("TC-0018-0017 (TDD-0262): Built CLI start on a temp repo in mode active", async () => {
+it("Built CLI start on a temp repo in mode active", async () => {
   const root = await minimalProject();
   const input = await inbox(root, null, "start", START_INPUT);
-  const outside = (rel: string) => rel.startsWith(".qfai/runs/");
+  const outside = (rel: string) => rel.startsWith(".qfai/run/");
   const before = await treeDigest(root, outside);
 
   const started = workflow(root, ["start", "--in", input]);

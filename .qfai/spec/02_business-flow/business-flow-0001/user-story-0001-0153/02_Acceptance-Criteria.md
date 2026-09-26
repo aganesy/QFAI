@@ -1,0 +1,27 @@
+# Acceptance Criteria
+
+## Criteria
+
+```gherkin
+Feature: Discussion-Pack Preflight
+
+# AC-0001-0153-01
+# Parent: US-0001-0153
+Scenario: No usable source stops SDD
+  Given no discussion pack, import-lite input, or explicit user requirement is usable
+  When SDD starts
+  Then it stops and guides the operator to /qfai-discussion
+
+Scenario: Validation does not require a pack where SDD would not stop
+  Given a story-tree project with no discussion pack of any name
+  When `qfai validate` runs
+  Then it reports no missing discussion pack, because SDD may start from an explicit user requirement
+  And a misnamed pack still reports its naming finding and the missing pack
+
+Scenario: An incomplete discussion pack remains provenance
+  Given a discussion pack exists but is incomplete, contradictory, or carries a blocking open question
+  When SDD starts
+  Then it continues using that pack as non-normative reference material
+  And it records the discrepancy in SDD-owned decisions, questions, or evidence
+  And it does not edit the discussion pack to clear the discrepancy
+```

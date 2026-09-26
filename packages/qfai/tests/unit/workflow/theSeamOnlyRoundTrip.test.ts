@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0045
+// QFAI:EX-0001-0192-27
 // Fault seeds: FAULT-014
 
 import { expect, it } from "vitest";
@@ -16,7 +16,7 @@ const plan = {
       stageInstanceId: "bounded-sdd-delta",
       stageKind: "sdd_delta",
       skill: "qfai-sdd",
-      operation: "delta-or-applicability-check",
+      operation: "update-or-applicability-check",
       when: "always",
     },
     {
@@ -45,7 +45,7 @@ const plan = {
 const facts = { acceptanceObligationsUnmet: true };
 const base = {
   plan,
-  specBinding: { specId: "spec-0007" },
+  flowBinding: { flowId: "BF-0007" },
   acceptedStages: [
     { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
   ],
@@ -86,7 +86,7 @@ function summary(workOrder: WorkOrder | null | undefined) {
 
 const stopped = { id: "run-seam", state: "stopped", sequence: -1 };
 
-it("TC-0018-0045 (TDD-0057): An acceptance result with seamRequest and outcome needs_repair", () => {
+it("An acceptance result with seamRequest and outcome needs_repair", () => {
   const targetTestId = "TC-0007-0003";
   const first = nextFrom({ ...base, run: { id: "run-seam", state: "ready", sequence: 6 } });
   const acceptance = first.workOrder;

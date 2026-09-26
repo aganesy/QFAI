@@ -36,7 +36,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const CONSTITUTION = path.join(
   repoRoot,
-  "packages/qfai/assets/init/.qfai/assistant/constitution/constitution.md",
+  "packages/qfai/assets/init/.qfai/assistant/rule/constitution.md",
 );
 
 async function withGitignore(

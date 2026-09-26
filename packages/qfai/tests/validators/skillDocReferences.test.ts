@@ -1,11 +1,11 @@
 /**
- * Validator: skillDocReferences (.qfai/assistant/skills/<skill>/SKILL.md).
+ * Validator: skillDocReferences (.qfai/assistant/skill/<skill>/SKILL.md).
  *
  * Covers TC-0004-0023 (project_memory enforcement) and TC-0004-0024
  * (W-SKILL-DOC-BROKEN-REF).
  */
-// QFAI:SPEC-0004:TC-0004-0023
-// QFAI:SPEC-0004:TC-0004-0024
+// QFAI:EX-0001-0047-02
+// QFAI:EX-0001-0048-01
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -19,7 +19,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seedSkill(root: string, id: string, body: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", id);
+  const dir = path.join(root, ".qfai", "assistant", "skill", id);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "SKILL.md"), body, "utf-8");
 }
@@ -104,7 +104,9 @@ describe("skillDocReferences validator", () => {
       const issues = await validateSkillDocReferences(root, await getConfig(root));
       const broken = issues.filter((i) => i.code === "W-SKILL-DOC-BROKEN-REF");
       expect(broken.length).toBe(1);
-      expect(broken[0]?.message).toContain("agent-routing.yml has moved");
+      expect(broken[0]?.message).toContain("non-canonical path");
+      expect(broken[0]?.message).toContain("Agent routing defaults are shipped with qfai");
+      expect(broken[0]?.message).toContain("project overrides live in qfai.config.yaml");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

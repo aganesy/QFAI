@@ -1,5 +1,6 @@
-// QFAI:SPEC-0018:TC-0018-0030
-// QFAI:SPEC-0018:TC-0018-0039
+// QFAI:AC-0001-0192-06
+// QFAI:EX-0001-0192-19
+// QFAI:EX-0001-0192-36
 
 import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -24,11 +25,11 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, asserted first", async () => {
+it("Built CLI on a fixture whose validate is clean, asserted first", async () => {
   const root = await initProject();
   const errors = (await validateQuietly(root)).issues.filter((issue) => issue.severity === "error");
   const { runId, issued } = await featureRunAt(root, "verify");
-  const report = path.join(root, ".qfai", "runs", "shared", "verify.json");
+  const report = path.join(root, ".qfai", "run", "shared", "verify.json");
   await mkdir(path.dirname(report), { recursive: true });
   await writeFile(report, '{"status":"PASS","scope":"full"}\n');
   await submit(
@@ -36,7 +37,7 @@ it("TC-0018-0039 (TDD-0305): Built CLI on a fixture whose validate is clean, ass
     runId,
     "accept",
     resultFor(issued.json, "verify-1", {
-      artifactRefs: [{ path: ".qfai/runs/shared/verify.json", digest: "submitted" }],
+      artifactRefs: [{ path: ".qfai/run/shared/verify.json", digest: "submitted" }],
       reviewResults: [
         { role: "qa-gatekeeper", agentInstance: "qa-1", verdict: "PASS", reportRef: "qa.md" },
       ],
@@ -102,7 +103,7 @@ function gitSubcommand(argv: string[]): string {
   return "";
 }
 
-it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async () => {
+it("Temp repo whose validate reports an error", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "verify");
   const accepted = await submit(
@@ -111,8 +112,8 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     "accept",
     resultFor(issued.json, "verify-1", { gateResults: [{ gateId: "validate", verdict: "PASS" }] }),
   );
-  const log = path.join(root, ".qfai", "runs", "spawns.log");
-  const recorder = await spawnRecorder(path.join(root, ".qfai", "runs"), log);
+  const log = path.join(root, ".qfai", "run", "spawns.log");
+  const recorder = await spawnRecorder(path.join(root, ".qfai", "run"), log);
   const finished = spawnSync(
     process.execPath,
     ["--import", recorder, CLI, "workflow", "finish", "--run", runId],
@@ -128,7 +129,7 @@ it("TC-0018-0030 (TDD-0303): Temp repo whose validate reports an error", async (
     const args = Array.isArray(argv) ? argv.map(String) : [];
     return file !== "git" || !READ_ONLY_GIT.has(gitSubcommand(args));
   });
-  const journal = path.join(root, ".qfai", "runs", runId, "journal");
+  const journal = path.join(root, ".qfai", "run", runId, "journal");
   const events = await Promise.all(
     (await readdir(journal)).map((name) => readFile(path.join(journal, name), "utf8")),
   );

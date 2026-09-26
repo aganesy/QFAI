@@ -1,0 +1,28 @@
+# 07 Decisions
+
+## Decisions
+
+### DR-0014-0005: Preserve Verify's validation-error failure path
+
+- Date: 2026-09-24
+- Status: Adopted
+
+EX-0014-0001 described a Verify failure on validation error, which neither AC-0014-0001's scan scope nor AC-0014-0003's validator import asserted. AC-0014-0027 under US-0014-0013 now owns that observable with TC-0014-0042. TC-0014-0018 retains full-scan scope under AC-0014-0001 using EX-0014-0036; TC-0014-0019 retains canonical import under AC-0014-0003 using EX-0014-0035. This preserves the original error path and gives each example one criterion.
+
+### DR-0014-0001
+
+- Decision: verify depends on the canonical validator path only.
+
+### DR-0014-0002
+
+- Decision: removed compatibility surfaces remain removed.
+
+### DR-0014-0003
+
+- Decision: legacy validator slices may persist as artifact-specific checks without reintroducing a public prototyping runtime.
+
+### DR-0014-0004
+
+- Decision: the SaaS-package certify scope (REQ-0166, certify side) seals `completion-certificate.json` with `scope: "saas-package"` + an explicit `notes:` naming what was skipped, and MUST NOT claim full DONE.
+- Governing references: the validate-side contract is CLI-VAL / DCON-005 per `_policies/05_Contracts.md` §CHG-006 and the `saas-package profile` glossary entry. REQ-0166 has no dedicated shared `DR-NNNN` (it is a straight spec'd MUST). DR-0274 is a sibling REQ-0167 (pack-location lint scope) decision and is intentionally NOT cited as governing here.
+- Rationale: the lightweight delivery mode preserves the certify-scope discipline established in v1.9.1 — the certificate explicitly carries its reduced scope so downstream consumers can never mistake it for full completion. `--upgrade-scope full` is the only sanctioned path to full scope and only after the skipped gates land.

@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0238
+// QFAI:EX-0001-0192-11
 
 import { expect, it } from "vitest";
 
@@ -12,7 +12,7 @@ const startFacts: Facts = {
     qfaiVersion: "2.0.0",
     digestKey: "c".repeat(64),
     policyDigests: {},
-    manifestDigests: {},
+
     planDigests: {},
   },
 };
@@ -30,7 +30,7 @@ const capabilities = Object.fromEntries(
   ].map((capability) => [capability, true]),
 );
 
-it("TC-0018-0238 (TDD-0465): a start input carrying scope is refused schema", () => {
+it("a start input carrying scope is refused schema", () => {
   const refused = decide(
     null,
     {

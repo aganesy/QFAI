@@ -16,6 +16,7 @@
  * never the contract they are checked against.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,6 +25,8 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { storyTreeMarkdownPatterns } from "../../src/core/storyTree/layout.js";
+
 // The IMPLEMENTATION, not the repository-root delegator: the delegator exits
 // the process on load, so it exports nothing at all — importing it would end the
 // test run during collection. The spawn cases below still address the delegator,
@@ -31,6 +34,7 @@ import { afterEach, describe, expect, it } from "vitest";
 // @ts-expect-error -- a plain .mjs guard with no type declarations
 import {
   IGNORE_MARKER,
+  documentsWithoutOneEntry,
   findMdschemaCommand,
   firstHeading,
   optsOutOfSchema,
@@ -63,6 +67,11 @@ const tempDirs: string[] = [];
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-lane-"));
   tempDirs.push(dir);
+  await writeFile(
+    path.join(dir, "qfai.config.yaml"),
+    "paths:\n  specsDir: .qfai/specs\n  contractsDir: .qfai/contracts\n",
+    "utf-8",
+  );
   return dir;
 }
 
@@ -127,6 +136,105 @@ async function writeSpec(root: string, pack: string, body: string): Promise<stri
 }
 
 describe("check-mdschema driver", () => {
+  it("uses the story-tree directories without a config file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-mdschema-defaults-"));
+    tempDirs.push(root);
+    const file = path.join(root, ".qfai", "spec", "03_contract", "tech.md");
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, "# Wrong root\n", "utf-8");
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("story-tech");
+  });
+
+  // QFAI:EX-0001-0011-01
+  // QFAI:EX-0001-0011-02
+  it("gives every fixed story-tree document and a CLI contract one schema entry", () => {
+    const manifest = readFileSync(
+      path.join(REPO_ROOT, "packages/qfai/assets/mdschema/manifest.yml"),
+      "utf-8",
+    );
+    const files = [
+      ...storyTreeMarkdownPatterns("docs/spec", "docs/contracts"),
+      "docs/contracts/cli/example.md",
+    ];
+
+    expect(
+      documentsWithoutOneEntry(manifest, files, {
+        specsDir: "docs/spec",
+        contractsDir: "docs/contracts",
+      }),
+    ).toEqual([]);
+    const withoutOpenQuestions = manifest.replace(
+      / {2}- id: story-open-questions\r?\n {4}schema: [^\r\n]+\r?\n {4}pattern: [^\r\n]+\r?\n/,
+      "",
+    );
+    expect(
+      documentsWithoutOneEntry(withoutOpenQuestions, files, {
+        specsDir: "docs/spec",
+        contractsDir: "docs/contracts",
+      }),
+    ).toEqual(["docs/spec/open-questions.md"]);
+  });
+
+  it("finds only files with zero or multiple unconditional manifest entries", () => {
+    const manifest = [
+      "documents:",
+      "  - id: decision",
+      "    schema: story/decisions.mdschema.yml",
+      '    pattern: "{specsDir}/decisions.md"',
+      "  - id: decision-other",
+      "    schema: story/decisions.mdschema.yml",
+      '    pattern: "{specsDir}/decisions.md"',
+      "    when: '^# Other'",
+      "  - id: contract",
+      "    schema: story/03_contract/tech.mdschema.yml",
+      '    pattern: "{contractsDir}/tech.md"',
+    ].join("\n");
+    expect(
+      documentsWithoutOneEntry(
+        manifest,
+        ["docs/spec/decisions.md", "docs/spec/open-questions.md", "docs/contracts/tech.md"],
+        { specsDir: "docs/spec", contractsDir: "docs/contracts" },
+      ),
+    ).toEqual(["docs/spec/open-questions.md"]);
+    expect(
+      documentsWithoutOneEntry(
+        manifest.replace("    when: '^# Other'\n", ""),
+        ["docs/spec/decisions.md"],
+        { specsDir: "docs/spec", contractsDir: "docs/contracts" },
+      ),
+    ).toEqual(["docs/spec/decisions.md"]);
+  });
+
+  // QFAI:EX-0001-0011-03
+  it("checks a contract file at the configured contractsDir", async () => {
+    const root = await newTempDir();
+    const contract = path.join(root, "docs", "contracts", "tech.md");
+    await mkdir(path.dirname(contract), { recursive: true });
+    await writeFile(contract, "# Wrong root\n", "utf-8");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: docs/spec\n  contractsDir: docs/contracts\n",
+      "utf-8",
+    );
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("story-tech");
+
+    const template = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md",
+    );
+    await writeFile(contract, readFileSync(template, "utf-8"), "utf-8");
+    const valid = runDriver(["--root", root, "--scope", "all"]);
+    expect(valid.status, valid.stderr).toBe(0);
+  });
+
   it("exits 0 and counts the files when every document conforms", async () => {
     const root = await newTempDir();
     await writeSpec(root, "spec-0001", CONFORMING_SPEC);
@@ -135,6 +243,38 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 file(s) conform");
+  });
+
+  // QFAI:EX-0001-0011-04
+  it("accepts a one-flow one-story sample copied from the SDD templates", async () => {
+    const root = await newTempDir();
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+      "utf-8",
+    );
+    const source = path.join(
+      REPO_ROOT,
+      "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/business-flow-NNNN",
+    );
+    const destination = path.join(root, ".qfai/spec/02_business-flow/business-flow-0001");
+    for (const relative of [
+      "business-flow.md",
+      "user-story-NNNN-NNNN/01_User-story.md",
+      "user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
+      "user-story-NNNN-NNNN/03_Example.md",
+    ]) {
+      const target = path.join(
+        destination,
+        relative.replace("user-story-NNNN-NNNN", "user-story-0001-0001"),
+      );
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, readFileSync(path.join(source, relative), "utf-8"), "utf-8");
+    }
+
+    const result = runDriver(["--root", root, "--scope", "all"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("4 file(s) conform");
   });
 
   it("exits 1 and names the document type when a document violates its schema", async () => {

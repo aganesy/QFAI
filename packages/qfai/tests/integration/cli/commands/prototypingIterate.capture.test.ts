@@ -6,14 +6,14 @@
  *       (DR-0012-0029 preserved; amendment pinned by DR-0012-0031).
  *   (b) `--capture` writes one .png + .html per `iterate-plan.json#screens[]`.
  *   (c) `htmlSourceCopy: true` produces byte-equivalent .html to the
- *       `.qfai/prototypes/iter-NN/<screen-id>.html` source (sha256 match).
+ *       `.qfai/prototype/iter-NN/<screen-id>.html` source (sha256 match).
  *
  * Capture is driven through an injectable `captureScreen` callback so
  * the test does not spawn real Playwright; the integration scope is
  * the flag plumbing + per-screen iteration + htmlSourceCopy byte-copy.
  */
 
-// QFAI:SPEC-0012:TC-0012-0440
+// QFAI:EX-0001-0134-01
 
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -100,6 +100,13 @@ async function seedMinimalProject(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -166,12 +173,12 @@ describe("iterate --capture ON writes per iterate-plan.json#screens[]", () => {
 });
 
 describe("iterate --capture with htmlSourceCopy: true is byte-equivalent", () => {
-  it("copies the .qfai/prototypes/iter-NN/<screen>.html source byte-for-byte (sha256 match)", async () => {
+  it("copies the .qfai/prototype/iter-NN/<screen>.html source byte-for-byte (sha256 match)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
 
-    // Seed a source HTML at .qfai/prototypes/iter-00/home.html
-    const sourceDir = path.join(root, ".qfai/prototypes/iter-00");
+    // Seed a source HTML at .qfai/prototype/iter-00/home.html.
+    const sourceDir = path.join(root, ".qfai/prototype/iter-00");
     await mkdir(sourceDir, { recursive: true });
     const sourceHtml = "<!doctype html><html><body>SRC content</body></html>";
     const sourcePath = path.join(sourceDir, "home.html");

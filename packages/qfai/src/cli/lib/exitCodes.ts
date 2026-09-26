@@ -28,8 +28,8 @@ export const EXIT_CODES = {
    * 値の不正だけなので、綴り誤りのコマンドをそこへ寄せない。
    * ここでいう実行時エラーはトップレベルの catch が拾う送出全般で、
    * prototyping certify の証明書書き込み失敗、validate の JSON 出力や
-   * doctor / preflight の --out 書き込み失敗、prototyping show-spec が
-   * spec 本文を ENOENT 以外の理由で読めない場合もこの値になる。
+   * doctor / preflight の --out 書き込み失敗、prototyping show-ui-contract が
+   * UI 契約一覧を読めない場合もこの値になる。
    * どれも検査結果の不合格ではないため、復旧手段 (権限 / ディスク /
    * パスの修正) が閾値到達とは異なる点に注意。
    */
@@ -42,7 +42,7 @@ export const EXIT_CODES = {
    * peek / 本処理へ進まずここで停止する。
    *
    * 入力 / lock drift エラーも同じ値。guardrails では使用法エラーも、
-   * report / prototyping show-spec では入力ファイルの欠落 / 破損も、
+   * report / prototyping show-ui-contract では入力ファイルの欠落 / 破損も、
    * prototyping certify では証明書 mismatch / 品質ゲート拒否もこの値。
    * prototyping iterate では --auto-serve のサーバ起動失敗や --capture の
    * runner 拒否 / 例外 / HTML コピー失敗といった実行環境エラーも含む
@@ -127,11 +127,11 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "prototyping iterate",
     lines: [
-      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI-bearing spec,`,
+      `${EXIT_CODES.ok} = continue (next cycle), or a no-op exit with no UI contract,`,
       `${EXIT_CODES.inputError} = an input or lock-drift error, or a runtime error`,
       `      (--auto-serve could not start the server; --capture was refused by the runner or failed on I/O),`,
-      `${EXIT_CODES.prototypingStop} = STOP: converged (no DESIGN.md violation, no layout`,
-      `      anti-pattern, no blocking finding),`,
+      `${EXIT_CODES.prototypingStop} = STOP: converged (all four UX scores exceptional for every`,
+      `      UI contract/screen; no DESIGN.md violation, layout anti-pattern, or blocking finding),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: budget exhausted (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify failed`,
     ],
@@ -158,12 +158,19 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     ],
   },
   {
-    label: "prototyping show-spec",
+    label: "prototyping show-ui-contract",
     lines: [
       `${EXIT_CODES.ok} = success,`,
-      `${EXIT_CODES.findings} = a runtime error (an I/O exception while resolving the spec — a`,
-      "      permission error, say; a spec body read failure other than ENOENT is re-thrown),",
-      `${EXIT_CODES.inputError} = prototyping.json is missing or corrupt`,
+      `${EXIT_CODES.findings} = a runtime error (an I/O exception while reading UI contracts),`,
+      `${EXIT_CODES.inputError} = prototyping.json is missing, legacy, or malformed`,
+    ],
+  },
+  {
+    label: "atdd scaffold",
+    lines: [
+      `${EXIT_CODES.ok} = success,`,
+      `${EXIT_CODES.findings} = a runtime read or write failure,`,
+      `${EXIT_CODES.inputError} = a usage error or an ID absent from the story tree`,
     ],
   },
   {
@@ -180,7 +187,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = success, ${EXIT_CODES.inputError} = a usage error,`,
       `${EXIT_CODES.findings} = a runtime error`,
-      "(init / discussion / audit log / handoff upgrade / atdd scaffold)",
+      "(init / discussion / audit log / handoff upgrade)",
     ],
   },
 ];

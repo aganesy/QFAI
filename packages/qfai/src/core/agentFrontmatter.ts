@@ -4,6 +4,14 @@ export type AgentFrontmatter = {
   name: string;
   description: string;
   tools: string[];
+  kind: "worker" | "reviewer";
+  domain: string;
+  mission: string;
+  replaces: string[];
+  owned_artifacts: string[];
+  tool_profile: string;
+  permission_profile: string;
+  specialization_tags: string[];
 };
 
 export type AgentFrontmatterParseResult =
@@ -82,12 +90,37 @@ export function parseAgentFrontmatter(content: string): AgentFrontmatterParseRes
     };
   }
 
+  if (root.kind !== "worker" && root.kind !== "reviewer") {
+    return { ok: false, error: "frontmatter.kind must be worker or reviewer" };
+  }
+  for (const key of ["domain", "mission", "tool_profile", "permission_profile"] as const) {
+    if (typeof root[key] !== "string" || root[key].trim().length === 0) {
+      return { ok: false, error: `frontmatter.${key} must be a non-empty string` };
+    }
+  }
+  for (const key of ["replaces", "owned_artifacts", "specialization_tags"] as const) {
+    if (
+      !Array.isArray(root[key]) ||
+      root[key].some((entry) => typeof entry !== "string" || entry.trim().length === 0)
+    ) {
+      return { ok: false, error: `frontmatter.${key} must be a list of non-empty strings` };
+    }
+  }
+
   return {
     ok: true,
     frontmatter: {
       name: root.name.trim(),
       description: root.description.trim(),
       tools: root.tools.map((entry) => (entry as string).trim()),
+      kind: root.kind,
+      domain: (root.domain as string).trim(),
+      mission: (root.mission as string).trim(),
+      replaces: (root.replaces as string[]).map((entry) => entry.trim()),
+      owned_artifacts: (root.owned_artifacts as string[]).map((entry) => entry.trim()),
+      tool_profile: (root.tool_profile as string).trim(),
+      permission_profile: (root.permission_profile as string).trim(),
+      specialization_tags: (root.specialization_tags as string[]).map((entry) => entry.trim()),
     },
   };
 }

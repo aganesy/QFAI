@@ -1,6 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0027
-// QFAI:SPEC-0018:TC-0018-0028
-// QFAI:SPEC-0018:TC-0018-0029
+// QFAI:AC-0001-0192-05
+// QFAI:EX-0001-0192-18
 
 import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,34 +32,22 @@ function oneDocument(run: CliRun) {
 }
 
 async function corrupt(root: string, runId: string) {
-  const event = path.join(root, ".qfai", "runs", runId, "journal", "000002.json");
+  const event = path.join(root, ".qfai", "run", runId, "journal", "000002.json");
   await writeFile(event, "{ torn");
 }
 
 const calls: [string, (root: string) => Promise<CliRun>, boolean][] = [
   [
-    "TC-0018-0027 (TDD-0274): start-ok",
+    "start-ok",
     async (root) => workflow(root, ["start", "--in", await inbox(root, null, "s", START_INPUT)]),
     true,
   ],
+  ["start-error", (root) => Promise.resolve(workflow(root, ["start"])), false],
+  ["next-ok", async (root) => workflow(root, ["next", "--run", await startRun(root)]), true],
+  ["next-error", (root) => Promise.resolve(workflow(root, ["next", "--run", UNKNOWN])), false],
+  ["accept-ok", async (root) => (await routedRun(root)).routed, true],
   [
-    "TC-0018-0027 (TDD-0275): start-error",
-    (root) => Promise.resolve(workflow(root, ["start"])),
-    false,
-  ],
-  [
-    "TC-0018-0027 (TDD-0276): next-ok",
-    async (root) => workflow(root, ["next", "--run", await startRun(root)]),
-    true,
-  ],
-  [
-    "TC-0018-0027 (TDD-0277): next-error",
-    (root) => Promise.resolve(workflow(root, ["next", "--run", UNKNOWN])),
-    false,
-  ],
-  ["TC-0018-0027 (TDD-0278): accept-ok", async (root) => (await routedRun(root)).routed, true],
-  [
-    "TC-0018-0027 (TDD-0279): accept-error",
+    "accept-error",
     async (root) => {
       const runId = await startRun(root);
       await mkdir(path.join(root, "elsewhere"), { recursive: true });
@@ -70,7 +57,7 @@ const calls: [string, (root: string) => Promise<CliRun>, boolean][] = [
     false,
   ],
   [
-    "TC-0018-0027 (TDD-0280): decision-ok",
+    "decision-ok",
     async (root) => {
       const runId = await startRun(root);
       return submit(root, runId, "decision", { stop: true, answeredBy: "operator" });
@@ -78,7 +65,7 @@ const calls: [string, (root: string) => Promise<CliRun>, boolean][] = [
     true,
   ],
   [
-    "TC-0018-0027 (TDD-0281): decision-error",
+    "decision-error",
     async (root) => {
       const runId = await startRun(root);
       const answer = { questionId: "question-9-1", answer: { optionIds: ["create"] } };
@@ -86,36 +73,20 @@ const calls: [string, (root: string) => Promise<CliRun>, boolean][] = [
     },
     false,
   ],
+  ["status-ok", async (root) => workflow(root, ["status", "--run", await startRun(root)]), true],
+  ["status-error", (root) => Promise.resolve(workflow(root, ["status", "--run", UNKNOWN])), false],
   [
-    "TC-0018-0027 (TDD-0282): status-ok",
-    async (root) => workflow(root, ["status", "--run", await startRun(root)]),
-    true,
-  ],
-  [
-    "TC-0018-0027 (TDD-0283): status-error",
-    (root) => Promise.resolve(workflow(root, ["status", "--run", UNKNOWN])),
-    false,
-  ],
-  [
-    "TC-0018-0027 (TDD-0284): resume-ok",
+    "resume-ok",
     async (root) => workflow(root, ["resume", "--run", (await routedRun(root)).runId]),
     true,
   ],
   [
-    "TC-0018-0027 (TDD-0285): resume-error",
+    "resume-error",
     async (root) => workflow(root, ["resume", "--run", await startRun(root)]),
     false,
   ],
-  [
-    "TC-0018-0027 (TDD-0286): finish-ok",
-    async (root) => workflow(root, ["finish", "--run", await startRun(root)]),
-    true,
-  ],
-  [
-    "TC-0018-0027 (TDD-0287): finish-error",
-    (root) => Promise.resolve(workflow(root, ["finish"])),
-    false,
-  ],
+  ["finish-ok", async (root) => workflow(root, ["finish", "--run", await startRun(root)]), true],
+  ["finish-error", (root) => Promise.resolve(workflow(root, ["finish"])), false],
 ];
 
 for (const [title, call, ok] of calls) {
@@ -126,7 +97,7 @@ for (const [title, call, ok] of calls) {
   });
 }
 
-it("TC-0018-0028 (TDD-0288): Built CLI status and next on a run in running", async () => {
+it("Built CLI status and next on a run in running", async () => {
   const root = await minimalProject();
   const { runId } = await routedRun(root);
   workflow(root, ["next", "--run", runId]);
@@ -163,12 +134,12 @@ async function heldLock(root: string, runId: string) {
     startedAt: new Date().toISOString(),
     token: "held",
   };
-  await writeFile(path.join(root, ".qfai", "runs", ".lock"), JSON.stringify(owner));
+  await writeFile(path.join(root, ".qfai", "run", ".lock"), JSON.stringify(owner));
 }
 
 const exits: [string, (root: string) => Promise<CliRun>, number][] = [
   [
-    "TC-0018-0029 (TDD-0289): exit0-blocked",
+    "exit0-blocked",
     async (root) => {
       const { runId } = await routedRun(root);
       const issued = workflow(root, ["next", "--run", runId]);
@@ -181,19 +152,15 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     },
     0,
   ],
+  ["exit0-awaiting-input", async (root) => (await awaitingRun(root)).routed, 0],
   [
-    "TC-0018-0029 (TDD-0290): exit0-awaiting-input",
-    async (root) => (await awaitingRun(root)).routed,
-    0,
-  ],
-  [
-    "TC-0018-0029 (TDD-0291): exit0-cancelled",
+    "exit0-cancelled",
     async (root) =>
       submit(root, await startRun(root), "decision", { stop: true, answeredBy: "operator" }),
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0292): exit0-replayed-accept",
+    "exit0-replayed-accept",
     async (root) => {
       const runId = await startRun(root);
       const routing = workflow(root, ["next", "--run", runId]);
@@ -204,7 +171,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0293): exit0-replayed-decision",
+    "exit0-replayed-decision",
     async (root) => {
       const { runId, questionId, sequence } = await awaitingRun(root);
       const answer = { questionId, answer: { optionIds: ["create"] }, answeredBy: "operator" };
@@ -214,7 +181,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0294): exit0-status-failed",
+    "exit0-status-failed",
     async (root) => {
       const runId = await startRun(root);
       await corrupt(root, runId);
@@ -223,7 +190,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0295): exit0-start-off",
+    "exit0-start-off",
     async (root) => {
       await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: off\n");
       return workflow(root, ["start", "--in", await inbox(root, null, "s", START_INPUT)]);
@@ -231,7 +198,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0296): exit0-start-shadow",
+    "exit0-start-shadow",
     async (root) => {
       await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: shadow\n");
       return workflow(root, ["start", "--in", await inbox(root, null, "s", START_INPUT)]);
@@ -239,12 +206,12 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     0,
   ],
   [
-    "TC-0018-0029 (TDD-0297): exit1-finish-unmet",
+    "exit1-finish-unmet",
     async (root) => workflow(root, ["finish", "--run", await startRun(root)]),
     1,
   ],
   [
-    "TC-0018-0029 (TDD-0298): exit1-integrity",
+    "exit1-integrity",
     async (root) => {
       const runId = await startRun(root);
       await corrupt(root, runId);
@@ -253,7 +220,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     1,
   ],
   [
-    "TC-0018-0029 (TDD-0299): exit2-stale-sequence",
+    "exit2-stale-sequence",
     async (root) => {
       const runId = await startRun(root);
       const routing = workflow(root, ["next", "--run", runId]);
@@ -263,7 +230,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     2,
   ],
   [
-    "TC-0018-0029 (TDD-0300): exit2-lock-held",
+    "exit2-lock-held",
     async (root) => {
       const runId = await startRun(root);
       await heldLock(root, runId);
@@ -272,7 +239,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     2,
   ],
   [
-    "TC-0018-0029 (TDD-0301): exit2-run-active",
+    "exit2-run-active",
     async (root) => {
       await startRun(root);
       return workflow(root, ["start", "--in", await inbox(root, null, "again", START_INPUT)]);
@@ -280,7 +247,7 @@ const exits: [string, (root: string) => Promise<CliRun>, number][] = [
     2,
   ],
   [
-    "TC-0018-0029 (TDD-0302): exit2-invalid-input",
+    "exit2-invalid-input",
     async (root) => {
       const input = { ...START_INPUT, scope: { writeAreas: ["src/**"] } };
       return workflow(root, ["start", "--in", await inbox(root, null, "scoped", input)]);

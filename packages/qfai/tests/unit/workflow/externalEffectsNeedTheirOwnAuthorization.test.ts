@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0086
-// QFAI:SPEC-0018:TC-0018-0087
+// QFAI:EX-0001-0195-03
 
 import { expect, it } from "vitest";
 
@@ -34,7 +33,7 @@ function allowedEffects(effect: string, authorizations: Snapshot["authorizations
     {
       run: { id: "run-effects", state: "ready", sequence: 4 },
       plan: planDeclaring(effect),
-      specBinding: { specId: "spec-0007" },
+      flowBinding: { flowId: "BF-0007" },
       authorizations,
     },
     { operation: "next" },
@@ -44,12 +43,12 @@ function allowedEffects(effect: string, authorizations: Snapshot["authorizations
 }
 
 const undeclaredByPolicy: [string, string][] = [
-  ["TC-0018-0086 (TDD-0112): push", "push"],
-  ["TC-0018-0086 (TDD-0113): pull-request", "pull-request"],
-  ["TC-0018-0086 (TDD-0114): merge", "merge"],
-  ["TC-0018-0086 (TDD-0115): deploy", "deploy"],
-  ["TC-0018-0086 (TDD-0116): production-migration", "production-migration"],
-  ["TC-0018-0086 (TDD-0117): extra-spending", "extra-spending"],
+  ["push", "push"],
+  ["pull-request", "pull-request"],
+  ["merge", "merge"],
+  ["deploy", "deploy"],
+  ["production-migration", "production-migration"],
+  ["extra-spending", "extra-spending"],
 ];
 
 for (const [title, effect] of undeclaredByPolicy) {
@@ -58,7 +57,7 @@ for (const [title, effect] of undeclaredByPolicy) {
   });
 }
 
-it("TC-0018-0087 (TDD-0118): project-policy-deploy", () => {
+it("project-policy-deploy", () => {
   const policy = {
     authorizationId: "policy-deploy",
     kind: "project_policy",
@@ -67,7 +66,7 @@ it("TC-0018-0087 (TDD-0118): project-policy-deploy", () => {
   expect(allowedEffects("deploy", [policy])).toEqual(["deploy"]);
 });
 
-it("TC-0018-0087 (TDD-0119): request-scope-push", () => {
+it("request-scope-push", () => {
   const requestScope = { authorizationId: "request-scope-1", kind: "request_scope" };
   expect(allowedEffects("push", [requestScope])).toEqual([]);
 });

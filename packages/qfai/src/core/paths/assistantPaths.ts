@@ -1,7 +1,7 @@
 import path from "node:path";
 
 /**
- * SSOT for the 4-layer assistant-tree path segments.
+ * SSOT for the assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
  * the codebase are lint-rejected; build path strings through
  * the helpers in this module.
@@ -9,13 +9,11 @@ import path from "node:path";
 
 export const ASSISTANT_DIR = ".qfai/assistant" as const;
 
-export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog", "process"] as const;
+export const ASSISTANT_LAYERS = ["rule", "skill", "agent", "prompt"] as const;
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
 export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const;
-
-export const MIGRATIONS_SUBDIR = "migrations" as const;
 
 /**
  * The release that retired the legacy `.qfai/assistant/steering/` layout.
@@ -37,15 +35,12 @@ export function assistantLayerDir(layer: AssistantLayer): string {
   return `${ASSISTANT_DIR}/${layer}`;
 }
 
-/** A layer, or a directory inside one that is governed as a layer of its own. */
-export type AssistantLayerPath = AssistantLayer | `${AssistantLayer}/${string}`;
-
 export function joinAssistantLayer(
   destRoot: string,
-  layer: AssistantLayerPath,
+  layer: AssistantLayer,
   ...rest: string[]
 ): string {
-  return path.join(destRoot, ASSISTANT_DIR, ...layer.split("/"), ...rest);
+  return path.join(destRoot, ASSISTANT_DIR, layer, ...rest);
 }
 
 /**
@@ -81,14 +76,6 @@ export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" 
 
 export function joinLegacyAssistantInstructions(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, LEGACY_ASSISTANT_INSTRUCTIONS_DIR, ...rest);
-}
-
-export function migrationMemoRelativePath(version: string): string {
-  return `${ASSISTANT_DIR}/process/${MIGRATIONS_SUBDIR}/v${version}-assistant-layer-recut.md`;
-}
-
-export function joinMigrationMemo(destRoot: string, version: string): string {
-  return path.join(destRoot, migrationMemoRelativePath(version));
 }
 
 /**

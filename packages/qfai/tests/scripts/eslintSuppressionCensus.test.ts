@@ -107,7 +107,6 @@ const PINNED: readonly string[] = [
   "packages/qfai/src/core/handoff/reader.ts :: no-console",
   "packages/qfai/src/core/observability/writer.ts :: no-console",
   "packages/qfai/src/core/prototyping/playwrightCliLauncher.ts :: @typescript-eslint/no-deprecated",
-  "packages/qfai/src/core/report.ts :: @typescript-eslint/no-unnecessary-condition",
   "packages/qfai/src/core/uiux/renderEvidence.ts :: @typescript-eslint/no-unnecessary-condition",
   "packages/qfai/src/core/validators/layoutAntiPatterns.ts :: @typescript-eslint/no-non-null-assertion",
 ];

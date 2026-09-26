@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
 
 const SKILL_MD = path.resolve(
   process.cwd(),
-  "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
+  "assets/init/.qfai/assistant/skill/qfai-prototyping/SKILL.md",
 );
 const ARGS_TS = path.resolve(process.cwd(), "src/cli/lib/args.ts");
 const MAIN_TS = path.resolve(process.cwd(), "src/cli/main.ts");
@@ -30,7 +30,7 @@ const CONTRACT_MD = path.resolve(
   process.cwd(),
   "..",
   "..",
-  ".qfai/contracts/cli/qfai-prototyping-iterate.md",
+  ".qfai/spec/03_contract/cli/qfai-prototyping-iterate.md",
 );
 
 /**
@@ -54,7 +54,7 @@ const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--force", optionKey: "force" },
   { flag: "--dry-run", optionKey: "dryRun" },
   { flag: "--license-patch", optionKey: "prototypingLicensePatch" },
-  { flag: "--primary-spec-id", optionKey: "prototypingPrimarySpecId" },
+  { flag: "--primary-ui-contract", optionKey: "prototypingPrimaryUiContract" },
   { flag: "--check-convergence", optionKey: "prototypingCheckConvergence" },
   { flag: "--capture", optionKey: "prototypingCapture" },
   { flag: "--auto-serve", optionKey: "prototypingAutoServe" },

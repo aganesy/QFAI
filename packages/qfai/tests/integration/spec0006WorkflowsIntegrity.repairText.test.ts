@@ -29,7 +29,7 @@
  * describe block is one ledger row; the round-by-round derivation — witnesses,
  * measurements, mutant blobs — is in `.qfai/evidence/implement-spec-0006.md`.
  */
-// QFAI:SPEC-0006:TC-0006-0030
+// QFAI:EX-0003-0011-03
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";

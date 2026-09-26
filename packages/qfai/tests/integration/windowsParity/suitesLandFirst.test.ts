@@ -2,7 +2,6 @@
  * Integration: every entry of the `test:windows-parity` list resolves to a tracked test file the
  * workspace collects, so the job cannot land ahead of the suites it names.
  */
-// QFAI:SPEC-0017:TC-0017-0095
 import { spawnSync } from "node:child_process";
 
 import { describe, expect, it } from "vitest";
@@ -45,7 +44,9 @@ async function collectedTestFiles(): Promise<string[]> {
 }
 
 describe("the suites land with the job", () => {
-  it("TC-0017-0095: Every suite-list entry resolves to a collected test file", async () => {
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-03
+  it("Every suite-list entry resolves to a collected test file", async () => {
     const collected = await collectedTestFiles();
     const entries = suiteList();
     expect(entries.length).toBeGreaterThan(0);

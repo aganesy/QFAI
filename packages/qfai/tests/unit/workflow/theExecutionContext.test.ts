@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0105
+// QFAI:EX-0001-0196-02
 
 import { expect, it } from "vitest";
 
@@ -18,7 +18,7 @@ const harness = {
   },
 };
 
-it("TC-0018-0105 (TDD-0144): Decide start", () => {
+it("Decide start", () => {
   const started = decide(
     null,
     {
@@ -32,8 +32,8 @@ it("TC-0018-0105 (TDD-0144): Decide start", () => {
         qfaiVersion: "2.0.0",
         digestKey: "b".repeat(64),
         policyDigests: { "qfai.config.yaml": "c".repeat(64) },
-        manifestDigests: { ".qfai/assistant/manifest/agent-routing.yml": "d".repeat(64) },
-        planDigests: { ".qfai/assistant/process/workflows/direct.yml": "e".repeat(64) },
+
+        planDigests: { "assets/defaults/workflows/direct.yml": "e".repeat(64) },
       },
     },
   );
@@ -45,8 +45,8 @@ it("TC-0018-0105 (TDD-0144): Decide start", () => {
       runId: "run-20260925000000001",
       qfaiVersion: "2.0.0",
       policyDigests: { "qfai.config.yaml": "c".repeat(64) },
-      manifestDigests: { ".qfai/assistant/manifest/agent-routing.yml": "d".repeat(64) },
-      planDigests: { ".qfai/assistant/process/workflows/direct.yml": "e".repeat(64) },
+
+      planDigests: { "assets/defaults/workflows/direct.yml": "e".repeat(64) },
       harness,
       requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
     },

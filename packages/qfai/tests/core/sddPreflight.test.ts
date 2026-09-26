@@ -318,7 +318,7 @@ describe("runSddPreflight", () => {
     }
 
     const repoRoot = path.resolve(process.cwd(), "..", "..");
-    const playbookRel = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
+    const playbookRel = "assistant/skill/qfai-sdd/references/sdd-execution-playbook.md";
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const playbook = (await readFile(path.join(repoRoot, tree, playbookRel), "utf-8")).replace(
         /\s*\n\s*/g,
@@ -327,7 +327,7 @@ describe("runSddPreflight", () => {
       expect(playbook, `${tree} Stage 0 still stops where this preflight continues`).not.toContain(
         "Stop if `prototyping.yaml` is present in the latest UI-bearing pack",
       );
-      expect(playbook).toContain("A malformed optional artifact is **not** a Stage 0 blocker");
+      expect(playbook).toContain("A pack discrepancy does not itself block SDD.");
     }
   });
 

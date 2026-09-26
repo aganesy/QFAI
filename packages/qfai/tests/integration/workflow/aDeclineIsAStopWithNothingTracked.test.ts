@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0009
+// QFAI:AC-0001-0192-03
+// QFAI:EX-0001-0192-06
 
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -20,7 +21,7 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0009 (TDD-0260): Built CLI on a temp repo", async () => {
+it("Built CLI on a temp repo", async () => {
   const root = await minimalProject();
   const input = await inbox(root, null, "start", START_INPUT);
   const before = await treeDigest(root);
@@ -38,7 +39,7 @@ it("TC-0018-0009 (TDD-0260): Built CLI on a temp repo", async () => {
     answeredBy: "operator",
     expectedSequence: field(routed.json, "run.sequence"),
   });
-  const own = `.qfai/runs/${runId}/`;
+  const own = `.qfai/run/${runId}/`;
 
   expect({
     exit: declined.status,

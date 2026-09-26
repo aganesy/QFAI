@@ -1,10 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0034
+// QFAI:EX-0001-0192-21
 
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
 
-it("TC-0018-0034 (TDD-0037): Decide finish where the only qa-gatekeeper PASS comes from an instance the actor history shows as an author", () => {
+it("Decide finish where the only qa-gatekeeper PASS comes from an instance the actor history shows as an author", () => {
   const snapshot = readySnapshot();
   const acceptedStages = (snapshot.acceptedStages ?? []).map((stage) => ({
     ...stage,

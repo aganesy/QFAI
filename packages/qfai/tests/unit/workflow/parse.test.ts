@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0216
-// QFAI:SPEC-0018:TC-0018-0217
+// QFAI:EX-0001-0201-07
 
 import { expect, it } from "vitest";
 
@@ -23,7 +22,7 @@ function acceptMeasured(measurement: unknown) {
   const ready = {
     run: { id: "run-measured", state: "ready", sequence: 4 },
     plan: finishPlan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
   };
   const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;
@@ -47,7 +46,7 @@ function acceptMeasured(measurement: unknown) {
   );
 }
 
-it("TC-0018-0216 (TDD-0251): A stage result whose measurement sets every field null, and one submitting 0 for a field", () => {
+it("A stage result whose measurement sets every field null, and one submitting 0 for a field", () => {
   const counted = { ...UNMEASURED, reworkCount: 0 };
   const recorded = [UNMEASURED, counted].map((measurement) => {
     const accepted = acceptMeasured(measurement);
@@ -60,7 +59,7 @@ it("TC-0018-0216 (TDD-0251): A stage result whose measurement sets every field n
   ]);
 });
 
-it("TC-0018-0217 (TDD-0252): A stage result whose measurement omits a field", () => {
+it("A stage result whose measurement omits a field", () => {
   const { reworkCount: _omitted, ...partial } = UNMEASURED;
   const refused = acceptMeasured(partial);
 

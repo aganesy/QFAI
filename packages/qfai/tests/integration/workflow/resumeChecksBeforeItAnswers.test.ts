@@ -1,6 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0102
-// QFAI:SPEC-0018:TC-0018-0103
-// QFAI:SPEC-0018:TC-0018-0104
+// QFAI:AC-0001-0196-01
+// QFAI:EX-0001-0196-01
 
 import { spawnSync } from "node:child_process";
 import { appendFile, cp, mkdtemp } from "node:fs/promises";
@@ -32,13 +31,13 @@ async function runningRun(root: string): Promise<string> {
   return runId;
 }
 
-it("TC-0018-0102 (TDD-0316): Built CLI", async () => {
+it("Built CLI", async () => {
   const root = await minimalProject();
   const runId = await runningRun(root);
   const second = path.join(await mkdtemp(path.join(os.tmpdir(), "qfai-worktree-")), "second");
   worktrees.push(path.dirname(second));
   git(root, ["worktree", "add", "-q", "--detach", second]);
-  await cp(path.join(root, ".qfai", "runs"), path.join(second, ".qfai", "runs"), {
+  await cp(path.join(root, ".qfai", "run"), path.join(second, ".qfai", "run"), {
     recursive: true,
   });
   const resumed = workflow(second, ["resume", "--run", runId]);
@@ -49,7 +48,7 @@ it("TC-0018-0102 (TDD-0316): Built CLI", async () => {
   }).toEqual({ code: "identity-mismatch", workOrder: undefined });
 });
 
-it("TC-0018-0103 (TDD-0317): Switch the branch of the run's worktree, then resume", async () => {
+it("Switch the branch of the run's worktree, then resume", async () => {
   const root = await minimalProject();
   const runId = await runningRun(root);
   git(root, ["checkout", "-q", "-b", "another-branch"]);
@@ -61,11 +60,10 @@ it("TC-0018-0103 (TDD-0317): Switch the branch of the run's worktree, then resum
   }).toEqual({ state: "blocked", cause: "invariant-violation" });
 });
 
-it("TC-0018-0104 (TDD-0318): Change a watched manifest outside the run's write scope, then resume", async () => {
-  const root = await minimalProject();
+it("Change the watched configuration outside the run's write scope, then resume", async () => {
+  const root = await minimalProject("workflow:\n  mode: active\n");
   const runId = await runningRun(root);
-  const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-  await appendFile(manifest, "# edited outside the run\n");
+  await appendFile(path.join(root, "qfai.config.yaml"), "# edited outside the run\n");
   const resumed = workflow(root, ["resume", "--run", runId]);
 
   expect({

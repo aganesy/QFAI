@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0189
+// QFAI:AC-0001-0200-02
+// QFAI:EX-0001-0200-02
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -31,7 +32,7 @@ async function started(root: string) {
   };
 }
 
-it("TC-0018-0189 (TDD-0408): A temp project with no eval record and READMEs claiming no host", async () => {
+it("A temp project with no eval record and READMEs claiming no host", async () => {
   const claiming = await minimalProject("workflow:\n  mode: active\n");
   await writeFile(path.join(claiming, "README.md"), NO_CLAIM);
   // A README and an eval record the core could not read without failing: a directory where the

@@ -1,6 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0088
-// QFAI:SPEC-0018:TC-0018-0089
-// QFAI:SPEC-0018:TC-0018-0090
+// QFAI:EX-0001-0195-04
 
 import { expect, it } from "vitest";
 
@@ -59,24 +57,9 @@ function outcomeOf(decision: ReturnType<typeof decide>) {
 }
 
 const effects: [string, string, string, string[]][] = [
-  [
-    "TC-0018-0088 (TDD-0120): proceed",
-    "keep",
-    "ready",
-    ["authorization-recorded", "valid-answer-no-replan"],
-  ],
-  [
-    "TC-0018-0088 (TDD-0121): replan",
-    "narrow",
-    "routing",
-    ["authorization-recorded", "answer-changes-scope"],
-  ],
-  [
-    "TC-0018-0088 (TDD-0122): stop",
-    "stop",
-    "cancelled",
-    ["authorization-recorded", "authorized-stop"],
-  ],
+  ["proceed", "keep", "ready", ["authorization-recorded", "valid-answer-no-replan"]],
+  ["replan", "narrow", "routing", ["authorization-recorded", "answer-changes-scope"]],
+  ["stop", "stop", "cancelled", ["authorization-recorded", "authorized-stop"]],
 ];
 
 for (const [title, optionId, state, events] of effects) {
@@ -93,7 +76,7 @@ for (const [title, optionId, state, events] of effects) {
   });
 }
 
-it("TC-0018-0089 (TDD-0123): A multi-select answer choosing a proceed option and a stop option", () => {
+it("A multi-select answer choosing a proceed option and a stop option", () => {
   expect(outcomeOf(answer(["keep", "stop"], { min: 1, max: 2 }))).toEqual({
     state: "cancelled",
     events: ["authorization-recorded", "authorized-stop"],
@@ -111,11 +94,11 @@ const refused = {
   reasons: [{ reason: "option", subject: "answer" }],
 };
 const counts: [string, string[], "recorded" | "refused"][] = [
-  ["TC-0018-0090 (TDD-0124): count-min", ["keep"], "recorded"],
-  ["TC-0018-0090 (TDD-0125): count-max", ["keep", "narrow"], "recorded"],
-  ["TC-0018-0090 (TDD-0126): below-min", [], "refused"],
-  ["TC-0018-0090 (TDD-0127): above-max", ["keep", "narrow", "stop"], "refused"],
-  ["TC-0018-0090 (TDD-0128): option-outside", ["archive"], "refused"],
+  ["count-min", ["keep"], "recorded"],
+  ["count-max", ["keep", "narrow"], "recorded"],
+  ["below-min", [], "refused"],
+  ["above-max", ["keep", "narrow", "stop"], "refused"],
+  ["option-outside", ["archive"], "refused"],
 ];
 
 for (const [title, optionIds, expected] of counts) {

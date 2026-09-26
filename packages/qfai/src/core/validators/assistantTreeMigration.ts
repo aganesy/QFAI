@@ -27,9 +27,7 @@ export async function validateAssistantTreeMigration(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // 1. 4-layer enum guard — any assistant-tree dir outside the 4 canonical
-  // names is flagged (except the documented exceptions: agents/, skills/,
-  // instructions/ — these are existing pre-recut surfaces).
+  // 1. Canonical assistant-layer enum guard.
   const assistantRoot = path.join(root, ".qfai", "assistant");
   if (await exists(assistantRoot)) {
     let dirEntries: Dirent[];
@@ -38,19 +36,14 @@ export async function validateAssistantTreeMigration(
     } catch {
       dirEntries = [];
     }
-    const PRE_RECUT_DIRS = new Set([
-      "agents",
-      "skills",
-      // skills.local/ is the protected user-customization surface.
-      "skills.local",
-    ]);
+    const EXTRA_DIRS = new Set(["skill.local"]);
     // instructions/ and steering/ are pre-recut layers that get their
     // own D-DEPRECATED-PATH below (symmetric per qfai-init.md contract).
     const PRE_RECUT_DEPRECATED_DIRS = new Set(["instructions", "steering"]);
     for (const entry of dirEntries) {
       if (!entry.isDirectory()) continue;
       if (isAssistantLayer(entry.name)) continue;
-      if (PRE_RECUT_DIRS.has(entry.name)) continue;
+      if (EXTRA_DIRS.has(entry.name)) continue;
       if (PRE_RECUT_DEPRECATED_DIRS.has(entry.name)) continue;
       issues.push(
         issue(

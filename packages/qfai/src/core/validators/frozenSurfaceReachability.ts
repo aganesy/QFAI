@@ -66,8 +66,8 @@ export async function validateFrozenSurfaceReachability(
   return [
     issue(
       FROZEN_SURFACE_UNREACHABLE_CODE,
-      `prototyping.json#frozenSurfaceUnion names ${missing.length} spec(s) that no longer ` +
-        `resolve as UI-bearing: ${missing.join(", ")}. The loop is still open ` +
+      `prototyping.json#frozenSurfaceUnion names ${missing.length} UI contract(s) that no longer ` +
+        `resolve with screens[]: ${missing.join(", ")}. The loop is still open ` +
         `(stopReason=null) and ${resolvable.size} of the frozen scope remains reachable, so ` +
         "this is a scope reduction rather than the all-markers-removed drift " +
         "`iterate` hard-stops on. A scope reduction has an in-loop route: " +
@@ -80,7 +80,7 @@ export async function validateFrozenSurfaceReachability(
       "canonical",
       "Run `qfai prototyping rescope --remove <id> --reason <delta-id>` for each id above, " +
         "citing the decision that retired it. If the surface was NOT meant to be retired, " +
-        "restore its UI-bearing marker instead — `rescope` refuses a surface that still " +
+        "restore its UI contract and screens[] instead — `rescope` refuses a surface that still " +
         "resolves, so it cannot be used to drop one by mistake. The cycle-0 `--force` reset " +
         "remains available and remains destructive: it moves the recorded iterations to " +
         "`iter-00.backup-<ISO>`.",

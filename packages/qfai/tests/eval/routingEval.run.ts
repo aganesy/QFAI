@@ -19,12 +19,6 @@ import { it } from "vitest";
 
 import { hashAssistantAssetText } from "../../src/core/assistantAssetProvenance.js";
 import {
-  listRuns,
-  readJournal,
-  RUNS_DIR,
-  snapshotOf,
-} from "../../src/core/workflow/persistence.js";
-import {
   buildSeedFixture,
   evalRecordProblems,
   isSafetyRelevant,
@@ -97,32 +91,76 @@ function commit(root: string): void {
   ]);
 }
 
-async function stageMeasurements(runDir: string): Promise<unknown[]> {
-  const dir = path.join(runDir, "results");
-  const names = await readdir(dir).catch(() => []);
-  const results = await Promise.all(
-    names.map(async (name) => readFile(path.join(dir, name), "utf8")),
+async function jsonFiles(dir: string): Promise<unknown[]> {
+  const names = (await readdir(dir).catch(() => [])).filter((name) => name.endsWith(".json"));
+  return Promise.all(
+    names
+      .sort()
+      .map(async (name): Promise<unknown> =>
+        JSON.parse(await readFile(path.join(dir, name), "utf8")),
+      ),
   );
-  return results.map((text): unknown => Reflect.get(JSON.parse(text), "measurement") ?? null);
 }
 
-// SIMPLIFIED: observes the route, the accepted stage kinds and whether a question was opened.
+const read = (value: unknown, key: string): unknown =>
+  typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
+
+// The route the run's journal names: the checked plan's, or, for a run still waiting on an
+// answer at routing, the proposal's. The runtime snapshot answers when the journal names none.
+function routeOf(events: unknown[], snapshot: unknown): string | null {
+  const candidates = events.map((event) =>
+    read(event, "event") === "plan-accepted"
+      ? read(read(event, "plan"), "route")
+      : read(event, "event") === "unsettled-material-input"
+        ? read(read(event, "proposal"), "candidateRoute")
+        : undefined,
+  );
+  const route =
+    candidates.reverse().find((each) => typeof each === "string") ??
+    read(read(snapshot, "plan"), "route");
+  return typeof route === "string" ? route : null;
+}
+
+// Whether the run asked the operator anything a seed scores. A story-authoring stage asks for
+// every change it makes, so a question opened while an `sdd` or `sdd_delta` work order is the
+// last one issued does not count.
+function askedQuestion(events: unknown[]): boolean {
+  let outstanding: unknown;
+  for (const event of events) {
+    const name = read(event, "event");
+    if (name === "work-order-issued") outstanding = read(read(event, "workOrder"), "stageKind");
+    if (name === "question-opened" && outstanding !== "sdd" && outstanding !== "sdd_delta") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// SIMPLIFIED: observes the route, the stage kinds the run issued work orders for, and whether
+// the run asked the operator anything a seed scores.
 // Lift when: a host transcript format is settled, so the other behaviour a token names can be read.
 async function observe(root: string, seedId: string) {
-  const runsDir = path.join(root, RUNS_DIR);
-  const [runId] = await listRuns(runsDir);
+  const runs = (await readdir(path.join(root, ".qfai", "run")).catch(() => [])).filter((name) =>
+    /^run-\d{17}$/.test(name),
+  );
+  const [runId] = runs;
   if (runId === undefined) {
     return { run: { seedId, route: null, observed: [], askedQuestion: false }, measurements: [] };
   }
-  const read = await readJournal(path.join(runsDir, runId));
-  const records = read.ok ? read.records : [];
+  const runDir = path.join(root, ".qfai", "run", runId);
+  const events = await jsonFiles(path.join(runDir, "journal"));
+  const snapshot: unknown = JSON.parse(
+    await readFile(path.join(runDir, "snapshot.json"), "utf8").catch(() => "null"),
+  );
+  const orders = await jsonFiles(path.join(runDir, "work-orders"));
   const run: RunRecord = {
     seedId,
-    route: snapshotOf(records)?.plan?.route ?? null,
-    observed: records.flatMap((record) => (record.stageKind ? [record.stageKind] : [])),
-    askedQuestion: records.some((record) => record.event === "question-opened"),
+    route: routeOf(events, snapshot),
+    observed: orders.map((order) => String(read(order, "stageKind"))),
+    askedQuestion: askedQuestion(events),
   };
-  return { run, measurements: await stageMeasurements(path.join(runsDir, runId)) };
+  const results = await jsonFiles(path.join(runDir, "results"));
+  return { run, measurements: results.map((result) => read(result, "measurement") ?? null) };
 }
 
 async function runSeed(baseRoot: string, seed: Seed, argv: string[]) {

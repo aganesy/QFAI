@@ -3,7 +3,7 @@
  * (REQ-0012-0061 / TC-0012-0461).
  *
  * When the per-screen `htmlSourceCopy` flag is set, iterate copies
- * the source HTML at `.qfai/prototypes/iter-NN/<id>.html`
+ * the source HTML at `.qfai/prototype/iter-NN/<id>.html`
  * byte-for-byte (sha256 match) and does NOT inject runtime style
  * blocks (the `<style>` count must match exactly).
  *
@@ -12,7 +12,7 @@
  * Playwright's own runtime style injections).
  */
 
-// QFAI:SPEC-0012:TC-0012-0461
+// QFAI:EX-0001-0134-01
 
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -22,6 +22,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
+import { PROTOTYPE_REL } from "../../../../src/core/prototyping/paths.js";
 
 const tempDirs: string[] = [];
 
@@ -96,6 +97,13 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -110,8 +118,11 @@ describe("iterate --capture htmlSourceCopy byte-equivalent + zero injected <styl
     const root = await newTempDir();
     await seedMinimal(root);
 
-    const sourceDir = path.join(root, ".qfai/prototypes/iter-00");
+    const sourceDir = path.join(root, PROTOTYPE_REL, "iter-00");
     await mkdir(sourceDir, { recursive: true });
+    const oldSourceDir = path.join(root, ".qfai/prototypes/iter-00");
+    await mkdir(oldSourceDir, { recursive: true });
+    await writeFile(path.join(oldSourceDir, "home.html"), "retired layout", "utf-8");
     // Source HTML with exactly 2 <style> blocks — the byte-equivalent
     // copy MUST also have exactly 2; any runtime injection from a
     // Playwright `page.content()` path would surface as a count mismatch.

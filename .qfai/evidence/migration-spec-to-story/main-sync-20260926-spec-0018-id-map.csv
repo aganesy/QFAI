@@ -1,0 +1,667 @@
+old_id,new_id,disposition,reason
+US-0018-0001,US-0001-0192,carried,restated on the story tree
+US-0018-0002,US-0001-0193,carried,restated on the story tree
+US-0018-0003,US-0001-0194,carried,restated on the story tree
+US-0018-0004,US-0001-0195,carried,restated on the story tree
+US-0018-0005,US-0001-0196,carried,restated on the story tree
+US-0018-0006,US-0001-0197,carried,restated on the story tree
+US-0018-0007,US-0001-0198,carried,restated on the story tree
+US-0018-0008,US-0001-0199,carried,restated on the story tree
+US-0018-0009,US-0001-0200,carried,restated on the story tree
+US-0018-0010,US-0001-0201,carried,restated on the story tree
+AC-0018-0001,AC-0001-0192-01,carried,restated on the story tree
+AC-0018-0002,AC-0001-0192-02,carried,restated on the story tree
+AC-0018-0003,AC-0001-0192-03,carried,restated on the story tree
+AC-0018-0004,AC-0001-0192-04,carried,restated on the story tree
+AC-0018-0005,AC-0001-0192-05,carried,restated on the story tree
+AC-0018-0006,AC-0001-0192-06,carried,restated on the story tree
+AC-0018-0007,AC-0001-0192-07,carried,restated on the story tree
+AC-0018-0008,AC-0001-0192-08,carried,restated on the story tree
+AC-0018-0009,AC-0001-0192-09,carried,restated on the story tree
+AC-0018-0010,AC-0001-0192-10,carried,restated on the story tree
+AC-0018-0011,AC-0001-0192-11,carried,restated on the story tree
+AC-0018-0012,AC-0001-0193-01,carried,restated on the story tree
+AC-0018-0013,AC-0001-0193-02,carried,restated on the story tree
+AC-0018-0014,AC-0001-0193-03,carried,restated on the story tree
+AC-0018-0015,AC-0001-0193-04,carried,restated on the story tree
+AC-0018-0016,AC-0001-0194-01,carried,restated on the story tree
+AC-0018-0017,AC-0001-0194-02,carried,restated on the story tree
+AC-0018-0018,AC-0001-0194-03,carried,restated on the story tree
+AC-0018-0019,AC-0001-0195-01,carried,restated on the story tree
+AC-0018-0020,AC-0001-0195-02,carried,restated on the story tree
+AC-0018-0021,AC-0001-0195-03,carried,restated on the story tree
+AC-0018-0022,AC-0001-0195-04,carried,restated on the story tree
+AC-0018-0023,AC-0001-0195-05,carried,restated on the story tree
+AC-0018-0024,AC-0001-0195-06,carried,restated on the story tree
+AC-0018-0025,AC-0001-0195-07,carried,restated on the story tree
+AC-0018-0026,AC-0001-0196-01,carried,restated on the story tree
+AC-0018-0027,AC-0001-0196-02,carried,restated on the story tree
+AC-0018-0028,AC-0001-0196-03,carried,restated on the story tree
+AC-0018-0029,AC-0001-0196-04,carried,restated on the story tree
+AC-0018-0030,AC-0001-0196-05,carried,restated on the story tree
+AC-0018-0031,AC-0001-0196-06,carried,restated on the story tree
+AC-0018-0032,AC-0001-0196-07,carried,restated on the story tree
+AC-0018-0033,AC-0001-0197-01,carried,restated on the story tree
+AC-0018-0034,AC-0001-0197-02,carried,restated on the story tree
+AC-0018-0035,AC-0001-0198-01,carried,restated on the story tree
+AC-0018-0036,AC-0001-0198-02,carried,restated on the story tree
+AC-0018-0037,AC-0001-0199-01,carried,restated on the story tree
+AC-0018-0038,AC-0001-0199-02,carried,restated on the story tree
+AC-0018-0039,AC-0001-0199-03,carried,restated on the story tree
+AC-0018-0040,AC-0001-0200-01,carried,restated on the story tree
+AC-0018-0041,AC-0001-0200-02,carried,restated on the story tree
+AC-0018-0042,AC-0001-0201-01,carried,restated on the story tree
+AC-0018-0043,AC-0001-0201-02,carried,restated on the story tree
+AC-0018-0044,AC-0001-0201-03,carried,restated on the story tree
+AC-0018-0045,AC-0001-0201-04,carried,restated on the story tree
+AC-0018-0046,AC-0001-0201-05,carried,restated on the story tree
+AC-0018-0047,AC-0001-0192-12,carried,restated on the story tree
+AC-0018-0048,AC-0001-0192-13,carried,restated on the story tree
+AC-0018-0049,AC-0001-0195-08,carried,restated on the story tree
+AC-0018-0050,AC-0001-0196-08,carried,restated on the story tree
+AC-0018-0051,AC-0001-0192-14,carried,restated on the story tree
+AC-0018-0052,AC-0001-0192-15,carried,restated on the story tree
+BR-0018-0001,BR-0533,carried,restated with story-tree names
+BR-0018-0002,BR-0534,carried,restated with story-tree names
+BR-0018-0003,BR-0535,carried,restated with story-tree names
+BR-0018-0004,BR-0536,carried,restated with story-tree names
+BR-0018-0005,BR-0537,carried,restated with story-tree names
+BR-0018-0006,BR-0538,carried,carried by meaning
+BR-0018-0007,BR-0539,carried,carried by meaning
+BR-0018-0008,BR-0540,carried,carried by meaning
+BR-0018-0009,BR-0541,carried,carried by meaning
+BR-0018-0010,BR-0542,carried,carried by meaning
+BR-0018-0011,BR-0543,carried,carried by meaning
+BR-0018-0012,BR-0544,carried,carried by meaning
+BR-0018-0013,BR-0545,carried,restated with story-tree names
+BR-0018-0014,BR-0546,carried,carried by meaning
+BR-0018-0015,BR-0547,carried,carried by meaning
+BR-0018-0016,BR-0548,carried,carried by meaning
+BR-0018-0017,BR-0549,carried,carried by meaning
+BR-0018-0018,BR-0550,carried,carried by meaning
+BR-0018-0019,BR-0551,carried,carried by meaning
+BR-0018-0020,BR-0552,carried,restated with story-tree names
+BR-0018-0021,BR-0553,carried,carried by meaning
+BR-0018-0022,BR-0554,carried,carried by meaning
+BR-0018-0023,BR-0555,carried,carried by meaning
+BR-0018-0024,BR-0556,carried,carried by meaning
+BR-0018-0025,BR-0557,carried,carried by meaning
+BR-0018-0026,BR-0558,carried,restated with story-tree names
+BR-0018-0027,BR-0559,carried,carried by meaning
+BR-0018-0028,BR-0560,carried,carried by meaning
+BR-0018-0029,BR-0561,carried,carried by meaning
+BR-0018-0030,BR-0562,carried,carried by meaning
+BR-0018-0031,BR-0563,carried,restated with story-tree names
+BR-0018-0032,BR-0564,carried,carried by meaning
+BR-0018-0033,BR-0565,carried,carried by meaning
+BR-0018-0034,BR-0566,carried,restated with story-tree names
+BR-0018-0035,BR-0567,carried,carried by meaning
+BR-0018-0036,BR-0568,carried,restated with story-tree names
+BR-0018-0037,BR-0569,carried,restated with story-tree names
+BR-0018-0038,BR-0570,carried,restated with story-tree names
+BR-0018-0039,BR-0571,carried,carried by meaning
+BR-0018-0040,BR-0572,carried,restated with story-tree names
+BR-0018-0041,BR-0573,carried,restated with story-tree names
+BR-0018-0042,BR-0574,carried,restated with story-tree names
+BR-0018-0043,BR-0575,carried,carried by meaning
+BR-0018-0044,BR-0576,carried,restated with story-tree names
+BR-0018-0045,BR-0577,carried,carried by meaning
+BR-0018-0046,BR-0578,carried,restated with story-tree names
+BR-0018-0047,BR-0579,carried,restated with story-tree names
+BR-0018-0048,BR-0580,carried,carried by meaning
+BR-0018-0049,BR-0581,carried,restated with story-tree names
+BR-0018-0050,BR-0582,carried,restated with story-tree names
+BR-0018-0051,BR-0583,carried,carried by meaning
+BR-0018-0052,BR-0584,carried,carried by meaning
+BR-0018-0053,BR-0585,carried,carried by meaning
+BR-0018-0054,BR-0586,carried,carried by meaning
+BR-0018-0055,BR-0587,carried,carried by meaning
+BR-0018-0056,BR-0588,carried,carried by meaning
+BR-0018-0057,BR-0589,carried,carried by meaning
+BR-0018-0058,BR-0590,carried,restated with story-tree names
+BR-0018-0059,BR-0591,carried,carried by meaning
+BR-0018-0060,BR-0592,carried,carried by meaning
+BR-0018-0061,BR-0593,carried,carried by meaning
+BR-0018-0062,BR-0594,carried,restated with story-tree names
+BR-0018-0063,BR-0595,carried,carried by meaning
+BR-0018-0064,BR-0596,carried,restated with story-tree names
+BR-0018-0065,BR-0597,carried,carried by meaning
+BR-0018-0066,BR-0598,carried,carried by meaning
+BR-0018-0067,BR-0599,carried,carried by meaning
+BR-0018-0068,BR-0600,carried,carried by meaning
+BR-0018-0069,BR-0601,carried,carried by meaning
+BR-0018-0070,BR-0602,carried,carried by meaning
+BR-0018-0071,BR-0603,carried,carried by meaning
+BR-0018-0072,BR-0604,carried,carried by meaning
+BR-0018-0073,BR-0605,carried,carried by meaning
+BR-0018-0074,BR-0606,carried,carried by meaning
+BR-0018-0075,BR-0607,carried,carried by meaning
+BR-0018-0076,BR-0608,carried,carried by meaning
+BR-0018-0077,BR-0609,carried,carried by meaning
+BR-0018-0078,BR-0610,carried,carried by meaning
+BR-0018-0079,BR-0611,carried,carried by meaning
+BR-0018-0080,BR-0612,carried,carried by meaning
+BR-0018-0081,BR-0613,carried,carried by meaning
+BR-0018-0082,BR-0614,carried,carried by meaning
+BR-0018-0083,BR-0615,carried,carried by meaning
+BR-0018-0084,BR-0616,carried,carried by meaning
+BR-0018-0085,BR-0617,carried,carried by meaning
+BR-0018-0086,BR-0618,carried,restated with story-tree names
+BR-0018-0087,BR-0619,carried,carried by meaning
+BR-0018-0088,BR-0620,carried,carried by meaning
+BR-0018-0089,BR-0621,carried,restated with story-tree names
+BR-0018-0090,BR-0622,carried,carried by meaning
+BR-0018-0091,BR-0623,carried,carried by meaning
+BR-0018-0092,BR-0624,carried,carried by meaning
+BR-0018-0093,BR-0625,carried,carried by meaning
+BR-0018-0094,BR-0626,carried,restated with story-tree names
+BR-0018-0095,BR-0627,carried,carried by meaning
+BR-0018-0096,BR-0628,carried,carried by meaning
+BR-0018-0097,BR-0629,carried,carried by meaning
+BR-0018-0098,BR-0630,carried,restated with story-tree names
+BR-0018-0099,BR-0631,carried,restated with story-tree names
+BR-0018-0100,BR-0632,carried,carried by meaning
+BR-0018-0101,BR-0633,carried,carried by meaning
+BR-0018-0102,BR-0634,carried,carried by meaning
+BR-0018-0103,BR-0635,carried,restated with story-tree names
+BR-0018-0104,BR-0636,carried,carried by meaning
+BR-0018-0105,BR-0637,carried,carried by meaning
+BR-0018-0106,BR-0638,carried,restated with story-tree names
+BR-0018-0107,BR-0639,carried,carried by meaning
+BR-0018-0108,BR-0640,carried,carried by meaning
+BR-0018-0109,BR-0641,carried,carried by meaning
+BR-0018-0110,BR-0642,carried,carried by meaning
+BR-0018-0111,BR-0643,carried,carried by meaning
+BR-0018-0112,BR-0644,carried,carried by meaning
+BR-0018-0113,BR-0645,carried,carried by meaning
+BR-0018-0114,BR-0646,carried,carried by meaning
+BR-0018-0115,BR-0647,carried,carried by meaning
+BR-0018-0116,BR-0648,narrowed,narrowed (DEC-0779)
+BR-0018-0117,BR-0649,carried,carried by meaning
+BR-0018-0118,BR-0650,carried,carried by meaning
+BR-0018-0119,BR-0651,carried,carried by meaning
+BR-0018-0120,BR-0652,carried,carried by meaning
+BR-0018-0121,BR-0653,carried,carried by meaning
+BR-0018-0122,BR-0654,carried,restated with story-tree names
+BR-0018-0123,BR-0655,carried,restated with story-tree names
+BR-0018-0124,BR-0656,carried,restated with story-tree names
+BR-0018-0125,BR-0657,carried,restated with story-tree names
+BR-0018-0126,BR-0658,carried,restated with story-tree names
+BR-0018-0127,BR-0659,carried,restated with story-tree names
+BR-0018-0128,BR-0660,carried,carried by meaning
+BR-0018-0129,BR-0661,carried,carried by meaning
+EX-0018-0001,EX-0001-0192-01,carried,restated with story-tree names
+EX-0018-0002,EX-0001-0192-02,carried,carried by meaning
+EX-0018-0003,EX-0001-0192-03,carried,restated with story-tree names
+EX-0018-0004,EX-0001-0192-04,carried,restated with story-tree names
+EX-0018-0005,EX-0001-0192-05,carried,restated with story-tree names
+EX-0018-0006,EX-0001-0192-06,carried,restated with story-tree names
+EX-0018-0007,EX-0001-0192-07,carried,carried by meaning
+EX-0018-0008,EX-0001-0192-08,carried,restated with story-tree names
+EX-0018-0009,EX-0001-0192-09,carried,restated with story-tree names
+EX-0018-0010,EX-0001-0192-10,carried,carried by meaning
+EX-0018-0011,EX-0001-0192-11,carried,carried by meaning
+EX-0018-0012,EX-0001-0192-12,carried,carried by meaning
+EX-0018-0013,EX-0001-0192-13,carried,restated with story-tree names
+EX-0018-0014,EX-0001-0192-14,carried,restated with story-tree names
+EX-0018-0015,EX-0001-0192-15,carried,carried by meaning
+EX-0018-0016,EX-0001-0192-16,carried,restated with story-tree names
+EX-0018-0017,EX-0001-0192-17,carried,carried by meaning
+EX-0018-0018,EX-0001-0192-18,carried,carried by meaning
+EX-0018-0019,EX-0001-0192-19,carried,carried by meaning
+EX-0018-0020,EX-0001-0192-20,carried,carried by meaning
+EX-0018-0021,EX-0001-0192-21,carried,carried by meaning
+EX-0018-0022,EX-0001-0192-22,carried,carried by meaning
+EX-0018-0023,EX-0001-0192-23,carried,carried by meaning
+EX-0018-0024,EX-0001-0192-24,carried,carried by meaning
+EX-0018-0025,EX-0001-0192-25,carried,carried by meaning
+EX-0018-0026,EX-0001-0192-26,carried,restated with story-tree names
+EX-0018-0027,EX-0001-0192-27,carried,carried by meaning
+EX-0018-0028,EX-0001-0192-28,carried,carried by meaning
+EX-0018-0029,EX-0001-0192-29,carried,carried by meaning
+EX-0018-0030,EX-0001-0192-30,carried,carried by meaning
+EX-0018-0031,EX-0001-0192-31,carried,restated with story-tree names
+EX-0018-0032,EX-0001-0192-32,carried,carried by meaning
+EX-0018-0033,EX-0001-0192-33,carried,carried by meaning
+EX-0018-0034,EX-0001-0192-34,carried,restated with story-tree names
+EX-0018-0035,EX-0001-0192-35,carried,carried by meaning
+EX-0018-0136,EX-0001-0192-36,carried,carried by meaning
+EX-0018-0137,EX-0001-0192-37,carried,carried by meaning
+EX-0018-0142,EX-0001-0192-38,carried,restated with story-tree names
+EX-0018-0145,EX-0001-0192-39,carried,restated with story-tree names
+EX-0018-0147,EX-0001-0192-40,carried,restated with story-tree names
+EX-0018-0151,EX-0001-0192-41,carried,carried by meaning
+EX-0018-0152,EX-0001-0192-42,carried,carried by meaning
+EX-0018-0153,EX-0001-0192-43,carried,carried by meaning
+EX-0018-0154,EX-0001-0192-44,carried,restated with story-tree names
+EX-0018-0155,EX-0001-0192-45,carried,carried by meaning
+EX-0018-0036,EX-0001-0193-01,carried,restated with story-tree names
+EX-0018-0037,EX-0001-0193-02,carried,restated with story-tree names
+EX-0018-0038,EX-0001-0193-03,carried,restated with story-tree names
+EX-0018-0039,EX-0001-0193-04,carried,restated with story-tree names
+EX-0018-0040,EX-0001-0193-05,carried,restated with story-tree names
+EX-0018-0041,EX-0001-0193-06,carried,restated with story-tree names
+EX-0018-0042,EX-0001-0193-07,carried,restated with story-tree names
+EX-0018-0043,EX-0001-0193-08,carried,restated with story-tree names
+EX-0018-0044,EX-0001-0193-09,carried,restated with story-tree names
+EX-0018-0045,EX-0001-0193-10,carried,restated with story-tree names
+EX-0018-0046,EX-0001-0194-01,carried,restated with story-tree names
+EX-0018-0047,EX-0001-0194-02,carried,restated with story-tree names
+EX-0018-0048,EX-0001-0194-03,carried,carried by meaning
+EX-0018-0049,EX-0001-0194-04,carried,restated with story-tree names
+EX-0018-0050,EX-0001-0194-05,carried,restated with story-tree names
+EX-0018-0051,EX-0001-0195-01,carried,carried by meaning
+EX-0018-0052,EX-0001-0195-02,carried,carried by meaning
+EX-0018-0053,EX-0001-0195-03,carried,carried by meaning
+EX-0018-0054,EX-0001-0195-04,carried,carried by meaning
+EX-0018-0055,EX-0001-0195-05,carried,carried by meaning
+EX-0018-0056,EX-0001-0195-06,carried,carried by meaning
+EX-0018-0057,EX-0001-0195-07,carried,carried by meaning
+EX-0018-0058,EX-0001-0195-08,carried,restated with story-tree names
+EX-0018-0059,EX-0001-0195-09,carried,carried by meaning
+EX-0018-0060,EX-0001-0195-10,carried,carried by meaning
+EX-0018-0141,EX-0001-0195-11,carried,carried by meaning
+EX-0018-0146,EX-0001-0195-12,carried,restated with story-tree names
+EX-0018-0061,EX-0001-0196-01,carried,carried by meaning
+EX-0018-0062,EX-0001-0196-02,carried,restated with story-tree names
+EX-0018-0063,EX-0001-0196-03,carried,carried by meaning
+EX-0018-0064,EX-0001-0196-04,carried,restated with story-tree names
+EX-0018-0065,EX-0001-0196-05,carried,carried by meaning
+EX-0018-0066,EX-0001-0196-06,carried,carried by meaning
+EX-0018-0067,EX-0001-0196-07,carried,restated with story-tree names
+EX-0018-0068,EX-0001-0196-08,carried,carried by meaning
+EX-0018-0069,EX-0001-0196-09,carried,carried by meaning
+EX-0018-0070,EX-0001-0196-10,carried,carried by meaning
+EX-0018-0071,EX-0001-0196-11,carried,carried by meaning
+EX-0018-0072,EX-0001-0196-12,carried,carried by meaning
+EX-0018-0073,EX-0001-0196-13,carried,carried by meaning
+EX-0018-0074,EX-0001-0196-14,carried,carried by meaning
+EX-0018-0075,EX-0001-0196-15,carried,carried by meaning
+EX-0018-0076,EX-0001-0196-16,carried,carried by meaning
+EX-0018-0077,EX-0001-0196-17,carried,carried by meaning
+EX-0018-0078,EX-0001-0196-18,carried,carried by meaning
+EX-0018-0079,EX-0001-0196-19,carried,carried by meaning
+EX-0018-0080,EX-0001-0196-20,carried,carried by meaning
+EX-0018-0081,EX-0001-0196-21,carried,carried by meaning
+EX-0018-0148,EX-0001-0196-22,carried,restated with story-tree names
+EX-0018-0149,EX-0001-0196-23,carried,carried by meaning
+EX-0018-0150,EX-0001-0196-24,carried,restated with story-tree names
+EX-0018-0082,EX-0001-0197-01,carried,carried by meaning
+EX-0018-0083,EX-0001-0197-02,carried,carried by meaning
+EX-0018-0084,EX-0001-0197-03,carried,carried by meaning
+EX-0018-0085,EX-0001-0197-04,carried,carried by meaning
+EX-0018-0086,EX-0001-0197-05,carried,carried by meaning
+EX-0018-0087,EX-0001-0198-01,carried,carried by meaning
+EX-0018-0088,EX-0001-0198-02,carried,carried by meaning
+EX-0018-0089,EX-0001-0198-03,carried,restated with story-tree names
+EX-0018-0090,EX-0001-0198-04,carried,carried by meaning
+EX-0018-0091,EX-0001-0199-01,carried,carried by meaning
+EX-0018-0092,EX-0001-0199-02,carried,carried by meaning
+EX-0018-0093,EX-0001-0199-03,carried,carried by meaning
+EX-0018-0094,EX-0001-0199-04,carried,carried by meaning
+EX-0018-0095,EX-0001-0199-05,carried,carried by meaning
+EX-0018-0096,EX-0001-0199-06,carried,restated with story-tree names
+EX-0018-0097,EX-0001-0199-07,carried,restated with story-tree names
+EX-0018-0098,EX-0001-0199-08,carried,restated with story-tree names
+EX-0018-0099,EX-0001-0199-09,carried,restated with story-tree names
+EX-0018-0100,EX-0001-0200-01,carried,carried by meaning
+EX-0018-0101,EX-0001-0200-02,carried,carried by meaning
+EX-0018-0102,EX-0001-0200-03,carried,carried by meaning
+EX-0018-0103,EX-0001-0201-01,carried,restated with story-tree names
+EX-0018-0104,EX-0001-0201-02,carried,carried by meaning
+EX-0018-0105,EX-0001-0201-03,carried,carried by meaning
+EX-0018-0106,EX-0001-0201-04,carried,carried by meaning
+EX-0018-0107,EX-0001-0201-05,carried,carried by meaning
+EX-0018-0108,EX-0001-0201-06,carried,carried by meaning
+EX-0018-0109,EX-0001-0201-07,carried,carried by meaning
+EX-0018-0110,EX-0001-0201-08,carried,restated with story-tree names
+EX-0018-0111,EX-0001-0201-09,carried,carried by meaning
+EX-0018-0112,EX-0001-0201-10,carried,carried by meaning
+EX-0018-0113,EX-0001-0201-11,carried,carried by meaning
+EX-0018-0114,EX-0001-0201-12,carried,carried by meaning
+EX-0018-0115,EX-0001-0201-13,carried,carried by meaning
+EX-0018-0116,EX-0001-0201-14,carried,restated with story-tree names
+EX-0018-0117,EX-0001-0201-15,carried,carried by meaning
+EX-0018-0118,EX-0001-0201-16,carried,carried by meaning
+EX-0018-0119,EX-0001-0201-17,carried,carried by meaning
+EX-0018-0120,EX-0001-0201-18,carried,carried by meaning
+EX-0018-0121,EX-0001-0201-19,carried,carried by meaning
+EX-0018-0122,EX-0001-0201-20,carried,carried by meaning
+EX-0018-0123,EX-0001-0201-21,carried,restated with story-tree names
+EX-0018-0124,EX-0001-0201-22,carried,carried by meaning
+EX-0018-0125,EX-0001-0201-23,carried,carried by meaning
+EX-0018-0126,EX-0001-0201-24,carried,carried by meaning
+EX-0018-0127,EX-0001-0201-25,carried,carried by meaning
+EX-0018-0128,EX-0001-0201-26,carried,carried by meaning
+EX-0018-0129,EX-0001-0201-27,carried,carried by meaning
+EX-0018-0130,EX-0001-0201-28,carried,carried by meaning
+EX-0018-0131,EX-0001-0201-29,carried,carried by meaning
+EX-0018-0132,EX-0001-0201-30,carried,carried by meaning
+EX-0018-0133,EX-0001-0201-31,carried,carried by meaning
+EX-0018-0134,EX-0001-0201-32,carried,carried by meaning
+EX-0018-0135,EX-0001-0201-33,carried,carried by meaning
+EX-0018-0138,EX-0001-0201-34,carried,carried by meaning
+EX-0018-0139,EX-0001-0201-35,carried,carried by meaning
+EX-0018-0140,EX-0001-0201-36,carried,restated with story-tree names
+EX-0018-0143,EX-0001-0201-37,carried,carried by meaning
+EX-0018-0144,EX-0001-0201-38,carried,carried by meaning
+TC-0018-0001,EX-0001-0192-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-01
+TC-0018-0002,EX-0001-0192-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-01
+TC-0018-0003,EX-0001-0192-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-02
+TC-0018-0004,EX-0001-0192-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-03
+TC-0018-0005,EX-0001-0192-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-04
+TC-0018-0006,EX-0001-0192-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-05
+TC-0018-0007,EX-0001-0192-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-05
+TC-0018-0008,EX-0001-0192-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-06
+TC-0018-0009,EX-0001-0192-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-06
+TC-0018-0010,EX-0001-0192-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-07
+TC-0018-0011,EX-0001-0192-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-07
+TC-0018-0012,EX-0001-0192-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-08
+TC-0018-0013,EX-0001-0192-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-08
+TC-0018-0014,EX-0001-0192-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-08
+TC-0018-0015,EX-0001-0192-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-09
+TC-0018-0016,EX-0001-0192-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-10
+TC-0018-0017,EX-0001-0192-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-11
+TC-0018-0238,EX-0001-0192-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-11
+TC-0018-0018,EX-0001-0192-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-12
+TC-0018-0019,EX-0001-0192-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-13
+TC-0018-0020,EX-0001-0192-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-14
+TC-0018-0021,EX-0001-0192-15,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-15
+TC-0018-0022,EX-0001-0192-15,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-15
+TC-0018-0023,EX-0001-0192-15,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-15
+TC-0018-0024,EX-0001-0192-16,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-16
+TC-0018-0025,EX-0001-0192-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-17
+TC-0018-0026,EX-0001-0192-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-17
+TC-0018-0027,EX-0001-0192-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-18
+TC-0018-0028,EX-0001-0192-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-18
+TC-0018-0029,EX-0001-0192-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-18
+TC-0018-0030,EX-0001-0192-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-19
+TC-0018-0031,EX-0001-0192-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-19
+TC-0018-0032,EX-0001-0192-20,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-20
+TC-0018-0033,EX-0001-0192-20,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-20
+TC-0018-0034,EX-0001-0192-21,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-21
+TC-0018-0035,EX-0001-0192-22,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-22
+TC-0018-0036,EX-0001-0192-22,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-22
+TC-0018-0037,EX-0001-0192-23,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-23
+TC-0018-0038,EX-0001-0192-23,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-23
+TC-0018-0039,EX-0001-0192-36,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-36
+TC-0018-0040,EX-0001-0192-24,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-24
+TC-0018-0041,EX-0001-0192-24,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-24
+TC-0018-0042,EX-0001-0192-25,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-25
+TC-0018-0043,EX-0001-0192-26,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-26
+TC-0018-0044,EX-0001-0192-26,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-26
+TC-0018-0239,EX-0001-0192-26,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-26
+TC-0018-0240,EX-0001-0192-26,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-26
+TC-0018-0045,EX-0001-0192-27,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-27
+TC-0018-0046,EX-0001-0192-28,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-28
+TC-0018-0047,EX-0001-0192-29,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-29
+TC-0018-0048,EX-0001-0192-29,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-29
+TC-0018-0049,EX-0001-0192-30,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-30
+TC-0018-0050,EX-0001-0192-30,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-30
+TC-0018-0051,EX-0001-0192-31,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-31
+TC-0018-0052,EX-0001-0192-31,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-31
+TC-0018-0053,EX-0001-0192-31,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-31
+TC-0018-0054,EX-0001-0192-32,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-32
+TC-0018-0055,EX-0001-0192-32,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-32
+TC-0018-0056,EX-0001-0192-37,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-37
+TC-0018-0057,EX-0001-0192-33,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-33
+TC-0018-0058,EX-0001-0192-34,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-34
+TC-0018-0059,EX-0001-0192-34,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-34
+TC-0018-0246,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0247,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0248,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0249,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0250,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0251,EX-0001-0192-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-38
+TC-0018-0254,EX-0001-0192-40,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-40
+TC-0018-0255,EX-0001-0192-39,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-39
+TC-0018-0256,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0257,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0258,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0259,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0260,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0261,EX-0001-0195-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-12
+TC-0018-0262,EX-0001-0196-22,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-22
+TC-0018-0263,EX-0001-0196-23,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-23
+TC-0018-0264,EX-0001-0196-24,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-24
+TC-0018-0265,EX-0001-0192-41,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-41
+TC-0018-0266,EX-0001-0192-42,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-42
+TC-0018-0267,EX-0001-0192-43,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-43
+TC-0018-0268,EX-0001-0192-44,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-44
+TC-0018-0269,EX-0001-0192-45,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-45
+TC-0018-0060,EX-0001-0192-34,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-34
+TC-0018-0061,EX-0001-0192-35,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-35
+TC-0018-0062,EX-0001-0192-35,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0192-35
+TC-0018-0063,EX-0001-0193-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-01
+TC-0018-0064,EX-0001-0193-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-01
+TC-0018-0065,EX-0001-0193-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-01
+TC-0018-0066,EX-0001-0193-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-02
+TC-0018-0067,EX-0001-0193-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-03
+TC-0018-0068,EX-0001-0193-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-04
+TC-0018-0069,EX-0001-0193-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-04
+TC-0018-0070,EX-0001-0193-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-05
+TC-0018-0071,EX-0001-0193-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-06
+TC-0018-0072,EX-0001-0193-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-06
+TC-0018-0073,EX-0001-0193-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-07
+TC-0018-0074,EX-0001-0193-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-08
+TC-0018-0075,EX-0001-0193-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-09
+TC-0018-0076,EX-0001-0193-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0193-10
+TC-0018-0077,EX-0001-0194-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-01
+TC-0018-0078,EX-0001-0194-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-02
+TC-0018-0079,EX-0001-0194-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-03
+TC-0018-0080,EX-0001-0194-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-03
+TC-0018-0081,EX-0001-0194-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-04
+TC-0018-0082,EX-0001-0194-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0194-05
+TC-0018-0083,EX-0001-0194-07,carried,a test case the story tree states as an example: a test fix missing its review receipt or its re-run receipt
+TC-0018-0084,EX-0001-0195-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-01
+TC-0018-0085,EX-0001-0195-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-02
+TC-0018-0086,EX-0001-0195-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-03
+TC-0018-0087,EX-0001-0195-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-03
+TC-0018-0088,EX-0001-0195-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-04
+TC-0018-0089,EX-0001-0195-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-04
+TC-0018-0090,EX-0001-0195-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-04
+TC-0018-0091,EX-0001-0195-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-05
+TC-0018-0092,EX-0001-0195-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-06
+TC-0018-0093,EX-0001-0195-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-07
+TC-0018-0094,EX-0001-0195-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-08
+TC-0018-0241,EX-0001-0195-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-11
+TC-0018-0242,EX-0001-0195-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-11
+TC-0018-0095,EX-0001-0195-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-09
+TC-0018-0096,EX-0001-0195-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-09
+TC-0018-0097,EX-0001-0195-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-09
+TC-0018-0098,EX-0001-0195-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-09
+TC-0018-0099,EX-0001-0195-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-10
+TC-0018-0100,EX-0001-0195-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-10
+TC-0018-0101,EX-0001-0195-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0195-10
+TC-0018-0102,EX-0001-0196-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-01
+TC-0018-0103,EX-0001-0196-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-01
+TC-0018-0104,EX-0001-0196-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-01
+TC-0018-0105,EX-0001-0196-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-02
+TC-0018-0106,EX-0001-0196-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-03
+TC-0018-0107,EX-0001-0196-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-03
+TC-0018-0108,EX-0001-0196-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-04
+TC-0018-0109,EX-0001-0196-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-04
+TC-0018-0110,EX-0001-0196-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-05
+TC-0018-0111,EX-0001-0196-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-06
+TC-0018-0112,EX-0001-0196-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-07
+TC-0018-0113,EX-0001-0196-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-07
+TC-0018-0114,EX-0001-0196-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-07
+TC-0018-0115,EX-0001-0196-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-08
+TC-0018-0116,EX-0001-0196-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-08
+TC-0018-0117,EX-0001-0196-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-09
+TC-0018-0118,EX-0001-0196-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-09
+TC-0018-0119,EX-0001-0196-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-09
+TC-0018-0120,EX-0001-0196-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-09
+TC-0018-0121,EX-0001-0196-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-09
+TC-0018-0122,EX-0001-0196-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-10
+TC-0018-0123,EX-0001-0196-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-11
+TC-0018-0124,EX-0001-0196-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-11
+TC-0018-0125,EX-0001-0196-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-11
+TC-0018-0126,EX-0001-0196-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-11
+TC-0018-0127,EX-0001-0196-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-12
+TC-0018-0128,EX-0001-0196-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-12
+TC-0018-0129,EX-0001-0196-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-12
+TC-0018-0130,EX-0001-0196-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-12
+TC-0018-0131,EX-0001-0196-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-13
+TC-0018-0132,EX-0001-0196-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-13
+TC-0018-0133,EX-0001-0196-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-13
+TC-0018-0134,EX-0001-0196-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-13
+TC-0018-0135,EX-0001-0196-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-14
+TC-0018-0136,EX-0001-0196-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-14
+TC-0018-0137,EX-0001-0196-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-14
+TC-0018-0138,EX-0001-0196-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-14
+TC-0018-0139,EX-0001-0196-15,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-15
+TC-0018-0140,EX-0001-0196-16,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-16
+TC-0018-0141,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0142,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0143,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0144,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0145,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0146,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0147,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0148,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0149,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0150,EX-0001-0196-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-17
+TC-0018-0151,EX-0001-0196-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-18
+TC-0018-0152,EX-0001-0196-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-18
+TC-0018-0153,EX-0001-0196-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-19
+TC-0018-0154,EX-0001-0196-20,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-20
+TC-0018-0155,EX-0001-0196-21,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-21
+TC-0018-0156,EX-0001-0196-21,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-21
+TC-0018-0157,EX-0001-0197-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-01
+TC-0018-0158,EX-0001-0197-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-02
+TC-0018-0159,EX-0001-0197-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-03
+TC-0018-0160,EX-0001-0197-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-04
+TC-0018-0161,EX-0001-0197-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-05
+TC-0018-0162,EX-0001-0197-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-05
+TC-0018-0163,EX-0001-0197-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0197-05
+TC-0018-0164,EX-0001-0198-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0198-01
+TC-0018-0165,EX-0001-0198-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0198-01
+TC-0018-0166,EX-0001-0198-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0198-02
+TC-0018-0167,EX-0001-0198-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0198-03
+TC-0018-0168,EX-0001-0198-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0198-04
+TC-0018-0169,EX-0001-0199-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-01
+TC-0018-0170,EX-0001-0199-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-02
+TC-0018-0171,EX-0001-0199-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-03
+TC-0018-0172,EX-0001-0199-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-03
+TC-0018-0173,EX-0001-0199-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-04
+TC-0018-0174,EX-0001-0199-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-04
+TC-0018-0175,EX-0001-0199-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-05
+TC-0018-0176,EX-0001-0199-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-06
+TC-0018-0177,EX-0001-0199-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-06
+TC-0018-0178,EX-0001-0199-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-06
+TC-0018-0179,EX-0001-0199-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-07
+TC-0018-0180,EX-0001-0199-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-07
+TC-0018-0181,EX-0001-0199-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-07
+TC-0018-0182,EX-0001-0199-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-07
+TC-0018-0183,EX-0001-0199-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-08
+TC-0018-0184,EX-0001-0199-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-09
+TC-0018-0185,EX-0001-0199-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-09
+TC-0018-0186,EX-0001-0199-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0199-09
+TC-0018-0187,EX-0001-0200-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0200-01
+TC-0018-0188,EX-0001-0200-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0200-01
+TC-0018-0189,EX-0001-0200-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0200-02
+TC-0018-0190,EX-0001-0200-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0200-03
+TC-0018-0191,EX-0001-0201-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-01
+TC-0018-0192,EX-0001-0201-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-01
+TC-0018-0193,EX-0001-0201-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-01
+TC-0018-0194,EX-0001-0201-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-01
+TC-0018-0195,EX-0001-0201-01,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-01
+TC-0018-0196,EX-0001-0201-21,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-21
+TC-0018-0197,EX-0001-0201-22,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-22
+TC-0018-0198,EX-0001-0201-23,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-23
+TC-0018-0199,EX-0001-0201-24,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-24
+TC-0018-0200,EX-0001-0201-25,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-25
+TC-0018-0201,EX-0001-0201-26,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-26
+TC-0018-0202,EX-0001-0201-27,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-27
+TC-0018-0203,EX-0001-0201-28,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-28
+TC-0018-0204,EX-0001-0201-29,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-29
+TC-0018-0205,EX-0001-0201-30,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-30
+TC-0018-0206,EX-0001-0201-31,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-31
+TC-0018-0252,EX-0001-0201-37,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-37
+TC-0018-0243,EX-0001-0201-34,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-34
+TC-0018-0244,EX-0001-0201-35,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-35
+TC-0018-0245,EX-0001-0201-36,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-36
+TC-0018-0207,EX-0001-0201-32,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-32
+TC-0018-0208,EX-0001-0201-33,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-33
+TC-0018-0209,EX-0001-0201-02,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-02
+TC-0018-0210,EX-0001-0201-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-03
+TC-0018-0211,EX-0001-0201-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-03
+TC-0018-0212,EX-0001-0201-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-04
+TC-0018-0213,EX-0001-0201-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-05
+TC-0018-0253,EX-0001-0201-38,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-38
+TC-0018-0214,EX-0001-0201-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-06
+TC-0018-0215,EX-0001-0201-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-06
+TC-0018-0216,EX-0001-0201-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-07
+TC-0018-0217,EX-0001-0201-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-07
+TC-0018-0218,EX-0001-0201-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-08
+TC-0018-0219,EX-0001-0201-08,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-08
+TC-0018-0220,EX-0001-0201-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-09
+TC-0018-0221,EX-0001-0201-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-09
+TC-0018-0222,EX-0001-0201-09,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-09
+TC-0018-0223,EX-0001-0201-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-10
+TC-0018-0224,EX-0001-0201-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-10
+TC-0018-0225,EX-0001-0201-10,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-10
+TC-0018-0226,EX-0001-0201-11,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-11
+TC-0018-0227,EX-0001-0201-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-12
+TC-0018-0228,EX-0001-0201-12,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-12
+TC-0018-0229,EX-0001-0201-13,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-13
+TC-0018-0230,EX-0001-0201-14,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-14
+TC-0018-0231,EX-0001-0201-15,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-15
+TC-0018-0232,EX-0001-0201-16,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-16
+TC-0018-0233,EX-0001-0201-17,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-17
+TC-0018-0234,EX-0001-0201-18,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-18
+TC-0018-0235,EX-0001-0201-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-19
+TC-0018-0236,EX-0001-0201-19,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-19
+TC-0018-0237,EX-0001-0201-20,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0201-20
+-,EX-0001-0192-46,added,example the story-tree restatement needs (DEC-0751)
+-,EX-0001-0192-47,added,example the story-tree restatement needs (DEC-0751)
+-,EX-0001-0192-48,added,example the story-tree restatement needs (DEC-0749)
+-,EX-0001-0192-49,added,example the story-tree restatement needs (DEC-0754)
+-,EX-0001-0193-11,added,example the story-tree restatement needs (DEC-0755)
+-,EX-0001-0193-12,added,example the story-tree restatement needs (DEC-0750)
+-,EX-0001-0194-06,added,example the story-tree restatement needs (DEC-0754)
+-,EX-0001-0195-13,added,example the story-tree restatement needs (DEC-0748)
+-,EX-0001-0195-14,added,example the story-tree restatement needs (DEC-0748)
+-,BR-0662,added,rule the story-tree restatement needs (DEC-0749)
+-,BR-0663,added,rule the story-tree restatement needs (DEC-0751)
+-,BR-0664,added,rule the story-tree restatement needs (DEC-0751)
+-,BR-0665,added,rule the story-tree restatement needs (DEC-0748)
+-,BR-0666,added,rule the story-tree restatement needs (DEC-0755)
+-,BR-0667,added,rule the story-tree restatement needs (DEC-0750)
+-,EX-0001-0192-50,added,example the story-tree restatement needs (DEC-0776)
+-,EX-0001-0193-13,added,example the story-tree restatement needs (DEC-0777)
+-,BR-0743,added,rule the story-tree restatement needs (DEC-0776)
+-,BR-0744,added,rule the story-tree restatement needs (DEC-0777)
+-,AC-0001-0192-16,added,criterion the story-tree restatement needs (DEC-0751)
+-,AC-0001-0195-09,added,criterion the story-tree restatement needs (DEC-0748)
+DR-0018-0001,DEC-0761,carried,decision still in force
+DR-0018-0002,dropped,dropped,a spec-size signal the story tree has no use for
+DR-0018-0003,DEC-0762,carried,decision still in force
+DR-0018-0004,DEC-0763,carried,decision still in force
+DR-0018-0005,DEC-0764,carried,decision still in force
+DR-0018-0006,DEC-0765,carried,decision still in force
+DR-0018-0007,DEC-0766,carried,decision still in force
+DR-0018-0008,DEC-0767,carried,decision still in force
+DR-0018-0009,DEC-0768,carried,decision still in force
+DR-0018-0010,DEC-0769,carried,decision still in force
+DR-0018-0011,DEC-0770,carried,decision still in force
+DR-0018-0012,DEC-0771,carried,decision still in force
+DR-0018-0013,DEC-0772,carried,decision still in force
+OQ-0018-0001,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0002,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0003,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0004,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0005,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0006,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0007,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0008,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0009,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0010,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0011,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0012,-,resolved,answered by the contract section main named; the story-tree contracts carry the answer
+OQ-0018-0013,OQ-0188,carried,still deferred
+OQ-0018-0014,OQ-0189,carried,still deferred
+OQ-0018-0015,OQ-0190,carried,still deferred
+-,EX-0001-0192-51,added,example the story-tree restatement needs (DEC-0781)
+-,BR-0745,added,rule the story-tree restatement needs (DEC-0781)

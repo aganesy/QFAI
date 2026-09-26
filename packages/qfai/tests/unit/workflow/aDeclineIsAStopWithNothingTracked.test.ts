@@ -1,34 +1,35 @@
-// QFAI:SPEC-0018:TC-0018-0008
+// QFAI:EX-0001-0192-06
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-it("TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding or work order", () => {
+it("Declining CREATE cancels the run without a binding or work order", () => {
   const question = {
     questionId: "question-3-1",
     kind: "create" as const,
-    text: "Create a capability for customer notification email registration?",
+    text: "Create a story in BF-0001 for customer notification email registration?",
     options: [
       {
         optionId: "create",
         label: "Create it",
-        description: "SDD writes the new capability's spec.",
+        description: "Story authoring writes the new story.",
         effect: "proceed" as const,
       },
       {
         optionId: "decline",
         label: "Do not create it",
-        description: "The run ends without creating the capability.",
+        description: "The run ends without creating the story.",
         effect: "stop" as const,
       },
     ],
     selection: { min: 1 as const, max: 1 as const },
     recommendation: "create",
-    capability: {
+    story: {
       goal: "Customer notification email registration",
       covers: ["Up to five unique emails per customer"],
       excludes: ["Notification delivery"],
+      flowId: "BF-0001",
       slotId: "slot-3-1",
     },
   };
@@ -77,7 +78,7 @@ it("TC-0018-0008 (TDD-0013): Declining CREATE cancels the run without a binding 
       operation: "CREATE",
       effect: "stop",
       optionIds: ["decline"],
-      slotId: question.capability.slotId,
+      slotId: question.story.slotId,
     },
     bindingEvents: 0,
     workOrderEvents: 0,

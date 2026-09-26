@@ -1,15 +1,15 @@
-// QFAI:SPEC-0018:TC-0018-0190
+// QFAI:EX-0001-0200-03
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
 
-it("TC-0018-0190 (TDD-0240): The first stage needing a real delegation returns delegation", () => {
+it("The first stage needing a real delegation returns delegation", () => {
   const ready = {
     run: { id: "run-first-delegation", state: "ready", sequence: 4 },
     plan: finishPlan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
   };
   const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;

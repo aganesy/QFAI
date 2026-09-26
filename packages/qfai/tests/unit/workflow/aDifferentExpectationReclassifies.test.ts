@@ -1,10 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0074
+// QFAI:EX-0001-0193-08
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 const plan = {
   route: "bugfix",
   stages: [
@@ -22,12 +22,12 @@ const plan = {
 const diagnosis = {
   verdict: "expectation-differs",
   reproductionRef: "evidence/expectation-reproduction.json",
-  matchedRowIds: ["TDD-0004"],
+  matchedIds: ["EX-0007-0002-01"],
 };
 
-it("TC-0018-0074 (TDD-0089): A diagnose result expectation-differs", () => {
+it("A diagnose result expectation-differs", () => {
   const issued = decide(
-    { run: { id: "run-reclassify", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-reclassify", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -36,7 +36,7 @@ it("TC-0018-0074 (TDD-0089): A diagnose result expectation-differs", () => {
   const accepted =
     workOrder && running
       ? decide(
-          { run: running, plan, specBinding, outstandingWorkOrder: workOrder },
+          { run: running, plan, flowBinding, outstandingWorkOrder: workOrder },
           {
             operation: "accept",
             result: {
@@ -58,7 +58,7 @@ it("TC-0018-0074 (TDD-0089): A diagnose result expectation-differs", () => {
         {
           run: after,
           plan,
-          specBinding,
+          flowBinding,
           diagnosis,
           acceptedStages: [
             { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },

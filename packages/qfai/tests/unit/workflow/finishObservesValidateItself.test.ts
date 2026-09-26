@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0031
+// QFAI:EX-0001-0192-19
 // Fault seeds: FAULT-008
 
 import { expect, it } from "vitest";
@@ -6,14 +6,14 @@ import { expect, it } from "vitest";
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finish, finishPlan, metFacts, readySnapshot } from "./finishFixture.js";
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function acceptImplementClaimingValidatePass() {
   const issued = decide(
     {
       run: { id: "run-20260925000000001", state: "ready", sequence: 8 },
       plan: finishPlan,
-      specBinding,
+      flowBinding,
       acceptedStages: [
         { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
       ],
@@ -28,7 +28,7 @@ function acceptImplementClaimingValidatePass() {
     {
       run,
       plan: finishPlan,
-      specBinding,
+      flowBinding,
       outstandingWorkOrder: workOrder,
       acceptedStages: [
         { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
@@ -50,7 +50,7 @@ function acceptImplementClaimingValidatePass() {
   );
 }
 
-it("TC-0018-0031 (TDD-0035): A result whose gateResults claims a PASS for a gate", () => {
+it("A result whose gateResults claims a PASS for a gate", () => {
   const accepted = acceptImplementClaimingValidatePass();
   const claims = accepted?.events[0]?.gateResults;
   expect(claims).toEqual([{ gateId: "validate", verdict: "PASS", trustLevel: "agent_reported" }]);

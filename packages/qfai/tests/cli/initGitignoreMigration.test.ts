@@ -51,7 +51,7 @@ describe("re-init preserves what the project chose to track", () => {
       // drop one governance negation so the freshness check fails on re-init.
       const pruned = (await readGitignore(root))
         .split("\n")
-        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/decisions/**")
+        .filter((line) => line !== ".qfai/evidence/*" && line !== "!.qfai/evidence/decision/**")
         .join("\n");
       await writeFile(path.join(root, ".gitignore"), pruned, "utf-8");
 
@@ -60,7 +60,7 @@ describe("re-init preserves what the project chose to track", () => {
       const after = await readGitignore(root);
       expect(after.split("\n")).not.toContain(".qfai/evidence/*");
       // …while the missing governance negation is restored.
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/evidence/decision/**");
       expect(after.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
     });
   });
@@ -77,6 +77,8 @@ describe("re-init preserves what the project chose to track", () => {
           QFAI_GITIGNORE_MARKER,
           ".qfai/report/*",
           "!.qfai/report/README.md",
+          "!.qfai/decisions/",
+          "!.qfai/decisions/**",
           ".qfai/discussion/discussion-*/",
           "",
         ].join("\n"),
@@ -88,13 +90,15 @@ describe("re-init preserves what the project chose to track", () => {
       const after = (await readGitignore(root)).split("\n");
       // Retired lines go.
       expect(after).not.toContain("!.qfai/report/README.md");
+      expect(after).not.toContain("!.qfai/decisions/");
+      expect(after).not.toContain("!.qfai/decisions/**");
       expect(after).not.toContain(".qfai/discussion/discussion-*/");
       // A renamed line keeps its successor — dropping it alone would remove an
       // ignore the project never gave up.
       expect(after).toContain(".qfai/discussion/*");
       // But an ignore this block simply never had is NOT added.
       expect(after).not.toContain(".qfai/evidence/*");
-      expect(after).toContain("!.qfai/decisions/**");
+      expect(after).toContain("!.qfai/evidence/decision/**");
     });
   });
 
@@ -130,6 +134,8 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         "!atdd-*.md",
         "!coverage-depth-*.md",
         "!skeleton.md",
+        "!decision/",
+        "!decision/**",
         "!decisions/",
         "!decisions/**",
         "!implement-*.md",
@@ -190,7 +196,7 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
         ".qfai/evidence/coverage-depth-spec-0001.md",
         ".qfai/evidence/change-request-0001.md",
         ".qfai/evidence/decision-0001.md",
-        ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/decision/20260101T000000000.json",
         ".qfai/evidence/import-lite-20260101000000000.md",
         ".qfai/evidence/import-lite.md",
         // The two session records. A stage that ran its grilling session and
@@ -232,20 +238,13 @@ describe("a legacy per-directory evidence ignore is migrated, not ignored", () =
 
 describe("--force regenerates the standard asset trees", () => {
   it("restores an edited agent definition, not the manifest and not project content", async () => {
-    // Without this, a correction to an agent body reached new projects only:
-    // `.qfai/**` is copied create-only and `--force` covered
-    // `assistant/skills` alone.
-    //
-    // `agent-catalog.yml` is **not** in the set. `qfai-configure` is the
-    // shipped entrypoint for editing the declarative manifests, so forcing the
-    // catalog would replace a taxonomy adjustment made through the supported
-    // path — and nothing migrates it back, because `--upgrade-assistant-tree`
-    // deliberately does not walk `manifest/`.
+    // The retired manifest is adopter content. Init does not create or update it.
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
       await writeFile(agent, "# stale" + NL, "utf-8");
+      await mkdir(path.dirname(manifest), { recursive: true });
       await writeFile(manifest, "tuned: true" + NL, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -258,7 +257,7 @@ describe("--force regenerates the standard asset trees", () => {
   it("leaves them alone without --force", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const agent = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+      const agent = path.join(root, ".qfai", "assistant", "agent", "qa-gatekeeper.md");
       await writeFile(agent, "# ours\n", "utf-8");
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -769,7 +768,7 @@ describe("nothing under a review directory reaches a commit", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const hidden = [
-        ".qfai/evidence/decisions/20260101T000000000.json",
+        ".qfai/evidence/decision/20260101T000000000.json",
         ".qfai/evidence/implement-spec-0001.md",
         ".qfai/evidence/atdd-spec-0001.md",
         ".qfai/evidence/coverage-depth-spec-0001.md",

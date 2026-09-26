@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0001
-// QFAI:SPEC-0018:TC-0018-0002
+// QFAI:EX-0001-0192-01
 
 import { expect, it } from "vitest";
 
@@ -10,7 +9,7 @@ import type {
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
 
-it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked proposal names one new capability", () => {
+it("Decide accept of a routing result whose checked proposal names one new story", () => {
   const snapshot = {
     run: { id: "run-routing", state: "routing", sequence: 2 },
     outstandingWorkOrder: {
@@ -43,21 +42,22 @@ it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked pro
           { kind: "request", ref: "request" },
         ] satisfies RouteReference<NormativeReferenceKind>[],
         observedRefs: [] satisfies RouteReference<ObservedReferenceKind>[],
-        affectedSpecIds: [],
+        affectedFlowIds: [],
         riskSignals: [],
         unresolvedQuestions: [],
-        newCapabilities: [
+        newStories: [
           {
             goal: "Customer notification email registration",
             covers: ["Up to five unique emails per customer"],
             excludes: ["Notification delivery"],
             evidence: ["request"],
+            flowId: "BF-0001",
           },
         ],
-        proposedWriteScope: [".qfai/specs/spec-0018/**"],
+        proposedWriteScope: [".qfai/specs/BF-0018/**"],
         protectedTargets: [],
         requiredStages: ["sdd", "verify"],
-        rationale: "No existing capability owns notification email registration.",
+        rationale: "No existing story owns notification email registration.",
       },
     },
   };
@@ -73,7 +73,7 @@ it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked pro
         recommendationIsOffered: question?.options.some(
           (option) => option.optionId === question.recommendation,
         ),
-        slotId: question?.capability?.slotId,
+        slotId: question?.story?.slotId,
       };
     });
 
@@ -97,7 +97,7 @@ it("TC-0018-0001 (TDD-0001): Decide accept of a routing result whose checked pro
   expect(actual).toEqual(expected);
 });
 
-it("TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to its last stage with canned accepted results", () => {
+it("After a proceed answer, drive the feature plan to its last stage with canned accepted results", () => {
   const plan = {
     route: "feature",
     stages: [
@@ -112,7 +112,7 @@ it("TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to i
     kind: "human_decision",
     operation: "CREATE",
     effect: "proceed",
-    target: { kind: "new_capability", slotId: "slot-3-1" },
+    target: { kind: "new_story", slotId: "slot-3-1" },
   };
   let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
   const postRoutingEvents: ReturnType<typeof decide>["events"] = [];
@@ -129,9 +129,11 @@ it("TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to i
   >();
   let replayFailure: string | null = null;
   let run = { id: "run-feature", state: "ready", sequence: 5 };
+  // The story-authoring stage binds the flow its new story joins; every later stage targets it.
+  const bound = () => (acceptedStages.length > 0 ? { flowBinding: { flowId: "BF-0001" } } : {});
 
   for (const stage of plan.stages) {
-    const readySnapshot = { run, plan, approval, acceptedStages };
+    const readySnapshot = { run, plan, approval, acceptedStages, ...bound() };
     const next = decide(readySnapshot, { operation: "next" }, {});
     postRoutingEvents.push(...next.events);
     const candidate = "workOrder" in next.verdict ? next.verdict.workOrder : null;
@@ -160,6 +162,7 @@ it("TC-0018-0002 (TDD-0002): After a proceed answer, drive the feature plan to i
       plan,
       approval,
       acceptedStages,
+      ...bound(),
       outstandingWorkOrder: {
         workOrderId: candidate.workOrderId,
         stageInstanceId: candidate.stageInstanceId,

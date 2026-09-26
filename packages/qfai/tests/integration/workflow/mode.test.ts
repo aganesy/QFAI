@@ -1,5 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0173
-// QFAI:SPEC-0018:TC-0018-0174
+// QFAI:AC-0001-0199-02
+// QFAI:EX-0001-0199-04
 
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,8 +11,8 @@ import { field, minimalProject, removeProjects, startRun, workflow } from "./wor
 
 afterEach(removeProjects);
 
-it("TC-0018-0173 (TDD-0376): Built CLI start with no workflow key in qfai", async () => {
-  const root = await minimalProject("paths:\n  specsDir: .qfai/specs\n");
+it("Built CLI start with no workflow key in qfai", async () => {
+  const root = await minimalProject("paths:\n  specsDir: .qfai/spec\n");
   const runId = await startRun(root).catch(() => undefined);
   const status = workflow(root, ["status"]);
 
@@ -22,7 +22,7 @@ it("TC-0018-0173 (TDD-0376): Built CLI start with no workflow key in qfai", asyn
   });
 });
 
-it("TC-0018-0174 (TDD-0377): npx qfai validate with workflow", async () => {
+it("npx qfai validate with workflow", async () => {
   const root = await minimalProject();
   await writeFile(path.join(root, "qfai.config.yaml"), "workflow:\n  mode: always\n");
   const result = await validateProject(root);

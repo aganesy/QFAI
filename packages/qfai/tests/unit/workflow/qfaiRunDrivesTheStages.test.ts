@@ -1,11 +1,11 @@
-// QFAI:SPEC-0018:TC-0018-0016
+// QFAI:EX-0001-0192-10
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-it("TC-0018-0016 (TDD-0026): direct", () => {
-  const specBinding = { specId: "spec-0018" };
+it("direct", () => {
+  const flowBinding = { flowId: "BF-0018" };
   const plan = {
     route: "direct",
     stages: [
@@ -37,7 +37,7 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
   let replayFailure: string | null = null;
 
   for (const stage of plan.stages) {
-    const next = decide({ run, plan, specBinding, acceptedStages }, { operation: "next" }, {});
+    const next = decide({ run, plan, flowBinding, acceptedStages }, { operation: "next" }, {});
     events.push(...next.events);
     const workOrder = next.verdict.workOrder;
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
@@ -70,7 +70,7 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
       {
         run: next.verdict.run,
         plan,
-        specBinding,
+        flowBinding,
         acceptedStages,
         outstandingWorkOrder: workOrder,
       },
@@ -113,7 +113,7 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
     run = accepted.verdict.run;
   }
 
-  const finalNext = decide({ run, plan, specBinding, acceptedStages }, { operation: "next" }, {});
+  const finalNext = decide({ run, plan, flowBinding, acceptedStages }, { operation: "next" }, {});
   const actual = {
     issued,
     acceptedStages,
@@ -130,14 +130,14 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
         stageKind: "maintenance",
         skill: "qfai-maintain",
         operation: "non-normative-edit",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
       {
         stageInstanceId: "direct-verify",
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
@@ -153,8 +153,8 @@ it("TC-0018-0016 (TDD-0026): direct", () => {
   expect(actual).toEqual(expected);
 });
 
-it("TC-0018-0016 (TDD-0028): bounded-change", () => {
-  const specBinding = { specId: "spec-0018" };
+it("bounded-change", () => {
+  const flowBinding = { flowId: "BF-0018" };
   const plan = {
     route: "bounded-change",
     stages: [
@@ -162,7 +162,7 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
         stageInstanceId: "bounded-sdd-delta",
         stageKind: "sdd_delta",
         skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
+        operation: "update-or-applicability-check",
         when: "always",
       },
       {
@@ -203,7 +203,7 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
   let replayFailure: string | null = null;
 
   for (const stage of plan.stages) {
-    const next = decide({ run, plan, specBinding, acceptedStages }, { operation: "next" }, facts);
+    const next = decide({ run, plan, flowBinding, acceptedStages }, { operation: "next" }, facts);
     events.push(...next.events);
     const workOrder = next.verdict.workOrder;
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
@@ -226,7 +226,7 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
     };
     resultDocuments.set(`results/${resultId}.json`, result);
     const accepted = decide(
-      { run: next.verdict.run, plan, specBinding, acceptedStages, outstandingWorkOrder: workOrder },
+      { run: next.verdict.run, plan, flowBinding, acceptedStages, outstandingWorkOrder: workOrder },
       { operation: "accept", result },
       facts,
     );
@@ -267,7 +267,7 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
   }
 
   const finalNext = decide(
-    { run, plan, specBinding, acceptedStages },
+    { run, plan, flowBinding, acceptedStages },
     { operation: "next" },
     facts,
   );
@@ -286,29 +286,29 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
         stageInstanceId: "bounded-sdd-delta",
         stageKind: "sdd_delta",
         skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
-        target: { kind: "spec", specId: "spec-0018" },
+        operation: "update-or-applicability-check",
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-acceptance",
         stageKind: "acceptance",
         skill: "qfai-atdd",
         operation: "author-acceptance-tests",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-implement",
         stageKind: "implement",
         skill: "qfai-implement",
         operation: "implement",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bounded-verify",
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
@@ -326,8 +326,8 @@ it("TC-0018-0016 (TDD-0028): bounded-change", () => {
   expect(actual).toEqual(expected);
 });
 
-it("TC-0018-0016 (TDD-0027): bugfix", () => {
-  const specBinding = { specId: "spec-0018" };
+it("bugfix", () => {
+  const flowBinding = { flowId: "BF-0018" };
   const plan = {
     route: "bugfix",
     stages: [
@@ -342,8 +342,8 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
         stageInstanceId: "bugfix-sdd-append",
         stageKind: "sdd_append",
         skill: "qfai-sdd",
-        operation: "defect-row-seeding",
-        when: "missing_test_row_needed",
+        operation: "defect-example-seeding",
+        when: "missing_example_needed",
       },
       {
         stageInstanceId: "bugfix-acceptance",
@@ -357,7 +357,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
         stageKind: "implement",
         skill: "qfai-implement",
         operation: "implement",
-        when: "missing_test_row_needed",
+        when: "missing_example_needed",
       },
       {
         stageInstanceId: "bugfix-regression-fix",
@@ -385,7 +385,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
   const missingTestDiagnosis = {
     verdict: "missing-test",
     reproductionRef: "evidence/empty-value-reproduction.json",
-    matchedRowIds: [],
+    matchedIds: [],
   };
   const appendedRow = { rowId: "TDD-NEW", layer: "Integration" } as const;
   let run = { id: "run-bugfix", state: "ready", sequence: 4 };
@@ -407,7 +407,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
   >();
 
   for (let index = 0; index < 5; index++) {
-    const readySnapshot = { run, plan, specBinding, acceptedStages, diagnosis: replayedDiagnosis };
+    const readySnapshot = { run, plan, flowBinding, acceptedStages, diagnosis: replayedDiagnosis };
     const facts = { acceptanceObligationsUnmet };
     const next = decide(readySnapshot, { operation: "next" }, facts);
     events.push(...next.events);
@@ -436,7 +436,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
     const runningSnapshot = {
       run: next.verdict.run,
       plan,
-      specBinding,
+      flowBinding,
       acceptedStages,
       diagnosis: replayedDiagnosis,
       outstandingWorkOrder: workOrder,
@@ -482,7 +482,7 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
     }
   }
 
-  const finalSnapshot = { run, plan, specBinding, acceptedStages, diagnosis: replayedDiagnosis };
+  const finalSnapshot = { run, plan, flowBinding, acceptedStages, diagnosis: replayedDiagnosis };
   const finalNext = decide(finalSnapshot, { operation: "next" }, { acceptanceObligationsUnmet });
   const actual = {
     issued,
@@ -501,35 +501,35 @@ it("TC-0018-0016 (TDD-0027): bugfix", () => {
         stageKind: "diagnose",
         skill: "qfai-implement",
         operation: "diagnose-only",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-sdd-append",
         stageKind: "sdd_append",
         skill: "qfai-sdd",
-        operation: "defect-row-seeding",
-        target: { kind: "spec", specId: "spec-0018" },
+        operation: "defect-example-seeding",
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-acceptance",
         stageKind: "acceptance",
         skill: "qfai-atdd",
         operation: "author-acceptance-tests",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-implement",
         stageKind: "implement",
         skill: "qfai-implement",
         operation: "implement",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: { kind: "flow", flowId: "BF-0018" },
       },
       {
         stageInstanceId: "bugfix-verify",
         stageKind: "verify",
         skill: "qfai-verify",
         operation: "verify-full",
-        target: { kind: "spec", specId: "spec-0018" },
+        target: undefined,
       },
     ],
     acceptedStages: [
@@ -561,8 +561,14 @@ function driveWithCannedResults(
   const issued: { stageKind: string; skill: string | undefined; operation: string | undefined }[] =
     [];
   const acceptEvents: string[] = [];
+  // The flow a story-authoring stage binds, which every later stage targets.
+  let bound = {};
   for (let index = 0; index < 10 && run.state === "ready"; index++) {
-    const next = decide({ ...context, run, acceptedStages }, { operation: "next" }, facts);
+    const next = decide(
+      { ...context, ...bound, run, acceptedStages },
+      { operation: "next" },
+      facts,
+    );
     const workOrder = next.verdict.workOrder;
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
     issued.push({
@@ -571,7 +577,13 @@ function driveWithCannedResults(
       operation: workOrder.operation,
     });
     const accepted = decide(
-      { ...context, run: next.verdict.run, acceptedStages, outstandingWorkOrder: workOrder },
+      {
+        ...context,
+        ...bound,
+        run: next.verdict.run,
+        acceptedStages,
+        outstandingWorkOrder: workOrder,
+      },
       {
         operation: "accept",
         result: {
@@ -581,12 +593,25 @@ function driveWithCannedResults(
           attempt: workOrder.attempt,
           expectedSequence: next.verdict.run.sequence,
           outcome: "accepted",
+          ...(workOrder.target?.kind === "new_story"
+            ? {
+                bindings: [
+                  {
+                    slotId: workOrder.target.slotId,
+                    flowId: "BF-0001",
+                    storyIds: ["US-0001-0001"],
+                  },
+                ],
+              }
+            : {}),
         },
       },
       facts,
     );
     if (!accepted.verdict.ok || !accepted.verdict.run) break;
     acceptEvents.push(...accepted.events.map((event) => event.type));
+    const binding = accepted.events.find((event) => event.binding)?.binding;
+    if (binding) bound = { flowBinding: { flowId: binding.flowId } };
     acceptedStages = [
       ...acceptedStages,
       {
@@ -599,7 +624,7 @@ function driveWithCannedResults(
   }
   const finalNext =
     run.state === "ready"
-      ? decide({ ...context, run, acceptedStages }, { operation: "next" }, facts)
+      ? decide({ ...context, ...bound, run, acceptedStages }, { operation: "next" }, facts)
       : null;
   return {
     issued,
@@ -609,7 +634,7 @@ function driveWithCannedResults(
   };
 }
 
-it("TC-0018-0016 (TDD-0029): feature", () => {
+it("feature", () => {
   const plan = {
     route: "feature",
     stages: [
@@ -617,7 +642,7 @@ it("TC-0018-0016 (TDD-0029): feature", () => {
         stageInstanceId: "feature-sdd",
         stageKind: "sdd",
         skill: "qfai-sdd",
-        operation: "new-capability",
+        operation: "new-story",
         when: "always",
       },
       {
@@ -648,7 +673,7 @@ it("TC-0018-0016 (TDD-0029): feature", () => {
     kind: "human_decision",
     operation: "CREATE",
     effect: "proceed",
-    target: { kind: "new_capability", slotId: "slot-3-1" },
+    target: { kind: "new_story", slotId: "slot-3-1" },
   };
 
   const actual = driveWithCannedResults(
@@ -658,14 +683,18 @@ it("TC-0018-0016 (TDD-0029): feature", () => {
   );
   const expected = {
     issued: plan.stages.map(({ stageKind, skill, operation }) => ({ stageKind, skill, operation })),
-    acceptEvents: plan.stages.map(() => "accept-nonfinal-result"),
+    acceptEvents: plan.stages.flatMap(({ stageKind }) =>
+      stageKind === "sdd"
+        ? ["accept-nonfinal-result", "binding-recorded"]
+        : ["accept-nonfinal-result"],
+    ),
     finalState: "ready",
     finalWorkOrder: null,
   };
   expect(actual).toEqual(expected);
 });
 
-it("TC-0018-0016 (TDD-0030): discovery", () => {
+it("discovery", () => {
   const plan = {
     route: "discovery",
     stages: [

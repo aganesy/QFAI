@@ -1,0 +1,19 @@
+# Document schema: `<contractsDir>/contracts.md`
+structure:
+  - heading:
+      pattern: "^# Contracts$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: Why the index exists.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Contract Index$"
+          regex: true
+        description: Contract files and their declared IDs.
+        allow_additional: true

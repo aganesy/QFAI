@@ -1,7 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0043
-// QFAI:SPEC-0018:TC-0018-0044
-// QFAI:SPEC-0018:TC-0018-0239
-// QFAI:SPEC-0018:TC-0018-0240
+// QFAI:EX-0001-0192-26
 // Fault seeds: FAULT-010, FAULT-011
 
 import { expect, it } from "vitest";
@@ -28,11 +25,11 @@ const plan = {
     },
   ],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function acceptWithDebts(debts: NonNullable<AcceptResult["debts"]>) {
   const issued = decide(
-    { run: { id: "run-debt", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-debt", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -40,7 +37,7 @@ function acceptWithDebts(debts: NonNullable<AcceptResult["debts"]>) {
   const run = issued.verdict.run;
   if (!workOrder || !run) return null;
   const decision = decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -65,13 +62,13 @@ function acceptWithDebts(debts: NonNullable<AcceptResult["debts"]>) {
   };
 }
 
-it("TC-0018-0044 (TDD-0056): A result with a debt that has no resolvingOwner", () => {
+it("A result with a debt that has no resolvingOwner", () => {
   const actual = acceptWithDebts([
     {
       findingCode: "QFAI-TRACE-002",
       path: "src/notify/email.ts",
       cause: "The function has no spec annotation.",
-      owningSpec: "spec-0007",
+      owningFlow: "BF-0007",
       detectingCommand: "qfai validate",
       blockingExtent: "completion",
     },
@@ -87,9 +84,9 @@ it("TC-0018-0044 (TDD-0056): A result with a debt that has no resolvingOwner", (
 
 const crossSpecDebt = {
   findingCode: "QFAI-TRACE-003",
-  path: ".qfai/specs/spec-0003/06_Test-Cases.md",
+  path: ".qfai/specs/BF-0003/06_Test-Cases.md",
   cause: "The test case cites an example this change retired.",
-  owningSpec: "spec-0003",
+  owningFlow: "BF-0003",
   detectingCommand: "qfai validate",
   resolvingOwner: "qfai-sdd",
   blockingExtent: "completion",
@@ -99,7 +96,7 @@ function acceptImplementWithDebt() {
   const accepted = [
     { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
   ];
-  const base = { plan: finishPlan, specBinding: { specId: "spec-0007" }, acceptedStages: accepted };
+  const base = { plan: finishPlan, flowBinding: { flowId: "BF-0007" }, acceptedStages: accepted };
   const issued = decide(
     { ...base, run: { id: RUN_ID, state: "ready", sequence: 8 } },
     { operation: "next" },
@@ -141,7 +138,7 @@ function finishWhileReported(debts: AcceptResult["debts"], reported: boolean) {
   return finish({ ...snapshot, acceptedStages }, facts);
 }
 
-it("TC-0018-0043 (TDD-0055): Decide accept of an accepted_with_debt result whose debt names another spec as owningSpec and qfai-sdd as resolvingOwner, then finish while the finding still stands", () => {
+it("Decide accept of an accepted_with_debt result whose debt names another spec as owningFlow and qfai-sdd as resolvingOwner, then finish while the finding still stands", () => {
   const accepted = acceptImplementWithDebt();
   expect(accepted.verdict.run?.state).toBe("ready");
   const debts = accepted.events[0]?.debts;
@@ -150,7 +147,7 @@ it("TC-0018-0043 (TDD-0055): Decide accept of an accepted_with_debt result whose
   const standing = finishWhileReported(debts, true);
   expect(standing.verdict.run?.state).toBe("ready");
   expect(standing.verdict.unmet).toEqual([
-    { condition: "debt-open", subject: "spec-0003", owner: "qfai-sdd" },
+    { condition: "debt-open", subject: "BF-0003", owner: "qfai-sdd" },
   ]);
 
   const repaired = finishWhileReported(debts, false);
@@ -162,7 +159,7 @@ const sameSpecDebt = {
   findingCode: "QFAI-TRACE-002",
   path: "src/notify/email.ts",
   cause: "The function has no spec annotation.",
-  owningSpec: "spec-0007",
+  owningFlow: "BF-0007",
   detectingCommand: "qfai validate",
   resolvingOwner: "qfai-implement",
   blockingExtent: "completion",
@@ -191,28 +188,28 @@ function finishSameSpecDebt(options: {
   return { state: finished.verdict.run?.state, unmet: finished.verdict.unmet };
 }
 
-it("TC-0018-0239 (TDD-0466): finish-validate", () => {
+it("finish-validate", () => {
   expect(finishSameSpecDebt({ laterResult: false, reported: false })).toEqual({
     state: "completed",
     unmet: [],
   });
 });
 
-it("TC-0018-0239 (TDD-0467): later-result", () => {
+it("later-result", () => {
   expect(finishSameSpecDebt({ laterResult: true, reported: true })).toEqual({
     state: "completed",
     unmet: [],
   });
 });
 
-it("TC-0018-0240 (TDD-0468): still-reported", () => {
+it("still-reported", () => {
   expect(finishSameSpecDebt({ laterResult: false, reported: true })).toEqual({
     state: "ready",
-    unmet: [{ condition: "debt-open", subject: "spec-0007", owner: "qfai-implement" }],
+    unmet: [{ condition: "debt-open", subject: "BF-0007", owner: "qfai-implement" }],
   });
 });
 
-it("TC-0018-0240 (TDD-0469): other-path", () => {
+it("other-path", () => {
   const moved = { laterResult: false, reported: true, reportedAt: "src/notify/sms.ts" };
 
   expect(finishSameSpecDebt(moved)).toEqual({ state: "completed", unmet: [] });

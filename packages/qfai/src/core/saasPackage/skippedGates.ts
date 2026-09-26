@@ -13,10 +13,10 @@
  * `certify`.
  */
 export const SAAS_PACKAGE_SKIPPED_GATES = [
-  "validateAtddCodeTraceability",
-  "validateTddList",
+  "validateStoryTreeObligations",
+  "validateStoryTreeCoverageDepth",
   "validateTestTodoStubs",
-  "validateTraceabilityIntegrity",
+  "validateStoryTreeDrift",
 ] as const;
 
 export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number];
@@ -34,31 +34,21 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
  * excess-key one. Typed as `Record<string, …>` neither held, and the guarantee
  * rested entirely on a runtime test.
  *
- * An entry must cover exactly what its gate emits — no more, no less, since
- * the notice is read as the list of checks that did not run. Both failure
- * directions have been observed here. `validateTestTodoStubs` was listed as
- * the bare `QFAI-TEST-001` while the gate also emits `QFAI-TEST-002`, so the
- * notice under-stated the skip until the entry was widened to a prefix glob.
- * `validateTraceabilityIntegrity` had the opposite defect: `QFAI-TRACE-*` also
- * claims the `QFAI-TRACE-1xx` block, which `validateTraceability` owns and
- * this skip-set does not name, so the glob over-stated it. Prefer a glob where
- * the gate owns its whole prefix; enumerate codes where it owns only part.
+ * An entry covers what the skipped gate can emit. Prefixes are used only when
+ * the gate owns the whole family; shared families are enumerated.
  */
 export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, readonly string[]> =
   {
-    validateAtddCodeTraceability: ["QFAI-ATDD-*"],
-    // Four families for one gate: `TDDLIST_*` is frozen legacy, and every code
-    // this validator gained after the grammar landed is canonical, so a notice
-    // built from the legacy glob alone under-states the skip set.
-    validateTddList: ["TDDLIST_*", "QFAI-TDDLIST-*", "QFAI-TCLEVEL-*", "QFAI-BRREF-*"],
+    validateStoryTreeObligations: [
+      "QFAI-STORY-006",
+      "QFAI-STORY-007",
+      "QFAI-STORY-008",
+      "QFAI-STORY-009",
+      "QFAI-SCAN-002",
+    ],
+    validateStoryTreeCoverageDepth: ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
     validateTestTodoStubs: ["QFAI-TEST-*"],
-    // Only the integrity gate's own two codes. `QFAI-TRACE-*` would also claim
-    // the `QFAI-TRACE-1xx` block, which belongs to `validateTraceability` — a
-    // different validator, and not one this skip-set names.
-    // `QFAI-TRACE-003` as well: the gate raises it when the check could not
-    // run at all — no diff, or a spec the diff names that the tree no longer
-    // carries — so a skip that omitted it under-reported what went unevaluated.
-    validateTraceabilityIntegrity: ["QFAI-TRACE-001", "QFAI-TRACE-002", "QFAI-TRACE-003"],
+    validateStoryTreeDrift: ["QFAI-DRIFT-001", "QFAI-STORY-010"],
   };
 
 /** Deduped, order-preserving code families the saas-package profile skips. */

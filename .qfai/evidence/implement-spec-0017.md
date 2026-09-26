@@ -912,15 +912,18 @@ The lane is registered between `check-prompt-scanner-pair` and the package-scope
 `check-*.mjs` scripts stay contiguous and a failure in the cheap own-tree scan surfaces before a
 vitest run.
 
-At this revision, the member count appeared in roughly seventeen statements across the
-repository. The current inventory is derived from `scripts/run-lint-checks.sh`. The other statements in
-`.qfai/evidence/**` are revision-stamped measurements that were true when taken; they are not
-corrected, because rewriting a dated observation destroys an audit trail. A reader comparing an
-old evidence line against a fresh run should use the script for the current lane set.
+The member count appears in roughly seventeen statements across this repository. **One** of them is a
+live operational rule — `.qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md` §4 — and
+that one is updated, with the date and the reason. The other sixteen are revision-stamped records in
+`.qfai/evidence/**` of measurements that were true when taken; those are NOT corrected, because
+rewriting a dated observation destroys an audit trail rather than fixing it. The brief now says so, so
+a reader comparing an old evidence line against a fresh run knows the difference is this member and
+not a regression.
 
 The generalisation is the one this slice has already paid for twice: **a count is maintained at one
 site or it is not maintained.** The member inventory in `workflowsIntegrity.ts` had its numeral deleted
-for exactly this reason. The script is the current lane inventory.
+for exactly this reason. Here the numeral survives because the list IS the rule — but it lives in one
+place.
 
 The existing `ci:lint` placement pin (`shippedWorkflowShapeGate.test.ts`, TDD-0050 of spec-0003) uses
 `toContain` rather than equality, so adding a member does not redden it. Checked before editing, not

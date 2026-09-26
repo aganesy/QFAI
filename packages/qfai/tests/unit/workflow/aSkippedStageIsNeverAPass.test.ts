@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0021
+// QFAI:EX-0001-0192-15
 
 import { expect, it } from "vitest";
 
@@ -24,11 +24,11 @@ const plan = {
     },
   ],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function acceptSkipped(notRun: AcceptResult["notRun"], facts: Facts = {}) {
   const issued = decide(
-    { run: { id: "run-skip", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-skip", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -45,7 +45,7 @@ function acceptSkipped(notRun: AcceptResult["notRun"], facts: Facts = {}) {
     ...(notRun ? { notRun } : {}),
   };
   const decision = decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     { operation: "accept", result },
     facts,
   );
@@ -58,7 +58,7 @@ function acceptSkipped(notRun: AcceptResult["notRun"], facts: Facts = {}) {
   };
 }
 
-it("TC-0018-0021 (TDD-0032): Decide accept of a result with notRun", () => {
+it("Decide accept of a result with notRun", () => {
   const notRun: AcceptResult["notRun"] = {
     kind: "not_applicable",
     reason: "The change touches no screen.",
@@ -88,13 +88,11 @@ function refusedInput(reason: string) {
   };
 }
 
-// QFAI:SPEC-0018:TC-0018-0022
-it("TC-0018-0022 (TDD-0033): A result with notRun and no reason", () => {
+it("A result with notRun and no reason", () => {
   expect(acceptSkipped({ kind: "not_applicable" })).toEqual(refusedInput("skip-unexplained"));
 });
 
-// QFAI:SPEC-0018:TC-0018-0023
-it("TC-0018-0023 (TDD-0034): A result with notRun", () => {
+it("A result with notRun", () => {
   const receiptRef = "receipts/verify-2026-09-24.json";
   expect(
     acceptSkipped({ kind: "reused", receiptRef }, { receiptValidity: { [receiptRef]: "stale" } }),

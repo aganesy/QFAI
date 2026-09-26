@@ -2,14 +2,14 @@
  * Integration: the Windows job is selected like the test lanes and joins the aggregate verdict,
  * so its failure fails `ci-pass`.
  */
-// QFAI:SPEC-0017:TC-0017-0097
-// QFAI:SPEC-0017:TC-0017-0098
 import { describe, expect, it } from "vitest";
 
 import { WINDOWS_JOB, job, needsOf, verdictExit } from "./ownCi.js";
 
 describe("the Windows job's selection and verdict", () => {
-  it("TC-0017-0097: The job follows change detection and joins the verdict", () => {
+  // QFAI:AC-0002-0024-02
+  // QFAI:EX-0002-0024-04
+  it("The job follows change detection and joins the verdict", () => {
     const windows = job(WINDOWS_JOB);
 
     expect(needsOf(windows)).toEqual(["detect"]);
@@ -17,7 +17,8 @@ describe("the Windows job's selection and verdict", () => {
     expect(needsOf(job("ci-pass"))).toContain(WINDOWS_JOB);
   });
 
-  it("TC-0017-0098: A failing Windows job fails the aggregate verdict", () => {
+  // QFAI:EX-0002-0024-05
+  it("A failing Windows job fails the aggregate verdict", () => {
     const needs = Object.fromEntries(
       needsOf(job("ci-pass")).map((name) => [
         name,

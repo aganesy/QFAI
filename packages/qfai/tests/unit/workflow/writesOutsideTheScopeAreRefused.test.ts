@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0057
+// QFAI:EX-0001-0192-33
 
 import { expect, it } from "vitest";
 
@@ -8,7 +8,7 @@ type Snapshot = Parameters<typeof decide>[0];
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type WorkOrder = NonNullable<ReturnType<typeof decide>["verdict"]["workOrder"]>;
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 const directPlan = {
   route: "direct",
   stages: [
@@ -53,7 +53,7 @@ function acceptChangedFiles(
   extra: Partial<AcceptResult> = {},
 ) {
   const issued = decide(
-    { run: { id: "run-write-scope", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-write-scope", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -62,7 +62,7 @@ function acceptChangedFiles(
   if (!issuedOrder || !run) return issued;
   const workOrder = widen(issuedOrder);
   return decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -92,18 +92,18 @@ function refusal(decision: ReturnType<typeof decide>) {
 
 const digest = "0".repeat(64);
 
-it("TC-0018-0057 (TDD-0074): outside-write-areas", () => {
+it("outside-write-areas", () => {
   const decision = acceptChangedFiles(
     directPlan,
     [
       { path: "src/notify/email.ts", digest },
-      { path: ".qfai/evidence/implement-spec-0007.md", digest },
+      { path: ".qfai/evidence/implement-BF-0007.md", digest },
       { path: "src/billing/invoice.ts", digest },
     ],
     (workOrder) => ({
       ...workOrder,
       scope: { writeAreas: ["src/notify/**"] },
-      recordAreas: [".qfai/evidence/implement-spec-0007.md"],
+      recordAreas: [".qfai/evidence/implement-BF-0007.md"],
     }),
   );
   expect(refusal(decision)).toEqual({
@@ -114,7 +114,7 @@ it("TC-0018-0057 (TDD-0074): outside-write-areas", () => {
   });
 });
 
-it("TC-0018-0057 (TDD-0075): diagnose-only", () => {
+it("diagnose-only", () => {
   const decision = acceptChangedFiles(
     bugfixPlan,
     [{ path: "src/notify/email.ts", digest }],
@@ -123,7 +123,7 @@ it("TC-0018-0057 (TDD-0075): diagnose-only", () => {
       diagnosis: {
         verdict: "regression",
         reproductionRef: "reports/bugfix-diagnose/reproduction.md",
-        matchedRowIds: [],
+        matchedIds: [],
       },
     },
   );

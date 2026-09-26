@@ -1,11 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0195
-// QFAI:SPEC-0018:TC-0018-0211
+// QFAI:EX-0001-0201-03
 
 import { expect, it, vi } from "vitest";
 
 import { buildSeedFixture, untypedTokens } from "../../helpers/routingEval.js";
 
-it("TC-0018-0195 (TDD-0241): The fixture factory given a seed with an unknown fact key", async () => {
+it("The fixture factory refuses a seed with an unknown fact key before touching the tree", async () => {
   const overlay = vi.fn(async () => {});
   const seed = { id: "ROUTE-900", repoFacts: { newCapability: true, notAFact: true } };
 
@@ -15,7 +14,7 @@ it("TC-0018-0195 (TDD-0241): The fixture factory given a seed with an unknown fa
   expect(overlay).not.toHaveBeenCalled();
 });
 
-it("TC-0018-0211 (TDD-0242): The vocabulary check given a synthetic seed with an untyped token", () => {
+it("The vocabulary check fails a synthetic seed carrying a token the vocabulary does not type", () => {
   const vocabulary = { verify: "stage", direct_delete: "effect", unknown_class: "wish" };
   const seed = {
     id: "ROUTE-901",

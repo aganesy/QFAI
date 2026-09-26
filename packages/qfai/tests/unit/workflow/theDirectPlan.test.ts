@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0165
+// QFAI:EX-0001-0198-01
 
 import { expect, it } from "vitest";
 
@@ -26,7 +26,7 @@ const startFacts: Facts = {
     qfaiVersion: "2.0.0",
     digestKey: "b".repeat(64),
     policyDigests: {},
-    manifestDigests: {},
+
     planDigests: {},
   },
 };
@@ -53,10 +53,10 @@ const proposal = {
   goal: "Fix a typo in the README.",
   expectedBehaviorRefs: [{ kind: "request" as const, ref: "request" }],
   observedRefs: [],
-  affectedSpecIds: [],
+  affectedFlowIds: [],
   riskSignals: [],
   unresolvedQuestions: [],
-  newCapabilities: [],
+  newStories: [],
   proposedWriteScope: ["README.md"],
   protectedTargets: [],
   requiredStages: ["maintenance", "verify"],
@@ -92,7 +92,7 @@ function accept(
   return decide(snapshot, { operation: "accept", result }, facts);
 }
 
-it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned accepted results", () => {
+it("Drive a direct run from start to finish with canned accepted results", () => {
   const decisions: WorkflowDecision[] = [];
   const record = (decision: WorkflowDecision) => {
     decisions.push(decision);
@@ -120,7 +120,7 @@ it("TC-0018-0165 (TDD-0218): Drive a direct run from start to finish with canned
   if (!plan) throw new Error("the routing result is checked into the direct plan");
   const base = {
     plan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
     completionTarget: "qfai_done" as const,
     baseline: {
       findings: [],

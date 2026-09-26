@@ -117,42 +117,6 @@ that has it and one that does not. Both files run in continuous integration.
 Thirty-five further cases in the projects above declare themselves inactive and
 did not run.
 
-### TDD-0008
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: integration
-- Reset by: `CR-20260912-0003` (option 1; TC-0002-0008 re-derived to the narrowed direction rule).
-- Test file: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
-- Selector: `SKILL.md の UI-bearing completion が brand SSOT を要求している`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/discussionSkillTemplateIntegration.test.ts --testNamePattern='SKILL.md の UI-bearing completion が brand SSOT を要求している' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The case now reads the UI-bearing completion conditions and asserts the explorations stay unranked, no design system is finalized, and the brand direction is the user's; the shipped matrix and skill already say so, because the change request's product edit landed with its approval.
-- GREEN result: exit 0; 1 passed | 18 skipped (19)
-- Changed files: `packages/qfai/tests/integration/discussionSkillTemplateIntegration.test.ts`
-
-### TDD-0009
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: integration
-- Reset by: `CR-20260912-0003` (option 1; TC-0002-0009 re-derived: a pack marking one screen exploration final is refused).
-- Test file: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
-- Selector: `SKILL.md が UI-bearing artifact family (DESIGN.md + sidecars) を説明している`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/discussionHardeningE2E.test.ts --testNamePattern='SKILL.md が UI-bearing artifact family' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The case now asserts that the UI-bearing conditions block completion until the explorations are carried unranked, and that the skill forbids a single visual winner.
-- GREEN result: exit 0; 1 passed | 1 skipped (2)
-- Changed files: `packages/qfai/tests/e2e/discussionHardeningE2E.test.ts`
-
-### TDD-0016
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: E2E
-- Reset by: `CR-20260912-0003` (US-0002-0005 re-derived). The spec's plan names no spec-0018 journey for this story.
-- Test file: `packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts`
-- Selector: `US-0002-0005: the installed discussion skill carries explorations unranked and records the user's brand direction`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0002PlannerFirstE2E.test.ts --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The journey runs `qfai init` into a temp root and reads the installed discussion skill and completion matrix.
-- GREEN result: exit 0; 1 passed (1)
-- Changed files: `packages/qfai/tests/e2e/spec0002PlannerFirstE2E.test.ts`
-
 ## Coverage Depth Matrix
 
 See `.qfai/evidence/coverage-depth-spec-0002.md`.

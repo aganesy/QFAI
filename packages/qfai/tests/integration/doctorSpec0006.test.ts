@@ -7,19 +7,22 @@
  * All 10 TDD items are Exception-pattern backfill (DR-0006-0002).
  * Existing coverage: tests/cli/doctor.test.ts.
  */
-// QFAI:SPEC-0006:TC-0006-0001
-// QFAI:SPEC-0006:TC-0006-0002
-// QFAI:SPEC-0006:TC-0006-0003
-// QFAI:SPEC-0006:TC-0006-0004
-// QFAI:SPEC-0006:TC-0006-0005
-// QFAI:SPEC-0006:TC-0006-0006
-// QFAI:SPEC-0006:TC-0006-0007
-// QFAI:SPEC-0006:TC-0006-0008
-// QFAI:SPEC-0006:TC-0006-0009
-// QFAI:SPEC-0006:TC-0006-0010
-import { readFile } from "node:fs/promises";
+// QFAI:EX-0003-0001-01
+// QFAI:EX-0003-0001-03
+// QFAI:EX-0003-0002-01
+// QFAI:EX-0003-0003-01
+// QFAI:EX-0003-0004-01
+// QFAI:EX-0003-0005-01
+// QFAI:EX-0003-0012-01
+// QFAI:EX-0003-0012-02
+// QFAI:EX-0003-0005-02
+// QFAI:EX-0003-0001-02
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { createDoctorData } from "../../src/core/doctor.js";
 
 const DOCTOR_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "doctor.ts");
 
@@ -42,9 +45,21 @@ describe("TC-0006-0002: config missing detection", () => {
 
 // TC-0006-0003: directory structure diagnosis
 describe("TC-0006-0003: directory structure diagnosis", () => {
-  it("doctor checks directory structure", async () => {
-    const content = await readFile(DOCTOR_CLI, "utf-8");
-    expect(content).toMatch(/dir|directory/i);
+  it("reports the configured specs directory when it is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-story-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: custom/story-specs\n",
+        "utf8",
+      );
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "paths.specsDir");
+      expect(check?.severity).toBe("warning");
+      expect(check?.details?.path).toBe("custom/story-specs");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -1,7 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0095
-// QFAI:SPEC-0018:TC-0018-0096
-// QFAI:SPEC-0018:TC-0018-0097
-// QFAI:SPEC-0018:TC-0018-0098
+// QFAI:EX-0001-0195-09
 
 import { expect, it } from "vitest";
 
@@ -28,11 +25,11 @@ const plan = {
     },
   ],
 };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 function acceptCarrying(extra: Partial<AcceptResult>) {
   const issued = decide(
-    { run: { id: "run-approve", state: "ready", sequence: 4 }, plan, specBinding },
+    { run: { id: "run-approve", state: "ready", sequence: 4 }, plan, flowBinding },
     { operation: "next" },
     {},
   );
@@ -40,7 +37,7 @@ function acceptCarrying(extra: Partial<AcceptResult>) {
   const run = issued.verdict.run;
   if (!workOrder || !run) return null;
   const decision = decide(
-    { run, plan, specBinding, outstandingWorkOrder: workOrder },
+    { run, plan, flowBinding, outstandingWorkOrder: workOrder },
     {
       operation: "accept",
       result: {
@@ -104,7 +101,7 @@ function summary(decision: ReturnType<typeof decide>) {
   };
 }
 
-it("TC-0018-0095 (TDD-0132): A stage result carrying approved", () => {
+it("A stage result carrying approved", () => {
   expect(acceptCarrying({ approved: true })).toEqual({
     ok: false,
     code: "invalid-input",
@@ -113,7 +110,7 @@ it("TC-0018-0095 (TDD-0132): A stage result carrying approved", () => {
   });
 });
 
-it("TC-0018-0096 (TDD-0133): A decision naming no open question, not a stop", () => {
+it("A decision naming no open question, not a stop", () => {
   const { authorizations, ...actual } = answer({ questionId: "question-9-9" });
   expect({ ...actual, authorizations }).toEqual({
     ok: false,
@@ -124,16 +121,16 @@ it("TC-0018-0096 (TDD-0133): A decision naming no open question, not a stop", ()
   });
 });
 
-it("TC-0018-0097 (TDD-0134): A decision whose payload declares capture", () => {
+it("A decision whose payload declares capture", () => {
   const { authorizations } = answer({ capture: "host_observed" });
   expect(authorizations.map((authorization) => authorization.capture)).toEqual(["agent_captured"]);
 });
 
 const derived: [string, "accept" | "decision", string][] = [
-  ["TC-0018-0098 (TDD-0135): mode-at-accept", "accept", "mode"],
-  ["TC-0018-0098 (TDD-0136): mode-at-decision", "decision", "mode"],
-  ["TC-0018-0098 (TDD-0137): confidence-at-accept", "accept", "confidence"],
-  ["TC-0018-0098 (TDD-0138): confidence-at-decision", "decision", "confidence"],
+  ["mode-at-accept", "accept", "mode"],
+  ["mode-at-decision", "decision", "mode"],
+  ["confidence-at-accept", "accept", "confidence"],
+  ["confidence-at-decision", "decision", "confidence"],
 ];
 
 for (const [title, operation, kind] of derived) {

@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0042
+// QFAI:AC-0001-0192-07
+// QFAI:EX-0001-0192-25
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,7 +17,7 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0042 (TDD-0306): Git temp repo with the run's changed paths uncommitted", async () => {
+it("Git temp repo with the run's changed paths uncommitted", async () => {
   const root = await minimalProject();
   const runId = await startRun(root, { ...START_INPUT, completionTarget: "working_tree" });
   await mkdir(path.join(root, "docs"), { recursive: true });

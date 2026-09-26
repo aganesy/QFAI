@@ -1,6 +1,7 @@
-// QFAI:SPEC-0018:TC-0018-0230
-// QFAI:SPEC-0018:TC-0018-0231
-// QFAI:SPEC-0018:TC-0018-0232
+// QFAI:AC-0001-0201-05
+// QFAI:EX-0001-0201-14
+// QFAI:EX-0001-0201-15
+// QFAI:EX-0001-0201-16
 
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
@@ -21,7 +22,7 @@ import { removeTempTree } from "../../helpers/tempTree.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const assistant = path.join("assets", "init", ".qfai", "assistant");
-const PLANS = path.join(assistant, "process", "workflows");
+const PLANS = path.join("assets", "defaults", "workflows");
 const SCHEMAS = path.join("assets", "schemas", "workflow");
 
 const roots: string[] = [];
@@ -43,14 +44,14 @@ async function filesUnder(relative: string): Promise<string[]> {
 // The workflow's shipped assets: the two entry skills, the plans and the schemas.
 async function workflowAssets(): Promise<string[]> {
   return [
-    ...(await filesUnder(path.join(assistant, "skills", "qfai-run"))),
-    ...(await filesUnder(path.join(assistant, "skills", "qfai-maintain"))),
+    ...(await filesUnder(path.join(assistant, "skill", "qfai-run"))),
+    ...(await filesUnder(path.join(assistant, "skill", "qfai-maintain"))),
     ...(await filesUnder(PLANS)),
     ...(await filesUnder(SCHEMAS)),
   ];
 }
 
-it("TC-0018-0230 (TDD-0447): Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas", async () => {
+it("Run the asset line budget over qfai-run, qfai-maintain, the plans and the schemas", async () => {
   const files = await workflowAssets();
   const over: string[] = [];
   for (const file of files) {
@@ -88,7 +89,7 @@ async function postBuildGuard(): Promise<{ status: number | null; output: string
   return { status: run.status, output: `${run.stdout}${run.stderr}` };
 }
 
-it("TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans", async () => {
+it("Read the five shipped schemas and the plans", async () => {
   const schemas = (await filesUnder(SCHEMAS)).sort();
   const ids: string[] = [];
   const versioned: string[] = [];
@@ -102,7 +103,7 @@ it("TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans", async
   }
   const lint = await runLintShipping(packageRoot);
   const planLeaks = lint.violations.filter((violation) =>
-    violation.file.split(path.sep).join("/").includes("process/workflows/"),
+    violation.file.split(path.sep).join("/").includes("defaults/workflows/"),
   );
   const guard = await postBuildGuard();
 
@@ -120,7 +121,7 @@ it("TC-0018-0231 (TDD-0448): Read the five shipped schemas and the plans", async
   });
 });
 
-it("TC-0018-0232 (TDD-0449): Run the canonical launcher check over the shipped tree", async () => {
+it("Run the canonical launcher check over the shipped tree", async () => {
   const files = (await filesUnder(path.join("assets", "init"))).filter((file) =>
     /\.(md|ya?ml|json|txt)$/.test(file),
   );

@@ -1,16 +1,12 @@
-// QFAI:SPEC-0018:TC-0018-0062
+// QFAI:EX-0001-0192-35
 
 import { expect, it } from "vitest";
 
 import { finish, metFacts, readySnapshot } from "./finishFixture.js";
 
 const drifts: [string, { toolVersion?: string; cliEntryDigest?: string }, string][] = [
-  ["TC-0018-0062 (TDD-0079): tool-version", { toolVersion: "2.1.0" }, "tool-version"],
-  [
-    "TC-0018-0062 (TDD-0080): cli-entry-digest",
-    { cliEntryDigest: "f".repeat(64) },
-    "cli-entry-digest",
-  ],
+  ["tool-version", { toolVersion: "2.1.0" }, "tool-version"],
+  ["cli-entry-digest", { cliEntryDigest: "f".repeat(64) }, "cli-entry-digest"],
 ];
 
 for (const [title, change, subject] of drifts) {

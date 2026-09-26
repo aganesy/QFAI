@@ -7,11 +7,11 @@
  * production functions directly (no reliance on repo live state or a
  * rebuilt dist binary).
  */
-// QFAI:SPEC-0010:TC-0010-0009
-// QFAI:SPEC-0010:TC-0010-0010
-// QFAI:SPEC-0010:TC-0010-0011
-// QFAI:SPEC-0010:TC-0010-0012
-// QFAI:SPEC-0010:TC-0010-0013
+// QFAI:EX-0001-0092-01
+// QFAI:EX-0001-0092-02
+// QFAI:EX-0001-0092-03
+// QFAI:EX-0001-0093-01
+// QFAI:EX-0001-0093-02
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

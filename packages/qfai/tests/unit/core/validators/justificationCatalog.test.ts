@@ -22,7 +22,7 @@
  * field would be read by no production path, so its absence is pinned
  * here as a regression guard.
  */
-// QFAI:SPEC-0015:TC-0015-0026
+// QFAI:EX-0001-0178-01
 
 import { describe, expect, it } from "vitest";
 

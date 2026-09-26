@@ -1,40 +1,40 @@
-// QFAI:SPEC-0018:TC-0018-0153
+// QFAI:EX-0001-0196-19
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 const acceptedStages = [
   { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
 ];
 // The test fails because the example it asserts is wrong, so the spec's owner repairs it.
 const failingExample = {
   findingCode: "QFAI-TRACE-002",
-  path: ".qfai/specs/spec-0007/05_Examples.md",
+  path: ".qfai/specs/BF-0007/05_Examples.md",
   cause: "The example the failing test asserts contradicts its business rule",
-  owningSpec: "spec-0007",
+  owningFlow: "BF-0007",
   detectingCommand: "vitest run",
   resolvingOwner: "qfai-sdd",
   blockingExtent: "run",
 };
 
-it("TC-0018-0153 (TDD-0207): An implement result with testObservation", () => {
+it("An implement result with testObservation", () => {
   const run = { id: "run-test-failure", state: "running", sequence: 8 };
   const implementOrder = {
     workOrderId: "work-order-bounded-implement-1",
     stageInstanceId: "bounded-implement",
     attempt: 1,
     stageKind: "implement",
-    target: { kind: "spec" as const, specId: "spec-0007" },
+    target: { kind: "flow" as const, flowId: "BF-0007" },
     executor: { skill: "qfai-implement" },
     operation: "implement",
   };
   const snapshot = {
     run,
     plan: finishPlan,
-    specBinding,
+    flowBinding,
     acceptedStages,
     attempts: { "bounded-sdd-delta": 1, "bounded-implement": 1 },
   };

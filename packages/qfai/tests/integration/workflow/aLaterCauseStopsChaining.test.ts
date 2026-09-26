@@ -1,7 +1,7 @@
-// QFAI:SPEC-0018:TC-0018-0179
-// QFAI:SPEC-0018:TC-0018-0182
+// QFAI:AC-0001-0199-03
+// QFAI:EX-0001-0199-07
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -21,7 +21,7 @@ afterEach(removeProjects);
 
 // Every journal event of the run, in sequence order.
 async function journalOf(root: string, runId: string): Promise<unknown[]> {
-  const dir = path.join(root, ".qfai", "runs", runId, "journal");
+  const dir = path.join(root, ".qfai", "run", runId, "journal");
   const names = (await readdir(dir)).filter((name) => name.endsWith(".json")).sort();
   return Promise.all(
     names.map(async (name): Promise<unknown> =>
@@ -30,17 +30,18 @@ async function journalOf(root: string, runId: string): Promise<unknown[]> {
   );
 }
 
-it("TC-0018-0179 (TDD-0387): A run in running", async () => {
+it("A run in running", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   const config = await readFile(path.join(root, "qfai.config.yaml"));
   const { runId } = await routedRun(root);
   const issued = workflow(root, ["next", "--run", runId]);
-  const manifest = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
-  const original = await readFile(manifest);
-  await writeFile(manifest, Buffer.concat([original, Buffer.from("# edited outside the run\n")]));
+  // A rule added under the assistant tree while the run is in flight.
+  const rule = path.join(root, ".qfai", "assistant", "rule", "local-policy.md");
+  await mkdir(path.dirname(rule), { recursive: true });
+  await writeFile(rule, "# Local policy\n\nAdded outside the run.\n");
   const accepted = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
   const untouched = (await readFile(path.join(root, "qfai.config.yaml"))).equals(config);
-  await writeFile(manifest, original);
+  await rm(rule);
   workflow(root, ["resume", "--run", runId]);
   const cleared = (await journalOf(root, runId)).find(
     (event) => field(event, "event") === "blocker-cleared-and-revalidated",
@@ -59,7 +60,7 @@ it("TC-0018-0179 (TDD-0387): A run in running", async () => {
   });
 });
 
-it("TC-0018-0182 (TDD-0388): The run edits qfai", async () => {
+it("The run edits qfai", async () => {
   const root = await minimalProject("workflow:\n  mode: active\n");
   const proposal = {
     ...DISCOVERY_PROPOSAL,

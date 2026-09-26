@@ -4,11 +4,12 @@
  * Copilot instructions. The oracle is the directive's place and the skill it names, never its
  * wording.
  */
-// QFAI:SPEC-0003:TC-0003-0066
-// QFAI:SPEC-0003:TC-0003-0067
-// QFAI:SPEC-0003:TC-0003-0068
-// QFAI:SPEC-0003:TC-0003-0069
-// QFAI:SPEC-0003:TC-0003-0070
+// QFAI:AC-0001-0203-03
+// QFAI:EX-0001-0203-05
+// QFAI:EX-0001-0203-06
+// QFAI:EX-0001-0203-07
+// QFAI:EX-0001-0203-08
+// QFAI:EX-0001-0203-09
 import { lstat, readFile, readlink, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -42,7 +43,7 @@ async function writeEntryPoints(root: string, text: string): Promise<void> {
 }
 
 describe("the entry directive", () => {
-  it("TC-0003-0066: Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot", async () => {
+  it("Fresh init: directive in AGENTS.md and CLAUDE.md, not Copilot", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       for (const name of ENTRY_POINTS) {
@@ -55,7 +56,7 @@ describe("the entry directive", () => {
     });
   });
 
-  it("TC-0003-0067: Directive prepended to existing CRLF entry points, bytes kept", async () => {
+  it("Directive prepended to existing CRLF entry points, bytes kept", async () => {
     await withEmptyRepo(async (root) => {
       const original = PROJECT_TEXT.replace(/\n/g, "\r\n");
       await writeEntryPoints(root, original);
@@ -69,7 +70,7 @@ describe("the entry directive", () => {
     });
   });
 
-  it("TC-0003-0068: Entry directive with and without REVIEW.md", async () => {
+  it("Entry directive with and without REVIEW.md", async () => {
     for (const withReview of [false, true]) {
       await withEmptyRepo(async (root) => {
         await writeEntryPoints(root, PROJECT_TEXT);
@@ -87,7 +88,7 @@ describe("the entry directive", () => {
     }
   });
 
-  it("TC-0003-0069: Operative copy on a rerun, and a copy only inside a fence", async () => {
+  it("Operative copy on a rerun, and a copy only inside a fence", async () => {
     await withInstall([], async (root) => {
       const before = await Promise.all(ENTRY_POINTS.map((name) => read(root, name)));
       await initQuietly(root);
@@ -104,7 +105,7 @@ describe("the entry directive", () => {
     });
   });
 
-  it("TC-0003-0070: A symlinked AGENTS.md is refused", async () => {
+  it("A symlinked AGENTS.md is refused", async () => {
     await withEmptyRepo(async (root) => {
       const target = path.join(root, "shared.md");
       await writeFile(target, PROJECT_TEXT, "utf-8");

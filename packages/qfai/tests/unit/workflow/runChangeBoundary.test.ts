@@ -1,6 +1,6 @@
-// QFAI:SPEC-0018:TC-0018-0262
-// QFAI:SPEC-0018:TC-0018-0263
-// QFAI:SPEC-0018:TC-0018-0264
+// QFAI:EX-0001-0196-22
+// QFAI:EX-0001-0196-23
+// QFAI:EX-0001-0196-24
 
 import { expect, it } from "vitest";
 
@@ -10,8 +10,8 @@ import { RUN_ID, completion, finish, metFacts, readySnapshot } from "./finishFix
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Facts = Parameters<typeof decide>[2];
 
-const LEDGER = ".qfai/specs/spec-0007/tdd/test-list.md";
-const IMPLEMENT_EVIDENCE = ".qfai/evidence/implement-spec-0007.md";
+const LEDGER = ".qfai/specs/BF-0007/tdd/test-list.md";
+const IMPLEMENT_EVIDENCE = ".qfai/evidence/implement-BF-0007.md";
 const SUMMARY = `.qfai/evidence/workflow/${RUN_ID}/summary.json`;
 
 // The two checks of the cumulative change: the next write operation, and `finish`.
@@ -31,7 +31,7 @@ function boundaryChecks(snapshot: Snapshot, changed: string[], facts: Facts = {}
   };
 }
 
-it("TC-0018-0262 (TDD-0516): issued stage recordAreas pass later write and finish", () => {
+it("issued stage recordAreas pass later write and finish", () => {
   const snapshot = { ...readySnapshot(), issuedRecordAreas: [LEDGER, IMPLEMENT_EVIDENCE] };
 
   expect(boundaryChecks(snapshot, [LEDGER, IMPLEMENT_EVIDENCE])).toEqual({
@@ -50,7 +50,7 @@ function implementing(): Snapshot {
   return { ...ready, acceptedStages, run, outstandingWorkOrder: workOrder };
 }
 
-it("TC-0018-0263 (TDD-0517): core evidence passes later write and finish", () => {
+it("core evidence passes later write and finish", () => {
   const running = implementing();
   const workOrder = running.outstandingWorkOrder;
   const listed = decide(
@@ -80,16 +80,19 @@ it("TC-0018-0263 (TDD-0517): core evidence passes later write and finish", () =>
   });
 });
 
-const DRIFTED = ".qfai/specs/spec-0002/03_Acceptance-Criteria.md";
-const UNLISTED = ".qfai/specs/spec-0004/03_Acceptance-Criteria.md";
-const CHANGE_REQUEST = ".qfai/decisions/CR-20260925-0001.md";
+const DRIFTED =
+  ".qfai/spec/02_business-flow/business-flow-0002/user-story-0002-0001/02_Acceptance-Criteria.md";
+const UNLISTED = ".qfai/specs/BF-0004/03_Acceptance-Criteria.md";
+// The change request is a row of the decisions table, which the repair outside the run appends.
+const CHANGE_REQUEST = ".qfai/spec/decisions.md";
+const CHANGE_ROW = "DEC-0007";
 const DIGESTS = {
   [DRIFTED]: "e".repeat(64),
   [UNLISTED]: "f".repeat(64),
   [CHANGE_REQUEST]: "0".repeat(64),
 };
 
-// A run blocked on the spec-0002 drift its verify stage found outside the write scope.
+// A run blocked on the BF-0002 drift its verify stage found outside the write scope.
 function blockedOnScopeDependency(): Snapshot {
   const ready = readySnapshot();
   const acceptedStages = (ready.acceptedStages ?? []).slice(0, 2);
@@ -113,7 +116,7 @@ function repairFacts(approved: boolean, paths: string[], changed: string[]): Fac
   return {
     observedChangedPaths: changed,
     fileDigests: DIGESTS,
-    changeRequests: [{ recordPath: CHANGE_REQUEST, approved, paths }],
+    changeRequests: [{ rowId: CHANGE_ROW, inForce: approved, paths }],
   };
 }
 
@@ -128,11 +131,11 @@ function resumeOutcome(facts: Facts) {
 }
 
 const adjusted = [
-  { path: DRIFTED, digest: DIGESTS[DRIFTED], changeRequest: CHANGE_REQUEST },
-  { path: CHANGE_REQUEST, digest: DIGESTS[CHANGE_REQUEST], changeRequest: CHANGE_REQUEST },
+  { path: DRIFTED, digest: DIGESTS[DRIFTED], changeRequest: CHANGE_ROW },
+  { path: CHANGE_REQUEST, digest: DIGESTS[CHANGE_REQUEST], changeRequest: CHANGE_ROW },
 ];
 
-it("TC-0018-0264 (TDD-0518): approved named external repair passes resume and finish", () => {
+it("approved named external repair passes resume and finish", () => {
   const facts = repairFacts(true, [DRIFTED], [DRIFTED, CHANGE_REQUEST]);
   const resumed = resumeOutcome(facts);
   const later = { ...readySnapshot(), startAdjustments: resumed.adjustments };
@@ -145,19 +148,19 @@ it("TC-0018-0264 (TDD-0518): approved named external repair passes resume and fi
 
 const failsClosed = { state: "blocked", cause: "invariant-violation", adjustments: [] };
 
-it("TC-0018-0264 (TDD-0519): missing approval fails closed", () => {
+it("missing approval fails closed", () => {
   expect(resumeOutcome(repairFacts(false, [DRIFTED], [DRIFTED, CHANGE_REQUEST]))).toEqual(
     failsClosed,
   );
 });
 
-it("TC-0018-0264 (TDD-0520): unlisted external path fails closed", () => {
+it("unlisted external path fails closed", () => {
   expect(
     resumeOutcome(repairFacts(true, [DRIFTED, UNLISTED], [DRIFTED, UNLISTED, CHANGE_REQUEST])),
   ).toEqual(failsClosed);
 });
 
-it("TC-0018-0264 (TDD-0521): digest drift fails closed", () => {
+it("digest drift fails closed", () => {
   const facts = repairFacts(true, [DRIFTED], [DRIFTED, CHANGE_REQUEST]);
   const later = { ...readySnapshot(), startAdjustments: resumeOutcome(facts).adjustments };
   const drifted = { ...facts, fileDigests: { ...DIGESTS, [DRIFTED]: "1".repeat(64) } };

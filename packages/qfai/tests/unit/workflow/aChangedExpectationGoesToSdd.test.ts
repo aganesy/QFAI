@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0081
+// QFAI:EX-0001-0194-04
 // Fault seeds: FAULT-016
 
 import { expect, it } from "vitest";
@@ -20,7 +20,7 @@ const plan = {
   })),
 };
 const run = { id: "run-test-fix", state: "running", sequence: 8 };
-const target: { kind: "spec"; specId: string } = { kind: "spec", specId: "spec-0007" };
+const target: { kind: "flow"; flowId: string } = { kind: "flow", flowId: "BF-0007" };
 const workOrder = {
   workOrderId: "work-order-bugfix-test-fix-1",
   stageInstanceId: "bugfix-test-fix",
@@ -30,31 +30,19 @@ const workOrder = {
   executor: { skill: "qfai-implement" },
   operation: "test-fix",
 };
-const facts = {
-  ledger: {
-    specId: "spec-0007",
-    rows: [
-      {
-        rowId: "TDD-0004",
-        status: "done",
-        digest: "4".repeat(64),
-        layer: "Unit",
-        tcLevels: ["L1"],
-      },
-    ],
-  },
-};
+// An example ID first: the test fix goes to `qfai-implement`.
+const facts = {};
 
-it("TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from citedBefore", () => {
+it("A test_fix result whose citedAfter differs from citedBefore", () => {
   const decision = decide(
     {
       run,
       plan,
-      specBinding: { specId: "spec-0007" },
+      flowBinding: { flowId: "BF-0007" },
       diagnosis: {
         verdict: "defective-test",
         reproductionRef: "evidence/defective-test.json",
-        matchedRowIds: ["TDD-0004"],
+        matchedIds: ["EX-0007-0002-01"],
       },
       acceptedStages: [
         { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
@@ -71,8 +59,8 @@ it("TC-0018-0081 (TDD-0100): A test_fix result whose citedAfter differs from cit
         expectedSequence: run.sequence,
         outcome: "accepted",
         testFix: {
-          citedBefore: "AC-0007-0002: an empty value is refused with 400",
-          citedAfter: "AC-0007-0002: an empty value is refused with 422",
+          citedBefore: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "a".repeat(64) },
+          citedAfter: { ids: ["AC-0007-0002-01", "EX-0007-0002-01"], digest: "b".repeat(64) },
           reviewRef: "evidence/test-fix-review.json",
           rerunRef: "evidence/test-fix-rerun.json",
         },

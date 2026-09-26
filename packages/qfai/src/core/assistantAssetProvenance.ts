@@ -13,8 +13,8 @@ import { escapeRegExp } from "./regex.js";
  * Provenance record for the vendored halves of the assistant tree.
  *
  * qfai ships its normative rules as markdown copied into the project
- * (`constitution/`, `catalog/`) and the validators that implement them through
- * npm. The copy is create-only, so the two halves separate the moment either
+ * (`rule/`) and the validators that implement them through npm. The copy is
+ * create-only, so the two halves separate the moment either
  * side moves: an upgraded toolkit keeps reading whatever constitution the
  * project first initialised with, and a local edit to that constitution is
  * indistinguishable from shipped policy — downstream reasoning then cites the
@@ -25,58 +25,27 @@ import { escapeRegExp } from "./regex.js";
  * toolkit may refresh, and a file that matches neither the record nor the
  * installed release is a local fork that needs a merge decision.
  *
- * `manifest/` is deliberately outside the record. `qfai-configure` is the
- * shipped entrypoint for editing those declarative files, so a project editing
- * them is using the supported path and must not be reported for it.
+ * Routing defaults are built into the package; there is no project manifest
+ * layer to record. Project context belongs to the story tree.
  */
 export const ASSISTANT_ASSETS_LOCK_BASENAME = ".assets.lock.json";
 
 /**
  * Assistant layers qfai owns end to end and can therefore vouch for.
- *
- * A layer may sit one directory inside another. `process/workflows` holds the
- * workflow plans, which an upgrade refreshes and the workflow engine checks
- * against the release; the rest of `process/` is the project's, because
- * `process/migrations/` gains one memo per upgrade. Read a path's layer with
- * {@link governedLayerOf}, never as its first segment.
  */
-export const GOVERNED_ASSISTANT_LAYERS = ["constitution", "catalog", "process/workflows"] as const;
+export const GOVERNED_ASSISTANT_LAYERS = ["rule"] as const;
 
 export type GovernedAssistantLayer = (typeof GOVERNED_ASSISTANT_LAYERS)[number];
 
 /**
- * The governed layer a POSIX path relative to `.qfai/assistant/` sits in, or
- * `null` when it sits in none.
+ * No assistant catalog file is seeded in the story-tree layout. Keep the
+ * shared list so init, validation, and the root link script agree on the empty
+ * adopter-owned set.
  */
-export function governedLayerOf(relativePath: string): GovernedAssistantLayer | null {
-  return GOVERNED_ASSISTANT_LAYERS.find((layer) => relativePath.startsWith(`${layer}/`)) ?? null;
-}
+export const ADOPTER_OWNED_CATALOG_FILES = [] as const;
 
-/**
- * The Stage 0 catalog documents a project fills in and owns from then on.
- *
- * Governed like the rest of the layer — qfai seeds them, records them, and
- * reports one that goes missing — but their content is the project's. They ship
- * as templates whose values are literal placeholders, and the shared skill
- * baseline names them as MANDATORY refresh targets, so a difference from the
- * shipped bytes is the finished state rather than a defect.
- *
- * Here rather than beside either reader because both have to agree: the
- * validator must not report the difference, and `qfai init --force` must not
- * overwrite it. Two copies of this list is how one of those silently stops
- * matching the other.
- */
-export const ADOPTER_OWNED_CATALOG_FILES = [
-  "manifest.md",
-  "product.md",
-  "structure.md",
-  "tech.md",
-] as const;
-
-/** The same four, keyed the way the lock and the provenance walk key them. */
-export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
-  ADOPTER_OWNED_CATALOG_FILES.map((fileName) => `catalog/${fileName}`),
-);
+/** Assistant paths protected as adopter-owned; empty in the story tree. */
+export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set();
 
 /**
  * Assistant layers `qfai init --force` regenerates outright.
@@ -87,55 +56,36 @@ export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set(
  *
  * | layer                        | what `--force` does                             | what has to be told apart |
  * | ---------------------------- | ----------------------------------------------- | ------------------------- |
- * | `constitution/` `catalog/`   | refreshes a file still matching the record; leaves a diverged one and reports it | stale from forked |
- * | `skills/` `agents/`          | overwrites every file                           | nothing — only whether it is behind |
+ * | `rule/`                      | refreshes a file still matching the record; leaves a diverged one and reports it | stale from forked |
+ * | `skill/` `agent/`            | overwrites every file                           | nothing — only whether it is behind |
  *
  * With no merge decision to protect there is nothing to record, so these layers
  * are outside {@link AssistantAssetsLock} and are compared against the shipped
  * bytes directly. A lock entry per file would be a hundred and sixty-odd
  * records that no consumer reads.
  *
- * `manifest/` is in neither list. `qfai-configure` is the supported way to edit
- * it, and `--force` leaves it alone.
+ * `prompt/` is in neither list; it is installed create-only.
  */
-export const REGENERATED_ASSISTANT_LAYERS = ["skills", "agents"] as const;
+export const REGENERATED_ASSISTANT_LAYERS = ["skill", "agent"] as const;
 
 export type RegeneratedAssistantLayer = (typeof REGENERATED_ASSISTANT_LAYERS)[number];
 
 /**
  * Maps a POSIX path relative to `.qfai/assistant/` to the sha256 of the
- * content qfai wrote at that path, beside the package version that wrote it and
- * the conflicts that run found. Nothing reads the conflicts back: every run
- * recomputes them.
+ * content qfai wrote at that path.
  */
 export type AssistantAssetsLock = {
-  packageVersion?: string;
   files: Record<string, string>;
-  conflicts?: readonly AssistantAssetConflict[];
-};
-
-/**
- * A file an upgrade left in conflict with the workflow's correspondence check:
- * its POSIX path relative to `.qfai/assistant/`, the cause it trips, and what
- * differs.
- */
-export type AssistantAssetConflict = {
-  path: string;
-  trigger: "contract-undeclared" | "reviewer-missing";
-  difference: string;
 };
 
 /**
  * A project's legal way to extend qfai policy without editing a file qfai
  * owns: `<layer>/<name>.local.md` is never shipped, never recorded and never
- * reported. Extending the catalog in place is what produces an unmergeable
+ * reported. Extending a governed rule in place produces an unmergeable
  * fork; an overlay beside it is additive and survives every upgrade.
  *
- * The extension is pinned to `md`, not left open. `catalog/` also ships
- * `review-gate.rules.yml` and `spec_required_files.json`, and a pattern that
- * accepted any extension read `review-gate.local.yml` as an overlay — so a
- * non-markdown normative file added beside them dropped out of the record
- * entirely and out of `QFAI-ASSETS-006` with it.
+ * The extension is pinned to `md`, not left open: a rule with another extension
+ * must still participate in the provenance check.
  */
 const LOCAL_OVERLAY_PATTERN = /\.local\.md$/i;
 
@@ -158,7 +108,7 @@ export const ASSISTANT_STAGING_PREFIX = ".qfai-staging-";
  * Dotfiles inside a governed layer that are known housekeeping, not policy.
  *
  * Only these are skipped. Excluding every dotted name instead was a hole the
- * size of the check: `constitution/.policy.md` is as normative as its
+ * size of the check: `rule/.policy.md` is as normative as its
  * undotted sibling, and a blanket `startsWith(".")` let one be added without
  * `QFAI-ASSETS-006` ever seeing it — the exact bypass this record exists to
  * close. `*.local.md` is the one sanctioned way to add a file here.
@@ -177,7 +127,7 @@ const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
  * makes it unique, and the `.tmp` suffix.
  *
  * Matching the prefix alone excluded any name that merely begins with it, so
- * `constitution/.qfai-staging-project-rule.md` was a normative file the record
+ * `rule/.qfai-staging-project-rule.md` was a normative file the record
  * never saw and `QFAI-ASSETS-006` never reported — an addition dressed as
  * qfai's own scaffolding. Only a name qfai could actually have produced is
  * treated as scaffolding.
@@ -214,17 +164,20 @@ function isUngovernedManagementFile(basename: string): boolean {
  * therefore validated at the parse boundary, so neither `init` nor `validate`
  * can be handed a path to act on that qfai does not own.
  *
- * Nesting is accepted because the governed layers are `constitution/**` and
- * `catalog/**`: a project that adds `constitution/custom/rule.md` is adding a
+ * Nesting is accepted because the governed layer is `rule/**`:
+ * a project that adds `rule/custom/rule.md` is adding a
  * normative file, and a key shape that stopped at one level put that file
  * outside the record — and outside `QFAI-ASSETS-006` with it.
  */
 export function isGovernedAssistantLockKey(key: string): boolean {
-  const layer = governedLayerOf(key);
-  if (layer === null) {
+  const [layer, ...rest] = key.split("/");
+  if (layer === undefined || rest.length === 0) {
     return false;
   }
-  const rest = key.slice(layer.length + 1).split("/");
+  const layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS;
+  if (!layers.includes(layer)) {
+    return false;
+  }
   if (!rest.every(isGovernedPathSegment)) {
     return false;
   }
@@ -258,9 +211,9 @@ function isGovernedPathSegment(segment: string): boolean {
  * True when `key` is not a shipped path but folds onto one under the
  * case-insensitive comparison a default Windows or macOS filesystem applies.
  *
- * A lock is project-supplied, so a key of `catalog/TEST-LAYERS.MD` paired with
+ * A lock is project-supplied, so a key of `rule/TEST-LAYERS.MD` paired with
  * the real file's hash passes every structural check while being a different
- * key from the shipped `catalog/test-layers.md`. `retireWithdrawnGovernedAssets`
+ * key from the shipped `rule/test-layers.md`. `retireWithdrawnGovernedAssets`
  * then reads it as a rule the release withdrew, finds the content still
  * matching, and `qfai init --force` deletes the shipped file the alias
  * actually named. Such a key is dropped rather than acted on — on every
@@ -283,14 +236,14 @@ export function aliasesShippedGovernedAsset(
  * other reparse point.
  *
  * Only the final entry of a governed path was checked before, so a checkout
- * that left `constitution/` or `catalog/` itself pointing at a directory
+ * that left `rule/` itself pointing at a directory
  * outside the repository put every write and every `--force` retire inside
  * that directory: `rename` replaces the entry it is given, but the entry was
  * already out of the tree. Each parent is therefore inspected with `lstat`,
  * which reports a link as a link instead of resolving through it.
  *
  * The walk starts at the **project** root, and `relative` is relative to it —
- * `.qfai/assistant/constitution/quality.md`, not `constitution/quality.md`.
+ * `.qfai/assistant/rule/quality.md`, not `rule/quality.md`.
  * Starting at the assistant root left the components above it unchecked, and
  * `lstat` only declines to resolve the *final* component: with `.qfai` a
  * symlink out of the repository, `lstat(.qfai/assistant)` resolved through it
@@ -504,16 +457,15 @@ const OPEN_READ_NOFOLLOW_FLAGS =
  * POSIX paths, relative to the assistant root, of every governed file under
  * `assistantRoot`. Overlays are excluded: they are project property.
  *
- * The walk descends: the governed layers are `constitution/**` and
- * `catalog/**`, so a project that puts a normative file in
- * `constitution/custom/rule.md` has added one. Skipping subdirectories left
+ * The walk descends through `rule/**`, so a project that puts a normative file in
+ * `rule/custom/rule.md` has added one. Skipping subdirectories left
  * that file out of the record and out of `QFAI-ASSETS-006` — a directory was
  * all it took to add an unreported rule beside the ones qfai owns.
  *
  * Only real directories are descended into. A symlinked directory is not part
  * of the governed tree, and following one would walk out of the project. That
  * holds for the layer roots themselves, which `readdir` resolved like any other
- * path: a checkout that left `constitution/` pointing outside the repository
+ * path: a checkout that left `rule/` pointing outside the repository
  * had `qfai validate` walk and hash whatever was there, pass in silence if it
  * happened to match the release, and take as long as that tree was big. A layer
  * root that is not a real directory throws rather than reading — the caller
@@ -539,7 +491,7 @@ export async function collectGovernedAssistantFiles(assistantRoot: string): Prom
  * one is empty rather than an error, and housekeeping dotfiles are skipped.
  *
  * One layer at a time, because these are compared one at a time. A project can
- * be behind on its skills and current on its agents, and the finding names the
+ * be behind on its skill and current on its agent, and the finding names the
  * layer whose files differ.
  */
 export async function collectRegeneratedAssistantFiles(
@@ -559,12 +511,13 @@ async function collectGovernedFilesUnder(
 ): Promise<void> {
   // Nested entries were classified by `readdir` itself, which does not resolve
   // links — only a scan root arrives here unexamined.
-  // The project root is two levels above the assistant root, which is one level
-  // above a layer per segment of its name: `<root>/.qfai/assistant/<layer>`.
+  // `projectRoot` is two levels above a layer: `<root>/.qfai/assistant/<layer>`.
   // A link that stays inside it is a vendored tree; one that leaves is what
   // this refusal is for.
-  const projectRoot = path.resolve(directory, ...prefix.split("/").map(() => ".."), "..", "..");
-  if (isLayerRoot && !(await isRealDirectoryOrAbsent(directory, projectRoot))) {
+  if (
+    isLayerRoot &&
+    !(await isRealDirectoryOrAbsent(directory, path.resolve(directory, "../../..")))
+  ) {
     throw new Error(
       `${directory} cannot be walked as a governed layer: it is not a directory, or it is a link that leaves the project.`,
     );
@@ -773,12 +726,7 @@ export async function writeAssistantAssetsLock(
   const target = assistantAssetsLockPath(assistantRoot);
   const staging = `${target}.${randomUUID()}.tmp`;
   try {
-    const body = {
-      packageVersion: lock.packageVersion,
-      files: ordered,
-      conflicts: lock.conflicts ?? [],
-    };
-    await writeFile(staging, `${JSON.stringify(body, null, 2)}\n`, {
+    await writeFile(staging, `${JSON.stringify({ files: ordered }, null, 2)}\n`, {
       encoding: "utf-8",
       flag: "wx",
     });

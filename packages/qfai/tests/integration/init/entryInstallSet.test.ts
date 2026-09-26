@@ -1,10 +1,12 @@
 /**
- * Integration: `qfai init` installs the workflow entry — the two entry skills, the built-in plans
- * and each plan-named stage skill's orchestrated-mode reference — through the existing asset copy.
+ * Integration: `qfai init` installs the workflow entry — the two entry skills and each plan-named
+ * stage skill's orchestrated-mode reference — through the existing asset copy. The built-in plans
+ * stay in the package and are never written into the project.
  */
-// QFAI:SPEC-0003:TC-0003-0093
-// QFAI:SPEC-0003:TC-0003-0063
-// QFAI:SPEC-0003:TC-0003-0064
+// QFAI:AC-0001-0203-01
+// QFAI:EX-0001-0203-01
+// QFAI:EX-0001-0203-02
+// QFAI:EX-0001-0203-03
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, readdir, realpath } from "node:fs/promises";
@@ -12,19 +14,23 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { initQuietly, withEmptyRepo, withInstall } from "./upgradeStates.js";
+import { packagePlansDir } from "../../../src/core/workflow/plans.js";
+import {
+  ENTRY_SKILLS,
+  HOST_SKILL_DIRS,
+  SKILLS,
+  initQuietly,
+  withEmptyRepo,
+  withInstall,
+} from "./upgradeStates.js";
 
-const ENTRY_SKILLS = ["qfai-run", "qfai-maintain"];
 const PLANS = ["bounded-change.yml", "bugfix.yml", "direct.yml", "discovery.yml", "feature.yml"];
-const HOST_SKILL_DIRS = [".agents/skills", ".claude/skills", ".codex/skills", ".github/skills"];
-const SKILLS = ".qfai/assistant/skills";
-const WORKFLOWS = ".qfai/assistant/process/workflows";
 
-/** The skills the installed plans name, read from the plans themselves. */
-async function planSkills(root: string): Promise<string[]> {
+/** The skills the packaged plans name, read from the plans themselves. */
+async function planSkills(): Promise<string[]> {
   const names = new Set<string>();
   for (const plan of PLANS) {
-    const text = await readFile(path.join(root, WORKFLOWS, plan), "utf-8");
+    const text = await readFile(path.join(packagePlansDir(), plan), "utf-8");
     for (const match of text.matchAll(/qfai-[a-z-]+/g)) names.add(match[0]);
   }
   return [...names].sort();
@@ -56,12 +62,16 @@ async function expectInstallSet(root: string): Promise<void> {
   for (const skill of ENTRY_SKILLS) {
     expect(existsSync(path.join(root, SKILLS, skill, "SKILL.md")), skill).toBe(true);
   }
-  expect((await readdir(path.join(root, WORKFLOWS))).sort()).toEqual(PLANS);
-  for (const skill of await planSkills(root)) {
+  for (const skill of await planSkills()) {
     const reference = path.join(root, SKILLS, skill, "references", "orchestrated-mode.md");
     expect(existsSync(reference), `${skill} carries its orchestrated-mode reference`).toBe(true);
   }
-  const schemas = (await filesUnder(root)).filter((file) => file.endsWith(".schema.json"));
+  const written = (await filesUnder(root)).map((file) => path.basename(file));
+  expect(
+    written.filter((name) => PLANS.includes(name)),
+    "no plan is written",
+  ).toEqual([]);
+  const schemas = written.filter((name) => name.endsWith(".schema.json"));
   expect(schemas, "no workflow schema is written into the project").toEqual([]);
 }
 
@@ -75,21 +85,21 @@ async function expectWrappersResolve(root: string): Promise<void> {
 }
 
 describe("the workflow entry install set", () => {
-  it("TC-0003-0093: Fresh init installs the entry skills, plans and references", async () => {
+  it("Fresh init installs the entry skills and the orchestrated-mode references", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       await expectInstallSet(root);
     });
   });
 
-  it("TC-0003-0063: Four host skill dirs resolve both entry skills to one source", async () => {
+  it("Four host skill dirs resolve both entry skills to one source", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
       await expectWrappersResolve(root);
     });
   });
 
-  it("TC-0003-0064: Upgrade over an install without the workflow entry", async () => {
+  it("Upgrade over an install without the workflow entry", async () => {
     await withInstall(["absent-skills"], async (root) => {
       const before = await otherSkillDigests(root);
       await initQuietly(root);

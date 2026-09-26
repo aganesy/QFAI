@@ -15,7 +15,7 @@ export const finishPlan = {
   route: "bounded-change",
   writeScope: ["src/notify"],
   stages: [
-    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "delta-or-applicability-check"],
+    ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
     ["bounded-implement", "implement", "qfai-implement", "implement"],
     ["bounded-verify", "verify", "qfai-verify", "verify-full"],
   ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
@@ -31,7 +31,7 @@ export function readySnapshot(): Snapshot {
   return {
     run: { id: RUN_ID, state: "ready", sequence: 12 },
     plan: finishPlan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
     completionTarget: "qfai_done",
     baseline: {
       findings: [],
@@ -81,9 +81,12 @@ export function completion(): Completion {
 
 export function metFacts(): Facts {
   return {
-    ledger: {
-      specId: "spec-0007",
-      rows: [{ rowId: "TDD-0001", status: "done", digest: "c".repeat(64) }],
+    obligations: {
+      flowId: "BF-0007",
+      ids: ["AC-0007-0001-01", "BF-0007", "EX-0007-0001-01"],
+      exampleIds: ["EX-0007-0001-01"],
+      annotated: ["EX-0007-0001-01"],
+      digest: "c".repeat(64),
     },
     completion: completion(),
   };

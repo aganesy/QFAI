@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0110
+// QFAI:AC-0001-0196-02
+// QFAI:EX-0001-0196-05
 
 import { afterEach, expect, it } from "vitest";
 
@@ -6,7 +7,7 @@ import { field, minimalProject, removeProjects, routedRun, workflow } from "./wo
 
 afterEach(removeProjects);
 
-it("TC-0018-0110 (TDD-0328): Built CLI status with no --run in a worktree holding one non-terminal run", async () => {
+it("Built CLI status with no --run in a worktree holding one non-terminal run", async () => {
   const root = await minimalProject();
   const { runId, routed } = await routedRun(root);
   const status = workflow(root, ["status"]);

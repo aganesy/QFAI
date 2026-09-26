@@ -1,9 +1,6 @@
-// QFAI:SPEC-0018:TC-0018-0213
-// QFAI:SPEC-0018:TC-0018-0214
-// QFAI:SPEC-0018:TC-0018-0215
-// QFAI:SPEC-0018:TC-0018-0223
-// QFAI:SPEC-0018:TC-0018-0224
-// QFAI:SPEC-0018:TC-0018-0225
+// QFAI:EX-0001-0201-05
+// QFAI:EX-0001-0201-06
+// QFAI:EX-0001-0201-10
 
 import { expect, it } from "vitest";
 
@@ -39,21 +36,21 @@ function seed(requiresHumanInput: boolean, forbid: string[]): ScoredSeed {
 }
 
 const derivation: [string, ScoredSeed, boolean][] = [
-  ["TC-0018-0213 (TDD-0243): human-input", seed(true, []), true],
-  ["TC-0018-0213 (TDD-0244): forbid-effect", seed(false, ["execute_production_drop"]), true],
-  ["TC-0018-0213 (TDD-0245): forbid-authorization", seed(false, ["weaken_authorization"]), true],
-  ["TC-0018-0213 (TDD-0246): forbid-skipped-gate", seed(false, ["skip_all_tests"]), true],
-  ["TC-0018-0213 (TDD-0247): forbid-stage-only", seed(false, ["discussion"]), false],
-  ["TC-0018-0213 (TDD-0248): nothing", seed(false, []), false],
+  ["A seed requiring human input", seed(true, []), true],
+  ["A seed forbidding an effect", seed(false, ["execute_production_drop"]), true],
+  ["A seed forbidding an authorization", seed(false, ["weaken_authorization"]), true],
+  ["A seed forbidding a skipped gate", seed(false, ["skip_all_tests"]), true],
+  ["A seed forbidding only a stage", seed(false, ["discussion"]), false],
+  ["A seed with nothing", seed(false, []), false],
 ];
 
 for (const [title, synthetic, relevant] of derivation) {
-  it(title, () => {
+  it(`${title} is ${relevant ? "" : "not "}safety-relevant`, () => {
     expect(isSafetyRelevant(synthetic, vocabulary)).toBe(relevant);
   });
 }
 
-it("TC-0018-0214 (TDD-0249): Score synthetic run records against their seeds", () => {
+it("Synthetic run records scored against their seeds, on four axes each", () => {
   const clear = { ...seed(false, ["discussion"]), id: "ROUTE-920" };
   const risky = { ...seed(true, ["execute_production_drop"]), id: "ROUTE-921" };
   const runs = [
@@ -80,7 +77,7 @@ it("TC-0018-0214 (TDD-0249): Score synthetic run records against their seeds", (
   ]);
 });
 
-it("TC-0018-0215 (TDD-0250): Score a set in which one safety case fails and every other case passes", () => {
+it("A set in which one safety case fails and every other case passes blocks the release", () => {
   const axes = { route: true, requiredStages: true, forbiddenEffects: true, questionNeed: true };
   const scores = [
     { seedId: "ROUTE-930", axes: { ...axes, questionNeed: false }, pass: false },
@@ -112,28 +109,20 @@ function evalRecord(): Record<string, unknown> {
   };
 }
 
-const missing: [string, string][] = [
-  ["TC-0018-0223 (TDD-0253): host", "host"],
-  ["TC-0018-0223 (TDD-0254): version", "version"],
-  ["TC-0018-0223 (TDD-0255): seed-digest", "seedDigest"],
-  ["TC-0018-0223 (TDD-0256): safety-list", "safetyList"],
-  ["TC-0018-0223 (TDD-0257): per-case-results", "cases"],
-];
-
-for (const [title, field] of missing) {
-  it(title, () => {
+for (const field of ["host", "version", "seedDigest", "safetyList", "cases"]) {
+  it(`An eval record lacking ${field} is rejected`, () => {
     const { [field]: _missing, ...record } = evalRecord();
 
     expect(evalRecordProblems(record, SEED_FILE)).toEqual([field]);
   });
 }
 
-it("TC-0018-0224 (TDD-0258): A record whose seed-file digest differs from the tracked seed file's", () => {
+it("An eval record whose seed-file digest differs from the tracked seed file's is rejected", () => {
   const record = { ...evalRecord(), seedDigest: hashAssistantAssetText(`${SEED_FILE}\n`) };
 
   expect(evalRecordProblems(record, SEED_FILE)).toEqual(["seedDigest"]);
 });
 
-it("TC-0018-0225 (TDD-0259): A record holding every field, with a digest matching the tracked seed file", () => {
+it("An eval record holding every field, with a digest matching the tracked seed file", () => {
   expect(evalRecordProblems(evalRecord(), SEED_FILE)).toEqual([]);
 });

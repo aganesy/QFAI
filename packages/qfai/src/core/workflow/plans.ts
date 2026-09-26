@@ -5,6 +5,10 @@ import { parse as parseYaml } from "yaml";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { normalizeNewlines } from "../../shared/text.js";
+import type { QfaiConfig } from "../config.js";
+import { joinAssistantLayer } from "../paths/assistantPaths.js";
+import { readEffectiveRouting } from "../validators/agentDefinition.js";
+import type { SkillRouting } from "../validators/skillRoles.js";
 import { isRecord } from "./parse.js";
 
 export const WORKFLOW_ROUTES = [
@@ -46,7 +50,6 @@ export type PlanRefusalReason =
   | "cycle"
   | "unreachable"
   | "no-verify-path"
-  | "plan-differs"
   | "skill-missing"
   | "operations-table-missing"
   | "operations-first-column"
@@ -64,15 +67,22 @@ export interface PlanRefusal {
 export type PlanLoad =
   { ok: true; plan: WorkflowPlanFile } | { ok: false; refusals: PlanRefusal[] };
 
-// The verdict over a project's installed plans, the skills they name and the reviewers the
-// routing manifest requires: a refusal is the cause `contract-undeclared` or `reviewer-missing`.
+// The verdict over the package's plans, the skills they name and the reviewers the effective
+// routing keeps: a refusal is the cause `contract-undeclared` or `reviewer-missing`.
 export interface PlanCheck {
   cause?: "contract-undeclared" | "reviewer-missing";
   refusals: PlanRefusal[];
 }
 
-// Where the plans sit, relative to the package's `assets/init` and to a project root.
-export const PLANS_DIR = path.join(".qfai", "assistant", "process", "workflows");
+// Where the plans sit: in the installed package, never in a project.
+export function packagePlansDir(): string {
+  return path.resolve(getInitAssetsDir(), "..", "defaults", "workflows");
+}
+
+// The name a plan's digest is recorded under: its path inside the package.
+export function planDigestKey(route: WorkflowRoute): string {
+  return `assets/defaults/workflows/${route}.yml`;
+}
 
 const PLAN_KEYS = ["route", "stages"];
 const STAGE_KEYS = ["id", "kind", "skill", "operation", "when", "after", "effects"];
@@ -81,11 +91,11 @@ const STAGE_KEYS = ["id", "kind", "skill", "operation", "when", "after", "effect
 const KINDS: Record<string, { skills: string[]; operation: string }> = {
   maintenance: { skills: ["qfai-maintain"], operation: "non-normative-edit" },
   diagnose: { skills: ["qfai-implement"], operation: "diagnose-only" },
-  sdd_append: { skills: ["qfai-sdd"], operation: "defect-row-seeding" },
+  sdd_append: { skills: ["qfai-sdd"], operation: "defect-example-seeding" },
   test_fix: { skills: ["qfai-atdd", "qfai-implement"], operation: "test-fix" },
   regression_fix: { skills: ["qfai-implement"], operation: "regression-fix" },
-  sdd: { skills: ["qfai-sdd"], operation: "new-capability" },
-  sdd_delta: { skills: ["qfai-sdd"], operation: "delta-or-applicability-check" },
+  sdd: { skills: ["qfai-sdd"], operation: "new-story" },
+  sdd_delta: { skills: ["qfai-sdd"], operation: "update-or-applicability-check" },
   prototype: { skills: ["qfai-prototyping"], operation: "existing-runtime-contract" },
   acceptance: { skills: ["qfai-atdd"], operation: "author-acceptance-tests" },
   implement: { skills: ["qfai-implement"], operation: "implement" },
@@ -99,7 +109,8 @@ const OPERATIONS = new Set([...Object.values(KINDS).map((kind) => kind.operation
 
 const PREDICATES = [
   "always",
-  "missing_test_row_needed",
+  "missing_example_needed",
+  "diagnosis_missing_test",
   "test_defect_found",
   "regression_found",
   "acceptance_obligations_unmet",
@@ -194,6 +205,16 @@ function isVerifyFull(stage: PlanStage): boolean {
   return stage.kind === "verify" && stage.operation === "verify-full";
 }
 
+function verifyPathRefusals(stages: PlanStage[], refuse: Refuse) {
+  for (const stage of stages) {
+    const verifies = [...reachedFrom(stages, [stage])].some((id) =>
+      stages.some((candidate) => candidate.id === id && isVerifyFull(candidate)),
+    );
+    const endsElsewhere = followersOf(stages, stage.id).length === 0 && !isVerifyFull(stage);
+    if (!verifies || endsElsewhere) refuse("no-verify-path", stage.id);
+  }
+}
+
 function graphRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const { stages } = plan;
   const ids = new Set(stages.map((stage) => stage.id));
@@ -207,14 +228,7 @@ function graphRefusals(plan: WorkflowPlanFile, refuse: Refuse) {
   const reached = reachedFrom(stages, roots);
   for (const stage of stages) if (!reached.has(stage.id)) refuse("unreachable", stage.id);
   // A discovery plan ends by returning the run to routing, so it needs no verify stage.
-  if (plan.route === "discovery") return;
-  for (const stage of stages) {
-    const verifies = [...reachedFrom(stages, [stage])].some((id) =>
-      stages.some((candidate) => candidate.id === id && isVerifyFull(candidate)),
-    );
-    const endsElsewhere = followersOf(stages, stage.id).length === 0 && !isVerifyFull(stage);
-    if (!verifies || endsElsewhere) refuse("no-verify-path", stage.id);
-  }
+  if (plan.route !== "discovery") verifyPathRefusals(stages, refuse);
 }
 
 function documentOf(text: string): unknown {
@@ -241,37 +255,15 @@ export function parsePlan(text: string, route: WorkflowRoute): PlanLoad {
   const refusals: PlanRefusal[] = [];
   const refuse: Refuse = (reason, subject) => refusals.push({ route, reason, subject });
   const document = documentOf(text);
-  if (!isRecord(document))
+  if (!isRecord(document)) {
     return { ok: false, refusals: [{ route, reason: "not-mapping", subject: route }] };
+  }
   unknownKeys(document, PLAN_KEYS, refuse);
   if (document.route !== route) refuse("route-name", String(document.route));
   const stages = stagesOf(document, refuse);
   const plan = { route, stages: stages ?? [] };
   if (stages && refusals.length === 0) graphRefusals(plan, refuse);
   return refusals.length === 0 ? { ok: true, plan } : { ok: false, refusals };
-}
-
-function packagePlanPath(route: WorkflowRoute): string {
-  return path.join(getInitAssetsDir(), PLANS_DIR, `${route}.yml`);
-}
-
-// A package copy that does not load is a packaging defect, so it throws.
-async function loadBuiltInPlan(route: WorkflowRoute): Promise<WorkflowPlanFile> {
-  const loaded = parsePlan(await readFile(packagePlanPath(route), "utf8"), route);
-  if (!loaded.ok) throw new Error(`The packaged ${route} plan does not load.`);
-  return loaded.plan;
-}
-
-// The package's own plans, which are the ones a run follows.
-export async function loadBuiltInPlans(): Promise<Record<WorkflowRoute, WorkflowPlanFile>> {
-  const [direct, bugfix, boundedChange, feature, discovery] = await Promise.all([
-    loadBuiltInPlan("direct"),
-    loadBuiltInPlan("bugfix"),
-    loadBuiltInPlan("bounded-change"),
-    loadBuiltInPlan("feature"),
-    loadBuiltInPlan("discovery"),
-  ]);
-  return { direct, bugfix, "bounded-change": boundedChange, feature, discovery };
 }
 
 async function readIfPresent(file: string): Promise<string | undefined> {
@@ -283,30 +275,43 @@ async function readIfPresent(file: string): Promise<string | undefined> {
   }
 }
 
-// One installed copy against the package's: it must load and equal it after CRLF normalization.
-async function installedPlanRefusals(root: string, route: WorkflowRoute): Promise<PlanRefusal[]> {
-  const installed = await readIfPresent(path.join(root, PLANS_DIR, `${route}.yml`));
-  if (installed === undefined) return [{ route, reason: "file-missing", subject: route }];
-  const loaded = parsePlan(installed, route);
-  if (!loaded.ok) return loaded.refusals;
-  const packaged = await readFile(packagePlanPath(route), "utf8");
-  if (normalizeNewlines(installed) === normalizeNewlines(packaged)) return [];
-  return [{ route, reason: "plan-differs", subject: route }];
+// One of the package's plans, loaded or refused.
+export async function loadPackagePlan(route: WorkflowRoute): Promise<PlanLoad> {
+  const text = await readIfPresent(path.join(packagePlansDir(), `${route}.yml`));
+  if (text === undefined) {
+    return { ok: false, refusals: [{ route, reason: "file-missing", subject: route }] };
+  }
+  return parsePlan(text, route);
 }
 
-const SKILLS_DIR = path.join(".qfai", "assistant", "skills");
-const ROUTING_MANIFEST = path.join(".qfai", "assistant", "manifest", "agent-routing.yml");
+// The package's own plans, which are the ones a run follows. A plan that does not load is
+// trigger (b), which `start` refuses before any run reads the plans, so here it throws.
+async function loadBuiltInPlan(route: WorkflowRoute): Promise<WorkflowPlanFile> {
+  const load = await loadPackagePlan(route);
+  if (!load.ok) throw new Error(`The packaged ${route} plan does not load.`);
+  return load.plan;
+}
 
-// Every (skill, operation) pair the built-in plans use, with the first route using the skill.
-async function planPairs(): Promise<
-  Map<string, { route: WorkflowRoute; operations: Set<string> }>
-> {
-  const plans = await loadBuiltInPlans();
-  const pairs = new Map<string, { route: WorkflowRoute; operations: Set<string> }>();
-  for (const route of WORKFLOW_ROUTES) {
-    for (const stage of plans[route].stages) {
+export async function loadBuiltInPlans(): Promise<Record<WorkflowRoute, WorkflowPlanFile>> {
+  const [direct, bugfix, boundedChange, feature, discovery] = await Promise.all([
+    loadBuiltInPlan("direct"),
+    loadBuiltInPlan("bugfix"),
+    loadBuiltInPlan("bounded-change"),
+    loadBuiltInPlan("feature"),
+    loadBuiltInPlan("discovery"),
+  ]);
+  return { direct, bugfix, "bounded-change": boundedChange, feature, discovery };
+}
+
+type PlanUse = { route: WorkflowRoute; operations: Set<string> };
+
+// Every (skill, operation) pair the loaded plans use, with the first route using the skill.
+function planPairs(plans: readonly WorkflowPlanFile[]): Map<string, PlanUse> {
+  const pairs = new Map<string, PlanUse>();
+  for (const plan of plans) {
+    for (const stage of plan.stages) {
       for (const skill of stage.skills) {
-        const entry = pairs.get(skill) ?? { route, operations: new Set<string>() };
+        const entry = pairs.get(skill) ?? { route: plan.route, operations: new Set<string>() };
         pairs.set(skill, entry);
         entry.operations.add(stage.operation);
       }
@@ -319,11 +324,10 @@ type TableRead = { ok: true; operations: string[] } | { ok: false; reason: PlanR
 
 // The lines of the first table under `## Operations`, up to the next heading, outside fences.
 function operationsTableLines(text: string): string[] {
-  const lines = normalizeNewlines(text).split("\n");
   const table: string[] = [];
   let inside = false;
   let fenced = false;
-  for (const line of lines) {
+  for (const line of normalizeNewlines(text).split("\n")) {
     if (line.trimStart().startsWith("```")) fenced = !fenced;
     if (fenced) continue;
     if (/^#{1,6}\s/.test(line)) {
@@ -348,15 +352,16 @@ function cellsOf(row: string): string[] {
 
 // The operations a skill's Operations table declares: a first column headed `Operation`, each
 // cell exactly one backticked operation ID of the vocabulary.
-function readOperationsTable(text: string): TableRead {
+export function readOperationsTable(text: string): TableRead {
   const [header, , ...rows] = operationsTableLines(text);
   if (header === undefined) return { ok: false, reason: "operations-table-missing" };
   if (cellsOf(header)[0] !== "Operation") return { ok: false, reason: "operations-first-column" };
   const operations: string[] = [];
   for (const row of rows) {
     const id = /^`([a-z-]+)`$/.exec(cellsOf(row)[0] ?? "")?.[1];
-    if (id === undefined || !OPERATIONS.has(id))
+    if (id === undefined || !OPERATIONS.has(id)) {
       return { ok: false, reason: "operations-cell-not-id" };
+    }
     operations.push(id);
   }
   return { ok: true, operations };
@@ -364,15 +369,11 @@ function readOperationsTable(text: string): TableRead {
 
 // A skill a plan names must be installed, and its Operations table must declare every
 // operation the plans use it for.
-async function skillRefusals(
-  root: string,
-  skill: string,
-  use: { route: WorkflowRoute; operations: Set<string> },
-): Promise<PlanRefusal[]> {
+async function skillRefusals(root: string, skill: string, use: PlanUse): Promise<PlanRefusal[]> {
   const refusal = (reason: PlanRefusalReason, subject = skill) => [
     { route: use.route, reason, subject },
   ];
-  const skillDir = path.join(root, SKILLS_DIR, skill);
+  const skillDir = joinAssistantLayer(root, "skill", skill);
   if (!(await stat(skillDir).catch(() => undefined))?.isDirectory()) {
     return refusal("skill-missing");
   }
@@ -384,61 +385,45 @@ async function skillRefusals(
     .flatMap((operation) => refusal("operations-pair-omitted", `${skill}:${operation}`));
 }
 
-// Each routed skill's phases and the agents each phase blocks on, from a routing manifest.
-function blockingAgentsOf(text: string | undefined): Map<string, Map<string, string[]>> {
-  const bySkill = new Map<string, Map<string, string[]>>();
-  const document: unknown = text === undefined ? undefined : documentOf(text);
-  const routing = isRecord(document) && Array.isArray(document.routing) ? document.routing : [];
-  for (const entry of routing) {
-    if (!isRecord(entry) || typeof entry.skill !== "string" || !Array.isArray(entry.phases))
-      continue;
-    const phases = new Map<string, string[]>();
-    for (const phase of entry.phases) {
-      if (!isRecord(phase) || typeof phase.id !== "string") continue;
-      const agents = Array.isArray(phase.blocking_agents) ? phase.blocking_agents : [];
-      phases.set(
-        phase.id,
-        agents.filter((agent): agent is string => typeof agent === "string"),
-      );
-    }
-    bySkill.set(entry.skill, phases);
-  }
-  return bySkill;
+function requiredAgents(routing: Map<string, SkillRouting> | undefined, skill: string): string[] {
+  const agents = routing?.get(skill)?.agents ?? new Map<string, string>();
+  return [...agents].filter(([, binding]) => binding === "required").map(([agent]) => agent);
 }
 
-// Every blocking agent the shipped routing manifest requires for a phase of a skill a plan
-// dispatches must still block that phase in the project's copy. Extra agents are the project's.
-// SIMPLIFIED: the refusal names the cause only, not the dropped reviewer or `qfai init --force`.
-// Lift when: the start refusal message carries what the operator does next.
-async function reviewerRefusals(root: string, skills: Map<string, { route: WorkflowRoute }>) {
-  const shipped = blockingAgentsOf(
-    await readFile(path.join(getInitAssetsDir(), ROUTING_MANIFEST), "utf8"),
-  );
-  const project = blockingAgentsOf(await readIfPresent(path.join(root, ROUTING_MANIFEST)));
+// Every agent the package's default routing requires for a skill a plan dispatches must still be
+// required by the effective routing. An agent the project adds is the project's.
+async function reviewerRefusals(
+  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
+  pairs: Map<string, PlanUse>,
+): Promise<PlanRefusal[]> {
+  const { routing, defaultRouting } = await readEffectiveRouting(config);
   const refusals: PlanRefusal[] = [];
-  for (const [skill, { route }] of skills) {
-    for (const [phase, agents] of shipped.get(skill) ?? []) {
-      const kept = project.get(skill)?.get(phase) ?? [];
-      for (const agent of agents.filter((each) => !kept.includes(each))) {
-        refusals.push({ route, reason: "reviewer-missing", subject: `${skill}:${phase}:${agent}` });
+  for (const [skill, { route }] of pairs) {
+    const kept = requiredAgents(routing, skill);
+    for (const agent of requiredAgents(defaultRouting, skill)) {
+      if (!kept.includes(agent)) {
+        refusals.push({ route, reason: "reviewer-missing", subject: `${skill}:${agent}` });
       }
     }
   }
   return refusals;
 }
 
-// Trigger (b) over the installed plans and the skills they name, then trigger (c) over the
-// reviewers the routing manifest requires. The first that holds is the cause.
-export async function checkInstalledPlans(projectRoot: string): Promise<PlanCheck> {
-  const pairs = await planPairs();
+// Trigger (b) over the package's plans and the skills they name, then trigger (c) over the
+// reviewers the effective routing keeps. The first that holds is the cause.
+export async function checkPlans(
+  projectRoot: string,
+  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
+): Promise<PlanCheck> {
+  const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
+  const loadRefusals = loaded.flatMap((load) => (load.ok ? [] : load.refusals));
+  if (loadRefusals.length > 0) return { cause: "contract-undeclared", refusals: loadRefusals };
+  const pairs = planPairs(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
   const contract = (
-    await Promise.all([
-      ...WORKFLOW_ROUTES.map((route) => installedPlanRefusals(projectRoot, route)),
-      ...[...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)),
-    ])
+    await Promise.all([...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)))
   ).flat();
   if (contract.length > 0) return { cause: "contract-undeclared", refusals: contract };
-  const reviewers = await reviewerRefusals(projectRoot, pairs);
+  const reviewers = await reviewerRefusals(config, pairs);
   return reviewers.length > 0
     ? { cause: "reviewer-missing", refusals: reviewers }
     : { refusals: [] };

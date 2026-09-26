@@ -13,7 +13,7 @@ const fullEntry = (overrides: Record<string, unknown> = {}): Record<string, unkn
   ...overrides,
 });
 
-// QFAI:SPEC-0012:TC-0012-0372
+// QFAI:EX-0001-0121-01
 describe("validateImageSources — closed schema (TC-0012-0372)", () => {
   it("accepts an array of fully-populated entries", () => {
     const result = validateImageSources([fullEntry(), fullEntry({ source: "pexels" })]);

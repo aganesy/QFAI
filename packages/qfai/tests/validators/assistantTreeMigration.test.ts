@@ -1,12 +1,12 @@
 /**
- * Validator: assistantTreeMigration (.qfai/assistant/{constitution,manifest,catalog,process}/).
+ * Validator: assistantTreeMigration (.qfai/assistant/{rule,skill,agent,prompt}/).
  *
  * Covers TC-0004-0015 (4-layer enum guard), TC-0004-0022 (D-DEPRECATED-PATH
  * sunset literal), TC-0004-0025 (W-USER-EDIT-PRESERVED info pass-through).
  */
-// QFAI:SPEC-0004:TC-0004-0015
-// QFAI:SPEC-0004:TC-0004-0022
-// QFAI:SPEC-0004:TC-0004-0025
+// QFAI:EX-0001-0043-01
+// QFAI:EX-0001-0047-01
+// QFAI:EX-0001-0048-02
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -20,7 +20,7 @@ async function newRoot(prefix: string): Promise<string> {
 }
 
 async function seed4LayerTree(root: string): Promise<void> {
-  for (const layer of ["constitution", "manifest", "catalog", "process"]) {
+  for (const layer of ["rule", "skill", "agent", "prompt"]) {
     const dir = path.join(root, ".qfai", "assistant", layer);
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, ".gitkeep"), `# ${layer}\n`, "utf-8");
@@ -44,7 +44,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0015: 4-layer enum guard
-  it("TC-0004-0015: emits W-ASSISTANT-LAYOUT for a non-canonical layer dir", async () => {
+  it("TC-0004-0015: reports a non-canonical layer dir", async () => {
     const root = await newRoot("treemig-enum");
     try {
       await seed4LayerTree(root);
@@ -57,7 +57,7 @@ describe("assistantTreeMigration validator", () => {
       );
       expect(enumIssues.length).toBe(1);
       expect(enumIssues[0]?.message).toContain("extras");
-      expect(enumIssues[0]?.message).toContain("constitution");
+      expect(enumIssues[0]?.message).toContain("rule");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -125,7 +125,7 @@ describe("assistantTreeMigration validator", () => {
     const root = await newRoot("treemig-info");
     try {
       // Only seed 3 of the 4 layers.
-      for (const layer of ["constitution", "manifest", "catalog"]) {
+      for (const layer of ["rule", "skill", "agent"]) {
         const dir = path.join(root, ".qfai", "assistant", layer);
         await mkdir(dir, { recursive: true });
         await writeFile(path.join(dir, ".gitkeep"), "", "utf-8");
@@ -133,9 +133,28 @@ describe("assistantTreeMigration validator", () => {
       const issues = await validateAssistantTreeMigration(root, await getConfig(root));
       const infoIssues = issues.filter((i) => i.code === "I-ASSISTANT-LAYER-UNSEEDED");
       expect(infoIssues.length).toBeGreaterThanOrEqual(1);
-      // process/ should be the named offender.
-      expect(infoIssues.some((i) => i.message.includes("process"))).toBe(true);
+      // prompt/ should be the named offender.
+      expect(infoIssues.some((i) => i.message.includes("prompt"))).toBe(true);
       expect(infoIssues[0]?.severity).toBe("info");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("allows skill.local and reports a legacy catalog directory", async () => {
+    const root = await newRoot("treemig-catalog");
+    try {
+      await seed4LayerTree(root);
+      const assistant = path.join(root, ".qfai", "assistant");
+      await mkdir(path.join(assistant, "skill.local"));
+      const catalog = path.join(assistant, "catalog");
+      await mkdir(catalog);
+      await writeFile(path.join(catalog, "product.md"), "# Old\n", "utf-8");
+      await mkdir(path.join(assistant, "skills"));
+      const changed = await validateAssistantTreeMigration(root, await getConfig(root));
+      expect(
+        changed.filter((found) => found.code === "W-ASSISTANT-LAYOUT").map((found) => found.file),
+      ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

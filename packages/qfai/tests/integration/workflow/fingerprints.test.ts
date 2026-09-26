@@ -1,8 +1,6 @@
-// QFAI:SPEC-0018:TC-0018-0112
-// QFAI:SPEC-0018:TC-0018-0113
-// QFAI:SPEC-0018:TC-0018-0114
-// QFAI:SPEC-0018:TC-0018-0115
-// QFAI:SPEC-0018:TC-0018-0116
+// QFAI:AC-0001-0196-03
+// QFAI:EX-0001-0196-07
+// QFAI:EX-0001-0196-08
 // Fault seeds: FAULT-017, FAULT-018, FAULT-019
 
 import { readFile, utimes } from "node:fs/promises";
@@ -12,6 +10,7 @@ import { afterEach, expect, it } from "vitest";
 
 import {
   AC_FILE,
+  criteria,
   GREEN_RECEIPT,
   PRODUCTION_FILE,
   RED_RECEIPT,
@@ -37,9 +36,11 @@ function validities(receipts: Record<string, unknown>): unknown[] {
   return Object.values(receipts);
 }
 
-it("TC-0018-0112 (TDD-0330): Git fixture with recorded receipts", async () => {
+it("Git fixture with recorded receipts", async () => {
+  // Inside the run's write scope, so the run change boundary admits it, and outside every file
+  // and glob a receipt reads.
   const { outstanding, resumed, receipts } = await resumedAfter((root) =>
-    write(root, "README.md", "# An unrelated change\n"),
+    write(root, ".qfai/spec/02_business-flow/README.md", "# An unrelated change\n"),
   );
 
   expect({
@@ -51,18 +52,18 @@ it("TC-0018-0112 (TDD-0330): Git fixture with recorded receipts", async () => {
   });
 }, 120_000);
 
-it("TC-0018-0113 (TDD-0331): Change the text of an AC the test and implementation receipts depend on", async () => {
-  const { resumed, receipts } = await resumedAfter((root) =>
-    write(root, AC_FILE, "# Acceptance criteria\n\nAC-0001-0001: the lines are exported as TSV.\n"),
-  );
+it("Change the text of an AC the test and implementation receipts depend on", async () => {
+  const { resumed, receipts } = await resumedAfter((root) => write(root, AC_FILE, criteria("TSV")));
 
+  // The sdd receipt holds; RED and GREEN read the criterion. No UI contract serves the flow,
+  // so the feature plan ran no prototype stage.
   expect({
     validities: validities(receipts),
     reissued: field(resumed.json, "workOrder.stageKind"),
-  }).toEqual({ validities: ["valid", "valid", "stale", "stale"], reissued: "acceptance" });
+  }).toEqual({ validities: ["valid", "stale", "stale"], reissued: "acceptance" });
 }, 120_000);
 
-it("TC-0018-0114 (TDD-0332): Add a file matching an input glob, leaving every existing file's hash unchanged", async () => {
+it("Add a file matching an input glob, leaving every existing file's hash unchanged", async () => {
   const { receipts } = await resumedAfter((root) =>
     write(root, "src/extra.ts", "export const extra = 1;\n"),
   );
@@ -73,7 +74,7 @@ it("TC-0018-0114 (TDD-0332): Add a file matching an input glob, leaving every ex
   });
 }, 120_000);
 
-it("TC-0018-0115 (TDD-0333): Record RED, then change the production file", async () => {
+it("Record RED, then change the production file", async () => {
   const { receipts } = await resumedAfter((root) =>
     write(root, PRODUCTION_FILE, "export const exportCsv = () => ['a', 'b', 'c'];\n"),
   );
@@ -84,7 +85,7 @@ it("TC-0018-0115 (TDD-0333): Record RED, then change the production file", async
   });
 }, 120_000);
 
-it("TC-0018-0116 (TDD-0334): mtime-only", async () => {
+it("mtime-only", async () => {
   const { receipts } = await resumedAfter(async (root) => {
     const later = new Date(Date.now() + 60_000);
     await utimes(path.join(root, PRODUCTION_FILE), later, later);
@@ -93,7 +94,7 @@ it("TC-0018-0116 (TDD-0334): mtime-only", async () => {
   expect([...new Set(validities(receipts))]).toEqual(["valid"]);
 }, 120_000);
 
-it("TC-0018-0116 (TDD-0335): same-bytes-rewrite", async () => {
+it("same-bytes-rewrite", async () => {
   const { receipts } = await resumedAfter(async (root) => {
     const file = path.join(root, PRODUCTION_FILE);
     await write(root, PRODUCTION_FILE, await readFile(file, "utf8"));

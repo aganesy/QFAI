@@ -1,6 +1,6 @@
 /**
  * Scoring engine — evaluates scores against thresholds and produces
- * accept/refine/reject decisions (BR-0030-0005 through BR-0030-0008).
+ * accept/refine/reject decisions.
  */
 
 import type { Decision, DecisionResult, ThresholdConfig } from "./types.js";

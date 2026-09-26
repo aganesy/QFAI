@@ -9,7 +9,7 @@
  * `.agents/rules/root-additions-policy.md` and proposes the correct
  * allowed-root path (`.qfai/review/2026-05-27/`).
  */
-// QFAI:SPEC-0004:TC-0004-0071
+// QFAI:EX-0002-0011-01
 
 import { execFile } from "node:child_process";
 import path from "node:path";

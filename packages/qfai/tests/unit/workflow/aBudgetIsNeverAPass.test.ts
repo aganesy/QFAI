@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0155
-// QFAI:SPEC-0018:TC-0018-0156
+// QFAI:EX-0001-0196-21
 
 import { expect, it } from "vitest";
 
@@ -8,7 +7,7 @@ import { completion, finishPlan } from "./finishFixture.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 const bugfixPlan = {
   route: "bugfix",
@@ -30,7 +29,7 @@ function diagnosing(replans: number) {
   const ready: Snapshot = {
     run: { id: "run-budget", state: "ready", sequence: 10 + replans },
     plan: bugfixPlan,
-    specBinding,
+    flowBinding,
     replans,
     completionTarget: "qfai_done",
   };
@@ -57,7 +56,7 @@ function replan(snapshot: ReturnType<typeof diagnosing>) {
         diagnosis: {
           verdict: "expectation-differs",
           reproductionRef: "evidence/reproduction.json",
-          matchedRowIds: ["TDD-0004"],
+          matchedIds: ["EX-0007-0002-01"],
         },
       },
     },
@@ -65,7 +64,7 @@ function replan(snapshot: ReturnType<typeof diagnosing>) {
   );
 }
 
-it("TC-0018-0155 (TDD-0209): Four replans in one run", () => {
+it("Four replans in one run", () => {
   const decisions = [0, 1, 2, 3].map((earlier) => replan(diagnosing(earlier)));
   const fourth = decisions[3]?.verdict;
   const blockedRun = fourth?.run;
@@ -90,9 +89,9 @@ it("TC-0018-0155 (TDD-0209): Four replans in one run", () => {
 
 const finding = {
   findingCode: "QFAI-TRACE-002",
-  path: ".qfai/specs/spec-0007/06_Test-Cases.md",
+  path: ".qfai/specs/BF-0007/06_Test-Cases.md",
   cause: "A test case names an example the spec does not define",
-  owningSpec: "spec-0007",
+  owningFlow: "BF-0007",
   detectingCommand: "qfai validate",
   resolvingOwner: "qfai-sdd",
   blockingExtent: "run",
@@ -110,14 +109,14 @@ function fourthRepair(path: string) {
     stageInstanceId: "bounded-verify",
     attempt: 4,
     stageKind: "verify",
-    target: { kind: "spec" as const, specId: "spec-0007" },
+    target: { kind: "flow" as const, flowId: "BF-0007" },
     executor: { skill: "qfai-verify" },
     operation: "verify-full",
   };
   const snapshot = {
     run,
     plan: finishPlan,
-    specBinding,
+    flowBinding,
     acceptedStages,
     attempts: { "bounded-sdd-delta": 4, "bounded-implement": 1, "bounded-verify": 4 },
     repairsByCause: [{ findingCode: finding.findingCode, path: finding.path, count: 3 }],
@@ -159,7 +158,7 @@ function fourthRepair(path: string) {
   };
 }
 
-it("TC-0018-0156 (TDD-0210): same-path", () => {
+it("same-path", () => {
   expect(fourthRepair(finding.path)).toEqual({
     state: "blocked",
     halt: {
@@ -171,8 +170,8 @@ it("TC-0018-0156 (TDD-0210): same-path", () => {
   });
 });
 
-it("TC-0018-0156 (TDD-0211): other-path", () => {
-  expect(fourthRepair(".qfai/specs/spec-0007/05_Examples.md")).toEqual({
+it("other-path", () => {
+  expect(fourthRepair(".qfai/specs/BF-0007/05_Examples.md")).toEqual({
     state: "ready",
     halt: undefined,
     issued: "qfai-sdd",

@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0158
+// QFAI:EX-0001-0197-02
 
 import { expect, it } from "vitest";
 
@@ -30,10 +30,10 @@ function acceptRequestKind(requestKind: string) {
           goal: "Explain how notification emails are sent.",
           expectedBehaviorRefs: [{ kind: "request", ref: "request" }],
           observedRefs: [],
-          affectedSpecIds: [],
+          affectedFlowIds: [],
           riskSignals: [],
           unresolvedQuestions: [],
-          newCapabilities: [],
+          newStories: [],
           proposedWriteScope: [],
           protectedTargets: [],
           requiredStages: [],
@@ -60,26 +60,26 @@ function scopeEscape(requestKind: string) {
   };
 }
 
-it("TC-0018-0158 (TDD-0212): read-only", () => {
+it("read-only", () => {
   expect(acceptRequestKind("read_only")).toEqual(scopeEscape("read_only"));
 });
 
-it("TC-0018-0158 (TDD-0213): plan-only", () => {
+it("plan-only", () => {
   expect(acceptRequestKind("plan_only")).toEqual(scopeEscape("plan_only"));
 });
 
-it("TC-0018-0158 (TDD-0214): verify-only", () => {
+it("verify-only", () => {
   expect(acceptRequestKind("verify_only")).toEqual(scopeEscape("verify_only"));
 });
 
-it("TC-0018-0158 (TDD-0215): resume", () => {
+it("resume", () => {
   expect(acceptRequestKind("resume")).toEqual(scopeEscape("resume"));
 });
 
-it("TC-0018-0158 (TDD-0216): cancel", () => {
+it("cancel", () => {
   expect(acceptRequestKind("cancel")).toEqual(scopeEscape("cancel"));
 });
 
-it("TC-0018-0158 (TDD-0217): explicit-stage", () => {
+it("explicit-stage", () => {
   expect(acceptRequestKind("explicit_stage")).toEqual(scopeEscape("explicit_stage"));
 });

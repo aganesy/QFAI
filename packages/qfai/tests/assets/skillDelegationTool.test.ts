@@ -25,7 +25,7 @@ const LEGACY_DELEGATION_TOOL = "Task";
  * listing both is what makes the granted set runtime-version independent.
  */
 async function skillFiles(tree: string): Promise<string[]> {
-  const skillsDir = path.join(repoRoot, tree, "assistant", "skills");
+  const skillsDir = path.join(repoRoot, tree, "assistant", "skill");
   const files = await fg(["*/SKILL.md"], { cwd: skillsDir, absolute: true });
   return files.sort();
 }
@@ -86,9 +86,11 @@ describe("shipped skills declare the delegation tool they mandate", () => {
       expect(offenders).toEqual([]);
     });
 
-    it(`${tree}: every qfai-* skill allows \`TodoWrite\``, async () => {
-      const files = (await skillFiles(tree)).filter((filePath) =>
-        path.basename(path.dirname(filePath)).startsWith("qfai-"),
+    it(`${tree}: orchestration skills allow \`TodoWrite\``, async () => {
+      const files = (await skillFiles(tree)).filter(
+        (filePath) =>
+          path.basename(path.dirname(filePath)).startsWith("qfai-") &&
+          path.basename(path.dirname(filePath)) !== "qfai-migration-spec-to-story",
       );
       expect(files.length).toBeGreaterThan(0);
 

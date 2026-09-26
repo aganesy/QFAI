@@ -69,9 +69,9 @@
  * configuration and textually over every file that configures the runner — the rule is
  * phrased as a search, and a commented-out retry is still a retry someone will uncomment.
  */
-// QFAI:SPEC-0017:TC-0017-0060
-// QFAI:SPEC-0017:TC-0017-0061
-// QFAI:SPEC-0017:TC-0017-0068
+// QFAI:EX-0002-0019-01
+// QFAI:EX-0002-0019-02
+// QFAI:EX-0002-0019-06
 
 import { readFileSync, readdirSync } from "node:fs";
 import { availableParallelism } from "node:os";

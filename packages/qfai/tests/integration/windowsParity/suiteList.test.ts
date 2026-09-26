@@ -2,8 +2,6 @@
  * Integration: the Windows job runs the package's `test:windows-parity` list and nothing else,
  * and runs it under a temp root whose name contains a space.
  */
-// QFAI:SPEC-0017:TC-0017-0094
-// QFAI:SPEC-0017:TC-0017-0096
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,8 +15,8 @@ import {
   testCommands,
 } from "./ownCi.js";
 
-// The control-core suites, the init suites, and the named provenance, gitignore and migration
-// tests. The literal is the declaration this case holds the script to.
+// The workflow control-core suites, the init suites, and the named provenance, gitignore and
+// migration tests. The literal is the declaration this case holds the script to.
 const DECLARED_SUITES = [
   "tests/unit/workflow/",
   "tests/integration/workflow/",
@@ -37,7 +35,9 @@ function envOf(step: Record<string, unknown>): Record<string, unknown> {
 }
 
 describe("the Windows job's suite list", () => {
-  it("TC-0017-0094: The Windows job runs exactly the declared suite list", () => {
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-01
+  it("The Windows job runs exactly the declared suite list", () => {
     const windows = job(WINDOWS_JOB);
 
     expect(windows["runs-on"]).toBe("windows-latest");
@@ -45,7 +45,8 @@ describe("the Windows job's suite list", () => {
     expect([...suiteList()].sort()).toEqual([...DECLARED_SUITES].sort());
   });
 
-  it("TC-0017-0096: The job points TEMP and TMP at a directory with a space", () => {
+  // QFAI:EX-0002-0024-02
+  it("The job points TEMP and TMP at a directory with a space", () => {
     const steps = stepsOf(job(WINDOWS_JOB));
     const testAt = firstTestStep(job(WINDOWS_JOB));
     expect(testAt).toBeGreaterThan(0);

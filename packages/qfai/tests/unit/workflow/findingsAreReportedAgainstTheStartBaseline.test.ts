@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0037
-// QFAI:SPEC-0018:TC-0018-0038
+// QFAI:EX-0001-0192-23
 
 import { expect, it } from "vitest";
 
@@ -18,7 +17,7 @@ function finishWith(baseline: Finding[], found: Finding[]) {
   return finish({ ...snapshot, baseline: { ...start, findings: baseline } }, facts);
 }
 
-it("TC-0018-0037 (TDD-0051): A start baseline with one error, and finish facts holding it and one new error", () => {
+it("A start baseline with one error, and finish facts holding it and one new error", () => {
   const known = { code: "QFAI-TRACE-002", file: "src/notify/email.ts", refs: [] };
   const added = { code: "QFAI-TRACE-004", file: "src/notify/sms.ts", refs: [] };
   const decision = finishWith([known], [known, added]);
@@ -37,7 +36,7 @@ it("TC-0018-0037 (TDD-0051): A start baseline with one error, and finish facts h
   ]);
 });
 
-it("TC-0018-0038 (TDD-0052): A finish finding with the baseline's code and file and its refs in another order", () => {
+it("A finish finding with the baseline's code and file and its refs in another order", () => {
   const code = "QFAI-TRACE-002";
   const file = "src/notify/email.ts";
   const decision = finishWith(

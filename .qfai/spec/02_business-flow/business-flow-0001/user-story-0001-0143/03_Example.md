@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                               | Expected                                                                                                                                                                                                                                                                                                   |
+| --------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0143-01 | AC-0001-0143-01 | Given a post-capture iter where `home.png` and `dashboard.png` share md5 `d41d8cd98f00b204e9800998ecf8427e`, When iterate runs duplicate detection, | Then `layoutAntiPatternsDetected[]` contains `{code: "lap-009", category: "duplicate-capture", offenders: ["home", "dashboard"], md5: "d41d8cd..."}` with severity error. Override requires Reviewer `justification:` text. NFR-0113 determinism: re-running the same iter produces the identical finding. |

@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0169
+// QFAI:AC-0001-0199-01
+// QFAI:EX-0001-0199-01
 
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -10,19 +11,19 @@ import { field, minimalProject, removeProjects, treeDigest, workflow } from "./w
 afterEach(removeProjects);
 
 const modes: [string, string][] = [
-  ["TC-0018-0169 (TDD-0372): off", "off"],
-  ["TC-0018-0169 (TDD-0373): shadow", "shadow"],
+  ["off", "off"],
+  ["shadow", "shadow"],
 ];
 
 for (const [title, mode] of modes) {
   it(title, async () => {
     const root = await minimalProject(`workflow:\n  mode: ${mode}\n`);
-    const runs = path.join(root, ".qfai", "runs");
+    const runs = path.join(root, ".qfai", "run");
     await mkdir(path.join(runs, "inbox"), { recursive: true });
     await writeFile(path.join(runs, "inbox", "start.json"), "{ not json");
     const before = await treeDigest(root);
 
-    const started = workflow(root, ["start", "--in", ".qfai/runs/inbox/start.json"]);
+    const started = workflow(root, ["start", "--in", ".qfai/run/inbox/start.json"]);
 
     expect({
       exit: started.status,

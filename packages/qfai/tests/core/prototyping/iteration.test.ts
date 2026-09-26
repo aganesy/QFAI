@@ -17,14 +17,20 @@ const baseIter = (overrides: Partial<Iteration> = {}): Iteration => ({
   index: 0,
   commitSha: "a".repeat(40),
   blockingFindings: ["home: the empty state is not represented"],
+  scores: {
+    informationArchitecture: "exceptional",
+    navigationFlow: "exceptional",
+    usability: "exceptional",
+    functionality: "exceptional",
+  },
   proseCritique: "x".repeat(1500),
   layoutAntiPatternsDetected: [],
   designMdViolations: [],
   pivotDirective: "continue",
-  evidenceRefs: {
-    screenshot: ".qfai/evidence/prototyping/iter-00/home.png",
-    html: ".qfai/evidence/prototyping/iter-00/home.html",
-  },
+  evidenceRefs: [
+    { kind: "screenshot", path: "iter-00/home.png" },
+    { kind: "html", path: "iter-00/home.html" },
+  ],
   ...overrides,
 });
 
@@ -34,8 +40,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // TC-3.4.1
-  // QFAI:SPEC-0012:TC-0012-0319
-  it("returns converged when all three arrays are empty", () => {
+  it("returns converged when all four axes are exceptional and blockers are empty", () => {
     const iter = baseIter({ blockingFindings: [] });
     expect(shouldStop([iter])).toBe("converged");
   });
@@ -46,18 +51,32 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([iter])).toBeNull();
   });
 
+  // AC-0001-0120-02 behavior is exercised here; acceptance coverage belongs to integration.
+  it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"] as const)(
+    "does not converge when %s is only strong",
+    (axis) => {
+      const scores = { ...baseIter().scores, [axis]: "strong" as const };
+      const iter = baseIter({ blockingFindings: [], scores });
+      expect(iterationConverged(iter)).toBe(false);
+      expect(shouldStop([iter])).toBeNull();
+    },
+  );
+
+  it("does not converge when a score axis is absent", () => {
+    const iter = { ...baseIter({ blockingFindings: [] }), scores: { usability: "exceptional" } };
+    expect(iterationConverged(iter)).toBe(false);
+  });
+
   // TC-3.4.3
-  // QFAI:SPEC-0012:TC-0012-0320
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
-      layoutAntiPatternsDetected: ["lap-007-state-not-represented"],
+      layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
     });
     expect(shouldStop([iter])).toBeNull();
   });
 
   // TC-3.4.4
-  // QFAI:SPEC-0012:TC-0012-0329
   it("returns null when designMdViolations is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
@@ -147,14 +166,14 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([{ index: 1, commitSha: "b".repeat(40) }])).toBeNull();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0357
-  it("shouldStop boundary at index === 9 (TC-0012-0357, TDD-0372)", () => {
+  // QFAI:EX-0001-0127-01
+  it("shouldStop boundary at index === 9", () => {
     expect(shouldStop([baseIter({ index: 9 })])).toBe("max-iterations");
     expect(shouldStop([baseIter({ index: 8 })])).toBeNull();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0369
-  it("shouldStop ignores any quantitative pass-rate fields (TC-0012-0369, TDD-0375)", () => {
+  // QFAI:EX-0001-0120-04
+  it("shouldStop ignores any quantitative pass-rate fields", () => {
     // Negative assertion: convergence logic must depend ONLY on the
     // ordinal axes + lap empty + designMdViolations empty. Synthesize an
     // iteration record with fabricated `acPassPercent` /
@@ -189,7 +208,8 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
     expect(shouldStop([convergedHighPassRate])).toBe("converged");
 
     const weakIter = baseIter({
-      blockingFindings: ["home: the empty state is not represented"],
+      blockingFindings: [],
+      scores: { ...baseIter().scores, navigationFlow: "strong" },
     });
     const weakHighPassRate: Iteration & {
       acPassPercent: number;
@@ -212,42 +232,42 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 });
 
-describe("shouldStopAcrossSpecs — multi-spec AND convergence", () => {
+describe("shouldStopAcrossSpecs — UI contract AND convergence", () => {
   const convergedIter = baseIter({ blockingFindings: [] });
   const laggingIter = baseIter({
     blockingFindings: ["home: the empty state is not represented"],
   });
 
-  // QFAI:SPEC-0012:TC-0012-0367
-  it("returns null when 2/3 pairs are converged and the 3rd has a finding open (TC-0012-0367, TDD-0376)", () => {
+  // QFAI:EX-0001-0120-03
+  it("returns null when 2/3 pairs are converged and the 3rd has a finding open", () => {
     const result = shouldStopAcrossSpecs([
-      { specId: "spec-0007", screen: "dashboard", latestIteration: convergedIter },
-      { specId: "spec-0007", screen: "detail", latestIteration: convergedIter },
-      { specId: "spec-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
   });
 
-  // QFAI:SPEC-0012:TC-0012-0367
-  it("returns converged when all 3 pairs are converged (TC-0012-0367, TDD-0376)", () => {
+  // QFAI:EX-0001-0120-03
+  it("returns converged when all 3 pairs are converged", () => {
     const result = shouldStopAcrossSpecs([
-      { specId: "spec-0007", screen: "dashboard", latestIteration: convergedIter },
-      { specId: "spec-0007", screen: "detail", latestIteration: convergedIter },
-      { specId: "spec-0011", screen: "list", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: convergedIter },
     ]);
     expect(result.stopReason).toBe("converged");
-    expect(result.laggingSpecs).toEqual([]);
+    expect(result.laggingUiContracts).toEqual([]);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0368
-  it("names every lagging spec in laggingSpecs[] when convergence not achieved (TC-0012-0368, TDD-0377)", () => {
+  // QFAI:EX-0001-0120-04
+  it("names every lagging UI contract when convergence is not achieved", () => {
     const result = shouldStopAcrossSpecs([
-      { specId: "spec-0007", screen: "dashboard", latestIteration: convergedIter },
-      { specId: "spec-0011", screen: "list", latestIteration: laggingIter },
-      { specId: "spec-0013", screen: "page", latestIteration: laggingIter },
+      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "CON-UI-0013", screen: "page", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
-    expect(result.laggingSpecs).toEqual(["spec-0011", "spec-0013"]);
+    expect(result.laggingUiContracts).toEqual(["CON-UI-0011", "CON-UI-0013"]);
   });
 });
 
@@ -261,7 +281,10 @@ describe("iterationConverged", () => {
       layoutAntiPatternsDetected: [],
       designMdViolations: [],
       pivotDirective: "continue",
-      evidenceRefs: { screenshot: "x.png", html: "x.html" },
+      evidenceRefs: [
+        { kind: "screenshot", path: "iter-00/x.png" },
+        { kind: "html", path: "iter-00/x.html" },
+      ],
     };
     expect(iterationConverged(withoutFindings)).toBe(false);
   });
@@ -316,14 +339,12 @@ describe("iteration paths", () => {
 });
 
 describe("type guards", () => {
-  // QFAI:SPEC-0012:TC-0012-0341
   it("isPivotDirective accepts the 3 levels", () => {
     expect(isPivotDirective("continue")).toBe(true);
     expect(isPivotDirective("refine")).toBe(true);
     expect(isPivotDirective("pivot")).toBe(true);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0341
   it("isPivotDirective rejects other values", () => {
     expect(isPivotDirective("stop")).toBe(false);
     expect(isPivotDirective(undefined)).toBe(false);
@@ -331,8 +352,8 @@ describe("type guards", () => {
 });
 
 describe("constants", () => {
-  // QFAI:SPEC-0012:TC-0012-0359
-  it("MAX_ITERATIONS === 10 and MAX_ITERATION_INDEX === 9 (TC-0012-0359, TDD-0371)", () => {
+  // QFAI:EX-0001-0127-02
+  it("MAX_ITERATIONS === 10 and MAX_ITERATION_INDEX === 9", () => {
     expect(MAX_ITERATIONS).toBe(10);
     expect(MAX_ITERATION_INDEX).toBe(9);
   });

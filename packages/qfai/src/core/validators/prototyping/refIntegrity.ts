@@ -4,16 +4,15 @@ import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../../config.js";
 import { isUntouchedCycleZeroSeed } from "../../prototyping/iteration.js";
-import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
+import { PROTOTYPING_EVIDENCE_REL, PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
 import { exists, issue } from "../utils.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
-const HANDOFF_REL = ".qfai/contracts/design/prototype-handoff.yaml";
 
 export async function validatePrototypingArtifactRefIntegrity(
   root: string,
-  _config: QfaiConfig,
+  config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const doc = await readJsonObject(path.join(root, PROTO_JSON_REL));
@@ -33,35 +32,85 @@ export async function validatePrototypingArtifactRefIntegrity(
       // ask the same question through one predicate: is this record
       // still the untouched seed the writer emitted?
       if (isUntouchedCycleZeroSeed(doc.iterations, i)) continue;
-      const refs = asRecord(iter?.evidenceRefs);
-      await validateArtifactRef(
-        root,
-        refs?.screenshot,
-        `iterations[${i}].evidenceRefs.screenshot`,
-        issues,
-        { required: true },
-      );
-      await validateArtifactRef(root, refs?.html, `iterations[${i}].evidenceRefs.html`, issues, {
-        required: true,
-      });
+      const refs = iter?.evidenceRefs;
+      if (!Array.isArray(refs)) {
+        issues.push(
+          issue(
+            "QFAI-PROT-009",
+            `iterations[${i}].evidenceRefs must be an array of {kind, path} entries.`,
+            "error",
+            PROTO_JSON_REL,
+            "prototyping.refIntegrity.evidenceRefsShape",
+          ),
+        );
+        continue;
+      }
+      for (let j = 0; j < refs.length; j += 1) {
+        const ref = asRecord(refs[j]);
+        const field = `iterations[${i}].evidenceRefs[${j}]`;
+        if (ref?.kind !== "screenshot" && ref?.kind !== "html") {
+          issues.push(
+            issue(
+              "QFAI-PROT-009",
+              `${field}.kind must be screenshot or html.`,
+              "error",
+              PROTO_JSON_REL,
+              "prototyping.refIntegrity.evidenceRefKind",
+            ),
+          );
+          continue;
+        }
+        const relative = ref.path;
+        if (
+          typeof relative !== "string" ||
+          !/^iter-\d{2}\/[A-Za-z0-9_]+\.(?:png|html)$/.test(relative) ||
+          (ref.kind === "screenshot" && !relative.endsWith(".png")) ||
+          (ref.kind === "html" && !relative.endsWith(".html"))
+        ) {
+          issues.push(
+            issue(
+              "QFAI-PROT-009",
+              `${field}.path must be an iter-NN artifact path under ${PROTOTYPING_EVIDENCE_REL}.`,
+              "error",
+              PROTO_JSON_REL,
+              "prototyping.refIntegrity.evidenceRefPath",
+            ),
+          );
+          continue;
+        }
+        await validateArtifactRef(
+          root,
+          `${PROTOTYPING_EVIDENCE_REL}/${relative}`,
+          `${field}.path`,
+          issues,
+          { required: true },
+        );
+      }
     }
   }
 
-  const handoff = await readYamlObject(path.join(root, HANDOFF_REL));
+  const handoffPath = path.join(
+    root,
+    config.paths.contractsDir,
+    "design",
+    "prototype-handoff.yaml",
+  );
+  const handoffRel = path.relative(root, handoffPath).split(path.sep).join("/");
+  const handoff = await readYamlObject(handoffPath);
   if (handoff) {
     await validateArtifactRef(
       root,
       handoff.finalArtifact,
       "prototype-handoff.finalArtifact",
       issues,
-      { required: true, sourcePath: HANDOFF_REL },
+      { required: true, sourcePath: handoffRel },
     );
     await validateArtifactRef(
       root,
       handoff.designSystemMirror,
       "prototype-handoff.designSystemMirror",
       issues,
-      { required: true, sourcePath: HANDOFF_REL },
+      { required: true, sourcePath: handoffRel },
     );
   }
 

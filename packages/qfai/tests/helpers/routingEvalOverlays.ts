@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,36 +21,73 @@ function appendTo(rel: string, text: string): FactOverlay {
   };
 }
 
+async function writeAt(root: string, rel: string, text: string): Promise<void> {
+  const file = path.join(root, rel);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, text);
+}
+
 // The prompt carries the fact: it describes the request, and nothing goes on disk.
 const stated: FactOverlay = async () => {};
 
-const RULES = path.join(".qfai", "specs", "spec-0001", "04_Business-Rules.md");
-const LEDGER = path.join(".qfai", "specs", "spec-0001", "tdd", "test-list.md");
-const LEDGER_HEAD = "| TDD-ID | TC-Refs | Layer | Status |\n| --- | --- | --- | --- |";
+const SPEC = ".qfai/spec";
+const FLOW = `${SPEC}/02_business-flow/business-flow-0001`;
+const STORY = `${FLOW}/user-story-0001-0001`;
+const CONTRACT = `${SPEC}/03_contract/api/orders.md`;
 
-// A normative rule of the one fixture spec, its value spliced into `sentence`.
+// The one business flow a fact about existing behaviour needs: a story with one criterion, its
+// example, and the contract rule that cites it.
+const FIXTURE_FLOW: Record<string, string> = {
+  [`${SPEC}/02_business-flow/business-flows.md`]:
+    "# Business Flows\n\n## Flows\n\n| BF-ID | Flow | Path |\n| ----- | ---- | ---- |\n| BF-0001 | Take orders | `business-flow-0001/` |\n",
+  [`${FLOW}/business-flow.md`]:
+    "# BF-0001: Take orders\n\n## Purpose\n\n- A customer places an order.\n\n## Flow\n\n```mermaid\nflowchart LR\n  Order --> Confirm\n```\n",
+  [`${FLOW}/user-stories.md`]:
+    "# User Stories\n\n## Stories\n\n| US-ID | Story | Path |\n| ----- | ----- | ---- |\n| US-0001-0001 | Place an order | `user-story-0001-0001/` |\n",
+  [`${STORY}/01_User-story.md`]:
+    "# US-0001-0001: Place an order\n\n## User Story\n\n- Goal: As a customer, I place an order.\n",
+  [`${STORY}/02_Acceptance-Criteria.md`]:
+    "# Acceptance Criteria\n\n## Criteria\n\n```gherkin\nFeature: Place an order\n  # AC-0001-0001-01\n  Scenario: An order is validated\n    Given a customer\n    When the customer submits an order\n    Then the order is validated\n```\n",
+  [`${STORY}/03_Example.md`]:
+    "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| ----- | ------ | ----- | -------- |\n| EX-0001-0001-01 | AC-0001-0001-01 | A valid order | Accepted |\n",
+  [CONTRACT]:
+    "# API Contract: orders\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001 | An order is validated | EX-0001-0001-01 |\n",
+};
+
+// Writes the fixture flow once; a later fact adds to it.
+async function fixtureFlow(root: string): Promise<void> {
+  if (existsSync(path.join(root, CONTRACT))) return;
+  for (const [rel, text] of Object.entries(FIXTURE_FLOW)) await writeAt(root, rel, text);
+}
+
+const withFlow: FactOverlay = async (root) => fixtureFlow(root);
+
+// A normative rule of the fixture flow's contract, its value spliced into `sentence`.
 const rule =
   (sentence: (value: unknown) => string): FactOverlay =>
-  async (root, value) =>
-    appendTo(RULES, `- ${sentence(value)}`)(root, value);
-
-// One ledger row of the fixture spec, holding `status` for a row of `layer`.
-const ledgerRow =
-  (layer: string): FactOverlay =>
   async (root, value) => {
-    const file = path.join(root, LEDGER);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(
-      file,
-      `${LEDGER_HEAD}\n| TDD-0001 | TC-0001-0001 | ${layer} | ${String(value)} |\n`,
-    );
+    await fixtureFlow(root);
+    const text = await readFile(path.join(root, CONTRACT), "utf8");
+    const next = (text.match(/^\| BR-\d{4} /gm) ?? []).length + 1;
+    const id = `BR-${String(next).padStart(4, "0")}`;
+    await appendTo(CONTRACT, `| ${id} | ${sentence(value)} | EX-0001-0001-01 |`)(root, value);
   };
 
-// Names the layer of the ledger row another fact wrote.
-const rowLayer: FactOverlay = async (root, value) => {
-  const file = path.join(root, LEDGER);
-  const text = await readFile(file, "utf8");
-  await writeFile(file, text.split("| Unit |").join(`| ${String(value)} |`));
+// A test annotating the fixture flow's example, or its criterion at an acceptance layer.
+const annotatedAt =
+  (rel: string, id: string): FactOverlay =>
+  async (root) => {
+    await fixtureFlow(root);
+    await writeAt(root, rel, `// QFAI:${id}\nit("${id}", () => expect(order()).toBeDefined());\n`);
+  };
+
+const UNIT_TEST = "tests/unit/orders.test.ts";
+
+// Moves the example's test to the layer named: an API test checks the criterion.
+const testLayer: FactOverlay = async (root, value) => {
+  if (value !== "api") return;
+  await rm(path.join(root, UNIT_TEST), { force: true });
+  await annotatedAt("tests/api/orders.test.ts", "AC-0001-0001-01")(root, value);
 };
 
 const PHONE_HANDLER = (status: unknown) =>
@@ -86,22 +124,21 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
     "on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    steps:\n      - run: npm test",
   ),
   requestedTimeoutKnown: stated,
-  normativeExpectedStatus: rule((value) => `An empty phone number returns ${String(value)}.`),
+  normativeExpectedStatus: rule((value) => `An empty phone number returns ${String(value)}`),
   observedStatus: async (root, value) =>
     appendTo(path.join("src", "phone.ts"), PHONE_HANDLER(value))(root, value),
-  ledgerStatus: ledgerRow("Unit"),
   existingTestCoversCase: stated,
-  specMissing: stated,
+  storyMissing: stated,
   userExpectedStatus: stated,
   expectedBehaviorUnknown: stated,
   multipleIncompatibleExpectedOutcomes: stated,
-  normativeRule: rule((value) => `The profile API must ${String(value)}.`),
+  normativeRule: rule((value) => `The profile API must ${String(value)}`),
   observedRule: appendTo(
     path.join("src", "profile.ts"),
     "export function canSeeProfile(loggedIn: boolean): boolean {\n  return loggedIn || true;\n}",
   ),
-  existingSpecRequiresAdmin: rule(
-    () => "The admin screen requires an authenticated administrator.",
+  existingStoryRequiresAdmin: rule(
+    () => "The admin screen requires an authenticated administrator",
   ),
   destructiveDataChange: appendTo(
     path.join("db", "migrations", "0001_old_orders.sql"),
@@ -114,7 +151,7 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   importantProductDecisionsOpen: stated,
   newVisualSurface: stated,
   brandDirectionMissing: stated,
-  nfrThresholdMs: rule((value) => `The list search answers within ${String(value)} ms.`),
+  nfrThresholdMs: rule((value) => `The list search answers within ${String(value)} ms`),
   meaningUnchanged: stated,
   structuralRefactor: appendTo(
     path.join("src", "orders.ts"),
@@ -130,14 +167,14 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   ),
   publicExport: stated,
   testOracleKnown: stated,
-  existingAcceptanceObligation: ledgerRow("Integration"),
+  existingAcceptanceObligation: annotatedAt("tests/integration/orders.test.ts", "AC-0001-0001-01"),
   changeRequested: stated,
   generatedFile: appendTo(
     path.join("src", "generated", "api-client.ts"),
     "// @generated by openapi-generator. Do not edit.\n// The typed clinet for the public API.\nexport {};",
   ),
   qfaiAssetChange: appendTo(
-    path.join(".qfai", "assistant", "skills", "qfai-sdd", "SKILL.md"),
+    path.join(".qfai", "assistant", "skill", "qfai-sdd", "SKILL.md"),
     "\nStages recieve their inputs from the work order.",
   ),
   repairNotAuthorized: stated,
@@ -152,13 +189,13 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   materialPermissionRequired: stated,
   providedApprover: stated,
   designLocked: appendTo(
-    path.join(".qfai", "contracts", "design", "customer-list.md"),
+    `${SPEC}/03_contract/design/customer-list.md`,
     "# Customer list\n\nA two-column grid. This layout is locked.",
   ),
   expectedLayoutKnown: stated,
   newBrandDecision: stated,
   publicContractBreak: appendTo(
-    path.join(".qfai", "contracts", "api", "order-total.md"),
+    `${SPEC}/03_contract/api/order-total.md`,
     "# Order total\n\n`GET /orders/{id}/total` returns the total as a string.",
   ),
   consumerImpactUnapproved: stated,
@@ -175,45 +212,51 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
     "# Guide\n\nWelcome ,this guide explains the setup .\n\n```sh\nnpm install\n```",
   ),
   codeBlocksUnchanged: stated,
-  normativeStatus: rule((value) => `A null input returns ${String(value)}.`),
+  normativeStatus: rule((value) => `A null input returns ${String(value)}`),
   environmentSettingChange: appendTo(".env.example", "LOG_LEVEL=info"),
   sqlFileChange: appendTo(
     path.join("db", "migrations", "0003_users.sql"),
     "CREATE TABLE users (\n  id integer -- the user's identifer\n);",
   ),
-  existingCapability: stated,
-  normativeMax: rule((value) => `A batch holds at most ${String(value)} items.`),
+  existingCapability: withFlow,
+  normativeMax: rule((value) => `A batch holds at most ${String(value)} items`),
   requestedMax: stated,
-  existingTCDoesNotCoverBoundary: stated,
-  existingACAlreadyCoversIt: stated,
-  existingLedgerStatus: ledgerRow("Unit"),
-  testLayer: rowLayer,
+  existingExampleDoesNotCoverBoundary: stated,
+  existingACAlreadyCoversIt: withFlow,
+  exampleAnnotated: annotatedAt(UNIT_TEST, "EX-0001-0001-01"),
+  testLayer,
   sameObligation: stated,
   newAcceptanceTestNeeded: stated,
   qfaiLocalLauncherMissing: async (root) =>
     rm(path.join(root, "node_modules", "qfai"), { recursive: true, force: true }),
-  specStatus: async (root, value) =>
-    appendTo(path.join(".qfai", "specs", "spec-0001", "01_Spec.md"), `Status: ${String(value)}`)(
+  // The one status the seeds name is `superseded`, recorded as the triage row that retired it.
+  storyStatus: async (root) => {
+    await fixtureFlow(root);
+    await writeAt(
       root,
-      value,
-    ),
+      `${SPEC}/decisions.md`,
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | ------- | -------- | ------ |\n| DEC-0001 | SUPERSEDE US-0001-0001 | Approved by the owner | DONE |\n",
+    );
+  },
   activeSuccessorKnown: stated,
-  targetExplicit: stated,
+  targetExplicit: withFlow,
   normativeRequirementsKnown: stated,
-  ledgerValid: stated,
+  examplesValid: stated,
   twoClearNewCapabilities: stated,
   dependencyOrderKnown: stated,
   validDesignContractSupplied: stated,
   siblingUIOptInChangesE2EObligations: stated,
   requestedBehaviorClear: stated,
-  specSplit: stated,
+  storySplit: withFlow,
   productionDeployRequested: stated,
   specificEnvironmentUnconfirmed: stated,
   completionTarget: stated,
-  criticalDecisionOpen: appendTo(
-    path.join(".qfai", "specs", "spec-0001", "08_Open-questions.md"),
-    "- Open: whether a deleted customer's addresses are kept.",
-  ),
+  criticalDecisionOpen: async (root) =>
+    writeAt(
+      root,
+      `${SPEC}/open-questions.md`,
+      "# Open Questions\n\n## Open Questions\n\n| ID | Content | Approach | Status |\n| --- | ------- | -------- | ------ |\n| OQ-0001 | Whether a deleted customer's addresses are kept | Ask the owner | TODO |\n",
+    ),
   structuralOptimization: stated,
   scopeClear: stated,
   requestedEffectKnown: stated,

@@ -65,7 +65,7 @@
   {
     "id": "FAULT-010",
     "synthetic": true,
-    "trigger": "scoped_atdd_with_other_spec_debt",
+    "trigger": "scoped_atdd_with_other_flow_debt",
     "expected": "A stage handover is kept apart from a command's success; final completion stays unmet.",
     "actualResult": null
   },
@@ -101,7 +101,7 @@
     "id": "FAULT-015",
     "synthetic": true,
     "trigger": "same_obligation_done_repair",
-    "expected": "SDD appends the missing-test row. The done row stays done and keeps its prior evidence, and no row moves from done back to todo.",
+    "expected": "Story authoring appends the missing example. The covered example stays annotated and keeps its prior evidence, and no annotated example loses its test.",
     "actualResult": null
   },
   {

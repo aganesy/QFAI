@@ -1,0 +1,5 @@
+{
+  "contract": "api/order.yaml",
+  "rule": "BR-0001",
+  "example": "EX-0001-0001-03"
+}

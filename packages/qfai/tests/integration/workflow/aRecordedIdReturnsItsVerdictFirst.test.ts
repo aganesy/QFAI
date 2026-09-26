@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0056
+// QFAI:AC-0001-0192-09
+// QFAI:EX-0001-0192-37
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -19,13 +20,13 @@ import {
 afterEach(removeProjects);
 
 async function journalBytes(root: string, runId: string): Promise<string> {
-  const dir = path.join(root, ".qfai", "runs", runId, "journal");
+  const dir = path.join(root, ".qfai", "run", runId, "journal");
   const names = (await readdir(dir)).sort();
   const files = await Promise.all(names.map((name) => readFile(path.join(dir, name), "utf8")));
   return files.join("\n");
 }
 
-it("TC-0018-0056 (TDD-0308): Built CLI", async () => {
+it("Built CLI", async () => {
   const root = await minimalProject();
   const runId = await startRun(root);
   const routing = workflow(root, ["next", "--run", runId]);

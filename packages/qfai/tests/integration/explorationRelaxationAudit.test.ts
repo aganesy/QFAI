@@ -9,7 +9,7 @@
  * only difference between an exploration run and a convergence run was
  * the `severity` field of the affected findings.
  *
- * Fixture: a UI-bearing project (a `contracts/ui/*.yaml` exists) with no
+ * Fixture: a UI-bearing project (a `spec/03_contract/ui/*.yaml` exists) with no
  * root DESIGN.md, so `validatePrototypingDesignContractReadiness` emits
  * QFAI-DCON-030 / QFAI-DCON-031 at error. Flipping
  * `prototyping.json#iterations[0].mode` is the only variable.
@@ -23,7 +23,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { validateProject } from "../../src/core/validate.js";
 
-const UI_CONTRACT = `screens:
+const UI_CONTRACT = `# QFAI-CONTRACT-ID: CON-UI-0001
+screens:
   - id: orders
     title: Orders
 `;
@@ -31,7 +32,7 @@ const UI_CONTRACT = `screens:
 let root: string;
 
 async function seedProject(mode: "convergence" | "exploration"): Promise<void> {
-  const uiDir = path.join(root, ".qfai", "contracts", "ui");
+  const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   const protoDir = path.join(root, ".qfai", "evidence", "prototyping");
   await mkdir(uiDir, { recursive: true });
   await mkdir(protoDir, { recursive: true });

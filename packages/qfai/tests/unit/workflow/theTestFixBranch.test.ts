@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0077
+// QFAI:EX-0001-0194-01
 
 import { expect, it } from "vitest";
 
@@ -19,44 +19,37 @@ const plan = {
   })),
 };
 
-function testFixSkillFor(layer: string, tcLevels: string[]) {
+// The kind of the diagnosis's first matched ID decides who fixes the test.
+function testFixSkillFor(firstMatched: string) {
   const decision = decide(
     {
       run: { id: "run-test-fix", state: "ready", sequence: 6 },
       plan,
-      specBinding: { specId: "spec-0007" },
+      flowBinding: { flowId: "BF-0007" },
       diagnosis: {
         verdict: "defective-test",
         reproductionRef: "evidence/defective-test.json",
-        matchedRowIds: ["TDD-0004"],
+        matchedIds: [firstMatched, "EX-0007-0002-02"],
       },
       acceptedStages: [
         { stageInstanceId: "bugfix-diagnose", stageKind: "diagnose", outcome: "accepted" },
       ],
     },
     { operation: "next" },
-    {
-      ledger: {
-        specId: "spec-0007",
-        rows: [{ rowId: "TDD-0004", status: "done", digest: "4".repeat(64), layer, tcLevels }],
-      },
-    },
+    {},
   );
   const workOrder = decision.verdict.workOrder;
   return [workOrder?.stageKind, workOrder?.executor?.skill, workOrder?.operation];
 }
 
-const matrix: [string, string, string[], string][] = [
-  ["TC-0018-0077 (TDD-0091): e2e", "E2E", ["L3"], "qfai-atdd"],
-  ["TC-0018-0077 (TDD-0092): api", "API", ["L3"], "qfai-atdd"],
-  ["TC-0018-0077 (TDD-0093): integration-l3", "Integration", ["L2", "L3"], "qfai-atdd"],
-  ["TC-0018-0077 (TDD-0094): integration-l1-l2", "Integration", ["L1", "L2"], "qfai-implement"],
-  ["TC-0018-0077 (TDD-0095): unit", "Unit", ["L1"], "qfai-implement"],
-  ["TC-0018-0077 (TDD-0096): component", "Component", ["L2"], "qfai-implement"],
+const matrix: [string, string, string][] = [
+  ["business-flow", "BF-0007", "qfai-atdd"],
+  ["acceptance-criterion", "AC-0007-0002-01", "qfai-atdd"],
+  ["example", "EX-0007-0002-01", "qfai-implement"],
 ];
 
-for (const [title, layer, tcLevels, skill] of matrix) {
+for (const [title, firstMatched, skill] of matrix) {
   it(title, () => {
-    expect(testFixSkillFor(layer, tcLevels)).toEqual(["test_fix", skill, "test-fix"]);
+    expect(testFixSkillFor(firstMatched)).toEqual(["test_fix", skill, "test-fix"]);
   });
 }

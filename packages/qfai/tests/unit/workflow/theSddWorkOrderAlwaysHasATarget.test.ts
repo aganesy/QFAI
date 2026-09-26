@@ -1,10 +1,10 @@
-// QFAI:SPEC-0018:TC-0018-0005
+// QFAI:EX-0001-0192-04
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-it("TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result reporting bindings for the slot", () => {
+it("Issue the SDD work order, then accept an SDD result reporting bindings for the slot", () => {
   const plan = {
     route: "feature",
     stages: [
@@ -12,7 +12,7 @@ it("TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result
         stageInstanceId: "feature-sdd",
         stageKind: "sdd",
         skill: "qfai-sdd",
-        operation: "new-capability",
+        operation: "new-story",
       },
       {
         stageInstanceId: "feature-implement",
@@ -33,9 +33,9 @@ it("TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result
     kind: "human_decision",
     operation: "CREATE",
     effect: "proceed",
-    target: { kind: "new_capability", slotId: "slot-3-1" },
+    target: { kind: "new_story", slotId: "slot-3-1" },
   };
-  const binding = { slotId: "slot-3-1", capabilityId: "CAP-0001", specId: "spec-0007" };
+  const binding = { slotId: "slot-3-1", flowId: "BF-0007", storyIds: ["US-0007-0001"] };
 
   const sddNext = decide(
     { run: { id: "run-feature", state: "ready", sequence: 5 }, plan, approval },
@@ -72,7 +72,7 @@ it("TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result
             run: acceptedRun,
             plan,
             approval,
-            specBinding: { specId: recorded[0].binding.specId },
+            flowBinding: { flowId: recorded[0].binding.flowId },
             acceptedStages: [
               { stageInstanceId: "feature-sdd", stageKind: "sdd", outcome: "accepted" },
             ],
@@ -89,10 +89,10 @@ it("TC-0018-0005 (TDD-0005): Issue the SDD work order, then accept an SDD result
     laterTarget: laterNext?.verdict.workOrder?.target,
   };
   const expected = {
-    sddTarget: { kind: "new_capability", slotId: "slot-3-1" },
+    sddTarget: { kind: "new_story", slotId: "slot-3-1" },
     bindingEvents: [binding],
     laterStageKind: "implement",
-    laterTarget: { kind: "spec", specId: "spec-0007" },
+    laterTarget: { kind: "flow", flowId: "BF-0007" },
   };
   expect(actual).toEqual(expected);
 });

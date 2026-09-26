@@ -4,17 +4,14 @@
 
 This matrix scores every active obligation this pack declares: the **27 user stories** of
 `02_User-stories.md` (`US-0003-0001` … `US-0003-0028`, one `## US-0003-NNNN:` heading each) and the
-**59 test cases** of `06_Test-Cases.md` (`TC-0003-0001` … `TC-0003-0059`, one row each in the Test
+**58 test cases** of `06_Test-Cases.md` (`TC-0003-0001` … `TC-0003-0058`, one row each in the Test
 Case Table). `US-0003-0014` is not in the pack: its catalog line and heading are gone, so it owes
 nothing and has no row. No remaining story carries a `- x-qfai-status: planned` line, so all 27 owe an
 acceptance test. Both sets are read from the pack in full, not from the rows of
 `.qfai/specs/spec-0003/tdd/test-list.md`.
 
-The business rule table below carries all **49** `BR-0003-*` rows of the Rule Table in
-`04_Business-Rules.md`. None carries a status retiring it, so all 49 are active and all 49 own a row.
-
-`TC-0003-0059` and `BR-0003-0049` were added to the pack by `CR-20260925-0011`. Their two rows were
-read at a later revision than the others; see "The two rows added for the Copilot instructions".
+The business rule table below carries all **48** `BR-0003-*` rows of the Rule Table in
+`04_Business-Rules.md`. None carries a status retiring it, so all 48 are active and all 48 own a row.
 
 `Status` is a row verdict, not a mark, and is excluded from every total below. The scored cells are
 the nine depth columns of the matrix and the `Positive case` / `Negative case` /
@@ -61,7 +58,7 @@ a safety-floor cell is anything but `✅`, or the row's test fixes the opposite 
 `✅` only when every scored cell is `✅` or `n/a`. `⚠️` otherwise. A business-rule row is `❌` when any
 scored cell is `❌` or when its test fixes the opposite of the rule.
 
-**Twenty of the eighty-six matrix obligations are discharged by nothing their pack owns, or by a
+**Twenty of the eighty-five matrix obligations are discharged by nothing their pack owns, or by a
 case about something else.** Five stories have no test at all (`US-0003-0016` … `-0020`). Two
 test cases are coverage placeholders with no test (`TC-0003-0016`, `-0017`). Thirteen test cases
 are answered only by source-text reads of `init.ts` (`TC-0003-0001` … `-0010`, `-0015`, `-0018`,
@@ -112,51 +109,8 @@ The files that carry spec-0003 cases, and what each drives:
 | `tests/integration/shippedWorkflowShapeGate.test.ts` | `TC-0003-0049`, `-0050` | the declared-shape differ over planted copies |
 | `tests/integration/codexAgentWrappers.test.ts` | `TC-0003-0055` | `runInit`, `--force`, `--dry-run` |
 | `tests/integration/shippedWorkflowCheckIndependence.test.ts` | `TC-0003-0056`, `-0057` | the delivered tree; aggregate bodies under bash |
-| `tests/integration/initCopilotLegacyWindow.test.ts` | `TC-0003-0059` | `runInit` into a temp dir; the generated Copilot instructions |
 
 Paths are relative to `packages/qfai/`.
-
-### The two rows added for the Copilot instructions
-
-`TC-0003-0059` and `BR-0003-0049` were read at revision `22afc279e`, from
-`tests/integration/initCopilotLegacyWindow.test.ts` and the `TDD-0094` entry of
-`.qfai/evidence/atdd-spec-0003.md`. The file carries `// QFAI:SPEC-0003:TC-0003-0059` above its one
-`describe`, so all four `it`s answer the test case and no other obligation.
-
-The case runs `runInit` into an empty temporary directory, reads the generated
-`.github/copilot-instructions.md`, and takes the one top-level list item that mentions
-`D-DEPRECATED-PATH`, with its continuation lines joined. Each verify bullet has its own `it`:
-
-| Verify bullet | `it` | What it asserts |
-| --- | --- | --- |
-| 1 | line 40 | the item names both legacy surfaces and says `past its compatibility window` |
-| 2 | line 46 | the item says `` `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error `` |
-| 3 | line 50 | the item names `` `qfai init --upgrade-assistant-tree` `` |
-| 4 | line 54 | the whole file does not match `/read-compatible/i`; the item does not match `/warning/i` |
-
-The `TDD-0094` entry records a RED against the old wording, with bullets 1, 2 and 4 failing, and a
-mutation that deletes the item, with bullets 1 to 3 failing. Every `it` has therefore been seen to
-fail. The negative assertions of bullet 4 are not vacuous: bullets 1 to 3 fail when no item is found.
-
-How each cell of the two rows was scored:
-
-| Coordinate | Mark | Why |
-| --- | --- | --- |
-| `TC-0003-0059` × EP | ✅ | The row declares one input, an empty directory with no flag, and two output partitions: the statements that must appear and the wordings that must not. Both are asserted. |
-| `TC-0003-0059` × NP | ✅ | `Type` is `normal`, and all four verify bullets are asserted. |
-| `TC-0003-0059` × ER | n/a | `AC-0003-0039` and `EX-0003-0052` declare no failure outcome, so the row owns no kept failure. |
-| `TC-0003-0059` × ED | ✅ | The statement is wrapped across three source lines; the item is read with its continuation lines joined, so a phrase split by a line break still matches. Both forbidden words are matched case-insensitively, and `read-compatible` is checked across the whole file. |
-| `TC-0003-0059` × BV | n/a | No ordered or sized domain: the generated text is fixed and the row names no count. |
-| `TC-0003-0059` × SV | n/a | The row plants no input; `buildCopilotInstructions` takes no argument. |
-| `TC-0003-0059` × ST | n/a | One run. A re-run and `--force` are not part of the row's scenario. |
-| `TC-0003-0059` × CO | n/a | No interacting conditions: the generated text does not vary with any option. |
-| `TC-0003-0059` × OS | ✅ | Exact-phrase containment against the product's own output, and every `it` has been seen to fail. |
-| `BR-0003-0049` × Positive | ✅ | The four assertions are the outcome `EX-0003-0052` states, word for word. |
-| `BR-0003-0049` × Negative | n/a | The rule forbids two wordings but has no rejection mechanism, so, like the other prohibitions in this table, it is scored as its positive case. |
-| `BR-0003-0049` × Conditional | n/a | The rule states one outcome. |
-
-`AC-0003-0039` also names `US-0003-0010` and `US-0003-0020` in its `US-Refs`. The annotation binds this
-case to the test case, so it cannot answer either story, and neither story row was rescored.
 
 ### The four cases moved into an integration module
 
@@ -289,37 +243,36 @@ on `US-0003-0023`, `-0024` and `-0026`.
 | TC-0003-0056 | ✅ | ✅ | ❌ | ✅ | n/a | ❌ | n/a | ❌ | ✅ | ⚠️ |
 | TC-0003-0057 | ✅ | ✅ | ❌ | ✅ | n/a | ❌ | n/a | ✅ | ✅ | ⚠️ |
 | TC-0003-0058 | ⚠️ | n/a | ⚠️ | ✅ | n/a | ✅ | n/a | ⚠️ | ⚠️ | ⚠️ |
-| TC-0003-0059 | ✅ | ✅ | n/a | ✅ | n/a | n/a | n/a | n/a | ✅ | ✅ |
 
-Totals across the nine scored depth columns, 774 cells (86 rows × 9): **✅ 199 / ⚠️ 113 / ❌ 150**,
-with `n/a` 312.
+Totals across the nine scored depth columns, 765 cells (85 rows × 9): **✅ 195 / ⚠️ 113 / ❌ 150**,
+with `n/a` 307.
 
 `Status` is the row verdict and is not a scored cell, so it is excluded from that total and from the
-grand total at the end. Its distribution across the 86 rows, for reading only, is ✅ 10 / ⚠️ 42 / ❌ 34.
+grand total at the end. Its distribution across the 85 rows, for reading only, is ✅ 9 / ⚠️ 42 / ❌ 34.
 
-Per scored depth column, 86 cells each:
+Per scored depth column, 85 cells each:
 
 | Column | ✅ | ⚠️ | ❌ | n/a |
 | --- | --- | --- | --- | --- |
-| Equivalence partitions | 37 | 27 | 22 | 0 |
-| Normal path | 27 | 17 | 19 | 23 |
-| Error path | 10 | 5 | 14 | 57 |
-| Edge cases | 34 | 12 | 22 | 18 |
-| Boundary values | 11 | 9 | 9 | 57 |
-| Special values | 13 | 3 | 12 | 58 |
-| State transitions | 13 | 4 | 13 | 56 |
-| Combinatorial | 15 | 12 | 16 | 43 |
-| Oracle strength | 39 | 24 | 23 | 0 |
+| Equivalence partitions | 36 | 27 | 22 | 0 |
+| Normal path | 26 | 17 | 19 | 23 |
+| Error path | 10 | 5 | 14 | 56 |
+| Edge cases | 33 | 12 | 22 | 18 |
+| Boundary values | 11 | 9 | 9 | 56 |
+| Special values | 13 | 3 | 12 | 57 |
+| State transitions | 13 | 4 | 13 | 55 |
+| Combinatorial | 15 | 12 | 16 | 42 |
+| Oracle strength | 38 | 24 | 23 | 0 |
 
 The shape of that table is the pack's central fact. The `❌` cells in `Normal path` and
-`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-seven rows
-have a passing normal path and thirty-nine a strong oracle. `Error path` is `n/a` on 57 rows because
+`Oracle strength` sit almost entirely on the twenty rows named in Scope; outside them, twenty-six rows
+have a passing normal path and thirty-eight a strong oracle. `Error path` is `n/a` on 56 rows because
 most rows own no kept failure, and twelve of the fourteen `Error path` `❌` cells are on rows with a
 credited case.
 
 ### Business rule coverage
 
-One row per active `BR-0003-*`. All 49 rows of the Rule Table are active, so none is omitted.
+One row per active `BR-0003-*`. All 48 rows of the Rule Table are active, so none is omitted.
 
 `Covering TC` is derived from the `BR-Ref` of the example each test case cites — that is, from
 `06_Test-Cases.md#EX-Ref` joined to `05_Examples.md#BR-Ref`. `TC-0003-0009` and `TC-0003-0055` cite no
@@ -376,18 +329,17 @@ which the placeholder `TC-0003-0017` is the example route for.
 | BR-0003-0046 | ✅ | n/a | n/a | TC-0003-0052 | ✅ |
 | BR-0003-0047 | ✅ | n/a | ✅ | TC-0003-0056, TC-0003-0057 | ✅ |
 | BR-0003-0048 | ❌ | ⚠️ | ❌ | TC-0003-0058 | ❌ |
-| BR-0003-0049 | ✅ | n/a | n/a | TC-0003-0059 | ✅ |
 
-Totals across the three scored columns, 147 cells: **✅ 44 / ⚠️ 17 / ❌ 26**, with `n/a` 60.
+Totals across the three scored columns, 144 cells: **✅ 43 / ⚠️ 17 / ❌ 26**, with `n/a` 58.
 
-`Status` here is likewise a row verdict and is not counted. Its distribution across the 49 rows is
-✅ 20 / ⚠️ 9 / ❌ 20.
+`Status` here is likewise a row verdict and is not counted. Its distribution across the 48 rows is
+✅ 19 / ⚠️ 9 / ❌ 20.
 
 `Negative case` is scored only where the rule or its example declares a failure outcome — a
 rejection, an exit 1, an error, a refusal, a closed stop. A rule stated as a prohibition with no
 rejection mechanism ("leaves no floating reference", "is never pruned") is scored as its positive
-case, which is why 36 of the 49 rows are `n/a` in that column. `Conditional branches` is scored only
-where the rule states two or more branches with different outcomes; 24 rules state one.
+case, which is why 35 of the 48 rows are `n/a` in that column. `Conditional branches` is scored only
+where the rule states two or more branches with different outcomes; 23 rules state one.
 
 ## Every ❌ cell, named
 
@@ -790,9 +742,9 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    - `AC-0003-0001` / `US-0003-0001` require `specs/`, `contracts/`, `discussion/`, `evidence/`,
      `review/` and `report/` under `.qfai/`. `initE2E.test.ts` asserts none of the six exists.
    - `BR-0003-0013`, `AC-0003-0015`, `EX-0003-0016`, `TC-0003-0018` and `US-0003-0015` list a nine-line
-     block with `.qfai/discussion/discussion-*/` and four README negations. `src/core/gitignore.ts`
+     block with `.qfai/discussion/discussion-*/` and four README negations. `src/core/gitignore.ts` <!-- qfai:not-a-citation -->
      now lists all five in `QFAI_GITIGNORE_LEGACY_LINES` — stripped on migration — and writes
-     `.qfai/discussion/*` plus governance negations. Both `initE2E.test.ts` cases assert the new form.
+     `.qfai/discussion/*` plus governance negations. Both `initE2E.test.ts` cases assert the new form. <!-- qfai:not-a-citation -->
    - `TC-0003-0022`, `AC-0003-0018`, `BR-0003-0016` and `REQ-0019` seed `.qfai/steering/README.md`.
      The case asserts it is absent.
    - `TC-0003-0026`, `AC-0003-0023`, `AC-0003-0024`, `BR-0003-0020` and `US-0003-0020` describe an open
@@ -857,8 +809,8 @@ six above it.
 `QFAI-ATDD-133` requires the stage evidence to carry a `## Coverage Depth Matrix` section that links
 to this file and restates the counted totals beside it. Those totals are:
 
-**✅ 243 / ⚠️ 130 / ❌ 176**, with `n/a 372`, across all 921 scored cells — 774 matrix depth cells and
-147 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
+**✅ 238 / ⚠️ 130 / ❌ 176**, with `n/a 365`, across all 909 scored cells — 765 matrix depth cells and
+144 business rule scored cells. `Status` is a row verdict, not a mark, and is excluded from all four
 counts.
 
 Three kinds of work would move the `❌` cells, and they are different in kind:
@@ -874,53 +826,3 @@ Three kinds of work would move the `❌` cells, and they are different in kind:
 
 `BR-0003-0027` × Conditional is the one `❌` no test can raise: it governs how a change to the guard's
 pattern set is made, and is held by review.
-
-## Rows added by the work-log surface removal
-
-`CR-20260925-0010` withdrew every row this section scored, with its ledger rows and its tests:
-the test cases this branch numbered `TC-0003-0059` … `TC-0003-0061`, carried by `TDD-0094` …
-`TDD-0099`, and the business rules they covered, numbered `BR-0003-0049` and `BR-0003-0050`.
-
-The first test case, the first business rule and the first ledger row never merged under those
-numbers. Main assigned `TC-0003-0059`, `BR-0003-0049` and `TDD-0094` to the closed-legacy-window
-statement in the generated Copilot text, and the matrix above scores them. This section scores no
-row.
-
-**Relation to the matrix above.** Every other obligation of the pack is scored above, by a run that
-credits only a case that runs. Its totals are the ones that run's stage evidence restates, so they
-are left as computed. Two of its rows score obligations the work-log removal deleted, `TC-0003-0022`
-and `BR-0003-0016` (ledger row `TDD-0022` is tombstoned); the next full recompute drops them.
-
-### Totals for these rows
-
-**✅ 0 / ⚠️ 0 / ❌ 0**, `n/a` 0, across 0 scored cells.
-
-## Shared-artifact re-verify
-
-The work-log removal edited `packages/qfai/tests/integration/initSpec0003.test.ts`, which the
-`done` row `spec-0003/TDD-0001` names. No live row of this change carries the edit: the
-spec-0003 row it belonged to, `TDD-0022`, is deleted, and this change's `TDD-0095` … `TDD-0099`
-are withdrawn by `CR-20260925-0010`, so the record is stage-level. The completion gate reads
-it only once this file's `## Final status` names the stage review pack and a seal that still
-recomputes. That section and its stage review do not exist yet.
-
-### spec-0003/TDD-0001
-
-- Evidence file: .qfai/evidence/atdd-spec-0003.md
-- Revision: 03762f3cfe0d4233beafb427462d58116ad8b5de
-- Selector: TC-0003-0001: Empty directory initialization
-- Re-verify command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose -t "TC-0003-0001: Empty directory initialization|TC-0003-0025: assistantPaths\.ts SSOT module|TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window|TC-0012-0434: Tailwind contract convergence within 3 cycles|TC-0012-0471: --emit-skeletons cross-spec frozenSurfaceUnion coverage|TC-0012-0472: opt-in default \+ --skeleton-mode full escalation|TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-NN mutation" tests/integration/initCopilotLegacyWindow.test.ts tests/integration/initSpec0003.test.ts tests/integration/prototyping/emitSkeletonsCoverage.test.ts tests/integration/prototyping/mutationLog.test.ts tests/integration/prototyping/tailwindContractConvergence.test.ts, on the clean clone at that revision (batch 13 of the cross-spec re-run, recorded in tmp/xspec/selector-results2.json).
-- Re-verify result: PASS — exit 0; Test Files 5 passed (5); Tests 29 passed | 21 skipped (50). The row's one case, "writes .qfai/assistant/ and qfai.config.yaml, none of the six artifact directories, and a link to every skill in each of the four skills/ directories", is named as passed; captured in tmp/xspec/logs2/selector-13.log.
-- Proof command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose "tests/integration/initSpec0003.test.ts" "-t" "TC-0003-0001: Empty directory initialization", with the empty file packages/qfai/assets/init/.qfai/specs/.gitkeep created, the mutation the row's Round 1 Falsifiability command records. Run on the clean clone at 25d42885388fd1ab6a428adc7a3b8132c7acdb89; the test file (sha256 58827ca29a39ccbf0a858b6988031359f39a14a1c22c19fea59bc82de8f4ec09) and the mutated path (absent) are the same at 03762f3cfe0d4233beafb427462d58116ad8b5de.
-- Proof result: FAIL — exit 1; Tests 1 failed | 22 skipped (23). AssertionError at tests/integration/initSpec0003.test.ts:74:72, inside the row's own case: "init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []", the recorded failure. `qa-gatekeeper` passed the observation; captured in tmp/xspec/logs/0003-TDD-0001-artifact-dir-shipped-mutant.log.
-- Restored GREEN command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose "tests/integration/initSpec0003.test.ts" "-t" "TC-0003-0001: Empty directory initialization", after the created file and directory were removed and the tree was clean again.
-- Restored GREEN result: PASS — exit 0; Tests 1 passed | 22 skipped (23); captured in tmp/xspec/logs/0003-TDD-0001-artifact-dir-shipped-green.log.
-- RED test manifest:
-
-```text
-packages/qfai/tests/helpers/stdout.ts
-packages/qfai/tests/helpers/tempTree.ts
-packages/qfai/tests/integration/initSpec0003.test.ts
-```
-
-- RED test hash: 67095c7c430df9bbc07c22d874566e9c8f2dfe399172747e07c60569474f784c

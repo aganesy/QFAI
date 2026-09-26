@@ -1,34 +1,36 @@
-// QFAI:SPEC-0018:TC-0018-0003
+// QFAI:EX-0001-0192-02
+// QFAI:EX-0001-0192-44
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 
-it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision used by the SDD work order", () => {
+it("A proceed answer records a bound human decision used by the SDD work order", () => {
   const question = {
     questionId: "question-3-1",
     kind: "create" as const,
-    text: "Create a capability for customer notification email registration?",
+    text: "Create a story in BF-0001 for customer notification email registration?",
     options: [
       {
         optionId: "create",
         label: "Create it",
-        description: "SDD writes the new capability's spec.",
+        description: "Story authoring writes the new story.",
         effect: "proceed" as const,
       },
       {
         optionId: "decline",
         label: "Do not create it",
-        description: "The run ends without creating the capability.",
+        description: "The run ends without creating the story.",
         effect: "stop" as const,
       },
     ],
     selection: { min: 1 as const, max: 1 as const },
     recommendation: "create",
-    capability: {
+    story: {
       goal: "Customer notification email registration",
       covers: ["Up to five unique emails per customer"],
       excludes: ["Notification delivery"],
+      flowId: "BF-0001",
       slotId: "slot-3-1",
     },
   };
@@ -117,30 +119,31 @@ it("TC-0018-0003 (TDD-0003): A proceed answer records a bound human decision use
       scopeDigest: awaitingSnapshot.scopeDigest,
       recordedAt: "2026-09-24T00:00:00.000Z",
       target: {
-        kind: "new_capability",
-        slotId: question.capability?.slotId,
-        capability: {
-          goal: question.capability?.goal,
-          covers: question.capability?.covers,
-          excludes: question.capability?.excludes,
+        kind: "new_story",
+        slotId: question.story?.slotId,
+        story: {
+          goal: question.story?.goal,
+          covers: question.story?.covers,
+          excludes: question.story?.excludes,
+          flowId: question.story?.flowId,
         },
       },
     }),
     sddWorkOrder: {
       stageKind: "sdd",
-      target: { kind: "new_capability", slotId: question.capability?.slotId },
+      target: { kind: "new_story", slotId: question.story?.slotId },
       authorizationRefsMatch: true,
     },
   };
   expect(actual).toEqual(expected);
 });
 
-// QFAI:SPEC-0018:TC-0018-0268
-it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue", () => {
-  const capability = {
+it("missing persisted CREATE authorization at SDD issue", () => {
+  const story = {
     goal: "Customer notification email registration",
     covers: ["Up to five unique emails per customer"],
     excludes: ["Notification delivery"],
+    flowId: "BF-0001",
   };
   const readySnapshot = {
     run: { id: "run-feature", state: "ready", sequence: 5 },
@@ -155,7 +158,7 @@ it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
       kind: "human_decision",
       operation: "CREATE",
       effect: "proceed",
-      target: { kind: "new_capability", slotId: "slot-3-1", capability },
+      target: { kind: "new_story", slotId: "slot-3-1", story },
     },
   };
 
@@ -167,8 +170,8 @@ it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
     workOrder: next.verdict.workOrder ?? null,
     questions: (next.verdict.questions ?? []).map((question) => ({
       kind: question.kind,
-      slotId: question.capability?.slotId,
-      goal: question.capability?.goal,
+      slotId: question.story?.slotId,
+      goal: question.story?.goal,
     })),
     issuedEvents: next.events.filter((event) => event.type === "work-order-issued").length,
   };
@@ -176,7 +179,7 @@ it("TC-0018-0268 (TDD-0527): missing persisted CREATE authorization at SDD issue
     ok: true,
     state: "awaiting_input",
     workOrder: null,
-    questions: [{ kind: "create", slotId: "slot-3-1", goal: capability.goal }],
+    questions: [{ kind: "create", slotId: "slot-3-1", goal: story.goal }],
     issuedEvents: 0,
   };
   expect(actual).toEqual(expected);

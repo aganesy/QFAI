@@ -4,7 +4,7 @@
  * test checks the workspace declaration and every include glob directly.
  * Cross-surface alignment is covered by the integration acceptance suite.
  */
-// QFAI:SPEC-0017:TC-0017-0063
+// QFAI:EX-0002-0019-09
 
 import { existsSync } from "node:fs";
 import path from "node:path";

@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0046
+// QFAI:EX-0001-0192-28
 
 import { expect, it } from "vitest";
 
@@ -12,7 +12,7 @@ const base = {
         stageInstanceId: "bounded-sdd-delta",
         stageKind: "sdd_delta",
         skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
+        operation: "update-or-applicability-check",
         when: "always",
       },
       {
@@ -31,7 +31,7 @@ const base = {
       },
     ],
   },
-  specBinding: { specId: "spec-0007" },
+  flowBinding: { flowId: "BF-0007" },
   acceptedStages: [
     { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
   ],
@@ -44,7 +44,7 @@ const base = {
 };
 const facts = { acceptanceObligationsUnmet: true };
 
-it("TC-0018-0046 (TDD-0058): A seam-only result whose seam", () => {
+it("A seam-only result whose seam", () => {
   const issued = decide(
     { ...base, run: { id: "run-seam-pass", state: "ready", sequence: 8 } },
     { operation: "next" },

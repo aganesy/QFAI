@@ -5,7 +5,7 @@
  * - malformed / unreadable legacy file → clear error
  * - the canonical destination is NOT overwritten or partially emitted
  */
-// QFAI:SPEC-0015:TC-0015-0031
+// QFAI:EX-0001-0180-01
 
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

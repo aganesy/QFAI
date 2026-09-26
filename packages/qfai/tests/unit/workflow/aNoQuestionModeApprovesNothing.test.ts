@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0092
+// QFAI:EX-0001-0195-06
 
 import { expect, it } from "vitest";
 
@@ -19,7 +19,7 @@ const question: Question = {
   recommendation: "stop",
 };
 
-it("TC-0018-0092 (TDD-0130): A run in awaiting_input that nobody answers", () => {
+it("A run in awaiting_input that nobody answers", () => {
   const ready = readySnapshot();
   const waiting = {
     ...ready,

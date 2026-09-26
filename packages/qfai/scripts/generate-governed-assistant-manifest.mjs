@@ -46,7 +46,7 @@ const OUTPUT_LABEL = "src/core/governedAssistantManifest.ts";
  * `src/core/assistantAssetProvenance.ts`; the scripts test slice pins them
  * together so this list cannot quietly fall behind that one.
  */
-const GOVERNED_LAYERS = ["constitution", "catalog", "process/workflows"];
+const GOVERNED_LAYERS = ["rule"];
 
 /**
  * The same names `collectGovernedAssistantFiles` treats as housekeeping rather

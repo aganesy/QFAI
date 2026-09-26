@@ -1,16 +1,16 @@
-// QFAI:SPEC-0018:TC-0018-0180
-// QFAI:SPEC-0018:TC-0018-0181
+// QFAI:EX-0001-0199-07
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
+import { JournalRun, planOf, readyWith } from "./journalRun.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Input = Parameters<typeof decide>[1];
 
 const cause = { cause: "policy-drift" as const };
-const specBinding = { specId: "spec-0007" };
+const flowBinding = { flowId: "BF-0007" };
 
 const openQuestion = {
   questionId: "question-5-1",
@@ -30,13 +30,13 @@ const openQuestion = {
 const ready: Snapshot = {
   run: { id: "run-cause", state: "ready", sequence: 4 },
   plan: finishPlan,
-  specBinding,
+  flowBinding,
 };
 
 const awaiting: Snapshot = {
   run: { id: "run-cause", state: "awaiting_input", sequence: 5 },
   plan: finishPlan,
-  specBinding,
+  flowBinding,
   scopeDigest: "d".repeat(64),
   openQuestions: [openQuestion],
 };
@@ -75,23 +75,23 @@ const cancelled = {
   events: ["authorized-stop"],
 };
 
-it("TC-0018-0180 (TDD-0223): ready-refused", () => {
+it("ready-refused", () => {
   expect(outcome(ready, { operation: "next" })).toEqual(refused("ready"));
 });
 
-it("TC-0018-0180 (TDD-0224): awaiting-input-refused", () => {
+it("awaiting-input-refused", () => {
   expect(outcome(awaiting, answer)).toEqual(refused("awaiting_input"));
 });
 
-it("TC-0018-0180 (TDD-0225): ready-stop", () => {
+it("ready-stop", () => {
   expect(outcome(ready, stop)).toEqual(cancelled);
 });
 
-it("TC-0018-0180 (TDD-0226): awaiting-input-stop", () => {
+it("awaiting-input-stop", () => {
   expect(outcome(awaiting, stop)).toEqual(cancelled);
 });
 
-it("TC-0018-0181 (TDD-0227): Facts where the observed diff escapes the authorized write scope at a write operation", () => {
+it("Facts where the observed diff escapes the authorized write scope at a write operation", () => {
   const issued = decide(ready, { operation: "next" }, {});
   const workOrder = issued.verdict.workOrder;
   const run = issued.verdict.run;
@@ -116,5 +116,25 @@ it("TC-0018-0181 (TDD-0227): Facts where the observed diff escapes the authorize
   expect({ state: accepted.verdict.run?.state, halt: accepted.verdict.halt }).toEqual({
     state: "blocked",
     halt: { cause: "invariant-violation", owner: "operator", subjects: [escaped] },
+  });
+});
+
+it("A routing result accepted while the policy drifted", () => {
+  const seed = readyWith(planOf("bounded-change", finishPlan.stages), undefined).slice(0, 2);
+  const run = new JournalRun(seed);
+  expect(run.next().stageKind).toBe("route");
+
+  const decision = run.accept({ outcome: "accepted" }, cause);
+
+  expect({
+    state: decision.verdict.run?.state,
+    halt: decision.verdict.halt,
+    events: decision.events.map((event) => event.type),
+    folded: run.snapshot.run.state,
+  }).toEqual({
+    state: "blocked",
+    halt: { cause: "policy-drift", owner: "operator", subjects: [] },
+    events: ["missing-capability"],
+    folded: "blocked",
   });
 });

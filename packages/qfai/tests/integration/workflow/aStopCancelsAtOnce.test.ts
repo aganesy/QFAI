@@ -1,4 +1,5 @@
-// QFAI:SPEC-0018:TC-0018-0138
+// QFAI:AC-0001-0196-06
+// QFAI:EX-0001-0196-14
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,11 +17,11 @@ import {
 
 afterEach(removeProjects);
 
-it("TC-0018-0138 (TDD-0354): Built CLI", async () => {
+it("Built CLI", async () => {
   const root = await minimalProject();
   const { runId, issued } = await featureRunAt(root, "implement");
   const summary = `.qfai/evidence/workflow/${runId}/summary.json`;
-  const run = `.qfai/runs/${runId}/`;
+  const run = `.qfai/run/${runId}/`;
   const rewritten = (rel: string) =>
     rel === summary ||
     rel === `${run}snapshot.json` ||

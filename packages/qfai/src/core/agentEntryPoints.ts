@@ -263,6 +263,7 @@ function prependDirective(existing: string, pointer: string, blankLine: boolean)
   // A code span the directive itself contains is part of its visible text; any
   // other span is opaque, so a copy quoted inside one is not operative.
   const pointerSpans = new Set(pointer.match(/`[^`]+`/g) ?? []);
+
   const referenceLabels = new Set<string>();
   const normalizeLabel = (label: string): string =>
     label

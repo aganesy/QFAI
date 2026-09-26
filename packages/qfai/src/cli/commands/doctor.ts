@@ -81,7 +81,7 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
     }
   }
   lines.push("");
-  lines.push("== advisory findings (drift, non-blocking by default) ==");
+  lines.push("== warnings advisory of drift ==");
   const combinedAdvisory = [...advisoryGroup, ...skillsAdvisory];
   if (combinedAdvisory.length === 0) {
     lines.push("[ok] (no findings in this bucket)");
@@ -224,7 +224,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
     // `process.env["CI"] === "true"` missed the `GITHUB_ACTIONS` arm and read
     // `CI=1` as "local", so a lane that exports only `GITHUB_ACTIONS=true`
     // kept remediating: `npm install`, root `.gitignore` rewrite, review-pack
-    // archival and config-fill all ran on CI checkouts that AC-0006-0018 puts
+    // archival and config-fill all ran on CI checkouts where remediation is
     // off limits. `isCiEnvironment` is the repo's SSOT for that detection
     // (`core/phasePolicy.ts`); reuse it so the two CI gates cannot drift apart.
     const isCi = isCiEnvironment();
@@ -276,7 +276,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       );
     }
     if (summary.disabledInCi) {
-      // Honor AC-0006-0018: autoremediate disabled in CI; no diagnostic
+      // Autoremediation is disabled in CI; no diagnostic
       // build needed for the CI off path. Output-channel routing
       // mirrors the main return path below: under `--format json`,
       // side-effect lines go to stderr so the stdout channel remains

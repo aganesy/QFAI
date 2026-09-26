@@ -1,5 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0035
-// QFAI:SPEC-0018:TC-0018-0036
+// QFAI:EX-0001-0192-22
 
 import { expect, it } from "vitest";
 
@@ -26,7 +25,7 @@ const debt = {
   findingCode: "QFAI-TRACE-002",
   path: "src/notify/email.ts",
   cause: "The function has no spec annotation.",
-  owningSpec: "spec-0007",
+  owningFlow: "BF-0007",
   detectingCommand: "qfai validate",
   resolvingOwner: "qfai-implement",
   blockingExtent: "completion",
@@ -38,21 +37,28 @@ const matrix: {
   expected: { condition: string; subject: string; owner: string };
 }[] = [
   {
-    title: "TC-0018-0035 (TDD-0038): obligation-unprocessed",
+    title: "obligation-unprocessed",
     plant: (snapshot, facts) => [
       snapshot,
       {
         ...facts,
-        ledger: {
-          specId: "spec-0007",
-          rows: [{ rowId: "TDD-0001", status: "todo", digest: "c".repeat(64) }],
+        obligations: {
+          flowId: "BF-0007",
+          ids: ["AC-0007-0001-01", "BF-0007", "EX-0007-0001-01"],
+          exampleIds: ["EX-0007-0001-01"],
+          annotated: [],
+          digest: "c".repeat(64),
         },
       },
     ],
-    expected: { condition: "obligation-unprocessed", subject: "TDD-0001", owner: "operator" },
+    expected: {
+      condition: "obligation-unprocessed",
+      subject: "EX-0007-0001-01",
+      owner: "operator",
+    },
   },
   {
-    title: "TC-0018-0035 (TDD-0039): stage-unaccepted",
+    title: "stage-unaccepted",
     plant: (snapshot, facts) => [withoutStage(snapshot, "bounded-implement"), facts],
     expected: {
       condition: "stage-unaccepted",
@@ -61,7 +67,7 @@ const matrix: {
     },
   },
   {
-    title: "TC-0018-0035 (TDD-0040): review-missing",
+    title: "review-missing",
     plant: (snapshot, facts) => [
       {
         ...snapshot,
@@ -78,12 +84,12 @@ const matrix: {
     expected: { condition: "review-missing", subject: "qa-gatekeeper", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0041): verify-missing",
+    title: "verify-missing",
     plant: (snapshot, facts) => [withoutStage(snapshot, "bounded-verify"), facts],
     expected: { condition: "verify-missing", subject: "bounded-verify", owner: "qfai-verify" },
   },
   {
-    title: "TC-0018-0035 (TDD-0042): verify-foreign",
+    title: "verify-foreign",
     plant: (snapshot, facts) => [
       snapshot,
       withCompletion(facts, {
@@ -98,7 +104,7 @@ const matrix: {
     expected: { condition: "verify-foreign", subject: "verify.json", owner: "qfai-verify" },
   },
   {
-    title: "TC-0018-0035 (TDD-0043): gate-failed",
+    title: "gate-failed",
     plant: (snapshot, facts) => [
       snapshot,
       withCompletion(facts, {
@@ -113,7 +119,7 @@ const matrix: {
     expected: { condition: "gate-failed", subject: "verify", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0044): diff-out-of-scope",
+    title: "diff-out-of-scope",
     plant: (snapshot, facts) => [
       snapshot,
       withCompletion(facts, { changedPaths: ["src/notify/email.ts", "docs/notes.md"] }),
@@ -121,7 +127,7 @@ const matrix: {
     expected: { condition: "diff-out-of-scope", subject: "docs/notes.md", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0045): approval-unanswered",
+    title: "approval-unanswered",
     plant: (snapshot, facts) => [
       {
         ...snapshot,
@@ -129,7 +135,7 @@ const matrix: {
           kind: "human_decision",
           operation: "CREATE",
           effect: "proceed",
-          target: { kind: "new_capability", slotId: "slot-3-1" },
+          target: { kind: "new_story", slotId: "slot-3-1" },
         },
       },
       facts,
@@ -137,7 +143,7 @@ const matrix: {
     expected: { condition: "approval-unanswered", subject: "slot-3-1", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0046): debt-open",
+    title: "debt-open",
     plant: (snapshot, facts) => [
       {
         ...snapshot,
@@ -154,15 +160,15 @@ const matrix: {
         },
       }),
     ],
-    expected: { condition: "debt-open", subject: "spec-0007", owner: "qfai-implement" },
+    expected: { condition: "debt-open", subject: "BF-0007", owner: "qfai-implement" },
   },
   {
-    title: "TC-0018-0035 (TDD-0047): tool-drift",
+    title: "tool-drift",
     plant: (snapshot, facts) => [snapshot, withCompletion(facts, { toolVersion: "2.0.1" })],
     expected: { condition: "tool-drift", subject: "tool-version", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0048): policy-drift",
+    title: "policy-drift",
     plant: (snapshot, facts) => [
       snapshot,
       withCompletion(facts, { policyDigests: { "qfai.config.yaml": "e".repeat(64) } }),
@@ -170,7 +176,7 @@ const matrix: {
     expected: { condition: "policy-drift", subject: "qfai.config.yaml", owner: "operator" },
   },
   {
-    title: "TC-0018-0035 (TDD-0049): run-waiting",
+    title: "run-waiting",
     plant: (snapshot, facts) => [
       {
         ...snapshot,
@@ -203,7 +209,7 @@ for (const { title, plant, expected } of matrix) {
   });
 }
 
-it("TC-0018-0036 (TDD-0050): Decide finish on a run in ready whose facts meet every condition", () => {
+it("Decide finish on a run in ready whose facts meet every condition", () => {
   const snapshot = readySnapshot();
   const decision = finish(snapshot, metFacts());
 

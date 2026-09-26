@@ -22,9 +22,10 @@ export const PROTOTYPING_DELEGATION_SCOPE = {
  * fails when the label set or any row's role set drifts apart.
  */
 export const SHIPPED_DELEGATION_SCOPE_TABLE: Readonly<Record<string, readonly string[]>> = {
-  Generation: ["product-experience-architect"],
-  "Playwright CLI execution & capture": ["devops-ci-engineer"],
-  "Evaluation scoring": ["product-surface-reviewer"],
+  "Generation and implementation": ["product-experience-architect"],
+  "Live Playwright review and evaluation scoring": ["product-surface-reviewer"],
+  Build: ["devops-ci-engineer", "backend-engineer"],
+  "Optional Playwright CLI execution & capture": ["devops-ci-engineer"],
 };
 
 const DELEGATION_SCOPE_BY_CATEGORY: ReadonlyMap<string, readonly string[]> = new Map(
@@ -36,6 +37,14 @@ const SHIPPED_SCOPE_BY_NORMALIZED_LABEL: ReadonlyMap<string, readonly string[]> 
     normalizeDelegationCategory(label),
     roles,
   ]),
+);
+
+const LEGACY_SCOPE_BY_NORMALIZED_LABEL: ReadonlyMap<string, readonly string[]> = new Map(
+  Object.entries({
+    Generation: ["product-experience-architect"],
+    "Evaluation scoring": ["product-surface-reviewer"],
+    "Playwright CLI execution & capture": ["devops-ci-engineer"],
+  }).map(([label, roles]) => [normalizeDelegationCategory(label), roles]),
 );
 
 /** Case / spacing / `&`-vs-`and` insensitive form of a table label. */
@@ -53,12 +62,21 @@ function normalizeDelegationCategory(category: string): string {
 export function resolveDelegationScope(category: string): readonly string[] | undefined {
   const direct = DELEGATION_SCOPE_BY_CATEGORY.get(category);
   if (direct !== undefined) return direct;
-  return SHIPPED_SCOPE_BY_NORMALIZED_LABEL.get(normalizeDelegationCategory(category));
+  const normalized = normalizeDelegationCategory(category);
+  return (
+    SHIPPED_SCOPE_BY_NORMALIZED_LABEL.get(normalized) ??
+    LEGACY_SCOPE_BY_NORMALIZED_LABEL.get(normalized)
+  );
 }
 
-export const PROTOTYPING_REQUIRED_ROLE_IDS = Array.from(
+export const PROTOTYPING_ALLOWED_ROLE_IDS = Array.from(
   new Set(Object.values(PROTOTYPING_DELEGATION_SCOPE).flat()),
 ).sort() as readonly string[];
+
+export const PROTOTYPING_REQUIRED_ROLE_IDS = [
+  "product-experience-architect",
+  "product-surface-reviewer",
+] as const;
 
 export const PROTOTYPING_ROLE_WRAPPER_INTEGRATIONS = [
   { id: "claude", dir: ".claude/agents", suffix: ".md", label: "Claude Code" },

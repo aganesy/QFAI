@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0010
+// QFAI:EX-0001-0192-07
 
 import { expect, it } from "vitest";
 
@@ -9,7 +9,7 @@ import type {
   RouteReference,
 } from "../../../src/core/workflow/parse.js";
 
-it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal passes every check", () => {
+it("Decide accept of a routing result whose proposal passes every check", () => {
   const boundedPlan = {
     route: "bounded-change",
     stages: [
@@ -17,7 +17,7 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
         stageInstanceId: "sdd-delta",
         stageKind: "sdd_delta",
         skill: "qfai-sdd",
-        operation: "delta-or-applicability-check",
+        operation: "update-or-applicability-check",
         when: "always",
       },
       {
@@ -64,8 +64,8 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
         observedRefs: [
           { kind: "path", ref: "src/notify/email.ts" },
         ] satisfies RouteReference<ObservedReferenceKind>[],
-        affectedSpecIds: ["spec-0007"],
-        newCapabilities: [],
+        affectedFlowIds: ["BF-0007"],
+        newStories: [],
         proposedWriteScope: ["src/notify/**", "tests/notify/**"],
         requiredStages: ["sdd_delta", "implement", "verify"],
       },
@@ -74,6 +74,7 @@ it("TC-0018-0010 (TDD-0014): Decide accept of a routing result whose proposal pa
   const facts = {
     pathExistence: { "src/notify/email.ts": true },
     plans: { "bounded-change": boundedPlan },
+    flows: ["BF-0007"],
   };
 
   const decision = decide(snapshot, input, facts);

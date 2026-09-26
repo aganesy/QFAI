@@ -1,4 +1,4 @@
-// QFAI:SPEC-0018:TC-0018-0154
+// QFAI:EX-0001-0196-20
 
 import { expect, it } from "vitest";
 
@@ -9,14 +9,14 @@ const source = "src/notify/email.ts";
 const staleDigest = "1".repeat(64);
 const freshDigest = "2".repeat(64);
 
-it("TC-0018-0154 (TDD-0208): A result whose submitted digest of an input differs from the digest in the facts", () => {
+it("A result whose submitted digest of an input differs from the digest in the facts", () => {
   const run = { id: "run-stale-input", state: "running", sequence: 8 };
   const implementOrder = {
     workOrderId: "work-order-bounded-implement-1",
     stageInstanceId: "bounded-implement",
     attempt: 1,
     stageKind: "implement",
-    target: { kind: "spec" as const, specId: "spec-0007" },
+    target: { kind: "flow" as const, flowId: "BF-0007" },
     executor: { skill: "qfai-implement" },
     operation: "implement",
     scope: { writeAreas: ["src/notify"] },
@@ -25,7 +25,7 @@ it("TC-0018-0154 (TDD-0208): A result whose submitted digest of an input differs
   const snapshot = {
     run,
     plan: finishPlan,
-    specBinding: { specId: "spec-0007" },
+    flowBinding: { flowId: "BF-0007" },
     acceptedStages: [
       { stageInstanceId: "bounded-sdd-delta", stageKind: "sdd_delta", outcome: "accepted" },
     ],

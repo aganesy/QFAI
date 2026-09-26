@@ -1,0 +1,20 @@
+# Document schema: decisions.md
+structure:
+  - heading:
+      pattern: "^# Decisions$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Decisions$"
+          regex: true
+        description: Decisions section.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - ID
+              - Content
+              - Approach
+              - Status

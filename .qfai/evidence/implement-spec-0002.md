@@ -93,18 +93,6 @@ running it gets the result above rather than those eighteen failures. They run i
 continuous integration, which does have `pwsh`. Five further cases in the
 projects above declare themselves inactive and did not run.
 
-### TDD-0012
-
-- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
-- Layer: validators
-- Reset by: `CR-20260912-0003` (option 1; TC-0002-0011 re-derived to the visual-surface sentence, row re-pointed by the rerun).
-- Test file: `packages/qfai/tests/assets/assets.test.ts`
-- Selector: `ensures qfai-discussion skill and artifact rules use canonical pack wording`
-- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/assets/assets.test.ts --testNamePattern='ensures qfai-discussion skill and artifact rules use canonical pack wording' --reporter=verbose`
-- RED result: already satisfied: exit 0 on the first run (1 passed). The case already required the narrowed sentence in the package README, the skill and the artifact rules.
-- GREEN result: exit 0; 1 passed | 93 skipped (94)
-- Changed files: `packages/qfai/tests/assets/assets.test.ts` (the TC annotation on the re-pointed case)
-
 ## Test results summary
 
 `TDD-0011` green at the recorded revision, and falsified by a mutation of the

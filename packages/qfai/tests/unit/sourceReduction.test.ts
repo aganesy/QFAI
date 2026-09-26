@@ -167,20 +167,17 @@ describe("the shared source reduction", () => {
   it("agrees with the tree on the module that broke the last generation", async () => {
     // A regression pin on the measured file rather than on the mechanism, so
     // it keeps its meaning if the reduction is ever rewritten again.
-    // `validateTddList` occurs in `core/specPackParsers.ts` exactly once, in a
-    // JSDoc, and the previous reduction reported it as executable text.
     const source = await readFile(path.join(SRC_ROOT, "core/specPackParsers.ts"), "utf-8");
-    expect(source.match(/validateTddList/g)).toHaveLength(1);
-    expect(withoutCommentsOrLiterals(source)).not.toContain("validateTddList");
+    expect(withoutCommentsOrLiterals(source)).not.toContain("validateStoryTreeCoverageDepth");
 
     // And the mirror: a module's own declaration must survive its reduction.
     // The previous reduction erased this one, having re-framed the file from a
     // regex some lines above it.
     const depth = await readFile(
-      path.join(SRC_ROOT, "core/validators/atddCoverageDepth.ts"),
+      path.join(SRC_ROOT, "core/validators/storyTreeCoverageDepth.ts"),
       "utf-8",
     );
-    expect(withoutCommentsOrLiterals(depth)).toContain("validateAtddCoverageDepth");
+    expect(withoutCommentsOrLiterals(depth)).toContain("validateStoryTreeCoverageDepth");
   });
 
   it("returns the same string for a repeated call, since the parse is memoised", () => {

@@ -8,23 +8,24 @@
  * Complements scripts/check-no-internal-version-leakage.sh by checking
  * the *output* of init (post-template-copy), not just the source assets.
  *
- * SSOT note: the `PATTERNS` array below is one of THREE equivalent
+ * SSOT note: the shared scan helper is one of THREE equivalent
  * expressions of the same forbidden class set:
  *   1. `packages/qfai/scripts/lint-shipping.ts` `src-comment` rules
  *      (JS RegExp, pre-build, `src/*.ts` JSDoc scan).
  *   2. `packages/qfai/scripts/check-no-internal-version-leakage.sh`
  *      (POSIX ERE, post-build `dist/` scan).
- *   3. This file (JS RegExp, smoke against `qfai init` output).
+ *   3. `tests/helpers/distributedSurfaceScan.ts` (JS RegExp, smoke
+ *      against `qfai init` output).
  *
  * Updating one requires updating all three in the same change. The guard
  * table in `.agents/rules/distributed-surface.md` lists the layers.
  *
  * The patterns are applied in two dimensions: to file CONTENT and to
- * file NAMES (`scanPathName` below), because `qfai init` copies a path
+ * file NAMES (`scanPathName` in the helper), because `qfai init` copies a path
  * component into the consuming project just as literally as a line.
  * Site 2 carries the same two dimensions.
  */
-import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -33,6 +34,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { captureStdout } from "../helpers/stdout.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
+import {
+  STORY_ID_BOUNDARIES,
+  STORY_ID_TRAILING_HYPHEN_BOUNDARIES,
+  scanDistributedSurface,
+} from "../helpers/distributedSurfaceScan.js";
 
 const tempDirs: string[] = [];
 
@@ -49,191 +55,68 @@ async function newTempDir(): Promise<string> {
   return dir;
 }
 
-const PATTERNS: ReadonlyArray<{ name: string; re: RegExp }> = [
-  // "10 and above" as a value, not as a list of digit shapes: any leading
-  // zeros, then a non-zero digit and at least one more. Enumerating shapes is
-  // what let `spec-9999` and `spec-00100` through different layers of the same
-  // SSOT-synced set.
-  { name: "internal spec id (spec-0010+)", re: /spec-0*[1-9][0-9]+/gi },
-  { name: "internal version marker", re: /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b|\bv1\.x\b/g },
-  {
-    name: "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
-    re: /\bCAP-0*[1-9][0-9]+\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b/g,
-  },
-  { name: "schemaVersion field", re: /"schemaVersion"|schemaVersion\s*:/g },
-];
-
 /** Repo-relative rule-master paths cited by the generated agent instructions. */
 const RULE_REFERENCE_RE = /\.agents\/rules\/[A-Za-z0-9._-]+\.md/g;
 
-const TEXT_EXTENSIONS = new Set([
-  ".md",
-  ".yaml",
-  ".yml",
-  ".json",
-  // The MCP server templates the `web-research` skill ships. A text format the
-  // init payload carries but this walk does not open is a distributed surface
-  // with no guard over it — the shell guard greps the tree with no extension
-  // filter, so the two layers would disagree about what they cover.
-  ".toml",
-  ".ts",
-  ".tsx",
-  ".js",
-  ".mjs",
-  ".cjs",
-  ".sh",
-  ".ps1",
-  ".html",
-  ".css",
-  ".txt",
-]);
-
-/**
- * Extensionless text files `qfai init` seeds. `path.extname(".gitkeep")` is
- * `""`, so an extension allowlist alone never reads them — the `.gitkeep`
- * bodies seeded for every assistant layer carry prose and are as much a
- * distributed surface as the `.md` files beside them.
- */
-const TEXT_BASENAMES = new Set([".gitkeep", ".gitignore", ".gitattributes"]);
-
-function isScannableTextFile(file: string): boolean {
-  return TEXT_EXTENSIONS.has(path.extname(file)) || TEXT_BASENAMES.has(path.basename(file));
-}
-
-/** One entry of the init output. `isFile` gates the content scan; every
- *  entry's *name* is scanned regardless of what kind it is. */
-interface WalkEntry {
-  full: string;
-  isFile: boolean;
-}
-
-/**
- * Every entry `qfai init` writes, not only the regular files.
- *
- * Yielding files alone left two kinds of name unscanned. `init` creates the
- * skill and agent wrappers as **symlinks** (`syncIntegrationWrappers`), which
- * are neither `isFile()` nor `isDirectory()` to `readdir`, so a marker in one
- * of those names reached no matcher at all — and they are copied into the
- * consuming project exactly as named. An **empty** directory was invisible for
- * the same reason: a directory only ever reached the name pass through the
- * relative path of a file inside it.
- *
- * Recursion still follows `isDirectory()` only, which `withFileTypes` reports
- * from `lstat` — so a symlinked directory is scanned by name and not walked
- * through, and the walk cannot cycle.
- */
-async function* walk(dir: string): AsyncGenerator<WalkEntry> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    yield { full, isFile: entry.isFile() };
-    if (entry.isDirectory()) {
-      yield* walk(full);
-    }
-  }
-}
-
-interface Hit {
-  file: string;
-  line: number;
-  match: string;
-  className: string;
-}
-
-/**
- * Name-pass exemption, mirroring `MIGRATION_MEMO_STAMP_SED` in
- * `scripts/check-no-internal-version-leakage.sh`: migration memo file
- * names are version-stamped on purpose (ADR-style citation targets, and
- * `migrationMemoRelativePath()` mints one per `--upgrade-assistant-tree`
- * run). Version class only — spec ids and trace ids in a migration path
- * are still a leak — and names only; memo contents keep the full scan.
- *
- * The exemption rewrites the *sanctioned name* instead of skipping every
- * path that mentions the memo directory: skipping the whole path would
- * also excuse `.../migrations/notes-v2.0-draft.md`,
- * `.../migrations/drafts-v2.0/clean.md`, and same-named directories in
- * an unrelated tree. Only the exact documented shape
- * `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md`,
- * directly in that directory, loses its stamp.
- */
-const MIGRATION_MEMO_STAMP_RE =
-  /(^|[/\\])\.qfai[/\\]assistant[/\\]process[/\\]migrations[/\\]v[0-9]+\.[0-9]+\.[0-9]+(-[^/\\]*)?\.md$/;
-
-function stripSanctionedMemoStamp(relativePath: string): string {
-  return relativePath.replace(MIGRATION_MEMO_STAMP_RE, (_full, lead: string, tail?: string) =>
-    [lead, ".qfai/assistant/process/migrations/MEMO", tail ?? "", ".md"].join(""),
-  );
-}
-
-/**
- * Scan a relative path for forbidden tokens carried by the *name*.
- * `PATTERNS` above matches line content; a marker encoded in a path
- * component (`v1.4.27-atdd-alignment.md`, `spec-0042-notes.md`, a
- * `DR-0007/` directory) never reaches a content matcher, yet init copies
- * the name verbatim into the consuming project.
- */
-function scanPathName(relativePath: string): Hit[] {
-  const found: Hit[] = [];
-  for (const { name, re } of PATTERNS) {
-    if (name === "schemaVersion field") continue;
-    const subject =
-      name === "internal version marker" ? stripSanctionedMemoStamp(relativePath) : relativePath;
-    re.lastIndex = 0;
-    const m = re.exec(subject);
-    if (m) {
-      found.push({ file: relativePath, line: 0, match: m[0], className: name });
-    }
-  }
-  return found;
+async function scanSingleName(relative: string): Promise<string[]> {
+  const root = await newTempDir();
+  const file = path.join(root, relative);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, "clean body", "utf-8");
+  return (await scanDistributedSurface(root)).nameHits
+    .filter((hit) => hit.file === relative)
+    .map((hit) => hit.className);
 }
 
 describe("distributed surface leakage smoke", () => {
+  it.each(STORY_ID_BOUNDARIES)(
+    "accepts %s and reports %s in a shipped file",
+    async (sample, internal) => {
+      expect(await scanSingleName(sample + ".md")).toEqual([]);
+      expect(await scanSingleName(internal + ".md")).toEqual(["internal story id"]);
+      const root = await newTempDir();
+      const file = path.join(root, "notes.md");
+      await writeFile(file, sample, "utf-8");
+      expect((await scanDistributedSurface(root)).hits).toEqual([]);
+      await writeFile(file, internal, "utf-8");
+      const { hits } = await scanDistributedSurface(root);
+      expect(hits).toEqual([
+        { file: "notes.md", line: 1, match: internal, className: "internal story id" },
+      ]);
+    },
+  );
+
+  it.each(STORY_ID_TRAILING_HYPHEN_BOUNDARIES)(
+    "accepts %s and reports %s at a path or line end",
+    async (sample, internal) => {
+      expect(await scanSingleName(sample)).toEqual([]);
+      expect(await scanSingleName(internal)).toEqual(["internal story id"]);
+      const root = await newTempDir();
+      const file = path.join(root, "notes.md");
+      await writeFile(file, sample, "utf-8");
+      expect((await scanDistributedSurface(root)).hits).toEqual([]);
+      await writeFile(file, internal, "utf-8");
+      expect((await scanDistributedSurface(root)).hits.map((hit) => hit.className)).toEqual([
+        "internal story id",
+      ]);
+    },
+  );
+
+  it("keeps legacy composite decisions and questions in their existing class", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "notes.md"), "DEC-0010-0001 OQ-0010-0001", "utf-8");
+    const { hits } = await scanDistributedSurface(root);
+    expect(hits.map((hit) => hit.className)).toEqual([
+      "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
+    ]);
+  });
+
   it("qfai init output contains no internal IDs or version markers", async () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-    const hits: Hit[] = [];
-    const nameHits: Hit[] = [];
-    const visitedRelative: string[] = [];
-    const scannedRelative: string[] = [];
-    for await (const { full: file, isFile } of walk(tmpDir)) {
-      const relative = path.relative(tmpDir, file);
-      visitedRelative.push(relative);
-      nameHits.push(...scanPathName(relative));
-      // Name scanned above for every entry; only a regular file has content —
-      // and `isScannableTextFile` decides which of those bodies are text,
-      // extensionless `.gitkeep` / `.gitignore` / `.gitattributes` included.
-      if (!isFile) continue;
-      if (!isScannableTextFile(file)) continue;
-      scannedRelative.push(relative);
-      const stats = await stat(file);
-      if (stats.size > 1_000_000) continue;
-      const content = await readFile(file, "utf-8");
-      const lines = content.split("\n");
-      const isPackageJson = path.basename(file) === "package.json";
-      for (const { name, re } of PATTERNS) {
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i] ?? "";
-          if (isPackageJson && name === "internal version marker" && /"version"\s*:/.test(line)) {
-            continue;
-          }
-          if (isPackageJson && name === "schemaVersion field") {
-            continue;
-          }
-          re.lastIndex = 0;
-          const m = re.exec(line);
-          if (m) {
-            hits.push({
-              file: path.relative(tmpDir, file),
-              line: i + 1,
-              match: m[0],
-              className: name,
-            });
-          }
-        }
-      }
-    }
-
+    const { hits, nameHits, visitedRelative, scannedRelative } =
+      await scanDistributedSurface(tmpDir);
     if (hits.length > 0) {
       const report = hits
         .slice(0, 30)
@@ -264,14 +147,7 @@ describe("distributed surface leakage smoke", () => {
     // DESIGN.md, because `/qfai-discussion` emits one and only for a
     // visual-prototyping surface.
     expect(visitedRelative).toContain(
-      path.join(
-        ".qfai",
-        "assistant",
-        "skills",
-        "qfai-prototyping",
-        "templates",
-        "DESIGN.md.sample",
-      ),
+      path.join(".qfai", "assistant", "skill", "qfai-prototyping", "templates", "DESIGN.md.sample"),
     );
 
     // The walk must actually reach the symlinked wrappers, or the name pass
@@ -279,7 +155,7 @@ describe("distributed surface leakage smoke", () => {
     // Directories have to be in the list too: an empty one is otherwise
     // reachable by no path at all.
     const walked = new Set(visitedRelative.map((entry) => entry.split(path.sep).join("/")));
-    expect(walked).toContain(".qfai/assistant/skills");
+    expect(walked).toContain(".qfai/assistant/skill");
     const symlinked = [...walked].filter((entry) =>
       /^\.(claude|codex|github|agents)\/skills\//.test(entry),
     );
@@ -308,82 +184,57 @@ describe("distributed surface leakage smoke", () => {
     ["CAP-0009", []],
     ["CAP-0999", ["internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)"]],
     ["CAP-1000", ["internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)"]],
-  ])("reads %s as a capability ID only from CAP-0010 up", (id, classes) => {
-    expect(scanPathName(path.join(".qfai", `${id}-notes.md`)).map((h) => h.className)).toEqual(
-      classes,
-    );
+  ])("reads %s as a capability ID only from CAP-0010 up", async (id, classes) => {
+    expect(await scanSingleName(path.join(".qfai", String(id) + "-notes.md"))).toEqual(classes);
   });
 
   // The walk above only proves that today's tree happens to be clean —
   // which is exactly the state a content-only scan also reported. Pin the
   // name matcher itself on synthetic paths so the dimension stays alive.
-  it("name pass flags path-borne tokens and honours the migration-memo exemption", () => {
-    const classNames = (relative: string): string[] =>
-      scanPathName(relative).map((h) => h.className);
-
-    expect(classNames(path.join(".qfai", "assistant", "notes-v2.0-draft.md"))).toEqual([
+  it("name pass flags path-borne tokens, a version-stamped migration memo name included", async () => {
+    expect(await scanSingleName(path.join(".qfai", "assistant", "notes-v2.0-draft.md"))).toEqual([
       "internal version marker",
     ]);
-    expect(classNames(path.join(".qfai", "specs", "spec-0042-notes.md"))).toEqual([
+    expect(await scanSingleName(path.join(".qfai", "specs", "spec-0042-notes.md"))).toEqual([
       "internal spec id (spec-0010+)",
     ]);
-    expect(classNames(path.join(".qfai", "DR-0007", "notes.md"))).toEqual([
+    expect(await scanSingleName(path.join(".qfai", "DR-0007", "notes.md"))).toEqual([
       "internal trace id (CAP-0010+/DEC/DR/PROT2/OQ/CHG)",
     ]);
 
+    // No path is exempt: a name shaped like the migration memo `qfai init`
+    // no longer writes carries a version marker like any other name.
     const memoDir = path.join(".qfai", "assistant", "process", "migrations");
-    expect(classNames(path.join(memoDir, "v1.4.27-atdd-alignment.md"))).toEqual([]);
-    // The exemption is scoped to the version class only.
-    expect(classNames(path.join(memoDir, "spec-0042-recut.md"))).toEqual([
+    expect(await scanSingleName(path.join(memoDir, "v1.4.27-atdd-alignment.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(await scanSingleName(path.join(memoDir, "v2.0.0.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(await scanSingleName(path.join(memoDir, "spec-0042-recut.md"))).toEqual([
       "internal spec id (spec-0010+)",
     ]);
-    // ...and to the sanctioned name shape only: a file that merely sits in
-    // the memo directory, a nested directory, or the same fragment in
-    // another tree all keep the version scan.
-    expect(classNames(path.join(memoDir, "notes-v2.0-draft.md"))).toEqual([
-      "internal version marker",
-    ]);
-    expect(classNames(path.join(memoDir, "drafts-v2.0", "clean.md"))).toEqual([
-      "internal version marker",
-    ]);
     expect(
-      classNames(path.join("docs", "assistant", "process", "migrations", "v2.0.0-notes.md")),
-    ).toEqual(["internal version marker"]);
-    expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
+      await scanSingleName(path.join(".qfai", "assistant", "steering", "test-layers.md")),
+    ).toEqual([]);
   });
 
-  // TC-1.5.2: standalone DESIGN.md sample scan against all 4 PATTERNS.
-  it("the DESIGN.md sample alone has zero matches across all 4 forbidden patterns", async () => {
+  // TC-1.5.2: standalone DESIGN.md sample scan against every forbidden pattern.
+  it("the DESIGN.md sample alone has zero forbidden matches", async () => {
     const designMdPath = path.join(
       getInitAssetsDir(),
       ".qfai",
       "assistant",
-      "skills",
+      "skill",
       "qfai-prototyping",
       "templates",
       "DESIGN.md.sample",
     );
     const content = await readFile(designMdPath, "utf-8");
-    const lines = content.split("\n");
-    const hits: Array<{ pattern: string; line: number; match: string }> = [];
-    for (const { name, re } of PATTERNS) {
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i] ?? "";
-        re.lastIndex = 0;
-        const m = re.exec(line);
-        if (m) {
-          hits.push({ pattern: name, line: i + 1, match: m[0] });
-        }
-      }
-    }
-    if (hits.length > 0) {
-      const report = hits
-        .map((h) => `  [${h.pattern}] DESIGN.md:${h.line} -> ${h.match}`)
-        .join("\n");
-      throw new Error(
-        `DESIGN.md template contains forbidden tokens (${hits.length} hits):\n${report}`,
-      );
-    }
+    const root = await newTempDir();
+    await writeFile(path.join(root, "DESIGN.md"), content, "utf-8");
+    const { hits, scannedRelative } = await scanDistributedSurface(root);
+    expect(scannedRelative).toContain("DESIGN.md");
     expect(hits).toEqual([]);
   });
 

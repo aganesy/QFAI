@@ -1,13 +1,12 @@
 /**
  * Integration: iter-NN evidence-mutation audit log.
  *
- * - TC-0012-0479: every destructive mutation under
+ * Every destructive mutation under
  *   `.qfai/evidence/prototyping/iter-NN/*` appends a JSONL line to
  *   `.qfai/evidence/prototyping/mutation-log.jsonl` shaped
  *   `{ts, caller, path, action, priorSize, newSize}`. Includes
  *   files moved by `iterate --cycle 0 --force`. Log is git-ignored.
  */
-// QFAI:SPEC-0012:TC-0012-0479
 
 import { lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -136,7 +135,7 @@ function isLogEntry(entry: unknown): entry is {
   );
 }
 
-describe("TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-NN mutation", () => {
+describe("mutation-log appends a JSONL entry per destructive iter-NN mutation", () => {
   it("appendMutationLogEntry creates the file with the canonical shape", async () => {
     await appendMutationLogEntry(root, {
       caller: "iterate",
