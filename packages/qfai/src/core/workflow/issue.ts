@@ -314,8 +314,7 @@ function issueSeamOnly(snapshot: WorkflowSnapshot, seam: WorkflowSeamRequest): W
 }
 
 // A routing receipt that no longer holds sends the run back to routing before any work. Once the
-// run has spent its replans, `ready` has no edge to `blocked`, so the call is refused naming the
-// spent budget; `stop` ends the run.
+// run has spent its replans it is blocked instead, naming the spent budget.
 function planRevision(
   snapshot: WorkflowSnapshot,
   facts: WorkflowFacts,
@@ -324,10 +323,10 @@ function planRevision(
   if (ref === undefined || facts.receiptValidity?.[ref] === "valid") return undefined;
   if ((snapshot.replans ?? 0) >= REPLAN_BUDGET) {
     const halt = { blocker: "budget-exhausted" as const, owner: "operator", subjects: ["replan"] };
-    const message = "The run has made every replan it may. Stop it, or start a new run.";
+    const blocked = { ...snapshot.run, state: "blocked", sequence: snapshot.run.sequence + 1 };
     return {
-      verdict: { ok: false, run: snapshot.run, error: { code: "fail-closed", message, halt } },
-      events: [],
+      verdict: { ok: true, run: blocked, workOrder: null, halt },
+      events: [{ type: "budget-exhausted", halt }],
     };
   }
   const run = { ...snapshot.run, state: "routing", sequence: snapshot.run.sequence + 1 };

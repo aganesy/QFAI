@@ -31,6 +31,7 @@ import {
   appendRecords,
   createRunDir,
   freeRunId,
+  ioRefusalOf,
   isRunId,
   listRuns,
   readJournal,
@@ -647,11 +648,20 @@ export async function runWorkflow(options: WorkflowOptions): Promise<number> {
     if (options.operation === "start") return await start(options);
     return await writeOperation(options);
   } catch (thrown: unknown) {
-    // A file system failure still answers with one JSON document; any other failure is a defect
-    // and keeps its stack.
-    const cause = isRecord(thrown) && typeof thrown.code === "string" ? thrown.code : undefined;
-    if (!cause) throw thrown;
-    const message = "A project file could not be read or written. Check the path and try again.";
-    return refuse(null, { code: "io-error", message, cause });
+    // A busy or refused file still answers with one JSON document, naming the run it concerns;
+    // any other failure is a defect and keeps its stack.
+    const refusal = ioRefusalOf(thrown);
+    if (!refusal) throw thrown;
+    return refuse(await runNamed(options), refusal);
   }
+}
+
+// The current state and sequence of the run an operation named, where it can be read.
+export async function runNamed(options: Pick<WorkflowOptions, "root" | "runId">): Promise<Run> {
+  if (!options.runId) return null;
+  const loaded = await loadRun(path.join(options.root, RUNS_DIR), options.runId).catch(
+    () => undefined,
+  );
+  if (!loaded) return null;
+  return loaded.ok ? loaded.run.snapshot.run : loaded.run;
 }

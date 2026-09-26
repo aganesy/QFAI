@@ -1,5 +1,6 @@
 // QFAI:EX-0001-0196-22
 // QFAI:EX-0001-0193-10
+// QFAI:EX-0001-0196-25
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -114,21 +115,21 @@ it("next once the routing receipt went stale, with the replan budget spent and w
     const stale = { [run.snapshot.routingReceiptRef ?? ""]: "stale" } as const;
     return run.apply({ operation: "next" }, { flows: [FLOW], obligations, receiptValidity: stale });
   };
-  const spent = next(replanned(3));
+  const exhausted = replanned(3);
+  const spent = next(exhausted);
+  const again = exhausted.apply({ operation: "next" }, { flows: [FLOW], obligations });
   const left = next(replanned(2));
+  const halt = { blocker: "budget-exhausted", owner: "operator", subjects: ["replan"] };
 
   expect({
-    spent: [spent.verdict.run?.state, spent.verdict.error, spent.events.length],
+    spent: [spent.verdict.run?.state, spent.verdict.halt, spent.events.map((event) => event.type)],
+    folded: [exhausted.snapshot.run.state, exhausted.snapshot.halt],
+    again: [again.verdict.ok, again.verdict.workOrder, again.verdict.halt],
     left: [left.verdict.run?.state, left.events.map((event) => event.type)],
   }).toEqual({
-    spent: [
-      "ready",
-      expect.objectContaining({
-        code: "fail-closed",
-        halt: { blocker: "budget-exhausted", owner: "operator", subjects: ["replan"] },
-      }),
-      0,
-    ],
+    spent: ["blocked", halt, ["budget-exhausted"]],
+    folded: ["blocked", halt],
+    again: [true, null, halt],
     left: ["routing", ["required-plan-revision"]],
   });
 });
@@ -158,6 +159,23 @@ it("The routing receipt after the run's tests rewrite a log the proposal cited a
       classes: ["contract.md:normative", "failure.log:historical_observation"],
       validity: "valid",
     });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("A proposal citing one file both as a normative path and as observed evidence", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-both-"));
+  try {
+    await writeFile(path.join(root, "contract.md"), "# Contract\n");
+    const both = {
+      expectedBehaviorRefs: [{ kind: "path" as const, ref: "contract.md" }],
+      observedRefs: [{ kind: "evidence" as const, ref: "contract.md" }],
+      proposedWriteScope: ["src/**"],
+    };
+    const classes = (await routingDependenciesOf(root, both)).map((each) => each.class);
+
+    expect(classes).toEqual(["normative"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -327,8 +327,11 @@ export async function routingDependenciesOf(
   const scope = proposal?.proposedWriteScope ?? [];
   const cited = new Map<string, WorkflowDependency["class"]>();
   for (const each of refs) {
-    if (each.kind === "path" && !cited.has(each.ref)) cited.set(each.ref, "normative");
-    if (each.kind === "evidence") cited.set(each.ref, "historical_observation");
+    // A file cited as a normative path stays normative even where it is also cited as evidence.
+    if (each.kind === "path") cited.set(each.ref, "normative");
+    if (each.kind === "evidence" && !cited.has(each.ref)) {
+      cited.set(each.ref, "historical_observation");
+    }
   }
   const digested = await Promise.all(
     [...cited]

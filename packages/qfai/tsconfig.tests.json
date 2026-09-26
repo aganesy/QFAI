@@ -482,6 +482,7 @@
     "tests/integration/workflow/theMissingTestBranch.test.ts",
     "tests/integration/workflow/theSupportClaimHasNoRuntimeEffect.test.ts",
     "tests/integration/workflow/workflowProject.ts",
+    "tests/integration/workflow/aBusyFileIsAnIoError.test.ts",
     "tests/integration/workflow/onlyTheRunsChangesWaitOnACommit.test.ts",
     "tests/integration/workflow/acceptanceObligationsPickTheAcceptanceStage.test.ts",
     "tests/integration/workflow/theRunChangeBoundaryHoldsInProduction.test.ts",

@@ -274,7 +274,6 @@ export interface WorkflowVerdict {
         message: string;
       }
     | { code: "fail-closed"; message: string; cause: FailClosedCause }
-    | { code: "fail-closed"; message: string; halt: WorkflowHalt }
     | { code: "proposal-refused"; message: string; reasons: ProposalRefusal[] };
 }
 

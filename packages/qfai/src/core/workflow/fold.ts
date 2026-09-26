@@ -297,6 +297,7 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "answer-changes-scope": countReplan,
   "required-plan-revision": countReplan,
   "missing-capability": withHalt,
+  "budget-exhausted": withHalt,
   "reconciled-with-blocker": withHalt,
   "retry-scheduled": (snapshot, record) => ({
     ...snapshot,
@@ -348,6 +349,7 @@ const STATE_AFTER_EVENT: Record<string, string> = {
   "validated-final-result-and-target": "completed",
   "accept-nonfinal-result": "ready",
   "unrun-or-unresolved-dependency": "blocked",
+  "budget-exhausted": "blocked",
   "observed-session-interruption": "interrupted",
   "scope-or-obligation-revision": "routing",
   "valid-answer-no-replan": "ready",

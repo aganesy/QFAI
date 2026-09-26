@@ -17,6 +17,14 @@ export interface IoRefusal {
 
 const BUSY_OR_REFUSED = ["EBUSY", "EPERM", "EACCES"];
 
+// A busy or refused file is `io-error`, naming its code; any other failure is not one.
+export function ioRefusalOf(error: unknown): IoRefusal | undefined {
+  const cause = systemCode(error);
+  if (!cause || !BUSY_OR_REFUSED.includes(cause)) return undefined;
+  const message = "A run file could not be written. Close whatever holds it and try again.";
+  return { code: "io-error", message, cause };
+}
+
 function systemCode(error: unknown): string | undefined {
   if (!(error instanceof Error) || !("code" in error)) return undefined;
   return typeof error.code === "string" ? error.code : undefined;
@@ -40,10 +48,9 @@ export async function writeRecord(
     await write(filePath, content);
     return undefined;
   } catch (error) {
-    const cause = systemCode(error);
-    if (!cause || !BUSY_OR_REFUSED.includes(cause)) throw error;
-    const message = "A run file could not be written. Close whatever holds it and try again.";
-    return { code: "io-error", message, cause };
+    const refusal = ioRefusalOf(error);
+    if (!refusal) throw error;
+    return refusal;
   }
 }
 
