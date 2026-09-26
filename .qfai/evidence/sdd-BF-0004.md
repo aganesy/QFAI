@@ -147,7 +147,7 @@ Cycle 2 held one author round, on F2-02 and on the route for F2-03 and F2-07.
 - Result: exit 0, 0 errors, 2 warnings. `--profile drift`: 0 errors.
   `--profile tdd`: no finding on a BF-0004 ID; the dogfood guard holds
   `tdd`, `full` and `sdd` within their pins.
-- Run log: `.qfai/report/run-*` (not tracked).
+- Run log: `.qfai/report/run-*` (not tracked). <!-- qfai:not-a-citation .qfai/report/ -->
 
 ## Work Orders Summary
 
