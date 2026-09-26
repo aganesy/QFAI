@@ -399,6 +399,7 @@ it("reconciled-resume", () => {
   ]);
 });
 
+// QFAI:EX-0001-0196-16
 it("reconciled-with-blocker", () => {
   const resumed = decide(runningRun(), { operation: "resume" }, { cause: "policy-drift" });
 
