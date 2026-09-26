@@ -28,7 +28,9 @@ function obligationRefusals(
   storyAuthoring: boolean,
 ): InputRefusal[] {
   const now = facts.obligations;
-  if (!issued || now?.flowId !== issued.flowId) return [];
+  if (!issued) return [];
+  // Obligations that cannot be read now show no example still covered.
+  if (now?.flowId !== issued.flowId) return refused("example-uncovered", [issued.flowId]);
   const removed = (id: string) => !now.exampleIds.includes(id);
   const uncovered = issued.annotated.filter(
     (id) => !now.annotated.includes(id) && !(storyAuthoring && removed(id)),
@@ -67,29 +69,51 @@ function rewrittenRows(
   return { rewritten: [...new Set(rewritten)], appended: diff.appended };
 }
 
+// Whether `text` names `name` whole, not as the start or end of a longer name.
+function namesWhole(text: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^\\w-])${escaped}($|[^\\w-])`).test(text);
+}
+
 // Whether a row's Approach cites a `human_decision` this run recorded for the operation, as
-// `<runId>/<authorizationId>`, and repeats its `answeredBy`.
-function citesAnswer(snapshot: WorkflowSnapshot, row: RecordRow, operation: string): boolean {
+// `<runId>/<authorizationId>`, and names its `answeredBy` whole. A CREATE row of a new-story
+// work order cites the approval of that work order's own slot.
+function citesAnswer(
+  snapshot: WorkflowSnapshot,
+  row: RecordRow,
+  operation: string,
+  slotApproval?: string,
+): boolean {
   return (snapshot.authorizations ?? []).some(
     (authorization) =>
       authorization.kind === "human_decision" &&
       authorization.operation === operation &&
-      row.approach.includes(`${snapshot.run.id}/${authorization.authorizationId}`) &&
+      (slotApproval === undefined || authorization.authorizationId === slotApproval) &&
+      namesWhole(row.approach, `${snapshot.run.id}/${authorization.authorizationId}`) &&
       Boolean(authorization.answeredBy) &&
-      row.approach.includes(authorization.answeredBy ?? ""),
+      namesWhole(row.approach, authorization.answeredBy ?? ""),
   );
 }
 
 // An appended row that needs an approval may stand at WIP or DONE only with the answer cited.
-function unauthorizedRows(snapshot: WorkflowSnapshot, appended: readonly RecordRow[]): string[] {
+function unauthorizedRows(
+  snapshot: WorkflowSnapshot,
+  workOrder: WorkflowWorkOrder,
+  appended: readonly RecordRow[],
+): string[] {
+  const slotApproval =
+    workOrder.target?.kind === "new_story" ? snapshot.approval?.authorizationId : undefined;
   return appended.flatMap((row) => {
     if (row.status !== "WIP" && row.status !== "DONE") return [];
     const changeRequest = classifyRecordRow(row).kind === "change-request";
     const operation = operationOf(row);
     if (!changeRequest && !APPROVAL_REQUIRED.includes(operation ?? "")) return [];
     // A CREATE answers its slot's `create` question; every other change answers the stage's own.
-    const answered = !changeRequest && operation === "CREATE" ? "CREATE" : "CHANGE_REQUEST";
-    return citesAnswer(snapshot, row, answered) ? [] : [row.id];
+    const create = !changeRequest && operation === "CREATE";
+    const cited = create
+      ? citesAnswer(snapshot, row, "CREATE", slotApproval)
+      : citesAnswer(snapshot, row, "CHANGE_REQUEST");
+    return cited ? [] : [row.id];
   });
 }
 
@@ -131,10 +155,16 @@ function changedLines(before: string, after: string): number[] | undefined {
 }
 
 // Defect example seeding changes its contract only by adding the new example's ID to one rule's
-// Examples cell: every rule keeps its ID and Statement, and nothing else in the file moves.
-function ruleChanges(contract: WorkflowRecordsAtIssue["contract"], facts: WorkflowFacts) {
+// Examples cell: every rule keeps its ID and Statement, the ID added is an example this stage
+// added to the story, and nothing else in the file moves.
+function ruleChanges(
+  contract: WorkflowRecordsAtIssue["contract"],
+  issuedExamples: readonly string[],
+  facts: WorkflowFacts,
+) {
   const now = facts.records?.contract;
   if (!contract || now?.path !== contract.path) return [];
+  const added = (facts.obligations?.exampleIds ?? []).filter((id) => !issuedExamples.includes(id));
   const before = parseContractRules(contract.path, contract.text).rules;
   const after = parseContractRules(now.path, now.text).rules;
   const kept = (rule: (typeof before)[number]) =>
@@ -151,7 +181,9 @@ function ruleChanges(contract: WorkflowRecordsAtIssue["contract"], facts: Workfl
     grown.every((rule) => {
       const was = before.find((each) => each.id === rule.id)?.examples ?? [];
       return (
-        rule.examples.length === was.length + 1 && was.every((id) => rule.examples.includes(id))
+        rule.examples.length === was.length + 1 &&
+        was.every((id) => rule.examples.includes(id)) &&
+        rule.examples.every((id) => was.includes(id) || added.includes(id))
       );
     }) &&
     lines !== undefined &&
@@ -173,10 +205,12 @@ function recordRefusals(
   const decisions = rewrittenRows(issued.decisions, now.decisions, "decisions", byRun);
   const questions = rewrittenRows(issued.openQuestions, now.openQuestions, "open-questions", byRun);
   const unauthorized = [
-    ...unauthorizedRows(snapshot, decisions.appended),
+    ...unauthorizedRows(snapshot, workOrder, decisions.appended),
     ...unrequestedFiles(snapshot, result, facts, decisions.appended),
   ];
-  const rules = workOrder.stageKind === "sdd_append" ? ruleChanges(issued.contract, facts) : [];
+  const issuedExamples = snapshot.issuedObligations?.exampleIds ?? [];
+  const rules =
+    workOrder.stageKind === "sdd_append" ? ruleChanges(issued.contract, issuedExamples, facts) : [];
   return {
     refusals: [
       ...refused("record-rewritten", [...decisions.rewritten, ...questions.rewritten]),

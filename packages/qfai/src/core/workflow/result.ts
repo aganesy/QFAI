@@ -451,7 +451,7 @@ function repairOutsidePlan(
 ): boolean {
   const plan = snapshot.plan;
   if (result.outcome !== "needs_repair" || !plan) return false;
-  const selected = activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet);
+  const selected = activeStages(plan, snapshot, facts);
   return (result.debts ?? []).some((debt) => {
     const owner = skillOwnerOf(debt);
     return owner !== undefined && !servingStage(selected, owner, snapshot.diagnosis);
@@ -522,9 +522,7 @@ export function acceptStageResult(
 ): WorkflowDecision {
   const { run, plan, outstandingWorkOrder: workOrder } = snapshot;
   const accepted = snapshot.acceptedStages ?? [];
-  const selected = plan
-    ? activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet)
-    : [];
+  const selected = plan ? activeStages(plan, snapshot, facts) : [];
   // A repair stage is one of the plan's own, issued out of order to the finding's owner.
   const repair = repairStageOf(snapshot, selected);
   const stage = repair?.stage ?? selected[accepted.length];

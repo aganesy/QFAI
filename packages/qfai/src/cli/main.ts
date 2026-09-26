@@ -452,7 +452,7 @@ async function workflowEntry(
       code: "invalid-input",
       message:
         "The command line names no operation or flag the workflow command takes. Run it with --help.",
-      reasons: subjects.map((subject) => ({ reason: "argument", subject })),
+      reasons: subjects.map((subject) => ({ reason: "schema", subject })),
     });
   }
   if (options.help || !options.workflowAction) {

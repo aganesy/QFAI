@@ -134,10 +134,9 @@ function diagnosisInputs(stageKind: string, snapshot: WorkflowSnapshot, facts: W
 
 // The records a stage is defined to write for the flow its work order binds, each named for
 // that flow. Every other kind writes only its checked scope or git-ignored output.
-// SIMPLIFIED: a prototype work order names no record, as for a target that is not UI-bearing,
-// and defect example seeding names no contract when rules in several contracts cite the matched
-// criterion's examples. Lift when: the facts say whether a prototype's target is UI-bearing, and
-// the choice among several citing contracts is settled.
+// A prototype work order names no record. Defect example seeding names no contract while rules
+// in several contracts cite the matched criterion's examples, which is open: the stage then
+// returns `blocked` to the operator instead of choosing one.
 function recordAreasOf(
   workOrder: WorkflowWorkOrder,
   flowId: string | undefined,
@@ -374,7 +373,7 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   const plan = snapshot.plan;
   if (!plan || planNotReady(snapshot, facts)) return refusedInput(run, "The plan is not ready.");
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
-  const selected = activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet);
+  const selected = activeStages(plan, snapshot, facts);
   const next = stageToIssue(snapshot, selected);
   if (next.refused) return refusedInput(run, "The repair work order is not ready.");
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };

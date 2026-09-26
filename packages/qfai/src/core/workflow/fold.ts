@@ -64,6 +64,7 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     acceptedStages: _replaced,
     repairedStages: _repaired,
     repairRequest: _left,
+    skippedStages: _skipped,
     ...rest
   } = withoutWorkOrder(snapshot);
   const prior = [
@@ -281,6 +282,11 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "unrun-or-unresolved-dependency": (snapshot, record) =>
     withAppendedRows(withHalt(snapshot, record), record),
   "material-decision": withAppendedRows,
+  // A stage `next` passed over because its predicate did not hold stays skipped.
+  "receipt-recorded": (snapshot, record) =>
+    record.notRun?.kind === "not_applicable" && record.stageInstanceId
+      ? { ...snapshot, skippedStages: [...(snapshot.skippedStages ?? []), record.stageInstanceId] }
+      : snapshot,
   "answer-changes-scope": countReplan,
   "required-plan-revision": countReplan,
   "missing-capability": withHalt,

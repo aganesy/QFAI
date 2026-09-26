@@ -25,6 +25,7 @@ function table(rows: string[]): string {
 }
 
 const QUESTIONS = table(["| OQ-0001 | Which channel? | Ask the owner | TODO |"]);
+const AT_ISSUE = ["EX-0001-0005-01", "EX-0001-0005-02"];
 const ISSUED = [
   "| DEC-0001 | CREATE US-0001-0004 in BF-0001 | Approved by the owner | DONE |",
   "| DEC-0002 | Keep one email per customer | Settled in discussion | DONE |",
@@ -95,6 +96,7 @@ function accept(accepted: Accepted) {
       contract: { path: CONTRACT, text: contract("EX-0001-0005-01") },
     },
     ...(accepted.appendedByRun ? { appendedRows: accepted.appendedByRun } : {}),
+    issuedObligations: { flowId: "BF-0001", exampleIds: AT_ISSUE, annotated: [] },
   };
   const records = {
     decisions: table(after),
@@ -111,7 +113,10 @@ function accept(accepted: Accepted) {
     changedFiles: changed.map((path) => ({ path, digest: "d".repeat(64) })),
     ...(outcome === "awaiting_input" ? { questions: [changeQuestion] } : {}),
   };
-  const decision = decide(snapshot, { operation: "accept", result }, { records });
+  // Seeding adds EX-0001-0005-03 to the story; every other stage leaves the examples as issued.
+  const exampleIds = stageKind === "sdd_append" ? [...AT_ISSUE, "EX-0001-0005-03"] : AT_ISSUE;
+  const obligations = { flowId: "BF-0001", ids: [], exampleIds, annotated: [], digest: "" };
+  const decision = decide(snapshot, { operation: "accept", result }, { records, obligations });
   const error = decision.verdict.error;
   return {
     state: decision.verdict.run?.state,

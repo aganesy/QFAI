@@ -2,16 +2,22 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
+import { isEnoent } from "../fs/errno.js";
 import { gitStdout, uncommittedPaths } from "../gitChanges.js";
 import type { WorkflowBoundaryStart } from "./types.js";
 
 // The runtime tree is never tracked, so nothing under it is a run change.
 const RUNTIME = ".qfai/run/";
 
-// A path's content digest after CRLF normalization, or `null` when there is no file.
+// A path's content digest after CRLF normalization, or `null` when there is no file. Any other
+// failure to read it is the caller's.
 async function contentDigest(root: string, file: string): Promise<string | null> {
-  const text = await readFile(path.join(root, ...file.split("/")), "utf8").catch(() => undefined);
-  return text === undefined ? null : hashAssistantAssetText(text);
+  try {
+    return hashAssistantAssetText(await readFile(path.join(root, ...file.split("/")), "utf8"));
+  } catch (error) {
+    if (isEnoent(error)) return null;
+    throw error;
+  }
 }
 
 function nulSeparated(output: string | null): string[] {

@@ -32,7 +32,10 @@ async function reclassified() {
   };
   run.accept({ diagnosis }, facts);
   expect(run.next(facts).stageKind).toBe("implement");
-  run.accept({ testObservation: "expected_red", red: { testId: "t", failureKind: "assertion" } });
+  run.accept(
+    { testObservation: "expected_red", red: { testId: "t", failureKind: "assertion" } },
+    facts,
+  );
   expect(run.next(facts).stageKind).toBe("verify");
   const storyDefect = {
     findingCode: "QFAI-TRACE-002",

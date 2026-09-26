@@ -71,7 +71,7 @@ function stageUnmet(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowU
   const accepted = snapshot.acceptedStages ?? [];
   const isAccepted = (stageInstanceId: string) =>
     accepted.some((stage) => stage.stageInstanceId === stageInstanceId);
-  return activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet)
+  return activeStages(plan, snapshot, facts)
     .filter((stage) => stage.stageKind !== "verify" && !isAccepted(stage.stageInstanceId))
     .flatMap((stage) =>
       unmetOf(
@@ -228,12 +228,27 @@ function completionUnmet(
     ...driftUnmet(snapshot, completion),
     ...unmetOf("uncommitted", completion.uncommittedPaths),
   ];
-  const seen = new Set<string>();
-  return unmet.filter((entry) => {
-    const key = JSON.stringify([entry.condition, entry.subject, entry.owner]);
-    const first = !seen.has(key);
-    seen.add(key);
-    return first;
+  return oncePerCondition(unmet);
+}
+
+// Each failing condition is listed once: its subjects together, in the order found, and its
+// owner when every subject shares one, `operator` when they differ.
+function oncePerCondition(unmet: readonly WorkflowUnmet[]): WorkflowUnmet[] {
+  const conditions = [...new Set(unmet.map((entry) => entry.condition))];
+  return conditions.map((condition) => {
+    const entries = unmet.filter((entry) => entry.condition === condition);
+    const subjects = [...new Set(entries.map((entry) => entry.subject))];
+    const owners = [...new Set(entries.map((entry) => entry.owner))];
+    const owner = owners.length === 1 ? (owners[0] ?? "operator") : "operator";
+    const [only] = entries;
+    if (entries.length === 1 && only) return only;
+    const findings = entries.flatMap((entry) => entry.findings ?? []);
+    return {
+      condition,
+      subject: subjects.join(", "),
+      owner,
+      ...(findings.length > 0 ? { findings } : {}),
+    };
   });
 }
 

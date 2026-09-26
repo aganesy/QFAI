@@ -3,14 +3,19 @@ import type { PlanStages, WorkflowFacts, WorkflowSnapshot } from "./types.js";
 
 type Plan = NonNullable<WorkflowSnapshot["plan"]>;
 
+type PredicateFacts = Pick<WorkflowFacts, "acceptanceObligationsUnmet" | "prototypeDecisionNeeded">;
+
 // Whether one plan predicate holds for the run as it stands.
 function predicateHolds(
   when: string | undefined,
+  plan: Plan,
   diagnosis: WorkflowSnapshot["diagnosis"],
-  acceptanceObligationsUnmet: boolean | undefined,
+  facts: PredicateFacts,
 ): boolean {
   const verdict = diagnosis?.verdict;
   switch (when) {
+    // Every plan file names a predicate for each stage; a stage with none runs.
+    case undefined:
     case "always":
       return true;
     // An example already stating the case is the diagnosis's first matched ID.
@@ -19,7 +24,15 @@ function predicateHolds(
     case "diagnosis_missing_test":
       return verdict === "missing-test";
     case "acceptance_obligations_unmet":
-      return acceptanceObligationsUnmet === true;
+      return facts.acceptanceObligationsUnmet === true;
+    // While how a UI contract serves a flow is open, one does when one of its rules cites an
+    // example of the flow, so a project with no UI contract has no prototype stage.
+    case "prototype_decision_needed":
+      return facts.prototypeDecisionNeeded === true;
+    // Routing chose discovery because product scope is open, which is what a full discussion
+    // settles.
+    case "full_discussion_needed":
+      return plan.route === "discovery";
     case "regression_found":
       return verdict === "regression";
     case "test_defect_found":
@@ -29,17 +42,24 @@ function predicateHolds(
   }
 }
 
-// The plan's stages whose predicates hold, in plan order.
+// The plan's stages that run, in plan order. A stage already issued or accepted keeps running
+// whatever its predicate says now, since its own work can change what the predicate reads, and
+// one the run recorded as skipped stays skipped. Every other stage runs when its predicate holds.
 export function activeStages(
   plan: Plan,
-  diagnosis: WorkflowSnapshot["diagnosis"],
-  acceptanceObligationsUnmet: boolean | undefined,
+  snapshot: WorkflowSnapshot,
+  facts: PredicateFacts,
 ): PlanStages {
-  // SIMPLIFIED: feature and discovery issue every stage; their predicates are not evaluated.
-  // Lift when: the prototype and full-discussion predicates get the facts that decide them.
-  if (plan.route !== "bugfix" && plan.route !== "bounded-change") return plan.stages;
-  return plan.stages.filter((stage) =>
-    predicateHolds(stage.when, diagnosis, acceptanceObligationsUnmet),
+  const ran = new Set([
+    ...(snapshot.acceptedStages ?? []).map((stage) => stage.stageInstanceId),
+    ...(snapshot.outstandingWorkOrder ? [snapshot.outstandingWorkOrder.stageInstanceId] : []),
+  ]);
+  const skipped = new Set(snapshot.skippedStages ?? []);
+  return plan.stages.filter(
+    (stage) =>
+      ran.has(stage.stageInstanceId) ||
+      (!skipped.has(stage.stageInstanceId) &&
+        predicateHolds(stage.when, plan, snapshot.diagnosis, facts)),
   );
 }
 
@@ -120,7 +140,7 @@ export function planNotReady(snapshot: WorkflowSnapshot, facts: WorkflowFacts): 
   const plan = snapshot.plan;
   if (!plan || !Array.isArray(plan.stages) || plan.stages.length === 0) return true;
   const accepted = snapshot.acceptedStages ?? [];
-  const selected = activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet);
+  const selected = activeStages(plan, snapshot, facts);
   const ids = plan.stages.map((stage) => stage.stageInstanceId);
   return (
     plan.stages.some((stage) => !stage.stageInstanceId || !stage.stageKind) ||

@@ -38,6 +38,10 @@ AC already states:
   `AC-Ref` is that AC.
 - Add the new EX ID to the Examples cell of the contract rule that already cites
   an example of that AC. The rule's Statement is unchanged.
+- When the work order's `recordAreas` name no contract, because rules in several
+  contracts cite that AC's examples, change no file. Return `blocked` with one
+  `debts` entry owned by `operator` that names those contracts: which of them
+  takes the new example is the operator's to settle.
 - Add or change no US or AC, and no existing EX. Write or annotate no test: the
   new EX stays an example no test annotates.
 - Record the appended EX as one `decisions.md` triage row naming UPDATE:APPEND,

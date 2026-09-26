@@ -1,15 +1,18 @@
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolveFlowScope } from "../flowScope.js";
 import { parseStoryTestAnnotations } from "../storyTree/ids.js";
 import { classifyRecordRow, parseRecordTable } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
 import { isEnoent } from "../fs/errno.js";
-import { countsForExample, readStoryTests } from "../validators/storyTreeObligations.js";
+import {
+  countsForExample,
+  readStoryTests,
+  validateStoryTreeObligationsModel,
+} from "../validators/storyTreeObligations.js";
+import { obligationDigest } from "./obligationDigest.js";
 import type {
   WorkflowDiagnosis,
   WorkflowFacts,
@@ -50,46 +53,46 @@ export function changeRequestsOf(decisions: string): NonNullable<WorkflowFacts["
     .map((row) => ({ rowId: row.row.id, inForce: row.inForce, paths: row.refs }));
 }
 
-// The digest of the obligation set: its IDs, and the text of every file that declares one of
-// its items or a rule citing one of its examples.
-// SIMPLIFIED: an item's text is the whole file that declares it.
-// Lift when: an item's text can be read on its own.
-async function obligationDigest(ids: string[], files: string[]): Promise<string> {
-  const hash = createHash("sha256").update(JSON.stringify(ids));
-  for (const file of [...new Set(files)].sort()) {
-    hash.update(`\0${hashAssistantAssetText(await readText(file))}`);
-  }
-  return hash.digest("hex");
-}
-
-// The bound flow's BF, AC and EX IDs, and which of its examples a test annotates now.
+// The bound flow's obligations as the tree and its tests read now: its BF, AC and EX IDs, the
+// examples a test annotates, whether an acceptance-layer obligation is unmet, and whether a UI
+// contract serves the flow.
 export async function obligationFactsOf(
   root: string,
   config: QfaiConfig,
   model: StoryTreeModel,
   flowId: string,
-): Promise<WorkflowObligationFacts | undefined> {
+) {
   const scope = resolveFlowScope([flowId], model);
   if (scope.flowIds.length === 0) return undefined;
   const ids = [...scope.flowIds, ...scope.acceptanceCriteriaIds, ...scope.exampleIds].sort();
   const inScope = new Set(scope.exampleIds);
+  const files = (await readStoryTests(root, config)).files;
   const annotated = new Set<string>();
-  for (const file of (await readStoryTests(root, config)).files) {
-    if (!countsForExample(file)) continue;
+  for (const file of files.filter(countsForExample)) {
     for (const id of parseStoryTestAnnotations(file.content).EX) {
       if (inScope.has(id)) annotated.add(id);
     }
   }
-  const declaring = model.declarations
-    .filter((item) => ids.includes(item.id))
-    .map((item) => item.file);
-  return {
+  const obligations: WorkflowObligationFacts = {
     flowId,
     ids,
     exampleIds: scope.exampleIds,
     annotated: [...annotated].sort(),
-    digest: await obligationDigest(ids, [...declaring, ...scope.ruleFiles]),
+    digest: await obligationDigest(model, scope, ids, readText),
   };
+  // An acceptance-layer obligation is what the validator's acceptance profile still reports
+  // missing for the flow's BF and ACs; an exception row in force exempts an item.
+  const owed = new Set([...scope.flowIds, ...scope.acceptanceCriteriaIds]);
+  const acceptanceObligationsUnmet = validateStoryTreeObligationsModel(model, files, "atdd").some(
+    (issue) => issue.code === "QFAI-STORY-006" && owed.has(issue.refs?.[0] ?? ""),
+  );
+  const ui = `${contractsDirOf(root, config)}/ui/`;
+  const prototypeDecisionNeeded = model.rules.some(
+    (rule) =>
+      projectRelative(root, rule.file).startsWith(ui) &&
+      rule.examples.some((id) => inScope.has(id)),
+  );
+  return { obligations, acceptanceObligationsUnmet, prototypeDecisionNeeded };
 }
 
 // The files that declare an item of the flow or a rule citing one of its examples, which a
@@ -169,7 +172,7 @@ export async function storyFactsOf(
   const model = await readStoryTreeModel(root, config);
   const flows = model.flows.map((flow) => flow.id);
   const specsDir = specsDirOf(root, config);
-  const obligations = flowId ? await obligationFactsOf(root, config, model, flowId) : undefined;
+  const flow = flowId ? await obligationFactsOf(root, config, model, flowId) : undefined;
   const seeding = seedingTargetsOf(root, model, diagnosis);
   const records = await currentRecords(root, config, seeding);
   return {
@@ -178,7 +181,7 @@ export async function storyFactsOf(
     contractsDir: contractsDirOf(root, config),
     records,
     changeRequests: changeRequestsOf(records.decisions),
-    ...(obligations ? { obligations } : {}),
+    ...(flow ?? {}),
     ...(seeding ? { seeding } : {}),
   };
 }

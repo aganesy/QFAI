@@ -393,6 +393,8 @@ export interface WorkflowSnapshot {
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
   // The results of stages issued out of plan order to repair a finding.
   repairedStages?: WorkflowAcceptedStage[];
+  // The current plan's stages the run skipped because their predicate did not hold.
+  skippedStages?: string[];
   // The stage results of every plan a replan replaced, kept for their receipts and debts.
   priorStages?: WorkflowAcceptedStage[];
   // What the routing receipt depends on, recorded when routing's result was accepted.
@@ -581,6 +583,8 @@ export interface WorkflowFacts {
   contractsDir?: string;
   pathExistence?: Record<string, boolean>;
   acceptanceObligationsUnmet?: boolean;
+  // Whether a UI contract serves the bound flow, which a prototype stage needs.
+  prototypeDecisionNeeded?: boolean;
   plans?: Record<string, { route: string; stages: PlanStages }>;
   // The business flows the story tree declares.
   flows?: string[];

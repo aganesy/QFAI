@@ -399,6 +399,12 @@ export async function completionFacts(
   return {
     completion,
     changeRequests: story.changeRequests,
+    ...(story.acceptanceObligationsUnmet !== undefined
+      ? { acceptanceObligationsUnmet: story.acceptanceObligationsUnmet }
+      : {}),
+    ...(story.prototypeDecisionNeeded !== undefined
+      ? { prototypeDecisionNeeded: story.prototypeDecisionNeeded }
+      : {}),
     fileDigests: Object.fromEntries(
       digests.flatMap(([file, digest]) => (digest ? [[file, digest]] : [])),
     ),

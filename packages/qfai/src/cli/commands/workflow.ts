@@ -333,7 +333,7 @@ async function publish(
 const MISSING_RUN: Refusal = {
   code: "invalid-input",
   message: "Name the run with --run.",
-  reasons: [{ reason: "argument", subject: "--run" }],
+  reasons: [{ reason: "schema", subject: "--run" }],
 };
 
 // The operation's input, read from its `--in` file where it takes one.

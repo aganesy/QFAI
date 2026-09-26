@@ -55,10 +55,12 @@ it("Git fixture with recorded receipts", async () => {
 it("Change the text of an AC the test and implementation receipts depend on", async () => {
   const { resumed, receipts } = await resumedAfter((root) => write(root, AC_FILE, criteria("TSV")));
 
+  // The sdd receipt holds; RED and GREEN read the criterion. No UI contract serves the flow,
+  // so the feature plan ran no prototype stage.
   expect({
     validities: validities(receipts),
     reissued: field(resumed.json, "workOrder.stageKind"),
-  }).toEqual({ validities: ["valid", "valid", "stale", "stale"], reissued: "acceptance" });
+  }).toEqual({ validities: ["valid", "stale", "stale"], reissued: "acceptance" });
 }, 120_000);
 
 it("Add a file matching an input glob, leaving every existing file's hash unchanged", async () => {

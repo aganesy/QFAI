@@ -19,10 +19,11 @@ for (const [title, args] of refused) {
     const root = await minimalProject();
     const run = workflow(root, args);
 
-    expect({ exit: run.status, code: field(run.json, "error.code") }).toEqual({
-      exit: 2,
-      code: "invalid-input",
-    });
+    expect({
+      exit: run.status,
+      code: field(run.json, "error.code"),
+      reason: field(run.json, "error.reasons.0.reason"),
+    }).toEqual({ exit: 2, code: "invalid-input", reason: "schema" });
   });
 }
 
