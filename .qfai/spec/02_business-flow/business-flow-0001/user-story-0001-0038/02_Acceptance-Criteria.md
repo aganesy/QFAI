@@ -32,7 +32,7 @@ Scenario: Configured spec and contract paths
 Scenario: Spec-pack layout left to the migration skill
   Given a project where the configured `paths.specsDir` holds a `spec-*/` or `_policies/` directory, or where `.qfai/contracts/` exists
   When `qfai init` runs
-  Then nothing is written under `.qfai/spec/`, everything else is written as on any other run, the migration skill and its host links included, and one output line names the detected path and `/qfai-migration-spec-to-story`
+  Then nothing is written under `.qfai/spec/`, everything else is written as on any other run, the migration skill and its host links included, and one output line names the detected path and `/qfai-migration-v1-to-v2`
   And the exit code is the one the run would have returned otherwise
 
 # AC-0001-0038-05

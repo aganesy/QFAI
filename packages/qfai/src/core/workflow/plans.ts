@@ -409,6 +409,24 @@ async function reviewerRefusals(
   return refusals;
 }
 
+// Every refusal of both triggers, for a caller that reports each failed check rather than
+// stopping at the first cause as `checkPlans` does.
+export async function allPlanRefusals(
+  projectRoot: string,
+  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
+): Promise<PlanRefusal[]> {
+  const loaded = await Promise.all(WORKFLOW_ROUTES.map((route) => loadPackagePlan(route)));
+  const pairs = planPairs(loaded.flatMap((load) => (load.ok ? [load.plan] : [])));
+  const contract = await Promise.all(
+    [...pairs].map(([skill, use]) => skillRefusals(projectRoot, skill, use)),
+  );
+  return [
+    ...loaded.flatMap((load) => (load.ok ? [] : load.refusals)),
+    ...contract.flat(),
+    ...(await reviewerRefusals(config, pairs)),
+  ];
+}
+
 // Trigger (b) over the package's plans and the skills they name, then trigger (c) over the
 // reviewers the effective routing keeps. The first that holds is the cause.
 export async function checkPlans(

@@ -138,7 +138,7 @@ export async function validateProject(
   if (oldLayoutRoot) {
     const layoutIssue = issue(
       "QFAI-LAYOUT-001",
-      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-spec-to-story before validation.`,
+      `Old spec-pack layout at ${oldLayoutRoot}; run /qfai-migration-v1-to-v2 before validation.`,
       "error",
       oldLayoutRoot,
       "storyTree.oldLayout",

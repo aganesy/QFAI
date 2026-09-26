@@ -8,7 +8,7 @@ Feature: Migrate a project with the skill
 # AC-0004-0012-01
 # Parent: US-0004-0012
 Scenario: SKILL.md plans, previews, runs and keeps the reports
-  Given the installed /qfai-migration-spec-to-story skill
+  Given the installed /qfai-migration-v1-to-v2 skill
   When an AI follows SKILL.md on a project on the spec-pack layout
   Then it writes the plan, runs each step with --dry-run and then without it, keeps every report as evidence, and runs qfai validate after step 10
   And on a project with nothing to migrate it reports that there is nothing to migrate

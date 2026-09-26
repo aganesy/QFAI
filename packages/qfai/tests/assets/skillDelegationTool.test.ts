@@ -90,7 +90,7 @@ describe("shipped skills declare the delegation tool they mandate", () => {
       const files = (await skillFiles(tree)).filter(
         (filePath) =>
           path.basename(path.dirname(filePath)).startsWith("qfai-") &&
-          path.basename(path.dirname(filePath)) !== "qfai-migration-spec-to-story",
+          path.basename(path.dirname(filePath)) !== "qfai-migration-v1-to-v2",
       );
       expect(files.length).toBeGreaterThan(0);
 

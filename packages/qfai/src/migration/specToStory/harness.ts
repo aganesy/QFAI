@@ -16,12 +16,19 @@ import {
 import { createHash } from "node:crypto";
 import path from "node:path";
 
-import { loadConfig, resolvePath, type QfaiConfig } from "../../core/config.js";
+import { SKILL_ARCHIVE_DIR, SKILL_INTEGRATION_DIRS } from "../../cli/commands/init.js";
+import {
+  loadConfig,
+  resolvePath,
+  WORKFLOW_MODE_MESSAGE,
+  type QfaiConfig,
+} from "../../core/config.js";
+import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { ID_MAP_PATH, IdMapInputError, readIdMap } from "./idMap.js";
 import { shouldRenameSource, STEP01_RENAMES } from "./step01RenameDirectories.js";
 
-export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type MigrationStepNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 export type WriteSetArea =
   | "qfai"
   | "specs"
@@ -30,7 +37,11 @@ export type WriteSetArea =
   | "gitignore"
   | "gitignore-staging"
   | "links"
-  | "test-annotations";
+  | "test-annotations"
+  | "skills"
+  | "skill-archive"
+  | "skill-links"
+  | "entry-points";
 export type ReportSection = "Cases to examples" | "For a person" | "Annotations kept";
 
 export type MigrationContext = {
@@ -472,6 +483,16 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return HOST_LINKS.some((link) => inside(path.join(root, link), target));
     case "test-annotations":
       return inside(resolvePath(root, context.config, "testsDir"), target);
+    case "skills": {
+      const skills = path.join(root, ".qfai", "assistant", "skill");
+      return target !== skills && inside(skills, target);
+    }
+    case "skill-archive":
+      return inside(path.join(root, SKILL_ARCHIVE_DIR), target);
+    case "skill-links":
+      return SKILL_INTEGRATION_DIRS.some((link) => inside(path.join(root, link), target));
+    case "entry-points":
+      return AGENT_ENTRY_POINT_FILES.some((name) => target === path.join(root, name));
   }
 }
 
@@ -991,7 +1012,7 @@ async function applyOperations(
 }
 
 export function isMigrationStepNumber(value: unknown): value is MigrationStepNumber {
-  return Number.isInteger(value) && typeof value === "number" && value >= 1 && value <= 10;
+  return Number.isInteger(value) && typeof value === "number" && value >= 1 && value <= 12;
 }
 
 async function loadStep(number: MigrationStepNumber): Promise<MigrationStep> {
@@ -1016,11 +1037,15 @@ async function loadStep(number: MigrationStepNumber): Promise<MigrationStep> {
       return (await import("./step09RepointLinks.js")).step09;
     case 10:
       return (await import("./step10UpdateGitignore.js")).step10;
+    case 11:
+      return (await import("./step11InstallEntry.js")).step11;
+    case 12:
+      return (await import("./step12CheckEntry.js")).step12;
   }
 }
 
-async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
-  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
+/** Whether a source of step 1's rename map is still in place, so step 1 has not run. */
+async function hasPendingRename(context: MigrationContext): Promise<boolean> {
   for (const [source] of STEP01_RENAMES) {
     if (
       (await shouldRenameSource(context, source)) &&
@@ -1029,6 +1054,12 @@ async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
       return true;
     }
   }
+  return false;
+}
+
+async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
+  if (await pathExists(path.join(context.root, ID_MAP_PATH))) return true;
+  if (await hasPendingRename(context)) return true;
   const entries = await readdir(context.specsDir).catch((error: unknown) => {
     if (isEnoent(error)) return [] as string[];
     throw error;
@@ -1038,7 +1069,7 @@ async function hasLegacyEntries(context: MigrationContext): Promise<boolean> {
 
 export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Promise<0 | 2 | 3> {
   if (!isMigrationStepNumber(step)) {
-    io.stderr.write("Step must be an integer from 1 to 10.\n");
+    io.stderr.write("Step must be an integer from 1 to 12.\n");
     return 2;
   }
   if (!Array.isArray(argv) || !argv.every((arg) => typeof arg === "string")) {
@@ -1064,7 +1095,12 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     return 2;
   }
   const loaded = await loadConfig(root);
-  if (loaded.issues.length > 0) {
+  // Step 12 reports an invalid workflow mode as one of its checks, and step 11
+  // does not read the mode, so neither refuses for it.
+  const blocking = loaded.issues.filter(
+    (issue) => !((step === 11 || step === 12) && issue.message === WORKFLOW_MODE_MESSAGE),
+  );
+  if (blocking.length > 0) {
     io.stderr.write("Cannot read or parse qfai.config.yaml.\n");
     return 2;
   }
@@ -1074,6 +1110,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     specsDir: resolvePath(root, loaded.config, "specsDir"),
     contractsDir: resolvePath(root, loaded.config, "contractsDir"),
   };
+  if (step === 11 || step === 12) return await runEntryStep(step, context, argv.length === 1, io);
   let selected: MigrationStep;
   let staleStages: MigrationOperation[];
   try {
@@ -1108,16 +1145,9 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
       io.stdout.write(`${renderReport(selected, { operations: [] }, [])}\n`);
       return 0;
     }
-    if (step >= 2) {
-      for (const [source] of STEP01_RENAMES) {
-        if (
-          (await shouldRenameSource(context, source)) &&
-          (await pathExists(path.join(root, source)))
-        ) {
-          io.stderr.write(`Run step 1 before step ${step}.\n`);
-          return 2;
-        }
-      }
+    if (step >= 2 && (await hasPendingRename(context))) {
+      io.stderr.write(`Run step 1 before step ${step}.\n`);
+      return 2;
     }
     if (step >= 3 && step <= 8) {
       const { pendingMergeInput } = await import("./step02MergeTables.js");
@@ -1211,4 +1241,28 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     },
   };
   return await executePlannedStep(withRecovery, context, dryRun, io);
+}
+
+/**
+ * Steps 11 and 12 compare the project with the installed package rather than
+ * with the old layout, so only step 1's output gates them: no ID map, plan or
+ * earlier staging is read.
+ */
+async function runEntryStep(
+  step: 11 | 12,
+  context: MigrationContext,
+  dryRun: boolean,
+  io: MigrationIo,
+): Promise<0 | 2 | 3> {
+  try {
+    if (await hasPendingRename(context)) {
+      io.stderr.write(`Run step 1 before step ${step}.\n`);
+      return 2;
+    }
+  } catch (error) {
+    if (!isInputFailure(error)) throw error;
+    io.stderr.write(`${errorMessage(error)}\n`);
+    return 2;
+  }
+  return await executePlannedStep(await loadStep(step), context, dryRun, io);
 }

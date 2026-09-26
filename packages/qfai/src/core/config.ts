@@ -371,17 +371,16 @@ export async function loadConfig(root: string): Promise<ConfigLoadResult> {
 
   const normalized = normalizeConfig(parsed, configPath, issues);
   if (readWorkflowMode(parsed) === null) {
-    issues.push(
-      configIssue(
-        configPath,
-        "workflow.mode must be active, shadow or off; an absent key means active.",
-      ),
-    );
+    issues.push(configIssue(configPath, WORKFLOW_MODE_MESSAGE));
   }
   return { config: normalized, issues, configPath, document: parsed };
 }
 
 const WORKFLOW_MODES = ["active", "shadow", "off"] as const;
+
+/** The config issue an invalid `workflow.mode` raises. */
+export const WORKFLOW_MODE_MESSAGE =
+  "workflow.mode must be active, shadow or off; an absent key means active.";
 
 export type WorkflowMode = (typeof WORKFLOW_MODES)[number];
 

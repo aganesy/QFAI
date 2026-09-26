@@ -49,7 +49,7 @@ and for the files QFAI writes into a consuming project.
 - Indexed in `.qfai/spec/03_contract/contracts.md`, with `CLI-*`
   short ids.
 - Named `qfai-<command>.md` for one command's surface, and after the skill
-  (`qfai-migration-spec-to-story.md`) for the scripts one skill bundles, since
+  (`qfai-migration-v1-to-v2.md`) for the scripts one skill bundles, since
   those scripts are not a `qfai` command. A subject name instead —
   `shipped-workflows.md` — means the file holds an ownership boundary that
   more than one command shares.

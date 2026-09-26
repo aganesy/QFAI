@@ -145,7 +145,7 @@ const requiredSkills = [
   "qfai-prototyping",
   "qfai-implement",
   "qfai-verify",
-  "qfai-migration-spec-to-story",
+  "qfai-migration-v1-to-v2",
 ];
 const deprecatedSkillIds = [
   "qfai-spec",

@@ -144,7 +144,7 @@ describe("story-tree initialization", () => {
 
       expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
       expect(await isPresent(path.join(root, ".qfai", "assistant", "skill"))).toBe(true);
-      expect(output).toContain("/qfai-migration-spec-to-story");
+      expect(output).toContain("/qfai-migration-v1-to-v2");
       expect(output).toContain(legacyName);
     },
   );
@@ -155,7 +155,7 @@ describe("story-tree initialization", () => {
     const output = await init(root);
 
     expect(await isPresent(path.join(root, ".qfai", "spec"))).toBe(false);
-    expect(output).toContain("/qfai-migration-spec-to-story");
+    expect(output).toContain("/qfai-migration-v1-to-v2");
     expect(output).toContain(path.join(".qfai", "contracts"));
   });
 });

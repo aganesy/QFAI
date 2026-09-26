@@ -627,7 +627,7 @@ describe(
         .toEqual([]);
 
       const migrationScripts = shipped.filter((file) =>
-        file.includes("/qfai-migration-spec-to-story/scripts/"),
+        file.includes("/qfai-migration-v1-to-v2/scripts/"),
       );
       expect(migrationScripts.sort()).toEqual([...ALLOWED_MIGRATION_SCRIPTS.keys()].sort());
 
@@ -768,7 +768,7 @@ describe(
       await walk(source);
 
       const migrationScripts = found.filter((file) =>
-        file.includes("/qfai-migration-spec-to-story/scripts/"),
+        file.includes("/qfai-migration-v1-to-v2/scripts/"),
       );
       expect(migrationScripts.sort()).toEqual([...ALLOWED_MIGRATION_SCRIPTS.keys()].sort());
 

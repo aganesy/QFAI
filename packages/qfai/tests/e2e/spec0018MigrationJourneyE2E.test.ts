@@ -43,7 +43,7 @@ const CONVERTIBLE_CRITERIA = path.join(
 );
 const SKILL_SCRIPTS = path.join(
   PACKAGE_ROOT,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const CLI = path.join(PACKAGE_ROOT, "dist/cli/index.mjs");
 const RESOLUTION = path.join(
@@ -61,6 +61,8 @@ const SCRIPT_NAMES = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const HOST_AGENT_DIRS = [".claude/agents", ".github/agents"];
