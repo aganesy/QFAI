@@ -1,4 +1,4 @@
-import { refusedFailClosed, refusedInput } from "./common.js";
+import { REPLAN_BUDGET, refusedFailClosed, refusedInput } from "./common.js";
 import { escapedPaths } from "./finish.js";
 import { issueNext } from "./issue.js";
 import type {
@@ -160,8 +160,32 @@ function resumeReady(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workflow
 // The core cannot observe a blocker a stage reported, so resume reissues that stage's work
 // order as a new attempt, and the new result decides whether the block still holds.
 // A change outside the run change boundary that no in-force repair admits keeps it blocked.
+// A run blocked on its spent replan budget stays blocked while the routing receipt still does not
+// hold: nothing has changed, so nothing is written.
+function replanBudgetStillSpent(snapshot: WorkflowSnapshot, facts: WorkflowFacts): boolean {
+  const { halt, routingReceiptRef: ref } = snapshot;
+  return (
+    halt?.blocker === "budget-exhausted" &&
+    halt.subjects.includes("replan") &&
+    (snapshot.replans ?? 0) >= REPLAN_BUDGET &&
+    ref !== undefined &&
+    facts.receiptValidity?.[ref] !== "valid"
+  );
+}
+
 function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run } = snapshot;
+  if (replanBudgetStillSpent(snapshot, facts)) {
+    return {
+      verdict: {
+        ok: true,
+        run,
+        workOrder: null,
+        ...(snapshot.halt ? { halt: snapshot.halt } : {}),
+      },
+      events: [],
+    };
+  }
   const observed = observedCause(snapshot, facts);
   if (observed) return refusedFailClosed(run, observed.cause);
   const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);

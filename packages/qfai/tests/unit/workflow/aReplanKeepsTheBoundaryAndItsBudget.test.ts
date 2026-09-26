@@ -180,3 +180,39 @@ it("A proposal citing one file both as a normative path and as observed evidence
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it("resume of a run blocked on its spent replan budget, with the routing receipt still stale and once it holds again", () => {
+  const blocked = () => {
+    const run = replanned(3);
+    const stale = { [run.snapshot.routingReceiptRef ?? ""]: "stale" } as const;
+    run.apply({ operation: "next" }, { flows: [FLOW], obligations, receiptValidity: stale });
+    return run;
+  };
+  const still = blocked();
+  const before = still.snapshot.run.sequence;
+  const stale = { [still.snapshot.routingReceiptRef ?? ""]: "stale" } as const;
+  const resumed = still.apply(
+    { operation: "resume" },
+    { flows: [FLOW], obligations, receiptValidity: stale },
+  );
+  const cleared = blocked();
+  const valid = { [cleared.snapshot.routingReceiptRef ?? ""]: "valid" } as const;
+  const released = cleared.apply(
+    { operation: "resume" },
+    { flows: [FLOW], obligations, receiptValidity: valid },
+  );
+
+  expect({
+    still: [
+      resumed.verdict.run?.state,
+      resumed.events.length,
+      still.snapshot.run.sequence - before,
+    ],
+    halt: resumed.verdict.halt,
+    released: [released.verdict.run?.state, released.verdict.workOrder?.stageKind],
+  }).toEqual({
+    still: ["blocked", 0, 0],
+    halt: { blocker: "budget-exhausted", owner: "operator", subjects: ["replan"] },
+    released: ["running", "sdd_delta"],
+  });
+});
