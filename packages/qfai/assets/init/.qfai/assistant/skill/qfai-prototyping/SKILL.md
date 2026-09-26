@@ -147,11 +147,10 @@ those are what the loop exists to make answerable, and they are open by design
 until the user has something to react to.
 
 **It is a decision record, not a regenerable log.** A run log is reproducible by
-rerunning its stage and is ignored; these answers are not reproducible by
-re-running anything, and
-every later generator and reviewer is required to read them. The managed
-ignore block negates this path so it survives a fresh clone, another worktree
-and a later checkout.
+rerunning its stage; these answers are not reproducible by re-running anything,
+and every later generator and reviewer is required to read them. Keep the file
+in place until the loop is certified. Like everything under `.qfai/evidence/`,
+it stays local and is never committed.
 
 The scope floor is unchanged: which UI contracts the loop covers is decided by
 their declared IDs and screens, and no session narrows it.
@@ -512,6 +511,11 @@ flag is selected. The build owner is separate from this identity rule.
 DONE = `completion-certificate.json` exists AND
 `npx qfai prototyping certify --check` returns 0 AND `/qfai-verify` returns
 PASS.
+
+The loop's outputs and the certificate stay local under
+`.qfai/evidence/prototyping/`. `certify --check` and
+`npx qfai validate --profile prototyping` run on this checkout; CI does not
+run them.
 
 The completion report lists every decision a session adopted, from the
 `## Session` rows of `.qfai/evidence/prototyping/grilling.md`, with why each was

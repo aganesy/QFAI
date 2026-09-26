@@ -67,8 +67,7 @@ with their owner; do not claim repository-wide PASS from one flow's result.
 3. Inspect test roots, `validation.traceability.testFileGlobs` and exclusions.
    Confirm each proposed path is collected by the runner and by validation.
 4. Cover the normal behavior, a boundary and a failure path where the
-   contract makes them meaningful. Record an observable oracle for each
-   assertion in the flow's Coverage Depth Matrix.
+   contract makes them meaningful. Give each assertion an observable oracle.
 
 If credentials are needed in E2E, API or integration work, follow
 `references/credential-reuse.md`. Keep actors and sessions isolated by worker.
@@ -89,22 +88,9 @@ where observable. Capture the command, assertion failure and revision in
 RED proof. For an already implemented surface, use a controlled falsifiability
 check and restore the mutation. See `references/red-provenance.md`.
 
-The Coverage Depth Matrix lives at
-`.qfai/evidence/coverage-depth-BF-NNNN.md`. It records this flow's US, AC and
-EX rows, the BF obligation in its header, and relevant layers, oracles and gaps
-without assigning EX tests to ATDD. See
-`references/test-case-depth-checklist.md` and `references/volume-signals.md`.
-The header links an existing BF E2E test under configured `paths.testsDir/e2e`
-with a Markdown link resolved from the matrix file. That test carries the
-matching `QFAI:BF-NNNN` annotation. Give each
-required ID its own row, and give each partial or missing coverage cell a
-reason; name the owner of each missing cell. In
-`.qfai/evidence/atdd-BF-NNNN.md`, add `## Coverage Depth Matrix` with a
-Markdown link or code span naming the matrix path and a numeric summary in
-the form `✅ N / ⚠️ N / ❌ N`. Count the six coverage cells in the matrix's
-US, AC and EX rows; the summary must equal those cells. Confirm that both
-files are tracked, including when an
-evidence ignore rule would otherwise hide them. Commit both evidence files.
+The evidence file is local and never committed; see
+`rule/drift-protocol.md#evidence-stays-local`. The annotated tests carry the
+coverage. For planning signals, see `references/volume-signals.md`.
 A shared fixture change needs the affected tests
 rerun and their provenance updated; see `references/shared-test-artifacts.md`
 and `references/stale-manifest.md`.
@@ -131,7 +117,7 @@ owning flow; see `references/cross-spec-obligations.md`.
 ### Reviewer Gate
 
 The completion reviewer and qa-gatekeeper independently check the active BF's
-test layers, observable assertions, RED/GREEN evidence, matrix, and handoff.
+test layers, observable assertions, RED/GREEN evidence, and handoff.
 They enforce the Drift Protocol and `rule/test-layers.md`. Test volume and
 planning estimates are signals, not gates. A finding ends in explicit PASS
 or REVISE on the current revision; the test author cannot sign off their own
@@ -143,8 +129,8 @@ The stage may report PASS only when:
 
 1. Every BF and AC obligation in scope has an executed, behavior-checking test
    at its required layer, or a valid DONE decision exception.
-2. The flow's matrix and ATDD evidence are current, committed, and name the
-   test command, selected tests and observed result.
+2. The flow's ATDD evidence is current and names the test command, selected
+   tests and observed result.
 3. Routed reviewers and qa-gatekeeper passed the current work, with no
    blocking finding remaining.
 4. `npx qfai validate --profile atdd --flow BF-NNNN --fail-on error` reports no

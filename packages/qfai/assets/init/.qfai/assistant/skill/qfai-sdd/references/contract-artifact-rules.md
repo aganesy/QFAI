@@ -208,11 +208,10 @@ satisfied by a file that cannot run.
   - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
   ```
 
-  `QFAI-CONTRACT-031` (`warning`) reports a `db/` contract with no such line. It
-  is a **presence check**: it does not execute SQL and makes no claim about
-  correctness. Neither a syntax-level parse nor a structural comparison would
-  have caught the observed defects, so a cheap record of "this was actually
-  driven" is what the omission needs.
+  The evidence is local, so no validator reads the line. The completion
+  reviewer checks it during the work. Neither a syntax-level parse nor a
+  structural comparison would have caught the observed defects, so a cheap
+  record of "this was actually driven" is what the omission needs.
 
   One thing about a `db/` contract _is_ checked without a database.
   `QFAI-CONTRACT-036` reads the DDL: a `REFERENCES` clause names a table, and

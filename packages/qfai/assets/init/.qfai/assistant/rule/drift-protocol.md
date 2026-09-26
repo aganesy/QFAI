@@ -84,9 +84,9 @@ places it in the queue the stage names. Repair the record to match the run; re-a
 review pack, leaving the earlier pack intact. If the run cannot be reconstructed honestly, treat the finding as a
 blocking evidence defect. Completion waits for the queue to drain.
 
-## Which evidence is committed
+## Evidence stays local
 
-Commit durable decision rows, envelope-deviation records under .qfai/evidence/decision/, and the evidence files a stage's completion contract requires on a fresh clone. Run logs and reports that can be reproduced may remain ignored. A gitignore negation makes a path visible to Git; the owner still stages and commits the evidence.
+Write stage evidence, run records and decision records under `.qfai/evidence/`. Git ignores that directory; never commit anything in it. Reviewers read the evidence in the working tree while the work is under review. What has to outlast the work goes into the story tree, the `decisions.md` and `open-questions.md` rows, and the tests.
 
 ## Line endings in the artifacts under review
 

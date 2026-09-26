@@ -55,10 +55,8 @@ specialization_tags:
 - Work Orders for each subagent (scope, inputs, outputs, gates)
 - Stage Gates plan + current status
 - Completion report (DoD checklist + evidence links)
-- Evidence summary for `.qfai/evidence/`. Commit the current BF stage evidence,
-  Coverage Depth Matrix and durable decision records; leave reproducible run logs
-  under their configured retention policy. See
-  `rule/drift-protocol.md#which-evidence-is-committed`.
+- Evidence summary for `.qfai/evidence/`. The evidence stays local and is never
+  committed; see `rule/drift-protocol.md#evidence-stays-local`.
 
 ## Stop conditions
 
@@ -71,7 +69,7 @@ specialization_tags:
 ## Sign-off
 
 - [ ] Deliverables are complete
-- [ ] Required evidence is present and committed when the stage contract requires it
+- [ ] Required evidence is present in the working tree for the reviewers
 - [ ] Stage gates are PASS
 - [ ] Reviewer sign-off recorded
 

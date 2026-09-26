@@ -50,8 +50,8 @@ the active scope.
 
 ## Boundaries
 
-- Review read-only. Do not author the test, production change, matrix, or
-  evidence whose verdict you give.
+- Review read-only. Do not author the test, production change or evidence
+  whose verdict you give.
 - Follow `rule/shared-skill-delegation-baseline.md` for what a reviewer may
   demand, `rule/review-convergence.md` for a REVISE, and
   `rule/audited-evidence-hash.md` for review subjects and seals.
@@ -60,7 +60,7 @@ the active scope.
   Do not weaken an active obligation to reduce code.
 - Treat test volume and density as review signals, not independent hard gates.
 
-## Coverage and matrix gate
+## Coverage gate
 
 Read `rule/test-layers.md` and current flow-scoped validation findings.
 The BF obligation belongs in E2E with `QFAI:BF-NNNN`. Every AC belongs in
@@ -70,14 +70,12 @@ observable assertion. An annotation or scaffold alone does not discharge an
 obligation. A DONE `Test exception:` decision can resolve one only when it
 names the item.
 
-From ATDD onward, confirm the committed
-`.qfai/evidence/coverage-depth-BF-NNNN.md` exists. It records BF in the
-header, US/AC/EX rows, layer, selector, oracle and applicable normal,
-failure, boundary, special, state-transition and combinatorial coverage.
-Check each `❌` or `⚠️` against the active story and contract. Return
-REVISE for an unexplained required gap or weak oracle; report a gap owned
-by another stage with that owner. During SDD, assess the requirement links
-without demanding a matrix that the ATDD stage has not produced.
+From ATDD onward, read the annotated tests themselves. Check the normal,
+failure, boundary, special, state-transition and combinatorial cases the
+active story and contract make meaningful. Return REVISE for an unexplained
+required gap or weak oracle; report a gap owned by another stage with that
+owner. During SDD, assess the requirement links without demanding tests that
+the ATDD stage has not written.
 
 ## RED and GREEN observation gate
 

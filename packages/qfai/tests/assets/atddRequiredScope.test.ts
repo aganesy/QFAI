@@ -41,17 +41,6 @@ describe.each(trees)("%s ATDD obligations", (tree) => {
     expect(skill).toContain("Never invent a waiver");
   });
 
-  it("retains every story row and untested example in the coverage matrix", async () => {
-    const checklist = await read(
-      tree,
-      "assistant/skill/qfai-atdd/references/test-case-depth-checklist.md",
-    );
-    expect(flat(checklist)).toContain("one row per US, AC and EX");
-    expect(checklist).toContain("A BF-level E2E obligation");
-    expect(checklist).toContain("EX rows remain in this flow's matrix");
-    expect(flat(checklist)).toContain("does not become `✅` when a file or skeleton appears");
-  });
-
   it("requires observed tests and flow-scoped validation before PASS", async () => {
     const skill = await read(tree, "assistant/skill/qfai-atdd/SKILL.md");
     expect(skill).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");

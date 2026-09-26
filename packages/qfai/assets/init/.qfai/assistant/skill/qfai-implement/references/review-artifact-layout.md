@@ -9,4 +9,4 @@ corrected implementation starts another round with a new directory and current e
 the same final revision. The qa-gatekeeper observations for RED and GREEN remain in the example evidence; the review
 pack records the completion, implementation, and applicable product-surface verdicts.
 
-The pack must be well formed before a PASS is claimed. A review directory absent on a fresh clone is evaluated through its committed verdict, revision, audited hash, path, and seal. A present malformed pack fails validation. Use the full verify profile to check review packs in addition to the flow checkpoint.
+The pack must be well formed before a PASS is claimed. A malformed pack fails validation. Use the full verify profile to check review packs in addition to the flow checkpoint.
