@@ -1,7 +1,7 @@
 # Workflow Files Contract
 
-- Contract scope: the files `npx qfai workflow` writes and reads, the tracked
-  evidence of a run, the plans the package ships, and the JSON Schemas the
+- Contract scope: the files `npx qfai workflow` writes and reads, the local
+  records of a run, the plans the package ships, and the JSON Schemas the
   package ships for the workflow payloads
 - Owning flow: `BF-0001`
 - Used-by: `npx qfai workflow`, `qfai init` (the ignore lines of the run trees),
@@ -50,7 +50,7 @@ exist.
   identities with trust level `cli_observed`. It carries no request text,
   free-text answer, secret or raw validator output. After a completed `finish`,
   recovery may rebuild `snapshot.json` from the journal but never rewrites the
-  tracked summary or authorization files.
+  run's summary or authorization records.
 - `snapshot.json` records the sequence it reflects. A snapshot behind the
   journal is rebuilt, and deleting it loses nothing.
 - `request.private.json` holds the one copy of the request text and of each
@@ -60,17 +60,18 @@ exist.
 - Nothing under `.qfai/run/` is tracked. Conversation text and secrets stay
   here.
 
-## Tracked tree
+## Run records
 
 ```text
-.qfai/evidence/workflow/<runId>/         tracked
+.qfai/evidence/workflow/<runId>/         git-ignored, with the rest of .qfai/evidence/
   summary.json
   authorizations/<authorizationId>.json
 ```
 
-`qfai init` keeps this directory tracked with a negation under the ignored
-`.qfai/evidence/*`, so a `decisions.md` row that cites an authorization resolves
-from a fresh clone.
+These records stay on the machine that ran the run. Nothing under
+`.qfai/evidence/` is tracked, so no completion target asks for them to be
+committed. A `decisions.md` row that an authorization approves states what was
+approved itself ([Authorization record](#authorization-record)).
 
 `summary.json`:
 
@@ -80,7 +81,7 @@ from a fresh clone.
 | `qfaiVersion`      | The package version that wrote the run. The only version the file carries                                                                                 |
 | `route`            | The checked route                                                                                                                                         |
 | `completionTarget` | `qfai_done` or `working_tree`                                                                                                                             |
-| `state`            | The state when this tracked summary was last written; the runtime journal holds the current state                                                         |
+| `state`            | The state when this summary was last written; the runtime journal holds the current state                                                                 |
 | `targetBindings`   | `{ slotId, flowId, storyIds }` per bound `new_story` slot. IDs only, no story text                                                                        |
 | `stages`           | `{ stageInstanceId, stageKind, outcome, testObservation, receiptDigests, reviewerRoles }` per stage instance                                              |
 | `authorizationIds` | The authorizations under `authorizations/`                                                                                                                |
@@ -89,16 +90,14 @@ from a fresh clone.
 | `createdAt`        | When the run was created                                                                                                                                  |
 | `updatedAt`        | When the file was last written                                                                                                                            |
 
-- **First write.** Tracked evidence is first written at the run's first
-  `proceed` authorization or its first accepted stage result, as
+- **First write.** Run records are first written at the run's first `proceed`
+  authorization or its first accepted stage result, as
   `qfai-workflow.md#decline-audit` states. From then on `summary.json` is
   rewritten at every write operation that changes the run, except `finish`. An
   authorization file is written when recorded. Both use a temporary file and a
-  rename. Before `qfai_done`, all tracked run changes and workflow evidence are
-  committed. `finish` records `completed` only in the runtime journal and
-  snapshot, so a committed summary may still say `ready`. `status` reads the
-  journal for the current state. A `working_tree` completion uses the same
-  runtime-only event without requiring a commit.
+  rename. `finish` records `completed` only in the runtime journal and
+  snapshot, so the summary may still say `ready`. `status` reads the journal for
+  the current state. Both completion targets use that runtime-only event.
 - **Keyed digest.** The request and every free-text answer appear only as
   HMAC-SHA-256 under the run's key. A bare hash of a short request could be
   confirmed by guessing it. The key stays in `request.private.json`, so the
@@ -106,8 +105,8 @@ from a fresh clone.
 - **Flow binding.** A flow bound from the proposal's `affectedFlowIds` has no
   slot, so it adds no `targetBindings` entry. The journal's `binding-recorded`
   event and the execution context's flow binding hold it.
-- **No private input.** The tracked tree holds no conversation text, no secret
-  or token, and no absolute local path. The one prose it carries is a question
+- **No private input.** The run records hold no conversation text, no secret
+  or token, and no absolute local path. The one prose they carry is a question
   and its options, as the question put them.
 
 ## Authorization record
@@ -138,11 +137,17 @@ from a fresh clone.
 - The slot's binding to the created IDs is a journal event and a
   `targetBindings` entry in `summary.json`. The record itself is never rewritten.
 - A `decisions.md` row cites a record as `<runId>/<authorizationId>`, which
-  resolves to
-  `.qfai/evidence/workflow/<runId>/authorizations/<authorizationId>.json`, and
-  repeats its `answeredBy` in the row's Approach. No column is added to the
-  table. The core checks the citation when it accepts the stage that appended
-  the row (`qfai-workflow.md#story-tree-records`).
+  names `.qfai/evidence/workflow/<runId>/authorizations/<authorizationId>.json`
+  on the machine that ran the run. The row's Approach also states, exactly as
+  the record holds them:
+  - who answered, the record's `answeredBy`;
+  - when, the record's `recordedAt`;
+  - what was approved, the label of each option `answer.optionIds` names, as
+    `question.options` holds it.
+- The row therefore reads the same where the record is absent. No column is
+  added to the table. The core checks the row against the record when it
+  accepts the stage that appended the row
+  (`qfai-workflow.md#story-tree-records`).
 
 ## Plan files
 
@@ -343,7 +348,7 @@ Rule refs: BR-0671, BR-0672, BR-0673
 | BR-0619 | The `direct` plan is a maintenance stage by `qfai-maintain`, then a full verify.                                                                                                                                                                                                                                                               | EX-0001-0198-01                                                                     |
 | BR-0631 | The plans load from the package's `assets/defaults/workflows/` and are never installed into a project. A plan with an unknown stage, a cycle or no path to verify is refused on load as trigger (b), and a copy under the project's `.qfai/assistant/` is never read.                                                                          | EX-0001-0199-09, EX-0001-0199-10, EX-0001-0199-11, EX-0001-0203-01                  |
 | BR-0649 | Shipped schemas, plans and skills carry no private version marker and no internal identifier, and the only version they name is `qfaiVersion`.                                                                                                                                                                                                 | EX-0001-0201-15                                                                     |
-| BR-0652 | Tracked evidence under `.qfai/evidence/workflow/` holds no conversation text, secret, token or absolute path, and request text and free-text answers appear there only as keyed digests.                                                                                                                                                       | EX-0001-0201-18, EX-0001-0195-11, EX-0001-0201-39                                   |
+| BR-0652 | The run records under `.qfai/evidence/workflow/` hold no conversation text, secret, token or absolute path, and request text and free-text answers appear there only as keyed digests.                                                                                                                                                         | EX-0001-0201-18, EX-0001-0195-11, EX-0001-0201-39                                   |
 | BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                                                                                          | EX-0001-0201-19                                                                     |
 | BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                                                                                                        | EX-0001-0201-20                                                                     |
 | BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it.                                          | EX-0001-0193-13, EX-0001-0193-01, EX-0001-0193-03, EX-0001-0193-11, EX-0001-0194-06 |

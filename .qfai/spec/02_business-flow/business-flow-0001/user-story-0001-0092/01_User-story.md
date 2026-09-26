@@ -20,5 +20,5 @@ As a discussion author writing HTML mocks in `03_Story-Workshop.md`, I want the 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0011`
+- Spec scope: the Scope section of retired spec-0010
+- Story block: `us-0010-0011` of retired spec-0010

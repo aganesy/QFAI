@@ -54,5 +54,5 @@ As a brand-SSOT maintainer, I want DESIGN.md to declare a front-matter `patch_zo
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/02_User-stories.md#us-0012-0139`
+- Spec scope: the Scope section of retired spec-0012
+- Story block: `us-0012-0139` of retired spec-0012

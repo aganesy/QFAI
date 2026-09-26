@@ -24,5 +24,5 @@ As a QFAI user, I want the configure skill to analyze my repository's test frame
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0009/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0009/02_User-stories.md#us-0009-0001`
+- Spec scope: the Scope section of retired spec-0009
+- Story block: `us-0009-0001` of retired spec-0009

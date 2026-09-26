@@ -24,5 +24,5 @@ As a QFAI user, I want the chosen test tools per layer documented with rationale
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0009/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0009/02_User-stories.md#us-0009-0005`
+- Spec scope: the Scope section of retired spec-0009
+- Story block: `us-0009-0005` of retired spec-0009

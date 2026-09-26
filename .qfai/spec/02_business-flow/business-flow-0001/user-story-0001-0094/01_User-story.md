@@ -31,5 +31,5 @@ As a developer, I want `/qfai-implement` to execute the full TDD micro-cycle (Re
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0011/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0011/02_User-stories.md#us-0011-0001`
+- Spec scope: the Scope section of retired spec-0011
+- Story block: `us-0011-0001` of retired spec-0011

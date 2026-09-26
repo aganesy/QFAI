@@ -2,7 +2,8 @@
 
 - Contract scope: public CLI surface backing the `/qfai-prototyping` skill
 - Owning flow: `BF-0001`
-- Used-by: `/qfai-prototyping` and the prototyping validation lane
+- Used-by: `/qfai-prototyping` and a local `qfai validate --profile prototyping`
+  run
 - SSOT modules:
   - `packages/qfai/src/cli/commands/prototypingIterate.ts`
   - `packages/qfai/src/cli/commands/prototypingCertify.ts`
@@ -10,6 +11,15 @@
   - `packages/qfai/src/core/prototyping/specResolution.ts` (`resolveAllUiBearingSpecs()`)
   - `packages/qfai/src/core/prototyping/specsCovered.ts` (`readUiContractsCovered()`)
   - `packages/qfai/src/core/prototyping/licenseVerify.ts` (license-class gate)
+
+## Where the outputs live
+
+Every output of these sub-commands is written under `.qfai/evidence/prototyping/`,
+a local work area the managed `.gitignore` block ignores. `qfai prototyping
+certify`, `qfai validate --profile prototyping` and `qfai report` read the
+outputs of the checkout that wrote them, and no CI lane runs the prototyping
+profile. Where no `prototyping.json` exists, the design-contract readiness check
+and the Reviewer Gate treat prototyping as not run in that checkout.
 
 ## Public sub-commands
 

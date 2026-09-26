@@ -15,7 +15,7 @@ Scenario: Validate Gate error=0
 # AC-0001-0155-02
 # Parent: US-0001-0155
 Scenario: Validate Pipeline Validator Registration Integrity
-  Given the current story-tree structure, contract-reference, test-obligation, coverage-depth and drift validators
+  Given the current story-tree structure, contract-reference, test-obligation and drift validators
   When the validate pipeline (`packages/qfai/src/core/validate.ts`) is loaded
   Then each validator's public export and direct pipeline registration hold as one complete outcome, including invocation in its owning profile.
 

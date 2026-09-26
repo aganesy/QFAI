@@ -38,5 +38,5 @@ As a QA engineer on the story tree, I want `qfai validate` to report each busine
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0045`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0045` of retired spec-0004

@@ -38,5 +38,5 @@ As a maintainer of a project still on the spec-pack layout, I want `qfai validat
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0046`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0046` of retired spec-0004

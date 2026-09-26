@@ -38,5 +38,5 @@ As a Reviewer-Gate consumer, I want `qfai validate` to require non-empty `justif
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0030`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0030` of retired spec-0004

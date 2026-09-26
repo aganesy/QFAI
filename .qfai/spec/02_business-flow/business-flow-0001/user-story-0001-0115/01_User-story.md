@@ -54,5 +54,5 @@ As an AI generator, I want `qfai prototyping iterate --cycle <n>` (n ≥ 1) to f
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/02_User-stories.md#us-0012-0106`
+- Spec scope: the Scope section of retired spec-0012
+- Story block: `us-0012-0106` of retired spec-0012
