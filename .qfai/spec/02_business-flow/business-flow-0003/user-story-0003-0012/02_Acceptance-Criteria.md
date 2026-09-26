@@ -18,4 +18,11 @@ Scenario: --fail-on warning で warning は fail
   Given doctor チェックで warning が検出される
   When `qfai doctor --fail-on warning` を実行する
   Then 終了コード 1 で終了する
+
+# AC-0003-0012-03
+# Parent: US-0003-0012
+Scenario: An error alone fails --fail-on warning
+  Given doctor detects an error and no warning
+  When `qfai doctor --fail-on warning` runs
+  Then the exit code is 1
 ```

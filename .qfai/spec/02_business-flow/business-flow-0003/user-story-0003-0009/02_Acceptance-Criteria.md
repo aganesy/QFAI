@@ -21,4 +21,12 @@ Scenario: CI では autoremediate off、--dry-run は副作用なし (error/boun
   When `qfai doctor --autoremediate` を実行する
   Then autoremediate は実行されず "autoremediate disabled in CI" line が出力される (既定 off)
   And 別途 `qfai doctor --autoremediate --dry-run` は予定された修復を preview するが、npm install / archive / config write のいずれの副作用も発生させない
+
+# AC-0003-0009-03
+# Parent: US-0003-0009
+Scenario: --autoremediate without a skill profile skips the install phase
+  Given no `--profile <skill>` is passed, outside CI
+  When `qfai doctor --autoremediate --yes` runs
+  Then no `npm install` runs
+  And the output says the install phase is skipped
 ```

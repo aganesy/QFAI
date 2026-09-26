@@ -20,4 +20,12 @@ Scenario: 設定ファイル不在チェック
   When `qfai doctor` を実行する
   Then config.found = false として報告される
   And 警告メッセージが表示される
+
+# AC-0003-0001-03
+# Parent: US-0003-0001
+Scenario: Invalid configuration
+  Given `qfai.config.yaml` is present but its loader reports issues
+  When `qfai doctor` runs
+  Then the `config.load` check is `error`
+  And `details.issues` lists the issues
 ```
