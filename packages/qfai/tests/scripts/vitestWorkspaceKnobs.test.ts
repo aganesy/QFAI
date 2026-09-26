@@ -259,6 +259,30 @@ describe("TC-0017-0060 (TDD-0060): every runner project declares the full knob s
       .soft(inert, "an axis that bounds the whole run is declared once, at the root")
       .toEqual([]);
   });
+
+  // QFAI:EX-0002-0019-01
+  it("declares the worker ceiling, the worker floor and file parallelism in the root knobs only", async () => {
+    const knobs: unknown = await import("../../vitest.knobs");
+    const rootKnobs = isRecord(knobs) ? knobs["rootKnobs"] : undefined;
+    const projectKnobs = isRecord(knobs) ? knobs["projectKnobs"] : undefined;
+    if (!isRecord(rootKnobs) || !isRecord(projectKnobs)) {
+      throw new Error("vitest.knobs.ts must export rootKnobs and projectKnobs");
+    }
+
+    expect([...ROOT_ONLY].sort()).toEqual(["fileParallelism", "maxWorkers", "minWorkers"]);
+    expect(Object.keys(rootKnobs).sort()).toEqual([...ROOT_ONLY].sort());
+    expect(rootKnobs["maxWorkers"]).toBeTypeOf("number");
+    expect(rootKnobs["minWorkers"]).toBeTypeOf("number");
+    expect(rootKnobs["fileParallelism"]).toBeTypeOf("boolean");
+    expect(ROOT_ONLY.filter((key) => key in projectKnobs)).toEqual([]);
+
+    const { projects } = await load();
+    expect(
+      projects.flatMap((project) =>
+        ROOT_ONLY.filter((key) => key in project).map((key) => `${nameOf(project)}: ${key}`),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("TC-0017-0061 (TDD-0061): the declared starting value is ten on both axes", () => {

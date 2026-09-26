@@ -9,7 +9,6 @@
  * `.agents/rules/root-additions-policy.md` and proposes the correct
  * allowed-root path (`.qfai/review/2026-05-27/`).
  */
-// QFAI:EX-0002-0011-01
 
 import { execFile } from "node:child_process";
 import path from "node:path";
@@ -45,6 +44,7 @@ async function runCheckScript(
 }
 
 describe("TC-0004-0071: misplaced review-pack at repo root triggers R-PACK-LOCATION-DRIFT", () => {
+  // QFAI:EX-0002-0011-01
   it("PR diff adding review-2026-05-27/ at root FAILS with R-PACK-LOCATION-DRIFT naming the correct allowed-root path", async () => {
     // Simulate a PR that introduces a misplaced pack at repo root —
     // `review-2026-05-27/PLAN.md` is outside `.qfai/review/`, the
@@ -60,6 +60,31 @@ describe("TC-0004-0071: misplaced review-pack at repo root triggers R-PACK-LOCAT
     // Names the misplaced directory:
     expect(combined).toMatch(/review-2026-05-27/);
     // Proposes the correct allowed-root path:
+    expect(combined).toMatch(/\.qfai\/review\/review-2026-05-27\//);
+  });
+
+  // QFAI:EX-0002-0011-01
+  it("PR diff adding discussion-2026-05-27/ at root FAILS with R-PACK-LOCATION-DRIFT naming the correct allowed-root path", async () => {
+    const changed = ["discussion-2026-05-27/PLAN.md"].join(",");
+    const result = await runCheckScript(["--changed", changed]);
+
+    expect(result.code).not.toBe(0);
+    const combined = result.stdout + result.stderr;
+    expect(combined).toMatch(/R-PACK-LOCATION-DRIFT/);
+    expect(combined).toMatch(/\.agents\/rules\/root-additions-policy\.md/);
+    expect(combined).toMatch(/discussion-2026-05-27/);
+    expect(combined).toMatch(/\.qfai\/discussion\/discussion-2026-05-27\//);
+  });
+
+  // QFAI:EX-0002-0011-01
+  it("PR diff adding review-2026-05-27/ under .qfai/discussion/ FAILS and proposes the review root", async () => {
+    const changed = [".qfai/discussion/review-2026-05-27/PLAN.md"].join(",");
+    const result = await runCheckScript(["--changed", changed]);
+
+    expect(result.code).not.toBe(0);
+    const combined = result.stdout + result.stderr;
+    expect(combined).toMatch(/R-PACK-LOCATION-DRIFT/);
+    expect(combined).toMatch(/\.agents\/rules\/root-additions-policy\.md/);
     expect(combined).toMatch(/\.qfai\/review\/review-2026-05-27\//);
   });
 });

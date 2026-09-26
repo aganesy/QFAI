@@ -200,6 +200,7 @@ describe("TC-0006-0027 (TDD-0029): edited installed shipped workflow yields a wo
   // next edit to them and which no gate can notice. Reached unconditionally
   // here instead.
   it("treats a recorded name absent from the packaged tree as `extra`, never as drift", async () => {
+    // QFAI:EX-0003-0011-13
     const dir = await pool.seedAdopterTree();
     const installed = await readFile(adopterWorkflowPath(dir, "qfai-tests.yml"), "utf-8");
 

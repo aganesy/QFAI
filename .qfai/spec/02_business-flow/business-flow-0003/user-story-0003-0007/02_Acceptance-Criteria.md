@@ -12,6 +12,7 @@ Scenario: skills.integrity defaults to warning
   When `qfai doctor` を実行する
   Then finding severity は `warning` (既定値)
   And `--fail-on error` でも exit 0 が維持される (skills.integrity 単独では active profile を block しない)
+  And with `--fail-on warning`, `skills.integrity` drift alone ends with exit 1
 
 # AC-0003-0007-02
 # Parent: US-0003-0007

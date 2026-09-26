@@ -320,6 +320,42 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
     ).toEqual([]);
   });
 
+  // QFAI:EX-0002-0003-03
+  it("an adopter declaring only test:unit runs the unit lane and keeps every other layer lane skipped under the full lane set", async () => {
+    const { doc } = await initScriptlessTree();
+    const probe = scriptsProbeBody(doc);
+    const selection = selectionStepBody(doc);
+    if (typeof probe !== "string" || typeof selection !== "string") {
+      throw new Error("the init-written orchestrator lacks the script probe or the selection step");
+    }
+
+    const adopterDir = await newTempDir();
+    await writeFile(path.join(adopterDir, "package.json"), ONE_LAYER_SCRIPT_MANIFEST, "utf-8");
+    const probeRun = await runShell(probe, adopterDir);
+    expect(probeRun.status).toBe(0);
+
+    const selectRun = await runShell(selection, adopterDir, {
+      QFAI_SCRIPTS: probeRun.outputs["scripts"] ?? "",
+      QFAI_LANES: FULL_LANES_JSON,
+    });
+    expect(selectRun.status).toBe(0);
+    const selectedJson = selectRun.outputs["selected"] ?? "null";
+    const selected: unknown = JSON.parse(selectedJson);
+    expect(selected).toEqual(["unit"]);
+
+    const condition = findWorkflowJob(doc, "tests")?.["if"];
+    expect(laneExecutes(condition, { selected: selectedJson }), "the unit lane must run").toBe(
+      true,
+    );
+    const skipped = LANE_LAYERS.filter((layer) => layer !== "unit");
+    for (const layer of skipped) {
+      expect(
+        Array.isArray(selected) && selected.includes(layer),
+        `the ${layer} lane must stay skipped`,
+      ).toBe(false);
+    }
+  });
+
   it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
     const { doc } = await initScriptlessTree();
     const violations: string[] = [];

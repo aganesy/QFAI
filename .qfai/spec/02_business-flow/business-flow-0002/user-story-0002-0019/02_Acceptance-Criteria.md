@@ -10,7 +10,7 @@ Feature: Runner parallelism derived from QFAI's own workload
 Scenario: Parallelism becomes explicit per project
   Given every project in the runner workspace declares only a name, an include pattern and a shared timeout today
   When the workspace is updated
-  Then every project declares pool and pool options, a worker setting, a concurrency setting, a file-parallelism setting and a hook timeout
+  Then every project declares its pool, an isolation setting, a within-file concurrency setting and a hook timeout, and the root configuration declares the worker and file-parallelism settings
   And the declared starting value on the worker axis is ten
   And the declared starting value on the within-file concurrency axis is ten
   And each declared value is overridable rather than fixed
@@ -35,7 +35,7 @@ Scenario: The declared starting value is a hypothesis, and the measurement decid
   Given the source repository's numbers are justified as network-bound while this suite is filesystem- and subprocess-bound
   When a timing artifact under the evidence tree compares at least two worker settings on the largest project
   Then the adopted setting is the fastest measured, or within ten percent of it with a written reason
-  And when the higher value measures slower or flakier, the lower value is kept and the measurement is recorded as the reason
+  And when the higher value measures slower or flakier, the contended structure is investigated first: a removable cause is repaired and the higher value kept, and only where no such cause is found is the lower value kept with the measurement recorded as the reason
   And revising the user's stated starting value requires the user's sign-off
   And the timings are quoted in the pull-request description as well as written to the evidence tree
 

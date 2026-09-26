@@ -22,4 +22,11 @@ Scenario: --clean は削除せず、validate review は _archive を除外する
   Then archival 操作で pack が delete されることは一度もない (move のみ)
   And `qfai validate --profile review` の scan 対象は top-level `.qfai/review/<ts>/` のみで `_archive/` 配下は out-of-scope
   And in-scope pack の `QFAI-REVIEW-003/004/005` 挙動は不変
+
+# AC-0003-0008-03
+# Parent: US-0003-0008
+Scenario: A tracked pack is not archived into an ignored directory
+  Given a git repository whose `.gitignore` ignores `.qfai/review/_archive/`, and a committed review pack older than the TTL
+  When `qfai doctor --clean` runs
+  Then the pack stays in `.qfai/review/` and is not moved to `_archive/`
 ```

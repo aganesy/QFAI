@@ -25,6 +25,7 @@ describe("isReviewPackArchiveEligible — review.staleTtlDays boundary semantics
   });
 
   it("exactly TTL-old is not yet eligible (strict greater-than boundary)", () => {
+    // QFAI:EX-0003-0008-04
     const now = Date.UTC(2026, 4, 28);
     const mtime = now - 14 * DAY_MS;
     expect(isReviewPackArchiveEligible(mtime, 14, now)).toBe(false);
