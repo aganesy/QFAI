@@ -21,7 +21,7 @@ const BUSY_OR_REFUSED = ["EBUSY", "EPERM", "EACCES"];
 export function ioRefusalOf(error: unknown): IoRefusal | undefined {
   const cause = systemCode(error);
   if (!cause || !BUSY_OR_REFUSED.includes(cause)) return undefined;
-  const message = "A run file could not be written. Close whatever holds it and try again.";
+  const message = "A run file could not be read or written. Close whatever holds it and try again.";
   return { code: "io-error", message, cause };
 }
 

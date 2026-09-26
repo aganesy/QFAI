@@ -684,7 +684,9 @@ and take no further event.
   saturated delegation per work order, at 30, 60 and 120 seconds. Reaching one
   moves the run to `blocked` with blocker `budget-exhausted` and never counts as
   a pass. A replan `next` or `resume` needs on a run in `ready` once the replan
-  budget is spent takes the `budget-exhausted` edge to `blocked`.
+  budget is spent takes the `budget-exhausted` edge to `blocked`. `resume` of
+  that run reports a fail-closed cause first; otherwise it writes nothing while
+  the routing receipt stays stale, and releases the run once the receipt holds.
 
 A blocked run names exactly one cause from [Fail-closed](#fail-closed) or one
 blocker — `stage-blocked`, `delegation-unavailable`, `budget-exhausted` or
@@ -808,8 +810,8 @@ Every write operation takes these steps, in this order:
   naming the owner's run, operation and start time.
 - The lock lives for one write operation. One writing run per worktree follows
   from the `run-active` check at `start`, not from a lock held between calls.
-- `EBUSY`, `EPERM` and `EACCES` while writing are refused `io-error`, naming the
-  system error, with no retry loop. Every write operation is idempotent and
+- `EBUSY`, `EPERM` and `EACCES` while reading or writing a run file are refused
+  `io-error`, naming the system error, with no retry loop. Every write operation is idempotent and
   compare-and-set, so the harness re-invoking it is the retry.
 - A run whose `qfaiVersion` is newer than the running package is refused
   `newer-record` by every operation. A record the core cannot parse is reported
@@ -977,7 +979,7 @@ out of the emitted rule codes.
 | `sequence-gap`      | The journal skips a sequence number                                                                        |
 | `hash-mismatch`     | An event's `prevHash` does not match                                                                       |
 | `proposal-refused`  | A route proposal fails a check; `reasons[]` names each one                                                 |
-| `io-error`          | `EBUSY`, `EPERM` or `EACCES` while writing, named in `cause`                                               |
+| `io-error`          | `EBUSY`, `EPERM` or `EACCES` while reading or writing a run file, named in `cause`                         |
 
 ## Exit codes
 
