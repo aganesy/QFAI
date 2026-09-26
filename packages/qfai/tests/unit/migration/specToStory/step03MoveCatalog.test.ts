@@ -219,6 +219,31 @@ describe("migration catalog move", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("writes nothing and lists both overlays when constitution and catalog share one name", async () => {
+    // QFAI:EX-0004-0006-08
+    const context = await fixture();
+    await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
+    await put(context.root, ".qfai/assistant/constitution/house.local.md", "constitution\n");
+    await put(context.root, ".qfai/assistant/catalog/house.local.md", "catalog\n");
+    await put(context.root, ".qfai/spec/_policies/01_Objective.md", "# Objective\n\nShip.\n");
+    const tree = async (): Promise<Map<string, string>> => {
+      const files = new Map<string, string>();
+      for (const entry of await readdir(context.root, { recursive: true, withFileTypes: true })) {
+        if (!entry.isFile()) continue;
+        const file = path.join(entry.parentPath, entry.name);
+        files.set(path.relative(context.root, file), await readFile(file, "utf8"));
+      }
+      return files;
+    };
+    const before = await tree();
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const person = result.output.slice(result.output.indexOf("## For a person"));
+    expect(person).toContain(".qfai/assistant/constitution/house.local.md");
+    expect(person).toContain(".qfai/assistant/catalog/house.local.md");
+    expect(await tree()).toEqual(before);
+  });
+
   it("archives unconsumed files from all four retired assistant directories", async () => {
     // QFAI:EX-0004-0003-24
     const context = await fixture();

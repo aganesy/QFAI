@@ -1011,6 +1011,46 @@ describe("BF-0004 acceptance criteria", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("refuses a plan that places a story or rule of a superseded pack", async () => {
+    // QFAI:EX-0004-0003-29
+    const root = await project();
+    await cp(
+      path.join(fixtureRoot, ".qfai/specs/spec-0002"),
+      path.join(root, ".qfai/specs/spec-0002"),
+      { recursive: true },
+    );
+    prepareThrough(root, 3);
+    const planPath = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
+    const valid = await readFile(planPath, "utf8");
+    for (const [name, content, offender] of [
+      [
+        "retired story",
+        valid.replace(
+          "      - id: US-0001-0001\n",
+          "      - id: US-0001-0001\n      - id: US-0002-0001\n",
+        ),
+        "US-0002-0001",
+      ],
+      [
+        "retired rule",
+        `${valid}  - id: BR-0002-0001\n    contract: api/order.yaml\n`,
+        "BR-0002-0001",
+      ],
+    ] as const) {
+      expect(content, name).not.toBe(valid);
+      await writeFile(planPath, content);
+      const before = await fingerprint(root);
+      const result = step(root, 4);
+      expect(result.status, name).toBe(2);
+      expect(result.stderr, name).toContain("plan.yaml");
+      expect(result.stderr, name).toContain(offender);
+      expect(await fingerprint(root), name).toBe(before);
+      expect(
+        await exists(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json")),
+      ).toBe(false);
+    }
+  });
+
   it("records a deprecated pack with no successor as a completed decision without a flow", async () => {
     // QFAI:EX-0004-0005-10
     const root = await project();

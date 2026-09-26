@@ -23,10 +23,9 @@
 
 - Decision rows: DEC-0810, DEC-0811, DEC-0812, DEC-0813, DEC-0814, DEC-0815, DEC-0816, DEC-0817, DEC-0818, DEC-0819, DEC-0820, DEC-0821, DEC-0845 (adopted);
   DEC-0822, DEC-0823, DEC-0824, DEC-0825, DEC-0826, DEC-0827, DEC-0828, DEC-0829, DEC-0830, DEC-0831, DEC-0832, DEC-0833, DEC-0834, DEC-0835, DEC-0836, DEC-0837, DEC-0838, DEC-0839, DEC-0840, DEC-0841, DEC-0842, DEC-0843, DEC-0844, DEC-0846 (rejected); DEC-0847
-  (`Change request:`).
-- Open-question rows: OQ-0196, OQ-0197, OQ-0198, OQ-0199. They stay at TODO for the user
-  and do not open with `Unadjudicated:`, because that marker raises
-  `QFAI-SPACK-102` as an error in every gated profile of this repository.
+  (`Change request:`); DEC-0848 to DEC-0851 (the user's answers of
+  2026-09-26 to the four open questions).
+- Open-question rows: OQ-0196, OQ-0197, OQ-0198, OQ-0199, all DONE.
 
 ## Pre-draft Grilling
 
@@ -116,27 +115,27 @@ Cycle 2 held one author round, on F2-02 and on the route for F2-03 and F2-07.
 | 1 | F1-B2-11: a story annotation in an E2E file whose story the plan did not place | a case the rule implies that no example states | BR-0504, BR-0506, BR-0490, AC-0004-0010-02 | rejected (DEC-0842) | griller-rr-1 | EX-0004-0010-04 states the partition of an ID the map does not hold; BR-0506 does not split by ID kind. |
 | 1 | F1-B2-13: a test-case annotation in a file `validation.traceability.testFileGlobs` does not select | a case the rule implies that no example states | BR-0503, BR-0506, US-0004-0010 | rejected (DEC-0843) | griller-rr-1 | BR-0503 bounds step 8 to selected files; reporting other files would be a new rule the request does not need. |
 | 1 | F1-B2-15: a `.gitignore` with no managed block | a case the rule implies that no example states | BR-0508, AC-0004-0011-02 | rejected (DEC-0844) | griller-rr-1 | Step 10 delegates to init's managed-block writer (BR-0094); the no-block case is that writer's contract. |
-| 1 | F1-B1-07: a plan that places a story or rule from a retired pack | a case the rule implies that no example states | BR-0478, BR-0485 | none (OQ-0196) | user | Rests on product intent nothing written states |
-| 1 | F1-B2-18: the cutover stage of BF-0004 has no owning story | a flow, story or criterion split the rules show to be wrong | BF-0004, US-0004-0001 to US-0004-0012 | none (OQ-0197) | user | Rests on product intent; creating a story needs triage |
+| 1 | F1-B1-07: a plan that places a story or rule from a retired pack | a case the rule implies that no example states | BR-0478, BR-0485 | decided by the user: step 4 keeps refusing with exit 2; BR-0478, BR-0485 and EX-0004-0003-29 state it (DEC-0848, OQ-0196) | user | Rests on product intent nothing written stated |
+| 1 | F1-B2-18: the cutover stage of BF-0004 has no owning story | a flow, story or criterion split the rules show to be wrong | BF-0004, US-0004-0001 to US-0004-0012 | decided by the user: the cutover stage leaves `business-flow.md` (DEC-0849, OQ-0197) | user | Rests on product intent; creating a story needs triage |
 | 2 | F2-01: cycle 1 let every step keep unverifiable staging; the contract gives that to step 10 | a rule its examples do not support | BR-0463, AC-0004-0003-04, EX-0004-0003-27 | adopted: BR-0463 and AC-0004-0003-04 name step 10 (DEC-0845) | griller-rr-2 | Matches the contract's report table; steps 1 to 8 refuse with exit 2 |
 | 2 | F2-02: a staging-named file with no `.owner` marker | a case the rule implies that no example states | BR-0463, EX-0004-0003-27 | adopted, amended after the author round: EX-0004-0003-27 keeps the file byte-identical, not listed (DEC-0845) | griller-rr-2 | Dissent: the applier showed `qfai init` treats such a file as a user file; the griller dropped the listing and exit 3 it first proposed |
-| 2 | F2-03: the former-default layout beside a story tree with a finding | a case the rule implies that no example states | BR-0164, EX-0004-0002-03, BR-0132 | adopted: EX-0004-0002-03 extended, BR-0164 cites it (DEC-0845); BR-0132 left as OQ-0199 | griller-rr-2 | BR-0132 belongs to BF-0001's rules |
+| 2 | F2-03: the former-default layout beside a story tree with a finding | a case the rule implies that no example states | BR-0164, EX-0004-0002-03, BR-0132 | adopted: EX-0004-0002-03 extended, BR-0164 cites it (DEC-0845); BR-0132, a BF-0001 rule, rewritten to match by the user's decision (DEC-0851, OQ-0199) | griller-rr-2 | BR-0132 belongs to BF-0001's rules, so the user decided it |
 | 2 | F2-04: which path the one error names when both roots hold a spec pack | a case the rule implies that no example states | BR-0163 | rejected (DEC-0846) | griller-rr-2 | No rule states a preferred path; pinning one would add a rule |
 | 2 | F2-05: an example whose one criterion takes no new ID | a case the rule implies that no example states | BR-0487, BR-0496, EX-0004-0007-10, EX-0004-0007-11 | adopted: BR-0487 and BR-0496 widened; EX-0004-0007-13 (DEC-0845) | griller-rr-2 | The only outcome consistent with BR-0487, BR-0488, BR-0495 and "Nothing is deleted" |
 | 2 | F2-06: AC-0004-0007-02 said a flow with no `from` stays in its source | a flow, story or criterion split the rules show to be wrong | AC-0004-0007-02, EX-0004-0007-08, BR-0488 | adopted: the Then says the flow receives the template (DEC-0845) | griller-rr-2 | Matches BR-0488 and EX-0004-0007-08 |
 | 2 | F2-07: a colliding overlay is not listed by the rule, criterion, example or prose | a rule its examples do not support | BR-0513, AC-0004-0006-03, EX-0004-0006-07 | adopted: all four list it for a person (DEC-0845) | griller-rr-2 | The report table lists every item the step could not settle |
-| 2 | F2-08: the same overlay name under `constitution/` and `catalog/` | a case the rule implies that no example states | BR-0513 | none (OQ-0198) | user | Which overlay stays in force is product intent; step 3 today stops partway in this case |
+| 2 | F2-08: the same overlay name under `constitution/` and `catalog/` | a case the rule implies that no example states | BR-0513 | decided by the user: step 3 writes nothing and lists both overlays; BR-0513, AC-0004-0006-03 and EX-0004-0006-08 state it, and step 3 implements it (DEC-0850, OQ-0198) | user | Which overlay stays in force is product intent |
 
 ## Artifacts changed
 
 | Layer | IDs or paths |
 | ----- | ------------ |
-| BF    | none |
+| BF    | BF-0004: the cutover stage removed (DEC-0849) |
 | US    | none |
 | AC    | AC-0004-0002-01, AC-0004-0003-04, AC-0004-0006-01, AC-0004-0006-03 (new), AC-0004-0007-02, AC-0004-0008-02, AC-0004-0008-03, AC-0004-0009-01, AC-0004-0010-02, AC-0004-0011-01 |
-| EX    | New: EX-0004-0002-02, -0002-03, -0003-25 to -0003-28, -0005-09, -0005-10, -0006-07, -0007-10 to -0007-13, -0008-10, -0008-11, -0009-10 to -0009-12, -0010-05. Changed: EX-0004-0002-01, -0003-01, -0003-05, -0003-08, -0003-10, -0003-11, -0003-16, -0003-22, -0003-27, -0005-01, -0006-01, -0006-06, -0006-07, -0007-01, -0007-04, -0007-07, -0007-08, -0008-02, -0012-01, -0012-04 |
-| BR    | BR-0163, BR-0164 (`.qfai/spec/03_contract/cli/qfai-validate.md`); BR-0457, BR-0458, BR-0463, BR-0464, BR-0466, BR-0467, BR-0469, BR-0475, BR-0478, BR-0479, BR-0482, BR-0485, BR-0487, BR-0488, BR-0490, BR-0493, BR-0495, BR-0496, BR-0497, BR-0499, BR-0500, BR-0501, BR-0506, BR-0510, BR-0513 (`.qfai/spec/03_contract/cli/qfai-migration-spec-to-story.md`) |
-| Code  | `packages/qfai/src/migration/specToStory/step04RenumberIds.ts`: `business-flow.md` carries the selected old section's prose as well as its diagram (BR-0488, EX-0004-0007-12) |
+| EX    | New: EX-0004-0002-02, -0002-03, -0003-25 to -0003-29, -0005-09, -0005-10, -0006-07, -0006-08, -0007-10 to -0007-13, -0008-10, -0008-11, -0009-10 to -0009-12, -0010-05. Changed: EX-0004-0002-01, -0003-01, -0003-05, -0003-08, -0003-10, -0003-11, -0003-16, -0003-22, -0003-27, -0005-01, -0006-01, -0006-06, -0006-07, -0007-01, -0007-04, -0007-07, -0007-08, -0008-02, -0012-01, -0012-04 |
+| BR    | BR-0132, BR-0163, BR-0164 (`.qfai/spec/03_contract/cli/qfai-validate.md`); BR-0457, BR-0458, BR-0463, BR-0464, BR-0466, BR-0467, BR-0469, BR-0475, BR-0478, BR-0479, BR-0482, BR-0485, BR-0487, BR-0488, BR-0490, BR-0493, BR-0495, BR-0496, BR-0497, BR-0499, BR-0500, BR-0501, BR-0506, BR-0510, BR-0513 (`.qfai/spec/03_contract/cli/qfai-migration-spec-to-story.md`) |
+| Code  | `packages/qfai/src/migration/specToStory/step04RenumberIds.ts`: `business-flow.md` carries the selected old section's prose as well as its diagram (BR-0488, EX-0004-0007-12). `packages/qfai/src/migration/specToStory/step03MoveCatalog.ts`: two overlays of one name that could both take `rule/<name>.local.md` stop step 3 before it writes (BR-0513, EX-0004-0006-08); its test failed before the change |
 
 ## Contract executability
 
@@ -166,17 +165,14 @@ Cycle 2 held one author round, on F2-02 and on the route for F2-03 and F2-07.
 
 | Reviewer | Verdict | Evidence |
 | -------- | ------- | -------- |
-| user | PENDING | The pull request review approves DEC-0847 |
+| user | PENDING | The pull request review approves DEC-0847. The four open questions were answered on 2026-09-26 (DEC-0848 to DEC-0851) |
 
 ## Open risks
 
-- OQ-0196, OQ-0197, OQ-0198, OQ-0199 wait for the user. OQ-0198 names a case in which
-  step 3 stops partway after earlier writes.
 - Steps 1 to 8 refuse unverifiable staging with exit 2, which neither BR-0458
   nor the exit-code table names.
 
 ## Final status
 
 - Status: `REVISE`
-- Reason: four open questions wait for the user, and the user's pull request
-  review is the approval DEC-0847 records.
+- Reason: the user's pull request review is the approval DEC-0847 records.

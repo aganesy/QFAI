@@ -30,4 +30,5 @@ Scenario: An overlay moves beside its rule, or is archived for a person
   Then the first is at `rule/<name>.local.md`
   And the second is under the migration's retired archive and listed under For a person
   And an overlay whose destination already holds a file is archived, leaving that file unchanged, and listed under For a person
+  And when overlays of one name under both directories could take the same place, step 3 writes nothing and lists both under For a person
 ```

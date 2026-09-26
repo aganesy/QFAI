@@ -11,8 +11,7 @@ old-to-new ID record.
 ```mermaid
 flowchart TD
   Inventory[Inventory old packs and contracts] --> Plan[Approve flows, stories, criteria and rule destinations]
-  Plan --> Fixture[Pass migration fixture and independent review]
-  Fixture --> Dry[Dry-run each of ten ordered steps]
+  Plan --> Dry[Dry-run each of ten ordered steps]
   Dry --> Apply[Run step and retain report]
   Apply --> Check{Step result}
   Check -->|Exit 2| Correct[Correct plan or source before first write]
@@ -23,7 +22,7 @@ flowchart TD
   Verify --> More{Steps remain?}
   More -->|Yes| Dry
   More -->|No| Recheck[Repeat steps and confirm zero-file change]
-  Recheck --> Cutover[Validate story tree and retire old reader]
+  Recheck --> Validate[Validate the story tree]
 ```
 
 ## Alternate and exception paths
@@ -37,8 +36,8 @@ flowchart TD
   SDD, with the old source retained as evidence.
 - Re-running any completed step changes zero files. A partial run resumes
   under the same plan and retained report.
-- Cutover requires the fixture DSC-003/004 gates, independent reviewer GO,
-  resolved active items, and the final story-tree validation.
+- The migration ends when `qfai validate` on the story tree reports no
+  layout or chain error, with every item listed for a person resolved.
 
 The ordered steps are directory rename, decision-table merge, catalog move,
 ID renumbering, TC-only case conversion, EX criterion derivation, rule move,
