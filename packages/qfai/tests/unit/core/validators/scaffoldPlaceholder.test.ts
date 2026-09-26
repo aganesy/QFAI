@@ -81,6 +81,15 @@ describe("story-tree scaffold placeholders", () => {
     expect(await readValidateCycles(root, ac.id)).toBe(3);
   });
 
+  // QFAI:EX-0001-0075-02
+  it("escalates on the configured cycle when scaffoldEscalateCycles is 2", async () => {
+    await seed(ac);
+    const config = structuredClone(defaultConfig);
+    config.atdd = { ...config.atdd, scaffoldEscalateCycles: 2 };
+    expect((await validateScaffoldPlaceholder(root, config))[0]?.severity).toBe("warning");
+    expect((await validateScaffoldPlaceholder(root, config))[0]?.severity).toBe("error");
+  });
+
   it("tracks multiple files with the same AC only once per pass", async () => {
     await seed(ac);
     const second = path.join(root, "tests", "api", `${ac.id}.test.ts`);

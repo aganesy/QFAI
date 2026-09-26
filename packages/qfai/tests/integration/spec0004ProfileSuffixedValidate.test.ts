@@ -120,6 +120,19 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
     body = JSON.parse(await readFile(alwaysLatest, "utf-8")) as { profile?: string };
     expect(body.profile).toBe("tdd");
   });
+
+  // QFAI:EX-0001-0049-01
+  it("records a run with no profile as the full profile", async () => {
+    await runValidate({ root, strict: false });
+    const full = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate-full.json"), "utf-8"),
+    ) as { profile?: string };
+    const latest = JSON.parse(
+      await readFile(path.join(root, ".qfai/report/validate.json"), "utf-8"),
+    ) as { profile?: string };
+    expect(full.profile).toBe("full");
+    expect(latest.profile).toBe("full");
+  });
 });
 
 describe("TC-0004-0058: legacy path escalates to error at tool version 1.10.0 when consumer evidence exists", () => {

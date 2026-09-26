@@ -11,7 +11,7 @@ Scenario: AC-0001-0053-01
   Given a project whose `paths.specsDir` holds no `spec-*/` and no `_policies/` directory (the story tree)
   When `qfai validate --profile sdd` runs
   Then the story-tree finding families run on it and the spec-pack validators report nothing about it
-  And A `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files is read as the spec-pack layout, and no story-tree finding family runs on it
+  And A `paths.specsDir` that holds a `spec-*/` or `_policies/` directory beside story-tree files raises `QFAI-LAYOUT-001` as the only finding, and no other validator runs
 
 # AC-0001-0053-02
 # Parent: US-0001-0053

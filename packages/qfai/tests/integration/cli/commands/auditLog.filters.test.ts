@@ -97,6 +97,7 @@ describe("TC-0015-0028: runAuditLog filters and orders records", () => {
     expect(parsed[0]?.scope).toBe("scope-expansion");
   });
 
+  // QFAI:EX-0001-0179-01
   it("filters by --operator", async () => {
     await seedRecords();
     const written: string[] = [];
@@ -112,6 +113,7 @@ describe("TC-0015-0028: runAuditLog filters and orders records", () => {
     for (const r of parsed) expect(r.operatorIdentity).toBe("alice");
   });
 
+  // QFAI:EX-0001-0179-01
   it("filters by --clause (substring on envelopeContractClause)", async () => {
     await seedRecords();
     const written: string[] = [];

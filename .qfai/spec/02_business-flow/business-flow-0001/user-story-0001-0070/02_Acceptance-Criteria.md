@@ -7,11 +7,6 @@ Feature: E2E Acceptance Test Implementation
 
 # AC-0001-0070-01
 # Parent: US-0001-0070
-Scenario: E2E Coverage Obligation
-  Given required US declarations in a spec
-  When ATDD E2E implementer runs
-  Then every required US has a corresponding E2E test file under `tests/e2e/**` with `QFAI:SPEC-XXXX:US-YYYY` annotation.
-
 Scenario: E2E Coverage Obligation on the story tree
   Given a BF in scope
   When the ATDD E2E implementer runs

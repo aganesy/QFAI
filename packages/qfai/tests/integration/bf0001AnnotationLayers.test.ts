@@ -56,8 +56,7 @@ describe("BF-0001 story annotation layers", () => {
     expect(hasMissing(example, [file(null, example)], "tdd")).toBe(false);
   });
 
-  // QFAI:EX-0001-0010-05
-  // QFAI:EX-0001-0010-06
+  // QFAI:EX-0001-0058-04
   it("reports misplaced BF and AC annotations without counting coverage", () => {
     for (const [kind, id] of [
       ["integration", flow],

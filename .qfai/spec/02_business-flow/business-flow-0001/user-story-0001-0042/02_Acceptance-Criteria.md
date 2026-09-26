@@ -23,37 +23,37 @@ Scenario: AC-0001-0042-02
 # Parent: US-0001-0042
 Scenario: AC-0001-0042-03 required design tokens
   Given root `DESIGN.md` and `references/design-md-spec.md`
-  When DCON-030 runs
-  Then DCON-030 validates that root `DESIGN.md` exists and contains the required token tables (color, typography, radius, shadow) parseable per `references/design-md-spec.md`.
+  When `qfai validate` runs
+  Then a root `DESIGN.md` that exists and whose front matter parses per `references/design-md-spec.md` raises neither `QFAI-DCON-030` nor `QFAI-DCON-033`.
 
 Scenario: AC-0001-0042-03 missing design tokens
-  Given root `DESIGN.md` is missing or unparseable
-  When DCON-030 runs
-  Then Missing or unparseable `DESIGN.md` emits `QFAI-DCON-030` at error severity.
+  Given root `DESIGN.md` is missing or its front matter does not parse
+  When `qfai validate` runs
+  Then a missing `DESIGN.md` emits `QFAI-DCON-030` at error severity, and an unparseable one emits `QFAI-DCON-033` at error severity.
 
 # AC-0001-0042-04
 # Parent: US-0001-0042
 Scenario: AC-0001-0042-04 matching design lock
   Given the design lock and root `DESIGN.md` bytes
-  When DCON-031 runs
-  Then DCON-031 validates that `<paths.contractsDir>/design/DESIGN.md.lock.yaml#sha256` matches `sha256(DESIGN.md bytes)` byte-for-byte.
+  When `qfai validate` runs
+  Then a `<paths.contractsDir>/design/DESIGN.md.lock.yaml#designMdSha256` equal to `sha256(DESIGN.md bytes)` raises neither `QFAI-DCON-031` nor `QFAI-DCON-032`.
 
 Scenario: AC-0001-0042-04 hash drift
-  Given the design lock hash differs from the on-disk hash
-  When DCON-031 runs
-  Then Hash drift emits `QFAI-DCON-031` at error severity with both the lock sha256 and the on-disk sha256 in the message.
+  Given the design lock is missing, lacks `designMdSha256`, or records a hash that differs from the on-disk hash
+  When `qfai validate` runs
+  Then a missing lock or a missing `designMdSha256` emits `QFAI-DCON-031` at error severity, and a differing hash emits `QFAI-DCON-032` at error severity.
 
 # AC-0001-0042-05
 # Parent: US-0001-0042
 Scenario: AC-0001-0042-05 matching design system
   Given the design system and root `DESIGN.md` token tables
-  When DCON-032 runs
-  Then DCON-032 validates that `<paths.contractsDir>/design/design-system.yaml` token tables (color, typography, radius, shadow) are byte-equivalent to the parsed token tables of root `DESIGN.md`.
+  When `qfai validate` runs
+  Then a `<paths.contractsDir>/design/design-system.yaml` whose `visual.*` tokens equal those of root `DESIGN.md` raises no mirror finding.
 
 Scenario: AC-0001-0042-05 diverging design system
-  Given a design-system token category diverges from root `DESIGN.md`
-  When DCON-032 runs
-  Then Any divergence emits `QFAI-DCON-032` at error severity, listing the diverging token category.
+  Given a `design-system.yaml` mirror key whose value differs from root `DESIGN.md`
+  When `qfai validate` runs
+  Then `QFAI-DCON-005` is emitted at error severity, naming the key and both values.
 
 # AC-0001-0042-06
 # Parent: US-0001-0042
