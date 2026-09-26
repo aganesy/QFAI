@@ -25,6 +25,8 @@ Inspect the impact cascade: policy → BF → US → AC → EX → enforcing con
 
 Use <paths.specsDir>/decisions.md and <paths.specsDir>/open-questions.md, each with exactly ID, Content, Approach, Status. Append a row; later only Status may change. Do not edit the first three cells or remove the row. Use the next highest ID in the table plus one. A retired item still reserves its BF or US ID.
 
+A decision row's Approach takes the form stated at the top of `templates/spec/decisions.md`. What this file asks an Approach to state goes inside that form.
+
 A triage decision's Content names the operation, target BF or US, and discussion source as discussion-<id>#REQ-NNNN when
 there is one. For other sources, name the actual source path or user requirement. Approach states the intended files and
 rationale, including the change classification Primary and Tags. Status begins TODO if approval is needed, moves to WIP

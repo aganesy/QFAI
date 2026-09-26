@@ -111,6 +111,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **A stage records each decision as a `decisions.md` row with a fixed
+  Approach form** (#2236). The thinking rule no longer walks the agent through
+  a five-step reasoning procedure: current models reason before every reply and
+  choose the depth themselves, so restating the goal and listing unknowns added
+  tokens and nothing else. Its `## What the stage records` section now says
+  that each decision is one row of `decisions.md`. The seeded `decisions.md`
+  states the form of that row's Approach cell, in this order:
+
+  - `Evidence:` one or more `file:` or `command:` entries;
+  - `Grounds:` which evidence supports the decision, and how;
+  - `Residual risk:` the risk that remains, or `none — <reason>`;
+  - `Rollback:` the steps that undo it, or `none — <reason>`.
+
+  The `qfai-sdd` guidance that says where a decision is recorded points to
+  that form. The table's columns are unchanged, and existing rows are not
+  rewritten. `qfai validate` does not check the form yet.
+
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
   stories, acceptance criteria and examples in `02_business-flow/`, contracts

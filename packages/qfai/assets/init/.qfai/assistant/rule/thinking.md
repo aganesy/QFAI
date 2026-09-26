@@ -12,13 +12,11 @@ update_frequency: rare
 - If something cannot be verified, write `TBD` and raise an Open Question (what evidence is missing).
 - Minimize ambiguity: define terms, scope, and measurable acceptance criteria.
 
-## Working method
+## What the stage records
 
-1. Restate the goal and constraints (brief).
-2. Enumerate unknowns and assumptions.
-3. Identify the evidence to check (files/commands).
-4. Decide with a rationale grounded in evidence.
-5. Record residual risk and the rollback path.
+Each decision a stage makes is recorded as one row of
+`<paths.specsDir>/decisions.md`. The row's Approach cell takes the form stated
+at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 
 ## When to stop and ask
 
