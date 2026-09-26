@@ -9,12 +9,9 @@
  * Existing coverage: tests/cli/guardrails.test.ts, tests/core/decisionGuardrails.test.ts.
  */
 // QFAI:EX-0003-0013-01
-// QFAI:EX-0003-0013-02
 // QFAI:EX-0003-0013-03
 // QFAI:EX-0003-0014-01
-// QFAI:EX-0003-0014-02
 // QFAI:EX-0003-0015-01
-// QFAI:EX-0003-0015-02
 // QFAI:EX-0003-0016-01
 // QFAI:EX-0003-0016-02
 import { readFile } from "node:fs/promises";
