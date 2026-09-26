@@ -197,6 +197,9 @@ check changes nothing in the run.
   needs the operator's answer.
 - A QFAI work order binds the stage to its target: one business flow, or one
   new-story slot. The stage works on that target and no other.
+- The stage result names the agent instance that did the work in
+  `actor: { agentInstance }`. The run records that instance as the work's
+  author and never counts it as the work's independent reviewer.
 - These statements add to the constitution. They except no article.
 
 ## Default Autopilot Policy inside a run

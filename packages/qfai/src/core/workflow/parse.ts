@@ -1,3 +1,6 @@
+import { DECISION_INPUT, shapeFaults, STAGE_RESULT } from "./payloadShapes.js";
+import type { InputRefusal } from "./types.js";
+
 export type NormativeReferenceKind = "request" | "flow-id" | "contract-id" | "path";
 export type ObservedReferenceKind = "path" | "evidence";
 
@@ -229,36 +232,35 @@ function fieldRefusals(
   }));
 }
 
-const RESULT_FIELDS = {
-  resultId: "string",
-  workOrderId: "string",
-  stageInstanceId: "string",
-  attempt: "number",
-  expectedSequence: "number",
-  outcome: "string",
-} as const;
+const AUTHORIZATION_KINDS: unknown[] = ["request_scope", "human_decision", "project_policy"];
 
-// A stage result's identity fields, and a route proposal's reference shape where it carries one.
-// SIMPLIFIED: every other field is checked by the decision function where it reads it.
-// Lift when: a stage result field the decision function never reads gets a refusal row.
-export function stageResultRefusals(value: Record<string, unknown>): SchemaReason[] {
-  const identity = fieldRefusals(value, RESULT_FIELDS, Object.keys(RESULT_FIELDS), false);
-  if (value.proposal === undefined || identity.length > 0) return identity;
-  const references = parseRouteReferences(value.proposal);
-  return references.ok ? [] : references.error.reasons;
+// Only the core records an authorization. One a payload carries is refused, and one of a kind
+// the core never records, such as one derived from a mode or a confidence value, says so.
+export function carriedAuthorization(payload: { approved?: unknown; authorization?: unknown }) {
+  const refusals: InputRefusal[] = [];
+  const { approved, authorization } = payload;
+  if (approved !== undefined) refusals.push({ reason: "schema", subject: "approved" });
+  if (authorization !== undefined) {
+    const kind = isRecord(authorization) ? authorization.kind : undefined;
+    const reason = AUTHORIZATION_KINDS.includes(kind) ? "schema" : "authorization-kind";
+    refusals.push({ reason, subject: "authorization" });
+  }
+  return refusals;
 }
 
-const DECISION_FIELDS = {
-  questionId: "string",
-  answer: "object",
-  answeredBy: "string",
-  expectedSequence: "number",
-  stop: "boolean",
-} as const;
+const schemaFaults = (subjects: readonly string[]): SchemaReason[] =>
+  subjects.map((subject) => ({ reason: "schema", subject: subject || "payload" }));
 
-// A decision input holds these and no other field.
+// A stage result is closed and complete: every field the stage-result schema requires, each of
+// its shape, and no key it does not declare. An authorization it tries to carry is named apart.
+export function stageResultRefusals(value: Record<string, unknown>): InputRefusal[] {
+  const { approved: _approved, authorization: _authorization, ...rest } = value;
+  return [...carriedAuthorization(value), ...schemaFaults(shapeFaults(rest, STAGE_RESULT, ""))];
+}
+
+// A decision input holds its own fields, each of its shape, and no other.
 export function decisionInputRefusals(value: Record<string, unknown>): SchemaReason[] {
-  return fieldRefusals(value, DECISION_FIELDS, [], true);
+  return schemaFaults(shapeFaults(value, DECISION_INPUT, ""));
 }
 
 const START_FIELDS = { request: "object", completionTarget: "string", harness: "object" } as const;

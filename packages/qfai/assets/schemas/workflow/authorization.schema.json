@@ -173,7 +173,7 @@
               "oneOf": [
                 {
                   "type": "string",
-                  "pattern": "^BF-d{4}$"
+                  "pattern": "^BF-\\d{4}$"
                 },
                 {
                   "type": "null"

@@ -59,6 +59,7 @@ The routing work order's result carries the proposal.
   "expectedSequence": 3,
   "outcome": "accepted",
   "testObservation": "not_applicable",
+  "actor": { "agentInstance": "routing-1" },
   "proposal": {
     "requestKind": "change",
     "candidateRoute": "bugfix",
@@ -80,6 +81,8 @@ The routing work order's result carries the proposal.
 }
 ```
 
+- `actor` names the agent instance that proposed the route. The run records it
+  as the recommender, and never counts it as an independent reviewer.
 - `requestKind` is `change`, `read_only`, `plan_only`, `verify_only`, `resume`,
   `cancel` or `explicit_stage`. Only `change` takes a route; the others carry
   `candidateRoute: null` and write nothing.
@@ -153,4 +156,6 @@ A routing or stage result carries a question as:
 
 The executor skill returns it. `qfai-run` writes it to the run's inbox as the
 skill gave it, and never edits its outcome, its review results or its
-changed-file list.
+changed-file list. It names its author in `actor`, as the routing result does.
+A result with no `actor`, a field of the wrong shape or an unknown key is
+refused before the run reads it.

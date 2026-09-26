@@ -3,6 +3,7 @@ import { mkdir, readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
+import { boundaryStartOf } from "../../core/workflow/boundary.js";
 import { decide, workOrderDocument } from "../../core/workflow/decide.js";
 import {
   journalExtrasOf,
@@ -555,6 +556,7 @@ async function createRun(
     completionTarget: completionTargetOf(input) ?? "qfai_done",
     baseline: await baselineOf(root),
     identity: await identityOf(root),
+    boundary: await boundaryStartOf(root),
   };
   const runDir = await createRunDir(path.join(root, RUNS_DIR), runId);
   const request = { request: input.request, digestKey: facts.start?.digestKey, answers: [] };

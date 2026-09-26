@@ -12,6 +12,7 @@ import { assistantLayerDir } from "../paths/assistantPaths.js";
 import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import { validateProject } from "../validate.js";
 import { resolveToolVersion } from "../version.js";
+import { changedSinceStart } from "./boundary.js";
 import { areaCovers, everyStageResult } from "./common.js";
 import { isRecord } from "./parse.js";
 import {
@@ -84,9 +85,8 @@ export async function identityOf(root: string): Promise<NonNullable<WorkflowFact
   return { worktree: await realpath(root), branch: branch && branch !== "HEAD" ? branch : null };
 }
 
-// What `start` fixes for the run: its ID and key, and the tool and policy it runs under.
-// SIMPLIFIED: takes no run change boundary snapshot.
-// Lift when: the change boundary observers land.
+// What `start` fixes for the run: its ID and key, and the tool and policy it runs under. The run
+// change boundary's starting state is recorded beside them, when the run is created.
 export async function startFacts(
   root: string,
   config: QfaiConfig,
@@ -353,10 +353,10 @@ async function verifyReportOf(runDir: string, snapshot: WorkflowSnapshot) {
 }
 
 // What `finish` observes: validate run in process, this run's verify report, the tool and
-// policy it runs under, the working tree's uncommitted paths and the bound flow's obligations.
-// SIMPLIFIED: the run's changed paths are the uncommitted ones, so a change committed during the
-// run is not counted; and under `failOn: never` no finding is reported, so no debt stays open.
-// Lift when: `start` fixes the commit the run began at, and a `never` project runs a workflow.
+// policy it runs under, the run's changes since `start` and those not yet committed, the change
+// requests in force and the bound flow's obligations.
+// SIMPLIFIED: under `failOn: never` no finding is reported, so no debt stays open.
+// Lift when: a `never` project runs a workflow.
 export async function completionFacts(
   root: string,
   runDir: string,
@@ -378,7 +378,10 @@ export async function completionFacts(
     refs: [...(issue.refs ?? [])].sort(),
     severity: issue.severity,
   }));
-  const changed = uncommittedPaths(root) ?? [];
+  const uncommitted = uncommittedPaths(root) ?? [];
+  const changed = snapshot.boundary
+    ? await changedSinceStart(root, snapshot.boundary)
+    : uncommitted;
   const validate =
     failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
   const completion = {
@@ -388,7 +391,17 @@ export async function completionFacts(
     cliEntryDigest: entryDigest,
     policyDigests,
     changedPaths: changed,
-    uncommittedPaths: changed,
+    uncommittedPaths: uncommitted,
   };
-  return { completion, ...(story.obligations ? { obligations: story.obligations } : {}) };
+  const digests = await Promise.all(
+    changed.map(async (file) => [file, await dependencyDigest(root, file)] as const),
+  );
+  return {
+    completion,
+    changeRequests: story.changeRequests,
+    fileDigests: Object.fromEntries(
+      digests.flatMap(([file, digest]) => (digest ? [[file, digest]] : [])),
+    ),
+    ...(story.obligations ? { obligations: story.obligations } : {}),
+  };
 }

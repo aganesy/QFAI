@@ -37,8 +37,10 @@ function validities(receipts: Record<string, unknown>): unknown[] {
 }
 
 it("Git fixture with recorded receipts", async () => {
+  // Inside the run's write scope, so the run change boundary admits it, and outside every file
+  // and glob a receipt reads.
   const { outstanding, resumed, receipts } = await resumedAfter((root) =>
-    write(root, "README.md", "# An unrelated change\n"),
+    write(root, ".qfai/spec/02_business-flow/README.md", "# An unrelated change\n"),
   );
 
   expect({

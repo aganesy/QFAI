@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { hashAssistantAssetText } from "../../core/assistantAssetProvenance.js";
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
+import { changedSinceStart } from "../../core/workflow/boundary.js";
 import { flowOfRun } from "../../core/workflow/issue.js";
 import {
   completionFacts,
@@ -14,7 +16,7 @@ import {
   routingFacts,
 } from "../../core/workflow/observe.js";
 import { isRecord } from "../../core/workflow/parse.js";
-import { storyFactsOf } from "../../core/workflow/storyFacts.js";
+import { changeRequestsOf, storyFactsOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowFacts,
   WorkflowInput,
@@ -141,11 +143,38 @@ export async function factsOf(
   input: WorkflowInput,
 ): Promise<WorkflowFacts> {
   if (input.operation === "finish") return completionFacts(root, runDir, snapshot);
-  if (input.operation === "decision") return { now: new Date().toISOString() };
-  const [identity, policyNow] = await Promise.all([identityOf(root), policyNowOf(root)]);
+  const [identity, policyNow, boundary] = await Promise.all([
+    identityOf(root),
+    policyNowOf(root),
+    boundaryFactsOf(root, snapshot),
+  ]);
+  const held = { identity, policyNow, ...boundary };
+  if (input.operation === "decision") return { now: new Date().toISOString(), ...held };
   if (input.operation === "accept" && snapshot.run.state === "routing") {
     const { config } = await loadConfig(root);
-    return { ...(await routingFacts(root, config, input.result?.proposal)), identity, policyNow };
+    return { ...(await routingFacts(root, config, input.result?.proposal)), ...held };
   }
-  return { ...(await stageFacts(root, snapshot, input)), identity, policyNow };
+  const stage = await stageFacts(root, snapshot, input);
+  return { ...stage, ...held, fileDigests: { ...stage.fileDigests, ...held.fileDigests } };
+}
+
+// Every write operation judges the run's cumulative changes against the state `start` fixed,
+// with the change requests in force that may admit a repaired path.
+async function boundaryFactsOf(root: string, snapshot: WorkflowSnapshot) {
+  if (!snapshot.boundary) return {};
+  const { config } = await loadConfig(root);
+  const decisions = await readFile(
+    path.join(root, config.paths.specsDir, "decisions.md"),
+    "utf8",
+  ).catch((error: unknown) => {
+    if (isEnoent(error)) return "";
+    throw error;
+  });
+  const observedChangedPaths = await changedSinceStart(root, snapshot.boundary);
+  return {
+    observedChangedPaths,
+    changeRequests: changeRequestsOf(decisions),
+    // A path admitted or to be admitted is held to its digest now.
+    fileDigests: await fileDigestsOf(root, observedChangedPaths),
+  };
 }

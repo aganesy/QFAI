@@ -1,8 +1,10 @@
 // QFAI:EX-0001-0194-03
+// QFAI:EX-0001-0194-08
 
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const plan = {
   route: "bounded-change",
@@ -147,4 +149,87 @@ it("A review result whose reviewer instance the actor history shows as the autho
     reasons: [{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }],
     events: [],
   });
+});
+
+// A bounded run driven through the journal, each result naming the agent that produced it.
+function actorsRun() {
+  const flow = "BF-0007";
+  const facts = {
+    flows: [flow],
+    obligations: {
+      flowId: flow,
+      ids: [flow],
+      exampleIds: [],
+      annotated: [],
+      digest: "1".repeat(64),
+    },
+  };
+  const plan = planOf("bounded-change", [
+    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
+    stage("bounded-implement", "implement", "qfai-implement", "implement"),
+    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+  ]);
+  const run = new JournalRun(readyWith(plan, flow));
+  run.next(facts);
+  run.accept({ actor: { agentInstance: "sdd-1" } }, facts);
+  run.next(facts);
+  run.accept({ actor: { agentInstance: "implement-1" } }, facts);
+  return { run, workOrder: run.next(facts), facts };
+}
+
+const review = (agentInstance: string) => ({
+  role: "qa-gatekeeper",
+  agentInstance,
+  verdict: "PASS",
+  reportRef: "qa.md",
+});
+
+function reasonsOf(decision: ReturnType<JournalRun["accept"]>) {
+  const error = decision.verdict.error;
+  return error && "reasons" in error ? error.reasons : undefined;
+}
+
+it("The verify work order after two results that each named their actor", () => {
+  const { workOrder } = actorsRun();
+
+  expect(workOrder.actorHistory).toEqual([
+    { role: "author", agentInstance: "sdd-1", stageInstanceId: "bounded-sdd-delta" },
+    { role: "author", agentInstance: "implement-1", stageInstanceId: "bounded-implement" },
+  ]);
+});
+
+it("A verify result reviewed by the instance that authored the implement stage", () => {
+  const { run, facts } = actorsRun();
+
+  expect(
+    reasonsOf(
+      run.accept(
+        { actor: { agentInstance: "verify-1" }, reviewResults: [review("implement-1")] },
+        facts,
+      ),
+    ),
+  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+});
+
+it("A verify result whose qa-gatekeeper review names the result's own actor", () => {
+  const { run, facts } = actorsRun();
+
+  expect(
+    reasonsOf(
+      run.accept(
+        { actor: { agentInstance: "verify-1" }, reviewResults: [review("verify-1")] },
+        facts,
+      ),
+    ),
+  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+});
+
+it("A verify result reviewed by an independent instance", () => {
+  const { run, facts } = actorsRun();
+  run.accept({ actor: { agentInstance: "verify-1" }, reviewResults: [review("qa-1")] }, facts);
+
+  expect(run.snapshot.actorHistory?.slice(2)).toEqual([
+    { role: "author", agentInstance: "verify-1", stageInstanceId: "bounded-verify" },
+    { role: "reviewer", agentInstance: "qa-1", stageInstanceId: "bounded-verify" },
+  ]);
 });

@@ -299,6 +299,14 @@ boundary accepts a legacy string entry, an unknown kind, or an extra entry key.
 Such payloads are `invalid-input` with reason `schema`, before proposal checks.
 Parser and schema verdicts agree on these shape cases.
 
+The stage-result schema and the runtime parser hold a stage result closed and
+complete in the same way: every field the schema requires, `actor` among them,
+every field of the shape the schema gives it, the proposal of a routing result
+included, and no key the schema does not declare. A payload that fails is
+`invalid-input` with reason `schema` before the run reads it, naming each
+faulty field. An `approved` or `authorization` key is refused as
+`qfai-workflow.md#stage-result` states.
+
 - They ship because `package.json#files` lists `assets/`. `qfai init` does not
   copy them into a project, and `qfai-run`'s reference shows each payload as a
   JSON example rather than citing a path under `node_modules/`.

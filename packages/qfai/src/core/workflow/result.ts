@@ -12,7 +12,7 @@ import {
   type PlanStage,
 } from "./common.js";
 import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
-import { isRecord, parseMeasurement, parseQuestionInput } from "./parse.js";
+import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
 import { storyTreeChecks } from "./records.js";
 import { activeStages } from "./stages.js";
 import type {
@@ -31,22 +31,6 @@ import type {
   WorkflowSnapshot,
   WorkflowWorkOrder,
 } from "./types.js";
-
-const AUTHORIZATION_KINDS: unknown[] = ["request_scope", "human_decision", "project_policy"];
-
-// Only the core records an authorization. One a payload carries is refused, and one of a kind
-// the core never records, such as one derived from a mode or a confidence value, says so.
-export function carriedAuthorization(payload: { approved?: unknown; authorization?: unknown }) {
-  const refusals: InputRefusal[] = [];
-  const { approved, authorization } = payload;
-  if (approved !== undefined) refusals.push({ reason: "schema", subject: "approved" });
-  if (authorization !== undefined) {
-    const kind = isRecord(authorization) ? authorization.kind : undefined;
-    const reason = AUTHORIZATION_KINDS.includes(kind) ? "schema" : "authorization-kind";
-    refusals.push({ reason, subject: "authorization" });
-  }
-  return refusals;
-}
 
 // The checks every `accept` runs before it reads what the result says.
 export function acceptPreamble(
@@ -90,10 +74,12 @@ function notRunRefusalOf(
   return undefined;
 }
 
+// A review by the result's own actor reviews its own work.
 // SIMPLIFIED: a reviewer recorded as an author or recommender anywhere in the run is refused.
 // Lift when: a review result names the stage it reviewed.
 function reviewerRefusals(result: WorkflowResult, actorHistory: readonly WorkflowActor[]) {
   return (result.reviewResults ?? []).flatMap((review, index): InputRefusal[] =>
+    review.agentInstance === result.actor?.agentInstance ||
     isAuthorOrRecommender(actorHistory, review.agentInstance)
       ? [{ reason: "reviewer-not-independent", subject: `reviewResults[${index}]` }]
       : [],

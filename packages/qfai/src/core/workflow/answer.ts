@@ -1,8 +1,7 @@
 import { createHmac } from "node:crypto";
 
 import { refusedInput, refusedWith } from "./common.js";
-import type { QuestionEffect } from "./parse.js";
-import { carriedAuthorization } from "./result.js";
+import { carriedAuthorization, type QuestionEffect } from "./parse.js";
 import type {
   WorkflowAuthorization,
   WorkflowDecision,

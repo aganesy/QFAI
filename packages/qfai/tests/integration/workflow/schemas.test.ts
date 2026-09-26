@@ -12,7 +12,9 @@ import {
   parseMeasurement,
   parseQuestionInput,
   parseRouteReferences,
+  stageResultRefusals,
 } from "../../../src/core/workflow/parse.js";
+import { stageResultVariants } from "./stageResultVariants.js";
 import { workOrderDocument } from "../../../src/core/workflow/decide.js";
 import { getInitAssetsDir } from "../../../src/shared/assets.js";
 
@@ -77,6 +79,10 @@ const measurement = {
   reworkCount: 0,
 };
 
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // A proposal with one reference entry replaced, for the reference shape cases.
 function withReference(proposal: unknown, field: string, entry: unknown) {
   return { ...(typeof proposal === "object" ? proposal : {}), [field]: [entry] };
@@ -88,12 +94,12 @@ it("Validate every payload example and fixture with the parser and with the five
   const { result, proposal } = routingResult(examples);
   const question = examples.find((example) => example.heading === "Question input")?.payload;
   const cases: { name: string; schema: string; payload: unknown; parser: boolean }[] = [
-    {
-      name: "routing result",
+    ...stageResultVariants(result).map(({ name, payload }) => ({
+      name,
       schema: RESULT,
-      payload: result,
-      parser: parseRouteReferences(proposal).ok,
-    },
+      payload,
+      parser: isRecordLike(payload) && stageResultRefusals(payload).length === 0,
+    })),
     {
       name: "proposal",
       schema: PROPOSAL,
@@ -147,7 +153,14 @@ it("Validate every payload example and fixture with the parser and with the five
     disagreements,
   }).toEqual({
     examples: ["Start input", "Routing result", "Question input", "Decision input"],
-    accepted: ["routing result", "proposal", "question", "measurement"],
+    accepted: [
+      "routing result",
+      "stage result with a flowless debt",
+      "stage result measured with nulls",
+      "proposal",
+      "question",
+      "measurement",
+    ],
     disagreements: [],
   });
 });

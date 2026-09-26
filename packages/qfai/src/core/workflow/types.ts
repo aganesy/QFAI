@@ -64,6 +64,8 @@ export interface WorkflowEvent {
   repairs?: WorkflowDebt[];
   debts?: WorkflowDebt[];
   gateResults?: WorkflowGateReceipt[];
+  // The agent that produced the result an event records, as the run's actor history keeps it.
+  actor?: WorkflowActor;
   validate?: { verdict: "PASS" | "FAIL"; findings: FindingIdentity[]; trustLevel: "cli_observed" };
   executionContext?: WorkflowExecutionContext;
   cause?: FailClosedCause;
@@ -118,6 +120,13 @@ export interface WorkflowExecutionContext {
   planDigests: Record<string, string>;
   harness: WorkflowHarness;
   requestDigest: string;
+}
+
+// What `start` fixes for the run change boundary: the commit checked out, and each path already
+// changed then with its content digest, `null` for a path with no file.
+export interface WorkflowBoundaryStart {
+  head: string | null;
+  dirty: Record<string, string | null>;
 }
 
 // The worktree real path and branch a run was started in.
@@ -349,6 +358,8 @@ export interface WorkflowSnapshot {
   // What `start` fixed for the run. The core reads its policy and plan digests.
   executionContext?: WorkflowExecutionContext;
   identity?: WorkflowIdentity;
+  // The run change boundary's starting state.
+  boundary?: WorkflowBoundaryStart;
   outstandingWorkOrder?: WorkflowWorkOrder;
   openQuestions?: WorkflowQuestion[];
   scopeDigest?: string;
@@ -510,6 +521,8 @@ export interface WorkflowResult {
   red?: { testId: string; failureKind: string };
   regressionFix?: { testId?: string; rerunRef?: string; reviewRef?: string };
   reviewResults?: WorkflowReview[];
+  // The agent instance that produced the result.
+  actor?: { agentInstance: string };
   gateResults?: { gateId: string; verdict: string }[];
   testFix?: { citedBefore?: unknown; citedAfter?: unknown; reviewRef?: string; rerunRef?: string };
   questions?: unknown[];

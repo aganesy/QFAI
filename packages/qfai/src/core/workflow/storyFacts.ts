@@ -6,10 +6,13 @@ import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolveFlowScope } from "../flowScope.js";
 import { parseStoryTestAnnotations } from "../storyTree/ids.js";
+import { classifyRecordRow, parseRecordTable } from "../storyTree/tables.js";
 import { readStoryTreeModel, type StoryTreeModel } from "../storyTree/tree.js";
+import { isEnoent } from "../fs/errno.js";
 import { countsForExample, readStoryTests } from "../validators/storyTreeObligations.js";
 import type {
   WorkflowDiagnosis,
+  WorkflowFacts,
   WorkflowObligationFacts,
   WorkflowRecordsAtIssue,
   WorkflowSeedingTargets,
@@ -28,8 +31,23 @@ function contractsDirOf(root: string, config: QfaiConfig): string {
   return projectRelative(root, path.resolve(root, config.paths.contractsDir));
 }
 
+// A record or story file that does not exist reads as empty; any other failure to read it is
+// the caller's.
 async function readText(file: string): Promise<string> {
-  return readFile(file, "utf8").catch(() => "");
+  try {
+    return await readFile(file, "utf8");
+  } catch (error) {
+    if (isEnoent(error)) return "";
+    throw error;
+  }
+}
+
+// Each `Change request:` row of `decisions.md`, whether it is in force, and what it names.
+export function changeRequestsOf(decisions: string): NonNullable<WorkflowFacts["changeRequests"]> {
+  return parseRecordTable(decisions, "decisions")
+    .rows.map(classifyRecordRow)
+    .filter((row) => row.kind === "change-request")
+    .map((row) => ({ rowId: row.row.id, inForce: row.inForce, paths: row.refs }));
 }
 
 // The digest of the obligation set: its IDs, and the text of every file that declares one of
@@ -159,6 +177,7 @@ export async function storyFactsOf(
     specsDir,
     contractsDir: contractsDirOf(root, config),
     records,
+    changeRequests: changeRequestsOf(records.decisions),
     ...(obligations ? { obligations } : {}),
     ...(seeding ? { seeding } : {}),
   };

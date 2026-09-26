@@ -193,7 +193,7 @@ export type JournalRecord = Omit<WorkflowEvent, "type"> & {
   to?: string;
   // On `run-created`: what the run is judged against at `finish`, and the worktree and branch
   // it was started in.
-  start?: Pick<WorkflowSnapshot, "completionTarget" | "baseline" | "identity">;
+  start?: Pick<WorkflowSnapshot, "completionTarget" | "baseline" | "identity" | "boundary">;
   // On an accepted stage result: the stage kind and the reviews the result carried.
   stageKind?: string;
   reviewResults?: NonNullable<WorkflowSnapshot["acceptedStages"]>[number]["reviewResults"];

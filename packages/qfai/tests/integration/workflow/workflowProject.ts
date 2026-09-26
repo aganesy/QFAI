@@ -86,7 +86,8 @@ export async function minimalProject(config?: string, prefix = "qfai-workflow-")
   roots.push(root);
   await writeStubSkills(root);
   if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
-  await writeFile(path.join(root, ".gitignore"), "/.qfai/run/\n");
+  // As `qfai init` ignores them: the runtime tree, and the reports a stage writes.
+  await writeFile(path.join(root, ".gitignore"), "/.qfai/run/\n/.qfai/report/\n");
   git(root, ["init", "-q"]);
   git(root, ["add", "-A"]);
   git(root, ["-c", "user.name=qfai", "-c", "user.email=qfai@example.com", "commit", "-qm", "init"]);
@@ -212,6 +213,7 @@ export const DISCOVERY_PROPOSAL = {
   proposedWriteScope: ["docs/**"],
   protectedTargets: [],
   requiredStages: ["discussion"],
+  rationale: "The request names no behaviour a story already states.",
 };
 
 /** A routing proposal for the feature route, naming one new story in BF-0001. */
@@ -232,7 +234,10 @@ export const FEATURE_PROPOSAL = {
   requiredStages: ["sdd", "implement", "verify"],
 };
 
-/** A result for the work order a document names, submitted at the sequence it names. */
+/**
+ * A result for the work order a document names, submitted at the sequence it names, by an agent
+ * of its own.
+ */
 export function resultFor(document: unknown, resultId: string, extra: object = {}) {
   const workOrder = field(document, "workOrder");
   return {
@@ -243,6 +248,7 @@ export function resultFor(document: unknown, resultId: string, extra: object = {
     expectedSequence: field(workOrder, "expectedSequence"),
     outcome: "accepted",
     testObservation: "not_applicable",
+    actor: { agentInstance: `agent-${resultId}` },
     ...extra,
   };
 }

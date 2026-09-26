@@ -6,6 +6,7 @@ import { isRecord } from "./parse.js";
 import { writeRecord } from "./persistence.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
 import type {
+  WorkflowActor,
   WorkflowDecision,
   WorkflowDependency,
   WorkflowEvent,
@@ -316,7 +317,8 @@ export function foldRecord(snapshot: Snapshot | null, record: JournalRecord): Sn
     sequence: record.sequence,
   };
   const fold = FOLDS[record.event];
-  const folded = fold ? fold({ ...snapshot, run }, record) : { ...snapshot, run };
+  const stepped = fold ? fold({ ...snapshot, run }, record) : { ...snapshot, run };
+  const folded = withActors(stepped, record);
   return record.replay ? foldReplay(folded, record.replay) : folded;
 }
 
@@ -387,11 +389,12 @@ export function journalExtrasOf(
   accepted: { reports: { path: string; digest: string }[]; dependencies: WorkflowDependency[] },
 ) {
   return (event: WorkflowEvent): Partial<JournalRecord> => {
+    const actor = actorOf(snapshot, input, event);
     if (event.type === "unsettled-material-input" || event.type === "plan-accepted") {
       const plan = event.type === "unsettled-material-input" ? decision.verdict.plan : undefined;
-      return { ...(plan ? { plan } : {}), dependencies: accepted.dependencies };
+      return { ...(plan ? { plan } : {}), dependencies: accepted.dependencies, ...actor };
     }
-    if (!ACCEPTED_EVENTS.includes(event.type)) return {};
+    if (!ACCEPTED_EVENTS.includes(event.type)) return actor;
     const stageKind = snapshot.outstandingWorkOrder?.stageKind;
     const reviews = input.result?.reviewResults;
     const testObservation = input.result?.testObservation;
@@ -401,8 +404,39 @@ export function journalExtrasOf(
       ...(reviews ? { reviewResults: reviews } : {}),
       ...(accepted.reports.length > 0 ? { reports: accepted.reports } : {}),
       dependencies: accepted.dependencies,
+      ...actor,
     };
   };
+}
+
+// The agent a result names, on the event that records the result: the recommender of a routing
+// result and the author of any other.
+function actorOf(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  event: WorkflowEvent,
+): { actor?: WorkflowActor } {
+  const agentInstance = input.result?.actor?.agentInstance;
+  if (!agentInstance || !event.resultRef) return {};
+  const workOrder = snapshot.outstandingWorkOrder;
+  const role = workOrder?.stageKind === "route" ? "recommender" : "author";
+  const stageInstanceId = workOrder?.stageInstanceId ?? event.stageInstanceId;
+  return { actor: { role, agentInstance, ...(stageInstanceId ? { stageInstanceId } : {}) } };
+}
+
+// Each result's actor, and each reviewer an accepted result names, joins the run's history.
+function withActors(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  const reviewers = ACCEPTED_EVENTS.includes(record.event) ? (record.reviewResults ?? []) : [];
+  const joined: WorkflowActor[] = [
+    ...(record.actor ? [record.actor] : []),
+    ...reviewers.map(({ agentInstance }) => ({
+      role: "reviewer",
+      agentInstance,
+      ...(record.stageInstanceId ? { stageInstanceId: record.stageInstanceId } : {}),
+    })),
+  ];
+  if (joined.length === 0) return snapshot;
+  return { ...snapshot, actorHistory: [...(snapshot.actorHistory ?? []), ...joined] };
 }
 
 export const TRACKED_DIR = path.join(".qfai", "evidence", "workflow");
