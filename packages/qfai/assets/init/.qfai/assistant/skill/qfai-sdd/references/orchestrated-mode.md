@@ -50,7 +50,8 @@ this run:
 
 1. The first attempt asks once and changes nothing. It opens one `decision`
    question naming the files it would change and the proposed change, and
-   returns `awaiting_input`.
+   returns `awaiting_input`. The concrete-abstract cycle below may add
+   questions for its findings beside it.
 2. The attempt that holds the answer, received through `authorizationRefs`,
    makes the change. It appends one `decisions.md` row at WIP whose Content
    opens `Change request:` and names every story-tree and contract file it
@@ -68,6 +69,25 @@ Only a row this stage appended changes its Status.
 
 Upstream drift found outside the run's checked scope gets no `Change request:`
 row here. The stage returns `blocked`, with each finding listed in `debts`.
+
+## The concrete-abstract cycle in a run
+
+Under `new-story` and `update-or-applicability-check`, the cycle of
+`references/concrete-abstract-cycle.md` runs in the first attempt only:
+
+1. The first attempt runs the cycle on its proposal before it asks the change
+   question. That question shows the proposal as the cycle left it.
+2. Each finding that goes to the user is a further `decision` question in the
+   same `awaiting_input` result, beside the one change question. The attempt
+   still writes nothing.
+3. The attempt holding the answers runs no further cycle. It applies the answer
+   to each finding the user decided, appends an `Unadjudicated:` row for each
+   finding the user left open, appends the REJECTED rows, and writes the
+   evidence rows of the cycles the first attempt ran. Its `Change request:` row
+   names `decisions.md` and `open-questions.md` when it appended a row to them.
+4. An adopted finding on an item outside the run's checked scope is upstream
+   drift: no `Change request:` row, the item unchanged, and the stage returns
+   `blocked`. `/qfai-sdd` invoked by name outside the run makes that change.
 
 ## `--auto` inside a run
 

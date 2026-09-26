@@ -44,6 +44,17 @@ coverage depth before a stage claims completion.
   `paths.specsDir` and `paths.contractsDir`. Report missing, ambiguous or
   contradictory obligations to the owning SDD stage. The tests and Coverage
   Depth Matrix are not yet authored.
+- During SDD, an instance that wrote none of the BRs it reads is the finder of
+  the concrete-abstract cycle, under
+  `skill/qfai-sdd/references/concrete-abstract-cycle.md`. It reads each BR whose
+  Statement or Examples cell the invocation wrote or changed, the EXs each cites and the EXs the invocation
+  wrote or changed. It raises findings of five kinds against BF, US, AC and EX:
+  a case the rule implies that no example states, a redundant example, an
+  example no rule explains, a rule its examples do not support, and a flow,
+  story or criterion split the rules show to be wrong. A finding names its kind
+  and target IDs and changes no file. The finder does not raise again a finding
+  already decided, rejected, or answered by a pending or declined change
+  request, and it does not decide its own findings.
 - During ATDD, author one Coverage Depth Matrix per BF at
   `.qfai/evidence/coverage-depth-BF-NNNN.md`. Record the BF E2E obligation
   in its header and one row for every US, AC and EX in that flow. Keep gaps
