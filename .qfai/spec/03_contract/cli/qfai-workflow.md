@@ -682,7 +682,10 @@ and take no further event.
   repairs per cause (a finding code and its path), and three retries of a
   saturated delegation per work order, at 30, 60 and 120 seconds. Reaching one
   moves the run to `blocked` with blocker `budget-exhausted` and never counts as
-  a pass.
+  a pass. A replan `next` or `resume` needs on a run in `ready` once the replan
+  budget is spent is refused `fail-closed` with `halt` naming blocker
+  `budget-exhausted`, since `ready` has no edge to `blocked`; `stop` ends the
+  run.
 
 A blocked run names exactly one cause from [Fail-closed](#fail-closed) or one
 blocker — `stage-blocked`, `delegation-unavailable`, `budget-exhausted` or
@@ -832,7 +835,10 @@ Every write operation takes these steps, in this order:
   `current_verification`. A RED receipt holds its obligation fingerprint as
   `normative` and its oracle fingerprint as `historical_observation`, so a later
   production change leaves it `valid`. A GREEN or verify receipt holds the
-  production and test files it ran as `current_verification`.
+  production and test files it ran as `current_verification`. The routing
+  receipt holds each `path` its proposal cites outside the proposed write scope
+  as `normative`, and each cited `evidence` file as `historical_observation`: a
+  log the run's own tests rewrite leaves it `valid`.
 - `accept` checks that every `artifactRefs` real path stays under the project's
   real root and names a regular file. It refuses a missing or escaping file as
   `invalid-input` with reason `schema`, before reading it. It recomputes the

@@ -130,9 +130,9 @@ function heldAdjustments(snapshot: WorkflowSnapshot, facts: WorkflowFacts): stri
     .map((adjustment) => adjustment.path);
 }
 
-// The cumulative changes outside the run change boundary. Its authorized set is the plan's
-// write scope, the record areas of every work order the run issued, the core's own evidence
-// tree, and each start adjustment that still holds.
+// The cumulative changes outside the run change boundary. Its authorized set is the write and
+// record areas of every work order the run issued under every plan it has had, the current
+// plan's write scope, the core's own evidence tree, and each start adjustment that still holds.
 export function escapedPaths(
   snapshot: WorkflowSnapshot,
   changedPaths: readonly string[],
@@ -140,6 +140,7 @@ export function escapedPaths(
 ): string[] {
   const areas = [
     ...(snapshot.plan?.writeScope ?? []),
+    ...(snapshot.issuedWriteAreas ?? []),
     ...(snapshot.issuedRecordAreas ?? []),
     ...(snapshot.outstandingWorkOrder?.recordAreas ?? []),
     `.qfai/evidence/workflow/${snapshot.run.id}`,

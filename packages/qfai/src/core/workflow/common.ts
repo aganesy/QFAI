@@ -62,6 +62,9 @@ export function refusedWith(run: WorkflowRun, reasons: InputRefusal[]): Workflow
   };
 }
 
+// The replans a run may make; one more leaves it held, never passed.
+export const REPLAN_BUDGET = 3;
+
 export function refusedFailClosed(run: WorkflowRun, cause: FailClosedCause): WorkflowDecision {
   const message = "The run cannot go on until the cause it names is cleared.";
   return {

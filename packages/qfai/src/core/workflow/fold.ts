@@ -45,6 +45,9 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const issuedRecordAreas = [
     ...new Set([...(snapshot.issuedRecordAreas ?? []), ...(workOrder.recordAreas ?? [])]),
   ];
+  const issuedWriteAreas = [
+    ...new Set([...(snapshot.issuedWriteAreas ?? []), ...(workOrder.scope?.writeAreas ?? [])]),
+  ];
   const { issuedObligations: _set, issuedRecords: _records, ...rest } = snapshot;
   return {
     ...rest,
@@ -52,6 +55,7 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
     attempts,
     issuedStages,
     issuedRecordAreas,
+    issuedWriteAreas,
     ...(record.obligationSet ? { issuedObligations: record.obligationSet } : {}),
     ...(record.recordsAtIssue ? { issuedRecords: record.recordsAtIssue } : {}),
   };

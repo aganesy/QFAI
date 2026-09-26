@@ -274,6 +274,7 @@ export interface WorkflowVerdict {
         message: string;
       }
     | { code: "fail-closed"; message: string; cause: FailClosedCause }
+    | { code: "fail-closed"; message: string; halt: WorkflowHalt }
     | { code: "proposal-refused"; message: string; reasons: ProposalRefusal[] };
 }
 
@@ -424,6 +425,8 @@ export interface WorkflowSnapshot {
   settled?: WorkflowSettled;
   // Why the run is blocked, while it is.
   halt?: WorkflowHalt;
+  // The write areas of every work order the run issued, under every plan it has had.
+  issuedWriteAreas?: string[];
   // The record areas of every work order the run issued.
   issuedRecordAreas?: string[];
   // The bound flow's examples, as the outstanding work order was issued against them.

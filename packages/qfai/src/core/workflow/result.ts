@@ -3,6 +3,7 @@ import {
   executorSkill,
   isAuthorOrRecommender,
   notReady,
+  REPLAN_BUDGET,
   RESULT_ID,
   refusedWith,
   servingStage,
@@ -245,10 +246,10 @@ export function blockOnResult(
   };
 }
 
-// SIMPLIFIED: the replan budget is checked on a replan from `running` only; the state machine
-// gives `ready` and `awaiting_input` no edge to `blocked`.
-// Lift when: the state machine names the edge a replan at its cap takes from those states.
-const REPLAN_BUDGET = 3;
+// SIMPLIFIED: the replan budget is checked on a replan from `running` and from `next`'s plan
+// revision only; an answer that changes the scope replans from `awaiting_input` unchecked, since
+// the state machine gives that state no edge to `blocked`.
+// Lift when: the state machine names the edge a replan at its cap takes from `awaiting_input`.
 
 const REPAIR_BUDGET = 3;
 

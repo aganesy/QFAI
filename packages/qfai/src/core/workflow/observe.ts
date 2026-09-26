@@ -315,23 +315,28 @@ export async function receiptValidityOf(
 
 // What the routing receipt depends on: every path and evidence file the proposal cites outside
 // the write scope it proposes. A file inside that scope is the run's to change, so its change
-// is the run's own work rather than a premise of the route going stale.
+// is the run's own work rather than a premise of the route going stale. Cited evidence, such as
+// a failing log, is what routing observed once, and is never rechecked.
 export async function routingDependenciesOf(
   root: string,
-  proposal: WorkflowProposal | undefined,
+  proposal:
+    | Pick<WorkflowProposal, "expectedBehaviorRefs" | "observedRefs" | "proposedWriteScope">
+    | undefined,
 ): Promise<WorkflowDependency[]> {
   const refs = [...(proposal?.expectedBehaviorRefs ?? []), ...(proposal?.observedRefs ?? [])];
   const scope = proposal?.proposedWriteScope ?? [];
-  const paths = [
-    ...new Set(
-      refs.flatMap((each) => (each.kind === "path" || each.kind === "evidence" ? [each.ref] : [])),
-    ),
-  ].filter((each) => !scope.some((area) => areaCovers(area, each)));
+  const cited = new Map<string, WorkflowDependency["class"]>();
+  for (const each of refs) {
+    if (each.kind === "path" && !cited.has(each.ref)) cited.set(each.ref, "normative");
+    if (each.kind === "evidence") cited.set(each.ref, "historical_observation");
+  }
   const digested = await Promise.all(
-    paths.map(async (each) => {
-      const digest = await dependencyDigest(root, each);
-      return digest === undefined ? [] : [{ path: each, digest, class: "normative" as const }];
-    }),
+    [...cited]
+      .filter(([each]) => !scope.some((area) => areaCovers(area, each)))
+      .map(async ([each, cls]) => {
+        const digest = await dependencyDigest(root, each);
+        return digest === undefined ? [] : [{ path: each, digest, class: cls }];
+      }),
   );
   return digested.flat();
 }
@@ -381,10 +386,12 @@ export async function completionFacts(
     refs: [...(issue.refs ?? [])].sort(),
     severity: issue.severity,
   }));
-  const uncommitted = uncommittedPaths(root) ?? [];
-  const changed = snapshot.boundary
-    ? await changedSinceStart(root, snapshot.boundary)
-    : uncommitted;
+  const dirty = uncommittedPaths(root) ?? [];
+  const changed = snapshot.boundary ? await changedSinceStart(root, snapshot.boundary) : dirty;
+  // Only the run's own changes and its workflow evidence wait on a commit; a path the operator
+  // left uncommitted before `start` is not the run's to deliver.
+  const evidence = `.qfai/evidence/workflow/${snapshot.run.id}/`;
+  const uncommitted = dirty.filter((file) => changed.includes(file) || file.startsWith(evidence));
   const validate =
     failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
   const completion = {
