@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -21,6 +21,11 @@ async function withInit(task: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
+async function editObjective(root: string): Promise<void> {
+  const objective = path.join(root, ".qfai", "spec", "01_policy", "objective.md");
+  await writeFile(objective, `${await readFile(objective, "utf-8")}\nProject goal.\n`, "utf-8");
+}
+
 describe("fresh story seed validation", () => {
   it("has no unfilled steering or missing discussion error before project content exists", async () => {
     await withInit(async (root) => {
@@ -38,17 +43,47 @@ describe("fresh story seed validation", () => {
     });
   });
 
-  it("enforces both obligations after any seed content is edited", async () => {
+  it("enforces the steering obligation after any seed content is edited", async () => {
     await withInit(async (root) => {
-      const objective = path.join(root, ".qfai", "spec", "01_policy", "objective.md");
-      await writeFile(objective, `${await readFile(objective, "utf-8")}\nProject goal.\n`, "utf-8");
+      await editObjective(root);
 
       expect(
         (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
       ).toEqual(["QFAI-ASSETS-003", "QFAI-ASSETS-003"]);
+    });
+  });
+
+  // QFAI:EX-0001-0153-02
+  it("needs no discussion pack on a story-tree project whose seed was edited", async () => {
+    await withInit(async (root) => {
+      await editObjective(root);
+
+      expect(
+        (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
+      ).not.toContain("QFAI-DPACK-001");
+    });
+  });
+
+  // QFAI:EX-0001-0153-02
+  it("still requires a correctly named pack on a story-tree project that holds a misnamed one", async () => {
+    await withInit(async (root) => {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
+
+      const codes = (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code);
+      expect(codes).toContain("QFAI-DPACK-005");
+      expect(codes).toContain("QFAI-DPACK-001");
+    });
+  });
+
+  // QFAI:EX-0001-0153-02
+  it("still requires a discussion pack where no story tree exists", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-"));
+    try {
       expect(
         (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
       ).toContain("QFAI-DPACK-001");
-    });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
