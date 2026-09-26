@@ -2,13 +2,13 @@
 
 ## Scope
 
-The flow owns 213 US, 462 AC and 754 EX rows. The [BF E2E test](../../packages/qfai/tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts) has the matching annotation and observable assertions across the development and verification flow. This record does not claim a current test-suite run or reviewer sign-off.
+The flow owns 213 US, 469 AC and 782 EX rows. The [BF E2E test](../../packages/qfai/tests/e2e/bf0001DevelopVerifyFlowE2E.test.ts) has the matching annotation and observable assertions across the development and verification flow. This record does not claim a current test-suite run or reviewer sign-off.
 
 The matrix maps every ID from the current story tree to a layer, an assertion candidate or a gap, and six depth dimensions. EX implementation tests remain the implement owner's responsibility.
 
 ## Coverage Depth Matrix
 
-[coverage-depth-BF-0001.md](coverage-depth-BF-0001.md) — ✅ 0 / ⚠️ 126 / ❌ 2558. The counts cover scored cells; `—` means the row has no declared case in that dimension.
+[coverage-depth-BF-0001.md](coverage-depth-BF-0001.md) — ✅ 0 / ⚠️ 126 / ❌ 2593. The counts cover scored cells; `—` means the row has no declared case in that dimension.
 
 ## Evidence and remaining work
 

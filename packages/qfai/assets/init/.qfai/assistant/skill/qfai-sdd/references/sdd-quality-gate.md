@@ -44,3 +44,12 @@ Do not use a sibling's in-flight findings to hold or clear the current flow. Rec
 - A REVISE finding was fixed and reviewed again under review-cycle-playbook.md.
 - Evidence records the source, changed IDs and files, contract executability, commands, reviewer verdicts, rejected options excluded, and remaining risks.
 - No approval-required operation is treated as approved from silence, --auto, or a generic instruction to continue.
+
+## Concrete-abstract cycle record
+
+Where the cycle ran (concrete-abstract-cycle.md), the completion reviewer reads the flow evidence's `## Concrete-Abstract Cycle` table. No validator reads it. The reviewer returns REVISE, naming the cycle, finding or item at fault, when:
+
+- a cycle that ran has no row;
+- the finder wrote a BR it read;
+- a finding the user did not decide names its finder, or an author of an item it targets, as adjudicator;
+- an adopted change to an item that existed when the invocation started was applied with no in-force triage approval or `Change request:` row whose approved change covers it.

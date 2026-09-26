@@ -113,6 +113,19 @@ contract change until no new flow or contract write is found. Do not silently re
 wider change request when only the story can move. A `confirm-only` change request stays read-only and stops on a
 mismatch. An activated API contract without an owning flow remains planned until an owner is established.
 
+## Concrete-abstract cycle
+
+Between Stage 4 and the gate, check the rules against their examples. Follow `references/concrete-abstract-cycle.md`.
+
+- **When.** A cycle runs when Stage 4 wrote or changed the Statement or the Examples cell of a BR. No cycle runs when it changed none, even if an AC or EX changed, or under `defect-example-seeding`.
+- **Finder.** A `test-design-analyst` that wrote none of those BRs reads them, the EXs they cite and the EXs this invocation wrote or changed. It raises findings of five kinds: a case the rule implies that no example states, a redundant example, an example no rule explains, a rule its examples do not support, and a flow, story or criterion split the rules show to be wrong.
+- **Griller.** One per cycle, neither the finder nor an author of a targeted item. It puts the findings to the authors for at most two rounds, then adopts its recommendation on each finding that is not critical. A finding resting on product intent nothing written states goes to the user.
+- **Scope.** A proposed EX must be implied by an existing BR, an existing AC or the request; otherwise it is rejected.
+- **Applying.** An item this invocation wrote changes directly. An item that existed before changes only under an in-force `Change request:` row whose approved change covers the change. A BF or US split, merge, creation or retirement keeps its triage approval. Under `--contract`, a story change asks for a wider change request. Rewrite the affected BRs afterwards.
+- **Stop.** At most two cycles; a cycle that adopts nothing ends the loop. A finding with no decision at the end becomes an `open-questions.md` row at TODO whose Content opens `Unadjudicated:`.
+- **Rejected.** Each rejected finding is a REJECTED `decisions.md` row naming its kind, target IDs and case. A finding matching one by kind, target IDs and an equal, including or included case is not raised again, nor one a pending or declined change request already answers.
+- **In a run.** The first attempt runs the cycle and asks each finding for the user as a further `decision` question beside the change question. The answering attempt applies the answers and writes the records. Drift outside the checked scope returns `blocked`.
+
 ## Review, gate, and evidence
 
 Use the routed roles and phase spans in `references/sdd-routing-phase-crosswalk.md`. Follow
@@ -140,6 +153,10 @@ Drift Protocol and `rule/test-layers.md` for every linked obligation.
 Planning and coverage estimates are signals, not gates. The gate records
 PASS or REVISE for the reviewed revision; an author does not review its own
 artifact.
+
+Where the concrete-abstract cycle ran, the completion reviewer returns REVISE
+on the grounds in
+`references/sdd-quality-gate.md#concrete-abstract-cycle-record`.
 
 When a stage needs user input or cannot proceed, record the question as a row of `open-questions.md` and report what the stage waits on. Follow the gate-failure repair protocol in the shared operating baseline. Do not bypass a failed gate.
 
