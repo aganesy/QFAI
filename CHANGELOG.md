@@ -294,6 +294,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   same bytes. The `/qfai-prototyping` skill no longer asks the agent to write
   the file by hand.
 
+- **`.qfai/evidence/` is local and never committed.** `qfai init` ignores the
+  whole directory, and a rerun strips the evidence negations earlier releases
+  wrote into the managed `.gitignore` block. Stage evidence, run records and
+  decision records stay in the working tree for review; what has to last goes
+  into the story tree, the `decisions.md` rows and the tests.
+  - `qfai validate` no longer reads evidence. QFAI-ATDD-131, QFAI-ATDD-132,
+    QFAI-ATDD-133, QFAI-GRILL-001, QFAI-GRILL-002, QFAI-CONTRACT-031 and
+    QFAI-DCON-019 are removed.
+  - A `decisions.md` row that records a workflow approval states who answered,
+    when, and what was chosen.
+  - The prototyping checks run locally only. No CI lane runs them.
+
 ### Removed
 
 - **Breaking: the spec-pack layout and every check that read it.** `qfai`
