@@ -69,6 +69,7 @@ the existing tree cannot represent it. Trace impact through BF → US → AC →
 
 Record triage, change requests, retired stories, and rejected options as rows of `<paths.specsDir>/decisions.md`; record
 unresolved questions in `<paths.specsDir>/open-questions.md`. Every row has exactly `ID | Content | Approach | Status`.
+A `decisions.md` row's Approach takes the form stated at the top of `templates/spec/decisions.md`.
 Append rows only; afterwards change only Status. A triage Content names the operation, affected BF or US, and its source
 as `discussion-<id>#REQ-NNNN` when that source exists. A change request Content begins `Change request:` and names the
 affected paths or IDs. Do not write a second decision-record directory or a retired story file. An approval-required row

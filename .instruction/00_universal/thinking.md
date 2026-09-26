@@ -37,12 +37,8 @@ version: 1.1.0
 - 測定可能な完了条件を定義する（例: 画面要素、API レスポンス、テスト観点）。
 - 95% 以上の確信が持てない場合は確認を優先する。
 
-## 作業前の整理テンプレート
+## What the stage records
 
-```
-1. 目的と完了条件
-2. 既存構造・パターン・制約
-3. 想定インパクト（機能/性能/セキュリティ）
-4. 案の比較と推奨理由
-5. 不明点と確認事項
-```
+A decision is recorded as one row of `.qfai/spec/decisions.md`, in the Approach
+form stated at the top of
+`packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.

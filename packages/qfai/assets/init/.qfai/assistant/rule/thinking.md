@@ -14,10 +14,9 @@ update_frequency: rare
 
 ## What the stage records
 
-- The evidence it read (files, commands).
-- The decision, and the grounds for it in that evidence.
-- The residual risk.
-- The rollback path.
+Each decision a stage makes is recorded as one row of
+`<paths.specsDir>/decisions.md`. The row's Approach cell takes the form stated
+at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 
 ## When to stop and ask
 
