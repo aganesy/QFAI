@@ -1,7 +1,7 @@
 ---
 name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
-description: "Author E2E tests for business flows and integration or API tests for acceptance criteria."
+description: "Use when invoked by name or handed a QFAI work order. Authors E2E tests for business flows and integration or API tests for acceptance criteria."
 argument-hint: "<BF-ID> [--auto]"
 allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Agent, Bash]
 roles:
@@ -21,6 +21,8 @@ mode: execution-focused
 ## /qfai-atdd — Author acceptance tests
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 

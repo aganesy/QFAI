@@ -15,9 +15,11 @@ import {
   testCommands,
 } from "./ownCi.js";
 
-// The init suites, and the named provenance, gitignore and migration tests. The literal is the
-// declaration this case holds the script to.
+// The workflow control-core suites, the init suites, and the named provenance, gitignore and
+// migration tests. The literal is the declaration this case holds the script to.
 const DECLARED_SUITES = [
+  "tests/unit/workflow/",
+  "tests/integration/workflow/",
   "tests/cli/init",
   "tests/integration/init/",
   "tests/core/assistantAssetProvenance.test.ts",
@@ -33,6 +35,8 @@ function envOf(step: Record<string, unknown>): Record<string, unknown> {
 }
 
 describe("the Windows job's suite list", () => {
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-01
   it("The Windows job runs exactly the declared suite list", () => {
     const windows = job(WINDOWS_JOB);
 
@@ -41,6 +45,7 @@ describe("the Windows job's suite list", () => {
     expect([...suiteList()].sort()).toEqual([...DECLARED_SUITES].sort());
   });
 
+  // QFAI:EX-0002-0024-02
   it("The job points TEMP and TMP at a directory with a space", () => {
     const steps = stepsOf(job(WINDOWS_JOB));
     const testAt = firstTestStep(job(WINDOWS_JOB));

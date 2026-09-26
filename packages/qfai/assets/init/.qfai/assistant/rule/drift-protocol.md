@@ -22,6 +22,11 @@ A new change-request row in decisions.md is permitted without an earlier change 
 
 These exceptions do not authorize a downstream stage to rewrite an upstream row or a vendored rule.
 
+A change that touches no protected file needs no change request. A bugfix whose
+diff changes no file under `01_policy/`, `02_business-flow/` or
+paths.contractsDir appends no `Change request:` row. A row naming a story file
+the bugfix did not touch would state an upstream change that did not happen.
+
 ## Drift classes
 
 Intent drift means an approved obligation should change. Record the current obligation, the proposed behavior, realistic

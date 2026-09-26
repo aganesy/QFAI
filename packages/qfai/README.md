@@ -12,8 +12,9 @@ QFAI addresses these failure modes by standardizing an end-to-end delivery loop 
 - Traceability validation enforces that SDD → ATDD → TDD → implementation stays aligned, reducing hallucination-driven drift.
 - Result: higher output quality, fewer review cycles, and lower human supervision cost.
 
-QFAI is designed for a skills-driven operating model: engineers select a prepared custom skill and provide only the task intent.
-The agent reads the repository, produces the required artifacts, and iterates until the hard gates pass.
+You describe the change to your AI coding agent in your own words.
+QFAI works out which stages the change needs, runs them one after another, and stops only to ask what it cannot decide for you.
+Invoking a stage skill such as `/qfai-sdd` yourself remains available as the expert path.
 
 ## Release status
 
@@ -80,9 +81,17 @@ and stops with recovery guidance when the check fails. `--dry-run` does not prob
 npx qfai init
 ```
 
-Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree. Follow
-the project's Standard commands in `<paths.contractsDir>/tech.md` (by default
-`.qfai/spec/03_contract/tech.md`) for its quality gates.
+Then open your AI coding agent in the repository and describe the change in your own words:
+
+> Let each customer register up to five notification addresses, with no duplicates.
+
+The agent announces the goal, the stages it will run and the files it may change, then runs them.
+It asks you only what it cannot decide for you, such as whether to create a new story.
+The stages fill the seeded story tree and follow the project's Standard commands in
+`<paths.contractsDir>/tech.md` (by default `.qfai/spec/03_contract/tech.md`) for its quality gates.
+
+To drive the stages yourself instead:
+Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
 
 ## What you can do (CLI commands)
 
@@ -141,6 +150,13 @@ the project's Standard commands in `<paths.contractsDir>/tech.md` (by default
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
+- `npx qfai workflow`
+  - The run control behind the free-text entry. The `qfai-run` skill calls its seven operations
+    (`start`, `next`, `accept`, `decision`, `status`, `resume` and `finish`), and each prints one
+    JSON document. `npx qfai workflow --help` lists them. A run's state lives under the git-ignored
+    `.qfai/run/`; its summary and the answers it recorded are tracked under
+    `.qfai/evidence/workflow/<runId>/`. Only `finish` reports a run complete, after it runs
+    `validate` itself.
 - `npx qfai sdd preflight`
   - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes the summary run-scoped at
@@ -176,9 +192,35 @@ error. A `Test exception:` decision row can exempt a specific BF, AC or EX;
 validation reports that exemption. The former `QFAI:SPEC-...` and contract
 annotations do not satisfy these obligations.
 
-## Operating model (skills-driven workflow)
+## Operating model (free-text entry)
 
-QFAI assumes you operate the project primarily via prepared custom skills.
+You state the change once, in your own words.
+The `qfai-run` skill takes it from there: it proposes a route, `npx qfai workflow` checks it,
+and each stage runs through its own skill until `finish` confirms the completion target.
+You type no stage name.
+
+- Say `continue` to resume an interrupted run where it stopped.
+- Say `stop` to cancel the run.
+- The run asks you only for a decision it cannot take: creating a new story, approving a change
+  to the story tree, accepting a material risk such as data loss, a broken public contract or a
+  production effect, or a fact only you hold.
+- Say you do not want a commit, and the run stops at a verified working tree instead of done.
+
+`workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
+
+| Mode     | What the entry does                                    |
+| -------- | ------------------------------------------------------ |
+| `active` | The default. Runs the stages one after another         |
+| `shadow` | Proposes the stages and the reason, and writes nothing |
+| `off`    | Starts no run. You invoke the stage skills by name     |
+
+`active` chains stages only on a host whose capability report and first delegation pass.
+See [Supported hosts](#supported-hosts).
+
+### Invoking a stage directly (expert path)
+
+You can still run one stage yourself by typing its skill, for example `/qfai-sdd`.
+The stage then runs on its own and stops when it is done, and you choose the next one.
 A custom skill is a reusable task instruction set for your AI coding agent.
 The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
 
@@ -191,6 +233,10 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/`) designed to keep the workflow opinionated and repeatable.
 
+- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages it needs,
+  hands each stage to the skill below that owns it, and reports when `finish` confirms the result.
+- **qfai-maintain**: Fix a typo or other non-normative text inside a run, and show that no
+  behaviour changed.
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
@@ -226,57 +272,42 @@ the new layout.
 
 ### Workflow sequence (example)
 
-This sequence shows which skill to run, in what order, and what artifacts to expect.
+This sequence follows one change from the first prompt to the completion report.
 
 ```mermaid
 sequenceDiagram
-participant U as User
+participant O as Operator
 participant AG as AI Agent
-participant Q as QFAI Kit (.qfai)
+participant W as npx qfai workflow
 participant R as Repo (codebase)
 
-U->>R: Create a repo (or open an existing one)
-U->>R: Run npx qfai init
-R-->>U: Story tree and assistant kit installed
+O->>R: Run npx qfai init
+R-->>O: Story tree and assistant kit installed
 
-U->>AG: Run /qfai-configure
-AG->>Q: Read .qfai/assistant/skill/qfai-configure/SKILL.md
-AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
-AG-->>U: Config tuned to this repo
+O->>AG: Describe the change in your own words
+AG->>W: start, then propose the route
+W-->>AG: Checked plan
+AG-->>O: The goal, the stages in order and the files it may change
 
-opt If you only have an idea
-U->>AG: Run /qfai-discussion
-AG-->>U: Structured discussion package (.qfai/discussion/discussion-<ts>/)
+opt The change needs a new story
+AG-->>O: Ask whether to create it
+O->>AG: Answer
 end
 
-U->>AG: Run /qfai-sdd
-AG->>Q: Read .qfai/assistant/skill/qfai-sdd/SKILL.md
-AG->>R: Triage + write policy, flows, stories and contracts
-AG-->>U: Story tree ready
+loop Each stage of the plan
+AG->>W: next
+W-->>AG: Work order for the stage
+AG->>R: Run the stage skill: story tree, acceptance tests, implementation or verification
+opt The stage changes the story tree
+AG-->>O: Ask to approve the change
+O->>AG: Answer
+end
+AG->>W: accept the stage result
+end
 
-U->>AG: Run /qfai-prototyping
-AG->>Q: Read .qfai/assistant/skill/qfai-prototyping/SKILL.md
-AG->>R: Build contract-aligned implementation skeleton
-AG-->>U: Prototype ready
-
-U->>AG: Run /qfai-atdd
-AG->>Q: Read .qfai/assistant/skill/qfai-atdd/SKILL.md
-AG->>R: Implement acceptance tests
-AG-->>U: ATDD tests ready
-
-U->>AG: Run /qfai-implement
-AG->>Q: Read .qfai/assistant/skill/qfai-implement/SKILL.md
-AG->>R: Run Red/Green/Refactor for each EX
-AG-->>U: Implementation complete
-
-U->>AG: Run /qfai-verify
-AG->>Q: Read .qfai/assistant/skill/qfai-verify/SKILL.md
-AG->>R: Run quality gates and summarize evidence
-AG-->>U: Verification summary ready
-
-U->>R: Run npx qfai validate
-U->>R: Run npx qfai report
-R-->>U: Traceability checks and report artifacts
+AG->>W: finish
+W-->>AG: Completion target confirmed by validate
+AG-->>O: Completion report
 ```
 
 Operational notes.
@@ -365,12 +396,13 @@ flowchart LR
 ## Minimal tutorial
 
 1. `npx qfai init`
-2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
-3. Run `/qfai-sdd` to write policy, flows, stories and contracts.
-4. Run `/qfai-prototyping` for UI-bearing contracts, then `/qfai-atdd` and
-   `/qfai-implement` for each flow.
-5. Keep each completed review under `.qfai/review/review-<timestamp>/`.
-6. Run `/qfai-verify` using the commands in `<paths.contractsDir>/tech.md`.
+2. Open your AI coding agent in the repository and describe the change in your own words.
+   If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
+3. Answer the questions the run puts to you. Say `continue` to resume after an interruption, or `stop` to cancel.
+4. Keep each completed review under `.qfai/review/review-<timestamp>/`.
+5. Run `npx qfai validate` then `npx qfai report`.
+
+To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 ## FAQ
 
@@ -649,6 +681,11 @@ it carries the delegation line to the canonical document of the same name, or is
 `.qfai/assistant/skill/`. One consequence of that: a symlink has no content to prove who wrote it, so
 if you publish a canonical skill of your own under a name QFAI itself once shipped, `--force` removes
 that link. Your `.qfai/assistant/skill/` entry is untouched; re-create the link to publish it again.
+
+### Supported hosts
+
+A host is declared supported for quality-gated automation once its adapter test passes and its routing eval is recorded for this release.
+No host is declared supported in this release.
 
 ### Cross-AI rules and the writing reminder
 

@@ -41,6 +41,34 @@ Use the shared user-question protocol for CREATE, DELETE, SPLIT, MERGE, SUPERSED
 
 Clarifications follow the constitution's question budget. Approval questions are decisions, so they do not consume that clarification budget. A pre-triage answer to continue is not approval for an operation not yet classified.
 
+## Inside a workflow run
+
+Under a QFAI work order, Stage 1 asks the operator nothing itself. The approval
+pass changes by operation.
+
+- **CREATE.** Stage 1 checks the `human_decision` the work order's
+  `authorizationRefs` cite for its `new_story` slot, instead of asking. The
+  check passes only when the record exists, answers this slot and this
+  operation, and is not stale. An approval is stale when the scope digest it was
+  given under changes, when the approved story text changes, or when a replan
+  widens the scope. The clock alone never makes it stale.
+- **A passing CREATE.** The attempt that writes the stage's change appends the
+  triage row at TODO. Its Approach cites the record as
+  `<runId>/<authorizationId>` and names its `answeredBy`. The row is then raised
+  to WIP.
+- **A missing, mismatched or stale CREATE approval.** Stage 1 appends no triage
+  row and asks the operator nothing. The stage returns `awaiting_input` naming
+  the row and the reason.
+- **DELETE, SPLIT, MERGE, SUPERSEDE and UPDATE:REMOVE.** A routing-time CREATE
+  approval approves none of them. Stage 1 opens the row's approval question as
+  a `decision` question of its stage result, with outcome `awaiting_input`, and
+  appends no row. The attempt that receives the answer through
+  `authorizationRefs` appends the row at TODO, citing that `human_decision` and
+  its `answeredBy`, and raises it to WIP.
+- **An approval-free row**, such as an UPDATE:APPEND, cites no answer.
+
+The table keeps exactly its four columns. The citation lives in Approach.
+
 ## ID allocation
 
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US. BR spans all contracts. DEC and OQ each span their table. Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.

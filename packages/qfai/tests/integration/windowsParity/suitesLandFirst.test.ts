@@ -44,6 +44,8 @@ async function collectedTestFiles(): Promise<string[]> {
 }
 
 describe("the suites land with the job", () => {
+  // QFAI:AC-0002-0024-01
+  // QFAI:EX-0002-0024-03
   it("Every suite-list entry resolves to a collected test file", async () => {
     const collected = await collectedTestFiles();
     const entries = suiteList();

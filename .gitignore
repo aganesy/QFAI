@@ -70,6 +70,7 @@ coverage/
 .qfai/state.json
 *.qfai-state.tmp
 .qfai/state.json.lock
+.qfai/run/
 .qfai/evidence/prototyping/*
 !.qfai/
 !.qfai/evidence/
@@ -77,6 +78,7 @@ coverage/
 !.qfai/evidence/decision/**
 !.qfai/evidence/prototyping/
 !.qfai/evidence/prototyping/grilling.md
+!.qfai/evidence/workflow/
 !.qfai/evidence/change-request-*.md
 !.qfai/evidence/decision-*.md
 !.qfai/evidence/implement-*.md

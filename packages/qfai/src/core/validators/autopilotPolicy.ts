@@ -90,6 +90,10 @@ export const HARD_REQUIRED_SKILL_ENTRIES: Readonly<Record<string, readonly strin
   // first question it exists to ask.
   "qfai-grilling": ["grilling subject"],
   "qfai-grill": ["grilling subject"],
+  // The entry skill starts from the operator's own words, and a maintenance
+  // edit from the text it changes. Neither has a default.
+  "qfai-run": ["change request"],
+  "qfai-maintain": ["edit target"],
 };
 
 /**

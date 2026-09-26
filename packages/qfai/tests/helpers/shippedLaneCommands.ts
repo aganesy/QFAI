@@ -1295,12 +1295,15 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
  * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
  * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
- * rather than drift.
+ * rather than drift. It moved a second time when the workflow's run state arrived: `.qfai/run/`
+ * joined the ignore lines and `!.qfai/evidence/workflow/` the governance negations, and those two
+ * lines are the whole delta.
  *
  * `AGENTS.md` and `CLAUDE.md` are the entry points Codex and Claude Code load, seeded create-only so
  * that the `.agents/rules/` masters this run writes are cited by something. They belong here for the
  * same reason `.github/copilot-instructions.md` does: an adopter's agent reads them as instructions,
- * so their bytes are the reviewed surface.
+ * so their bytes are the reviewed surface. Each opens with the entry directive that sends a first
+ * free-text change request to `qfai-run`, then a blank line; below it the bytes are unchanged.
  *
  * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
  * others are, and for one more: its whole purpose is to fix the bytes of everything beside it, so a
@@ -1464,7 +1467,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived the same way, and checked the way the note below asks: removing
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
-  [".gitignore", "632683497ae82c78050f3b347360ed0d2213227b1ec30bb876322ccd3833a291"],
+  [".gitignore", "d33d2c83ea359d0549bc39260e0bd9d8e94bafa0a8b30383c13ee7e5a6fd17db"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1512,8 +1515,8 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
-  ["AGENTS.md", "6083825b716db9e5c68b109b417c4108d80c46197eb333b14af35ad2ae89cf30"],
-  ["CLAUDE.md", "fe88c1229496dbd203993d9e79ec7869334fb77512331e0aba0cdcb1a4ed4d8b"],
+  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
+  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

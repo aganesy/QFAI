@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (TDD micro-cycle)
-description: "Implement one business flow through example tests and a complete Red, Green, Refactor cycle."
+description: "Use when invoked by name or handed a QFAI work order. Implements one business flow through example tests and a complete Red, Green, Refactor cycle."
 argument-hint: "<BF-ID> [EX-ID...]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:
@@ -24,6 +24,8 @@ mode: approval-gated
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
+
 ## User Questions (AskUserQuestion Protocol)
 
 Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
@@ -40,7 +42,10 @@ the BF is the unit of scoped completion.
 
 Send a decision, a question for the user or an out-of-scope discovery to
 `/qfai-sdd` as a change request. An out-of-scope discovery does not stop the
-current flow.
+current flow. A diagnosed missing test on behaviour an existing AC states is
+the one scope gap that raises no change request and adds no EX here: an EX that
+states the case is worked as an EX no test annotates, and where none does,
+`/qfai-sdd` adds it.
 
 For UI work, read root `DESIGN.md` and the linked UI contracts under
 `<paths.contractsDir>/ui/` before changing the surface. Review rendered HTML

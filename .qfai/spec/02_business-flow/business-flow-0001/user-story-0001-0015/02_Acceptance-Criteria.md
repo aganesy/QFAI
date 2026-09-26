@@ -7,8 +7,9 @@ Feature: UI-bearing detection
 
 # AC-0001-0015-01
 # Parent: US-0001-0015
-Scenario: UI-bearing discussion packs require prototyping.yaml
-  Given latest discussion pack is UI-bearing
-  When discussion README / skill contract を検証する
-  Then `prototyping.yaml` requiredness が明記されている
+Scenario: prototyping.yaml is optional for a pack with a visual prototyping surface
+  Given the shipped discussion README and skill contract
+  When their wording for `prototyping.yaml` is inspected
+  Then they offer it as optional to a pack whose surfaces include web, mobile, desktop or mixed
+  And they say a cli-only pack carries none
 ```
