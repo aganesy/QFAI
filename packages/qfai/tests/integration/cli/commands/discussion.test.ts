@@ -130,6 +130,7 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(combined).toMatch(/qfai discussion use <id>/);
   });
 
+  // QFAI:EX-0001-0093-03
   it("exits non-zero when currentId resolves to a missing pack with multiple candidates", async () => {
     await makePack("discussion-20260101000000000");
     await makePack("discussion-20260202000000000");
@@ -152,6 +153,23 @@ describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
     expect(code).not.toBe(0);
     const combined = cap.out.join("\n") + cap.err.join("\n");
     expect(combined).toMatch(/qfai discussion use <id>/);
+  });
+
+  // QFAI:EX-0001-0093-04
+  it("returns a lone pack with exit 0 and a stderr note when currentId is absent", async () => {
+    await makePack("discussion-20260101000000000");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      active: true,
+      format: "text",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    expect(cap.out.join("\n")).toMatch(/discussion-20260101000000000/);
+    expect(cap.err.join("\n")).toMatch(/no pointer set; single candidate assumed/);
   });
 });
 

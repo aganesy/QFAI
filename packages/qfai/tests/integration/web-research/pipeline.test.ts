@@ -91,10 +91,20 @@ describe("web-research pipeline", () => {
     expect(found.length).toBeGreaterThanOrEqual(2);
   });
 
+  // QFAI:EX-0001-0184-07
+  it("configures no MCP template for SSE transport", async () => {
+    const files = await fg(["**/*"], { cwd: mcpTemplateDir, absolute: true, dot: true });
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect(await readFile(file, "utf-8"), file).not.toMatch(/\bsse\b/i);
+    }
+  });
+
   // QFAI:EX-0001-0183-06
   it("specifies conservative concurrency defaults max_threads=2", async () => {
     const content = await readSkill();
     expect(content).toMatch(/max[_\s-]?threads\s*[=:]\s*2/i);
+    expect(content).toMatch(/\|\s*max_depth\s*\|\s*2\s*\|/i);
   });
 
   // QFAI:EX-0001-0183-04
@@ -107,6 +117,13 @@ describe("web-research pipeline", () => {
   it("specifies cache staleness with 24h default TTL", async () => {
     const content = await readSkill();
     expect(content).toMatch(/24\s*h(our)?|ttl.*24|staleness/i);
+  });
+
+  // QFAI:EX-0001-0183-07
+  it("re-fetches only entries older than the 24h default TTL", async () => {
+    const content = await readSkill();
+    expect(content).toContain("Default TTL: **24 hours**");
+    expect(content).toContain("Entries older than TTL are marked stale and re-fetched");
   });
 
   // QFAI:EX-0001-0184-06

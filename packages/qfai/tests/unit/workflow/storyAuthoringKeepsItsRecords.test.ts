@@ -52,6 +52,7 @@ function contract(examples: string, statement = "One email per customer"): strin
 interface Accepted {
   stageKind: string;
   after: string[];
+  questionsAfter?: string[];
   changed?: string[];
   outcome?: string;
   appendedByRun?: string[];
@@ -100,7 +101,7 @@ function accept(accepted: Accepted) {
   };
   const records = {
     decisions: table(after),
-    openQuestions: QUESTIONS,
+    openQuestions: accepted.questionsAfter ? table(accepted.questionsAfter) : QUESTIONS,
     contract: { path: CONTRACT, text: accepted.contractAfter ?? contract("EX-0001-0005-01") },
   };
   const result = {
@@ -209,6 +210,38 @@ it("An appended CREATE row at WIP citing no human_decision of this run", () => {
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
 });
 
+it("An sdd_delta result deleting an open-questions row present at issue", () => {
+  expect(accept({ stageKind: "sdd_delta", after: ISSUED, questionsAfter: [] })).toEqual(
+    refused("record-rewritten", "OQ-0001"),
+  );
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP citing this run's human_decision with another answeredBy", () => {
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [
+        ...ISSUED,
+        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | Answered ${RUN}/${CREATE.authorizationId} by operator-2 | WIP |`,
+      ],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP citing another run's human_decision", () => {
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [
+        ...ISSUED,
+        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | Answered run-20250101000000000/${CREATE.authorizationId} by operator-1 | WIP |`,
+      ],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
 it("An sdd result whose change request cites only the run's request_scope", () => {
   expect(
     accept({
@@ -262,6 +295,24 @@ it("Seeding after the answer writes the example and its citation under a change 
       ],
     }),
   ).toEqual(accepted);
+});
+
+it("Seeding whose change request names the example file but not the contract it also changed", () => {
+  expect(
+    accept({
+      stageKind: "sdd_append",
+      changed: [example, CONTRACT],
+      contractAfter: contract(seeded),
+      after: [
+        ...ISSUED,
+        `| DEC-0003 | UPDATE:APPEND EX-0001-0005-03 to US-0001-0005 | From the diagnosis | DONE |`,
+        `| DEC-0004 | Change request: ${example} | ${cites(CHANGE)} | WIP |`,
+      ],
+    }),
+  ).toEqual({
+    state: "running",
+    reasons: [example, CONTRACT].map((subject) => ({ reason: "record-unauthorized", subject })),
+  });
 });
 
 const withChangeRequest = [

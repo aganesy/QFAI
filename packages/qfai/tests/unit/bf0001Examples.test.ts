@@ -152,7 +152,7 @@ describe("BF-0001 story-directory examples", () => {
 
 describe("BF-0001 ID examples", () => {
   it("accepts one declaration of every story-tree ID shape", () => {
-    // QFAI:EX-0001-0008-01
+    // QFAI:EX-0001-0053-03
     const contents = files();
     contents.set(`${spec}/decisions.md`, table(["| DEC-0001 | Accepted choice | Reason | DONE |"]));
     contents.set(
@@ -201,7 +201,7 @@ describe("BF-0001 ID examples", () => {
   });
 
   it("rejects an AC with a three-digit tail and names its file", () => {
-    // QFAI:EX-0001-0008-02
+    // QFAI:EX-0001-0053-03
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -218,7 +218,7 @@ describe("BF-0001 ID examples", () => {
   });
 
   it("reports both files that declare one US ID", () => {
-    // QFAI:EX-0001-0008-03
+    // QFAI:EX-0001-0053-04
     const contents = files();
     contents.set(`${secondStory}/01_User-story.md`, "# US-0001-0001: Duplicate\n");
     const duplicates = findings(contents, "QFAI-STORY-002").filter((entry) =>
@@ -229,13 +229,33 @@ describe("BF-0001 ID examples", () => {
     expect(duplicates[0]?.message).toContain(`${secondStory}/01_User-story.md`);
   });
 
+  // QFAI:EX-0001-0008-10
+  it("reports both contract files that declare one BR ID", () => {
+    const contents = files();
+    contents.delete(`${spec}/03_contract/cli/check.md`);
+    const yaml = `${spec}/03_contract/api/orders.yaml`;
+    const sql = `${spec}/03_contract/db/orders.sql`;
+    contents.set(
+      yaml,
+      "x-qfai-rules:\n  - id: BR-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
+    );
+    contents.set(sql, "-- Rule BR-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n");
+    const duplicates = findings(contents, "QFAI-STORY-002").filter((entry) =>
+      entry.message.includes("BR-0001 is defined more than once"),
+    );
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0]?.message).toContain(yaml);
+    expect(duplicates[0]?.message).toContain(sql);
+  });
+
   it("accepts matching flow, story, AC and EX IDs", () => {
     // QFAI:EX-0001-0008-04
+    // QFAI:EX-0001-0053-05
     expect(findings(files(), "QFAI-STORY-002")).toEqual([]);
   });
 
   it("rejects a story numbered for another flow", () => {
-    // QFAI:EX-0001-0008-05
+    // QFAI:EX-0001-0053-05
     const contents = files();
     contents.set(`${story}/01_User-story.md`, "# US-0002-0001: Wrong flow\n");
     expect(findings(contents, "QFAI-STORY-002")).toEqual(
@@ -249,7 +269,7 @@ describe("BF-0001 ID examples", () => {
   });
 
   it("rejects a story directory numbered differently from its ID", () => {
-    // QFAI:EX-0001-0008-06
+    // QFAI:EX-0001-0053-05
     const contents = files();
     contents.set(
       `${secondStory}/01_User-story.md`,
@@ -261,6 +281,28 @@ describe("BF-0001 ID examples", () => {
         expect.objectContaining({
           file: `${secondStory}/01_User-story.md`,
           message: expect.stringContaining("user-story-0001-0002"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects an EX numbered for another story and a flow directory named for another flow", () => {
+    // QFAI:EX-0001-0053-05
+    const contents = files();
+    contents.set(
+      `${story}/03_Example.md`,
+      "| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0002-01 | AC-0001-0001-01 | project | passes |\n",
+    );
+    contents.set(`${flow}/business-flow.md`, "# BF-0003: Misplaced flow\n");
+    expect(findings(contents, "QFAI-STORY-002")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: `${story}/03_Example.md`,
+          message: expect.stringContaining("EX-0001-0002-01 disagrees"),
+        }),
+        expect.objectContaining({
+          file: `${flow}/business-flow.md`,
+          message: expect.stringContaining("BF-0003 disagrees"),
         }),
       ]),
     );
@@ -361,21 +403,22 @@ describe("BF-0001 EX and BR reference examples", () => {
   it("accepts one existing same-story AC reference", () => {
     // QFAI:EX-0001-0009-01
     // QFAI:EX-0001-0009-06
+    // QFAI:EX-0001-0057-01
     expect(findings(files(), "QFAI-STORY-004")).toEqual([]);
   });
 
   it("rejects an empty AC reference", () => {
-    // QFAI:EX-0001-0009-02
+    // QFAI:EX-0001-0057-01
     invalidAcRef("");
   });
 
   it("rejects two AC references", () => {
-    // QFAI:EX-0001-0009-03
+    // QFAI:EX-0001-0057-01
     invalidAcRef("AC-0001-0001-01, AC-0001-0001-02");
   });
 
   it("rejects an AC in another story", () => {
-    // QFAI:EX-0001-0009-04
+    // QFAI:EX-0001-0057-02
     const contents = files("AC-0001-0002-01");
     contents.set(
       `${secondStory}/02_Acceptance-Criteria.md`,
@@ -389,12 +432,12 @@ describe("BF-0001 EX and BR reference examples", () => {
   });
 
   it("rejects an undeclared AC", () => {
-    // QFAI:EX-0001-0009-05
+    // QFAI:EX-0001-0057-02
     invalidAcRef("AC-0001-0001-02");
   });
 
   it("names a criterion with no example", () => {
-    // QFAI:EX-0001-0009-07
+    // QFAI:EX-0001-0057-03
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -425,7 +468,7 @@ describe("BF-0001 EX and BR reference examples", () => {
   });
 
   it("names a rule with no examples", () => {
-    // QFAI:EX-0001-0009-09
+    // QFAI:EX-0001-0057-05
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
@@ -439,10 +482,27 @@ describe("BF-0001 EX and BR reference examples", () => {
         }),
       ]),
     );
+    contents.delete(`${spec}/03_contract/cli/check.md`);
+    const yaml = `${spec}/03_contract/api/orders.yaml`;
+    const sql = `${spec}/03_contract/db/orders.sql`;
+    contents.set(yaml, "x-qfai-rules:\n  - id: BR-0002\n    statement: Empty\n    examples: []\n");
+    contents.set(sql, "-- Rule BR-0003: No examples line\nSELECT 1;\n");
+    expect(findings(contents, "QFAI-STORY-005")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: yaml,
+          message: expect.stringContaining("BR-0002 has no examples"),
+        }),
+        expect.objectContaining({
+          file: sql,
+          message: expect.stringContaining("BR-0003 has no examples"),
+        }),
+      ]),
+    );
   });
 
   it("names an example no rule cites", () => {
-    // QFAI:EX-0001-0009-10
+    // QFAI:EX-0001-0057-07
     const contents = files();
     contents.delete(`${spec}/03_contract/cli/check.md`);
     expect(findings(contents, "QFAI-STORY-005")).toEqual(
@@ -453,10 +513,13 @@ describe("BF-0001 EX and BR reference examples", () => {
         }),
       ]),
     );
+    expect(
+      findings(files(), "QFAI-STORY-005").some((entry) => entry.message.includes("is not cited")),
+    ).toBe(false);
   });
 
   it("names an unknown example and the contract that cites it", () => {
-    // QFAI:EX-0001-0009-11
+    // QFAI:EX-0001-0057-06
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
@@ -565,6 +628,11 @@ describe("BF-0001 decision and question examples", () => {
       table(["| OQ-0001 | Unadjudicated: choose layout | Settled | DONE |"]),
     );
     expect(findings(contents, "QFAI-SPACK-102")).toEqual([]);
+    contents.set(
+      `${spec}/open-questions.md`,
+      table(["| OQ-0001 | Unadjudicated: choose layout | Deferred | DEFERRED |"]),
+    );
+    expect(findings(contents, "QFAI-SPACK-102")).toEqual([]);
   });
 });
 
@@ -597,6 +665,7 @@ describe("BF-0001 layer and exception examples", () => {
 
   it("requires integration or API for AC coverage", () => {
     // QFAI:EX-0001-0058-02
+    // QFAI:EX-0001-0071-01
     const contents = files();
     contents.set(
       `${story}/02_Acceptance-Criteria.md`,
@@ -693,6 +762,25 @@ describe("BF-0001 layer and exception examples", () => {
     }
   });
 
+  it("names an undeclared AC annotation and accepts a defined EX annotation", () => {
+    // QFAI:EX-0001-0073-04
+    const model = buildStoryTreeModel(files());
+    const tests = [
+      testFile(
+        "tests/integration/unknown.test.ts",
+        "integration",
+        annotation("AC", "0001-0001-99"),
+      ),
+      testFile("tests/unit/known.test.ts", null, annotation("EX", "0001-0001-01")),
+    ];
+    const undeclared = validateStoryTreeObligationsModel(model, tests, "atdd").filter(
+      (entry) => entry.code === "QFAI-STORY-008",
+    );
+    expect(undeclared).toEqual([
+      expect.objectContaining({ file: tests[0]?.file, refs: ["AC-0001-0001-99"] }),
+    ]);
+  });
+
   it("applies a DONE BF test exception without exempting its AC", () => {
     // QFAI:EX-0001-0058-06
     const contents = files();
@@ -717,6 +805,27 @@ describe("BF-0001 layer and exception examples", () => {
     expect(validateStoryTreeObligationsModel(buildStoryTreeModel(contents), [], "atdd")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "QFAI-STORY-006", refs: ["BF-0001"] }),
+      ]),
+    );
+  });
+
+  it("applies a DONE AC test exception without exempting its EX", () => {
+    // QFAI:EX-0001-0058-06
+    const contents = files();
+    contents.set(
+      `${spec}/decisions.md`,
+      table(["| DEC-0001 | Test exception: AC-0001-0001-01 | No API environment | DONE |"]),
+    );
+    const model = buildStoryTreeModel(contents);
+    const atdd = validateStoryTreeObligationsModel(model, [], "atdd");
+    expect(
+      atdd.some(
+        (entry) => entry.code === "QFAI-STORY-006" && entry.refs?.includes("AC-0001-0001-01"),
+      ),
+    ).toBe(false);
+    expect(validateStoryTreeObligationsModel(model, [], "tdd")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "QFAI-STORY-006", refs: ["EX-0001-0001-01"] }),
       ]),
     );
   });

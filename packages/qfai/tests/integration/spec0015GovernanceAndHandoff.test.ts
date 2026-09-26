@@ -110,6 +110,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     expect(f?.message).toMatch(/hard-required/);
   });
 
+  // QFAI:EX-0001-0175-04
   it("QFAI:EX-0001-0175-01 — normal: 3-bucket SKILL.md passes; widened auto-decide flagged as warning", async () => {
     await writeSkillMd("qfai-x", POLICY_3_BUCKET);
     const issues = await validateAutopilotPolicy(root);
@@ -123,6 +124,7 @@ describe("spec-0015 autopilot policy CHG-006", () => {
     await writeSkillMd("qfai-y", widened);
     const issues2 = await validateAutopilotPolicy(root);
     expect(issues2.some((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")).toBe(true);
+    expect(issues2.find((i) => i.code === "R-AUTOPILOT-POLICY-WIDENED")?.severity).toBe("warning");
   });
 });
 

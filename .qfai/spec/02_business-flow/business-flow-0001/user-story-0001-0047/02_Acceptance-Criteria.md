@@ -15,7 +15,8 @@ Scenario: AC-0001-0047-01
 # AC-0001-0047-02
 # Parent: US-0001-0047
 Scenario: AC-0001-0047-02
-  Given a `qfai-*` skill whose SKILL.md does not declare a top-level `project_memory:` YAML block
+  Given a `qfai-*` skill whose SKILL.md does not end with a `project_memory:` YAML block
   When `qfai validate` runs
-  Then an error finding is emitted (no specific code; uses `QFAI-SKILL-*` family) naming the skill and pointing at the missing block; read attempts of un-declared paths through the skill body are also rejected
+  Then `W-SKILL-PROJECT-MEMORY` is emitted at warning, naming the skill and the missing block
+  And a trailing `project_memory:` block raises no such warning whatever sub-keys it holds
 ```

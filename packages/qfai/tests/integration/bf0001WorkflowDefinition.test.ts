@@ -94,7 +94,6 @@ describe("BF-0001 workflow definition", () => {
     expect(checklist).toContain("A disagreement was resolved in an SDD-owned artifact");
   });
 
-  // QFAI:EX-0001-0001-03
   // QFAI:EX-0001-0001-04
   it("routes the specification output to the three story-tree layers", async () => {
     const sdd = await readFile(skill("qfai-sdd"), "utf8");
@@ -136,6 +135,7 @@ describe("BF-0001 workflow definition", () => {
     expect(stages.every(({ label }) => !label.includes("Configure"))).toBe(true);
   });
 
+  // QFAI:AC-0001-0004-05
   // QFAI:EX-0001-0004-02
   it("ships all eleven non-negotiable constitution articles", async () => {
     const constitution = await readFile(rule("constitution.md"), "utf8");

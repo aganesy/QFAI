@@ -92,6 +92,13 @@ describe("story-tree core", () => {
     );
   });
 
+  // QFAI:EX-0001-0008-11
+  it("counts only the parent flow's stories when allocating a story ID", () => {
+    expect(
+      nextId("US", ["US-0001-0001", "US-0001-0002", "US-0001-0003", "US-0002-0007"], "BF-0001"),
+    ).toBe("US-0001-0004");
+  });
+
   it("checks exact shapes, parent prefixes, and never fills an ID gap", () => {
     const marker = "QFAI:";
     expect(isStoryTreeId("AC-0001-0002-01", "AC")).toBe(true);
@@ -119,6 +126,7 @@ describe("story-tree core", () => {
     });
   });
 
+  // QFAI:EX-0001-0008-09
   it("reserves IDs named by decision rows when allocating a story ID", () => {
     const files = new Map(storyFiles);
     files.set(
@@ -206,6 +214,16 @@ describe("story-tree core", () => {
         ?.examples,
     ).toEqual([]);
     expect(parseContractRules("a.md", "## Rules\n\nNo table.\n").errors).not.toEqual([]);
+  });
+
+  // QFAI:EX-0001-0007-11
+  it("reports a row inserted above an existing row as that row's ID cell rewritten", () => {
+    const header = "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n";
+    const base = `${header}| DEC-0001 | First | Keep | TODO |\n`;
+    const head = `${header}| DEC-0002 | Inserted | Keep | TODO |\n| DEC-0001 | First | Keep | TODO |\n`;
+    expect(diffRecordTables(base, head, "decisions").rewritten).toContainEqual(
+      expect.objectContaining({ id: "DEC-0001", cell: "id" }),
+    );
   });
 
   it("checks table shape, status vocabulary, keyword force, and append-only diff", () => {

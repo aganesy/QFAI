@@ -226,6 +226,7 @@ describe("TC-0013-0035: incomplete / open structured primary_tasks rejected", ()
     });
   });
 
+  // QFAI:EX-0001-0161-03
   it("rejects a structured item carrying an extra key (closed schema)", async () => {
     const ui = [
       "screens:",

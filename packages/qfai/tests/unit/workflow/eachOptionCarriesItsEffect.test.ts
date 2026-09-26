@@ -76,6 +76,19 @@ for (const [title, optionId, state, events] of effects) {
   });
 }
 
+// QFAI:EX-0001-0195-15
+it("A replan answer, then next", () => {
+  const replanned = answer(["narrow"]).verdict.run;
+  if (!replanned) throw new Error("the replan answer returns the run");
+  const next = decide({ run: replanned }, { operation: "next" }, {});
+  const workOrder = next.verdict.workOrder;
+
+  expect({
+    state: replanned.state,
+    workOrder: [workOrder?.stageKind, workOrder?.executor?.skill, workOrder?.operation],
+  }).toEqual({ state: "routing", workOrder: ["route", "qfai-run", "route"] });
+});
+
 it("A multi-select answer choosing a proceed option and a stop option", () => {
   expect(outcomeOf(answer(["keep", "stop"], { min: 1, max: 2 }))).toEqual({
     state: "cancelled",

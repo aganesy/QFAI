@@ -10,6 +10,7 @@ const read = (tree: string, file: string): Promise<string> =>
 
 describe("autopilot choices cannot supply missing approval", () => {
   for (const tree of trees) {
+    // QFAI:EX-0001-0212-04
     it(tree + ": SDD classifies its own decisions and stops for pending approval", async () => {
       const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
@@ -22,6 +23,7 @@ describe("autopilot choices cannot supply missing approval", () => {
       expect(triage).toContain("Do not self-approve");
       expect(triage).toContain("In --auto, ask no question, leave approval-required rows at TODO");
       expect(triage).toContain("stop before their dependent writes");
+      expect(triage).toContain("report every pending row with its operation and target");
     });
 
     it(tree + ": the shared rule keeps mandatory approvals outside the prompt budget", async () => {

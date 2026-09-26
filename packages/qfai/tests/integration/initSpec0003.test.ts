@@ -13,7 +13,7 @@ const INIT_CLI = path.resolve(__dirname, "..", "..", "src", "cli", "commands", "
 
 // TC-0003-0001: Empty directory initialization
 describe("TC-0003-0001: Empty directory initialization", () => {
-  const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review"];
+  const ARTIFACT_DIRS = ["specs", "contracts", "discussion", "evidence", "review", "report"];
   const SKILL_LINK_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 
   async function kindOf(

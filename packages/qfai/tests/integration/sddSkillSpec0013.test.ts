@@ -143,7 +143,6 @@ describe("SDD preflight stops only when no usable source exists", () => {
     }
   });
 
-  // QFAI:EX-0001-0153-01
   it("continues with a selected discussion pack even when it is incomplete", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
     roots.push(root);
@@ -161,6 +160,18 @@ describe("SDD preflight stops only when no usable source exists", () => {
   });
 
   // QFAI:EX-0001-0153-01
+  it("continues when the selected pack has no 06_REQ.md and records it as a gap", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
+    roots.push(root);
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260924000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "01_Context.md"), "# Context\n\nSave drafts.\n");
+
+    const result = await runSddPreflight(root, defaultConfig, { packDir });
+    expect(result.status).toBe("ready");
+    expect(result.packGaps.some((gap) => gap.includes("06_REQ.md"))).toBe(true);
+  });
+
   // QFAI:EX-0001-0156-01
   it("stops when no usable discussion or import-lite source exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));

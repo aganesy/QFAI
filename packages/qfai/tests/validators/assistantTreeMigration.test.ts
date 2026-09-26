@@ -44,6 +44,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0015: 4-layer enum guard
+  // QFAI:EX-0001-0012-05
   it("TC-0004-0015: reports a non-canonical layer dir", async () => {
     const root = await newRoot("treemig-enum");
     try {
@@ -101,6 +102,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0022 (severity escalation): legacy steering/ still present at or past sunset minor escalates to error
+  // QFAI:EX-0001-0043-01
   it("TC-0004-0022 (severity): D-DEPRECATED-PATH reports at error", async () => {
     const mod = await import("../../src/core/validators/assistantTreeMigration.js");
     const root = await newRoot("treemig-severity");
@@ -141,6 +143,7 @@ describe("assistantTreeMigration validator", () => {
     }
   });
 
+  // QFAI:EX-0001-0043-01
   it("allows skill.local and reports a legacy catalog directory", async () => {
     const root = await newRoot("treemig-catalog");
     try {
@@ -155,6 +158,9 @@ describe("assistantTreeMigration validator", () => {
       expect(
         changed.filter((found) => found.code === "W-ASSISTANT-LAYOUT").map((found) => found.file),
       ).toEqual([".qfai/assistant/catalog/", ".qfai/assistant/skills/"]);
+      const catalogIssue = changed.find((found) => found.file === ".qfai/assistant/catalog/");
+      expect(catalogIssue?.severity).toBe("warning");
+      expect(catalogIssue?.message).toContain("rule, skill, agent, prompt");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -183,6 +183,7 @@ describe("iterate --license-patch add-only diff", () => {
   // source lives in the audit ledger; cycle-1 verify replays the audit
   // rows via `effectiveLicenseCatalog(frozen, auditRows)` so a
   // post-patch source is allowlisted on subsequent cycles.
+  // QFAI:EX-0001-0144-01
   it("cycle 0 --license-patch adds a source that cycle 1 license-verify accepts via audit replay", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -339,6 +340,7 @@ describe("iterate --license-patch add-only diff", () => {
     expect(errorCodes).not.toContain("license-not-allowlisted");
   });
 
+  // QFAI:EX-0001-0144-01
   it("cycle 0 --license-patch does NOT trigger the cycle-1 frozenLicenseCatalog drift gate", async () => {
     const root = await newTempDir();
     await seedProject(root);

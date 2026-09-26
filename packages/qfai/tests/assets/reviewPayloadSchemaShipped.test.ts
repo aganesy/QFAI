@@ -116,3 +116,39 @@ describe("shipped reviewer payload schema", () => {
     }
   });
 });
+
+/** The prompt's text with line wraps folded, so a rule is matched as one sentence. */
+async function readPromptFlat(): Promise<string[]> {
+  return (await readShipped(PROMPT_REL)).map((prompt) => prompt.replace(/\s*\n\s*/g, " "));
+}
+
+describe("the pivotDirective rule the shipped reviewer prompt states", () => {
+  const OPEN_COUNT =
+    "Let `open(r)` be the total length of `r.blockingFindings` plus `r.layoutAntiPatternsDetected`.";
+
+  // QFAI:EX-0001-0108-02
+  it("pivots when the open count is above zero and did not fall across three reviews", async () => {
+    for (const prompt of await readPromptFlat()) {
+      expect(prompt).toContain(OPEN_COUNT);
+      expect(prompt).toContain(
+        "`open(latest) > 0` AND `open(latest) >= open(prior)` AND `open(prior) >= open(prior2)` → `pivot`.",
+      );
+    }
+  });
+
+  // QFAI:EX-0001-0108-04
+  it("continues when the open count fell from the prior review", async () => {
+    for (const prompt of await readPromptFlat()) {
+      expect(prompt).toContain(
+        "Else if a prior review exists AND `open(latest) < open(prior)` → `continue`.",
+      );
+    }
+  });
+
+  // QFAI:EX-0001-0108-03
+  it("refines in every other case", async () => {
+    for (const prompt of await readPromptFlat()) {
+      expect(prompt).toContain("- Else → `refine`.");
+    }
+  });
+});

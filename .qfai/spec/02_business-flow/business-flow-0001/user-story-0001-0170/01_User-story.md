@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a QFAI user, I want a devils-advocate reviewer that challenges assumptions and provides concrete alternatives on FAIL, with 3-FAIL advisory demotion to prevent infinite loops.
+As a QFAI user, I want a devils-advocate reviewer that challenges assumptions and provides concrete alternatives on FAIL, as an advisory mode that does not block completion by default.
 
 ## Legacy Source Scope
 

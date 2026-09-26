@@ -61,7 +61,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     expect(resolved).toBe(expected);
   });
 
-  it("QFAI:EX-0001-0160-02 — a dangling currentId names candidate packs and the recovery command", async () => {
+  it("QFAI:EX-0001-0160-03 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
     await writeDiscussionCurrentId(root, "discussion-20260303000000000");
@@ -123,7 +123,8 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  it("QFAI:EX-0001-0161-01 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
+  // QFAI:AC-0001-0161-01
+  it("QFAI:EX-0001-0161-04 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
     // count == 2: silent, because there is no floor
     {
       const issues = await withinBandIssues(

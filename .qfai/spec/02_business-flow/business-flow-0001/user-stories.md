@@ -90,7 +90,6 @@
 | US-0001-0086 | Evaluator Calibration                                                                  | `user-story-0001-0086/` |
 | US-0001-0087 | Screen Contracts                                                                       | `user-story-0001-0087/` |
 | US-0001-0088 | Review Input Bundle                                                                    | `user-story-0001-0088/` |
-| US-0001-0089 | No Early Winner                                                                        | `user-story-0001-0089/` |
 | US-0001-0090 | Design Direction Handoff                                                               | `user-story-0001-0090/` |
 | US-0001-0091 | Legacy Sidecar Drop                                                                    | `user-story-0001-0091/` |
 | US-0001-0092 | Mock template emits anchor-form hrefs by default                                       | `user-story-0001-0092/` |
@@ -162,7 +161,7 @@
 | US-0001-0158 | Active Design Contract Surface Reduction                                               | `user-story-0001-0158/` |
 | US-0001-0159 | UI contract `primary_tasks` slot per screen                                            | `user-story-0001-0159/` |
 | US-0001-0160 | Resolve active discussion pack via single helper                                       | `user-story-0001-0160/` |
-| US-0001-0161 | `primary_tasks` count band + accepted shape documented                                 | `user-story-0001-0161/` |
+| US-0001-0161 | `primary_tasks` ceiling + accepted shape documented                                    | `user-story-0001-0161/` |
 | US-0001-0162 | Canonical verification validators                                                      | `user-story-0001-0162/` |
 | US-0001-0163 | Truthful verification evidence                                                         | `user-story-0001-0163/` |
 | US-0001-0164 | Contract-first verification gates                                                      | `user-story-0001-0164/` |

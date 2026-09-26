@@ -251,6 +251,7 @@ describe("TC-0013-0027: QFAI-AUD-001 aligned lane passes when primary_tasks is n
   // slot (key-absent) emit QFAI-AUD-001 at severity=info under a one-minor
   // release deprecation window (sunset: qfai 1.10.0). Key-empty (slot
   // authored but `primary_tasks: []`) remains severity=error.
+  // QFAI:EX-0001-0159-03
   it("legacy slot-less contracts emit QFAI-AUD-001 at severity=error (past sunset)", async () => {
     await withWorkspace({ uiContract: uiContractWithoutPrimaryTasksKey() }, async (root) => {
       const issues = await validateDesignAudit(root, defaultConfig);

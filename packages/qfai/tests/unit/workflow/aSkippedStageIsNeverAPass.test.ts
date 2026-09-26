@@ -98,3 +98,22 @@ it("A result with notRun", () => {
     acceptSkipped({ kind: "reused", receiptRef }, { receiptValidity: { [receiptRef]: "stale" } }),
   ).toEqual(refusedInput("reuse-stale"));
 });
+
+it("A result with notRun reused and a valid receipt", () => {
+  const receiptRef = "receipts/verify-2026-09-24.json";
+  const notRun: AcceptResult["notRun"] = { kind: "reused", receiptRef };
+  const actual = acceptSkipped(notRun, { receiptValidity: { [receiptRef]: "valid" } });
+  expect(actual).toEqual({
+    ok: true,
+    state: "ready",
+    reasons: [],
+    events: [
+      expect.objectContaining({
+        type: "accept-nonfinal-result",
+        stageInstanceId: "direct-edit",
+        notRun,
+      }),
+    ],
+  });
+  expect(actual?.events.some((event) => event.type === "receipt-recorded")).toBe(false);
+});

@@ -56,10 +56,11 @@ Scenario: A stop ends the run and recovery touches only the run's own paths
 # AC-0001-0196-07
 # Parent: US-0001-0196
 Scenario: Retries follow their class and a budget never counts as a pass
-  Given a run whose delegation is saturated, unavailable, or at a repair budget
+  Given a run whose delegation is saturated or unavailable, whose test fails, whose input is stale, or that reaches a budget
   When the core handles it
   Then a saturated delegation is retried with backoff, at most three times
   And an unavailable delegation or a spent budget leaves the run `blocked`, never completed
+  And a test failure goes to the owner of the failing artifact, and stale input is refreshed, never resubmitted
 
 # AC-0001-0196-08
 # Parent: US-0001-0196
@@ -69,4 +70,20 @@ Scenario: The run judges cumulative changes against its authorized boundary
   Then those changes are admitted against the state fixed at `start`
   And a `scope-dependency` repair made outside the run is admitted only for approved, named paths at their recorded digests
   And an unapproved or changed external path is refused
+
+# AC-0001-0196-09
+# Parent: US-0001-0196
+Scenario: File faults and platforms do not change a verdict
+  Given a run operation
+  When a file read or write fails with `EBUSY`, `EPERM` or `EACCES`, or the same run cycle runs on Linux and on Windows
+  Then the failing operation is refused `io-error` after one attempt
+  And both platforms give the same verdicts, with equal digests for LF and CRLF copies
+
+# AC-0001-0196-10
+# Parent: US-0001-0196
+Scenario: Every operation follows the edge table
+  Given a run in any state
+  When an operation has no edge from that state
+  Then it is refused, or `finish` lists the unmet condition, and the state is unchanged
+  And a terminal run accepts no further event
 ```

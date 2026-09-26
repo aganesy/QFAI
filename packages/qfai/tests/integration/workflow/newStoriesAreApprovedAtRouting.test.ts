@@ -32,6 +32,7 @@ const TWO_STORIES = {
   newStories: [...FEATURE_PROPOSAL.newStories, SECOND_STORY],
 };
 
+// QFAI:EX-0001-0192-03
 it("Each new story is asked about once, in the routing round, and recorded through decision", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, TWO_STORIES);
