@@ -382,7 +382,7 @@ describe("how many cycles run", () => {
   // QFAI:EX-0001-0152-25
   it("under --auto asks nothing and opens the Unadjudicated row in the cycle that raised it", async () => {
     const text = await loop();
-    expectSentence(text, "silence", /`--auto`/, /nothing is asked/i);
+    expectSentence(text, "silence", /`--auto`/, /outside a run/i, /nothing is asked/i);
     expectSentence(
       text,
       "the row at once",
