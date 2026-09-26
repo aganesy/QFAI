@@ -462,7 +462,7 @@ describe("spec-0018: one shipped-script migration journey", () => {
     expect(report).toContain("QFAI:SPEC-0001:US-0001-0001");
   });
 
-  it("repoints the six host links and keeps decision evidence trackable", async () => {
+  it("repoints the six host links and keeps decision evidence out of Git", async () => {
     for (const dir of HOST_SKILL_DIRS) {
       expect(
         (await readlink(path.join(journey.root, dir, "qfai-sdd"))).replace(/\\/g, "/"),
@@ -475,14 +475,14 @@ describe("spec-0018: one shipped-script migration journey", () => {
     }
     const ignore = await textAt(journey.root, ".gitignore");
     expect(ignore).toContain("# Local notes stay ignored.\nscratch/\n");
-    expect(ignore).toContain("!.qfai/evidence/decision/");
+    expect(ignore).not.toContain("!.qfai/evidence/");
     const expected = await cloneProject(journey.beforeLinks);
     await ensureRootGitignoreEntries(expected, false, () => {});
     expect(ignore).toBe(await textAt(expected, ".gitignore"));
     const record = ".qfai/evidence/decision/receipt.json";
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });
     await writeFile(path.join(journey.root, record), "{}\n");
-    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(1);
+    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(0);
   });
 
   it("limits link repair to managed wrappers and refuses an inspection failure", async () => {
