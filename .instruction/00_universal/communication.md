@@ -12,8 +12,6 @@ version: 1.1.0
 ## 基本原則
 
 - **不明点は即質問**: 憶測や仮定で進める作業は禁止。
-- **長時間タスクはこまめに共有**: 30分以上かかりそうなら途中経過を報告。
-- **完了時は具体的に報告**: 変更内容・変更ファイル・テスト結果をセットで示す。
 
 ## 作業を止めて確認すべきケース
 
@@ -32,19 +30,8 @@ A form restated here is a copy that drifts, and the drift is invisible until
 someone follows the copy — which is what this directory says about every rule it
 points at.
 
-## 進捗報告
+## Progress and completion reports
 
-報告には以下を含め、箇条書きで簡潔に伝える。
-
-- **進捗状況**: 完了/着手中/未着手を分けて記載。
-- **課題・問題**: 発生事象、対応済み、未解決のもの。
-- **次の一手**: 直近の作業と、ユーザーに確認が必要な点、想定リスク。
-
-## 完了報告
-
-完了時は次をセットで共有する。
-
-- **概要**: 何を、何のために変えたか。
-- **変更ファイル**: ファイルごとの目的と主な変更。
-- **テスト**: 実行したテストと結果、未実施なら理由。
-- **注意点/リスク**: 影響範囲、残タスク、確認が必要な点。
+What to say while the work runs, how to correct an earlier statement, and the
+shape of the closing report are owned by
+`.qfai/assistant/rule/communication.md`. Follow that article.
