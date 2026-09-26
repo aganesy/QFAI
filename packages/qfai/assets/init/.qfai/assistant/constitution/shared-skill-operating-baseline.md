@@ -88,6 +88,7 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   question, not the prompt: a question asked because a document requires a recorded human decision (an SDD triage `Approved By`, a reviewer-gate escalation) is an **approval** and spends nothing, and bundling one into a prompt does not exempt the clarifications beside it. On exhaustion, do not ask a sixth clarification — proceed with explicit, labelled assumptions and record them in the
   output, as `--auto` does; a required approval may still be asked. See `.qfai/assistant/constitution/constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask via plain text. Proceed with explicit assumptions and record them in the outputs. Proceeding presupposes evidence to assume from — when a step has none, it is a hard blocker: stop there and report it as a blocker instead of asking or guessing.
+  How such a run may end its turn: `#unattended-runs-ending-a-turn` below.
 - Mandatory approval questions and `hard-required` inputs are exempt from the budget, and exhaustion does not waive either: approvals MUST still be asked, and a missing `hard-required` input **that this invocation actually consumes** MUST be asked for rather than assumed — if it stays missing, stop instead of guessing. A `hard-required` input the requested path never reads is neither
   asked for nor a blocker. Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so these questions survive both. Under an explicit `--auto` the question is not asked at all — that run stops and names the missing input instead of inventing one. See `.qfai/assistant/constitution/constitution.md` Article VI.
 - **Grilling questions are exempt too, and unbounded.** A question asked inside the interview `.agents/rules/grilling.md` defines spends no budget, and a session runs to its own end condition — for a user session an empty frontier and the user's confirmation, which is itself in the exempt class, and for a delegated one no open node and an answer to every critical decision — rather than to a count.
@@ -95,6 +96,28 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   session is entered deliberately: an invocation declares one and nothing else starts one, so a question asked outside a declared session is an ordinary clarification and spends a unit, whatever its subject.
   Under an explicit `--auto` the session asks nothing, a delegated one still adopts every decision that is not critical, and each node it could not settle is opened as a question in the register the stage reads. Each node, not each decision: a fact only
   the user holds cannot be settled from evidence either, and a fact declared undefaultable stops the run rather than taking a value nobody has. Where a document requires the field to hold something, write the defaulted value and label it an assumption beside that open question; what is forbidden is the assumption with no open question against it (Article X, rule 6).
+
+## Unattended Runs: Ending a Turn
+
+Under `--auto` nobody is there to reply. A message with no tool call in it ends the turn, and an ended turn stops the run whether or not the work is done. The Completion Contract below cannot catch this: the stage is incomplete, and nothing is left running to notice.
+
+While work is still owed, a turn MUST NOT end with any of these:
+
+1. A summary that announces the next step and does not take it.
+2. An offer to carry on unless the user would prefer otherwise. Nobody is there to answer it.
+3. A list of decisions for the user when, by the agent's own account, none of them blocks the rest of the work.
+4. A stop because the turn has run long or a milestone is done.
+
+A turn may end with work still owed only when one of these holds:
+
+- nothing can move without the user — a hard blocker, or a `hard-required` input the run cannot read off evidence;
+- the thing blocking the run is deliberately protected from the agent, such as a credential, a permission or a protected branch.
+
+That ending is a stop report under `#gate-failure-autorepair-protocol`, not a completion claim.
+
+A status note or a recommendation is welcome. It goes in the same message as the next action.
+
+This section does not relax the confirmation an irreversible action needs, and it does not apply where a person is there to answer.
 
 ## Canonical qfai Launcher (Mandatory)
 
