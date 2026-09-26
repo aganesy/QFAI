@@ -120,7 +120,9 @@ async function stageFacts(root: string, snapshot: WorkflowSnapshot, input: Workf
     reviewerRolesOf(config),
     accepting ? realPathsOf(root, input.result) : undefined,
     fileDigestsOf(root, [...changed, ...(reproduction ? [reproduction] : [])]),
-    input.operation === "resume" ? receiptValidityOf(root, snapshot) : undefined,
+    input.operation === "resume" || input.operation === "next"
+      ? receiptValidityOf(root, snapshot)
+      : undefined,
   ]);
   return {
     ...story,

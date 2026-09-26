@@ -1,11 +1,17 @@
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { scopeDigestOf } from "./common.js";
+import { everyStageResult, scopeDigestOf, skillOwnerOf } from "./common.js";
 import { isRecord } from "./parse.js";
 import { writeRecord } from "./persistence.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
-import type { WorkflowDecision, WorkflowEvent, WorkflowSnapshot } from "./types.js";
+import type {
+  WorkflowDecision,
+  WorkflowDependency,
+  WorkflowEvent,
+  WorkflowInput,
+  WorkflowSnapshot,
+} from "./types.js";
 
 type Snapshot = WorkflowSnapshot;
 
@@ -48,15 +54,38 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
   };
 }
 
+// A plan routing settled starts from its first stage. The stage results of the plan it replaces
+// are kept apart for their receipts and debts, and a repair is left to the new plan.
 function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const plan = record.plan ?? snapshot.plan;
   const writeScope = record.proposal?.proposedWriteScope ?? plan?.writeScope;
+  const {
+    acceptedStages: _replaced,
+    repairedStages: _repaired,
+    repairRequest: _left,
+    ...rest
+  } = withoutWorkOrder(snapshot);
+  const prior = [
+    ...(snapshot.priorStages ?? []),
+    ...(snapshot.acceptedStages ?? []),
+    ...(snapshot.repairedStages ?? []),
+  ];
   return {
-    ...withoutWorkOrder(snapshot),
+    ...rest,
+    ...(prior.length > 0 ? { priorStages: prior } : {}),
     ...(plan ? { plan } : {}),
     ...(record.settled ? { settled: record.settled } : {}),
     ...(writeScope ? { scopeDigest: scopeDigestOf(writeScope) } : {}),
+    ...(record.resultRef
+      ? { routingReceiptRef: record.resultRef, routingDependencies: record.dependencies ?? [] }
+      : {}),
   };
+}
+
+// Each accepted result's receipt is one every later work order builds on.
+function withReceipt(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  if (!record.resultRef) return snapshot;
+  return { ...snapshot, receiptRefs: [...(snapshot.receiptRefs ?? []), record.resultRef] };
 }
 
 function foldQuestion(snapshot: Snapshot, record: JournalRecord): Snapshot {
@@ -121,8 +150,24 @@ function foldSeam(snapshot: Snapshot, record: JournalRecord): Snapshot | undefin
   return rest;
 }
 
-// A `needs_repair` result is routing data: its stage stays unaccepted, so `next` reissues it as
-// a new attempt, and each cause it lists counts one automatic repair.
+// Every `decisions.md` row a result appended, whatever its outcome, stays the run's.
+function withAppendedRows(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  if (!record.appendedRows?.length) return snapshot;
+  return { ...snapshot, appendedRows: [...(snapshot.appendedRows ?? []), ...record.appendedRows] };
+}
+
+// The findings of a `needs_repair` result that a skill owns, which `next` routes to their
+// owners' stages. A replan leaves the repair to the new plan, and an operator's finding is not
+// routed: the detecting stage is reissued.
+function repairRequestOf(record: JournalRecord): Snapshot["repairRequest"] {
+  const debts = (record.repairs ?? []).filter((debt) => skillOwnerOf(debt));
+  if (record.event !== "accept-nonfinal-result" || debts.length === 0) return undefined;
+  return { stageInstanceId: record.stageInstanceId ?? "", debts };
+}
+
+// A `needs_repair` result is routing data: its stage stays unaccepted, so `next` routes its
+// findings to their owners and then reissues it as a new attempt, and each cause it lists counts
+// one automatic repair.
 function foldRepair(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const counts = [...(snapshot.repairsByCause ?? [])];
   for (const debt of record.repairs ?? []) {
@@ -134,7 +179,26 @@ function foldRepair(snapshot: Snapshot, record: JournalRecord): Snapshot {
     if (at < 0) counts.push(entry);
     else counts[at] = entry;
   }
-  return { ...withoutWorkOrder(snapshot), repairsByCause: counts };
+  const { repairRequest: _replaced, ...rest } = withoutWorkOrder(snapshot);
+  const repairRequest = repairRequestOf(record);
+  return { ...rest, repairsByCause: counts, ...(repairRequest ? { repairRequest } : {}) };
+}
+
+// A repair stage's result: it is kept apart from the plan's accepted stages, and the findings its
+// owner repaired leave the request. Once none is left, `next` reissues the detecting stage.
+function foldRepaired(snapshot: Snapshot, record: JournalRecord): Snapshot | undefined {
+  const request = snapshot.repairRequest;
+  if (!request || !record.stageInstanceId || record.stageInstanceId === request.stageInstanceId) {
+    return undefined;
+  }
+  const owner = snapshot.outstandingWorkOrder?.executor?.skill;
+  const debts = request.debts.filter((debt) => skillOwnerOf(debt) !== owner);
+  const { halt: _cleared, repairRequest: _repaired, ...rest } = withoutWorkOrder(snapshot);
+  return {
+    ...rest,
+    repairedStages: [...(snapshot.repairedStages ?? []), acceptedStageOf(snapshot, record)],
+    ...(debts.length > 0 ? { repairRequest: { ...request, debts } } : {}),
+  };
 }
 
 function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
@@ -154,21 +218,34 @@ function acceptedStageOf(snapshot: Snapshot, record: JournalRecord) {
 
 function foldAccepted(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const seam = foldSeam(snapshot, record);
-  if (seam) return seam;
-  const replans =
-    (snapshot.replans ?? 0) + (record.event === "scope-or-obligation-revision" ? 1 : 0);
-  if (record.outcome === "needs_repair") {
-    return { ...foldRepair(snapshot, record), ...(replans > 0 ? { replans } : {}) };
-  }
-  const { halt: _cleared, ...rest } = withoutWorkOrder(snapshot);
-  const appendedRows = [...(snapshot.appendedRows ?? []), ...(record.appendedRows ?? [])];
-  return {
-    ...rest,
-    acceptedStages: [...(snapshot.acceptedStages ?? []), acceptedStageOf(snapshot, record)],
-    ...(record.diagnosis ? { diagnosis: record.diagnosis } : {}),
-    ...(replans > 0 ? { replans } : {}),
-    ...(appendedRows.length > 0 ? { appendedRows } : {}),
-  };
+  if (seam) return withAppendedRows(seam, record);
+  const counted = countReplan(snapshot, record);
+  if (record.outcome === "needs_repair")
+    return withAppendedRows(foldRepair(counted, record), record);
+  const repaired = foldRepaired(counted, record);
+  if (repaired) return withAppendedRows(withReceipt(repaired, record), record);
+  const { halt: _cleared, repairRequest: _done, ...rest } = withoutWorkOrder(counted);
+  const receipted = withReceipt(rest, record);
+  return withAppendedRows(
+    {
+      ...receipted,
+      acceptedStages: [...(snapshot.acceptedStages ?? []), acceptedStageOf(snapshot, record)],
+      ...(record.diagnosis ? { diagnosis: record.diagnosis } : {}),
+    },
+    record,
+  );
+}
+
+// Each event that sends the run back to routing is one replan against the run's budget.
+const REPLAN_EVENTS = [
+  "scope-or-obligation-revision",
+  "answer-changes-scope",
+  "required-plan-revision",
+];
+
+function countReplan(snapshot: Snapshot, record: JournalRecord): Snapshot {
+  if (!REPLAN_EVENTS.includes(record.event)) return snapshot;
+  return { ...snapshot, replans: (snapshot.replans ?? 0) + 1 };
 }
 
 // A flow bound at routing names the flow alone; one a new-story slot bound names the slot too.
@@ -200,7 +277,11 @@ const FOLDS: Record<string, (snapshot: Snapshot, record: JournalRecord) => Snaps
   "accept-nonfinal-result": foldAccepted,
   "scope-or-obligation-revision": foldAccepted,
   "binding-recorded": foldBinding,
-  "unrun-or-unresolved-dependency": withHalt,
+  "unrun-or-unresolved-dependency": (snapshot, record) =>
+    withAppendedRows(withHalt(snapshot, record), record),
+  "material-decision": withAppendedRows,
+  "answer-changes-scope": countReplan,
+  "required-plan-revision": countReplan,
   "missing-capability": withHalt,
   "reconciled-with-blocker": withHalt,
   "retry-scheduled": (snapshot, record) => ({
@@ -294,10 +375,39 @@ export function recordsOf(
   return records;
 }
 
+const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
+
+// What the journal keeps beside an event that the decision does not carry itself: the plan an
+// unsettled routing result proposed, and for an accepted stage result its kind, observation,
+// reviews, report copies and receipt dependencies.
+export function journalExtrasOf(
+  snapshot: WorkflowSnapshot,
+  input: WorkflowInput,
+  decision: WorkflowDecision,
+  accepted: { reports: { path: string; digest: string }[]; dependencies: WorkflowDependency[] },
+) {
+  return (event: WorkflowEvent): Partial<JournalRecord> => {
+    if (event.type === "unsettled-material-input" || event.type === "plan-accepted") {
+      const plan = event.type === "unsettled-material-input" ? decision.verdict.plan : undefined;
+      return { ...(plan ? { plan } : {}), dependencies: accepted.dependencies };
+    }
+    if (!ACCEPTED_EVENTS.includes(event.type)) return {};
+    const stageKind = snapshot.outstandingWorkOrder?.stageKind;
+    const reviews = input.result?.reviewResults;
+    const testObservation = input.result?.testObservation;
+    return {
+      ...(stageKind ? { stageKind } : {}),
+      ...(testObservation ? { testObservation } : {}),
+      ...(reviews ? { reviewResults: reviews } : {}),
+      ...(accepted.reports.length > 0 ? { reports: accepted.reports } : {}),
+      dependencies: accepted.dependencies,
+    };
+  };
+}
+
 export const TRACKED_DIR = path.join(".qfai", "evidence", "workflow");
 
 const ACCEPTED_OUTCOMES = ["accepted", "accepted_with_debt"];
-const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
 
 // Tracked evidence begins at the run's first `proceed` authorization or its first result accepted
 // as `accepted` or `accepted_with_debt`. A run that ends before either tracks nothing.
@@ -335,7 +445,7 @@ function summaryOf(records: readonly JournalRecord[], snapshot: WorkflowSnapshot
         .map((review) => review.role),
     })),
     authorizationIds: (snapshot.authorizations ?? []).map((each) => each.authorizationId),
-    debts: accepted.flatMap((stage) => stage.debts ?? []),
+    debts: everyStageResult(snapshot).flatMap((stage) => stage.debts ?? []),
     requestDigest: snapshot.executionContext?.requestDigest ?? "",
     createdAt: records[0]?.recordedAt ?? "",
   };

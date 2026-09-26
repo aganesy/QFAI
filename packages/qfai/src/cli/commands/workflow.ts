@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
 import { decide, workOrderDocument } from "../../core/workflow/decide.js";
 import {
+  journalExtrasOf,
   recordsOf,
   snapshotOf,
   TRACKED_DIR,
@@ -15,6 +16,7 @@ import {
   baselineOf,
   identityOf,
   receiptDependenciesOf,
+  routingDependenciesOf,
   startFacts,
 } from "../../core/workflow/observe.js";
 import {
@@ -40,7 +42,6 @@ import { obligationFilesOf } from "../../core/workflow/storyFacts.js";
 import type {
   WorkflowDecision,
   WorkflowDependency,
-  WorkflowEvent,
   WorkflowFacts,
   WorkflowInput,
   WorkflowResult,
@@ -400,6 +401,12 @@ function replayKey(input: WorkflowInput, decision: WorkflowDecision, digest?: st
 
 const ACCEPTED_EVENTS = ["accept-nonfinal-result", "scope-or-obligation-revision"];
 
+function routingSettled(decision: WorkflowDecision): boolean {
+  return decision.events.some(
+    (event) => event.type === "plan-accepted" || event.type === "unsettled-material-input",
+  );
+}
+
 function acceptsResult(decision: WorkflowDecision): boolean {
   return decision.events.some((event) => ACCEPTED_EVENTS.includes(event.type));
 }
@@ -423,38 +430,13 @@ async function acceptedDependencies(
   decision: WorkflowDecision,
 ): Promise<WorkflowDependency[]> {
   const workOrder = snapshot.outstandingWorkOrder;
+  if (routingSettled(decision)) return routingDependenciesOf(root, input.result?.proposal);
   if (!acceptsResult(decision) || !workOrder || !input.result) return [];
   const target = workOrder.target;
   const flowId = target?.kind === "flow" ? target.flowId : snapshot.flowBinding?.flowId;
   const { config } = await loadConfig(root);
   const obligation = flowId ? await obligationFilesOf(root, config, flowId) : [];
   return receiptDependenciesOf(root, workOrder, input.result, obligation);
-}
-
-// What the journal keeps beside an event that the decision does not carry itself.
-function extrasOf(
-  snapshot: WorkflowSnapshot,
-  input: WorkflowInput,
-  decision: WorkflowDecision,
-  accepted: { copies: ReportCopy[]; dependencies: WorkflowDependency[] },
-) {
-  return (event: WorkflowEvent): Partial<JournalRecord> => {
-    if (event.type === "unsettled-material-input" && decision.verdict.plan) {
-      return { plan: decision.verdict.plan };
-    }
-    if (!ACCEPTED_EVENTS.includes(event.type)) return {};
-    const stageKind = snapshot.outstandingWorkOrder?.stageKind;
-    const reviews = input.result?.reviewResults;
-    const reports = accepted.copies.map(({ path: file, digest }) => ({ path: file, digest }));
-    const testObservation = input.result?.testObservation;
-    return {
-      ...(stageKind ? { stageKind } : {}),
-      ...(testObservation ? { testObservation } : {}),
-      ...(reviews ? { reviewResults: reviews } : {}),
-      ...(reports.length > 0 ? { reports } : {}),
-      dependencies: accepted.dependencies,
-    };
-  };
 }
 
 // The decision's events, the files they reference, and the journal records that publish them.
@@ -471,7 +453,10 @@ async function persistDecision(
   const records = recordsOf(
     decision,
     { operation: options.operation, before: snapshot.run },
-    extrasOf(snapshot, read.input, decision, { copies, dependencies }),
+    journalExtrasOf(snapshot, read.input, decision, {
+      reports: copies.map(({ path: file, digest }) => ({ path: file, digest })),
+      dependencies,
+    }),
     replayKey(read.input, decision, read.digest),
   );
   const unwritten = await writeReportCopies(loaded.runDir, copies);

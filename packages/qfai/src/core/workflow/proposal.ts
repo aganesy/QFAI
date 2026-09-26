@@ -254,6 +254,7 @@ function routedDecision(
   const { run } = snapshot;
   const plan = checkedPlan(proposal, facts);
   const settled = { routingResultId: result.resultId, answers: snapshot.settled?.answers ?? [] };
+  const resultRef = `results/${result.resultId}.json`;
   const inputs = (proposal.unresolvedQuestions ?? []).map(parseQuestionInput);
   const parsed = inputs.flatMap((question) => question ?? []);
   if (parsed.length !== inputs.length) {
@@ -263,7 +264,7 @@ function routedDecision(
   const binding: WorkflowEvent[] = flowId ? [{ type: "binding-recorded", flowId }] : [];
   if (proposal.newStories.length === 0 && parsed.length === 0) {
     if (!plan) return routingNotReady(run);
-    const events = [...binding, { type: "plan-accepted", plan, settled }];
+    const events = [...binding, { type: "plan-accepted", plan, settled, resultRef }];
     const ready = { ...run, state: "ready", sequence: run.sequence + events.length };
     return { verdict: { ok: true, run: ready, plan }, events };
   }
@@ -271,7 +272,7 @@ function routedDecision(
   const events: WorkflowEvent[] = [
     ...questions.map((question) => ({ type: "question-opened", question })),
     ...binding,
-    { type: "unsettled-material-input", proposal, settled },
+    { type: "unsettled-material-input", proposal, settled, resultRef },
   ];
   const waiting = { ...run, state: "awaiting_input", sequence: run.sequence + events.length };
   return { verdict: { ok: true, run: waiting, questions, ...(plan ? { plan } : {}) }, events };

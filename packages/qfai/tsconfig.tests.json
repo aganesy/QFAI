@@ -483,6 +483,7 @@
     "tests/unit/workflow/externalEffectsNeedTheirOwnAuthorization.test.ts",
     "tests/unit/workflow/findingsAreReportedAgainstTheStartBaseline.test.ts",
     "tests/unit/workflow/finishFixture.ts",
+    "tests/unit/workflow/journalRun.ts",
     "tests/unit/workflow/finishObservesValidateItself.test.ts",
     "tests/unit/workflow/nextRepeatsAnUnansweredWorkOrder.test.ts",
     "tests/unit/workflow/normativeAndObservedReferencesStayApart.test.ts",

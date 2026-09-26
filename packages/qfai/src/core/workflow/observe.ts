@@ -12,7 +12,7 @@ import { assistantLayerDir } from "../paths/assistantPaths.js";
 import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import { validateProject } from "../validate.js";
 import { resolveToolVersion } from "../version.js";
-import { areaCovers } from "./common.js";
+import { areaCovers, everyStageResult } from "./common.js";
 import { isRecord } from "./parse.js";
 import {
   checkPlans,
@@ -25,6 +25,7 @@ import { storyFactsOf } from "./storyFacts.js";
 import type {
   WorkflowDependency,
   WorkflowFacts,
+  WorkflowProposal,
   WorkflowResult,
   WorkflowSnapshot,
   WorkflowWorkOrder,
@@ -293,19 +294,43 @@ async function validityOf(root: string, dependencies: readonly WorkflowDependenc
   return now.every((digest, index) => digest === checked[index]?.digest) ? "valid" : "stale";
 }
 
-// Each accepted stage's receipt, classed against the tree now.
+// Every receipt the run holds, classed against the tree now: routing's, and each stage result's
+// of every plan the run has had.
 export async function receiptValidityOf(
   root: string,
   snapshot: WorkflowSnapshot,
 ): Promise<NonNullable<WorkflowFacts["receiptValidity"]>> {
+  const routing = snapshot.routingReceiptRef
+    ? [{ receiptRef: snapshot.routingReceiptRef, dependencies: snapshot.routingDependencies }]
+    : [];
   const classed = await Promise.all(
-    (snapshot.acceptedStages ?? []).map(async (stage) =>
+    [...routing, ...everyStageResult(snapshot)].map(async (stage) =>
       stage.receiptRef
         ? [[stage.receiptRef, await validityOf(root, stage.dependencies)] as const]
         : [],
     ),
   );
   return Object.fromEntries(classed.flat());
+}
+
+// What the routing receipt depends on: every path and evidence file the proposal cites.
+export async function routingDependenciesOf(
+  root: string,
+  proposal: WorkflowProposal | undefined,
+): Promise<WorkflowDependency[]> {
+  const refs = [...(proposal?.expectedBehaviorRefs ?? []), ...(proposal?.observedRefs ?? [])];
+  const paths = [
+    ...new Set(
+      refs.flatMap((each) => (each.kind === "path" || each.kind === "evidence" ? [each.ref] : [])),
+    ),
+  ];
+  const digested = await Promise.all(
+    paths.map(async (each) => {
+      const digest = await dependencyDigest(root, each);
+      return digest === undefined ? [] : [{ path: each, digest, class: "normative" as const }];
+    }),
+  );
+  return digested.flat();
 }
 
 // This run's copy of the verify report, read from the stage that accepted it. A copy whose bytes

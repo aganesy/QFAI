@@ -378,7 +378,14 @@ export interface WorkflowSnapshot {
     policyDigests: Record<string, string>;
   };
   seamRequest?: WorkflowSeamRequest;
+  // The findings a `needs_repair` result routed to their owners, and the stage that found them.
   repairRequest?: { stageInstanceId: string; debts: WorkflowDebt[] };
+  // The results of stages issued out of plan order to repair a finding.
+  repairedStages?: WorkflowAcceptedStage[];
+  // The stage results of every plan a replan replaced, kept for their receipts and debts.
+  priorStages?: WorkflowAcceptedStage[];
+  // What the routing receipt depends on, recorded when routing's result was accepted.
+  routingDependencies?: WorkflowDependency[];
   attempts?: Record<string, number>;
   // The saturated-delegation retries already scheduled for the outstanding work order.
   delegationRetries?: number;

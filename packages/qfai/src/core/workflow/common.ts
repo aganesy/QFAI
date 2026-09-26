@@ -101,6 +101,37 @@ export function firstMatchedKind(diagnosis: WorkflowSnapshot["diagnosis"]): stri
   return /^(BF|AC|EX)-/.exec(diagnosis?.matchedIds[0] ?? "")?.[1];
 }
 
+// Every stage result the run accepted, in the order it accepted them: the plans a replan
+// replaced, the current plan's stages, then the stages that repaired a finding.
+export function everyStageResult(snapshot: WorkflowSnapshot) {
+  return [
+    ...(snapshot.priorStages ?? []),
+    ...(snapshot.acceptedStages ?? []),
+    ...(snapshot.repairedStages ?? []),
+  ];
+}
+
+// The skills a plan stage can be issued to: its executor, and each skill a stage naming two has.
+export function stageSkills(stage: PlanStage, diagnosis: WorkflowSnapshot["diagnosis"]): string[] {
+  const executor = executorSkill(stage, diagnosis);
+  return [...new Set([...(executor ? [executor] : []), ...(stage.skills ?? [])])];
+}
+
+// The first active stage `skill` can serve, which is where a finding it owns is repaired.
+export function servingStage(
+  selected: readonly PlanStage[],
+  skill: string,
+  diagnosis: WorkflowSnapshot["diagnosis"],
+): PlanStage | undefined {
+  return selected.find((stage) => stageSkills(stage, diagnosis).includes(skill));
+}
+
+// The skill a finding names as its owner, when a skill rather than the operator owns it.
+export function skillOwnerOf(debt: { resolvingOwner?: string | undefined }): string | undefined {
+  const owner = debt.resolvingOwner?.trim();
+  return owner && owner !== "operator" ? owner : undefined;
+}
+
 // A `test_fix` stage goes to `qfai-atdd` when the diagnosis's first matched ID is a BF or an
 // AC, and to `qfai-implement` when it is an EX.
 export function executorSkill(

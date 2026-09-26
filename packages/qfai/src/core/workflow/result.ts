@@ -5,6 +5,9 @@ import {
   notReady,
   RESULT_ID,
   refusedWith,
+  servingStage,
+  skillOwnerOf,
+  stageSkills,
   STORY_AUTHORING_KINDS,
   type PlanStage,
 } from "./common.js";
@@ -116,15 +119,17 @@ function measurementRefusals(result: WorkflowResult): InputRefusal[] {
 
 // A blocked result may list only findings the run cannot repair itself: one outside the checked
 // write scope, or one inside it that only the operator can clear, owned by a flow that exists
-// and, inside the scope, by the bound flow. A run that binds no flow names no owning flow.
+// and, inside the scope, by the bound flow. A run that binds no flow names no owning flow. The
+// bound flow is the run's, since a verify or maintenance work order carries no target.
 function blockedRefusals(
+  snapshot: WorkflowSnapshot,
   result: WorkflowResult,
   workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
 ): InputRefusal[] {
   if (result.outcome !== "blocked") return [];
   const scope = workOrder.scope?.writeAreas ?? [];
-  const boundFlow = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
+  const boundFlow = snapshot.flowBinding?.flowId;
   return (result.debts ?? []).flatMap((debt, index): InputRefusal[] => {
     const inside = scope.some((area) => areaCovers(area, debt.path));
     const skillOwned = Boolean(debt.resolvingOwner?.trim()) && debt.resolvingOwner !== "operator";
@@ -186,16 +191,16 @@ function receiptRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): 
 }
 
 export function resultRefusals(
+  snapshot: WorkflowSnapshot,
   result: WorkflowResult,
   workOrder: WorkflowWorkOrder,
   facts: WorkflowFacts,
-  actorHistory: readonly WorkflowActor[],
 ): InputRefusal[] {
   const refusals: InputRefusal[] = [
-    ...reviewerRefusals(result, actorHistory),
+    ...reviewerRefusals(result, snapshot.actorHistory ?? []),
     ...digestRefusals(result, facts),
     ...measurementRefusals(result),
-    ...blockedRefusals(result, workOrder, facts),
+    ...blockedRefusals(snapshot, result, workOrder, facts),
     ...scopeRefusals(result, workOrder, facts),
   ];
   const notRun = notRunRefusalOf(result.notRun, facts);
@@ -233,6 +238,7 @@ export function blockOnResult(
   result: WorkflowResult,
   type = "unrun-or-unresolved-dependency",
   halt?: WorkflowHalt,
+  extras: Partial<WorkflowEvent> = {},
 ): WorkflowDecision {
   const blocked = { ...run, state: "blocked", sequence: run.sequence + 1 };
   return {
@@ -244,6 +250,7 @@ export function blockOnResult(
         stageInstanceId: result.stageInstanceId,
         outcome: result.outcome,
         ...(halt ? { halt } : {}),
+        ...extras,
       },
     ],
   };
@@ -320,6 +327,7 @@ function openStageQuestions(
   run: WorkflowRun,
   result: WorkflowResult,
   storyAuthoring: boolean,
+  extras: Partial<WorkflowEvent>,
 ): WorkflowDecision {
   const inputs = (result.questions ?? []).map(parseQuestionInput);
   const parsed = inputs.flatMap((question) => question ?? []);
@@ -338,6 +346,7 @@ function openStageQuestions(
       resultRef: `results/${result.resultId}.json`,
       stageInstanceId: result.stageInstanceId,
       outcome: result.outcome,
+      ...extras,
     },
   ];
   const waiting = { ...run, state: "awaiting_input", sequence: run.sequence + events.length };
@@ -366,18 +375,35 @@ function outcomeIsAcceptable(result: WorkflowResult, stageKind: string): boolean
 const DIAGNOSIS_VERDICTS = ["missing-test", "defective-test", "regression", "expectation-differs"];
 
 // Whether the result names the plan stage the run is at, with the fields that stage needs.
+// The outstanding work order's stage when it repairs a finding another stage detected, and the
+// owner it was issued to.
+function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[]) {
+  const request = snapshot.repairRequest;
+  const workOrder = snapshot.outstandingWorkOrder;
+  if (!request || !workOrder || workOrder.stageInstanceId === request.stageInstanceId) {
+    return undefined;
+  }
+  const stage = selected.find((each) => each.stageInstanceId === workOrder.stageInstanceId);
+  const executor = workOrder.executor?.skill;
+  if (!stage || !executor || !stageSkills(stage, snapshot.diagnosis).includes(executor)) {
+    return undefined;
+  }
+  return { stage, executor };
+}
+
 function stageResultIsBroken(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   stage: PlanStage,
   result: WorkflowResult,
+  executor = executorSkill(stage, snapshot.diagnosis),
 ): boolean {
   const flowTarget = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
   const diagnosis = result.diagnosis;
   return (
     workOrder.stageInstanceId !== stage.stageInstanceId ||
     workOrder.stageKind !== stage.stageKind ||
-    workOrder.executor?.skill !== executorSkill(stage, snapshot.diagnosis) ||
+    workOrder.executor?.skill !== executor ||
     workOrder.operation !== stage.operation ||
     (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
     (stage.stageKind === "diagnose" &&
@@ -431,14 +457,19 @@ function acceptedEvents(
   ];
 }
 
-// A repair needs a new plan when a finding's owner is a skill no stage of this plan serves.
-function repairOutsidePlan(snapshot: WorkflowSnapshot, result: WorkflowResult): boolean {
-  if (result.outcome !== "needs_repair") return false;
-  const served = new Set((snapshot.plan?.stages ?? []).map((stage) => stage.skill));
-  return (result.debts ?? []).some(
-    ({ resolvingOwner }) =>
-      resolvingOwner !== undefined && resolvingOwner !== "operator" && !served.has(resolvingOwner),
-  );
+// A repair needs a new plan when a finding's owner is a skill no active stage of the plan serves.
+function repairOutsidePlan(
+  snapshot: WorkflowSnapshot,
+  result: WorkflowResult,
+  facts: WorkflowFacts,
+): boolean {
+  const plan = snapshot.plan;
+  if (result.outcome !== "needs_repair" || !plan) return false;
+  const selected = activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet);
+  return (result.debts ?? []).some((debt) => {
+    const owner = skillOwnerOf(debt);
+    return owner !== undefined && !servingStage(selected, owner, snapshot.diagnosis);
+  });
 }
 
 // The run cannot go on past this result: a budget reached is `blocked`, never a pass.
@@ -461,18 +492,20 @@ function settleResult(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   result: WorkflowResult,
-  extras: Partial<WorkflowEvent>,
-  lastOfPlan: boolean,
+  checked: { extras: Partial<WorkflowEvent>; facts: WorkflowFacts; lastOfPlan: boolean },
 ): WorkflowDecision {
+  const { extras, facts, lastOfPlan } = checked;
   const { run, plan } = snapshot;
   const delegated = decideDelegation(snapshot, workOrder, result);
   if (delegated) return delegated;
+  // Rows a story-authoring result appended are the run's whatever the result's outcome.
   if (result.outcome === "blocked") {
-    return blockOnResult(run, result, undefined, blockedHalt(result, workOrder));
+    return blockOnResult(run, result, undefined, blockedHalt(result, workOrder), extras);
   }
-  if (result.outcome === "unrun") return blockOnResult(run, result);
+  if (result.outcome === "unrun") return blockOnResult(run, result, undefined, undefined, extras);
   if (result.outcome === "awaiting_input") {
-    return openStageQuestions(run, result, STORY_AUTHORING_KINDS.includes(workOrder.stageKind));
+    const storyAuthoring = STORY_AUTHORING_KINDS.includes(workOrder.stageKind);
+    return openStageQuestions(run, result, storyAuthoring, extras);
   }
   const story = snapshot.approval?.target?.story;
   if (workOrder.target?.kind === "new_story" && story && approvalIsStale(snapshot)) {
@@ -484,7 +517,7 @@ function settleResult(
   const needsReplan =
     (plan?.route === "discovery" && lastOfPlan) ||
     (workOrder.stageKind === "diagnose" && result.diagnosis?.verdict === "expectation-differs") ||
-    repairOutsidePlan(snapshot, result);
+    repairOutsidePlan(snapshot, result, facts);
   const halted = budgetHalt(snapshot, result, needsReplan);
   if (halted) return halted;
   const events = acceptedEvents(workOrder, result, needsReplan, extras);
@@ -506,18 +539,22 @@ export function acceptStageResult(
   const selected = plan
     ? activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet)
     : [];
-  const stage = selected[accepted.length];
-  if (!plan || !workOrder || !stage || stageResultIsBroken(snapshot, workOrder, stage, result)) {
+  // A repair stage is one of the plan's own, issued out of order to the finding's owner.
+  const repair = repairStageOf(snapshot, selected);
+  const stage = repair?.stage ?? selected[accepted.length];
+  if (
+    !plan ||
+    !workOrder ||
+    !stage ||
+    stageResultIsBroken(snapshot, workOrder, stage, result, repair?.executor)
+  ) {
     return notReady(run, "stage result");
   }
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);
-  const refusals = [
-    ...resultRefusals(result, workOrder, facts, snapshot.actorHistory ?? []),
-    ...storyTree.refusals,
-  ];
+  const refusals = [...resultRefusals(snapshot, result, workOrder, facts), ...storyTree.refusals];
   if (refusals.length > 0) return refusedWith(run, refusals);
-  const last = accepted.length + 1 === selected.length;
-  return settleResult(snapshot, workOrder, result, storyTree.extras, last);
+  const lastOfPlan = !repair && accepted.length + 1 === selected.length;
+  return settleResult(snapshot, workOrder, result, { extras: storyTree.extras, facts, lastOfPlan });
 }
 
 // A seam-only result closes its seam request and returns the run to the acceptance stage it

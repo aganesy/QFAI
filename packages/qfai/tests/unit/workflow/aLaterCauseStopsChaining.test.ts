@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { finishPlan } from "./finishFixture.js";
+import { JournalRun, planOf, readyWith } from "./journalRun.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Input = Parameters<typeof decide>[1];
@@ -115,5 +116,25 @@ it("Facts where the observed diff escapes the authorized write scope at a write 
   expect({ state: accepted.verdict.run?.state, halt: accepted.verdict.halt }).toEqual({
     state: "blocked",
     halt: { cause: "invariant-violation", owner: "operator", subjects: [escaped] },
+  });
+});
+
+it("A routing result accepted while the policy drifted", () => {
+  const seed = readyWith(planOf("bounded-change", finishPlan.stages), undefined).slice(0, 2);
+  const run = new JournalRun(seed);
+  expect(run.next().stageKind).toBe("route");
+
+  const decision = run.accept({ outcome: "accepted" }, cause);
+
+  expect({
+    state: decision.verdict.run?.state,
+    halt: decision.verdict.halt,
+    events: decision.events.map((event) => event.type),
+    folded: run.snapshot.run.state,
+  }).toEqual({
+    state: "blocked",
+    halt: { cause: "policy-drift", owner: "operator", subjects: [] },
+    events: ["missing-capability"],
+    folded: "blocked",
   });
 });

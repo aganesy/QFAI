@@ -7,6 +7,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 
@@ -333,4 +334,68 @@ it("The answer to a story-authoring stage's question authorizes its change", () 
     operation: authorization?.operation,
     answeredBy: authorization?.answeredBy,
   }).toEqual({ state: "ready", operation: "CHANGE_REQUEST", answeredBy: "operator-1" });
+});
+
+// A bounded run's sdd_delta stage, driven through the journal: its first attempt appends a row
+// and ends with `outcome`, and the attempt after it moves that row to DONE.
+function laterAttemptMovesItsRow(outcome: "needs_repair" | "blocked") {
+  const plan = planOf(
+    "bounded-change",
+    [
+      stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
+      stage("bounded-implement", "implement", "qfai-implement", "implement"),
+      stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+    ],
+    [".qfai/spec/02_business-flow/business-flow-0001/**"],
+  );
+  const facts = (rows: string[]) => ({
+    flows: ["BF-0001"],
+    records: { decisions: table(rows), openQuestions: QUESTIONS },
+    obligations: {
+      flowId: "BF-0001",
+      ids: ["BF-0001"],
+      exampleIds: [],
+      annotated: [],
+      digest: "1".repeat(64),
+    },
+  });
+  const settled = "| DEC-0003 | Keep the retry count at three | Settled in review |";
+  const finding = {
+    findingCode: "QFAI-TRACE-002",
+    path: outcome === "blocked" ? "docs/notes.md" : `${STORY}/03_Example.md`,
+    cause: "The example names a criterion the story does not define",
+    owningFlow: "BF-0001",
+    detectingCommand: "qfai validate",
+    resolvingOwner: outcome === "blocked" ? "operator" : "qfai-sdd",
+    blockingExtent: "run",
+  };
+  const run = new JournalRun(readyWith(plan, "BF-0001"));
+  run.next(facts(ISSUED));
+  run.accept({ outcome, debts: [finding] }, facts([...ISSUED, `${settled} WIP |`]));
+  if (outcome === "blocked")
+    run.apply({ operation: "resume" }, facts([...ISSUED, `${settled} WIP |`]));
+  else run.next(facts([...ISSUED, `${settled} WIP |`]));
+  const decision = run.accept({}, facts([...ISSUED, `${settled} DONE |`]));
+  const error = decision.verdict.error;
+  return {
+    appended: run.snapshot.appendedRows,
+    state: decision.verdict.run?.state,
+    reasons: error && "reasons" in error ? error.reasons : undefined,
+  };
+}
+
+it("A later attempt moves the row its needs_repair attempt appended from WIP to DONE", () => {
+  expect(laterAttemptMovesItsRow("needs_repair")).toEqual({
+    appended: ["DEC-0003"],
+    state: "ready",
+    reasons: undefined,
+  });
+});
+
+it("A later attempt moves the row its blocked attempt appended from WIP to DONE", () => {
+  expect(laterAttemptMovesItsRow("blocked")).toEqual({
+    appended: ["DEC-0003"],
+    state: "ready",
+    reasons: undefined,
+  });
 });

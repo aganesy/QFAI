@@ -1,4 +1,10 @@
-import { areaCovers, executorSkill, isAuthorOrRecommender, refusedInput } from "./common.js";
+import {
+  areaCovers,
+  everyStageResult,
+  executorSkill,
+  isAuthorOrRecommender,
+  refusedInput,
+} from "./common.js";
 import { activeStages } from "./stages.js";
 import type {
   FindingIdentity,
@@ -169,7 +175,7 @@ function scopeUnmet(
 // A debt is resolved once the finish validate, or a later accepted result of the stage kind
 // that detected it, no longer reports its finding code at its path.
 function debtUnmet(snapshot: WorkflowSnapshot, completion: WorkflowCompletionFacts) {
-  const accepted = snapshot.acceptedStages ?? [];
+  const accepted = everyStageResult(snapshot);
   const reported = (debt: WorkflowDebt) =>
     completion.validate.findings.some(
       (finding) => finding.code === debt.findingCode && finding.file === debt.path,

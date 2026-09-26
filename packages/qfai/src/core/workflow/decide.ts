@@ -122,9 +122,13 @@ function decideAccept(
   if (!result) return notReady(run, "stage result");
   const refused = acceptPreamble(snapshot, result);
   if (refused) return refused;
+  // A cause found on a run in `running` or `routing` blocks it over that state's edge.
   const found = foundCause(snapshot, facts);
   if (found && run.state === "running") {
     return blockOnResult(run, result, undefined, { ...found, owner: "operator" });
+  }
+  if (found && run.state === "routing") {
+    return blockOnResult(run, result, "missing-capability", { ...found, owner: "operator" });
   }
   if (run.state === "routing" && workOrder?.stageKind === "route") {
     return acceptRouting(snapshot, result, facts);

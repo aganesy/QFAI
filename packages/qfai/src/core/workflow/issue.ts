@@ -3,6 +3,8 @@ import {
   executorSkill,
   refusedInput,
   scopeOf,
+  servingStage,
+  skillOwnerOf,
   STORY_AUTHORING_KINDS,
   UNTARGETED_KINDS,
   type PlanStage,
@@ -320,21 +322,16 @@ function planRevision(snapshot: WorkflowSnapshot, facts: WorkflowFacts) {
 }
 
 // The stage `next` issues: a repair's owner, or the first selected stage not yet accepted.
-// A repair owned by no stage of the plan never reaches here: `accept` sends it back to routing.
-// SIMPLIFIED: a repair inside the plan goes to the stage the first finding's owner serves only
-// from a snapshot that carries the repair request. The journal fold records none, and `accept`
-// takes a result only for the next stage in plan order, so a run read back from its journal
-// reissues the detecting stage. Lift when: the fold keeps the request, `accept` takes the owner
-// stage's result without advancing plan order, and the request is cleared once the repair is in.
+// While a repair is open, the active stage its next finding's owner serves, issued to that owner.
+// A repair owned by no active stage never reaches here: `accept` sends it back to routing.
 function stageToIssue(
   snapshot: WorkflowSnapshot,
-  plan: Plan,
   selected: PlanStages,
-): { stage?: PlanStage | undefined; refused?: true } {
-  const repairOwner = snapshot.repairRequest?.debts[0]?.resolvingOwner;
-  if (!repairOwner) return { stage: selected[(snapshot.acceptedStages ?? []).length] };
-  const stage = plan.stages.find((candidate) => candidate.skill === repairOwner);
-  return stage ? { stage } : { refused: true };
+): { stage?: PlanStage | undefined; executor?: string; refused?: true } {
+  const owner = snapshot.repairRequest?.debts.map(skillOwnerOf).find(Boolean);
+  if (!owner) return { stage: selected[(snapshot.acceptedStages ?? []).length] };
+  const stage = servingStage(selected, owner, snapshot.diagnosis);
+  return stage ? { stage, executor: owner } : { refused: true };
 }
 
 // The work order for one plan stage, with its target, inputs, obligations and records.
@@ -344,8 +341,11 @@ function stageWorkOrder(
   stage: PlanStage,
   selected: PlanStages,
   facts: WorkflowFacts,
+  executor?: string,
 ): WorkflowDecision {
-  const targeted = withTarget(snapshot, baseWorkOrder(snapshot, plan, stage, facts));
+  const base = baseWorkOrder(snapshot, plan, stage, facts);
+  const issuedTo = executor ? { ...base, executor: { skill: executor } } : base;
+  const targeted = withTarget(snapshot, issuedTo);
   if ("verdict" in targeted) return targeted;
   const flowId = targeted.target?.kind === "flow" ? targeted.target.flowId : flowOfRun(snapshot);
   const inputs = diagnosisInputs(stage.stageKind, snapshot, facts);
@@ -375,8 +375,8 @@ export function issueNext(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Wor
   if (!plan || planNotReady(snapshot, facts)) return refusedInput(run, "The plan is not ready.");
   if (snapshot.seamRequest) return issueSeamOnly(snapshot, snapshot.seamRequest);
   const selected = activeStages(plan, snapshot.diagnosis, facts.acceptanceObligationsUnmet);
-  const next = stageToIssue(snapshot, plan, selected);
+  const next = stageToIssue(snapshot, selected);
   if (next.refused) return refusedInput(run, "The repair work order is not ready.");
   if (!next.stage) return { verdict: { ok: true, run, workOrder: null }, events: [] };
-  return stageWorkOrder(snapshot, plan, next.stage, selected, facts);
+  return stageWorkOrder(snapshot, plan, next.stage, selected, facts, next.executor);
 }
