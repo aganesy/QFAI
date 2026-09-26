@@ -4,6 +4,16 @@ import type { ParsedArgs } from "../../src/cli/lib/args.js";
 import { parseArgs } from "../../src/cli/lib/args.js";
 
 describe("parseArgs", () => {
+  it("routes story and flow scaffold options without accepting them on other commands", () => {
+    const story = parseArgs(["atdd", "scaffold", "--story", "US-0008-0007"], process.cwd());
+    expect(story.invalid).toBe(false);
+    expect(story.options.atddStoryId).toBe("US-0008-0007");
+    const flow = parseArgs(["atdd", "scaffold", "--flow", "BF-0008"], process.cwd());
+    expect(flow.invalid).toBe(false);
+    expect(flow.options.atddFlowId).toBe("BF-0008");
+    expect(parseArgs(["report", "--story", "US-0008-0007"], process.cwd()).invalid).toBe(true);
+  });
+
   it("does not skip other options when --format has no value", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--format", "--strict"], cwd);
@@ -177,6 +187,17 @@ describe("parseArgs", () => {
     expect(parsed.options.guardrailsMax).toBe(12);
     expect(parsed.options.guardrailsKeyword).toBe("layout");
   });
+
+  it.each(["-1", "1.5", "2junk", "+2", "9007199254740992"])(
+    "rejects guardrails extract --max %s as a non-negative integer",
+    (value) => {
+      const parsed = parseArgs(["guardrails", "extract", "--max", value], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.guardrailsMax).toBeUndefined();
+      expect(parsed.invalidReason).toContain("Expected: a non-negative integer");
+    },
+  );
 
   it("parses --profile for validate", () => {
     const cwd = process.cwd();
@@ -362,53 +383,33 @@ describe("parseArgs", () => {
   // --clause are used on a subcommand that does NOT accept the flag,
   // the parser MUST (1) consume the value token so it cannot leak
   // into the positional stream, AND (2) call markInvalid() so the
-  describe("validate --spec", () => {
-    it("collects a single --spec value", () => {
-      const parsed = parseArgs(["validate", "--spec", "0003"], process.cwd());
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.validateSpecIds).toEqual(["0003"]);
-    });
-
-    it("is repeatable and preserves order", () => {
-      const parsed = parseArgs(
-        ["validate", "--spec", "0003", "--spec", "spec-0004", "--profile", "sdd"],
-        process.cwd(),
-      );
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.validateSpecIds).toEqual(["0003", "spec-0004"]);
-      expect(parsed.options.profile).toBe("sdd");
-    });
-
-    it("defaults to an empty scope, which means the whole repo", () => {
-      const parsed = parseArgs(["validate"], process.cwd());
-      expect(parsed.options.validateSpecIds).toEqual([]);
-    });
-
-    it("still marks --spec invalid on a subcommand that does not accept it", () => {
-      const parsed = parseArgs(["audit", "log", "--spec", "0003"], process.cwd());
-      expect(parsed.invalid).toBe(true);
-      expect(parsed.options.validateSpecIds).toEqual([]);
-    });
+  describe("validate/report --spec", () => {
+    for (const command of ["validate", "report"] as const) {
+      it(`rejects the removed option on ${command} with a migration hint`, () => {
+        const parsed = parseArgs([command, "--spec", "0003"], process.cwd());
+        expect(parsed.invalid).toBe(true);
+        expect(parsed.invalidReason).toContain("--flow BF-NNNN");
+      });
+    }
   });
 
-  // `report` accepts the same flag: the scoping `validate --spec` introduced
-  // used to stop at the report boundary, where `markInvalid()` rejected it.
-  describe("report --spec", () => {
-    it("collects --spec values without marking the parse invalid", () => {
-      const parsed = parseArgs(
-        ["report", "--spec", "0003", "--spec", "spec-0004", "--format", "json"],
-        process.cwd(),
-      );
-      expect(parsed.invalid).toBe(false);
-      expect(parsed.options.reportSpecIds).toEqual(["0003", "spec-0004"]);
-      expect(parsed.options.reportFormat).toBe("json");
-      // The validate slot must stay untouched — the two scopes are separate.
-      expect(parsed.options.validateSpecIds).toEqual([]);
-    });
+  describe("validate/report --flow", () => {
+    for (const command of ["validate", "report"] as const) {
+      it(`collects repeatable flow IDs on ${command}`, () => {
+        const parsed = parseArgs(
+          [command, "--flow", "BF-0002", "--flow", "BF-0001"],
+          process.cwd(),
+        );
+        expect(parsed.invalid).toBe(false);
+        expect(
+          command === "validate" ? parsed.options.validateFlowIds : parsed.options.reportFlowIds,
+        ).toEqual(["BF-0002", "BF-0001"]);
+      });
+    }
 
-    it("defaults to an empty scope, which means the whole repo", () => {
-      const parsed = parseArgs(["report"], process.cwd());
-      expect(parsed.options.reportSpecIds).toEqual([]);
+    it("rejects --flow on commands that do not consume it", () => {
+      const parsed = parseArgs(["init", "--flow", "BF-0001"], process.cwd());
+      expect(parsed.invalid).toBe(true);
     });
   });
 
@@ -580,7 +581,7 @@ describe("parseArgs", () => {
         "qfai discussion: unknown or missing subcommand. Expected: list|use",
       );
       expect(parseArgs(["prototyping"], cwd).invalidReason).toBe(
-        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-spec",
+        "qfai prototyping: unknown or missing subcommand. Expected: preflight|iterate|certify|show-ui-contract|rescope",
       );
       expect(parseArgs(["guardrails"], cwd).invalidReason).toBe(
         "qfai guardrails: unknown or missing subcommand. Expected: list|extract|check",
@@ -594,12 +595,12 @@ describe("parseArgs", () => {
       const parsed = parseArgs(["prototyping", "bogusaction"], process.cwd());
       expect(parsed.invalid).toBe(true);
       expect(parsed.invalidReason).toBe(
-        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-spec',
+        'qfai prototyping: unknown subcommand "bogusaction". Expected: preflight|iterate|certify|show-ui-contract|rescope',
       );
     });
 
     it("reports a flag used on a command that does not accept it", () => {
-      // `init` rather than `report`: `report --spec` is a real scoping flag
+      // `init` uses the generic refusal; validate/report add a migration hint.
       // now, so it is no longer an example of this class.
       const parsed = parseArgs(["init", "--spec", "0003"], process.cwd());
       expect(parsed.invalid).toBe(true);
@@ -820,11 +821,11 @@ describe("parseArgs", () => {
         untouched: (o) => expect(o.prototypingLicensePatch).toBeUndefined(),
       },
       {
-        flag: "--primary-spec-id",
-        value: "spec-0001",
+        flag: "--primary-ui-contract",
+        value: "CON-UI-0001",
         wrongCommand: ["validate"],
         probe: (o) => expect(o.validateFormat).toBe("github"),
-        untouched: (o) => expect(o.prototypingPrimarySpecId).toBeUndefined(),
+        untouched: (o) => expect(o.prototypingPrimaryUiContract).toBeUndefined(),
       },
       {
         flag: "--skeleton-mode",
@@ -1030,8 +1031,8 @@ describe("parseArgs", () => {
           "exploration",
           "--license-patch",
           "patch.json",
-          "--primary-spec-id",
-          "spec-0001",
+          "--primary-ui-contract",
+          "CON-UI-0001",
         ],
         cwd,
       );
@@ -1044,7 +1045,7 @@ describe("parseArgs", () => {
       expect(iterate.options.prototypingSkeletonMode).toBe("stub");
       expect(iterate.options.prototypingMode).toBe("exploration");
       expect(iterate.options.prototypingLicensePatch).toBe("patch.json");
-      expect(iterate.options.prototypingPrimarySpecId).toBe("spec-0001");
+      expect(iterate.options.prototypingPrimaryUiContract).toBe("CON-UI-0001");
       expect(iterate.options.prototypingTargetUrl).toBe("https://x/");
 
       const certify = parseArgs(["prototyping", "certify", "--check"], cwd);
@@ -1160,7 +1161,7 @@ describe("parseArgs", () => {
       for (const [flag, value] of [
         ["--cycle", "5"],
         ["--license-patch", "patch.json"],
-        ["--primary-spec-id", "0003"],
+        ["--primary-ui-contract", "CON-UI-0003"],
         ["--skeleton-mode", "stub"],
         ["--mode", "exploration"],
       ] as const) {
@@ -1169,7 +1170,7 @@ describe("parseArgs", () => {
         expect(parsed.options.validateFormat).toBe("github");
         expect(parsed.options.prototypingCycle).toBeUndefined();
         expect(parsed.options.prototypingLicensePatch).toBeUndefined();
-        expect(parsed.options.prototypingPrimarySpecId).toBeUndefined();
+        expect(parsed.options.prototypingPrimaryUiContract).toBeUndefined();
         expect(parsed.options.prototypingSkeletonMode).toBeUndefined();
         expect(parsed.options.prototypingMode).toBeUndefined();
 

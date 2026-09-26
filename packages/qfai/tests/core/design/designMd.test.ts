@@ -1212,7 +1212,7 @@ const SHIPPED_DESIGN_MD_SAMPLE = path.join(
   getInitAssetsDir(),
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-prototyping",
   "templates",
   "DESIGN.md.sample",

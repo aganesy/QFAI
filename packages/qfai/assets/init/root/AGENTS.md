@@ -1,3 +1,5 @@
+Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.
+
 # Agent Instructions
 
 Persistent instructions for every AI coding agent working in this repository.

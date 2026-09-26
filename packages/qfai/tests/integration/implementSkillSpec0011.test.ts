@@ -1,155 +1,47 @@
-/**
- * Integration: Implement Skill Spec-0011 TDD Backfill
- *
- * Validates that the /qfai-implement skill (spec-0011) requirements are
- * covered by existing implementation: SKILL.md template defines strict TDD
- * lifecycle, serial execution, exception handling, parallel dispatch, and
- * reviewer independence.
- *
- * All 8 TDD items are Exception-pattern backfill (DR-0011-0001).
- * Existing coverage: skillRoster.test.ts, completionContract.test.ts,
- * evidenceContract.test.ts, parallelDispatch.test.ts, uixDetection.test.ts.
- */
-// QFAI:SPEC-0011:TC-0011-0001
-// QFAI:SPEC-0011:TC-0011-0002
-// QFAI:SPEC-0011:TC-0011-0003
-// QFAI:SPEC-0011:TC-0011-0004
-// QFAI:SPEC-0011:TC-0011-0005
-// QFAI:SPEC-0011:TC-0011-0006
-// QFAI:SPEC-0011:TC-0011-0007
-// QFAI:SPEC-0011:TC-0011-0008
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
-const SKILL_PATH = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "assets",
-  "init",
-  ".qfai",
-  "assistant",
-  "skills",
-  "qfai-implement",
-  "SKILL.md",
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const skillPath = path.join(
+  packageRoot,
+  "assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
 );
 
-// TC-0011-0001: Full TDD Cycle Completion
-describe("TC-0011-0001: Full TDD Cycle Completion", () => {
-  it("SKILL.md defines strict TDD lifecycle phases", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toContain("todo");
-    expect(content).toContain("red");
-    expect(content).toContain("green");
-    expect(content).toContain("refactor");
-    expect(content).toContain("done");
+describe("implement skill flow and example contract", () => {
+  it("selects the lowest EX from a fresh validator result", async () => {
+    const content = await readFile(skillPath, "utf8");
+    expect(content).toContain("qfai validate --profile tdd --flow BF-NNNN");
+    expect(content).toContain("validate.flow-<ids>.json");
+    expect(content).toContain("generatedAt");
+    expect(content).toContain("profile");
+    expect(content).toContain("test-obligation EX findings");
+    expect(content).toContain("lowest EX ID");
+    expect(content).toMatch(/even when the command exits\s+nonzero/);
   });
-});
 
-// TC-0011-0002: Backward Transition Produces Error
-describe("TC-0011-0002: Backward Transition Produces Error", () => {
-  it("SKILL.md prohibits backward transitions", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/[Bb]ackward.*prohibit/);
+  it("keeps commands in the tech contract and works one EX through the TDD cycle", async () => {
+    const content = await readFile(skillPath, "utf8");
+    expect(content).toContain("<paths.contractsDir>/tech.md");
+    expect(content).toContain("**Standard commands**");
+    expect(content).toContain("Test, Lint, Typecheck, and Build");
+    expect(content).toContain("**Red:**");
+    expect(content).toContain("**Green:**");
+    expect(content).toContain("**Refactor:**");
+    expect(content).toContain("QFAI:EX-NNNN-NNNN-NN");
+    expect(content).toContain("minimum production code");
   });
-});
 
-// TC-0011-0003: QA Gatekeeper Authority
-describe("TC-0011-0003: QA Gatekeeper Authority", () => {
-  it("SKILL.md defines qa-gatekeeper role", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toContain("qa-gatekeeper");
-  });
-});
-
-// TC-0011-0004: Exception Missing DR-ID Error
-describe("TC-0011-0004: Exception Missing DR-ID Error", () => {
-  it("SKILL.md requires DR-ID for exception status", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/exception.*DR-ID|DR-ID.*exception/i);
-  });
-});
-
-// TC-0011-0005: Parallel Dispatch Deny Conditions
-describe("TC-0011-0005: Parallel Dispatch Deny Conditions", () => {
-  it("SKILL.md defines parallel processing constraints", async () => {
-    // The conditions live in references/parallelization-policy.md and
-    // are stated as concurrent write conflicts, not shared-thing existence.
-    const content = [
-      await readFile(SKILL_PATH, "utf-8"),
-      await readFile(
-        path.join(path.dirname(SKILL_PATH), "references", "parallelization-policy.md"),
-        "utf-8",
-      ),
-    ].join("\n");
-    expect(content).toMatch(/Deny conditions/i);
-    expect(content).toMatch(/write.*same source module|concurrent write conflict/i);
-    // EX-0011-0005 / TC-0011-0005 distinguish "shared exists" from "shared
-    // written": a written shared fixture file denies, a read-only shared
-    // fixture module does not.
+  it("requires current evidence, independent reviewers and a final flow gate", async () => {
+    const content = await readFile(skillPath, "utf8");
+    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("### EX-NNNN-NNNN-NN");
+    expect(content).toContain("The author does not certify their own result");
+    expect(content).toContain("qfai validate --profile tdd --fail-on error --flow BF-NNNN");
     expect(content).toMatch(
-      /write the same shared fixture, shared mock,\s*or shared global setup \*\*file\*\*/i,
+      /When no EX work remains at entry, still run the current flow checkpoint/,
     );
-    expect(content).toMatch(/neither item\s*writes and each consumes read-only is not a deny/i);
-  });
-});
-
-// TC-0011-0006: 10-Point Gate Enforcement
-describe("TC-0011-0006: 10-Point Gate Enforcement", () => {
-  it("SKILL.md defines completion gate checklist", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/done|completion/i);
-  });
-});
-
-// TC-0011-0007: Fresh Evidence Required
-describe("TC-0011-0007: Fresh Evidence Required", () => {
-  it("SKILL.md mandates per-item evidence", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/evidence/i);
-    expect(content).toContain("RED");
-    expect(content).toContain("GREEN");
-  });
-});
-
-// TC-0011-0008: All Done Reports Nothing To Do
-describe("TC-0011-0008: All Done Reports Nothing To Do", () => {
-  it("SKILL.md specifies nothing-to-do behavior for completed items", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toMatch(/nothing to do/i);
-  });
-});
-
-// TC-0011-0009: Minimal Code For The One Failing Test
-// QFAI:SPEC-0011:TC-0011-0009
-describe("TC-0011-0009: Minimal Code For The One Failing Test", () => {
-  it("SKILL.md asks Phase Green for the minimum production code", async () => {
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toContain("### Phase: Green (Make It Pass)");
-    expect(content).toMatch(
-      /Write the \*\*minimum production code\*\* to make the failing test pass/,
-    );
-  });
-
-  it("SKILL.md puts that code after the failure has been watched", async () => {
-    // Minimal is about the amount and this is about the order: code written
-    // before the RED is code no failing test bounded.
-    const content = await readFile(SKILL_PATH, "utf-8");
-    const red = content.indexOf("### Phase: Red");
-    const green = content.indexOf("### Phase: Green (Make It Pass)");
-    expect(red).toBeGreaterThan(-1);
-    expect(green).toBeGreaterThan(red);
-    expect(content).toMatch(/watch it fail/i);
-  });
-
-  it("SKILL.md refuses a generalization no test yet asks for", async () => {
-    // The rule has two clauses and only the first was asserted. Minimum code for
-    // the failing test and no code for a case nobody has reddened are different
-    // claims, and a skill could ask for the first while saying nothing about the
-    // second.
-    const content = await readFile(SKILL_PATH, "utf-8");
-    expect(content).toContain("Write for the failing test and no further");
-    expect(content).toMatch(/generalization ahead of its own RED/);
   });
 });

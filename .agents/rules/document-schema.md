@@ -1,9 +1,9 @@
 # Document Schema Discipline (全 AI 共通)
 
-SDD ドキュメント (spec pack / `_policies`) の構造は
-`packages/qfai/assets/mdschema/**` の宣言的スキーマが SSOT。
-「どの章が必要か」「その章はリストか、表か、Gherkin か、Mermaid か」は
-暗黙知ではなく、レビューできる 1 ファイルに書く。
+The structure of the SDD documents in the story tree under `.qfai/spec/` is
+declared by the schemas in `packages/qfai/assets/mdschema/**`, which are the SSOT.
+Which sections a document needs, and whether each is a list, a table, Gherkin or
+Mermaid, is written in one reviewable file rather than left as tacit knowledge.
 
 ## markdownlint では足りない理由
 
@@ -38,10 +38,13 @@ markdownlint は「整形された Markdown か」だけを見る。フェンス
 
 ## スキーマを変更するときの規律
 
-1. **スキーマはテンプレートの契約を述べる。** 現状ツリーの平均ではない。
-   `qfai-sdd` テンプレート (`assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/**`) とスキーマは 1 組で、
-   `tests/assets/mdschemaSchemas.test.ts` が双方向に固定する。
-   参照されないスキーマ、ファイルの無い manifest 項目、重複パターン、テンプレート不適合はすべて落ちる。
+1. **A schema states the templates' contract**, not the average of the current
+   tree. The `qfai-sdd` templates
+   (`assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/**`) and the
+   schemas are one pair, held in both directions by
+   `tests/assets/mdschemaSchemas.test.ts`. An unreferenced schema, a manifest
+   entry with no file, a duplicate pattern and a template that does not conform
+   all fail.
 2. **記法を強制するのは、記法が義務を運ぶときだけ。**
    Gherkin ブロックを `gherkin` 型にするのは、トレーサビリティリーダが info string で選ぶからで、無指定フェンスは読まれない。
    一方「実装方針」は変更の形によってリスト・表・番号付き手順のどれも正しい。
@@ -106,4 +109,4 @@ subject is the document, and it either conforms or does not.
 ## 関連
 
 - 配布物の識別子 leak: `.agents/rules/distributed-surface.md`
-- 配布ワークフローの構造契約: `.qfai/contracts/cli/shipped-workflows.md`
+- 配布ワークフローの構造契約: `.qfai/spec/03_contract/cli/shipped-workflows.md`

@@ -19,7 +19,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const CONSTITUTION = "assistant/constitution/constitution.md";
+const CONSTITUTION = "assistant/rule/constitution.md";
 const STAGES = ["qfai-implement", "qfai-atdd", "qfai-verify"];
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
@@ -108,7 +108,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // not a session. That is still true of meeting one; what starts a session
     // is a stage declaring it, and without both rows an initialized agent gets
     // two instructions and picks the cheaper.
-    const primitive = await read("assistant/skills/qfai-grilling/SKILL.md");
+    const primitive = await read("assistant/skill/qfai-grilling/SKILL.md");
     expectPhrase(primitive, "| An execution stage declaring one");
     expectPhrase(primitive, "Article IX names two, at the preflight and on detection");
     expectPhrase(primitive, "The last two rows are the same rule from both sides");
@@ -119,7 +119,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // Under `--auto` there is a user and the mode forbids asking them, so the
     // confirmation can never arrive. Without another ending, a stage that
     // resolved its whole frontier by inspection waits forever.
-    const primitive = await read("assistant/skills/qfai-grilling/SKILL.md");
+    const primitive = await read("assistant/skill/qfai-grilling/SKILL.md");
     expectPhrase(
       primitive,
       "**A session under a no-question mode cannot reach condition 2 either**",
@@ -132,22 +132,22 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // Three skills carrying three copies of one rule is three chances to drift,
     // and the drift surfaces as three agents behaving differently at the same
     // moment.
-    const body = await read(`assistant/skills/${skill}/SKILL.md`);
+    const body = await read(`assistant/skill/${skill}/SKILL.md`);
     expectPhrase(body, "## Grilling (MANDATORY)");
-    expectPhrase(body, "Article IX of `.qfai/assistant/constitution/constitution.md` owns both");
+    expectPhrase(body, "Article IX of `.qfai/assistant/rule/constitution.md` owns");
     expectPhrase(body, "Neither is restated here.");
     // The three obligations, named where an operator reads the skill.
     expectPhrase(body, "**At the preflight.**");
     expectPhrase(body, "**On detection.**");
     expectPhrase(body, "**Neither session changes settled input.**");
     // Including the branch that is not the protocol's.
-    expectPhrase(body, "the run solves it");
+    expectPhrase(body, "the run solves");
   });
 
   it.each(STAGES)("%s does not restate the method", async (skill) => {
     // The rule's parts qualify each other, so a partial copy states the
     // opposite of what the rule says.
-    const body = await read(`assistant/skills/${skill}/SKILL.md`);
+    const body = await read(`assistant/skill/${skill}/SKILL.md`);
     for (const mechanic of [
       /the whole frontier at once/i,
       /each question numbered/i,

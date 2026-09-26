@@ -2,9 +2,9 @@
  * A surface retired mid-loop must be reported.
  *
  * Cycle 0 freezes the screen set into `prototyping.json#frozenSurfaceUnion`, and
- * `iterate` hard-stops on drift — but only when EVERY UI-bearing spec has
+ * `iterate` hard-stops on drift — but only when EVERY UI contract has
  * disappeared (`prototypingIterate.ts:529-573`). A product decision that
- * retires ONE screen leaves the frozen union naming a spec that no longer
+ * retires ONE screen leaves the frozen union naming a UI contract that no longer
  * exists, the precheck's "zero UI-bearing specs resolved" condition false, and
  * `validate` reporting `error=0` over a loop describing a screen that is gone.
  * The operator found out at the next `iterate` — the point of no return, where
@@ -37,32 +37,16 @@ afterEach(async () => {
 async function project(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-frozen-surface-"));
   dirs.push(dir);
-  await writeFile(
-    path.join(dir, "qfai.config.yaml"),
-    [
-      "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
-      "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
-      "  srcDir: src",
-      "  testsDir: tests",
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
   return dir;
 }
 
-/** A spec whose `01_Spec.md` marks it UI-bearing. */
-async function seedUiBearingSpec(root: string, id: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "specs", `spec-${id}`);
+/** A declared UI contract with a screen. */
+async function seedUiContract(root: string, id: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(dir, { recursive: true });
   await writeFile(
-    path.join(dir, "01_Spec.md"),
-    `---\nsurface_type: ui-bearing\n---\n\n# spec-${id}\n`,
+    path.join(dir, `screen-${id}.yaml`),
+    `# QFAI-CONTRACT-ID: ${id}\nscreens:\n  - id: dashboard\n`,
     "utf-8",
   );
 }
@@ -98,17 +82,17 @@ describe("the frozen surface still resolves", () => {
     // The live case: two screens frozen at cycle 0, one retired by a product
     // decision, the loop still iterating.
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0002"], null);
+    await seedUiContract(root, "CON-UI-0001");
+    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
 
     const issues = await run(root);
 
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-PROT-011"]);
-    expect(issues[0]?.refs).toEqual(["0002"]);
+    expect(issues[0]?.refs).toEqual(["CON-UI-0002"]);
     expect(issues[0]?.file).toBe(".qfai/evidence/prototyping/prototyping.json");
     // The message has to say what survives, because that is what separates a
     // reduction from the all-markers-removed drift and decides the remedy.
-    expect(issues[0]?.message).toContain("0002");
+    expect(issues[0]?.message).toContain("CON-UI-0002");
     expect(issues[0]?.message).toContain("stopReason=null");
     // Two routes now, and which one comes first is the point: the row used to
     // assert `--cycle 0` because the destructive reset was the only way out.
@@ -124,11 +108,11 @@ describe("the frozen surface still resolves", () => {
     expect(remedy).toContain("refuses a surface that still");
   });
 
-  it("stays silent when every frozen spec still resolves", async () => {
+  it("stays silent when every frozen UI contract still resolves", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedUiBearingSpec(root, "0002");
-    await seedLoop(root, ["0001", "0002"], null);
+    await seedUiContract(root, "CON-UI-0001");
+    await seedUiContract(root, "CON-UI-0002");
+    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
 
     expect(await run(root)).toEqual([]);
   });
@@ -138,8 +122,8 @@ describe("the frozen surface still resolves", () => {
     // Reporting here would put a finding on every finished project whose specs
     // moved on afterwards.
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
-    await seedLoop(root, ["0001", "0002"], "converged");
+    await seedUiContract(root, "CON-UI-0001");
+    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], "converged");
 
     expect(await run(root)).toEqual([]);
   });
@@ -149,14 +133,14 @@ describe("the frozen surface still resolves", () => {
     // and a different remedy. Two findings on one state would send automated
     // remediation down two paths.
     const root = await project();
-    await seedLoop(root, ["0001", "0002"], null);
+    await seedLoop(root, ["CON-UI-0001", "CON-UI-0002"], null);
 
     expect(await run(root)).toEqual([]);
   });
 
   it("stays silent when there is no loop at all", async () => {
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
+    await seedUiContract(root, "CON-UI-0001");
 
     expect(await run(root)).toEqual([]);
   });
@@ -166,7 +150,7 @@ describe("the frozen surface still resolves", () => {
     // Guessing here would report a scope reduction from a file this validator
     // could not read.
     const root = await project();
-    await seedUiBearingSpec(root, "0001");
+    await seedUiContract(root, "CON-UI-0001");
     const dir = path.join(root, ".qfai", "evidence", "prototyping");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "prototyping.json"), "{ not json", "utf-8");

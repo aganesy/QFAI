@@ -23,14 +23,14 @@ fail=0
 # The regex set below is mirrored in
 #   - packages/qfai/scripts/lint-shipping.ts `src-comment` rules
 #     (pre-build, JSDoc → dist/*.d.ts path)
-#   - packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts
-#     `PATTERNS` array (smoke against `qfai init` output)
+#   - packages/qfai/tests/helpers/distributedSurfaceScan.ts
+#     pattern array (smoke against `qfai init` output)
 # Updating a regex here (e.g. tightening INTERNAL_VERSION_RE to a
 # QFAI-context pattern) requires updating both other sites in the same
 # change. The guard table in `.agents/rules/distributed-surface.md`
 # lists the layers.
 #
-# The same three regexes are applied twice per surface: once to file
+# The same forbidden classes are applied twice per surface: once to file
 # CONTENT and once to file NAMES (see the loop at the bottom). The smoke
 # test mirrors both dimensions; `lint-shipping.ts` scans `src/**` comment
 # text only, and source file names reach the distributed surface as
@@ -74,30 +74,17 @@ INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b|\bv1\.x\b'
 # receives one has no way to look it up.
 INTERNAL_ID_RE='\bCAP-0*[1-9][0-9]+\b|\bDEC-[0-9]{4}-[0-9]{4}\b|\bDR-[0-9]{4}\b|\bQFAI-PROT2-[0-9]+\b|\bOQ-[0-9]{4}-[0-9]{4}\b|\bCHG-[0-9]+\b'
 
-# Version-class exemption for the FILE NAME pass below.
-#
-# Migration memo file names are version-stamped on purpose: they are
-# ADR-style citation targets whose names must stay stable once
-# published, and `migrationMemoRelativePath()` in
-# `src/core/paths/assistantPaths.ts` mints one per
-# `--upgrade-assistant-tree` run. This exemption keeps that intentional
-# producer visible instead of accidental. It is scoped to the version
-# class only — a spec id or trace id in a migration path is still a
-# leak — and it applies to names only; memo *contents* keep the full
-# content scan.
-#
-# The exemption is expressed as a *rewrite of the sanctioned name*, not
-# as an inverted match that drops every line mentioning the memo
-# directory. Dropping whole lines would also excuse
-# `.../migrations/notes-v2.0-draft.md`,
-# `.../migrations/drafts-v2.0/clean.md`, and any file in an unrelated
-# tree that happens to carry the same path fragment. Instead the exact
-# shape documented in `.agents/rules/distributed-surface.md` —
-# `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md`,
-# directly in that directory — has its version stamp replaced by a
-# placeholder before the version regex runs, so anything else in the
-# same directory is still scanned.
-MIGRATION_MEMO_STAMP_SED='s#(^|/)\.qfai/assistant/process/migrations/v[0-9]+\.[0-9]+\.[0-9]+(-[^/]*)?\.md$#\1.qfai/assistant/process/migrations/MEMO\2.md#'
+# The generated sample band is 0001..0009 for four-digit segments and
+# 01..09 for AC/EX tails. Any segment outside that band is internal.
+# The short-ID suffix excludes legacy numeric composites, which the old
+# INTERNAL_ID_RE still catches for DEC/OQ. It accepts a trailing hyphen
+# only when no numeric segment follows it.
+OUTSIDE_FOUR='(0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})'
+OUTSIDE_TWO='(00|[1-9][0-9])'
+SINGLE_ID_END='(-([^0-9]|$)|[^0-9-]|$)'
+STORY_ID_RE="\b(DEC|OQ|BF|BR)-$OUTSIDE_FOUR\b$SINGLE_ID_END"
+STORY_ID_RE="$STORY_ID_RE|\bUS-($OUTSIDE_FOUR-[0-9]{4}|[0-9]{4}-$OUTSIDE_FOUR)\b"
+STORY_ID_RE="$STORY_ID_RE|\b(AC|EX)-($OUTSIDE_FOUR-[0-9]{4}-[0-9]{2}|[0-9]{4}-$OUTSIDE_FOUR-[0-9]{2}|[0-9]{4}-[0-9]{4}-$OUTSIDE_TWO)\b"
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas do not carry this field.
@@ -188,7 +175,7 @@ fi
 for idx in "${!SCAN_PATHS[@]}"; do
   target="${SCAN_PATHS[$idx]}"
   relative_target="${SCAN_RELATIVES[$idx]}"
-  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)
+  hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" "$target" 2>/dev/null || true)
   if [[ -n "$hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
     echo "$hits" | head -20 >&2
@@ -215,19 +202,10 @@ for idx in "${!SCAN_PATHS[@]}"; do
     target_paths=""
   fi
   name_hits=$(printf '%s\n' "$target_paths" \
-    | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE" || true)
-  version_name_hits=$(printf '%s\n' "$target_paths" \
-    | sed -E "$MIGRATION_MEMO_STAMP_SED" \
-    | grep -E "$INTERNAL_VERSION_RE" || true)
-  if [[ -n "$name_hits" || -n "$version_name_hits" ]]; then
+    | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE|$STORY_ID_RE" || true)
+  if [[ -n "$name_hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in a FILE NAME under $target:" >&2
-    # `fail=1` is already decided above; this only tidies the REPORT, by
-    # keeping the lines that carry a path when one of the two hit sets is
-    # empty. Written as a positive match on purpose: TDD-0033 pins that
-    # this script has no inverted grep, so that no filter can ever sit
-    # between a hit and the FAIL path.
-    { printf '%s\n%s\n' "$name_hits" "$version_name_hits" \
-      | grep -E '[^[:space:]]' | head -20 >&2; } || true
+    printf '%s\n' "$name_hits" | head -20 >&2
     fail=1
   fi
   schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null || true)

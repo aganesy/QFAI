@@ -1,0 +1,7 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                                          | Expected                                                                                                                                                                                                                                                                             |
+| --------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EX-0001-0131-01 | AC-0001-0131-01 | Given `--card-shadow: 0 4px 8px rgba(0,0,0,0.1); --btn-shadow-hover: 0 2px 4px rgba(15,23,42,0.05);` in `:root`, When `SHADOW_DECL_STRIP_RE` (matching `--*-shadow*:`) preprocesses the input, | Then both declarations are stripped before `scanColors` sees them; `designMdViolations[]` contains no entries naming those rgba values. Pre-fix the strip regex matched only `--shadow-*:`, leaving `--card-shadow:` / `--btn-shadow-hover:` color literals surfacing as violations. |

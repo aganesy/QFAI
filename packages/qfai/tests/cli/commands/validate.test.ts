@@ -66,7 +66,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     }
   });
 
-  it("TC-3.9.3: gap-allowed numbering preserved (005/009/012/013/019/030/031/032 present)", async () => {
+  it("TC-3.9.3: gap-allowed numbering preserved (005/009/012/013/030/031/032 present)", async () => {
     const src = await readSrc("validate.ts");
     for (const preserved of [
       "QFAI-DCON-001",
@@ -74,7 +74,6 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
       "QFAI-DCON-009",
       "QFAI-DCON-012",
       "QFAI-DCON-013",
-      "QFAI-DCON-019",
       "QFAI-DCON-030",
       "QFAI-DCON-031",
       "QFAI-DCON-032",
@@ -101,20 +100,16 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     // Minimal UI-bearing project without DESIGN.md.
     await mkdir(path.join(root, ".qfai/contracts/ui"), { recursive: true });
     await mkdir(path.join(root, ".qfai/contracts/design"), { recursive: true });
-    await mkdir(path.join(root, ".qfai/specs/spec-0001"), { recursive: true });
+    await mkdir(path.join(root, ".qfai/spec/02_business-flow"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/contracts/ui/ui.yaml"),
-      "screens:\n  - id: home\n    title: Home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
       "utf-8",
     );
-    await writeFile(
-      path.join(root, ".qfai/specs/spec-0001/01_Spec.md"),
-      "---\nsurface_type: ui-bearing\n---\n\n# spec\n",
-      "utf-8",
-    );
+    await writeFile(path.join(root, ".qfai/spec/decisions.md"), "# Decisions\n", "utf-8");
     await writeFile(
       path.join(root, "qfai.config.yaml"),
-      ["paths:", "  contractsDir: .qfai/contracts", "  specsDir: .qfai/specs", ""].join("\n"),
+      ["paths:", "  contractsDir: .qfai/contracts", "  specsDir: .qfai/spec", ""].join("\n"),
       "utf-8",
     );
     await runValidate({ root, strict: false, format: "text" });

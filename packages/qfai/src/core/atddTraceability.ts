@@ -18,7 +18,6 @@ import {
   type CollectFilesByGlobsResult,
 } from "./fs.js";
 import { braceRangeMembers, BraceRangeRefused } from "./globBraceRange.js";
-import { withoutJsoncSyntax } from "./jsonc.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { resolveSurfaceUnion } from "./prototyping/specResolution.js";
 import {
@@ -1162,80 +1161,6 @@ export async function evaluateAtddCodeTraceability(
       unreadableDirectories,
     },
   };
-}
-
-/**
- * Where each `TC-*` annotation sits, split by whether the file declares a test.
- *
- * Both maps are keyed like the scan's own `refs.tc`: spec number, then `TC-…`,
- * then the files.
- */
-export type TestCaseAnnotationHomes = {
-  /** Files that declare a test a runner collects. */
-  tests: AtddSpecRefs;
-  /** Files that name the case and declare no test: prose, or an annotation alone. */
-  carriers: AtddSpecRefs;
-};
-
-/**
- * Every `TC-*` annotation in the test files, whatever the case's `Level`.
- *
- * The acceptance scan in {@link evaluateAtddCodeTraceability} keeps only the
- * acceptance layers, so it cannot say whether a unit test annotates a case. A
- * ledger row claims a test at every layer, so this reads the same globs plus
- * the whole of `paths.testsDir`, with no layer filter, and splits the files the
- * way `QFAI-ATDD-119` does. The whole directory, because with no project glob
- * the acceptance globs reach none of `unit/` or `component/`.
- *
- * `null` when the scan is incomplete — truncated, a pattern could not be
- * walked, or a file could not be read. A test past the gap may annotate the
- * case, so "a carrier alone names it" is then unproven, as it is for
- * `coveredByCarrierOnly`.
- *
- * SIMPLIFIED: walks and reads the test tree again after the acceptance scan.
- * Lift when: a completion gate is measured slow on the second walk.
- */
-export async function collectTestCaseAnnotationHomes(
-  root: string,
-  config: QfaiConfig,
-): Promise<TestCaseAnnotationHomes | null> {
-  const projectGlobs = config.validation.traceability.testFileGlobs;
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const filePattern = deriveAtddFilePattern(projectGlobs);
-  const globs = [
-    ...buildAtddScanGlobs(root, testsRoot, filePattern, projectGlobs),
-    `${testsBaseGlob(root, testsRoot)}/${filePattern}`,
-  ];
-  const excludes = normalizeGlobs(config.validation.traceability.testFileExcludeGlobs);
-  let scan: CollectFilesByGlobsResult;
-  try {
-    scan = await collectTestFiles(root, globs, excludes, acceptanceSourceFilter(root, globs));
-  } catch {
-    return null;
-  }
-  if (scan.truncated) return null;
-  const homes: TestCaseAnnotationHomes = { tests: new Map(), carriers: new Map() };
-  for (const file of scan.files) {
-    let raw: string;
-    try {
-      raw = await readFile(file, "utf-8");
-    } catch {
-      return null;
-    }
-    const refs = extractSpecScopedAnnotations(maskTestSource(file, raw), TC_TEST_ANNOTATION_RE);
-    if (refs.length === 0) continue;
-    // A computed binding (`const run = LIVE ? test : test.skip`) declares a test
-    // no literal call shows, and this check reports at `error`, so it counts.
-    // The binding is JavaScript syntax, so only a JavaScript-family file can
-    // declare a test through it. In any other file, prose included, the same
-    // text is an example and declares nothing a runner collects.
-    const bindable = COMPUTED_BINDING_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase());
-    const declaresTest =
-      hasRunnableTestStructure(file, raw) || (bindable && hasComputedSuiteBinding(raw));
-    const into = declaresTest ? homes.tests : homes.carriers;
-    for (const ref of refs) recordSpecRef(into, ref.spec, `TC-${ref.id}`, file);
-  }
-  return homes;
 }
 
 /**
@@ -2643,18 +2568,6 @@ const COMPUTED_SUITE_BINDING_RE = new RegExp(
   "gm",
 );
 
-/** The extensions whose source can bind a runner name with `const`, `let` or `var`. */
-const COMPUTED_BINDING_EXTENSIONS: ReadonlySet<string> = new Set([
-  "ts",
-  "tsx",
-  "mts",
-  "cts",
-  "js",
-  "jsx",
-  "mjs",
-  "cjs",
-]);
-
 /**
  * True when the file binds a runner entry point to a name and then calls it.
  *
@@ -2912,25 +2825,6 @@ function hasRunnableTestStructure(file: string, text: string): boolean {
   return matchesAny(runnableTestPatterns(extension, text), text);
 }
 
-/** A readable test file that declares this TC in a runnable carrier. */
-export function hasRunnableTcCarrier(
-  file: string,
-  text: string,
-  specNumber: string,
-  tcId: string,
-): boolean {
-  const extension = path.extname(file).slice(1).toLowerCase();
-  if (extension !== "feature" && !TEST_PATTERNS_BY_EXTENSION.has(extension)) return false;
-  const annotations = extractSpecScopedAnnotations(
-    maskTestSource(file, text),
-    TC_TEST_ANNOTATION_RE,
-  );
-  return (
-    annotations.some((ref) => ref.spec === specNumber && `TC-${ref.id}` === tcId) &&
-    hasRunnableTestStructure(file, text)
-  );
-}
-
 /** True when any of `patterns` matches `text` once its non-code spans are gone. */
 function matchesAny(patterns: readonly RegExp[], text: string): boolean {
   const code = stripCommentsAndLiterals(text);
@@ -3170,8 +3064,7 @@ function acceptanceSourceFilter(
     namedTestFile(toPosixPath(absolutePath));
 }
 
-/** `paths.testsDir` as a glob base: root-relative inside the root, absolute outside. */
-function testsBaseGlob(root: string, testsRoot: string): string {
+function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
   const relativeTestsRoot = path.relative(root, testsRoot);
   const isInsideRoot =
     relativeTestsRoot.length === 0 ||
@@ -3179,11 +3072,7 @@ function testsBaseGlob(root: string, testsRoot: string): string {
   const base = isInsideRoot
     ? toPosixPath(relativeTestsRoot.length === 0 ? "." : relativeTestsRoot)
     : toPosixPath(testsRoot);
-  return base.replace(/\/+$/, "");
-}
-
-function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string): string[] {
-  const normalizedBase = testsBaseGlob(root, testsRoot);
+  const normalizedBase = base.replace(/\/+$/, "");
   return [
     `${normalizedBase}/e2e/${filePattern}`,
     `${normalizedBase}/api/${filePattern}`,
@@ -3279,7 +3168,7 @@ const ATDD_LAYER_SEGMENTS = new Map<string, AtddTestKind>([
   ["integration", "integration"],
 ]);
 
-type TestLayerRoots = {
+export type TestLayerRoots = {
   root: string;
   testsDirName: string;
   e2eRoot: string;
@@ -3288,10 +3177,23 @@ type TestLayerRoots = {
   isPackageRoot: (absoluteDir: string) => boolean;
 };
 
+/** Shared directory crosswalk for acceptance checks and migration. */
+export function createTestLayerRoots(root: string, config: QfaiConfig): TestLayerRoots {
+  const testsRoot = resolvePath(root, config, "testsDir");
+  return {
+    root,
+    testsDirName: testsDirName(root, config),
+    e2eRoot: path.join(testsRoot, "e2e"),
+    apiRoot: path.join(testsRoot, "api"),
+    integrationRoot: path.join(testsRoot, "integration"),
+    isPackageRoot: packageRootProbe(),
+  };
+}
+
 /** An acceptance layer a file answers, and the layer directory it sits in. */
 type TestLayer = { kind: AtddTestKind; layerDir: string };
 
-function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
+export function resolveTestKind(filePath: string, roots: TestLayerRoots): AtddTestKind | null {
   return resolveTestLayer(filePath, roots)?.kind ?? null;
 }
 
@@ -3335,15 +3237,7 @@ export function atddTestOwnerProbe(
   root: string,
   config: QfaiConfig,
 ): (absolutePath: string) => string | null {
-  const testsRoot = resolvePath(root, config, "testsDir");
-  const roots: TestLayerRoots = {
-    root,
-    testsDirName: testsDirName(root, config),
-    e2eRoot: path.join(testsRoot, "e2e"),
-    apiRoot: path.join(testsRoot, "api"),
-    integrationRoot: path.join(testsRoot, "integration"),
-    isPackageRoot: packageRootProbe(),
-  };
+  const roots = createTestLayerRoots(root, config);
   return (absolutePath) => {
     const layer = resolveTestLayer(absolutePath, roots);
     return layer === null ? null : layerSpecNumber(layer, absolutePath);
@@ -3505,6 +3399,61 @@ function declaresName(content: string): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * JSONC with its comments and trailing commas taken out, so `JSON.parse` reads
+ * it. A `//` or `/*` inside a string is text, not a comment.
+ */
+function withoutJsoncSyntax(content: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < content.length; i += 1) {
+    const char = content[i] ?? "";
+    const next = content[i + 1] ?? "";
+    if (inString) {
+      out += char;
+      if (char === "\\") {
+        out += next;
+        i += 1;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      out += char;
+    } else if (char === "/" && next === "/") {
+      const end = content.indexOf("\n", i);
+      i = end === -1 ? content.length : end - 1;
+    } else if (char === "/" && next === "*") {
+      const end = content.indexOf("*/", i + 2);
+      i = end === -1 ? content.length : end + 1;
+    } else if (char === "," && /^\s*[}\]]/.test(withoutLeadingComments(content.slice(i + 1)))) {
+      // A trailing comma: the next thing that is not a comment closes the value.
+    } else {
+      out += char;
+    }
+  }
+  return out;
+}
+
+/** Text with leading whitespace and comments removed, up to its first token. */
+function withoutLeadingComments(text: string): string {
+  let rest = text;
+  for (;;) {
+    const trimmed = rest.trimStart();
+    if (trimmed.startsWith("//")) {
+      const end = trimmed.indexOf("\n");
+      rest = end === -1 ? "" : trimmed.slice(end + 1);
+    } else if (trimmed.startsWith("/*")) {
+      const end = trimmed.indexOf("*/");
+      rest = end === -1 ? "" : trimmed.slice(end + 2);
+    } else {
+      return trimmed;
+    }
   }
 }
 

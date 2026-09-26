@@ -31,9 +31,13 @@ async function runOn(sql: string): Promise<Array<{ code: string; severity: strin
     os.tmpdir(),
     `qfai-sql-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  await mkdir(path.join(root, ".qfai", "contracts", "db"), { recursive: true });
+  await mkdir(path.join(root, ".qfai", "spec", "03_contract", "db"), { recursive: true });
   try {
-    await writeFile(path.join(root, ".qfai", "contracts", "db", "schema.sql"), sql, "utf-8");
+    await writeFile(
+      path.join(root, ".qfai", "spec", "03_contract", "db", "schema.sql"),
+      sql,
+      "utf-8",
+    );
     const issues = await validateContracts(root, defaultConfig);
     return issues.map((i) => ({ code: i.code, severity: i.severity }));
   } finally {

@@ -27,7 +27,12 @@ import {
 } from "../helpers/measurementClaim.js";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+/** The decision register, one table row per decision. */
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
+
+/** Every decision row in the register. */
+const decisionRows = (text: string): string[] =>
+  text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
 
 /** A record in the shape these rules police, with the numbers left out. */
 const WITHOUT_NUMBERS = [
@@ -59,7 +64,7 @@ const REGRESSION_WITHOUT_NUMBERS = [
   "- Consequences: none; the legs are unchanged.",
 ].join("\n");
 
-// QFAI:SPEC-0017:TC-0017-0033
+// QFAI:EX-0002-0016-02
 describe("a cost claim with no captured numbers does not satisfy the rule", () => {
   it("rejects a saving asserted on argument, and accepts the same claim once the numbers are quoted", () => {
     const bare = evaluateMeasurementClaim({ claim: "saving", record: WITHOUT_NUMBERS });
@@ -85,7 +90,7 @@ describe("a cost claim with no captured numbers does not satisfy the rule", () =
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0034
+// QFAI:EX-0002-0016-03
 describe("a recorded regression with the rebuilds kept is accepting", () => {
   it("resolves the criterion satisfied on a measured regression, and only while the rebuilds are there", () => {
     const kept = resolveArtifactReuse({
@@ -122,7 +127,7 @@ describe("a recorded regression with the rebuilds kept is accepting", () => {
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0035
+// QFAI:EX-0002-0016-02
 describe("an asserted regression with no numbers is not accepting", () => {
   it("refuses to close the criterion on an unmeasured regression, rebuilds present or not", () => {
     for (const rebuildsPresent of [true, false]) {
@@ -144,9 +149,11 @@ describe("an asserted regression with no numbers is not accepting", () => {
 describe("the extractor reads this repository's own decision record, not only its fixtures", () => {
   it("finds the one measured pair that exists and none in the record that only describes the rule", async () => {
     const text = await readFile(DECISIONS, "utf8");
+    // Keyed by the imported decision each row carries, `…/07_Decisions.md#DR-NNNN-NNNN: title`.
     const sections = new Map<string, string>();
-    for (const raw of text.split(/^### /m).slice(1)) {
-      sections.set(raw.slice(0, Math.max(raw.indexOf(":"), 0)), raw);
+    for (const row of decisionRows(text)) {
+      const id = /#(DR-\d{4}-\d{4}):/.exec(row)?.[1];
+      if (id !== undefined) sections.set(id, row);
     }
     expect(
       sections.size,

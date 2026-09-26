@@ -80,8 +80,8 @@
  * oracle: "the exit code moved AND the summary moved" is only observable while both
  * claims can fail in the same run.
  */
-// QFAI:SPEC-0006:TC-0006-0032
-// QFAI:SPEC-0006:TC-0006-0033
+// QFAI:EX-0003-0011-05
+// QFAI:EX-0003-0011-06
 
 import { describe, expect, it } from "vitest";
 

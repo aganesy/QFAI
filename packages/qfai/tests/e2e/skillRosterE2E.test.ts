@@ -9,7 +9,7 @@ const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
@@ -17,7 +17,7 @@ const implementSkillPath = path.join(
 describe("E2E: sub-agent roster formalization", () => {
   it("SKILL.md defines a formal routed specialist roster", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    expect(content).toMatch(/formal sub-agent roster/i);
+    expect(content).toContain("roles:");
     expect(content).toContain("delivery-planner");
     expect(content).toContain("frontend-engineer");
     expect(content).toContain("backend-engineer");
@@ -30,38 +30,38 @@ describe("E2E: sub-agent roster formalization", () => {
 describe("E2E: completion contract hardening", () => {
   it("SKILL.md has item completion checklist, spec completion, and prohibition conditions", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    expect(content).toMatch(/item completion.*checklist|10-point/i);
-    expect(content).toMatch(/spec completion.*condition/i);
-    expect(content).toMatch(/completion.*prohibition|prohibition.*condition/i);
+    expect(content).toContain("### Completion gate");
+    expect(content).toContain("Report the flow complete only when:");
+    expect(content).toContain(
+      "Every implemented EX has an observed RED, GREEN and Refactor result",
+    );
+    expect(content).toContain("A failing or unrun gate cannot be reported as PASS.");
   });
 });
 
 describe("E2E: evidence contract hardening", () => {
   it("SKILL.md defines minimum evidence with command+result pairs", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    expect(content).toMatch(/per-item evidence|evidence.*contract/i);
-    expect(content).toMatch(/RED command/i);
-    expect(content).toMatch(/RED result/i);
-    expect(content).toMatch(/GREEN command/i);
-    expect(content).toMatch(/GREEN result/i);
-    expect(content).toContain("fresh evidence");
+    expect(content).toContain(".qfai/evidence/implement-BF-NNNN.md");
+    expect(content).toContain("RED, GREEN, and Refactor commands and observed results");
+    expect(content).toContain("Evidence without a command and result pair does not prove a");
   });
 });
 
 describe("E2E: parallel dispatch rules", () => {
   it("SKILL.md defines allow/deny conditions and delivery-planner authority", async () => {
     // Full conditions live in references/parallelization-policy.md.
-    const content = [
-      await readFile(implementSkillPath, "utf-8"),
-      await readFile(
-        path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
-        "utf-8",
-      ),
-    ].join("\n");
-    expect(content).toMatch(/allow.*condition/i);
-    expect(content).toMatch(/deny.*condition/i);
-    expect(content).toMatch(/delivery-planner[\s\S]*?sole.*authorit/i);
-    expect(content).toMatch(/integration.*verify/i);
-    expect(content).toMatch(/worktree.*separation/i);
+    const content = await readFile(implementSkillPath, "utf-8");
+    const policy = await readFile(
+      path.join(path.dirname(implementSkillPath), "references", "parallelization-policy.md"),
+      "utf-8",
+    );
+    expect(content).toContain("Work one EX at a time by default");
+    expect(policy).toContain("explicit user approval and a delivery-planner PASS");
+    expect(policy).toContain("Deny parallel dispatch when two items write the same shared fixture");
+    expect(policy).toContain(
+      "Give each worker a separate worktree and an exact file ownership list",
+    );
+    expect(policy).toContain("After integration, rerun every item selector on the merged tree");
   });
 });

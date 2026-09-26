@@ -106,6 +106,7 @@ async function seedProject(root: string): Promise<void> {
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
     [
+      "# QFAI-CONTRACT-ID: CON-UI-0001",
       "screens:",
       "  - id: home",
       "    route: /",
@@ -172,11 +173,15 @@ describe("iterate --capture writes counted signals", () => {
   });
 
   it("reports an absent denominator rather than inventing one", async () => {
-    // No contract, so no declared task. A zero here would read as "no
-    // controls", which is the opposite of what the capture shows.
+    // The UI contract has a screen but no declared task. A zero denominator
+    // would read as "no controls", which is the opposite of the capture.
     const root = await newTempDir();
     await seedProject(root);
-    await rm(path.join(root, ".qfai/contracts/ui/spec-0001.yaml"));
+    await writeFile(
+      path.join(root, ".qfai/contracts/ui/spec-0001.yaml"),
+      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+      "utf-8",
+    );
 
     expect(await runCapture(root, HOME_HTML)).toBe(0);
 

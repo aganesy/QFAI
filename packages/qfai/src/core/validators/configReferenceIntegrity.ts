@@ -3,7 +3,7 @@
  *
  * Verifies that values in `qfai.config.yaml` resolve to real filesystem
  * entities:
- *   - QFAI-CFG-LINK-001: prototyping.primarySpecId points to a missing spec dir
+ *   - QFAI-CFG-LINK-001: prototyping.primaryUiContract names no UI contract
  *   - QFAI-CFG-LINK-002: paths.* points to a missing directory (warning)
  *   - QFAI-CFG-LINK-003: prototyping.calibration.packPath points to a missing dir
  *
@@ -14,6 +14,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { defaultConfig, type QfaiConfig, type ConfigPathKey } from "../config.js";
+import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -65,22 +66,21 @@ export async function validateConfigReferenceIntegrity(
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
 
-  // ─── QFAI-CFG-LINK-001: primarySpecId existence ──────────────────────────
-  const primarySpecId = config.prototyping?.primarySpecId;
-  if (primarySpecId !== undefined) {
-    const specDir = path.join(path.resolve(root, config.paths.specsDir), `spec-${primarySpecId}`);
-    if (!(await isDirectory(specDir))) {
-      const relSpecDir = path.relative(root, specDir).replace(/\\/g, "/");
+  // ─── QFAI-CFG-LINK-001: primary UI contract existence ────────────────────
+  const primaryUiContract = config.prototyping?.primaryUiContract;
+  if (primaryUiContract !== undefined) {
+    const inventory = await readUiContractInventory(root, config);
+    if (!inventory.some((entry) => entry.uiContractId === primaryUiContract)) {
       issues.push(
         issue(
           "QFAI-CFG-LINK-001",
-          `qfai.config.yaml: prototyping.primarySpecId="${primarySpecId}" but ${relSpecDir} does not exist.`,
+          `qfai.config.yaml: prototyping.primaryUiContract="${primaryUiContract}" does not name a UI contract under ${config.paths.contractsDir}/ui/.`,
           "error",
           "qfai.config.yaml",
-          "config.prototyping.primarySpecId.reality",
+          "config.prototyping.primaryUiContract.reality",
           undefined,
           "canonical",
-          "prototyping.primarySpecId を実在する spec-NNNN ディレクトリに合わせるか、対応する spec を `.qfai/specs/spec-NNNN/` に作成してください。",
+          "Set prototyping.primaryUiContract to a declared CON-UI-NNNN ID in the configured UI contracts directory.",
         ),
       );
     }

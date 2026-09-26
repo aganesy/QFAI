@@ -30,7 +30,7 @@ it is not authoritative.
 
 QFAI is a package that gets installed into user repositories. Shipped
 templates MUST NOT hardcode user-side specific spec / AC / TC / REQ IDs or
-paths. The user's repo may have spec-0001, spec-0099, or no spec at all —
+paths. The user's repo may have one spec, many specs, or no spec at all —
 shipped templates must work for any state.
 
 Enforcement: `npm run lint:shipping` (added in Phase 6) blocks

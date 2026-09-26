@@ -21,7 +21,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 /** Shipped assistant tree plus its generated root mirror. */
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const TEMPLATE_REL = "assistant/skills/qfai-verify/templates/verify-evidence.md";
+const TEMPLATE_REL = "assistant/skill/qfai-verify/templates/verify-evidence.md";
 
 const LIST_HEADER = "Required sections (all of them, in this order):";
 

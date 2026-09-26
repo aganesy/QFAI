@@ -9,8 +9,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 
 /**
  * The distributed assistant surface. Skills do not only read `skills/**`: every
- * skill loads `constitution/**` and `catalog/**` too (for example
- * `qfai-verify/SKILL.md` always reads `constitution/workflow.md`), so a launcher
+ * skill loads `rule/**` too (for example
+ * `qfai-verify/SKILL.md` always reads `rule/workflow.md`), so a launcher
  * prescribed there is a launcher a skill run will actually execute.
  */
 const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
@@ -23,8 +23,8 @@ const SHIPPED_ASSISTANT_ROOT = "packages/qfai/assets/init/.qfai/assistant";
 const ROOT_ASSISTANT_MIRROR = ".qfai/assistant";
 
 const BASELINE_PATHS = [
-  `${SHIPPED_ASSISTANT_ROOT}/constitution/shared-skill-operating-baseline.md`,
-  `${ROOT_ASSISTANT_MIRROR}/constitution/shared-skill-operating-baseline.md`,
+  `${SHIPPED_ASSISTANT_ROOT}/rule/shared-skill-operating-baseline.md`,
+  `${ROOT_ASSISTANT_MIRROR}/rule/shared-skill-operating-baseline.md`,
 ];
 
 /**
@@ -39,7 +39,7 @@ const BASELINE_PATHS = [
  * guard untouched.
  */
 const SUBCOMMANDS =
-  "(?:validate|init|report|doctor|prototyping|discussion|guardrails|audit|handoff|atdd)";
+  "(?:validate|init|report|doctor|prototyping|discussion|guardrails|audit|handoff|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");
@@ -103,13 +103,13 @@ describe("shipped assistant docs invoke qfai through the canonical launcher", ()
     ).toEqual([]);
   });
 
-  it("covers the constitution and catalog docs every skill loads", async () => {
+  it("covers the shared rule docs every skill loads", async () => {
     const files = await collectAssistantDocs();
     for (const required of [
-      `${SHIPPED_ASSISTANT_ROOT}/constitution/workflow.md`,
-      `${SHIPPED_ASSISTANT_ROOT}/catalog/test-layers.md`,
-      `${ROOT_ASSISTANT_MIRROR}/constitution/workflow.md`,
-      `${ROOT_ASSISTANT_MIRROR}/catalog/test-layers.md`,
+      `${SHIPPED_ASSISTANT_ROOT}/rule/workflow.md`,
+      `${SHIPPED_ASSISTANT_ROOT}/rule/test-layers.md`,
+      `${ROOT_ASSISTANT_MIRROR}/rule/workflow.md`,
+      `${ROOT_ASSISTANT_MIRROR}/rule/test-layers.md`,
     ]) {
       expect(files).toContain(required);
     }

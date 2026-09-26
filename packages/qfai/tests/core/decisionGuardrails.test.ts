@@ -1,8 +1,13 @@
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   checkDecisionGuardrails,
   extractDecisionGuardrailsFromMarkdown,
+  loadDecisionGuardrails,
   normalizeDecisionGuardrails,
   sortDecisionGuardrails,
 } from "../../src/core/decisionGuardrails.js";
@@ -10,7 +15,7 @@ import {
 describe("decision guardrails", () => {
   it("extracts and normalizes guardrails", () => {
     const text = [
-      "# SPEC-0001: Delta",
+      "# Policy",
       "",
       "## Decision Guardrails",
       "",
@@ -30,7 +35,7 @@ describe("decision guardrails", () => {
       "",
     ].join("\n");
 
-    const entries = extractDecisionGuardrailsFromMarkdown(text, "delta.md");
+    const entries = extractDecisionGuardrailsFromMarkdown(text, "policy.md");
     const items = sortDecisionGuardrails(normalizeDecisionGuardrails(entries));
 
     expect(items).toHaveLength(2);
@@ -43,7 +48,7 @@ describe("decision guardrails", () => {
 
   it("reports missing fields as errors or warnings", () => {
     const text = [
-      "# SPEC-0001: Delta",
+      "# Policy",
       "",
       "## Decision Guardrails",
       "",
@@ -52,7 +57,7 @@ describe("decision guardrails", () => {
       "",
     ].join("\n");
 
-    const entries = extractDecisionGuardrailsFromMarkdown(text, "delta.md");
+    const entries = extractDecisionGuardrailsFromMarkdown(text, "policy.md");
     const result = checkDecisionGuardrails(entries);
 
     expect(result.errors.map((issue) => issue.code)).toContain("QFAI-GR-003");
@@ -62,7 +67,7 @@ describe("decision guardrails", () => {
 
   it("extracts guardrails from heading format", () => {
     const text = [
-      "# SPEC-0001: Delta",
+      "# Contract",
       "",
       "## Decision Guardrails",
       "",
@@ -75,7 +80,7 @@ describe("decision guardrails", () => {
       "",
     ].join("\n");
 
-    const entries = extractDecisionGuardrailsFromMarkdown(text, "delta.md");
+    const entries = extractDecisionGuardrailsFromMarkdown(text, "contract.md");
     const items = normalizeDecisionGuardrails(entries);
 
     expect(items).toHaveLength(1);
@@ -83,5 +88,70 @@ describe("decision guardrails", () => {
     expect(items[0]?.type).toBe("not-now");
     expect(items[0]?.title).toBe("Avoid auto-upgrade");
     expect(items[0]?.keywords).toEqual(["upgrade", "templates"]);
+  });
+
+  it("loads explicit entries from configured policy and contract trees only", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const policyRoot = path.join(root, "custom", "stories", "01_policy");
+    const contractsRoot = path.join(root, "custom", "contracts");
+    const oldDelta = path.join(root, ".qfai", "specs", "spec-0001", "18_delta.md");
+    try {
+      await Promise.all([
+        mkdir(policyRoot, { recursive: true }),
+        mkdir(path.join(contractsRoot, "api"), { recursive: true }),
+        mkdir(path.dirname(oldDelta), { recursive: true }),
+      ]);
+      const entry = (id: string): string =>
+        [
+          "## Decision Guardrails",
+          `### ${id}: Explicit decision`,
+          "- Type: non-goal",
+          "- Guardrail: Keep this boundary.",
+          "- Rationale: Scope is fixed.",
+          "- Reconsider: When the scope changes.",
+        ].join("\n");
+      await Promise.all([
+        writeFile(path.join(policyRoot, "02_Constraints.md"), entry("DG-0001")),
+        writeFile(path.join(contractsRoot, "api", "service.md"), entry("DG-0002")),
+        writeFile(oldDelta, entry("DG-0003")),
+      ]);
+
+      const loaded = await loadDecisionGuardrails(root, {
+        specsRoot: policyRoot,
+        contractsRoot,
+      });
+      expect(loaded.errors).toEqual([]);
+      expect(loaded.entries.map((item) => item.id).sort()).toEqual(["DG-0001", "DG-0002"]);
+      expect(loaded.files).toHaveLength(2);
+
+      const explicit = await loadDecisionGuardrails(root, {
+        paths: [path.join(contractsRoot, "api")],
+        specsRoot: policyRoot,
+        contractsRoot,
+      });
+      expect(explicit.entries.map((item) => item.id)).toEqual(["DG-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores RFC 2119 prose without a DG entry", () => {
+    const entries = extractDecisionGuardrailsFromMarkdown(
+      "## Constraints\n\nThe service MUST preserve the policy.\n",
+      "policy.md",
+    );
+    expect(entries).toEqual([]);
+  });
+
+  it("reports an explicitly requested missing path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    try {
+      const loaded = await loadDecisionGuardrails(root, { paths: ["missing.md"] });
+      expect(loaded.errors).toEqual([
+        { path: path.join(root, "missing.md"), message: "Path does not exist" },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

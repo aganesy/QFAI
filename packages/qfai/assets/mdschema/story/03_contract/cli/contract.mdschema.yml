@@ -1,0 +1,20 @@
+# Document schema: `<contractsDir>/cli/*.md`
+structure:
+  - heading:
+      pattern: "^# .+"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Behavior$"
+          regex: true
+        description: Behavior section.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Rules$"
+          regex: true
+        description: Rules section.
+        allow_additional: true
+        optional: true

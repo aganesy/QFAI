@@ -1,6 +1,6 @@
 /**
- * Regression guard: `.qfai/specs/.markdownlint.jsonc` is actually picked up
- * by `markdownlint-cli2` when linting files under `.qfai/specs/`.
+ * Regression guard: `.qfai/spec/.markdownlint.jsonc` is actually picked up
+ * by `markdownlint-cli2` when linting files under `.qfai/spec/`.
  *
  * Rationale: if `markdownlint-cli2` stops merging the per-directory config, every
  * spec-pack MD013 threshold regressions would start firing again and CI
@@ -21,24 +21,24 @@ import { main as markdownlintCli2Main } from "markdownlint-cli2";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const rootCli2Config = path.join(repoRoot, ".markdownlint-cli2.jsonc");
-const specsDirConfig = path.join(repoRoot, ".qfai", "specs", ".markdownlint.jsonc");
+const specsDirConfig = path.join(repoRoot, ".qfai", "spec", ".markdownlint.jsonc");
 
-describe("nested markdownlint config under .qfai/specs/", () => {
-  it("relaxes MD013 for spec-pack files via the per-directory .markdownlint.jsonc", async () => {
+describe("nested markdownlint config under .qfai/spec/", () => {
+  it("relaxes MD013 for story-tree files via the per-directory .markdownlint.jsonc", async () => {
     const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-md-cfg-"));
     try {
       await copyFile(rootCli2Config, path.join(tempRoot, ".markdownlint-cli2.jsonc"));
-      const specsDir = path.join(tempRoot, ".qfai", "specs");
+      const specsDir = path.join(tempRoot, ".qfai", "spec");
       await mkdir(specsDir, { recursive: true });
       await copyFile(specsDirConfig, path.join(specsDir, ".markdownlint.jsonc"));
 
-      const specPackDir = path.join(specsDir, "spec-9999");
+      const specPackDir = path.join(specsDir, "01_policy");
       await mkdir(specPackDir, { recursive: true });
       const overLongLine = "decision: " + "x".repeat(150);
       const markdownBody = ["# 07 Decisions", "", "### DR-0001", "", `- ${overLongLine}`, ""].join(
         "\n",
       );
-      await writeFile(path.join(specPackDir, "07_Decisions.md"), markdownBody, "utf-8");
+      await writeFile(path.join(specPackDir, "decision.md"), markdownBody, "utf-8");
 
       const outputLog: string[] = [];
       const logger = {
@@ -48,7 +48,7 @@ describe("nested markdownlint config under .qfai/specs/", () => {
 
       await markdownlintCli2Main({
         directory: tempRoot,
-        argv: [".qfai/specs/**/*.md"],
+        argv: [".qfai/spec/**/*.md"],
         logMessage: logger.info,
         logError: logger.error,
         noRequire: true,
