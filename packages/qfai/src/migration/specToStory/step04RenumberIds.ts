@@ -490,7 +490,26 @@ function replacedIds(text: string, replacements: Record<string, string>): string
   );
 }
 
-function flowMermaid(text: string, selector: string | undefined): string | null {
+const MERMAID_FENCE = /```mermaid\s*\n([\s\S]*?)\n```/m;
+
+/** The old flow section `from` selects: its Mermaid diagram and the prose around it. */
+function flowSource(
+  text: string,
+  selector: string | undefined,
+): { diagram: string | null; prose: string } {
+  const selected = selectFlowSection(text, selector);
+  if (selected === null) return { diagram: null, prose: "" };
+  const prose = selected
+    .replace(MERMAID_FENCE, "")
+    .split(/\r?\n/)
+    .filter((line) => !/^#\s/.test(line))
+    .map((line) => line.replace(/^#{2}(?=\s)/, "###"))
+    .join("\n")
+    .trim();
+  return { diagram: MERMAID_FENCE.exec(selected)?.[1] ?? null, prose };
+}
+
+function selectFlowSection(text: string, selector: string | undefined): string | null {
   if (!selector) return null;
   let selected = text;
   if (selector === "_policies/04_Business-Flow.md") {
@@ -513,7 +532,7 @@ function flowMermaid(text: string, selector: string | undefined): string | null 
       throw new MigrationInputError(`${PLAN_PATH}: ambiguous or missing flow source ${selector}`);
     selected = extractH2Sections(text).get(selector)?.body ?? "";
   }
-  return /```mermaid\s*\n([\s\S]*?)\n```/m.exec(selected)?.[1] ?? null;
+  return selected;
 }
 
 function reportUnplaced(
@@ -648,8 +667,9 @@ function outputExamples(
   return `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
 }
 
-function outputFlow(title: string, id: string, diagram: string): string {
-  return `# ${id}: ${title}\n\n## Purpose\n\n- ${title}\n\n## Flow\n\n\`\`\`mermaid\n${diagram.trim()}\n\`\`\`\n`;
+function outputFlow(title: string, id: string, diagram: string, prose: string): string {
+  const source = prose ? `\n${prose}\n` : "";
+  return `# ${id}: ${title}\n\n## Purpose\n\n- ${title}\n${source}\n## Flow\n\n\`\`\`mermaid\n${diagram.trim()}\n\`\`\`\n`;
 }
 
 function outputFlowIndex(flows: readonly { id: string; title: string }[]): string {
@@ -949,13 +969,13 @@ export const step04: MigrationStep = {
       const flowId = numbered.flows[flow.title];
       if (!flowId) throw new MigrationInputError(`${PLAN_PATH}: flow ${flow.title} has no ID`);
       const flowDir = `${specsRelative}/02_business-flow/business-flow-${flowId.slice(3)}`;
-      const diagram = flowMermaid(oldFlowText, flow.from);
+      const { diagram, prose } = flowSource(oldFlowText, flow.from);
       if (!flow.from || !diagram)
         forAPerson.push(`${PLAN_PATH}: ${flow.title} has no old flow diagram`);
       operations.push({
         kind: "write",
         target: `${flowDir}/business-flow.md`,
-        content: outputFlow(flow.title, flowId, diagram ?? fallbackDiagram),
+        content: outputFlow(flow.title, flowId, diagram ?? fallbackDiagram, prose),
       });
       operations.push({
         kind: "write",

@@ -16,9 +16,9 @@ Scenario: The plan becomes flows and stories with new IDs, and the ID map record
 
 # AC-0004-0007-02
 # Parent: US-0004-0007
-Scenario: Step 4 does not guess a flow
-  Given a plan that places no flow for one old user story
+Scenario: Step 4 does not guess
+  Given a plan that places no flow for one old user story, a flow with no `from`, or an old criterion step 4 cannot convert or assign to one story
   When step 4 runs
-  Then that story stays in its spec pack and is listed under For a person with its file and the reason
+  Then a story or criterion stays in its source, a flow with no `from` receives the template `business-flow.md` with the plan title, and each is listed under For a person with its file and the reason
   And step 4 exits 3
 ```
