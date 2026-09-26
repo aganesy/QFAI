@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0001-a-failed-auto-serve-teardown-is-reported-by-no-case.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0001-a-failed-auto-serve-teardown-is-reported-by-no-case.md",
+      "sha256": "9677b1747117534df3a56c33185876258d1973e214dc09aebdded00d9fee2bcf",
+      "bytes": 6233
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0001-retire-two-repository-skills-and-their-slices.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0001-retire-two-repository-skills-and-their-slices.md",
+      "sha256": "fbc1473ca61897f4f81ad1ff4c475abaff77d1a69290b515b559e2bd15c3a920",
+      "bytes": 5842
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0002-split-ci-acceptance-boundaries.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0002-split-ci-acceptance-boundaries.md",
+      "sha256": "1908e1a7831118f2fc118410e31d90bb6ef552033024d35451ea76d41e66ff6a",
+      "bytes": 6154
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0002-the-failed-teardown-case-names-a-test-file-that-does-not-hold-its-test.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0002-the-failed-teardown-case-names-a-test-file-that-does-not-hold-its-test.md",
+      "sha256": "02f0e9064090367bc279eeee6fd78bd8a9b2f6a5ed5f450714311d69e05cab13",
+      "bytes": 5689
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0003-correct-discussion-ledger-claim.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0003-correct-discussion-ledger-claim.md",
+      "sha256": "74ef39ae424ddcabc984aa69d9658886e571d5800823a759e107042662f59c6c",
+      "bytes": 5206
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0004-scope-traceability-drift.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0004-scope-traceability-drift.md",
+      "sha256": "50c0de88090ed22a293647dbb102c92e8436de8c069198401338db832a9d03be",
+      "bytes": 7117
+    }
+  ]
+}

@@ -8,7 +8,7 @@
  * (under an allowed root) plus an unrelated README edit. The lane MUST
  * pass with exit code 0 and emit no `R-PACK-LOCATION-DRIFT` finding.
  */
-// QFAI:SPEC-0004:TC-0004-0072
+// QFAI:EX-0002-0011-02
 
 import { execFile } from "node:child_process";
 import path from "node:path";

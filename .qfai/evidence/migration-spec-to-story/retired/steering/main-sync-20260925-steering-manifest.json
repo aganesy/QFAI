@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/steering/2026-08-05-chg-007-toolchain-capability.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-08-05-chg-007-toolchain-capability.md",
+      "sha256": "292db51b2429fced2b534f2c0131d12bfa8f41cbd3c28fa0222f130a6ea5d30f",
+      "bytes": 4453
+    },
+    {
+      "oldPath": ".qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md",
+      "sha256": "831616227df838f298bc99a15b6bf204b8ee27518b743d20e473124006a45bbf",
+      "bytes": 6810
+    },
+    {
+      "oldPath": ".qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md",
+      "sha256": "e3a06ea59057bce029095318b049ecbe2a1324d28165a12905087990ad1a4835",
+      "bytes": 25382
+    },
+    {
+      "oldPath": ".qfai/steering/2026-08-09-chg-007-implementation-standing-brief.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-08-09-chg-007-implementation-standing-brief.md",
+      "sha256": "714da06f6a1fc377befe310b32926dd418a86aa94eda0f35966b9ef4d8df7803",
+      "bytes": 13795
+    },
+    {
+      "oldPath": ".qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md",
+      "sha256": "b2d384c12031ee29072c1af43c9783645987bbcf92a4ad4773da3dddeec0365e",
+      "bytes": 11879
+    },
+    {
+      "oldPath": ".qfai/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-09-12-spec-0002-two-statements-the-product-replaced.md",
+      "sha256": "ebd8c3f3daeadd2f8cc0d54396fb0de936f3e139ef8bbbddd3c8c1ba44d585f8",
+      "bytes": 12492
+    },
+    {
+      "oldPath": ".qfai/steering/2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement.md",
+      "sha256": "47e2538281701170f3087f55f9a2486995c6db8fcafee5f5057967dcde6fa0ce",
+      "bytes": 2197
+    },
+    {
+      "oldPath": ".qfai/steering/2026-09-24-spec-0013-open-decisions-after-ledger-reseed.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-09-24-spec-0013-open-decisions-after-ledger-reseed.md",
+      "sha256": "fb667078152ade6553369d843d1f8bf069ec2263fae735eeeb5769a783933591",
+      "bytes": 1275
+    },
+    {
+      "oldPath": ".qfai/steering/2026-09-24-spec-0017-acceptance-boundaries-await-split.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/steering/2026-09-24-spec-0017-acceptance-boundaries-await-split.md",
+      "sha256": "d2c1c24a817bd5158390935cf959c8651ae7d522240df92316cd0c1d0dc2a318",
+      "bytes": 1771
+    }
+  ]
+}

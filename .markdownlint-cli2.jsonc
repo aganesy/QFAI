@@ -49,12 +49,17 @@
     ".qfai/review/_archive/**",
     ".qfai/assistant/**",
     ".qfai/contracts/**",
+    // The migration archive keeps exact historical text. The decision ledger
+    // keeps long provenance cells whose formatter padding obscures the record.
+    ".qfai/evidence/migration-spec-to-story/**",
+    ".qfai/spec/decisions.md",
     ".qfai/evidence/*[0-9]*.md",
     ".qfai/report/atdd-traceability/**",
     ".qfai/report/preflight_summary.md",
     ".qfai/report/preflight/**",
     ".qfai/report/run-*/**",
     ".qfai/report/specs-coverage/**",
+    ".qfai/report/spec-coverage/**",
     ".qfai/report/validate.json",
     ".qfai/report/validate.log",
     ".qfai/report/report.md",

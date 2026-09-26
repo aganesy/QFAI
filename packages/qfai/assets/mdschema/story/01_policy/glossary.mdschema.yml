@@ -1,0 +1,18 @@
+# Document schema: 01_policy/glossary.md
+structure:
+  - heading:
+      pattern: "^# Glossary$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Terms$"
+          regex: true
+        description: Terms section.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Term
+              - Definition

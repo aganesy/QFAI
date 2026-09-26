@@ -53,6 +53,9 @@ describe("validateDbContractExecutability", () => {
     expect(issues[0]?.refs).toEqual(["CON-DB-0007"]);
     expect(issues[0]?.suggested_action).toContain("driven twice");
     expect(issues[0]?.suggested_action).toContain("at least twice");
+    expect(issues[0]?.suggested_action).toContain(
+      ".qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md",
+    );
   });
 
   it("is satisfied by an Executability line naming the contract", async () => {
@@ -60,7 +63,7 @@ describe("validateDbContractExecutability", () => {
     const file = await write(root, ".qfai/contracts/db/CON-DB-0007.sql", CONTRACT_SQL);
     await write(
       root,
-      ".qfai/evidence/sdd-spec-0001.md",
+      ".qfai/evidence/sdd-BF-0001.md",
       "# Evidence\n\n- Executability: CON-DB-0007 — applied to scratch DB; every declared write path driven twice; `psql -f …` / 0 errors\n",
     );
 
@@ -74,7 +77,7 @@ describe("validateDbContractExecutability", () => {
     const file = await write(root, ".qfai/contracts/db/CON-DB-0007.sql", CONTRACT_SQL);
     await write(
       root,
-      ".qfai/evidence/sdd-spec-0001.md",
+      ".qfai/evidence/sdd-BF-0001.md",
       "# Evidence\n\nCON-DB-0007 was reviewed and looks fine.\n",
     );
 
@@ -93,7 +96,7 @@ describe("validateDbContractExecutability", () => {
     );
     await write(
       root,
-      ".qfai/evidence/sdd-spec-0001.md",
+      ".qfai/evidence/sdd-BF-0001.md",
       "- Executability: CON-DB-0007 — applied; driven twice\n",
     );
 
@@ -112,7 +115,7 @@ describe("validateDbContractExecutability", () => {
     );
     await write(
       root,
-      ".qfai/evidence/sdd-spec-0001.md",
+      ".qfai/evidence/sdd-BF-0001.md",
       "- Executability: CON-DB-0007, CON-DB-0008 — applied; each declared write path driven twice\n",
     );
 
@@ -134,15 +137,15 @@ describe("validateDbContractExecutability", () => {
     await expect(validateDbContractExecutability(root, [])).resolves.toEqual([]);
   });
 
-  it("finds the record anywhere under the evidence directory", async () => {
+  it("ignores archived evidence outside the current flow record", async () => {
     const root = await newRoot();
     const file = await write(root, ".qfai/contracts/db/CON-DB-0007.sql", CONTRACT_SQL);
     await write(
       root,
-      ".qfai/evidence/archive/2026/sdd-spec-0001.md",
+      ".qfai/evidence/archive/2026/sdd-BF-0001.md",
       "* Executability: CON-DB-0007 — applied; driven twice\n",
     );
 
-    await expect(validateDbContractExecutability(root, [file])).resolves.toEqual([]);
+    await expect(validateDbContractExecutability(root, [file])).resolves.toHaveLength(1);
   });
 });

@@ -10,6 +10,7 @@
  * branches by stubbing the dynamic import via vi.mock and feeding
  * controlled response shapes.
  */
+// QFAI:EX-0001-0134-03
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, readFile } from "node:fs/promises";

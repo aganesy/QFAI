@@ -15,7 +15,6 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { collectFiles } from "./fs.js";
-import { joinAssistantLayer } from "./paths/assistantPaths.js";
 
 /** What `structure.md#ui-surface-paths-ssot` declares. */
 export type DeclaredUiPaths =
@@ -51,10 +50,13 @@ export interface HoldingClause {
  * section with no other bullet leaves clauses 1 and 2 unevaluable rather than
  * answered.
  */
-export async function readDeclaredUiPaths(root: string): Promise<DeclaredUiPaths> {
+export async function readDeclaredUiPaths(
+  root: string,
+  contractsDir = ".qfai/spec/03_contract",
+): Promise<DeclaredUiPaths> {
   let text: string;
   try {
-    text = await readFile(joinAssistantLayer(root, "catalog", "structure.md"), "utf-8");
+    text = await readFile(path.resolve(root, contractsDir, "structure.md"), "utf-8");
   } catch {
     return { kind: "undeclared" };
   }
@@ -233,7 +235,7 @@ export class UiAffectingClauses {
 
   /** The first clause that holds for `row`, or `null` when none the gate can read does. */
   async firstHolding(row: UiAffectingRow): Promise<HoldingClause | null> {
-    const declared = await (this.declared ??= readDeclaredUiPaths(this.root));
+    const declared = await (this.declared ??= readDeclaredUiPaths(this.root, this.contractsDir));
     if (declared.kind === "globs") {
       const owning = row.owningModule.trim();
       if (owning.length > 0 && owning !== "-") {

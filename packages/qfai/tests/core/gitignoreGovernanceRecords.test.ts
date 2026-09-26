@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_GITIGNORE_LEGACY_LINES,
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
@@ -51,15 +52,23 @@ describe("the managed block keeps governance records tracked", () => {
   });
 
   it("re-includes the directory writeDecisionRecord actually writes to", () => {
-    // `.qfai/evidence/decisions/<ISO8601-stamp>.json` — git will not descend
+    // `.qfai/evidence/decision/<ISO8601-stamp>.json` — git will not descend
     // into a directory ignored by `.qfai/evidence/*`, so the directory itself
     // must be negated before its contents.
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decisions/**");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/");
+    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/**");
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(lines.indexOf("!.qfai/evidence/decisions/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decisions/**"),
+    expect(lines.indexOf("!.qfai/evidence/decision/")).toBeLessThan(
+      lines.indexOf("!.qfai/evidence/decision/**"),
     );
+  });
+
+  it("retires the obsolete decision directory negations", () => {
+    for (const line of ["!.qfai/decisions/", "!.qfai/decisions/**"]) {
+      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain(line);
+      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
+      expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
+    }
   });
 
   it("keeps the Phase: Skeleton record trackable", () => {
@@ -94,7 +103,7 @@ describe("the managed block keeps governance records tracked", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     expect(lines.indexOf("!.qfai/")).toBeLessThan(lines.indexOf("!.qfai/evidence/"));
     expect(lines.indexOf("!.qfai/evidence/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decisions/"),
+      lines.indexOf("!.qfai/evidence/decision/"),
     );
   });
 
@@ -148,7 +157,7 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
-    ".qfai/evidence/decisions/2026-01-01T00-00-00.000Z.json",
+    ".qfai/evidence/decision/2026-01-01T00-00-00.000Z.json",
     // The two files gate item 10 names, and the only ones it resolves an
     // Evidence anchor against.
     ".qfai/evidence/implement-spec-0001.md",
@@ -166,7 +175,6 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     // check also accepts.
     ".qfai/evidence/import-lite-20260101000000000.md",
     ".qfai/evidence/import-lite.md",
-    ".qfai/decisions/CR-0001.md",
     ".qfai/evidence/skeleton.md",
   ];
 
@@ -301,56 +309,33 @@ describe("the shipped instructions commit the records the managed block untracks
     unwrap(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
 
   for (const tree of TREES) {
-    it(`${tree}: names the RED/GREEN records as committed governance records`, async () => {
-      const drift = await read(tree, "constitution/drift-protocol.md");
-      // The classification these two moved OUT of, and the one they moved into.
-      expect(drift).not.toContain(
-        "**Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`), run logs, reports",
-      );
-      expect(drift).toContain("`.qfai/evidence/implement-<spec-id>.md`");
-      expect(drift).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
-      expect(drift).toContain("so they are committed");
-      // A negation is not a commit, and the instruction has to say so.
-      expect(drift).toContain("Committing them is a step, not a consequence");
+    it(`${tree}: requires current flow evidence to be committed`, async () => {
+      const drift = await read(tree, "rule/drift-protocol.md");
+      expect(drift).toContain("Commit durable decision rows");
+      expect(drift).toContain("the owner still stages and commits the evidence");
 
-      const orchestrator = await read(tree, "agents/orchestrator.md");
-      expect(orchestrator).not.toContain("`.qfai/evidence/` (gitignored; do not commit)");
-      expect(orchestrator).toContain("must** be committed");
-      // The Sign-off box is the last thing an orchestrator reads, and it
-      // repeated the blanket claim the Deliverables line had just dropped.
-      expect(orchestrator, "the Sign-off box still says evidence is gitignored").not.toContain(
-        "- [ ] Evidence is present (gitignored)",
-      );
-      expect(orchestrator).toContain("governance records committed");
+      const orchestrator = await read(tree, "agent/orchestrator.md");
+      expect(orchestrator).toContain("Commit the current BF stage evidence");
+      expect(orchestrator).toContain("Required evidence is present and committed");
 
-      // `/qfai-atdd` owns `atdd-<spec-id>.md`, so its own list decides whether
-      // that half of the split is committed. It called the file regenerable.
-      const atdd = await read(tree, "skills/qfai-atdd/SKILL.md");
-      expect(atdd, "the ATDD skill still calls its stage evidence uncommitted").not.toContain(
-        "Stage evidence is **regenerable** and is not committed",
-      );
-      expect(atdd).toContain("stage's own `.qfai/evidence/atdd-<spec-id>.md`**");
-      expect(atdd).toContain("A negation does");
-      expect(atdd).toContain("not stage a file");
+      const atdd = await read(tree, "skill/qfai-atdd/SKILL.md");
+      expect(atdd).toContain(".qfai/evidence/atdd-BF-NNNN.md");
+      expect(atdd).toContain(".qfai/evidence/coverage-depth-BF-NNNN.md");
+      expect(atdd).toContain("Commit both evidence files");
 
-      const revision = await read(tree, "skills/qfai-implement/references/evidence-revision.md");
-      expect(revision).not.toContain(
-        "stage evidence is regenerable and deliberately not committed",
-      );
-      expect(revision).toContain("are now governance records and ARE committed");
+      const implement = await read(tree, "skill/qfai-implement/SKILL.md");
+      expect(implement).toContain(".qfai/evidence/implement-BF-NNNN.md");
     });
 
-    it(`${tree}: every record it calls committed is one the managed block negates`, async () => {
-      const drift = await read(tree, "constitution/drift-protocol.md");
+    it(`${tree}: the managed block exposes the named flow evidence`, async () => {
       // The document must not promise tracking for a path the block still
       // ignores — that is the same false instruction pointing the other way.
-      for (const pattern of ["implement-*.md", "atdd-*.md"]) {
+      for (const pattern of ["implement-*.md", "atdd-*.md", "coverage-depth-*.md"]) {
         expect(
           QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
           `${pattern} is named as committed and must be negated`,
         ).toContain(`!.qfai/evidence/${pattern}`);
       }
-      expect(drift).toContain("managed");
     });
   }
 });

@@ -1,0 +1,133 @@
+## Operations
+none
+
+## For a person
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0001 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0002 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0003 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0004 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0005 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0006 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0008 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0009 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0010 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0011 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0012 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0016 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0018 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0023 has no single derived criterion
+- .qfai/spec/spec-0001/05_Examples.md: EX-0001-0024 has no single derived criterion
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0001 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0003 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0004 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0005 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0006 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0011 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0012 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0013 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0014 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0015 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0016 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0020 has no contract in plan.yaml
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0022 has no contract in plan.yaml
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0007 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0020 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0021 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0023 has no single derived criterion
+- .qfai/spec/spec-0003/05_Examples.md: EX-0003-0028 has no single derived criterion
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0018 has no contract in plan.yaml
+- .qfai/spec/spec-0004/05_Examples.md: EX-0004-0004 has no single derived criterion
+- .qfai/spec/spec-0004/05_Examples.md: EX-0004-0037 has no single derived criterion
+- .qfai/spec/spec-0005/06_Test-Cases.md: TC-0005-0009 has ambiguous EX-Ref
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0001 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0002 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0005 has no single derived criterion
+- .qfai/spec/spec-0008/05_Examples.md: EX-0008-0017 has no single derived criterion
+- .qfai/spec/spec-0009/05_Examples.md: EX-0009-0001 has no single derived criterion
+- .qfai/spec/spec-0009/05_Examples.md: EX-0009-0003 has no single derived criterion
+- .qfai/spec/spec-0011/05_Examples.md: EX-0011-0002 has no single derived criterion
+- .qfai/spec/spec-0011/05_Examples.md: EX-0011-0003 has no single derived criterion
+- .qfai/spec/spec-0011/04_Business-Rules.md: BR-0011-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0001 is superseded — see EX-0012-0136 / EX-0012-0137 (per-spec iter-dir layout, `.review.json`-only; PNG/HTML capture retired by new model).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0002 is superseded — see EX-0012-0137 (no `.png` written by new model; Reviewer-driven Playwright replaces capture step).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0003 is superseded — see EX-0012-0137 (no `.html` written by new model; Reviewer-driven Playwright replaces capture step).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0089 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0098 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0102 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0110 is superseded — see EX-0012-0124 (10-cycle terminator) and EX-0012-0130 (AND-across-spec×screen qualitative convergence). 15-cycle narrative retired.; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0111 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0112 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0113 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0115 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0116 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0117 is superseded — see EX-0012-0128 (new payload contains 6 qualitative `*Feel` fields + 4 ordinal axes; path moves to `iter-NN/spec-NNNN/<screen>.review.json`).; keep the source for disposition
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0120 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0121 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0123 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0124 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0125 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0134 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0135 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0138 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0140 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0143 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0144 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0145 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0148 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0152 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0153 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0181 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0182 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0183 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0184 has no single derived criterion
+- .qfai/spec/spec-0012/05_Examples.md: EX-0012-0185 has no single derived criterion
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0291 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0330 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0333 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0337 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0339 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0344 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0349 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0351 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0375 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0390 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0397 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0404 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0409 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/06_Test-Cases.md: TC-0012-0410 has ambiguous EX-Ref
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0002 is superseded by BR-0012-0030 (reviewer-driven Playwright; no capture artifacts) and BR-0012-0035 (per-spec iter-dir namespacing; review.json only). See `09_delta.md` CHG-002 OP-PURGE-077.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0003 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0008 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0017 is superseded by BR-0012-0029 (cycles 0..9, per-spec single lineage under multi-spec). See `09_delta.md` CHG-002 OP-PURGE-078.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0019 is superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0024 is superseded by BR-0012-0032 (qualitative AND-aggregator across all spec × screen pairs) + BR-0012-0029 (10-cycle terminator at `index === 9`) + BR-0012-0034 (hard-stop class catalog). DESIGN.md sha256 mismatch on cycle ≥ 1 (exit 2) remains active via BR-0012-0026. See `09_delta.md` CHG-002 OP-PURGE-080.; keep the source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0025 has no contract in plan.yaml
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0001 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0002 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0005 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0006 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0007 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0008 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0010 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0009 has no single derived criterion
+- .qfai/spec/spec-0013/05_Examples.md: EX-0013-0018 has no single derived criterion
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0001 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0002 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0004 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0005 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0006 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0007 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0008 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0010 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0009 has no contract in plan.yaml
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0018 has no contract in plan.yaml
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0001 has no single derived criterion
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0002 has no single derived criterion
+- .qfai/spec/spec-0015/05_Examples.md: EX-0015-0004 has no single derived criterion
+- .qfai/spec/spec-0016/05_Examples.md: EX-0016-0014 has no single derived criterion
+- .qfai/evidence/migration-spec-to-story/plan.yaml: Diagnose and repair a QFAI workspace has no old flow diagram
+- .qfai/evidence/migration-spec-to-story/plan.yaml: Migrate a spec-pack project to the story tree has no old flow diagram
+- .qfai/steering/2026-09-23-spec-0003-six-rows-wait-on-the-document-lane-restatement.md: scope spec-0003 maps to 3 flows

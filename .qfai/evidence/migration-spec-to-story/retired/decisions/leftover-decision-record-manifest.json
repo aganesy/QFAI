@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/DR-0017-0023-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/DR-0017-0023-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
+      "sha256": "f0adcba305ab3d615baeba0ad54c81b6e895505bc24eaa3c4a99dd9bb787e5ed",
+      "bytes": 16625
+    }
+  ]
+}

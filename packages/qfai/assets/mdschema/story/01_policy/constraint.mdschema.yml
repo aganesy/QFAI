@@ -1,0 +1,37 @@
+# Document schema: 01_policy/constraint.md
+structure:
+  - heading:
+      pattern: "^# Constraints$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Technical Constraints$"
+          regex: true
+        description: Technical limits.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Operational Constraints$"
+          regex: true
+        description: Operational limits.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Business Constraints$"
+          regex: true
+        description: Business limits.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Constraints$"
+          regex: true
+        description: Constraints section.
+        allow_additional: true
+        optional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Constraint
+              - Reason

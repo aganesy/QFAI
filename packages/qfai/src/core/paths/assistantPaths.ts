@@ -1,7 +1,7 @@
 import path from "node:path";
 
 /**
- * SSOT for the 4-layer assistant-tree path segments.
+ * SSOT for the assistant-tree path segments.
  * Hard-coded `.qfai/assistant/<layer>/` literals elsewhere in
  * the codebase are lint-rejected; build path strings through
  * the helpers in this module.
@@ -9,17 +9,11 @@ import path from "node:path";
 
 export const ASSISTANT_DIR = ".qfai/assistant" as const;
 
-export const ASSISTANT_LAYERS = ["constitution", "manifest", "catalog", "process"] as const;
+export const ASSISTANT_LAYERS = ["rule", "skill", "agent", "prompt"] as const;
 
 export type AssistantLayer = (typeof ASSISTANT_LAYERS)[number];
 
 export const LEGACY_ASSISTANT_STEERING_DIR = ".qfai/assistant/steering" as const;
-
-export const PROJECT_STEERING_DIR = ".qfai/steering" as const;
-
-export const PROJECT_STEERING_TEMPLATES_SUBDIR = "_templates" as const;
-
-export const MIGRATIONS_SUBDIR = "migrations" as const;
 
 /**
  * The release that retired the legacy `.qfai/assistant/steering/` layout.
@@ -83,66 +77,6 @@ export const LEGACY_ASSISTANT_INSTRUCTIONS_DIR = ".qfai/assistant/instructions" 
 export function joinLegacyAssistantInstructions(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, LEGACY_ASSISTANT_INSTRUCTIONS_DIR, ...rest);
 }
-
-export function joinProjectSteering(destRoot: string, ...rest: string[]): string {
-  return path.join(destRoot, PROJECT_STEERING_DIR, ...rest);
-}
-
-export function migrationMemoRelativePath(version: string): string {
-  return `${ASSISTANT_DIR}/process/${MIGRATIONS_SUBDIR}/v${version}-assistant-layer-recut.md`;
-}
-
-export function joinMigrationMemo(destRoot: string, version: string): string {
-  return path.join(destRoot, migrationMemoRelativePath(version));
-}
-
-/**
- * SSOT for the work-log entry `kind` enum. MUST match
- * `.qfai/contracts/cli/worklog-entry.schema.md#kind enum` exactly.
- * Imported by worklogSurface.ts (ALLOWED_KINDS check), so the enum cannot
- * drift between the validator and the contract.
- */
-export const WORKLOG_ENTRY_KINDS = [
-  "milestone",
-  "decision",
-  "risk",
-  "consultation-needed",
-  "unexpected",
-  "unscoped-discovery",
-  "handoff",
-  "blocker",
-  "scope-up",
-  "scope-down",
-  "spike",
-] as const;
-
-export type WorklogEntryKind = (typeof WORKLOG_ENTRY_KINDS)[number];
-
-/**
- * SSOT for the work-log entry `status` enum. MUST match
- * `.qfai/contracts/cli/worklog-entry.schema.md#status enum` exactly.
- * Imported by:
- *   - worklogSurface.ts (ALLOWED_STATUS check)
- * so the enum cannot drift between the validator and the contract.
- */
-export const WORKLOG_ENTRY_STATUSES = ["active", "handoff", "archived"] as const;
-
-export type WorklogEntryStatus = (typeof WORKLOG_ENTRY_STATUSES)[number];
-
-/**
- * SSOT for the handoff body required sections. MUST match
- * `.qfai/contracts/cli/worklog-entry.schema.md#kind: handoff body`.
- * Imported by:
- *   - worklogSurface.ts (REQUIRED_HANDOFF_SECTIONS check)
- *   - init.ts (PROJECT_STEERING_ENTRY_TEMPLATE)
- */
-export const HANDOFF_REQUIRED_SECTIONS = [
-  "## State of the task",
-  "## Next single action",
-  "## Constraints to preserve",
-  "## Open questions",
-  "## References to consult first",
-] as const;
 
 /**
  * The README at the root of the assistant tree, which earlier releases wrote

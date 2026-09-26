@@ -25,17 +25,47 @@ describe("validateRepositoryHygiene", () => {
       await mkdir(path.join(root, ".qfai", "requirements"), {
         recursive: true,
       });
+      await mkdir(path.join(root, ".qfai", "specs"), {
+        recursive: true,
+      });
 
       const issues = await validateRepositoryHygiene(root, defaultConfig);
       const legacyIssues = issues.filter((entry) => entry.code === "QFAI-HYG-001");
-      expect(legacyIssues).toHaveLength(2);
+      expect(legacyIssues).toHaveLength(3);
       expect(legacyIssues.every((entry) => entry.severity === "error")).toBe(true);
+      expect(
+        legacyIssues.find((entry) => entry.file?.endsWith("specs"))?.suggested_action,
+      ).toContain(".qfai/spec/");
+    });
+  });
+
+  it("accepts the current .qfai/spec story-tree root", async () => {
+    await withTempRoot(async (root) => {
+      await mkdir(path.join(root, ".qfai", "spec", "02_business-flow"), { recursive: true });
+
+      const issues = await validateRepositoryHygiene(root, defaultConfig);
+
+      expect(issues.filter((entry) => entry.code === "QFAI-HYG-001")).toEqual([]);
+    });
+  });
+
+  it("accepts an explicitly configured story-tree root with a former default name", async () => {
+    await withTempRoot(async (root) => {
+      await mkdir(path.join(root, ".qfai", "specs", "02_business-flow"), { recursive: true });
+      const config = {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, specsDir: ".qfai/specs" },
+      };
+
+      const issues = await validateRepositoryHygiene(root, config);
+
+      expect(issues.filter((entry) => entry.code === "QFAI-HYG-001")).toEqual([]);
     });
   });
 
   it("warns when template-like artifacts are found under specs", async () => {
     await withTempRoot(async (root) => {
-      const templateDir = path.join(root, ".qfai", "specs", "_template");
+      const templateDir = path.join(root, ".qfai", "spec", "_template");
       await mkdir(templateDir, { recursive: true });
       await writeFile(path.join(templateDir, "sample.md"), "# sample\n");
 
@@ -56,7 +86,7 @@ describe("validateRepositoryHygiene", () => {
           specsDir: ".qfai/specs-custom",
         },
       };
-      const defaultTemplateDir = path.join(root, ".qfai", "specs", "_template");
+      const defaultTemplateDir = path.join(root, ".qfai", "spec", "_template");
       const customSamplesDir = path.join(root, ".qfai", "specs-custom", "samples");
       await mkdir(defaultTemplateDir, { recursive: true });
       await mkdir(customSamplesDir, { recursive: true });

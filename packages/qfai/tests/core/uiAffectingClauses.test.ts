@@ -53,12 +53,12 @@ function structure(bullets: readonly string[]): string {
   ].join("\n");
 }
 
-const STRUCTURE = ".qfai/assistant/catalog/structure.md";
+const STRUCTURE = ".qfai/spec/03_contract/structure.md";
 const TEST_CASES = ".qfai/specs/spec-0001/06_Test-Cases.md";
 const USER_STORIES = ".qfai/specs/spec-0001/02_User-stories.md";
 
 function clauses(root: string): UiAffectingClauses {
-  return new UiAffectingClauses(root, ".qfai/contracts", {
+  return new UiAffectingClauses(root, ".qfai/spec/03_contract", {
     testCases: path.join(root, TEST_CASES),
     userStories: path.join(root, USER_STORIES),
   });
@@ -180,17 +180,18 @@ describe("the first clause that holds", () => {
 
   it("clause 3, direction a: a UI contract names the obligation", async () => {
     const root = await project({
-      ".qfai/contracts/ui/home.yaml": "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
+      ".qfai/spec/03_contract/ui/home.yaml":
+        "screens:\n  - id: home\n    route: /\n    notes: TC-0001\n",
     });
     expect(await clauses(root).firstHolding({ ...ROW, obligations: ["TC-0001"] })).toEqual({
       clause: 3,
-      because: "TC-0001 occurs in .qfai/contracts/ui/home.yaml",
+      because: "TC-0001 occurs in .qfai/spec/03_contract/ui/home.yaml",
     });
   });
 
   it("clause 3, direction b: the obligation's entry names a UI contract id", async () => {
     const root = await project({
-      ".qfai/contracts/ui/home.yaml": [
+      ".qfai/spec/03_contract/ui/home.yaml": [
         "screens:",
         "  - id: home",
         "    route: /",
@@ -203,7 +204,7 @@ describe("the first clause that holds", () => {
     });
     expect(await clauses(root).firstHolding({ ...ROW, obligations: ["TC-0001"] })).toEqual({
       clause: 3,
-      because: `checkout-button from .qfai/contracts/ui/home.yaml occurs in the entry for TC-0001 in ${TEST_CASES}`,
+      because: `checkout-button from .qfai/spec/03_contract/ui/home.yaml occurs in the entry for TC-0001 in ${TEST_CASES}`,
     });
     expect((await clauses(root).firstHolding({ ...ROW, obligations: ["US-0001"] }))?.clause).toBe(
       3,
@@ -213,7 +214,7 @@ describe("the first clause that holds", () => {
   it("finds no link where neither side names the other", async () => {
     const root = await project({
       [STRUCTURE]: structure(["none"]),
-      ".qfai/contracts/ui/home.yaml": "screens:\n  - id: home\n    route: /\n",
+      ".qfai/spec/03_contract/ui/home.yaml": "screens:\n  - id: home\n    route: /\n",
       [TEST_CASES]: "| TC-ID | Steps |\n| --- | --- |\n| TC-0001 | add totals |\n",
     });
     expect(

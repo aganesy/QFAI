@@ -53,27 +53,21 @@ const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
  * here.
  */
 const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
-  ["validators/agentDefinition.ts", new Map([["code", 1]])],
   ["validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
   // One emission site for two stages, each with its own code, taken from the
   // subject table beside it. Both codes are module-level constants the
   // ownership scan reads there, so the codes are attributed; what is dynamic is
   // only which of the two a given run reaches.
   ["validators/grillingTrace.ts", new Map([["subject.code", 1]])],
-  ["validators/layerCoverage.ts", new Map([["group.code", 1]])],
-  [
-    "validators/orphanProhibition.ts",
-    new Map([
-      ["input.missingCode", 1],
-      ["input.unknownCode", 2],
-    ]),
-  ],
   // Two, not one. The second site is the workflow-set ingestion branch: it emits the
   // finding's own code at `info` while that code's catalog registration is deferred,
   // and the code it emits is the same `code` local the rejection site below uses. The
   // two codes it can reach are declared in `justificationCatalog.ts` — which this scan
   // reads as their owner — rather than restated here.
   ["validators/reviewerJustification.ts", new Map([["code", 2]])],
+  // Story-tree validators select a code from a closed, module-declared table.
+  ["validators/storyTreeCoverageDepth.ts", new Map([["code", 1]])],
+  ["validators/storyTreeStructure.ts", new Map([["code", 1]])],
 ]);
 
 /**
@@ -135,78 +129,30 @@ const RETIRED_CODES: readonly string[] = [
  * literals, so they appear in `owners` too and a second emitter collides.
  */
 const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
-  [
-    "validators/agentDefinition.ts",
-    [
-      "QFAI-AGENT-001",
-      "QFAI-AGENT-002",
-      "QFAI-AGENT-003",
-      "QFAI-AGENT-004",
-      "QFAI-AGENT-005",
-      "QFAI-AGENT-006",
-      "QFAI-AGENT-007",
-      "QFAI-AGENT-008",
-      "QFAI-AGENT-009",
-      "QFAI-AGENT-010",
-      "QFAI-AGENT-011",
-      "QFAI-AGENT-012",
-      "QFAI-AGENT-013",
-      "QFAI-AGENT-014",
-    ],
-  ],
   ["validators/designAudit.ts", ["QFAI-AUD-001", "QFAI-AUD-004", "QFAI-AUD-020", "QFAI-AUD-021"]],
   // One per stage. The check reads a record a stage was told to write, and the
   // two stages are gated by different profiles — a single code would be claimed
   // whole by both while each evaluated half of it.
   ["validators/grillingTrace.ts", ["QFAI-GRILL-001", "QFAI-GRILL-002"]],
   [
-    "validators/layerCoverage.ts",
-    [
-      "QFAI-COV-101",
-      "QFAI-COV-102",
-      "QFAI-COV-103",
-      "QFAI-COV-104",
-      "QFAI-COV-201",
-      "QFAI-COV-202",
-      "QFAI-COV-203",
-      "QFAI-COV-204",
-      "QFAI-COV-205",
-      "QFAI-COV-206",
-      "QFAI-COV-207",
-      "QFAI-COV-901",
-      "QFAI-PLAN-001",
-      "QFAI-PLAN-002",
-      "QFAI-PLAN-003",
-      "QFAI-PLAN-004",
-      "QFAI-PLAN-005",
-    ],
-  ],
-  [
-    "validators/orphanProhibition.ts",
-    [
-      "QFAI-ORPHAN-100",
-      "QFAI-ORPHAN-101",
-      "QFAI-ORPHAN-102",
-      "QFAI-ORPHAN-103",
-      "QFAI-ORPHAN-104",
-      "QFAI-ORPHAN-105",
-      "QFAI-ORPHAN-106",
-      "QFAI-ORPHAN-107",
-      "QFAI-ORPHAN-108",
-      "QFAI-ORPHAN-109",
-    ],
-  ],
-  [
     // Deliberately re-emits the finding's own code so the justification gap is
-    // reported under the code it applies to; those codes belong to
-    // `reviewerGate.ts` / `worklogSurface.ts`, which own them as literals.
+    // reported under the code it applies to. `reviewerGate.ts` owns the first
+    // two as literals; `R-REJECTED-READOPT` reaches this gate only from a
+    // reviewer report.
     "validators/reviewerJustification.ts",
+    ["R-CERTIFY-VERIFY-CIRCULAR", "R-PROMPT-SCANNER-DRIFT", "R-REJECTED-READOPT"],
+  ],
+  ["validators/storyTreeCoverageDepth.ts", ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"]],
+  [
+    "validators/storyTreeStructure.ts",
     [
-      "R-CERTIFY-VERIFY-CIRCULAR",
-      "R-HANDOFF-INCOMPLETE",
-      "R-PROMPT-SCANNER-DRIFT",
-      "R-REJECTED-READOPT",
-      "R-WORKLOG-DRIFT",
+      "QFAI-SPACK-102",
+      "QFAI-STORY-001",
+      "QFAI-STORY-002",
+      "QFAI-STORY-003",
+      "QFAI-STORY-004",
+      "QFAI-STORY-005",
+      "QFAI-STORY-011",
     ],
   ],
 ]);

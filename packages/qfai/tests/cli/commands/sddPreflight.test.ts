@@ -187,14 +187,13 @@ describe("qfai sdd preflight", () => {
     );
     for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
       const skill = await read(
-        pathMod.default.join(tree, "assistant/skills/qfai-sdd/SKILL.md"),
+        pathMod.default.join(tree, "assistant/skill/qfai-sdd/SKILL.md"),
         "utf-8",
       ).catch(() =>
-        read(pathMod.default.join(repoRoot, tree, "assistant/skills/qfai-sdd/SKILL.md"), "utf-8"),
+        read(pathMod.default.join(repoRoot, tree, "assistant/skill/qfai-sdd/SKILL.md"), "utf-8"),
       );
-      expect(skill, tree).toContain("**The pack Stage 0 selected**");
-      expect(skill, tree).toContain("`selectedInputPath`");
-      expect(skill, tree).toContain("Never re-derive it");
+      expect(skill, tree).toContain("use its `selectedInputPath`");
+      expect(skill, tree).toContain("a selected discussion pack may be older than the newest pack");
       // The instruction that caused it must be gone.
       expect(skill, tree).not.toContain("(lexicographically largest), validated by Stage 0");
     }
@@ -347,7 +346,7 @@ describe("qfai sdd preflight", () => {
     const template = await readFile(
       path.join(
         repoRoot,
-        "assets/init/.qfai/assistant/skills/qfai-sdd/templates/report/preflight_summary.md",
+        "assets/init/.qfai/assistant/skill/qfai-sdd/templates/report/preflight_summary.md",
       ),
       { encoding: "utf-8" },
     );

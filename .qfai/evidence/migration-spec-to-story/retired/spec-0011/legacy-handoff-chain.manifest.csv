@@ -1,0 +1,4 @@
+id,source,start,end,kind,archive,sha256,authority
+"BR-0011-0007",".qfai/specs/spec-0011/04_Business-Rules.md","48","55","business-rule",".qfai/evidence/migration-spec-to-story/retired/spec-0011/legacy-handoff-BR-0011-0007.md","989751642879004330a180c03a4aace36d7854479aa06ace153cf4298c602c74","spec-0011/09_delta.md P7 REMOVE; DR-0011-0002"
+"EX-0011-0008",".qfai/specs/spec-0011/05_Examples.md","55","62","example",".qfai/evidence/migration-spec-to-story/retired/spec-0011/legacy-handoff-EX-0011-0008.md","ec8390999af87e5b0adcef743488eb20f94b3c418cd16b8bea985187f7bf3bd4","spec-0011/09_delta.md P7 REMOVE; DR-0011-0002"
+"TC-0011-0011",".qfai/specs/spec-0011/06_Test-Cases.md","70","76","test-case",".qfai/evidence/migration-spec-to-story/retired/spec-0011/legacy-handoff-TC-0011-0011.md","3c8621f814592f16873fd4b07149affb1da84881c9527ae65ac2d5438137c2d0","spec-0011/09_delta.md P7 REMOVE; DR-0011-0002"

@@ -14,7 +14,7 @@
  * makes it binding, in the copy `qfai init` ships and in the copy this
  * repository runs.
  */
-// QFAI:SPEC-0014:TC-0014-0009
+// QFAI:EX-0001-0163-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,7 +29,7 @@ import { validateProject } from "../../src/core/validate.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const SKILL_REL = ".qfai/assistant/skills/qfai-verify/SKILL.md";
+const SKILL_REL = ".qfai/assistant/skill/qfai-verify/SKILL.md";
 
 const COPIES = [
   ["shipped", path.join(PACKAGE_ROOT, "assets", "init", SKILL_REL)],

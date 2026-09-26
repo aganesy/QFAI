@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import type * as FsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -31,6 +31,36 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 });
 
 describe("guardrails command", () => {
+  it("reads configured policy and contract roots by default", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-roots-"));
+    try {
+      const policy = path.join(root, "docs/stories/01_policy/policy.md");
+      const contract = path.join(root, "docs/contracts/api/orders.md");
+      const ignored = path.join(root, ".qfai/spec/01_policy/old.md");
+      for (const file of [policy, contract, ignored]) {
+        await mkdir(path.dirname(file), { recursive: true });
+      }
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        "paths:\n  specsDir: docs/stories\n  contractsDir: docs/contracts\n",
+        "utf8",
+      );
+      const guardrail = (id: string): string =>
+        `## Decision Guardrails\n### ${id}: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n`;
+      await writeFile(policy, guardrail("DG-0001"), "utf8");
+      await writeFile(contract, guardrail("DG-0002"), "utf8");
+      await writeFile(ignored, guardrail("DG-0003"), "utf8");
+      const output = await captureStdout(async () => {
+        expect(await runGuardrails({ root, action: "list", paths: [], format: "json" })).toBe(0);
+      });
+      expect(output).toContain("DG-0001");
+      expect(output).toContain("DG-0002");
+      expect(output).not.toContain("DG-0003");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("extracts guardrails from --path", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
     const deltaPath = path.join(root, "18_delta.md");

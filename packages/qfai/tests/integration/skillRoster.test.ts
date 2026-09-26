@@ -9,7 +9,7 @@ const implementSkillPath = path.join(
   templateRoot,
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
@@ -40,78 +40,49 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     }
   });
 
-  it("defines responsibilities for each sub-agent", async () => {
+  it("defines the current ownership boundaries", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toMatch(/delivery-planner[\s\S]*?selects the next pending item/i);
-    expect(content).toMatch(/frontend-engineer[\s\S]*?implement the selected item only/i);
-    expect(content).toMatch(/backend-engineer[\s\S]*?implement the selected item only/i);
-    expect(content).toMatch(/qa-gatekeeper[\s\S]*?sole authority/i);
-    expect(content).toMatch(/implementation-reviewer[\s\S]*?code quality/i);
-    expect(content).toMatch(/completion-reviewer[\s\S]*?final DoD/i);
+    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
+    expect(content).toContain("implementation-reviewer checks code and tests");
+    expect(content).toMatch(/completion-reviewer checks\s+obligation, commands/);
+    expect(content).toContain("Route UI-affecting work to");
   });
 
-  it("defines control guardrails for routed specialists", async () => {
+  it("defines control guardrails for parallel work and reviewers", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toMatch(/Orchestrator MUST NOT write test or production code directly/i);
-    expect(content).toMatch(/delivery-planner[\s\S]*?sole authority[\s\S]*?parallel dispatch/i);
-    // "routed blocking reviewers" was narrower than the real gate:
-    // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
-    // blocks `done`. The wording now says "every required reviewer".
-    expect(content).toMatch(
-      /Only after every required reviewer passes may the item transition to `done`/i,
-    );
+    expect(content).toContain("Work one EX at a time by default");
+    expect(content).toContain("Parallel work requires disjoint");
+    expect(content).toContain("required user consent");
+    expect(content).toContain("Each required reviewer must pass the same final revision");
   });
 
-  it("defines routed handoff transitions across planning, evidence, and review", async () => {
+  it("defines the example handoff and review sequence", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toMatch(/handoff contract/i);
-    expect(content).toMatch(
-      /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
-    );
-    expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission: one combined
-      // post-hoc submission is only satisfiable after the RED state is gone.
-      /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
-    );
-    expect(content).toMatch(/`qa-gatekeeper` confirms or rejects each observation/i);
-    expect(content).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer/i);
-    // The trigger is not restated inline. It is defined once in
-    // `references/ui-affecting.md` and every routing site cites that file, so
-    // the contract asserts the citation rather than a second copy of the rule.
-    expect(content).toMatch(
-      /product-surface-reviewer` is added when the item is UI-affecting[\s\S]*?references\/ui-affecting\.md/i,
-    );
-    // "routed blocking reviewers" was narrower than the real gate:
-    // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
-    // blocks `done`. The wording now says "every required reviewer".
-    expect(content).toMatch(
-      /Only after every required reviewer passes may the item transition to `done`/i,
-    );
+    expect(content).toContain("Take the lowest EX ID");
+    expect(content).toContain("Record command, selector, failure, test hash, and");
+    expect(content).toContain("Run the same selector and record");
+    expect(content).toContain("A review pack identifies the BF, EX, evidence path");
+    expect(content).toContain("references/ui-affecting.md");
   });
 });
 
-// QFAI:SPEC-0011:TC-0011-0003
+// QFAI:EX-0001-0095-01
 describe("qa-gatekeeper is sole observation authority", () => {
   let content: string | undefined;
 
-  it("states qa-gatekeeper is the sole authority for RED/GREEN observations", async () => {
+  it("routes RED and GREEN evidence to the qa-gatekeeper", async () => {
     content = await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toMatch(/qa-gatekeeper[\s\S]*?sole[\s\S]*?authorit/i);
-    expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission: one combined
-      // post-hoc submission is only satisfiable after the RED state is gone.
-      /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
-    );
+    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
   });
 
   it("routes RED/GREEN confirmation through qa-gatekeeper instead of the implementation agent", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toMatch(/`qa-gatekeeper` confirms or rejects each observation/i);
+    expect(content).toContain("The author does not certify their own result");
     expect(content).not.toMatch(
       /implementation agent[\s\S]*?confirms its own RED\/GREEN observation/i,
     );
@@ -121,20 +92,19 @@ describe("qa-gatekeeper is sole observation authority", () => {
 describe("watch-it-fail enforcement and resubmission", () => {
   let content: string | undefined;
 
-  it("requires watch-it-fail before implementation", async () => {
+  it("requires an observed assertion failure before implementation", async () => {
     content = await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toContain("watch it fail");
-    // Must explicitly state test must fail before implementation
-    expect(content).toMatch(/fail[\s\S]*?before[\s\S]*?implement|watch it fail/i);
+    expect(content).toContain(
+      "Observe the assertion fail for the intended behavior before changing",
+    );
   });
 
-  it("requires watch-it-pass before refactor", async () => {
+  it("requires the same selector after implementation and refactor", async () => {
     content ??= await readFile(implementSkillPath, "utf-8");
 
-    expect(content).toContain("watch it pass");
-    // Must explicitly state test must pass before refactor
-    expect(content).toMatch(/pass[\s\S]*?before[\s\S]*?refactor|watch it pass/i);
+    expect(content).toContain("Run the same selector and record");
+    expect(content).toContain("Re-run the selector and affected tests");
   });
 });
 
@@ -164,14 +134,8 @@ describe("aspirational language detection", () => {
 describe("routing consistency", () => {
   it("SKILL.md routing matches handoff contract targets", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    expect(content).toMatch(
-      /delivery-planner[\s\S]*?assigns it to the appropriate implementation agent/i,
-    );
-    expect(content).toMatch(
-      // Split into a RED submission and a GREEN submission: one combined
-      // post-hoc submission is only satisfiable after the RED state is gone.
-      /Implementation agent submits the RED run to `qa-gatekeeper`[\s\S]*?then the GREEN run after it/i,
-    );
+    expect(content).toContain("rule/shared-skill-delegation-baseline.md");
+    expect(content).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
   });
 });
 

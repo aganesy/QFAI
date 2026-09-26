@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/CR-20260923-0015-spec-0004-passes-a-blocked-row-the-kept-check-fails.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260923-0015-spec-0004-passes-a-blocked-row-the-kept-check-fails.md",
+      "sha256": "4188b6a2d7b217f1a2632e3d1c5d3d0974eda176c4f9adfcb27317a31e7be220",
+      "bytes": 8085
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0005-the-out-of-project-refusal-of-init-force-has-no-test-case.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0005-the-out-of-project-refusal-of-init-force-has-no-test-case.md",
+      "sha256": "2763c670087732cf37ddebc9d135bbc66d9cc45cb36687e220401a22e50cd138",
+      "bytes": 13615
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260924-0006-work-log-removal-upstream-scope.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260924-0006-work-log-removal-upstream-scope.md",
+      "sha256": "713e7ce55d70665bcf8c1514c7a8ad99b1f5cb6085dfb607822b318fb88cbe2b",
+      "bytes": 1744
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0001-spec-0012-selector-proof.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0001-spec-0012-selector-proof.md",
+      "sha256": "01e414680c041faf73b9c208e2c9f0e20635647356ea389ecac5578bb7a82023",
+      "bytes": 11529
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0002-spec-0012-proof-or-supersession.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0002-spec-0012-proof-or-supersession.md",
+      "sha256": "18caf9375e26c52ee5a5b2d3126888e5f6c9810a63d7f1ebb303a1855f1c65e1",
+      "bytes": 11261
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0003-spec-0012-pivot-rule.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0003-spec-0012-pivot-rule.md",
+      "sha256": "902ae077bad4c2b1a90c6e0ffd2909a6f9b91557021eb7b5e6955a173d29e36d",
+      "bytes": 5602
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0004-spec-0012-license-audit-shape.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0004-spec-0012-license-audit-shape.md",
+      "sha256": "f3dd81380046a946015599e2843925c7da654ad5acf37dde181613320edcd409",
+      "bytes": 5604
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0005-spec-0012-four-selector-proof-gaps.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0005-spec-0012-four-selector-proof-gaps.md",
+      "sha256": "62dfc2b11421cc504ef6f8af2058391b1b629669004cf447d5d4c428292deeb7",
+      "bytes": 7164
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0006-spec-0003-workflow-ownership-oracles-cannot-fail.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0006-spec-0003-workflow-ownership-oracles-cannot-fail.md",
+      "sha256": "75a8c9b4c266c8a4ca08d4fd061c0ef934f9cf02b79e1326914e92ca8d3affaf",
+      "bytes": 10635
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0007-ten-completed-selectors-match-no-test.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0007-ten-completed-selectors-match-no-test.md",
+      "sha256": "b44618d9a59e86cadd87fb6e7286fab9519b68e2730bb7166dce52462fae1de7",
+      "bytes": 13211
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0010-withdraw-the-work-log-absence-obligations.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0010-withdraw-the-work-log-absence-obligations.md",
+      "sha256": "a33ce0856165a87fae95871cb59fad18df527af48f764f5226db7fe27d9aa1fd",
+      "bytes": 26714
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0015-eleven-spec-0004-selectors-select-no-test.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0015-eleven-spec-0004-selectors-select-no-test.md",
+      "sha256": "8bf164fbd06508c4d8a5079f56add02d28e75ab952375bab0d3e3f87846f933b",
+      "bytes": 14122
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0016-spec-0006-tdd-0032-proof-set-cannot-be-replayed.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0016-spec-0006-tdd-0032-proof-set-cannot-be-replayed.md",
+      "sha256": "ce2fd31661ca3a23e108e536c70556735c5677f48bf16b269c7ccc97d730ed78",
+      "bytes": 6441
+    }
+  ]
+}

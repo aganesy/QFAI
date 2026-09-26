@@ -7,7 +7,7 @@
  * Deletion / modification patches are rejected with exit 2.
  */
 
-// QFAI:SPEC-0012:TC-0012-0455
+// QFAI:EX-0001-0144-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -99,6 +99,13 @@ async function seedProject(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -176,6 +183,7 @@ describe("iterate --license-patch add-only diff", () => {
   // source lives in the audit ledger; cycle-1 verify replays the audit
   // rows via `effectiveLicenseCatalog(frozen, auditRows)` so a
   // post-patch source is allowlisted on subsequent cycles.
+  // QFAI:EX-0001-0144-01
   it("cycle 0 --license-patch adds a source that cycle 1 license-verify accepts via audit replay", async () => {
     const root = await newTempDir();
     await seedProject(root);
@@ -332,6 +340,7 @@ describe("iterate --license-patch add-only diff", () => {
     expect(errorCodes).not.toContain("license-not-allowlisted");
   });
 
+  // QFAI:EX-0001-0144-01
   it("cycle 0 --license-patch does NOT trigger the cycle-1 frozenLicenseCatalog drift gate", async () => {
     const root = await newTempDir();
     await seedProject(root);

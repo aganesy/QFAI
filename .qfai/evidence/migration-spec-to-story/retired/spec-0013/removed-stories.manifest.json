@@ -1,0 +1,35 @@
+{
+  "source": ".qfai/specs/spec-0013/02_User-stories.md",
+  "sourceSha256Before": "4b21580865ce3e9cf6323ea6b81ee3a260c2cb9f2e64f278bfb8fe765d64f21d",
+  "sourceSha256After": "8aed63c4c3b99cf2e2a7700de14b1fe7045a41d20f5a2bfcf5196c36ee8e73b3",
+  "retired": [
+    {
+      "id": "US-0013-0002",
+      "catalog": "- US-0013-0002: Contract-First Phase\n",
+      "section": "## US-0013-0002: Contract-First Phase\n\nAs a QFAI user, I want contracts created/updated before spec slices, so that spec artifacts reference concrete contract definitions.\n\n",
+      "authority": "spec-0013/09_delta.md:234",
+      "sha256": "34ff3619aee83785bc141d0a1c8427bad896d05970fdd81e1809240eae570e30"
+    },
+    {
+      "id": "US-0013-0004",
+      "catalog": "- US-0013-0004: Batch Mode Processing\n",
+      "section": "## US-0013-0004: Batch Mode Processing\n\nAs a QFAI user, I want no-argument invocation to process all capabilities from `_policies/03_Capabilities.md`, so that multi-spec projects are handled in one run.\n\n",
+      "authority": "spec-0013/09_delta.md:234",
+      "sha256": "d4e308b13f9ea4f74aa207e79114d86e44eb5ed7f39b1a3b3eef307c77dbe80a"
+    },
+    {
+      "id": "US-0013-0007",
+      "catalog": "- US-0013-0007: Delta Phase with Rejected Guardrails\n",
+      "section": "## US-0013-0007: Delta Phase with Rejected Guardrails\n\nAs a QFAI user, I want `09_delta.md` to include adoption/rejection rationale with DO NOT and Temptation sections, so that rejected options are guarded against reintroduction.\n\n",
+      "authority": "spec-0013/09_delta.md:234",
+      "sha256": "62647f873c51f32cffd292e4ae1b6f0d59e4ac4e5c50e68fdf0fcd48435ce7e5"
+    },
+    {
+      "id": "US-0013-0013",
+      "catalog": "- US-0013-0013: Auto-populate `surface_type: ui-bearing` frontmatter\n",
+      "section": "## US-0013-0013: Auto-populate `surface_type: ui-bearing` frontmatter\n\nAs a QFAI user running `/qfai-sdd`, I want the skill to set `surface_type: ui-bearing` frontmatter for every spec that has a `.qfai/contracts/ui/<spec>-*.yaml` companion and `qfai sdd lint` to warn (`D-SURFACE-TYPE-MISSING`) when the companion exists but the frontmatter is missing, so that UI-bearing specs are no longer hand-patched while `resolveAllUiBearingSpecs()` keeps requiring the frontmatter as the strict signal. (REQ-0163)\n\n",
+      "authority": "spec-0013/09_delta.md:169,219",
+      "sha256": "e2a0ace0b7381a2f2870ed18fa05a2cd33b498b8984cdd8f2c8206c9fa10bd4f"
+    }
+  ]
+}

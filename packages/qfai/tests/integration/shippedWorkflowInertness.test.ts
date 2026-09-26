@@ -213,7 +213,7 @@ async function initScriptlessTree(): Promise<{ dir: string; doc: unknown }> {
   return { dir, doc };
 }
 
-// QFAI:SPEC-0003:TC-0003-0036
+// QFAI:EX-0002-0003-03
 describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing test lanes", () => {
   // One it() per TC-0003-0036 verify bullet. Scope notes, disclosed:
   // - The evaluator above honestly interprets a literal `false` conjunct
@@ -320,6 +320,42 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
     ).toEqual([]);
   });
 
+  // QFAI:EX-0002-0003-03
+  it("an adopter declaring only test:unit runs the unit lane and keeps every other layer lane skipped under the full lane set", async () => {
+    const { doc } = await initScriptlessTree();
+    const probe = scriptsProbeBody(doc);
+    const selection = selectionStepBody(doc);
+    if (typeof probe !== "string" || typeof selection !== "string") {
+      throw new Error("the init-written orchestrator lacks the script probe or the selection step");
+    }
+
+    const adopterDir = await newTempDir();
+    await writeFile(path.join(adopterDir, "package.json"), ONE_LAYER_SCRIPT_MANIFEST, "utf-8");
+    const probeRun = await runShell(probe, adopterDir);
+    expect(probeRun.status).toBe(0);
+
+    const selectRun = await runShell(selection, adopterDir, {
+      QFAI_SCRIPTS: probeRun.outputs["scripts"] ?? "",
+      QFAI_LANES: FULL_LANES_JSON,
+    });
+    expect(selectRun.status).toBe(0);
+    const selectedJson = selectRun.outputs["selected"] ?? "null";
+    const selected: unknown = JSON.parse(selectedJson);
+    expect(selected).toEqual(["unit"]);
+
+    const condition = findWorkflowJob(doc, "tests")?.["if"];
+    expect(laneExecutes(condition, { selected: selectedJson }), "the unit lane must run").toBe(
+      true,
+    );
+    const skipped = LANE_LAYERS.filter((layer) => layer !== "unit");
+    for (const layer of skipped) {
+      expect(
+        Array.isArray(selected) && selected.includes(layer),
+        `the ${layer} lane must stay skipped`,
+      ).toBe(false);
+    }
+  });
+
   it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
     const { doc } = await initScriptlessTree();
     const violations: string[] = [];
@@ -356,7 +392,7 @@ describe("TC-0003-0036 (TDD-0036): no declared layer script means zero executing
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0037
+// QFAI:EX-0002-0003-04
 describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and eight executing instances, zero secret references", () => {
   // Setup is TC-0003-0036's init output tree (the scriptless adopter);
   // every count below is taken over EVERY workflow file init wrote.
@@ -502,11 +538,9 @@ describe("TC-0003-0037 (TDD-0037): three installing job declarations, nine and e
       { file: "qfai-validate.yml", jobId: "validate" },
     ]);
 
-    // The declaration count is not the run count. Both installing jobs are
-    // matrix jobs, and the validation profiles are selected by the event, so
-    // what an adopter's runner actually starts is the expansion — four
-    // installs on a pull request, three on a push. A declaration count alone
-    // reads a leg that stopped expanding as unchanged.
+    // The declaration count is not the run count. Matrix expansion and
+    // event-selected validation profiles determine the executing instances.
+    // A declaration count alone would miss a leg that stopped expanding.
     const instances = (event: string): number =>
       installing.reduce((total, entry) => total + matrixInstances(entry.job, event), 0);
     // Nine and eight rather than four and three: the test lane's axis is

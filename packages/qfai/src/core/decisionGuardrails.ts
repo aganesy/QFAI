@@ -62,7 +62,9 @@ export type GuardrailLoadResult = {
   files: string[];
 };
 
-const DEFAULT_DECISION_GUARDRAILS_GLOBS = [".qfai/specs/**/18_delta.md"];
+const DEFAULT_SPECS_ROOT = ".qfai/spec/01_policy";
+const DEFAULT_CONTRACTS_ROOT = ".qfai/spec/03_contract";
+const DECISION_GUARDRAILS_GLOBS = ["**/*.md"];
 const DEFAULT_GUARDRAILS_IGNORE_GLOBS = [
   "**/node_modules/**",
   "**/.git/**",
@@ -89,10 +91,10 @@ const TYPE_ORDER: Record<GuardrailType, number> = {
 
 export async function loadDecisionGuardrails(
   root: string,
-  options: { paths?: string[]; specsRoot?: string } = {},
+  options: { paths?: string[]; specsRoot?: string; contractsRoot?: string } = {},
 ): Promise<GuardrailLoadResult> {
   const errors: GuardrailLoadError[] = [];
-  const files = await scanDecisionGuardrailFiles(root, options.paths, errors, options.specsRoot);
+  const files = await scanDecisionGuardrailFiles(root, options, errors);
   const entries: DecisionGuardrailEntry[] = [];
 
   for (const filePath of files) {
@@ -518,35 +520,27 @@ function normalizeFieldKey(raw: string): string | null {
 
 async function scanDecisionGuardrailFiles(
   root: string,
-  rawPaths: string[] | undefined,
+  options: { paths?: string[]; specsRoot?: string; contractsRoot?: string },
   errors: GuardrailLoadError[],
-  specsRoot?: string,
 ): Promise<string[]> {
-  if (!rawPaths || rawPaths.length === 0) {
-    const scanRoot = specsRoot
-      ? path.isAbsolute(specsRoot)
-        ? specsRoot
-        : path.resolve(root, specsRoot)
-      : root;
-    const globs = specsRoot ? ["**/18_delta.md"] : DEFAULT_DECISION_GUARDRAILS_GLOBS;
-    try {
-      const result = await collectFilesByGlobs(scanRoot, {
-        globs,
-        ignore: DEFAULT_GUARDRAILS_IGNORE_GLOBS,
-      });
-      return result.files.sort((a, b) => a.localeCompare(b));
-    } catch (error) {
-      errors.push({ path: scanRoot, message: String(error) });
-      return [];
-    }
-  }
-
+  const rawPaths = options.paths?.length
+    ? options.paths
+    : [options.specsRoot ?? DEFAULT_SPECS_ROOT, options.contractsRoot ?? DEFAULT_CONTRACTS_ROOT];
+  const explicitPaths = Boolean(options.paths?.length);
   const files = new Set<string>();
   for (const rawPath of rawPaths) {
     const resolved = path.isAbsolute(rawPath) ? rawPath : path.resolve(root, rawPath);
-    const stats = await safeStat(resolved);
+    let stats: Awaited<ReturnType<typeof stat>> | null;
+    try {
+      stats = await safeStat(resolved);
+    } catch (error) {
+      errors.push({ path: resolved, message: String(error) });
+      continue;
+    }
     if (!stats) {
-      errors.push({ path: resolved, message: "Path does not exist" });
+      if (explicitPaths) {
+        errors.push({ path: resolved, message: "Path does not exist" });
+      }
       continue;
     }
     if (stats.isFile()) {
@@ -556,7 +550,7 @@ async function scanDecisionGuardrailFiles(
     if (stats.isDirectory()) {
       try {
         const result = await collectFilesByGlobs(resolved, {
-          globs: ["**/18_delta.md"],
+          globs: DECISION_GUARDRAILS_GLOBS,
           ignore: DEFAULT_GUARDRAILS_IGNORE_GLOBS,
         });
         result.files.forEach((file) => files.add(file));
@@ -574,8 +568,11 @@ async function scanDecisionGuardrailFiles(
 async function safeStat(target: string): Promise<Awaited<ReturnType<typeof stat>> | null> {
   try {
     return await stat(target);
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
   }
 }
 

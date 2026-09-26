@@ -1,7 +1,7 @@
 /**
  * The test-layer policy, read from the artifact that calls itself its SSOT.
  *
- * `catalog/test-layers.md` describes itself as "the SSOT for ATDD test-layer
+ * `rule/test-layers.md` describes itself as "the SSOT for ATDD test-layer
  * semantics and completion gates", but the only consumer of the set it declares
  * was `validateSpecPackEntry` — the **legacy** `spec-pack` branch.
  * `validateLayeredSpecEntry`, the branch that runs on the layout `qfai init` and
@@ -65,7 +65,7 @@ function reportPolicyDrift(tags: ReadonlySet<string>, policyPath: string): Issue
       "specPack.layerPolicyDrift",
       [...onlyInPolicy, ...onlyInCode],
       "change",
-      "`catalog/test-layers.md` の `## Layer definitions` を SSOT として、両者を一致させてください。",
+      "`rule/test-layers.md` の `## Layer definitions` を SSOT として、両者を一致させてください。",
     ),
   ];
 }
@@ -76,10 +76,9 @@ export async function loadLayerPolicy(
 ): Promise<LayerPolicyResult> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   const assistantRoot = path.dirname(skillsDir);
-  const canonicalPath = path.join(assistantRoot, "catalog", "test-layers.md");
-  const legacyPath = path.join(assistantRoot, "steering", "test-layers.md");
+  const canonicalPath = path.join(assistantRoot, "rule", "test-layers.md");
 
-  for (const policyPath of [canonicalPath, legacyPath]) {
+  for (const policyPath of [canonicalPath]) {
     let policyText: string;
     try {
       policyText = await readFile(policyPath, "utf-8");
@@ -101,7 +100,7 @@ export async function loadLayerPolicy(
             "specPack.layerPolicy",
             undefined,
             "change",
-            "`catalog/test-layers.md` の `## Layer definitions` 見出し（例: `### L3 Integration`）または `layer-*` タグを確認してください。",
+            "`rule/test-layers.md` の `## Layer definitions` 見出し（例: `### L3 Integration`）または `layer-*` タグを確認してください。",
           ),
         ],
       };
@@ -121,7 +120,7 @@ export async function loadLayerPolicy(
         "specPack.layerPolicy",
         undefined,
         "change",
-        "`qfai init` を再実行して `catalog/test-layers.md` を配置してください。",
+        "`qfai init` を再実行して `rule/test-layers.md` を配置してください。",
       ),
     ],
   };

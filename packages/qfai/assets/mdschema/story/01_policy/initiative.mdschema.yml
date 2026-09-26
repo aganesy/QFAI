@@ -1,0 +1,48 @@
+# Document schema: 01_policy/initiative.md
+structure:
+  - heading:
+      pattern: "^# Initiative$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Initiative$"
+          regex: true
+        description: Initiative definition.
+        allow_additional: true
+      - heading:
+          pattern: "^## Initiative overview$"
+          regex: true
+        description: Initiative context.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Assumptions$"
+          regex: true
+        description: Conditions the initiative relies on.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Dependencies$"
+          regex: true
+        description: Dependencies on other work.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Priorities$"
+          regex: true
+        description: Initiative priority order.
+        allow_additional: true
+        optional: true
+      - heading:
+          pattern: "^## Milestones$"
+          regex: true
+        description: Initiative milestones.
+        allow_additional: true
+        optional: true
+        tables:
+          - min: 1
+            required_headers:
+              - Milestone
+              - Description

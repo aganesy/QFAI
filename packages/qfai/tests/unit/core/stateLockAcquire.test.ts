@@ -19,7 +19,7 @@
  * `node:fs/promises` is mocked here rather than in `state.test.ts` because
  * `vi.mock` is file-scoped and the rest of that suite needs the real module.
  */
-// QFAI:SPEC-0010:TC-0010-0012
+// QFAI:EX-0001-0093-01
 
 import type * as FsPromises from "node:fs/promises";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";

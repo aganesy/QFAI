@@ -20,10 +20,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-prototyping/SKILL.md";
+const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
 const RULE = ".agents/rules/grilling.md";
-const GENERATOR_PROMPT = "assistant/skills/qfai-prototyping/references/generator-prompt.md";
-const REVIEWER_PROMPT = "assistant/skills/qfai-prototyping/references/reviewer-prompt.md";
+const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
+const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -251,13 +251,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   });
 
   it("scopes every row to the lineage it applies to", async () => {
-    // One invocation runs a lineage per spec and screen, so a record with no
+    // One invocation runs a lineage per UI contract and screen, so a record with no
     // key applies every answer to each of them. `global` is written rather
     // than inferred from a missing key, because a missing key is also what an
     // unscoped row looks like.
     const skill = await read(SKILL);
     expectPhrase(skill, "**Every row names what it applies to**");
-    expectPhrase(skill, "`<spec-id>/<screen>`");
+    expectPhrase(skill, "`<ui-contract-id>/<screen>`");
     expectPhrase(skill, "`global` is a real answer and not a default");
     expectPhrase(
       skill,
@@ -336,14 +336,14 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // and not its procedure, and an agent with the name alone improvises an
     // interview that reads exactly like the method.
     const skill = await read(SKILL);
-    expectPhrase(skill, "Read\n`.qfai/assistant/skills/qfai-grilling/SKILL.md` before starting");
+    expectPhrase(skill, "Read\n`.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting");
     expectPhrase(skill, "It is the single implementation");
     // In the read order too, since that is where an agent looks for what to
     // open before it starts.
     const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(skill);
     expect(inputs, "the read order is gone").not.toBeNull();
     expect(unwrap(inputs?.[0] ?? "")).toContain(
-      "`.qfai/assistant/skills/qfai-grilling/SKILL.md` before either session",
+      "`.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session",
     );
   });
 
@@ -369,7 +369,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // the loss, and a destructive operation is approved on what it says.
     const skill = await read(SKILL);
     expectPhrase(skill, "naming what it destroys in both trees");
-    expectPhrase(skill, "`.qfai/prototypes/iter-00/index.html` is overwritten");
+    expectPhrase(skill, "`.qfai/prototype/iter-00/index.html` is overwritten");
     expectPhrase(skill, "with no backup taken");
 
     // And a refusal has an outcome of its own. Without one the table maps a

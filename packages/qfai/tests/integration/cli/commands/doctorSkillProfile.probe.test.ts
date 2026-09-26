@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0024
+// QFAI:EX-0003-0010-01
 //
 // Integration: `qfai doctor --profile <skill>` reads the skill's
 // manifest.json `runtimeDependencies` and probes the consumer
@@ -41,7 +41,7 @@ type DoctorJson = {
 };
 
 async function seedManifest(root: string, skill: string, deps: string[]): Promise<void> {
-  const dir = path.join(root, ".qfai", "assistant", "skills", skill);
+  const dir = path.join(root, ".qfai", "assistant", "skill", skill);
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "manifest.json"),
@@ -150,7 +150,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
 
   it("warns when the skill exists but has authored no manifest", async () => {
     const root = await newTempDir("nomanifest");
-    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping"), {
+    await mkdir(path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping"), {
       recursive: true,
     });
     const finding = await runAndFind(root, "qfai-prototyping");
@@ -184,7 +184,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
   it("errors when the manifest path exists but cannot be read", async () => {
     const root = await newTempDir("unreadable");
     await mkdir(
-      path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "manifest.json"),
+      path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping", "manifest.json"),
       { recursive: true },
     );
     const finding = await runAndFind(root, "qfai-prototyping");
@@ -198,7 +198,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
   // land on the `warning` that a manifest-less skill directory gets.
   it("errors when the skill directory is a regular file, not a directory", async () => {
     const root = await newTempDir("skilldir-file");
-    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skill");
     await mkdir(skillsRoot, { recursive: true });
     await writeFile(path.join(skillsRoot, "qfai-prototyping"), "not a directory", "utf-8");
     const finding = await runAndFind(root, "qfai-prototyping");
@@ -211,7 +211,7 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
 
   it("errors when the manifest exists but cannot be parsed", async () => {
     const root = await newTempDir("unparseable");
-    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const dir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, "manifest.json"), "{ not json", "utf-8");
     const finding = await runAndFind(root, "qfai-prototyping");

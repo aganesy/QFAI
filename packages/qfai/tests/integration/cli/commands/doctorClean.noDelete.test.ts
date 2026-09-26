@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0020
+// QFAI:EX-0003-0008-02
 //
 // Boundary: `qfai doctor --clean` is a move (never delete) operation;
 // re-running on an already-archived pack is a no-op. The

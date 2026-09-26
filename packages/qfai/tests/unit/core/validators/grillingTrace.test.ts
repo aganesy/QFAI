@@ -41,13 +41,13 @@ const packageRoot = path.resolve(
 const asset = (rel: string): string => path.join(packageRoot, "assets/init/.qfai/assistant", rel);
 
 /** The evidence template `qfai init` ships, which a spec stage copies. */
-const SPEC_EVIDENCE_TEMPLATE = asset("skills/qfai-sdd/templates/evidence/sdd-spec.md");
+const SPEC_EVIDENCE_TEMPLATE = asset("skill/qfai-sdd/templates/evidence/sdd-flow.md");
 
 /** The discussion skill, whose `## Grilling Session` block a run copies. */
-const DISCUSSION_SKILL = asset("skills/qfai-discussion/SKILL.md");
+const DISCUSSION_SKILL = asset("skill/qfai-discussion/SKILL.md");
 
 /** The review request the reviewer fills in, which ships the same table empty. */
-const REVIEW_REQUEST = asset("skills/qfai-discussion/templates/review/review_request.md");
+const REVIEW_REQUEST = asset("skill/qfai-discussion/templates/review/review_request.md");
 
 /**
  * The one table in `file` whose header names `marker`, as evidence would hold it.
@@ -140,15 +140,15 @@ const withLastCell = (cell: string): string => POPULATED.replace("#work-orders-s
 describe("validateGrillingTrace", () => {
   it("reports spec evidence with no session section", async () => {
     await withRoot(async (root) => {
-      await evidence(root, "sdd-spec-0007.md", "# Evidence\n\n## Work Orders Summary\n");
+      await evidence(root, "sdd-BF-0007.md", "# Evidence\n\n## Work Orders Summary\n");
 
       const issues = await validateGrillingTrace(root);
 
       expect(issues).toHaveLength(1);
-      expect(issues[0]?.code).toBe(GRILLING_TRACE_CODES.spec);
+      expect(issues[0]?.code).toBe(GRILLING_TRACE_CODES.flow);
       // The finding names the spec, not a generic message: an operator with
       // three of them needs to know which one.
-      expect(issues[0]?.message).toContain("spec-0007");
+      expect(issues[0]?.message).toContain("BF-0007");
       expect(issues[0]?.message).toContain("## Pre-draft Grilling");
       // The rule key is what a project silences or routes on, so it is part of
       // the finding rather than an implementation detail.
@@ -163,7 +163,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         "# Evidence\n\n## Pre-draft Grilling\n\n| Phase | Session |\n",
       );
 
@@ -178,7 +178,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         "# Evidence\n\n## Pre-draft Grilling\n\n| Phase | Session |\n| ----- | ------- |\n",
       );
 
@@ -193,33 +193,22 @@ describe("validateGrillingTrace", () => {
     });
   });
 
-  it("reports the shipped template, copied and filled in with nothing", async () => {
-    // The template carries worked rows, so the state this check is for — the
-    // section copied and nothing replaced — has three table rows under it. A
-    // row test that counted any row would take the template for the record it
-    // is a template for, which is the cheapest route to the second without the
-    // first.
+  it("reports the shipped template before any grilling row is recorded", async () => {
     await withRoot(async (root) => {
       const template = await readFile(SPEC_EVIDENCE_TEMPLATE, "utf-8");
-      // The template still holds a table under the heading. Replaced with
-      // prose, the finding below would be raised for the other reason and the
-      // placeholder rejection would go untested without anything saying so.
-      expect(template).toMatch(/## Pre-draft Grilling[\s\S]*?\n\|[^\n]+\n\|[\s|:-]+\|\n\|/);
-      await evidence(root, "sdd-spec-0007.md", template);
+      expect(template).toMatch(/## Pre-draft Grilling[\s\S]*?\n\|[^\n]+\n\|[\s|:-]+\|/);
+      await evidence(root, "sdd-BF-0007.md", template);
 
       const issues = await validateGrillingTrace(root);
 
       expect(issues).toHaveLength(1);
-      // The operator is told which of the states they are in: a section that is
-      // missing, one with no table, and one whose rows are all the template's
-      // need different edits.
-      expect(issues[0]?.message).toContain("still holds the template's placeholders");
+      expect(issues[0]?.message).toContain("at least one phase row");
     });
   });
 
   it("accepts a populated section", async () => {
     await withRoot(async (root) => {
-      await evidence(root, "sdd-spec-0007.md", POPULATED);
+      await evidence(root, "sdd-BF-0007.md", POPULATED);
 
       expect(await validateGrillingTrace(root)).toEqual([]);
     });
@@ -231,7 +220,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -253,7 +242,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -285,7 +274,7 @@ describe("validateGrillingTrace", () => {
         await withRoot(async (root) => {
           await evidence(
             root,
-            "sdd-spec-0007.md",
+            "sdd-BF-0007.md",
             POPULATED.replace("## Pre-draft Grilling", heading),
           );
 
@@ -301,7 +290,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           POPULATED.replace("## Pre-draft Grilling", "## Pre-draft Grilling###"),
         );
 
@@ -315,7 +304,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           POPULATED.replace("## Pre-draft Grilling", "### Pre-draft Grilling"),
         );
 
@@ -336,7 +325,7 @@ describe("validateGrillingTrace", () => {
         // has been written, and dropping its row would report a record that is
         // there as missing — against a stage that did the work.
         await withRoot(async (root) => {
-          await evidence(root, "sdd-spec-0007.md", withLastCell(cell));
+          await evidence(root, "sdd-BF-0007.md", withLastCell(cell));
 
           expect(await validateGrillingTrace(root)).toHaveLength(findings);
         });
@@ -347,7 +336,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           withLastCell("see <https://example.invalid/run> <br> and #wos"),
         );
 
@@ -381,7 +370,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -556,13 +545,13 @@ describe("validateGrillingTrace", () => {
       // Two runners dispatch this and a full run calls both, so a call reading
       // every stage would report each finding twice.
       await withRoot(async (root) => {
-        await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+        await evidence(root, "sdd-BF-0007.md", "# Evidence\n");
         await pack(root, `discussion-${NEWER}`);
 
-        const spec = await validateGrillingTrace(root, { subjects: ["spec"] });
+        const spec = await validateGrillingTrace(root, { subjects: ["flow"] });
         const discussion = await validateGrillingTrace(root, { subjects: ["discussion"] });
 
-        expect(spec.map((i) => i.file)).toEqual([".qfai/evidence/sdd-spec-0007.md"]);
+        expect(spec.map((i) => i.file)).toEqual([".qfai/evidence/sdd-BF-0007.md"]);
         expect(discussion.map((i) => i.file)).toEqual([`.qfai/evidence/discussion-${NEWER}.md`]);
         expect(await validateGrillingTrace(root)).toHaveLength(2);
       });
@@ -573,15 +562,15 @@ describe("validateGrillingTrace", () => {
       // in every slice, and `reviewArtifactsScope` says so of a discussion pack
       // by name. A sibling spec is the other case and is left alone.
       await withRoot(async (root) => {
-        await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
-        await evidence(root, "sdd-spec-0009.md", "# Evidence\n");
+        await evidence(root, "sdd-BF-0007.md", "# Evidence\n");
+        await evidence(root, "sdd-BF-0009.md", "# Evidence\n");
         await pack(root, `discussion-${NEWER}`);
 
-        const scoped = await validateGrillingTrace(root, { specScope: new Set(["0007"]) });
+        const scoped = await validateGrillingTrace(root, { flowScope: new Set(["BF-0007"]) });
 
         expect(scoped.map((i) => i.file)).toEqual([
           `.qfai/evidence/discussion-${NEWER}.md`,
-          ".qfai/evidence/sdd-spec-0007.md",
+          ".qfai/evidence/sdd-BF-0007.md",
         ]);
       });
     });
@@ -592,7 +581,7 @@ describe("validateGrillingTrace", () => {
     // that the record exists and not that a session happened. An error would
     // claim the second.
     await withRoot(async (root) => {
-      await evidence(root, "sdd-spec-0007.md", "# Evidence\n");
+      await evidence(root, "sdd-BF-0007.md", "# Evidence\n");
 
       expect((await validateGrillingTrace(root))[0]?.severity).toBe("warning");
     });
@@ -603,15 +592,15 @@ describe("validateGrillingTrace", () => {
     // runs over one tree reads as churn in a diff.
     await withRoot(async (root) => {
       for (const id of ["0009", "0007", "0008"]) {
-        await evidence(root, `sdd-spec-${id}.md`, "# Evidence\n");
+        await evidence(root, `sdd-BF-${id}.md`, "# Evidence\n");
       }
 
       const files = (await validateGrillingTrace(root)).map((finding) => finding.file);
 
       expect(files).toEqual([
-        ".qfai/evidence/sdd-spec-0007.md",
-        ".qfai/evidence/sdd-spec-0008.md",
-        ".qfai/evidence/sdd-spec-0009.md",
+        ".qfai/evidence/sdd-BF-0007.md",
+        ".qfai/evidence/sdd-BF-0008.md",
+        ".qfai/evidence/sdd-BF-0009.md",
       ]);
     });
   });
@@ -628,8 +617,8 @@ describe("validateGrillingTrace", () => {
     // on. The prototyping file is written before cycle 0 whether or not the
     // session settled anything, and an empty one is written as prose.
     await withRoot(async (root) => {
-      await evidence(root, "implement-spec-0007.md", "# Evidence\n");
-      await evidence(root, "atdd-spec-0007.md", "# Evidence\n");
+      await evidence(root, "implement-BF-0007.md", "# Evidence\n");
+      await evidence(root, "atdd-BF-0007.md", "# Evidence\n");
       await mkdir(path.join(root, ".qfai", "evidence", "prototyping"), { recursive: true });
       await writeFile(
         path.join(root, ".qfai", "evidence", "prototyping", "grilling.md"),
@@ -642,11 +631,11 @@ describe("validateGrillingTrace", () => {
   });
 
   it("ignores a name that is not the canonical one", async () => {
-    // The contract is on `sdd-spec-NNNN.md`. A file a project called
+    // The contract is on `sdd-BF-NNNN.md`. A file a project called
     // `sdd-notes.md` never entered it.
     await withRoot(async (root) => {
       await evidence(root, "sdd-notes.md", "# Notes\n");
-      await evidence(root, "sdd-spec-7.md", "# Evidence\n");
+      await evidence(root, "sdd-BF-7.md", "# Evidence\n");
 
       expect(await validateGrillingTrace(root)).toEqual([]);
     });
@@ -656,7 +645,7 @@ describe("validateGrillingTrace", () => {
     // `readdir` returns both kinds, and reading a directory throws EISDIR
     // rather than reporting anything useful.
     await withRoot(async (root) => {
-      await mkdir(path.join(root, ".qfai", "evidence", "sdd-spec-0007.md"), { recursive: true });
+      await mkdir(path.join(root, ".qfai", "evidence", "sdd-BF-0007.md"), { recursive: true });
 
       expect(await validateGrillingTrace(root)).toEqual([]);
     });
@@ -671,7 +660,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           ["## Pre-draft Grilling", "", ...fenced, ""].join("\n"),
         );
 
@@ -683,7 +672,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           [
             "## Pre-draft Grilling",
             "",
@@ -709,7 +698,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           [
             "## Pre-draft Grilling",
             "",
@@ -725,13 +714,15 @@ describe("validateGrillingTrace", () => {
     });
 
     for (const [stage, file, marker] of [
-      ["spec", SPEC_EVIDENCE_TEMPLATE, "Phase"],
+      ["flow", SPEC_EVIDENCE_TEMPLATE, "Phase"],
       ["discussion", DISCUSSION_SKILL, "Authoring began"],
     ] as const) {
       it(`${stage}: the columns named are the ones the asset writes`, async () => {
         // Two spellings of one column drift in silence: the stage keeps writing
         // its table and the check stops recognising it, and the run reads clean.
-        const header = (await shippedTable(file, marker, GRILLING_SECTIONS[stage])).split("\n")[4];
+        const source = await readFile(file, "utf-8");
+        const header = source.split(/\r?\n/).find((line) => line.includes(`| ${marker} |`)) ?? "";
+        expect(source).toContain(GRILLING_SECTIONS[stage]);
         for (const column of GRILLING_COLUMNS[stage]) {
           expect(header).toContain(column);
         }
@@ -749,7 +740,7 @@ describe("validateGrillingTrace", () => {
       // fence-looking line would end it at the inner line and hide the table
       // that follows the real closer.
       await withRoot(async (root) => {
-        await evidence(root, "sdd-spec-0007.md", under("~~~text", "```", "~~~", "", ...table));
+        await evidence(root, "sdd-BF-0007.md", under("~~~text", "```", "~~~", "", ...table));
 
         expect(await validateGrillingTrace(root)).toEqual([]);
       });
@@ -759,7 +750,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           under("\t| Phase | Session |", "\t| ----- | ------- |", "\t| 0 | run |"),
         );
 
@@ -774,7 +765,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           under(
             "| Phase | Session | Notes \\| evidence |",
             "| ----- | ------- | ---------------- |",
@@ -793,7 +784,7 @@ describe("validateGrillingTrace", () => {
       await withRoot(async (root) => {
         await evidence(
           root,
-          "sdd-spec-0007.md",
+          "sdd-BF-0007.md",
           under(
             "| Phase | Session | Who |",
             "| ----- | ------- | --- |",
@@ -810,7 +801,7 @@ describe("validateGrillingTrace", () => {
       // whose title is nothing. Requiring a title would read it as prose and
       // carry on into the table below it.
       await withRoot(async (root) => {
-        await evidence(root, "sdd-spec-0007.md", under("###", "", ...table));
+        await evidence(root, "sdd-BF-0007.md", under("###", "", ...table));
 
         expect(await validateGrillingTrace(root)).toHaveLength(1);
       });
@@ -821,7 +812,7 @@ describe("validateGrillingTrace", () => {
       // one, so a `### Example` inside one must not end the section before the
       // table.
       await withRoot(async (root) => {
-        await evidence(root, "sdd-spec-0007.md", under("<!--", "### Example", "-->", "", ...table));
+        await evidence(root, "sdd-BF-0007.md", under("<!--", "### Example", "-->", "", ...table));
 
         expect(await validateGrillingTrace(root)).toEqual([]);
       });
@@ -834,7 +825,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -856,7 +847,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -882,7 +873,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",
@@ -908,7 +899,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "```text",
           "## Pre-draft Grilling",
@@ -933,7 +924,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         ["## Pre-draft Grilling", "", "Phase | Session", "---", "0 | run", ""].join("\n"),
       );
 
@@ -948,7 +939,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         ["## Pre-draft Grilling", "", "The session ran.", "---", "See the table | below.", ""].join(
           "\n",
         ),
@@ -965,7 +956,7 @@ describe("validateGrillingTrace", () => {
     await withRoot(async (root) => {
       await evidence(
         root,
-        "sdd-spec-0007.md",
+        "sdd-BF-0007.md",
         [
           "## Pre-draft Grilling",
           "",

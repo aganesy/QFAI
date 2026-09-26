@@ -2,7 +2,7 @@
  * The shipped Markdown schemas and the SDD templates are one pair.
  *
  * `assets/mdschema/**` declares the shape of an SDD document;
- * `assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/**` is the
+ * `assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/**` is the
  * document an author starts from. If the two disagree, `qfai init` seeds a tree
  * that fails its own document lane on the first commit — the worst version of
  * this failure, because the adopter did nothing wrong.
@@ -72,7 +72,7 @@ const MDSCHEMA_CLI = resolveMdschemaCli();
  */
 const TEMPLATE_ROOT = path.join(
   REPO_ROOT,
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs",
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec",
 );
 
 interface ManifestEntry {
@@ -128,16 +128,16 @@ function readManifest(): ManifestEntry[] {
 /** Every `*.mdschema.yml` under the schema root, schema-root-relative. */
 function schemaFiles(): string[] {
   const out: string[] = [];
-  for (const group of readdirSync(SCHEMA_ROOT, { withFileTypes: true })) {
-    if (!group.isDirectory()) {
-      continue;
-    }
-    for (const file of readdirSync(path.join(SCHEMA_ROOT, group.name))) {
-      if (file.endsWith(".mdschema.yml")) {
-        out.push(`${group.name}/${file}`);
+  const visit = (dir: string): void => {
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      const absolute = path.join(dir, item.name);
+      if (item.isDirectory()) visit(absolute);
+      else if (item.name.endsWith(".mdschema.yml")) {
+        out.push(path.relative(SCHEMA_ROOT, absolute).split(path.sep).join("/"));
       }
     }
-  }
+  };
+  visit(SCHEMA_ROOT);
   return out.sort();
 }
 
@@ -151,10 +151,15 @@ function schemaFiles(): string[] {
  * `spec/04_Business-Rules.md`).
  */
 function templateFor(schemaRelative: string): string | undefined {
-  const group = schemaRelative.startsWith("policies/") ? "_policies" : "spec";
-  const base = path.basename(schemaRelative).replace(/\.mdschema\.yml$/, ".md");
-  const candidate = path.join(TEMPLATE_ROOT, group, base);
-  return existsSync(candidate) ? candidate : undefined;
+  if (schemaRelative.startsWith("story/")) {
+    const relative = schemaRelative
+      .slice("story/".length)
+      .replace("03_contract/cli/contract.mdschema.yml", "03_contract/cli/command.mdschema.yml")
+      .replace(/\.mdschema\.yml$/, ".md");
+    const candidate = path.join(TEMPLATE_ROOT, relative);
+    return existsSync(candidate) ? candidate : undefined;
+  }
+  return undefined;
 }
 
 const manifest = readManifest();
@@ -233,17 +238,31 @@ describe("shipped Markdown schemas", () => {
     expect(broken.map((entry) => `${entry.id}: ${entry.when ?? ""}`)).toEqual([]);
   });
 
-  it("roots every pattern at the configured specs directory", () => {
-    // `{specsDir}` is what makes an adopter who relocated their specs work
-    // without editing this file; a hard-coded `.qfai/specs` would silently match
-    // nothing there and report a green lane over zero documents.
-    const unrooted = manifest.filter((entry) => !entry.pattern.startsWith("{specsDir}/"));
+  it("roots every pattern at its configured directory", () => {
+    // Both roots come from adopter config. A hard-coded default would silently
+    // match nothing after either tree is moved.
+    const unrooted = manifest.filter(
+      (entry) =>
+        !entry.pattern.startsWith("{specsDir}/") && !entry.pattern.startsWith("{contractsDir}/"),
+    );
 
     expect(unrooted.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
   });
 });
 
 describe("shipped schemas agree with the SDD templates", () => {
+  it("does not ship the retired spec-pack templates", () => {
+    expect(existsSync(path.join(TEMPLATE_ROOT, "..", "specs"))).toBe(false);
+  });
+
+  it("pairs every story-tree schema with a template", () => {
+    const missing = schemas
+      .filter((schema) => schema.startsWith("story/"))
+      .filter((schema) => templateFor(schema) === undefined);
+
+    expect(missing).toEqual([]);
+  });
+
   it("finds the mdschema binary", () => {
     // Every case below spawns it; without this the failures read as schema
     // violations rather than as a missing devDependency.

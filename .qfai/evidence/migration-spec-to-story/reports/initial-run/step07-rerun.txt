@@ -1,0 +1,65 @@
+## Operations
+none
+
+## For a person
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0001: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0002: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0003: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0004: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0005: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0006: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0010: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0011: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0012: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0013: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0014: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0015: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0016: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0020: no contract placement in plan
+- .qfai/spec/spec-0001/04_Business-Rules.md: BR-0001-0022: no contract placement in plan
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0011: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0017: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0018: no contract placement in plan
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0020: no mapped example cites the rule
+- .qfai/spec/spec-0003/04_Business-Rules.md: BR-0003-0025: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0001: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0002: no mapped example cites the rule
+- .qfai/spec/spec-0004/04_Business-Rules.md: BR-0004-0029: no mapped example cites the rule
+- .qfai/spec/spec-0008/04_Business-Rules.md: BR-0008-0003: no mapped example cites the rule
+- .qfai/spec/spec-0008/04_Business-Rules.md: BR-0008-0004: no mapped example cites the rule
+- .qfai/spec/spec-0009/04_Business-Rules.md: BR-0009-0002: no mapped example cites the rule
+- .qfai/spec/spec-0011/04_Business-Rules.md: BR-0011-0002: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0002: retired status superseded by BR-0012-0030 (reviewer-driven Playwright; no capture artifacts) and BR-0012-0035 (per-spec iter-dir namespacing; review.json only). See `09_delta.md` CHG-002 OP-PURGE-077.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0003: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0004: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0005: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0008: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0010: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0017: retired status superseded by BR-0012-0029 (cycles 0..9, per-spec single lineage under multi-spec). See `09_delta.md` CHG-002 OP-PURGE-078.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0018: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0019: retired status superseded by BR-0012-0031 (per spec × screen `<screen>.review.json` with 4 ordinal axes + six `*Feel` prose fields, ≤ 200 words each; no global `critique` length rule). See `09_delta.md` CHG-002 OP-PURGE-079.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0021: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0023: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0024: retired status superseded by BR-0012-0032 (qualitative AND-aggregator across all spec × screen pairs) + BR-0012-0029 (10-cycle terminator at `index === 9`) + BR-0012-0034 (hard-stop class catalog). DESIGN.md sha256 mismatch on cycle ≥ 1 (exit 2) remains active via BR-0012-0026. See `09_delta.md` CHG-002 OP-PURGE-080.; keep source for disposition
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0025: no contract placement in plan
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0026: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0029: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0036: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0040: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0060: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0061: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0062: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0063: no mapped example cites the rule
+- .qfai/spec/spec-0012/04_Business-Rules.md: BR-0012-0064: no mapped example cites the rule
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0001: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0002: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0004: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0005: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0006: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0007: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0008: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0010: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0009: no contract placement in plan
+- .qfai/spec/spec-0013/04_Business-Rules.md: BR-0013-0018: no contract placement in plan
+- .qfai/spec/spec-0015/04_Business-Rules.md: BR-0015-0001: no mapped example cites the rule
+- .qfai/spec/spec-0015/04_Business-Rules.md: BR-0015-0005: no mapped example cites the rule

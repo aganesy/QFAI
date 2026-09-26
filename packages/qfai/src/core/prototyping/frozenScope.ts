@@ -24,7 +24,7 @@ import { PROTOTYPING_JSON_REL } from "./paths.js";
 export type FrozenScopeState = {
   /** `frozenSurfaceUnion` as recorded, in file order. */
   readonly frozen: readonly string[];
-  /** Spec ids currently resolvable as UI-bearing. */
+  /** UI contract IDs currently resolvable as UI-bearing. */
   readonly resolvable: ReadonlySet<string>;
   /** Frozen ids that no longer resolve, sorted. */
   readonly missing: readonly string[];
@@ -52,10 +52,7 @@ export async function readFrozenScopeState(
   if (frozen.length === 0) return null;
 
   const resolvable = new Set(await resolveAllUiBearingSpecs(root, config));
-  // `frozenSurfaceUnion` stores bare spec numbers (`"0001"`) and the resolver
-  // returns them the same way, so no normalisation is needed — a mismatch in
-  // shape would make every entry look unreachable, which is why the comparison
-  // is in one place rather than written twice.
+  // Both sides use full CON-UI-NNNN IDs. No name conversion is allowed.
   return {
     frozen,
     resolvable,

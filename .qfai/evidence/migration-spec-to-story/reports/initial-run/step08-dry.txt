@@ -1,0 +1,1 @@
+Step 8 cannot write packages/qfai/tests/assets/actionPinBumpOwner.test.ts: outside its write set.

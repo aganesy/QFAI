@@ -12,7 +12,7 @@ const templateQfaiDir = path.join(templateRoot, ".qfai");
 const implementSkillPath = path.join(
   templateQfaiDir,
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
@@ -52,7 +52,7 @@ describe("wrapper parity across all three platforms", () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const canonicalSkill = path.join(root, ".qfai", "assistant", "skills", "qfai-implement");
+      const canonicalSkill = path.join(root, ".qfai", "assistant", "skill", "qfai-implement");
 
       for (const integration of [".claude", ".agents", ".codex"]) {
         const wrapperSkill = path.join(root, integration, "skills", "qfai-implement");
@@ -94,14 +94,14 @@ describe("wrapper parity across all three platforms", () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       const requiredPhrases = [
-        "watch it fail",
-        "watch it pass",
-        "fresh evidence",
-        "spec review",
-        "code quality review",
-        "one test at a time",
-        "parallel",
-        "independent",
+        "one EX at a time by default",
+        "Record command, selector, failure, test hash",
+        "qa-gatekeeper checks the observed RED and GREEN evidence",
+        "implementation-reviewer checks code and tests",
+        "completion-reviewer checks",
+        "RED, GREEN and Refactor result",
+        "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
+        "required user consent",
       ];
       const forbiddenPhrases = [
         "qfai-tdd-red",

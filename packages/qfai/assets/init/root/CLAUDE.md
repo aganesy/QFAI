@@ -1,3 +1,5 @@
+Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.
+
 # Claude Code Instructions
 
 Persistent instructions for Claude Code in this repository. Codex loads

@@ -1,18 +1,4 @@
-/**
- * Unit: `R-EVIDENCE-MUTATION-UNLOGGED` (severity error).
- *
- * - TC-0012-0480: a code path that mutates iter-NN evidence without
- *   invoking the mutation-log writer surfaces the reviewer-gate finding.
- *
- * Detection mechanism: a static SSOT-sync pair scan listing known
- * mutation call-sites under `core/prototyping/` and asserting each
- * source file that performs `fs.rename` / `fs.unlink` / overwriting
- * `writeFile` under iter-NN ALSO contains a paired call to a member
- * of the mutation-log writer module (`logEvidenceMove`,
- * `logEvidenceDelete`, `logEvidenceOverwrite`, or
- * `appendMutationLogEntry`).
- */
-// QFAI:SPEC-0012:TC-0012-0480
+/** Unit coverage for the reviewer gate's unlogged evidence mutation finding. */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -41,7 +27,8 @@ async function writeSource(rel: string, body: string): Promise<void> {
   await writeFile(abs, body, "utf-8");
 }
 
-describe("TC-0012-0480: detectEvidenceMutationUnlogged fires (error) for unlogged iter-NN mutation sites", () => {
+describe("detectEvidenceMutationUnlogged", () => {
+  // QFAI:EX-0001-0151-02
   it("fires when a mutation call-site is present but no logEvidence* call is paired", async () => {
     // Seed a source file that calls fs.rename under iter-NN but never
     // funnels through the mutation-log writer.

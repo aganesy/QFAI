@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                         | Expected                                                                                                                                                                                                                                                             |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0081-01 | AC-0001-0081-01 | Configure a repository whose manifest and existing tests show Vitest for integration checks and Playwright for browser flows. | The configure evidence lists the selected tool for each test layer, cites the observed manifest or test files, and explains why the tool fits that layer.                                                                                                            |
+| EX-0001-0081-02 | AC-0001-0081-02 | Configure a Node project with a `dev` script, an environment template, and no database dependency.                            | The minimum runnable path states the dev-server command, required environment values, that no DB startup is needed, and a pointer to copyable validation commands in `03_contract/tech.md#standard-commands`; unverifiable steps are identified rather than guessed. |

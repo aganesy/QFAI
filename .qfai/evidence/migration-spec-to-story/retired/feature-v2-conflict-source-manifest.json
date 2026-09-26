@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "source": ":3:.qfai/specs/spec-0003/03_Acceptance-Criteria.md",
+      "archive": ".qfai/evidence/migration-spec-to-story/retired/spec-0003/merge-input/03_Acceptance-Criteria.feature-v2.md",
+      "sha256": "2a0de09baf76dd18c78188d05e76580436c7e851b4e4f59910a719c087ef0e8f",
+      "bytes": 25613
+    },
+    {
+      "source": ":3:.qfai/specs/spec-0003/05_Examples.md",
+      "archive": ".qfai/evidence/migration-spec-to-story/retired/spec-0003/merge-input/05_Examples.feature-v2.md",
+      "sha256": "ed31fa8a079c75df8f7fb982fc51f835f338df1fdf2b40baacbe9b615d0effc0",
+      "bytes": 47076
+    },
+    {
+      "source": ":3:.qfai/evidence/migration-spec-to-story/retired/spec-0003/tdd/test-list.md",
+      "archive": ".qfai/evidence/migration-spec-to-story/retired/spec-0003/merge-input/tdd-test-list.feature-v2.md",
+      "sha256": "bf4de83a803ec288e8f7aae4a8134a7636078f81f1b4b09ab6d4f3759b0c7e3a",
+      "bytes": 60015
+    },
+    {
+      "source": ":3:.qfai/evidence/migration-spec-to-story/retired/spec-0017/tdd/test-list.md",
+      "archive": ".qfai/evidence/migration-spec-to-story/retired/spec-0017/merge-input/tdd-test-list.feature-v2.md",
+      "sha256": "84fb96d495b83dbf6141ce80f432f73e7ada8e532b5976dde18b8eb1ceed6443",
+      "bytes": 192054
+    }
+  ]
+}

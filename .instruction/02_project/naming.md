@@ -10,59 +10,61 @@ version: 1.0.0
 ## 原則
 
 - 参照の正は ID であり、ファイル名は補助情報。
-- 参照は下位から上位のみ許可（上位から下位は禁止）。
-- spec は `.qfai/specs/spec-0001/` 形式（4桁連番）。
-- 分割ルールは **1 CAP = 1 spec**（`spec-0001 = CAP-0001`）。
+- Business flows group user stories; examples cite their acceptance criterion,
+  and contract rules cite examples.
+- Use `.qfai/spec/` as the configured `paths.specsDir`. Its policy, flow and
+  contract layers are described below.
 
-## レイヤード spec 必須ファイル
+## Story-tree files
 
 ```text
-.qfai/specs/_policies/
-  01_Objective.md
-  02_Initiative.md
-  03_Capabilities.md
-  04_Business-Flow.md
-  05_Contracts.md
-  06_Glossary.md
-  07_Constraints.md
-  08_Decisions.md
-  09_Open-questions.md
-  10_delta.md
-  11_Slice-Policy.md
-
-.qfai/specs/spec-XXXX/
-  01_Spec.md
-  02_User-stories.md
-  03_Acceptance-Criteria.md
-  04_Business-Rules.md
-  05_Examples.md
-  06_Test-Cases.md
-  07_Decisions.md
-  08_Open-questions.md
-  09_delta.md
-  10_Plan.md
+.qfai/spec/
+  decisions.md
+  open-questions.md
+  01_policy/
+    objective.md
+    initiative.md
+    principle.md
+    glossary.md
+    constraint.md
+  02_business-flow/
+    business-flows.md
+    business-flow-NNNN/
+      business-flow.md
+      user-stories.md
+      user-story-NNNN-NNNN/
+        01_User-story.md
+        02_Acceptance-Criteria.md
+        03_Example.md
+  03_contract/
+    contracts.md
+    tech.md
+    structure.md
+    api/ db/ ui/ cli/ design/
 ```
 
-The two lists above are the required sets `E_SPEC_MISSING_FILESET` reports
-against. A pack carries other files as well — `16_Traceability-ledger.md` and
-`tdd/test-list.md` among them — and they are not part of this gate.
+The story-tree validator checks required files and rejects nested story
+directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 
 ## ID 形式
 
-- policies: `CAP-0001`
-- spec root: `spec-0001` + `Parent: CAP-0001`
-- user-story: `US-0001` + `Parent: CAP-0001`
-- acceptance-criteria: `AC-0001`（Gherkinコメント または テーブル `AC-ID`）
-- business-rule: `BR-0001` + `AC-Refs: AC-0001, AC-0002`
-- examples: `EX-0001` + `BR-Ref: BR-0001`
-- test-case: `TC-0001` + `AC-Refs: AC-0001` + `EX-Ref: EX-0001`
+- business flow: `BF-0001`
+- user story: `US-0001-0001` under `BF-0001`
+- acceptance criterion: `AC-0001-0001-01` under its story
+- example: `EX-0001-0001-01` with one `AC-Ref`
+- business rule: `BR-0001` in a contract, citing its examples
+- decision and open question: `DEC-0001`, `OQ-0001`
+- explicit decision guardrail: `DG-0001` in policy or contract Markdown
 
 ## Contracts
 
-- 契約ファイル先頭に `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` を1つ記載する。
-- `ui/` は `CON-UI-*`、`api/` は `CON-API-*`、`db/` は `CON-DB-*` を使う。
+- API, DB, UI and design contracts retain one appropriate
+  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declaration.
+- CLI contracts use `CLI-*` short IDs in `03_contract/contracts.md`.
 
-## Examples（05_Examples.md）
+## Examples and test annotations
 
-- テーブルで `EX-ID | BR-Ref | Input | Expected | Notes` を記述する。
-- 各 EX は `BR-Ref` を必須とする。
+- `03_Example.md` uses `EX-ID | AC-Ref | Input | Expected` rows.
+- E2E tests annotate `QFAI:BF-0001`; integration and API tests annotate
+  `QFAI:AC-0001-0001-01`; selected non-E2E tests annotate
+  `QFAI:EX-0001-0001-01`.

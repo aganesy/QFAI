@@ -8,8 +8,8 @@
  *
  * That is worth doing rather than skipping. A rule satisfied by "somebody decided this"
  * degrades to nothing the moment the person who decided it stops reading pull requests. A
- * rule satisfied by a paragraph in `07_Decisions.md`, asserted here, fails when the
- * paragraph is deleted or reworded past the point where it still carries the reason.
+ * rule satisfied by a row in `.qfai/spec/decisions.md`, asserted here, fails when the
+ * row is deleted or reworded past the point where it still carries the reason.
  *
  * ## What this file must NOT do
  *
@@ -44,13 +44,12 @@
  * because the two files had already diverged on the profile they ran, so no mirror existed to
  * lose. Recording the absent mirror would overstate what the deletion takes away.
  */
-// QFAI:SPEC-0017:TC-0017-0074
-// QFAI:SPEC-0017:TC-0017-0075
-// QFAI:SPEC-0017:TC-0017-0025
-// QFAI:SPEC-0017:TC-0017-0026
-// QFAI:SPEC-0017:TC-0017-0052
-// QFAI:SPEC-0017:TC-0017-0066
-// QFAI:SPEC-0017:TC-0017-0067
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0020-04
+// QFAI:EX-0002-0014-09
+// QFAI:EX-0002-0014-10
+// QFAI:EX-0002-0018-09
+// QFAI:EX-0002-0019-05
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -62,7 +61,7 @@ import { declaredIncludeGlobs, testFileCount } from "../helpers/runnerProjects.j
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
-const DECISIONS = path.join(REPO_ROOT, ".qfai", "specs", "spec-0017", "07_Decisions.md");
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
 
 /** The decision this pair of rows reads. */
 const RETIREMENT_DR = "DR-0017-0007";
@@ -102,19 +101,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * One decision's section, from its heading to the next one.
+ * One imported decision's row in the consolidated decision register.
  *
- * Sliced rather than read whole, so a phrase present somewhere else in the register cannot
+ * Selected rather than read whole, so a phrase present somewhere else in the register cannot
  * satisfy a claim about this decision.
  */
 function decisionSection(id: string): string {
   const source = readFileSync(DECISIONS, "utf-8");
-  const start = source.indexOf(`### ${id}`);
-  if (start < 0) {
-    return "";
-  }
-  const next = source.indexOf("\n### ", start + 1);
-  return next < 0 ? source.slice(start) : source.slice(start, next);
+  return (
+    source.split(/\r?\n/).find((line) => /^\| DEC-\d+ \|/.test(line) && line.includes(`#${id}:`)) ??
+    ""
+  );
 }
 
 describe("TC-0017-0074 (TDD-0074): deleting the copy with no shipped-set gate is rejected", () => {
@@ -303,6 +300,7 @@ describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped h
 });
 
 describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
+  // QFAI:EX-0002-0019-04
   it("records the flakiness measurement, and what happened instead of lowering the value", () => {
     const section = decisionSection(PARALLELISM_DR);
     expect(section, `${PARALLELISM_DR} must record the parallelism episode`).not.toBe("");
@@ -365,8 +363,8 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0065
 describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
+  // QFAI:EX-0002-0019-03
   it("compares at least two settings on the largest project and places the adopted value", () => {
     // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker
     // settings ON THE LARGEST PROJECT plus the value actually adopted, and the adopted setting

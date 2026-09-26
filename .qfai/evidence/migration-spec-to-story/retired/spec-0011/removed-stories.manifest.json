@@ -1,0 +1,21 @@
+{
+  "source": ".qfai/specs/spec-0011/02_User-stories.md",
+  "sourceSha256Before": "3a4beb472e013c966e1ecafd0e1982c02821b131b68f6395ee774fb01a463ee2",
+  "sourceSha256After": "f5f1255cbd646dd8d7166a8ee9a839f8ce9764a6f8021ee97d35cc49743c09e0",
+  "retired": [
+    {
+      "id": "US-0011-0002",
+      "catalog": "- US-0011-0002: Forward-Only Status Lifecycle\n",
+      "section": "## US-0011-0002: Forward-Only Status Lifecycle\n\nAs a QA engineer, I want backward status transitions (e.g., green -> red) to be prohibited, so that TDD discipline is enforced and progress is monotonic.\n\n",
+      "authority": "spec-0011/09_delta.md:155",
+      "sha256": "c4a93e38cac3d5fbdd915f9bb3f743f7cd10461b193a9b0b764d15bafb8f998d"
+    },
+    {
+      "id": "US-0011-0004",
+      "catalog": "- US-0011-0004: Exception Handling with DR-ID\n",
+      "section": "## US-0011-0004: Exception Handling with DR-ID\n\nAs a developer, I want `exception` status to require a DR-ID in the ledger, so that anomalies are traceable to Decision Records.\n\n",
+      "authority": "spec-0011/09_delta.md:155",
+      "sha256": "7f2a65d689c68e7fc88cd7980fac956ebe8135b9026bbc2fddadd15511810429"
+    }
+  ]
+}

@@ -1,24 +1,14 @@
 import path from "node:path";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
-import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
-import { resolvePath } from "../config.js";
 import { hashDesignMd, isUnreplacedDesignMdSample, parseDesignMd } from "../design/designMd.js";
 import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
-import { VISUAL_BROWSER_SURFACES, readValidatedClassification } from "../detection/surfaceType.js";
-import type { UiBearingClassification } from "../detection/surfaceType.js";
-import {
-  ResolveActiveDiscussionPackError,
-  findLatestDiscussionPackDir,
-  resolveActiveDiscussionPack,
-} from "../discussionPack.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
-import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -48,8 +38,6 @@ const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be d
 // shipped `/qfai-sdd` spec templates. The 17-digit timestamp is the pack
 // directory name, so the template placeholder
 // (`discussion-YYYYMMDDhhmmssSSS`) deliberately does not match.
-const SPEC_PROVENANCE_FILES = ["02_User-stories.md", "03_Acceptance-Criteria.md"] as const;
-const SPEC_PROVENANCE_PACK_RE = /\bdiscussion-\d{17}\b/g;
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
 type SddDesignContractReadinessOptions = {
@@ -146,30 +134,7 @@ async function validateDesignContractReadinessForStage(
   stage: DesignContractReadinessStage,
   options: SddDesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
-  const uiPattern = path.posix.join(
-    path.join(root, config.paths.contractsDir, "ui").replace(/\\/g, "/"),
-    "**/*.yaml",
-  );
-  const uiContracts = await fg(uiPattern, { absolute: true });
-  const hasUiContracts = uiContracts.length > 0;
-  // The project is UI-bearing as soon as a spec says so — `contracts/ui`
-  // yaml is a later artifact, and Phase 0 freezes DESIGN.md in between.
-  // Reuse `resolveAllUiBearingSpecs` rather than re-deriving the rule, so a
-  // project cannot be UI-bearing for prototyping and non-UI for this gate.
-  const uiBearingSpecs = await scanUiBearingSpecs(root, config);
-  const uiBearing = hasUiContracts || (uiBearingSpecs.ok && uiBearingSpecs.specIds.length > 0);
-  // `cli` is discussion UI-bearing but is NOT a visual-prototyping surface:
-  // a cli-only pack gets no root DESIGN.md — `/qfai-sdd` Phase 0 skips the
-  // freeze for it — and `/qfai-prototyping` rejects `cli`, so the `visual.*`
-  // token tree has no reader at all. Demanding the brand SSOT here would
-  // re-block a pack the pipeline deliberately exempted.
-  //
-  // `uiBearing` above is repo-wide, so the carve-out must be too: it is
-  // withdrawn unless EVERY classification this repo's UI-bearing specs are
-  // attributable to says `cli`. A spec-scoped run (`qfai validate --spec`)
-  // filters findings afterwards and never widens this, so it cannot be more
-  // permissive than the unscoped run either.
-  const cliOnly = uiBearing && (await isCliOnlySurfaceProject(root, config, uiBearingSpecs));
+  const uiBearing = (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
 
   // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
   // Every other check in this validator presupposes design contracts that
@@ -186,8 +151,8 @@ async function validateDesignContractReadinessForStage(
   // OF. A warning would still fail `validation.failOn: warning` /
   // `--fail-on warning` runs and its remediation would tell the user to
   // author a brand SSOT that no reader in this project consumes.
-  const sampleIssues = cliOnly ? [] : await validateRootDesignMdSample(root, uiBearing);
-  if (!hasUiContracts) {
+  const sampleIssues = await validateRootDesignMdSample(root, uiBearing);
+  if (!uiBearing) {
     return sampleIssues;
   }
 
@@ -196,9 +161,7 @@ async function validateDesignContractReadinessForStage(
 
   // A cli-only project never freezes a brand SSOT, so neither the file
   // (DCON-030/033) nor its lock (DCON-031/032) can be required of it.
-  const rootResult: RootDesignMdResult = cliOnly
-    ? { issues: [], designMd: null, lockSha: null }
-    : await validateRootDesignMdAndLock(root, designDir);
+  const rootResult: RootDesignMdResult = await validateRootDesignMdAndLock(root, designDir);
   issues.push(...rootResult.issues);
 
   if (stage === "prototyping") {
@@ -233,255 +196,6 @@ async function validateDesignContractReadinessForStage(
 }
 
 /**
- * Every spec that declares itself UI-bearing, by the same rule the prototyping
- * resolver uses: the `surface_type: ui-bearing` frontmatter marker, with a
- * matching UI contract as the fallback.
- *
- * A scan failure is reported as `{ ok: false }` rather than propagating:
- * crashing `qfai validate` over an unreadable spec directory would be a worse
- * outcome than the two conservative degradations its callers apply — the
- * UI-bearing question falls back to the UI contracts alone (DCON-034 as a
- * warning), and the cli carve-out is withdrawn because nothing can confirm
- * every UI-bearing spec is cli-only.
- */
-type UiBearingSpecScan = { ok: true; specIds: string[] } | { ok: false };
-
-async function scanUiBearingSpecs(root: string, config: QfaiConfig): Promise<UiBearingSpecScan> {
-  try {
-    return { ok: true, specIds: await resolveAllUiBearingSpecs(root, config) };
-  } catch {
-    return { ok: false };
-  }
-}
-
-/**
- * Locate the discussion pack whose `01_Context.md` classification decides the
- * cli carve-out below.
- *
- * `/qfai-sdd` Phase 0 reads the **active** pack (the one
- * `qfai discussion use <id>` pinned into `.qfai/state.json#discussion.currentId`),
- * so this validator must select the same one: with several packs on disk, a
- * project whose active pack is `cli` while the newest is `web` would otherwise
- * be handed DCON-030/031 that Phase 0 never intends to satisfy — and the
- * inverse would silently drop both gates for a visual pack.
- *
- * Only `reason: "unset"` falls back to the newest pack. Never having run
- * `qfai discussion use` is the ordinary state of a single-pack project, and
- * every such project already relies on latest-pack selection.
- *
- * A `"corrupt"`, `"dangling"` or `"duplicate"` pointer does NOT fall back.
- * Those are broken runtime state that `resolveActiveDiscussionPack` reports as
- * recoverable errors precisely so nobody re-derives the answer from mtimes:
- * the project pinned a pack, and the pin no longer resolves (or
- * `.qfai/state.json` can no longer be read as a pointer at all). Inferring
- * "latest" there would hand the carve-out to a pack nothing selected — a
- * dangling pointer or an unparseable state file over a newest cli pack would
- * drop DCON-030/031 although no active classification exists. Return `null`
- * instead, which lands on the strict side (root DESIGN.md required) until
- * `qfai discussion use <id>` repairs the pointer.
- *
- * Any other failure (unreadable discussion root) yields `null` for the same
- * reason: it can only widen the requirement, never silently drop a gate.
- */
-async function resolveClassificationPackDir(
-  root: string,
-  config: QfaiConfig,
-): Promise<string | null> {
-  try {
-    return await resolveActiveDiscussionPack(root);
-  } catch (error) {
-    if (!(error instanceof ResolveActiveDiscussionPackError) || error.reason !== "unset") {
-      return null;
-    }
-  }
-  try {
-    return await findLatestDiscussionPackDir(resolvePath(root, config, "discussionDir"));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Discussion packs whose classification the cli carve-out must agree on.
- *
- * The carve-out suppresses repo-wide findings (DCON-030/031/034 are keyed on
- * the repo-wide `uiBearing`), so it cannot be decided by one pack. This
- * collects the union of:
- *
- *   1. the pack every UI-bearing spec's own provenance names — the
- *      `Source: discussion-<ts>#...` lines its `02_User-stories.md` /
- *      `03_Acceptance-Criteria.md` carry, the same per-spec attribution
- *      `qfai-implement/SKILL.md` uses to pick a spec's design inputs; and
- *   2. the active pack (`.qfai/state.json#discussion.currentId`), which
- *      `/qfai-sdd` Phase 0 reads and which is the only signal for a pack whose
- *      spec does not exist yet.
- *
- * Without (1), a repo holding both a web and a cli spec had DCON-030/031/034
- * suppressed for its web spec whenever the pointer happened to sit on the cli
- * pack — `uiBearing` is repo-wide while the old carve-out read the active pack
- * alone, so a stale pointer let the whole repo skip the brand SSOT. Without
- * (2), a freshly classified pack that has not produced its spec yet would be
- * invisible here.
- *
- * Returns `null` when the answer cannot be established — the spec scan failed,
- * the active pointer is corrupt / dangling / duplicate, or a spec names a pack
- * that is not on disk. `null` lands on the strict side: it can only widen the
- * requirement back to today's behaviour, never silently drop a gate.
- */
-async function collectCarveOutPackDirs(
-  root: string,
-  config: QfaiConfig,
-  uiBearingSpecs: UiBearingSpecScan,
-): Promise<string[] | null> {
-  if (!uiBearingSpecs.ok) {
-    return null;
-  }
-  const activePackDir = await resolveClassificationPackDir(root, config);
-  if (activePackDir === null) {
-    return null;
-  }
-  const packDirs = new Set<string>([activePackDir]);
-
-  const discussionRoot = resolvePath(root, config, "discussionDir");
-  let specDirs: string[];
-  try {
-    specDirs = await resolveSpecDirs(root, config, uiBearingSpecs.specIds);
-  } catch {
-    return null;
-  }
-  for (const specDir of specDirs) {
-    const provenance = await readSpecProvenancePackDirs(specDir, discussionRoot);
-    if (provenance === null) {
-      // The spec names a pack that is not on disk: its classification cannot
-      // be confirmed, so the carve-out cannot be granted on its behalf.
-      return null;
-    }
-    for (const packDir of provenance) {
-      packDirs.add(packDir);
-    }
-  }
-  return [...packDirs];
-}
-
-/** Absolute directories of the named spec ids, skipping ids with no directory. */
-async function resolveSpecDirs(
-  root: string,
-  config: QfaiConfig,
-  specIds: readonly string[],
-): Promise<string[]> {
-  if (specIds.length === 0) {
-    return [];
-  }
-  const wanted = new Set(specIds);
-  const entries = await collectSpecEntries(path.resolve(root, config.paths.specsDir));
-  return entries.filter((entry) => wanted.has(entry.specNumber)).map((entry) => entry.dir);
-}
-
-/**
- * Discussion packs a spec attributes itself to, via the
- * `Source: discussion-<17-digit-timestamp>#...` provenance lines its
- * `02_User-stories.md` / `03_Acceptance-Criteria.md` carry (the shape the
- * shipped `/qfai-sdd` spec templates seed).
- *
- * Returns `[]` when the spec carries no provenance at all — that spec is then
- * covered by the active pointer, per `qfai-implement/SKILL.md`. Returns `null`
- * when a named pack is not a directory on disk, which the caller treats as
- * "cannot confirm" rather than "no constraint".
- */
-async function readSpecProvenancePackDirs(
-  specDir: string,
-  discussionRoot: string,
-): Promise<string[] | null> {
-  const packIds = new Set<string>();
-  for (const fileName of SPEC_PROVENANCE_FILES) {
-    let body: string;
-    try {
-      body = await readFile(path.join(specDir, fileName), "utf-8");
-    } catch {
-      continue;
-    }
-    for (const match of body.matchAll(SPEC_PROVENANCE_PACK_RE)) {
-      packIds.add(match[0]);
-    }
-  }
-  const packDirs: string[] = [];
-  for (const packId of packIds) {
-    const packDir = path.join(discussionRoot, packId);
-    try {
-      if (!(await stat(packDir)).isDirectory()) {
-        return null;
-      }
-    } catch {
-      return null;
-    }
-    packDirs.push(packDir);
-  }
-  return packDirs;
-}
-
-/**
- * True when every classification the project's UI-bearing work is attributable
- * to says the only surface it ships is `cli` — `primary_surface: cli` with no
- * `web` / `mobile` / `desktop` / `mixed` entry in `secondary_surfaces`.
- *
- * `cli` is discussion UI-bearing, so it reaches every gate in this file, but
- * it is not a visual-prototyping surface: `/qfai-sdd` Phase 0 deliberately
- * authors no root DESIGN.md for such a pack and `/qfai-prototyping` rejects
- * `cli`, leaving the `visual.*` token tree with no reader. Without this the
- * DESIGN.md requirement Phase 0 dropped would simply reappear as a hard
- * `qfai validate --profile sdd` error.
- *
- * Each classification is read from a pack's `01_Context.md` via the strict
- * validated reader, so a malformed or contradictory block (which
- * `uix/classification.ts` reports separately) yields `null` and this returns
- * `false` — the strict brand-SSOT behaviour. Same for a project with no
- * discussion pack at all: absence of evidence is not evidence of `cli`, and
- * every pre-existing project must keep its gates.
- *
- * A filesystem failure degrades to `false` for the same reason: it can only
- * ever widen the requirement back to today's behaviour, never silently drop a
- * gate.
- */
-async function isCliOnlySurfaceProject(
-  root: string,
-  config: QfaiConfig,
-  uiBearingSpecs: UiBearingSpecScan,
-): Promise<boolean> {
-  const packDirs = await collectCarveOutPackDirs(root, config, uiBearingSpecs);
-  if (packDirs === null || packDirs.length === 0) {
-    return false;
-  }
-  for (const packDir of packDirs) {
-    if (!(await isCliOnlyPack(packDir))) {
-      return false;
-    }
-  }
-  return true;
-}
-
-async function isCliOnlyPack(packDir: string): Promise<boolean> {
-  let classification: UiBearingClassification | null;
-  try {
-    classification = await readValidatedClassification(packDir);
-  } catch {
-    return false;
-  }
-  if (classification === null || !classification.ui_bearing) {
-    return false;
-  }
-
-  // `VISUAL_BROWSER_SURFACES` is the code SSOT for "this surface needs the
-  // `visual.*` token tree". Judge the whole classified set, not
-  // `primary_surface` alone: `primary_surface: cli` with
-  // `secondary_surfaces: [web]` still ships a visual surface.
-  const surfaces = [classification.primary_surface, ...classification.secondary_surfaces];
-  if (surfaces.some((surface) => VISUAL_BROWSER_SURFACES.has(surface))) {
-    return false;
-  }
-  return classification.primary_surface === "cli";
-}
-
-/**
  * Identity gate for root DESIGN.md (QFAI-DCON-034).
  *
  * DCON-030..033 are all content-agnostic: they verify that DESIGN.md
@@ -492,7 +206,7 @@ async function isCliOnlyPack(packDir: string): Promise<boolean> {
  * the real brand breaks the lock until it is refrozen.
  *
  * A project holds the sample because someone put it there: copied from
- * `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` as a
+ * `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample` as a
  * starting point, or
  * seeded by a release back when `qfai init` wrote one. Init writes none
  * now — `/qfai-sdd` Phase 0 authors it, and only for a
@@ -537,7 +251,7 @@ async function validateRootDesignMdSample(root: string, uiBearing: boolean): Pro
       "designContractReadiness.rootDesignMdSample",
       undefined,
       "canonical",
-      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose Phase 0 authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. Phase 0 refuses to freeze a sample.",
+      "Replace root DESIGN.md with this product's brand SSOT (run /qfai-sdd, whose design lock step authors it from the design direction the discussion pack recorded, or author it from `.qfai/assistant/skill/qfai-prototyping/templates/DESIGN.md.sample`) and delete the sample marker comment if present. /qfai-sdd refuses to freeze a sample.",
     ),
   ];
 }
@@ -574,7 +288,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.rootDesignMd",
         undefined,
         "canonical",
-        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose Phase 0 authors it (see the qfai-sdd skill).",
+        "Create root DESIGN.md at the project root with the canonical front-matter, or run /qfai-sdd, whose design lock step authors it (see the qfai-sdd skill).",
       ),
     );
   }
@@ -592,7 +306,7 @@ async function validateRootDesignMdAndLock(
         "designContractReadiness.designMdLock",
         undefined,
         "canonical",
-        "Run /qfai-sdd Phase 0 to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
+        "Run the design lock step of /qfai-sdd to validate root DESIGN.md and freeze its sha256 into DESIGN.md.lock.yaml.",
       ),
     );
   }
@@ -637,7 +351,7 @@ async function validateRootDesignMdAndLock(
           "designContractReadiness.designMdLock",
           undefined,
           "canonical",
-          "Re-run /qfai-sdd Phase 0 to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
+          "Re-run the design lock step of /qfai-sdd to regenerate DESIGN.md.lock.yaml with a current designMdSha256.",
         ),
       );
     } else if (designMdText !== null) {
@@ -652,7 +366,7 @@ async function validateRootDesignMdAndLock(
             "designContractReadiness.designMdSha",
             undefined,
             "canonical",
-            "DESIGN.md was edited after the freeze. Re-run /qfai-sdd Phase 0 (or restart prototyping) to refreeze.",
+            "DESIGN.md was edited after the freeze. Re-run the design lock step of /qfai-sdd (or restart prototyping) to refreeze.",
           ),
         );
       }
@@ -862,7 +576,7 @@ async function validatePrototypeHandoff(
   }
 
   // Required fields match the rewritten handoff contract documented in
-  // `.qfai/assistant/skills/qfai-prototyping/references/handoff.md`:
+  // `.qfai/assistant/skill/qfai-prototyping/references/handoff.md`:
   // `finalIterIndex` (number ≥ 0), plus the string fields
   // `finalArtifact`, `designMdPath`, `designMdSha256`,
   // `designSystemMirror`, `implementationNotes`. The legacy fields
@@ -1015,7 +729,7 @@ async function validatePrototypeHandoff(
           "designContractReadiness.prototypeHandoffField",
           undefined,
           "canonical",
-          "Copy the `designMdSha256` value from `.qfai/contracts/design/DESIGN.md.lock.yaml`.",
+          "Copy the `designMdSha256` value from `design/DESIGN.md.lock.yaml` under `paths.contractsDir`.",
         ),
       );
     } else if (lockSha !== null && lower !== lockSha) {

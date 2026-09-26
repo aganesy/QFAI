@@ -11,7 +11,7 @@ const skillPath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
   "SKILL.md",
 );
@@ -21,7 +21,7 @@ async function readSkill(): Promise<string> {
 }
 
 describe("web-research SKILL.md template structure", () => {
-  // QFAI:SPEC-0016:TC-0016-0007 (TDD-0021)
+  // QFAI:EX-0001-0185-01 (TDD-0021)
   it("progressive disclosure - metadata-only on load, full body on task start", async () => {
     const content = await readSkill();
 
@@ -32,7 +32,7 @@ describe("web-research SKILL.md template structure", () => {
     expect(content).toMatch(/metadata[_\s-]?only|metadata\s+on\s+load/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0008 (TDD-0022)
+  // QFAI:EX-0001-0185-02 (TDD-0022)
   it("invalid SKILL.md YAML parse error reported, default behavior activated", async () => {
     const content = await readSkill();
 
@@ -52,7 +52,7 @@ const baselinePath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "constitution",
+  "rule",
   "shared-skill-delegation-baseline.md",
 );
 

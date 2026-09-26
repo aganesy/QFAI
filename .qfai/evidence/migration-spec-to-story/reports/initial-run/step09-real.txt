@@ -1,0 +1,23 @@
+## Operations
+- .github/agents/acceptance-test-engineer.agent.md: repoint host integration link
+- .github/agents/architecture-reviewer.agent.md: repoint host integration link
+- .github/agents/backend-engineer.agent.md: repoint host integration link
+- .github/agents/completion-reviewer.agent.md: repoint host integration link
+- .github/agents/delivery-planner.agent.md: repoint host integration link
+- .github/agents/devops-ci-engineer.agent.md: repoint host integration link
+- .github/agents/discovery-analyst.agent.md: repoint host integration link
+- .github/agents/doc-steward.agent.md: repoint host integration link
+- .github/agents/frontend-engineer.agent.md: repoint host integration link
+- .github/agents/implementation-reviewer.agent.md: repoint host integration link
+- .github/agents/orchestrator.agent.md: repoint host integration link
+- .github/agents/product-experience-architect.agent.md: repoint host integration link
+- .github/agents/product-surface-reviewer.agent.md: repoint host integration link
+- .github/agents/qa-gatekeeper.agent.md: repoint host integration link
+- .github/agents/qa-strategist.agent.md: repoint host integration link
+- .github/agents/requirements-analyst.agent.md: repoint host integration link
+- .github/agents/requirements-reviewer.agent.md: repoint host integration link
+- .github/agents/solution-architect.agent.md: repoint host integration link
+- .github/agents/test-design-analyst.agent.md: repoint host integration link
+
+## For a person
+none

@@ -1,6 +1,5 @@
 /**
- * Stale-reference validator for `qfai validate --report`
- * (AC-0015-0021, REQ-0173).
+ * Stale-reference validator for `qfai validate --report`.
  *
  * After the second-wave implementation lands, the shipped reference docs
  * (`references/iteration-loop.md`, `references/generator-prompt.md`,
@@ -67,7 +66,7 @@ export const STALE_REFERENCES: readonly StaleReferenceEntry[] = [
 
 /**
  * Reference doc paths that must be checked. Restricted to the doc
- * surfaces that AC-0015-0021 explicitly enumerates plus every
+ * required document surfaces plus every
  * `SKILL.md` under `.qfai/assistant/skills/`.
  */
 const REFERENCE_DOC_NAMES = [

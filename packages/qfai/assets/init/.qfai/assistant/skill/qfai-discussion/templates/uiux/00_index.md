@@ -1,0 +1,48 @@
+# uiux/ Sidecar Index
+
+## Purpose
+
+Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
+
+## File Inventory
+
+Brand-level intent (product intent, brand signals, anti-goals,
+reference pool framed as deviate-from inputs) is recorded in
+`04_Sources.md`, not in this sidecar family. `/qfai-sdd`'s `03_contract` step turns
+that record into root `DESIGN.md` — on a visual-prototyping surface
+(`web`, `mobile`, `desktop`, `mixed`) only. A cli-only pack has no
+brand-level intent layer at all.
+
+| File                      | Purpose                                  | Required |
+| ------------------------- | ---------------------------------------- | -------- |
+| 00_index.md               | This manifest                            | Yes      |
+| 40_screen_contracts.md    | Screen interaction contracts (11 fields) | Yes      |
+| 50_review_input_bundle.md | Review input bundle                      | Yes      |
+
+## Completeness Rule
+
+All three required files above MUST be present for every UI-bearing pack.
+Partial generation is not permitted.
+
+Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `03_contract` step authors it, and only
+on a visual-prototyping surface (`web`, `mobile`, `desktop`, `mixed`). A
+cli-only pack — `primary_surface: cli` with no visual surface in
+`secondary_surfaces` — never gets one: the `03_contract` step skips the freeze, and
+`/qfai-prototyping` does not run on `cli`. Do not report any pack as
+incomplete for a missing `DESIGN.md`.
+
+## Forbidden Legacy Files
+
+The following files are NOT part of the canonical family and must NOT be created in new packs:
+
+- `10_implementation_strategy.md` — discussion carries directions unranked, so it selects no strategy
+- `11_design_taste_interview.md` — brand signals are recorded in `04_Sources.md`
+- `12_design_system.md` — replaced by root `DESIGN.md` and the design contracts under `<paths.contractsDir>/design/`
+- the `20`–`24` design-evaluation family — the evaluator axes are fixed by the CLI, not authored here
+- `30_option_comparison.md` — replaced by root `DESIGN.md`
+- `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`
+- `33_exploration_rubric.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`)
+- `34_evaluator_calibration.md` — replaced by the fixed evaluator axes (`.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`)
+- `40_contracts.md` — replaced by `40_screen_contracts.md`
+- `50_review_bundle.md` — replaced by `50_review_input_bundle.md`
+- `60_critique_loop.md` — removed (critique integrated into review bundle)

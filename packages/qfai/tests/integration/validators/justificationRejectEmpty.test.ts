@@ -3,14 +3,13 @@
  * with empty / whitespace-only `justification:` (TC-0015-0027,
  * AC-0015-0018).
  *
- * The advisory-failing posture mirrors the R-WORKLOG-DRIFT family
- * pattern enforced by `validateReviewerJustification`. The catalog
- * SSOT (`justificationCatalog.ts`) supplies the 8 codes; this test
+ * `validateReviewerJustification` enforces the advisory-failing catalog.
+ * The catalog SSOT (`justificationCatalog.ts`) supplies the 8 codes; this test
  * fixtures a reviewer-report JSON under `.qfai/review/` with each
  * catalog code in two variants (empty + filled justification) and
  * asserts the validator flags only the empty variants.
  */
-// QFAI:SPEC-0015:TC-0015-0027
+// QFAI:EX-0001-0178-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

@@ -1,71 +1,44 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { resolvePath, type QfaiConfig } from "../../config.js";
+import type { QfaiConfig } from "../../config.js";
 import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
-import { collectSpecEntries } from "../../specLayout.js";
+import { readUiContractsCovered } from "../../prototyping/specsCovered.js";
+import { resolveSurfaceUnion } from "../../prototyping/specResolution.js";
 import type { Issue } from "../../types.js";
 import { issue } from "../utils.js";
 
-const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
-
+/** Validate that the frozen UI contract IDs still refer to declared contracts. */
 export async function validateSpecIdLinkage(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const doc = await readPrototypingJson(root);
-  if (!doc || !Array.isArray(doc.specsCovered)) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(path.join(root, PROTOTYPING_JSON_REL), "utf-8"));
+  } catch {
     return [];
   }
-
-  const specsRoot = resolvePath(root, config, "specsDir");
-  const knownSpecIds = new Set(
-    (await collectSpecEntries(specsRoot)).map((entry) => entry.specNumber),
-  );
-  const issues: Issue[] = [];
-
-  for (const value of doc.specsCovered) {
-    if (typeof value !== "string") {
-      continue;
-    }
-    const specId = normalizeSpecId(value);
-    if (!/^\d{4}$/u.test(specId)) {
-      issues.push(
-        issue(
-          "QFAI-PROT-008",
-          `prototyping.json specsCovered entry must be a 4-digit spec id (got ${JSON.stringify(value)}).`,
-          "error",
-          PROTO_JSON_REL,
-          "prototyping.specIdLinkage.specsCoveredFormat",
-        ),
-      );
-      continue;
-    }
-    if (!knownSpecIds.has(specId)) {
-      issues.push(
-        issue(
-          "QFAI-PROT-008",
-          `prototyping.json specsCovered references missing spec-${specId}.`,
-          "error",
-          PROTO_JSON_REL,
-          "prototyping.specIdLinkage.missingSpec",
-          [path.join(config.paths.specsDir, `spec-${specId}`)],
-        ),
-      );
-    }
+  const covered = readUiContractsCovered(parsed);
+  if (covered.kind !== "ok") {
+    return [
+      issue(
+        "QFAI-PROT-008",
+        "prototyping.json requires uiContractsCovered[] with full CON-UI-NNNN IDs. Re-seed with `qfai prototyping iterate --cycle 0`.",
+        "error",
+        PROTOTYPING_JSON_REL,
+        "prototyping.uiContractLinkage.scope",
+      ),
+    ];
   }
-
-  return issues;
-}
-
-async function readPrototypingJson(root: string): Promise<Record<string, unknown> | undefined> {
-  try {
-    const parsed = JSON.parse(await readFile(path.join(root, PROTO_JSON_REL), "utf-8")) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function normalizeSpecId(value: string): string {
-  return value.replace(/^spec-/iu, "");
+  const live = new Set(await resolveSurfaceUnion(root, config));
+  return covered.value
+    .filter((id) => !live.has(id))
+    .map((id) =>
+      issue(
+        "QFAI-PROT-008",
+        `prototyping.json uiContractsCovered references UI contract ${id} without screens[].`,
+        "error",
+        PROTOTYPING_JSON_REL,
+        "prototyping.uiContractLinkage.missingContract",
+        [path.posix.join(config.paths.contractsDir.replace(/\\/g, "/"), "ui")],
+      ),
+    );
 }

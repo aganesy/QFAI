@@ -16,15 +16,17 @@ async function withProject(
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-dcon019-"));
   try {
     // The stage validator is a no-op without at least one UI contract.
-    const uiDir = path.join(root, ".qfai", "contracts", "ui");
+    const uiDir = path.join(root, ".qfai", "spec", "03_contract", "ui");
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "main.yaml"),
-      ["screens:", "  - id: SCR-001", '    route: "/"'].join("\n"),
+      ["# QFAI-CONTRACT-ID: CON-UI-0001", "screens:", "  - id: SCR-001", '    route: "/"'].join(
+        "\n",
+      ),
       "utf-8",
     );
 
-    const designDir = path.join(root, ".qfai", "contracts", "design");
+    const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
     await mkdir(designDir, { recursive: true });
     // The two files /qfai-prototyping is required to produce.
     await writeFile(path.join(designDir, "design-system.yaml"), "tokens: {}\n", "utf-8");

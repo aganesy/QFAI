@@ -1,6 +1,6 @@
 /**
  * `QFAI-GRILL-001` and `QFAI-GRILL-002` (severity warning): a stage whose
- * mandatory grilling session left no trace in the evidence it wrote — the spec
+ * mandatory grilling session left no trace in the evidence it wrote — the flow
  * stage under the first code and a discussion run under the second.
  *
  * The failure it exists for leaves nothing else behind. A stage that ran its
@@ -14,8 +14,7 @@
  * cheap once the false-positive rate is known.
  *
  * **A row still carrying the template's placeholders is not a record.** The
- * template ships the section with worked rows in it, so a section nobody filled
- * in holds three of them. Counting any row at all would accept the copy as the
+ * template ships the section with no data rows. Counting an unwritten row would accept the copy as the
  * thing it is a template for, which is the one route to the record without the
  * session.
  *
@@ -26,7 +25,7 @@
  * since, which is inside what a record-exists check claims anyway.
  *
  * The two stages differ in how the repair arrives rather than in whether it
- * can. A spec's record has a path the next run of that spec opens anyway, so
+ * can. A flow's record has a path the next run of that flow opens anyway, so
  * the occasion comes with the work; a per-run stamp has no such occasion, which
  * is why only its newest run is asked about. A run that predates the record
  * obligation is reported until the stage next runs — the record cannot be
@@ -78,7 +77,7 @@ const SPEC_TRACE_CODE = "QFAI-GRILL-001";
 const DISCUSSION_TRACE_CODE = "QFAI-GRILL-002";
 
 export const GRILLING_TRACE_CODES = {
-  spec: SPEC_TRACE_CODE,
+  flow: SPEC_TRACE_CODE,
   discussion: DISCUSSION_TRACE_CODE,
 } as const satisfies Readonly<Record<GrillingSubject, string>>;
 
@@ -90,7 +89,7 @@ export const GRILLING_TRACE_CODES = {
  * leaving the other reading a heading nobody writes.
  */
 export const GRILLING_SECTIONS = {
-  spec: "## Pre-draft Grilling",
+  flow: "## Pre-draft Grilling",
   discussion: "## Grilling Session",
 } as const satisfies Readonly<Record<GrillingSubject, string>>;
 
@@ -103,7 +102,7 @@ export const GRILLING_SECTIONS = {
  * which is not. Two columns each, held against the shipped templates by a test.
  */
 export const GRILLING_COLUMNS = {
-  spec: ["Phase", "Session"],
+  flow: ["Phase", "Session"],
   discussion: ["Ended", "Authoring began"],
 } as const satisfies Readonly<Record<GrillingSubject, readonly string[]>>;
 
@@ -114,7 +113,7 @@ export const GRILLING_COLUMNS = {
  * dispatch this, and a full run calls both, so a call reading every stage would
  * report each finding twice.
  */
-export const GRILLING_SUBJECTS = ["spec", "discussion"] as const;
+export const GRILLING_SUBJECTS = ["flow", "discussion"] as const;
 
 export type GrillingSubject = (typeof GRILLING_SUBJECTS)[number];
 
@@ -132,8 +131,8 @@ type SubjectBase = {
   readonly row: string;
   /** Columns whose presence in a header identifies this stage's table. */
   readonly columns: readonly string[];
-  /** Whether the name holds a spec id, so a `--spec` run can place it. */
-  readonly specKeyed: boolean;
+  /** Whether the name holds a flow ID, so a `--flow` run can place it. */
+  readonly flowKeyed: boolean;
 };
 
 /**
@@ -151,15 +150,15 @@ type Subject =
 
 const SUBJECTS: readonly Subject[] = [
   {
-    stage: "spec",
+    stage: "flow",
     code: SPEC_TRACE_CODE,
-    // Anchored on the spec id rather than on anything after `sdd-`, so a file a
+    // Anchored on the flow ID rather than on anything after `sdd-`, so a file a
     // project named `sdd-notes.md` is not held to a contract it never entered.
-    file: /^sdd-(spec-\d{4})\.md$/,
-    section: GRILLING_SECTIONS.spec,
+    file: /^sdd-(BF-\d{4})\.md$/,
+    section: GRILLING_SECTIONS.flow,
     row: "phase row",
-    columns: GRILLING_COLUMNS.spec,
-    specKeyed: true,
+    columns: GRILLING_COLUMNS.flow,
+    flowKeyed: true,
     reads: "each",
   },
   {
@@ -175,7 +174,7 @@ const SUBJECTS: readonly Subject[] = [
     section: GRILLING_SECTIONS.discussion,
     row: "session row",
     columns: GRILLING_COLUMNS.discussion,
-    specKeyed: false,
+    flowKeyed: false,
     reads: "latest",
     packs: "discussion",
   },
@@ -186,7 +185,7 @@ const SUBJECTS: readonly Subject[] = [
  *
  * A fixed path rather than a configured one, because there is no
  * `paths.evidenceDir`: every writer and reader of this tree spells it out
- * (`preflight/importLiteEvidence.ts`, `validators/atddCoverageDepth.ts`), and a
+ * (`preflight/importLiteEvidence.ts`, `validators/storyTreeCoverageDepth.ts`), and a
  * second spelling here would be a second answer to where the tree is.
  */
 const EVIDENCE_DIR_REL = ".qfai/evidence";
@@ -500,13 +499,9 @@ function candidatesIn(
     for (const name of names) {
       const id = subject.file.exec(name)?.[1];
       if (id === undefined) continue;
-      // A `--spec` run is gating on its own spec, so a sibling it was told not
-      // to look at is left alone. A run that names no spec is the other case
-      // and the opposite answer: `core/specScope.ts#isFindingInSpecScope` keeps
-      // an unattributed finding in every slice, and `reviewArtifactsScope` says
-      // so of a discussion pack by name. Dropping it here would be this one
-      // validator answering a question the repository has already settled.
-      if (scope !== undefined && subject.specKeyed && !scope.has(id.replace("spec-", ""))) {
+      // A `--flow` run gates only its selected flow. Discussion evidence remains
+      // project-wide, so it is retained for every slice.
+      if (scope !== undefined && subject.flowKeyed && !scope.has(id)) {
         continue;
       }
       matched.push({ name, id, subject });
@@ -583,12 +578,11 @@ async function withOwedRuns(
  * Stage evidence with no grilling record of its own.
  *
  * Keyed on the evidence file rather than on the stage, because the evidence is
- * what the stage wrote: a spec with no evidence file has not run the stage, and
+ * what the stage wrote: a flow with no evidence file has not run the stage, and
  * reporting that is another validator's job. A stage that keeps its own list of
  * runs is the exception — see `Subject.packs`.
  *
- * `specScope` is the `--spec` selection when a run has one — the four-digit
- * numbers, as `core/specScope.ts` normalizes them.
+ * `flowScope` is the `--flow` selection when a run has one, as complete BF IDs.
  *
  * `subjects` is the stages this call gates, defaulting to all of them. Two
  * runners dispatch this and a full run calls both, so each names its own rather
@@ -600,7 +594,7 @@ async function withOwedRuns(
 export async function validateGrillingTrace(
   root: string,
   options: {
-    specScope?: ReadonlySet<string> | undefined;
+    flowScope?: ReadonlySet<string> | undefined;
     subjects?: readonly GrillingSubject[] | undefined;
     discussionDir?: string | undefined;
   } = {},
@@ -624,7 +618,7 @@ export async function validateGrillingTrace(
   const issues: Issue[] = [];
   const stages = options.subjects ?? GRILLING_SUBJECTS;
   const candidates = await withOwedRuns(
-    candidatesIn(names, options.specScope, stages),
+    candidatesIn(names, options.flowScope, stages),
     root,
     options.discussionDir,
     stages,

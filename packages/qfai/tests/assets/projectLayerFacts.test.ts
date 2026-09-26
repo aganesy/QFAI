@@ -47,15 +47,16 @@ const PATH_CITATION =
  * glob, or a directory a run creates. Checking these would report a project's
  * own naming convention as a missing file.
  *
- * The run-created three are the ones a clean checkout does not have. `report/`
- * and `evidence/` hold tracked files and the directory survives; `review/`
- * holds none, so it exists only where a review has run. All three are real
- * parts of the layout and belong in a description of it.
+ * The run-created four are directories a clean checkout may not have.
+ * `evidence/` holds tracked files, so the directory survives; `discussion/`,
+ * `report/` and `review/` hold none, so each exists only where a run has
+ * written it. All four are real parts of the layout and belong in a
+ * description of it.
  */
 const NOT_A_PATH = [
   /[<>*]/, // `spec-XXXX`'s siblings, `skills/*`, `<spec-id>`
   /[A-Z]{3,}/, // `spec-NNNN`, `CON-API-*`
-  /^\.qfai\/(?:report|evidence|review)\//,
+  /^\.qfai\/(?:discussion|report|evidence|review)\//,
 ];
 
 async function layerFiles(): Promise<string[]> {

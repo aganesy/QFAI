@@ -65,7 +65,7 @@ async function ownWorkflows(): Promise<Workflow[]> {
   return out;
 }
 
-// QFAI:SPEC-0017:TC-0017-0016
+// QFAI:EX-0002-0014-03
 //
 // Annotated as of `CR-20260818-0007`, approved 2026-08-23, **option A**: the minimal-scope default is
 // the literal `permissions: { contents: read }`, and exactly three blocks are declared exceptions.
@@ -145,7 +145,7 @@ describe("the own tree's departures from minimal permission scope are a closed s
   });
 });
 
-// QFAI:SPEC-0017:TC-0017-0030
+// QFAI:EX-0002-0015-04
 //
 // Annotated as of `CR-20260820-0001`, approved 2026-08-23, **option C**: the prohibition on a
 // workflow-level Node literal stays tree-wide, and the publishing job is exempted explicitly rather than

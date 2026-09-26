@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "oldPath": ".qfai/decisions/CR-20260923-0012-a-spec-0012-ledger-row-records-a-source-edit-and-names-no-test-case.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260923-0012-a-spec-0012-ledger-row-records-a-source-edit-and-names-no-test-case.md",
+      "sha256": "3eb0234350192df67ef5565397e3928868baee78984146ac20e611f148e7896a",
+      "bytes": 10709
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260923-0014-three-spec-0012-ledger-rows-each-carry-several-boundaries-of-their-case.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260923-0014-three-spec-0012-ledger-rows-each-carry-several-boundaries-of-their-case.md",
+      "sha256": "dfd80f8e5d2d19ff6a1acae2b9c72656ab2df8a2ca7f209e31882e3c0c52ee03",
+      "bytes": 12077
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0008-the-batch-mode-case-checks-one-clause-of-the-mapping-it-cites.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0008-the-batch-mode-case-checks-one-clause-of-the-mapping-it-cites.md",
+      "sha256": "ebc900b5f8190ce9ff05b8420826905851b5df1db3c789582efa0a0cbf845899",
+      "bytes": 6227
+    },
+    {
+      "oldPath": ".qfai/decisions/CR-20260925-0011-spec-0003-still-describes-readme-generation-and-an-open-legacy-window.md",
+      "archivePath": ".qfai/evidence/migration-spec-to-story/retired/decisions/CR-20260925-0011-spec-0003-still-describes-readme-generation-and-an-open-legacy-window.md",
+      "sha256": "4d1d53be28ecaac89882da9a4978a169c8e1092d93172e101f074fb6e4c8826d",
+      "bytes": 11955
+    }
+  ]
+}

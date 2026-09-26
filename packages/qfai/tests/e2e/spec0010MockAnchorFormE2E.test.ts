@@ -23,7 +23,7 @@ const discussionSkillDir = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-discussion",
 );
 const workshopTemplate = path.join(discussionSkillDir, "templates", "03_Story-Workshop.md");
@@ -43,7 +43,7 @@ function config(): QfaiConfig {
   return {
     paths: {
       discussionDir: ".qfai/discussion",
-      specsDir: ".qfai/specs",
+      specsDir: ".qfai/spec",
     },
     uiux: { htmlMockTimeout: 5000 },
   } as unknown as QfaiConfig;
@@ -64,7 +64,7 @@ async function localRefFindings(root: string): Promise<string[]> {
   return issues.filter((entry) => entry.code === "QFAI-MOCK-010").map((entry) => entry.message);
 }
 
-// QFAI:SPEC-0010:US-0010-0011
+// QFAI:BF-0001
 describe("E2E: the mock template emits anchor-form hrefs by default (US-0010-0011)", () => {
   it("ships a mock whose links are anchor-form", async () => {
     const template = await readFile(workshopTemplate, "utf-8");

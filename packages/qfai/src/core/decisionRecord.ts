@@ -1,7 +1,7 @@
 /**
  * Envelope-deviation decision-record writer.
  *
- * Persists `.qfai/evidence/decisions/<ISO8601-ts>.json` whenever an
+ * Persists `.qfai/evidence/decision/<ISO8601-ts>.json` whenever an
  * `AskUserQuestion` (issued by a skill body) names one of the four
  * envelope-deviation contexts in its `envelopeContractClause` slot:
  *   - skill-envelope
@@ -19,7 +19,7 @@
  *
  * A decision record carries the operator's approval and cannot be
  * regenerated, so — unlike the regenerable stage evidence beside it —
- * `.qfai/evidence/decisions/` is re-included by the managed `.gitignore`
+ * `.qfai/evidence/decision/` is re-included by the managed `.gitignore`
  * block `qfai init` writes (`QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`).
  */
 import { mkdir, writeFile } from "node:fs/promises";
@@ -82,7 +82,7 @@ export type WriteDecisionRecordResult = {
   path?: string;
 };
 
-const DECISIONS_REL = path.join(".qfai", "evidence", "decisions");
+const DECISION_REL = path.join(".qfai", "evidence", "decision");
 
 /**
  * File-safe ISO-8601 stamp. Colons are illegal in Windows filenames,
@@ -131,7 +131,7 @@ export async function writeDecisionRecord(
     timestamp: now.toISOString(),
     envelopeContractClause: input.envelopeContractClause,
   };
-  const dir = path.join(input.root, DECISIONS_REL);
+  const dir = path.join(input.root, DECISION_REL);
   await mkdir(dir, { recursive: true });
   const payload = `${JSON.stringify(record, null, 2)}\n`;
   // Exclusive-create retry loop. Caps the retry count to a safety
@@ -169,7 +169,7 @@ export async function writeDecisionRecord(
 }
 
 /**
- * Read all decision records under `<root>/.qfai/evidence/decisions/`.
+ * Read all decision records under `<root>/.qfai/evidence/decision/`.
  * Returns an empty array when the directory is absent — empty store is
  * a normal state (no records yet).
  */
@@ -178,7 +178,7 @@ export async function readDecisionRecords(
 ): Promise<Array<DecisionRecord & { __file: string }>> {
   const { readdir, readFile } = await import("node:fs/promises");
   const { isEnoent } = await import("./fs/errno.js");
-  const dir = path.join(root, DECISIONS_REL);
+  const dir = path.join(root, DECISION_REL);
   let entries: string[];
   try {
     entries = await readdir(dir);

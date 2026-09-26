@@ -1,0 +1,240 @@
+---
+name: qfai-implement
+title: QFAI Implement (TDD micro-cycle)
+description: "Use when invoked by name or handed a QFAI work order. Implements one business flow through example tests and a complete Red, Green, Refactor cycle."
+argument-hint: "<BF-ID> [EX-ID...]"
+allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
+roles:
+  - orchestrator
+  - delivery-planner
+  - test-design-analyst
+  - qa-strategist
+  - frontend-engineer
+  - backend-engineer
+  - devops-ci-engineer
+  - implementation-reviewer
+  - qa-gatekeeper
+  - completion-reviewer
+  - product-surface-reviewer
+routing-profile: implementation-heavy
+mode: approval-gated
+---
+
+## /qfai-implement — Implement a business flow
+
+[DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
+
+## User Questions (AskUserQuestion Protocol)
+
+Agents MUST follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
+for every user question. With `--auto`, they MUST ask nothing and record
+explicit assumptions in the stage evidence.
+
+Work within one `BF-NNNN` flow. Read its stories, acceptance criteria,
+examples, and owning contracts from the configured `paths.specsDir` and
+`paths.contractsDir`. The default spec tree is `.qfai/spec/`. Resolve
+contract paths from configuration; do not assume a directory name. Read
+`.agents/rules/minimal-implementation.md`, `rule/test-layers.md`, and the current
+agent cards before assigning work. An EX is the unit of implementation review;
+the BF is the unit of scoped completion.
+
+Send a decision, a question for the user or an out-of-scope discovery to
+`/qfai-sdd` as a change request. An out-of-scope discovery does not stop the
+current flow. A diagnosed missing test on behaviour an existing AC states is
+the one scope gap that raises no change request and adds no EX here: an EX that
+states the case is worked as an EX no test annotates, and where none does,
+`/qfai-sdd` adds it.
+
+For UI work, read root `DESIGN.md` and the linked UI contracts under
+`<paths.contractsDir>/ui/` before changing the surface. Review rendered HTML
+or screenshots at desktop and mobile sizes against those inputs; source code
+alone does not prove the user-visible result.
+
+### Preflight
+
+1. Follow `rule/shared-skill-operating-baseline.md` for steering and format,
+   and `rule/shared-skill-delegation-baseline.md` for the first delegation,
+   capability check, and failure handling. Confirm the flow and its links are
+   internally consistent. A changed upstream obligation follows
+   `rule/drift-protocol.md` before dependent work resumes.
+2. Read the **Standard commands** section of
+   `<paths.contractsDir>/tech.md`. Obtain Test, Lint, Typecheck, and Build
+   commands only from that section. If it is missing or stale, repair the
+   project contract before using a substitute command.
+3. Read the current `/qfai-atdd` handoff and
+   `.qfai/evidence/atdd-BF-NNNN.md`. Confirm the BF E2E and AC integration
+   or API tests and their observed results. A deliberate acceptance RED is
+   handed to the matching implementation; it is not a passing test.
+4. Check test roots, `validation.traceability.testFileGlobs`, and
+   exclusions. An EX test must be collected by the runner and by validation.
+   A test with only an annotation or placeholder is not behavioral proof.
+
+Use a bounded grilling session at preflight for unresolved implementation
+choices and when a contradiction or technical obstacle arises. Follow
+`rule/constitution.md` and `.agents/rules/grilling.md`. A critical decision goes to
+the user; accepted local decisions are recorded in the current evidence.
+Do not reopen settled requirements as implementation preferences.
+
+### Select the next example
+
+Start each selection by running
+`npx qfai validate --profile tdd --flow BF-NNNN`. Record the run start time.
+Read its `validate.flow-<ids>.json` result even when the command exits
+nonzero. The result is usable only when the file exists, `profile` is
+`tdd`, and `generatedAt` is no earlier than this run start. If any check
+fails, stop and report the command, exit result, and missing or stale field;
+never infer that the flow has no remaining work.
+
+Take the lowest EX ID among that result's **test-obligation EX findings**.
+The validator owns the obligation predicate, including decision exceptions;
+do not reconstruct it in this skill. A caller that names several EX IDs works
+each named ID serially after confirming each is in the current flow and is
+owed. Re-run validation before selecting the next unassigned EX. When there
+is no such finding, proceed to the flow completion checkpoint. Report any
+other finding with its owner; a clean EX selection alone is not a PASS.
+
+See `references/cross-spec-ownership.md` for changes that touch another
+flow and `references/parallelization-policy.md` for independently owned
+slices. Work one EX at a time by default. Parallel work requires disjoint
+writes, a passing technical gate, and the required user consent. Review the
+integrated result after slices join.
+
+### Red, Green, Refactor
+
+For the selected EX, create or strengthen a test in a non-acceptance layer and
+annotate it `QFAI:EX-NNNN-NNNN-NN`. Preserve the BF E2E and AC integration
+or API coverage owned by `/qfai-atdd`. Put the test where the observable
+behavior belongs. Use `references/walking-skeleton.md` and
+`references/oracle-strength.md` to choose the smallest useful seam and a
+falsifiable assertion.
+
+1. **Red:** Run the smallest applicable Test command from `tech.md`.
+   Observe the assertion fail for the intended behavior before changing
+   production code. A load error, missing dependency, or broken fixture is
+   not an admissible RED. Record command, selector, failure, test hash, and
+   revision. Follow `references/red-admissibility.md` and
+   `references/red-not-observable.md` when existing behavior prevents an
+   ordinary RED.
+2. **Green:** Write the minimum production code that makes this test pass.
+   Do not generalize to an untested case. Run the same selector and record
+   command, outcome, and revision. Failures outside the selected EX receive
+   an owner and a repair path.
+3. **Refactor:** Improve the tested code without changing its behavior.
+   Re-run the selector and affected tests, then applicable Lint, Typecheck,
+   and Build commands from `tech.md`. Record each command and result.
+   A failing or unrun gate cannot be reported as PASS.
+
+The qa-gatekeeper checks the observed RED and GREEN evidence. The
+implementation-reviewer checks code and tests; the completion-reviewer checks
+obligation, commands, and evidence independently. Route UI-affecting work to
+the product-surface-reviewer under `references/ui-affecting.md`. Use
+`references/relevant-test-suite.md` for affected suite selection and
+`references/checkpoint-verification.md` for the flow checkpoint. A reviewer
+REVISE follows `rule/review-convergence.md`; repair and re-review the current
+revision. The author does not certify their own result.
+
+### Evidence and review
+
+Write `.qfai/evidence/implement-BF-NNNN.md`. Give each example its own
+`### EX-NNNN-NNNN-NN` section with the obligation, test path and selector,
+RED, GREEN, and Refactor commands and observed results, revisions, hashes,
+reviewer verdicts, and open findings. Keep prior rounds as history; new work
+gets a new round. Evidence without a command and result pair does not prove a
+gate. Follow `references/evidence-revision.md` and
+`references/round-evidence.md` for freshness and round fields.
+
+A review pack identifies the BF, EX, evidence path, revision and requested
+reviewers. Each required reviewer must pass the same final revision.
+Seal the pack and record its path and seal in the EX evidence. Follow
+`references/review-artifact-layout.md` and
+`references/finding-classification.md`. A record correction follows
+`rule/drift-protocol.md` and never changes a sealed pack.
+
+### Reviewer Gate
+
+The implementation reviewer and qa-gatekeeper check the selected EX, its
+RED/GREEN evidence, code, and relevant rendered surface. The completion
+reviewer checks the integrated BF and evidence. Enforce the Drift Protocol
+and `rule/test-layers.md`; test volume and planning estimates are signals,
+not gates. Record explicit PASS or REVISE for the current revision.
+
+### Completion gate
+
+Report the flow complete only when:
+
+1. A fresh validate result has no test-obligation EX finding for this BF,
+   and every other in-scope error is resolved or assigned to its governing
+   stage with an explicit incomplete result.
+2. Every implemented EX has an observed RED, GREEN and Refactor result,
+   current evidence and the required independent PASS reviews.
+3. The affected tests and the Test, Lint, Typecheck and Build commands from
+   `tech.md` have been run on the integrated tree, or a command's documented
+   applicability makes it unnecessary.
+4. `npx qfai validate --profile tdd --fail-on error --flow BF-NNNN` succeeds
+   on the final tree. Read its fresh JSON result using the same freshness
+   checks as selection.
+
+When no EX work remains at entry, still run the current flow checkpoint;
+report "nothing to do" only after the scoped gate and applicable commands
+have passed. Record unresolved risks and upstream findings without calling
+them complete. Give the user the changed EX IDs, test paths, command results,
+review verdicts and evidence path.
+`/qfai-verify` owns the repository-wide gate.
+
+## Grilling (MANDATORY)
+
+Article IX of `.qfai/assistant/rule/constitution.md` owns the two sessions
+this stage may run; `.agents/rules/grilling.md` owns the method.
+Neither is restated here. Both sessions are delegated. Critical decisions go
+to the user; other decisions follow the recorded griller recommendation.
+
+- **At the preflight.** Open a session for unresolved implementation choices.
+  Record `confidence high` when there was no session to open.
+- **On detection.** Stop and open a session when a contradiction, missing
+  behavior case, or technical obstacle appears during implementation.
+- **Neither session changes settled input.** Route a needed story or contract
+  change through `rule/drift-protocol.md`; the run solves local obstacles.
+
+Record the sessions in `.qfai/evidence/implement-BF-NNNN.md` under
+`## Grilling Session`. Start the block with the invocation's UTC start time to
+the millisecond and `Preflight: session opened` or `Preflight: confidence high`.
+For every session that the user did not stop, record its session ID, subject,
+ending, end time, source revision, time work resumed (or why it did not),
+frontier, lookups, decisions, open nodes, and escalations. The ending is one
+of `confirmed`, `user-closed`, `adopted`, or `no-question`; a `stopped`
+session is reported to the user without writing the artifact they stopped.
+List each open node beneath the record with its session ID. Record every
+adopted decision and user answer in the Work Orders Summary, keyed to this
+invocation and session; record `none` when no decision was settled.
+Use one block per invocation, with a unique session ID for each row. Give
+the reviewer the run start in its work order so an older block cannot pass
+as the current run. `Revision` is a git revision or
+`working-tree+<hash>`; `Ended at` cannot precede the run start, and
+`Work resumed` must follow `Ended at`. The `Open` count must equal the
+session-keyed open lines. The `Decisions` count must equal the Work Orders
+Summary decisions keyed to the session and invocation; an unanswered escalation
+is an open node, not a settled decision.
+
+The completion reviewer checks the record against this invocation's start
+time, each counted decision and open node, and the source revision. A missing
+record, duplicate session key, unanswered critical decision, or work resumed
+after a `stopped` session is `REVISE`. A `no-question` ending cannot hide an open node:
+record the open question in the stage evidence and leave completion pending.
+
+## Default Autopilot Policy
+
+- auto-decide: implementation seam, test selector, and local refactor that
+  preserve the active story and contract behavior.
+- ask-user: approval-required operations, scope expansion, and critical
+  product choices. Do not answer these in a no-question mode.
+- hard-required:
+
+The BF, EX, and contract sources come from the invocation and configured tree.
+If they cannot be resolved, stop at preflight and report the missing source.
+
+project_memory:
+
+- Select EX work from a fresh flow-scoped validator result, one EX at a time.
+- Keep BF E2E and AC integration or API obligations with `/qfai-atdd`.
