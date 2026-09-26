@@ -118,6 +118,7 @@ describe("agent cards are the only definitions", () => {
 });
 
 describe("routing defaults are package data", () => {
+  // QFAI:EX-0001-0164-01
   it("keeps routing and review profiles together outside init assets", async () => {
     const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
       routing: Array<{ skill: string; phases: Array<{ id: string }>; review_profile: string }>;
