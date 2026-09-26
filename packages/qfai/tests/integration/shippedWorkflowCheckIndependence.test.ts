@@ -180,6 +180,7 @@ describe("delivered document checks run independently and require a complete res
   });
 
   // QFAI:EX-0002-0003-05
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0056 (TDD-0059): keeps the existing external check name and always runs its matrix aggregate", async () => {
     const docs = (await jobsOf(DOCS))[`${DOCS}#docs`];
     expect(docs?.["name"]).toBe("qfai docs (document shape and Mermaid syntax)");
@@ -190,6 +191,7 @@ describe("delivered document checks run independently and require a complete res
     expect(collectJobSteps(docs ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
   });
 
+  // QFAI:EX-0002-0003-06
   it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
     "executes the delivered aggregate for matrix result %j",
     async (result) => {
@@ -212,6 +214,7 @@ describe("delivered document checks run independently and require a complete res
     },
   );
 
+  // QFAI:EX-0002-0003-06
   it.each([
     ["skipped", "false", 0],
     ["skipped", "true", 1],
@@ -281,6 +284,7 @@ describe("delivered validation profiles run independently and require a complete
   });
 
   // QFAI:EX-0002-0003-05
+  // QFAI:EX-0002-0003-06
   it("TC-0003-0057 (TDD-0061): keeps the existing external validation check as an always-run complete verdict", async () => {
     const verdict = (await jobsOf(VALIDATE))[`${VALIDATE}#summary`];
     expect(verdict?.["name"]).toBe("qfai validate (full profile, fail on error)");
@@ -291,6 +295,7 @@ describe("delivered validation profiles run independently and require a complete
     expect(collectJobSteps(verdict ?? {}).some((step) => step["uses"] !== undefined)).toBe(false);
   });
 
+  // QFAI:EX-0002-0003-06
   it.each(["success", "failure", "cancelled", "timed_out", "skipped", "unknown", ""])(
     "executes the delivered validation verdict for profile result %j",
     async (result) => {

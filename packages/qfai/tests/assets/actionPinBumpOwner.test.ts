@@ -49,7 +49,6 @@
 // QFAI:EX-0002-0014-09
 // QFAI:EX-0002-0014-10
 // QFAI:EX-0002-0018-09
-// QFAI:EX-0002-0019-04
 // QFAI:EX-0002-0019-05
 
 import { existsSync, readFileSync } from "node:fs";
@@ -301,6 +300,7 @@ describe("TC-0017-0052 (TDD-0052): shipped coverage never precedes the shipped h
 });
 
 describe("TC-0017-0066 (TDD-0066): a slower or flakier higher value keeps the lower one", () => {
+  // QFAI:EX-0002-0019-04
   it("records the flakiness measurement, and what happened instead of lowering the value", () => {
     const section = decisionSection(PARALLELISM_DR);
     expect(section, `${PARALLELISM_DR} must record the parallelism episode`).not.toBe("");
@@ -363,8 +363,8 @@ describe("TC-0017-0067 (TDD-0067): revising the declared starting value needs th
   });
 });
 
-// QFAI:EX-0002-0019-03
 describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded measurement", () => {
+  // QFAI:EX-0002-0019-03
   it("compares at least two settings on the largest project and places the adopted value", () => {
     // `EX-0017-0049` fixes both halves: a timing artifact comparing at least two worker
     // settings ON THE LARGEST PROJECT plus the value actually adopted, and the adopted setting

@@ -30,4 +30,17 @@ describe("the Windows job's selection and verdict", () => {
     expect(verdictExit(needs)).toBe(1);
     expect(verdictExit({ ...needs, [WINDOWS_JOB]: { result: "success" } })).toBe(0);
   });
+
+  // QFAI:EX-0002-0024-05
+  it("A skipped Windows job leaves the aggregate verdict passing", () => {
+    const needs = Object.fromEntries(
+      needsOf(job("ci-pass")).map((name) => [
+        name,
+        { result: name === WINDOWS_JOB ? "skipped" : "success" },
+      ]),
+    );
+    expect(Object.keys(needs)).toContain(WINDOWS_JOB);
+
+    expect(verdictExit(needs)).toBe(0);
+  });
 });
