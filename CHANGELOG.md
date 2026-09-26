@@ -83,6 +83,24 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `qfai init` installs the skill and does not seed a story tree beside the old
   one.
 
+- **The migration ends ready for a free-text request.** Two steps follow the
+  ten that move the project.
+
+  - Step 11 (`11-install-entry.mjs`) brings each shipped skill up to the
+    installed package and adds the missing host skill links, the entry
+    directive in `AGENTS.md` and `CLAUDE.md`, and the `.qfai/run/` and
+    `!.qfai/evidence/workflow/` lines of the managed `.gitignore` block. A
+    skill the project changed is moved whole to
+    `.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/` first, never
+    deleted.
+  - Step 12 (`12-check-entry.mjs`) writes nothing. It makes the project
+    checks `npx qfai workflow start` makes, and checks what step 11
+    installs. Each failure is listed for a person by name —
+    `contract-undeclared`, `reviewer-missing`, `invalid-mode`,
+    `entry-directive`, `gitignore` or `qfai-run-link` — and the step exits 3.
+  - The skill then runs `npx qfai validate` and hands the first free-text
+    change request to `qfai-run`.
+
 - **Project overrides for agent routing and review profiles.** The defaults
   ship inside the package, in `assets/defaults/agent-routing.yml` and
   `assets/defaults/review-profiles.yml`. A `routing:` or `reviewProfiles:`

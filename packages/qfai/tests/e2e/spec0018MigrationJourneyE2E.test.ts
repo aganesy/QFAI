@@ -61,6 +61,8 @@ const SCRIPT_NAMES = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const HOST_AGENT_DIRS = [".claude/agents", ".github/agents"];

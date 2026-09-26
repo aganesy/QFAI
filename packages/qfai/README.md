@@ -259,8 +259,9 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skill/
 - **qfai-implement**: Implement a BF through EX tests and a Red, Green,
   Refactor cycle for each example.
 - **qfai-migration-v1-to-v2**: Move an existing spec-pack project to the
-  story tree with ten bundled scripts. Preview and apply each step, then resolve
-  items retained in the migration reports. The installed
+  story tree with twelve bundled scripts. Preview and apply each step, then
+  resolve items retained in the migration reports. The last two install the
+  free-text entry and check that `qfai-run` can start a run. The installed
   `.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md`
   defines the plan and report. This skill is not
   a CLI command. See the [2.0.0 migration guide](https://github.com/aganesy/QFAI/blob/main/packages/qfai/docs/MIGRATION-2.0.0.md).

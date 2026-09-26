@@ -45,6 +45,8 @@ const scriptNames = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const changedPathPatterns: readonly (readonly RegExp[])[] = [
   [

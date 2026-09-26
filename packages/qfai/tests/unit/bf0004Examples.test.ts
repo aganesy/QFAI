@@ -625,7 +625,8 @@ describe("BF-0004 migration examples", () => {
       "complete Markdown report and exit code",
       "Remove facts duplicated in different words",
       "Run steps 4 to 10 in order, each with `--dry-run` followed by the real run",
-      "After step 10, run `npx qfai validate` through the launcher proven by preflight",
+      "After step 10, run steps 11 and 12",
+      "run `npx qfai validate` through the launcher proven by preflight",
     ];
     const prose = skill.replace(/\s+/g, " ");
     const positions = markers.map((marker) => prose.indexOf(marker));

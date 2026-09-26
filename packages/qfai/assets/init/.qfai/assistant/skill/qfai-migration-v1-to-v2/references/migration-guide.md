@@ -77,6 +77,8 @@ evidence. The scripts write no report file themselves.
 | 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
 | 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block.                                                                 |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: shipped skills, host skill links, entry directive and `.gitignore` lines.  |
+| 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project.                        |
 
 Run a row from the project root in this form:
 
@@ -86,34 +88,39 @@ node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories
 ```
 
 The shared `scripts/_step.mjs` loads the locally installed package for each
-script. Keep it with the ten numbered scripts.
+script. Keep it with the twelve numbered scripts.
 
 ## Write boundary
 
 The dry run lists the operations the real run would perform. No step makes a
 network call. The scripts write only these targets:
 
-| Target                                                                                                                                                      | Steps   |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| `.qfai/` and configured spec and contract paths outside it                                                                                                  | 1–7     |
-| `qfai.config.yaml`                                                                                                                                          | 1, 3    |
-| `QFAI:` annotation lines in test files                                                                                                                      | 8       |
-| `.claude/skills`, `.agents/skills`, `.codex/skills`, `.github/skills`, `.claude/agents`, `.github/agents`                                                   | 9       |
-| Managed block of `.gitignore`                                                                                                                               | 10      |
-| Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10 |
+| Target                                                                                                                                                      | Steps                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `.qfai/` and configured spec and contract paths outside it                                                                                                  | 1–7                                  |
+| `qfai.config.yaml`                                                                                                                                          | 1, 3                                 |
+| `QFAI:` annotation lines in test files                                                                                                                      | 8                                    |
+| `.claude/skills`, `.agents/skills`, `.codex/skills`, `.github/skills`, `.claude/agents`, `.github/agents`                                                   | 9; 11 for the four skill directories |
+| Managed block of `.gitignore`                                                                                                                               | 10, 11                               |
+| Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
+| `AGENTS.md` and `CLAUDE.md`, only to add the entry directive, with a staging file beside each                                                               | 11                                   |
+| Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10, 11                          |
 
 The scripts verify ownership before clearing staging left by an interrupted
 run. If a marker is incomplete or the staged bytes changed, they preserve it
 for a person to inspect.
 
-Every report contains `## Operations`. Steps 2 through 10 also contain
+Step 12 writes nothing.
+
+Every report contains `## Operations`. Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
 `## Annotations kept`. Empty sections say `none`. Exit 0 means the step is
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
-completed step is safe to run again and changes no file. If every step reports
-`none` on a project already using the story tree, there is nothing to migrate.
+completed step is safe to run again and changes no file. If steps 1 to 10 all
+report `none` on a project already using the story tree, there is nothing to
+migrate; run steps 11 and 12 all the same.
 
 Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
 is archived under `retired/_policies/` and none of its sections was copied to
@@ -140,12 +147,50 @@ annotation only in an E2E test. Contract annotations, unresolved annotations
 and old deferral markers stay in place and are reported. Step 9 changes only the
 host integration links. Step 10 changes only the managed `.gitignore` block.
 
-After step 10, run `npx qfai validate` from the local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve every
+## Install and check the free-text entry
+
+Step 11 makes each skill directory the package ships equal to the installed
+package's copy. A copy the project changed is first moved whole to
+`.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/`; nothing is
+deleted. Where that archive already holds a different copy, both stay as they
+are and the pair is reported for a person: keep the copy you need, delete the
+other, and run step 11 again. A skill the package does not ship and
+`.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
+host skill link, the entry directive at the top of `AGENTS.md` and `CLAUDE.md`,
+and the `.qfai/run/` and `!.qfai/evidence/workflow/` lines of the managed
+`.gitignore` block. A path it cannot write is reported with the reason.
+
+Step 12 makes the checks `npx qfai workflow start` makes on the project,
+without starting a run, and checks what step 11 installs. Each failed check is
+reported by name:
+
+| Check                 | Fails when                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `contract-undeclared` | A skill a built-in plan names is missing, or its Operations table lacks an operation a plan uses |
+| `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
+| `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
+| `entry-directive`     | `AGENTS.md` or `CLAUDE.md` lacks the entry directive                                             |
+| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/` or `!.qfai/evidence/workflow/`                 |
+| `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
+
+Run step 11 again for what it installs. A routing override belongs to the
+project, so its owner decides whether to restore the reviewer. Rerun step 12
+until it exits 0.
+
+After step 12, run `npx qfai validate` from the local dependency (or `yarn exec qfai validate` for Plug'n'Play). Resolve every
 layout and chain error. Its test-obligation findings identify any business
 flow, acceptance criterion or example still missing a test in its layer. E2E
 tests cover flows, integration and API tests cover criteria, and other tests
 cover examples. Record a permitted exception in `decisions.md` when a test is
 intentionally absent.
+
+Then send the project's first free-text change request to the `qfai-run`
+skill. The entry directive step 11 added points agents there.
+
+A migration begun under the skill's earlier name,
+`qfai-migration-spec-to-story`, continues from the step it reached: the plan,
+the ID map and the archives stay under
+`.qfai/evidence/migration-spec-to-story/`.
 
 ## Former migration memos
 

@@ -2821,6 +2821,56 @@ async function updateUneditedRuleMasters(
   return { copied, skipped, installed };
 }
 
+export type EntryDirectivePlan =
+  | { kind: "current" }
+  | { kind: "refused"; reason: string }
+  | { kind: "create" | "prepend"; apply: () => Promise<void> };
+
+/**
+ * What giving one agent entry point the entry directive takes, by init's
+ * mechanism: an absent file is written from the package's seed, and an
+ * existing one has the directive prepended where no operative copy exists. A
+ * file that mechanism will not rewrite is refused with the reason.
+ */
+export async function planEntryDirective(
+  destRoot: string,
+  name: (typeof AGENT_ENTRY_POINT_FILES)[number],
+): Promise<EntryDirectivePlan> {
+  const target = path.join(destRoot, name);
+  const template = await readTextFileIfPresent(path.join(getInitAssetsDir(), "root", name));
+  if (template === null) throw new Error(`The installed package has no ${name} seed.`);
+  const entry = await safeLstat(target);
+  if (entry === undefined) {
+    return {
+      kind: "create",
+      apply: async () => {
+        await writeFile(target, template, { encoding: "utf-8", flag: "wx" });
+      },
+    };
+  }
+  if (!entry.isFile() && !entry.isSymbolicLink()) {
+    return { kind: "refused", reason: "It is not a regular file." };
+  }
+  const existing = await readTextFileIfPresent(target);
+  if (existing === null) return { kind: "refused", reason: "It is a link to nothing." };
+  const merged = addEntryDirective(existing, template);
+  if (merged === existing) return { kind: "current" };
+  const refusal = await refuseUnsafeEntryPointRewrite(
+    target,
+    existing,
+    destRoot,
+    "Add the entry directive",
+  );
+  if (refusal !== null) return { kind: "refused", reason: refusal };
+  return {
+    kind: "prepend",
+    apply: async () => {
+      const failure = await replaceEntryPointFile(target, merged, destRoot, existing);
+      if (failure !== null) throw new Error(`${name} was left unchanged. ${failure}`);
+    },
+  };
+}
+
 async function ensureAgentEntryPointRules(
   rootAssets: string,
   destRoot: string,
@@ -3740,7 +3790,7 @@ function managedBlockEnd(
  * what `negationsOutrankLaterIgnores` and the last-pattern-wins semantics
  * depend on) and any line only a later block carries is appended.
  */
-function extractManagedBlock(content: string): string {
+export function extractManagedBlock(content: string): string {
   const lines = content.split("\n");
   const knownLines = new Set([...QFAI_GITIGNORE_BLOCK.split("\n"), ...QFAI_GITIGNORE_LEGACY_LINES]);
 
@@ -3984,10 +4034,11 @@ function report(
 const RETIRED_MIGRATION_SKILL = "qfai-migration-spec-to-story";
 
 /**
- * Where a retired skill directory is kept whole, beside the migration's plan
- * and ID map.
+ * Where a skill directory that was replaced or retired is kept whole, beside
+ * the migration's plan and ID map. The migration's own step 11 archives here
+ * too, so a project has one place to look.
  */
-const SKILL_ARCHIVE_DIR = path.join(
+export const SKILL_ARCHIVE_DIR = path.join(
   ".qfai",
   "evidence",
   "migration-spec-to-story",
@@ -4516,6 +4567,29 @@ async function createSkillSymlinks(
   }
 
   return { copied, skipped };
+}
+
+/**
+ * Creates one shipped skill's host link with the writer `createSkillSymlinks`
+ * uses. The caller has found the path empty; anything there by the time the
+ * link is written is the project's, so the call fails rather than replace it.
+ */
+export async function createSkillLink(
+  destRoot: string,
+  integDir: string,
+  skillId: string,
+): Promise<void> {
+  const linkPath = path.join(destRoot, integDir, skillId);
+  const target = path.relative(
+    path.join(destRoot, integDir),
+    path.join(destRoot, ".qfai", "assistant", "skill", skillId),
+  );
+  const result = await ensureSymlink(linkPath, target, "dir", { force: false, dryRun: false });
+  if (result !== "created") {
+    throw new Error(
+      `${toRelativePath(destRoot, linkPath)} was occupied before the link was written.`,
+    );
+  }
 }
 
 async function createAgentSymlinks(

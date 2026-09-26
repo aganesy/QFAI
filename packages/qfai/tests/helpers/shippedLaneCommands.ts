@@ -1828,6 +1828,14 @@ export const ALLOWED_MIGRATION_SCRIPTS: ReadonlyMap<string, string> = new Map([
     ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/10-update-gitignore.mjs",
     "209fc3d2f4b7caaf33cba217d20573ad30eab897f1bf4cfbd48ef716a41a5641",
   ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/11-install-entry.mjs",
+    "3f1db593faa41352c289ae039c36d69895878fcfc6cf0b48d1d3089dfb07f03c",
+  ],
+  [
+    ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/12-check-entry.mjs",
+    "cada6bd144e55e06155424500416e5ab227194ebde975285f5d1a394d9f31eec",
+  ],
 ]);
 
 /**
