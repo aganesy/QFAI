@@ -357,6 +357,22 @@ describe("delegation failure taxonomy is actionable", () => {
       expect(content).toContain("Status (PASS/REVISE/PENDING)");
       expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
     }
+    const sddEvidence = await readAsset(
+      path.join(
+        ASSETS,
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-sdd",
+        "templates",
+        "evidence",
+        "sdd-flow.md",
+      ),
+    );
+    expect(sddEvidence).toContain(
+      "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
+    );
     for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
       const content = await readAsset(shippedSkill(skillId));
       // The closing `)` is what separates the retired schema from the current

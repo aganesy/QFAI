@@ -27,6 +27,6 @@ Scenario: An ID carries the number of the directory it sits in
 Scenario: The next ID is the highest plus one
   Given a project on the story tree
   When the next ID of a shape is chosen
-  Then it is the highest ID of that shape the tree names, `decisions.md` rows included, plus one
+  Then it is the highest ID of that shape the tree names under the same parent (the flow for a US, the story for an AC or EX), `decisions.md` rows included, plus one
   And a gap is never filled and a retired ID is never reissued
 ```
