@@ -24,6 +24,6 @@
 ## Source Provenance
 
 - Story block: spec-0001 US-0001-0010, which `main` added to spec-0001 (archived
-  pre-merge pack at `.qfai/evidence/migration-spec-to-story/retired/spec-0001/`;
+  pre-merge pack of spec-0001;
   main's text at `b5d357c14:.qfai/specs/spec-0001/02_User-stories.md`).
   `decisions.md#DEC-0745` records the carry.

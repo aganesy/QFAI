@@ -24,5 +24,5 @@ As a QFAI user, I want `/qfai-discussion` to produce the canonical 15-file discu
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0002/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0002/02_User-stories.md#us-0002-0001`
+- Spec scope: the Scope section of retired spec-0002
+- Story block: `us-0002-0001` of retired spec-0002

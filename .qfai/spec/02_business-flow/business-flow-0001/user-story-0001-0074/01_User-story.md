@@ -27,5 +27,5 @@ As a QA Engineer, I want test cases evaluated for quality depth (boundary values
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0008/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0008/02_User-stories.md#us-0008-0006`
+- Spec scope: the Scope section of retired spec-0008
+- Story block: `us-0008-0006` of retired spec-0008

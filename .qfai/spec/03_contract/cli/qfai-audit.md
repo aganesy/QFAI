@@ -49,9 +49,9 @@ The library writer `writeDecisionRecord` creates a JSON record only when
 case. Other questions create no file. A record holds `question`, `answer`,
 `scope`, `operatorIdentity`, `timestamp`, and `envelopeContractClause`. Its
 filename uses a Windows-safe ISO-8601 timestamp; exclusive creation and a
-numeric suffix protect records written in the same millisecond. The managed
-`.gitignore` block re-includes `.qfai/evidence/decision/` so these approvals
-remain tracked. The command's SHOULD-level status describes the convenience
+numeric suffix protect records written in the same millisecond. The records
+are local: the managed `.gitignore` block ignores `.qfai/evidence/` as a whole,
+so the command lists the records of the checkout it runs in. The command's SHOULD-level status describes the convenience
 of the query; it does not make the decision record optional.
 
 ## Rules

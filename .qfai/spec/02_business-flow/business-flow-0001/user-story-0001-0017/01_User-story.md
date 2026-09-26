@@ -24,5 +24,5 @@ As a QFAI user, I want discussion outputs to hand off cleanly into `/qfai-sdd`, 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0002/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0002/02_User-stories.md#us-0002-0008`
+- Spec scope: the Scope section of retired spec-0002
+- Story block: `us-0002-0008` of retired spec-0002

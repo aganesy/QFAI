@@ -22,5 +22,5 @@ As a QFAI maintainer, I want a single canonical cross-skill handoff schema (`pac
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/02_User-stories.md#us-0015-0011`
+- Spec scope: the Scope section of retired spec-0015
+- Story block: `us-0015-0011` of retired spec-0015

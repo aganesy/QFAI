@@ -18,5 +18,5 @@
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0003/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0003/02_User-stories.md#us-0003-0004`
+- Spec scope: the Scope section of retired spec-0003
+- Story block: `us-0003-0004` of retired spec-0003

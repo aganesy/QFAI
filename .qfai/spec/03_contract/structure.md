@@ -19,8 +19,7 @@
   startup serves: it is the first command an adopter runs, it runs before the
   project has a configuration for anything else to read, and every other command
   reads the tree it writes. The Skeleton phase's exit criterion follows from that
-  choice, so it is recorded in `.qfai/evidence/skeleton.md` rather than left to be
-  re-derived.
+  choice.
 
 - Core modules: `packages/qfai/src/core` (the validators, the parsers and the
   domain readers), `packages/qfai/src/cli` (argument parsing and the command

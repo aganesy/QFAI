@@ -65,9 +65,10 @@ Scenario: Retries follow their class and a budget never counts as a pass
 # AC-0001-0196-08
 # Parent: US-0001-0196
 Scenario: The run judges cumulative changes against its authorized boundary
-  Given a run whose stages write their own records and whose core writes tracked evidence
+  Given a run whose stages write their own records and whose core writes its run records
   When the run checks a later write operation or `finish`
-  Then those changes are admitted against the state fixed at `start`
+  Then the stages' changes are admitted against the state fixed at `start`
+  And the core's run records are no run change, and no stage result may list them as its own
   And a `scope-dependency` repair made outside the run is admitted only for approved, named paths at their recorded digests
   And an unapproved or changed external path is refused
 

@@ -35,5 +35,5 @@ As a QFAI maintainer, I want `/qfai-sdd` to stop emitting the legacy design cont
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/02_User-stories.md#us-0013-0010`
+- Spec scope: the Scope section of retired spec-0013
+- Story block: `us-0013-0010` of retired spec-0013

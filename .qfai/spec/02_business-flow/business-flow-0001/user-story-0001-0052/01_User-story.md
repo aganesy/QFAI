@@ -38,5 +38,5 @@ As a UI-contract author, I want `auditProfile.ts` to accept both the legacy stri
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0038`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0038` of retired spec-0004
