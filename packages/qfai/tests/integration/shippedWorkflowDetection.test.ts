@@ -464,6 +464,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     return cases;
   };
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases emit a warning annotation", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -474,6 +475,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases select the full lane superset", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {
@@ -485,6 +487,7 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0004-02
   it("all three degraded cases exit 0 — fail open stays green because the superset claim holds", async () => {
     const violations: string[] = [];
     for (const { label, run } of await degradedCases()) {

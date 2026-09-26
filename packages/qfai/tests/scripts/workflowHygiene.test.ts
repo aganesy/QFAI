@@ -351,6 +351,7 @@ describe("TC-0017-0021 (TDD-0021): full history is job-scoped, never a workflow 
 
 // QFAI:EX-0002-0014-07
 describe("TC-0017-0022 (TDD-0022): every action reference is a full-SHA pin", () => {
+  // QFAI:EX-0002-0014-07
   it("resolves every uses value to a forty-hex commit SHA", () => {
     const uses = ownUses();
 
@@ -595,6 +596,33 @@ describe("TC-0017-0023 (TDD-0023): a planted floating reference exits 1 and is n
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  // QFAI:EX-0002-0014-07
+  it("names a floating major-version reference planted only in the composite setup action", () => {
+    const pinned = "uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0";
+    const floating = "uses: actions/setup-node@" + "v" + "5";
+    const actionRel = path.join(".github", "actions", "setup", "action.yml");
+    const dir = plantedTree((d) => {
+      const actionPath = path.join(d, actionRel);
+      const text = readFileSync(actionPath, "utf-8");
+      if (!text.includes(pinned)) {
+        throw new Error(
+          `${actionRel} no longer carries the pinned setup-node reference to replace`,
+        );
+      }
+      writeFileSync(actionPath, text.replace(pinned, floating), "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the lane must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "and name the failure code").toContain("R-WORKFLOW-HYGIENE-DRIFT");
+      expect
+        .soft(run.output, "and name the floating reference in the composite action")
+        .toContain("actions/setup-node@" + "v" + "5");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ── the expected-required-context declaration ────────────────────────────────
@@ -798,8 +826,8 @@ describe("TC-0017-0058 (TDD-0058): a declared context resolving to no job exits 
   });
 });
 
-// QFAI:EX-0002-0013-12
 describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the required job skippable", () => {
+  // QFAI:EX-0002-0018-07
   it("exits 1 for a condition on a job the declared one depends on, not only on itself", () => {
     // The transitive case, and the one worth a row of its own. A job whose dependency is
     // skipped is itself skipped, and a skipped job reports SUCCESS to branch protection —
@@ -888,6 +916,7 @@ describe("the required-context workflow starts on every pull request event, not 
 });
 
 describe("the required-context job may carry always(), and nothing else", () => {
+  // QFAI:EX-0002-0013-12
   it("accepts always() on the declared job", () => {
     // The live tree already declares the verdict, so this asserts the shipped arrangement rather
     // than a fixture: an unplanted run must be green with a conditional job holding the context.
@@ -900,6 +929,7 @@ describe("the required-context job may carry always(), and nothing else", () => 
     }
   });
 
+  // QFAI:EX-0002-0013-12
   it("rejects any other condition on the declared job", () => {
     // The half that keeps the exception from becoming "conditions are fine now". A condition that
     // can evaluate false skips the job, and a skipped job reports SUCCESS to branch protection.
@@ -1998,6 +2028,7 @@ ${run.output}`,
   // required context stays green over a verification that established nothing. Two shapes,
   // because the second is the one an author would write without meaning anything by it.
   for (const expression of ["${{ true }}", "${{ matrix.experimental }}"]) {
+    // QFAI:EX-0002-0016-05
     it(`treats continue-on-error: ${expression} as shrinking the set`, () => {
       const dir = plantedTree((d) => {
         const declared = firstContext(d);
@@ -2281,6 +2312,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
   ] as const;
 
   for (const [figure, planted] of FIGURES) {
+    // QFAI:EX-0002-0017-04
     it(`rejects a pinned ${figure} the workflow does not declare`, () => {
       // One row per figure rather than one row planting all three. A single row would pass against
       // a rule that compared the first and stopped, and that is the failure the loop inside the
@@ -2310,6 +2342,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
     });
   }
 
+  // QFAI:EX-0002-0017-04
   it("rejects a build-declaring job the pin stopped listing", () => {
     // The set half. A build moved out of one job and into another leaves the count unchanged, so
     // the jobs are compared as a set rather than counted.
@@ -2338,6 +2371,7 @@ describe("TC-0017-0086 (TDD-0095): a committed code-path pin the tree does not d
     }
   });
 
+  // QFAI:EX-0002-0017-04
   it("rejects a declaration that carries no code-path pin at all", () => {
     const dir = plantedTree((d) => {
       editDeclaration(d, (declaration) => {
@@ -3045,6 +3079,7 @@ describe("the lane writes the artifact the Reviewer Gate ingests", () => {
 
 // QFAI:EX-0002-0018-01
 describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened own tree", () => {
+  // QFAI:EX-0002-0014-07
   it("passes over the real tree with every one of the five rules evaluated", () => {
     const dir = plantedTree(() => {});
     try {
@@ -3067,6 +3102,7 @@ describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened ow
 
 // QFAI:EX-0002-0018-01
 describe("TC-0017-0045 (TDD-0045): the own-tree hygiene rule set is closed at exactly five", () => {
+  // QFAI:EX-0002-0018-01
   it("evaluates the five enumerated obligations over the workflows tree and no sixth", () => {
     const dir = plantedTree(() => {});
     try {
@@ -3216,6 +3252,7 @@ describe("TC-0017-0047 (TDD-0047): an unevaluated rule is absent, not implied by
 
 // QFAI:EX-0002-0018-03
 describe("TC-0017-0048 (TDD-0048): each planted violation exits 1 naming file, job and rule", () => {
+  // QFAI:EX-0002-0014-05
   it("falsifies every rule independently, and returns to green when the plant is removed", () => {
     for (const { rule, label, file, plant } of PLANTS) {
       let brokenJob = "";

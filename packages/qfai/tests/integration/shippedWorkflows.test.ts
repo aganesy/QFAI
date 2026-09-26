@@ -110,6 +110,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0001-01
   it("every workflow declares a ref-scoped concurrency group with cancel-in-progress: true", async () => {
     const violations: string[] = [];
     for (const [name, body] of await loadShippedWorkflows()) {
@@ -189,6 +190,7 @@ describe("TC-0003-0027 (TDD-0027): every shipped job declares a reachable permis
     expect(violations).toEqual([]);
   });
 
+  // QFAI:EX-0002-0007-01
   it("the shipped and retired workflow name lists are disjoint", () => {
     // Carried obligation (advisory 27, ruled home): the contract's
     // write/prune sets may never claim the same name — a name moves from

@@ -188,8 +188,8 @@ describe("at most one runner project is moved off the declared parallelism value
   });
 });
 
-// QFAI:EX-0002-0019-12
 describe("a moved project carries the run identifiers that justify the move", () => {
+  // QFAI:EX-0002-0019-12
   it("requires three recorded runs against the change that moved it, and none against no change", async () => {
     const projects = readProjects();
     const moved = projects.filter((project) => project.departures.length > 0);
@@ -258,8 +258,8 @@ function budgetHolds(input: {
   return !exceeds || input.reopened;
 }
 
-// QFAI:EX-0002-0019-08
 describe("a rerun-to-green rate above one in twenty reopens the setting", () => {
+  // QFAI:EX-0002-0019-08
   it("holds the post-merge budget open, and finds no merged tuning change owing it anything", async () => {
     // The antecedent, read rather than assumed: a merged tuning change would be recorded, because
     // `BR-0017-0053` requires the record. None is, so nothing is owed — and the enumeration says that

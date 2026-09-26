@@ -47,6 +47,7 @@ describe("spec-0017 release aggregate fallback", () => {
   });
 
   // QFAI:EX-0002-0017-06
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0091: refuses invalid checks outputs", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];

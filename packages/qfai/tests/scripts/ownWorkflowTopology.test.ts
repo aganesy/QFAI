@@ -1477,6 +1477,18 @@ describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects eve
       )
       .toMatch(/unrecognized|not in any recognized/i);
   });
+
+  // QFAI:EX-0002-0013-09
+  it("selects the full set when an unrecognized path is paired with a documentation-only path", () => {
+    const docsOnly = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
+    expect.soft(docsOnly.full, "the documentation path alone selects the narrow set").toBe(false);
+
+    const result = runClassifier({
+      paths: ["packages/qfai/docs/anything.md", "some/directory/nobody/declared.txt"],
+    });
+    expect.soft(result.status, `the classifier must exit 0:\n${result.raw}`).toBe(0);
+    expect.soft(result.full, "a documentation path must not mask an unrecognized one").toBe(true);
+  });
 });
 
 /**
