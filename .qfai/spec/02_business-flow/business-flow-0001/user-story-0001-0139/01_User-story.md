@@ -54,5 +54,5 @@ As a maintainer, I want accepted-iter content mirrored to `.qfai/evidence/protot
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/02_User-stories.md#us-0012-0130`
+- Spec scope: the Scope section of retired spec-0012
+- Story block: `us-0012-0130` of retired spec-0012

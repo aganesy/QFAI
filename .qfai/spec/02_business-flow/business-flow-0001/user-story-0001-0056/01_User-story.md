@@ -38,5 +38,5 @@ As a reviewer of a change on the story tree, I want the `drift` gate to report a
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0043`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0043` of retired spec-0004

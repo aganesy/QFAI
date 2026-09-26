@@ -31,7 +31,7 @@ QFAI itself has no project API, database, or rendered UI contract. Those familie
 | CLI-RESEARCH     | Research protocol        | —           | `.qfai/spec/03_contract/cli/research-protocol.md`          | Provider-independent source handling.                                                          |
 | CLI-WFSET        | Shipped workflows        | —           | `.qfai/spec/03_contract/cli/shipped-workflows.md`          | Distributed CI workflow ownership and shape.                                                   |
 | CLI-WF           | qfai workflow            | —           | `.qfai/spec/03_contract/cli/qfai-workflow.md`              | Free-text entry, run control and the final gate.                                               |
-| CLI-WFFILE       | Workflow files           | —           | `.qfai/spec/03_contract/cli/workflow-files.md`             | Run trees, tracked evidence, plans and schemas.                                                |
+| CLI-WFFILE       | Workflow files           | —           | `.qfai/spec/03_contract/cli/workflow-files.md`             | Run trees, local run records, plans and schemas.                                               |
 | CLI-STORY-AUTHOR | Story authoring          | —           | `.qfai/spec/03_contract/cli/story-tree-authoring.md`       | SDD and migration authoring boundaries.                                                        |
 
 ## Rule ownership
@@ -39,4 +39,4 @@ QFAI itself has no project API, database, or rendered UI contract. Those familie
 - `tech.md#rules` owns technology and CI rules.
 - `structure.md#rules` owns story-tree and repository layout rules.
 - A CLI contract owns rules for its command or shared subject. Its BR entries cite existing examples from the story tree.
-- Historical contract declarations remain in `.qfai/evidence/migration-spec-to-story/retired/_policies/05_Contracts.md`; they are not execution inputs.
+- Historical contract declarations are in the retired spec-pack `_policies/05_Contracts.md`, which git history keeps; they are not execution inputs.

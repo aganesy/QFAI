@@ -63,8 +63,10 @@ alone does not prove the user-visible result.
    `<paths.contractsDir>/tech.md`. Obtain Test, Lint, Typecheck, and Build
    commands only from that section. If it is missing or stale, repair the
    project contract before using a substitute command.
-3. Read the current `/qfai-atdd` handoff and
-   `.qfai/evidence/atdd-BF-NNNN.md`. Confirm the BF E2E and AC integration
+3. Read the current `/qfai-atdd` handoff in
+   `.qfai/evidence/atdd-BF-NNNN.md`. The file is local; where this checkout
+   lacks it, find the tests by their `QFAI:BF-NNNN` and
+   `QFAI:AC-NNNN-NNNN-NN` annotations. Confirm the BF E2E and AC integration
    or API tests and their observed results. A deliberate acceptance RED is
    handed to the matching implementation; it is not a passing test.
 4. Check test roots, `validation.traceability.testFileGlobs`, and

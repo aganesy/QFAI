@@ -12,7 +12,7 @@ Scenario: A fresh, matching human decision approves the CREATE triage row
   And the decision matches the triage row's operation and the slot it creates, and is not stale
   When Stage 1 triages the row
   Then Stage 1 does not put the CREATE question again
-  And the attempt that writes the stage's change appends the CREATE row to decisions.md already at WIP, with an Approach citing the record as runId/authorizationId and naming its answeredBy
+  And the attempt that writes the stage's change appends the CREATE row to decisions.md already at WIP, with an Approach citing the record as runId/authorizationId and stating its answeredBy, its recordedAt and the label of the chosen option
   And decisions.md keeps its four columns
 
 # AC-0001-0212-02
@@ -31,7 +31,7 @@ Scenario: A routing-time approval answers only a CREATE
   When Stage 1 triages the row
   Then no routing-time CREATE approval is cited for it
   And Stage 1 asks once and appends nothing: the stage result opens the approval question as a decision question with outcome awaiting_input
-  And the attempt holding the human_decision appends the row already at WIP, with an Approach citing that answer
+  And the attempt holding the human_decision appends the row already at WIP, with an Approach citing that answer and stating its answeredBy, its recordedAt and the label of the chosen option
 
 # AC-0001-0212-04
 # Parent: US-0001-0212

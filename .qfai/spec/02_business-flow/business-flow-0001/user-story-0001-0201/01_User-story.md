@@ -22,4 +22,4 @@
 
 ## Source Provenance
 
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/main-sync-20260926/spec-0018/02_User-stories.md#us-0018-0010`, which `main` added as US-0018-0010 of its spec-0018. `decisions.md#DEC-0744` records the carry, and `.qfai/evidence/migration-spec-to-story/main-sync-20260926-spec-0018-id-map.csv` maps every item.
+- Story block: `us-0018-0010` of the main-sync-20260926 archive of spec-0018, which `main` added as US-0018-0010 of its spec-0018. `decisions.md#DEC-0744` records the carry, and the main-sync-20260926 ID map of spec-0018 maps every item.

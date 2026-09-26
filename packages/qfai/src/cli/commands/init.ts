@@ -70,7 +70,6 @@ import {
   RETIRED_LINE_SUCCESSORS,
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
-import { CANONICAL_TIMESTAMP_GLOB } from "../../core/packLocator.js";
 import {
   AGENT_ENTRY_POINT_FILES,
   QFAI_AGENT_RULES_END,
@@ -597,10 +596,6 @@ export async function runInit(
     ...symlinkRuntime,
   });
   const gitignoreResult = await ensureRootGitignoreEntries(destRoot, options.dryRun);
-  const legacyEvidenceIgnoreResult = await ensureLegacyEvidenceIgnoreNegations(
-    destRoot,
-    options.dryRun,
-  );
   // Its template sits outside `root/`, so no earlier copy has touched the file:
   // this owns both writing it and merging into one the project already had.
   const claudeHooksResult = await ensureClaudeCodeHooks(assetsRoot, destRoot, options.dryRun);
@@ -715,7 +710,6 @@ export async function runInit(
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
-      ...legacyEvidenceIgnoreResult.copied,
       ...entryPointRulesResult.copied,
       ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
@@ -729,7 +723,6 @@ export async function runInit(
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
-      ...legacyEvidenceIgnoreResult.skipped,
       ...entryPointRulesResult.skipped,
       ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
@@ -2088,11 +2081,11 @@ export async function ensureRootGitignoreEntries(
   // reach fresh inits.
   //
   // Presence alone is not enough — git applies the LAST matching pattern, so a
-  // negation with any matching ignore line below it is inert and the decision
-  // records stay ignored.
+  // negation with any matching ignore line below it is inert and the record it
+  // names stays ignored.
   //
   // The order check reads the **whole file**, not the managed block. A project
-  // that appended its own `.qfai/evidence/*.md` after the block wins under
+  // that appended its own `.qfai/*.json` after the block wins under
   // git's last-match rule, and a block-scoped check called the negation
   // effective while `git check-ignore -v` named the project's line. The repair
   // is `removeManagedBlock` plus a rebuilt block placed below the project's
@@ -2100,7 +2093,7 @@ export async function ensureRootGitignoreEntries(
   // it never ran.
   //
   // Required entries are matched only against the managed block: a project that
-  // deliberately removed, say, `.qfai/evidence/*` to track its own audit trail
+  // deliberately removed, say, `.qfai/review/*` to track its review packs
   // must not have that choice silently undone by the next `qfai init`.
   const managedBlock = extractManagedBlock(existing);
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
@@ -2449,55 +2442,16 @@ function demotedProjectNegations(before: string, after: string): string[] {
  *
  * Writing `QFAI_GITIGNORE_BLOCK` wholesale was a silent regression for the one
  * case the freshness check exists to protect. A project that deliberately
- * removed, say, `.qfai/evidence/*` from the block to track its own audit trail
+ * removed, say, `.qfai/review/*` from the block to track its review packs
  * fails the `every(...)` check the moment a NEW governance negation ships —
  * the block is then stripped and the canonical list written back, resurrecting
- * the ignore line the user deleted and re-hiding every evidence file from that
- * release on.
+ * the ignore line the user deleted and re-hiding every pack from that release
+ * on.
  *
  * So an existing block keeps its own ignore lines and only gains the governance
  * negations it is missing (appended last, because git applies the last matching
  * pattern). A project with no managed block still gets the full canonical one.
  */
-/**
- * The ignores that already hide the prototyping directory, any one of which
- * makes the re-inclusion below a widening rather than a fix.
- *
- * The evidence tree is the usual shape. A block naming the prototyping
- * directory itself is the narrower one a project writes when it tracks the rest
- * of its audit trail and not the captures, and reading only the tree line
- * treated that project as having no ignore to preserve — so the re-inclusion
- * cancelled its rule and `git add .` picked up the mutation log, `progress.md`
- * and every `iter-NN` capture.
- */
-const PROTOTYPING_COVERING_IGNORES: readonly string[] = [
-  ".qfai/evidence/*",
-  ".qfai/evidence/",
-  ".qfai/evidence/prototyping/",
-];
-
-/**
- * An ignore line as the list above spells it.
- *
- * A leading slash anchors a pattern to the directory its `.gitignore` sits in,
- * which for the managed block is the project root — the same set the unanchored
- * spelling matches, written the way a contributor who knows the syntax writes
- * it. Compared literally, that spelling reads as a project with no rule to
- * preserve, and the re-inclusion below then cancels the rule it has.
- *
- * SIMPLIFIED: equality against a list, after dropping the anchor.
- * Lift when: a project is found whose ignore covers that directory by some
- * other pattern, at which point the answer is gitignore matching rather than a
- * longer list. A wrong answer here adds an ignore line a later run can remove,
- * so the cost of the narrow read is bounded.
- */
-function asIgnoreLine(line: string): string {
-  return line.startsWith("/") ? line.slice(1) : line;
-}
-
-/** The line that keeps the re-included prototyping directory's contents ignored. */
-const PROTOTYPING_CONTENTS_IGNORE = ".qfai/evidence/prototyping/*";
-
 function rebuildManagedBlock(existingBlock: string): string {
   if (existingBlock.length === 0) {
     return QFAI_GITIGNORE_BLOCK;
@@ -2512,8 +2466,8 @@ function rebuildManagedBlock(existingBlock: string): string {
   //
   // An earlier attempt migrated a legacy-shaped block wholesale, on the theory
   // that a missing ignore there is age rather than a choice. That is not safe:
-  // a project can carry a retired line *and* have deleted `.qfai/evidence/*` to
-  // track its audit trail, and the wholesale rewrite resurrects the deletion —
+  // a project can carry a retired line *and* have deleted `.qfai/review/*` to
+  // track its review packs, and the wholesale rewrite resurrects the deletion —
   // the very regression this function exists to stop. Age and intent cannot be
   // told apart from the file, so the conservative reading wins in both cases:
   // never re-add an ignore line the block does not have.
@@ -2521,7 +2475,7 @@ function rebuildManagedBlock(existingBlock: string): string {
   // The cost is that a project on an old block does not pick up a newly shipped
   // *recommended* ignore. `QFAI-REVIEW-008` reports that at `info`, and the
   // consequence is generated files showing in `git status` — noisy. Silently
-  // re-hiding an audit trail the project chose to track is not noisy, which is
+  // re-hiding records the project chose to track is not noisy, which is
   // why it is the side to err on.
   const kept = lines.filter(
     (line) => line !== QFAI_GITIGNORE_MARKER && !negations.has(line) && !legacy.has(line),
@@ -2534,24 +2488,7 @@ function rebuildManagedBlock(existingBlock: string): string {
     .filter(([retired, successor]) => present.has(retired) && !present.has(successor))
     .map(([, successor]) => successor);
 
-  // One ignore is migrated, against the rule above, and only where the block
-  // already hides that directory. The negations below re-include
-  // `.qfai/evidence/prototyping/`, and re-including a directory exposes every
-  // descendant with no later rule of its own — the mutation log, the `iter-NN`
-  // captures, `progress.md`. So a block that ignored them must also carry the
-  // line that re-ignores that directory's contents, or the upgrade tracks files
-  // the project never chose to track.
-  //
-  // Conditional on an existing ignore, because a project that deleted every one
-  // of them to keep its audit trail tracked would otherwise have it re-hidden —
-  // the regression the rule above exists to stop.
-  const ignores = lines.map((line) => asIgnoreLine(line));
-  const reIgnore =
-    ignores.some((line) => PROTOTYPING_COVERING_IGNORES.includes(line)) &&
-    !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
-      ? [PROTOTYPING_CONTENTS_IGNORE]
-      : [];
-  // Run state is added against the rule above as well: it is never a record a project tracks,
+  // Run state is added against the rule above: it is never a record a project tracks,
   // and a block without it would leave every run's journal for `git add .` to stage.
   const runState = present.has(QFAI_RUN_STATE_IGNORE) ? [] : [QFAI_RUN_STATE_IGNORE];
 
@@ -2559,122 +2496,11 @@ function rebuildManagedBlock(existingBlock: string): string {
     QFAI_GITIGNORE_MARKER,
     ...kept,
     ...renamed,
-    ...reIgnore,
     ...runState,
     ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
     .join("\n");
-}
-
-/**
- * Leaf negations for the governance records, as a legacy
- * `.qfai/evidence/.gitignore` needs them.
- *
- * Earlier `qfai init` versions wrote a per-directory ignore file whose first
- * line is `*`. Git applies the deepest matching file, so that `*` wins over
- * every root-level negation: `change-request-*.md`, `decision-*.md`,
- * `decisions/**`, the Coverage Depth Matrix and the `Phase: Skeleton` record
- * (`skeleton.md`) all stay ignored in a project
- * that still has it, however correct the managed block is. The file is not
- * removed — a project may want the rest of its behaviour — but the governance
- * records are re-included inside it.
- */
-const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
-  "!change-request-*.md",
-  "!decision-*.md",
-  "!implement-*.md",
-  "!atdd-*.md",
-  "!coverage-depth-*.md",
-  "!skeleton.md",
-  "!decision/",
-  "!decision/**",
-  "!decisions/",
-  "!decisions/**",
-  // The per-item RED/GREEN records. Every root negation this block adds needs
-  // its leaf counterpart here or the migration does nothing for the projects it
-  // exists to serve: on a tree carrying the legacy nested file, `git
-  // check-ignore -v` reports `.qfai/evidence/implement-<spec-id>.md` and
-  // `atdd-<spec-id>.md` as ignored by the nested `*` without these lines, so the
-  // fresh clone and CI the root negation is for see neither file.
-  "!implement-*.md",
-  "!atdd-*.md",
-  // A spec's own evidence, which carries the grilling trace a validator rule
-  // reads. That makes it an input to a check rather than a log of one, and a
-  // rule whose input is hidden reports the same clean result for a run that
-  // skipped every session as for one that grilled every phase.
-  "!sdd-*.md",
-  // A discussion run's own evidence, which the same rule reads for the same
-  // reason. The stamp is spelled out to its full width, which is the only
-  // width the check accepts, so a draft or a backup beside it stays ignored.
-  `!discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
-  // The import-lite record, for the same reason: on a spec set that arrived
-  // without a discussion pack it is the only input source in the repository,
-  // and the nested `*` hides it from the fresh clone that CI validates. Both
-  // accepted spellings, run-stamped and template-named. The stamp is spelled
-  // out to its full width, which is the only width the check accepts: any
-  // other suffix is rejected there rather than demoted, so a wider negation
-  // would commit a file nothing reads.
-  // The prototyping session record, for the same reason again. It is a user
-  // decision rather than regenerable stage evidence, so the root block tracks
-  // it — and the nested `*` overrides that root negation on any project that
-  // carries the legacy file. The directory needs its own line: git never
-  // descends into an ignored one, so the leaf alone is inert.
-  "!prototyping/",
-  "!prototyping/grilling.md",
-  // A workflow run's tracked evidence. The nested `*` matches at every depth,
-  // so the directory and everything under it each need a line.
-  "!workflow/",
-  "!workflow/**",
-  "!import-lite.md",
-  `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
-];
-
-async function ensureLegacyEvidenceIgnoreNegations(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
-  const target = path.join(destRoot, ".qfai", "evidence", ".gitignore");
-  let existing: string;
-  try {
-    existing = await readFile(target, "utf-8");
-  } catch (err: unknown) {
-    if (isEnoent(err)) {
-      // No legacy file: the root managed block is already authoritative.
-      return { copied: [], skipped: [] };
-    }
-    throw err;
-  }
-
-  const lines = existing.split("\n").map((line) => line.trimEnd());
-  // Presence is not enough: git applies the **last** matching pattern, so a
-  // negation sitting above a broad re-ignore (`*`, or a later
-  // `coverage-depth-*` rule) is inert while a `lines.includes` check reads it
-  // as satisfied. `git check-ignore -v` still names the broad rule, and the
-  // governance record this migration promises to track stays untracked.
-  //
-  // A negation counts only when no ignore line below it can match the same
-  // path. Anything else is re-appended, which puts it last and therefore wins.
-  //
-  // Real glob semantics, not a prefix comparison. A prefix test cannot see
-  // that a later `*.md` or a double-star `/*.md` matches
-  // `coverage-depth-*.md`, `decision-*.md` and `change-request-*.md`, so it
-  // called those negations effective and left the records ignored.
-  const missing = LEGACY_EVIDENCE_IGNORE_NEGATIONS.filter(
-    (entry) => !negationsOutrankLaterIgnores(lines, [entry]),
-  );
-  if (missing.length === 0) {
-    return { copied: [], skipped: [target] };
-  }
-  if (dryRun) {
-    info(`  would update: ${target} (re-include governance records)`);
-    return { copied: [target], skipped: [] };
-  }
-
-  const separator = existing.endsWith("\n") ? "" : "\n";
-  await writeFile(target, `${existing}${separator}${missing.join("\n")}\n`, "utf-8");
-  info(`  updated: ${target} (re-include governance records)`);
-  return { copied: [target], skipped: [] };
 }
 
 // ---------------------------------------------------------------------------

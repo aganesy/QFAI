@@ -320,28 +320,6 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       "src/checkout.mjs",
       "export const checkoutTotal = (prices) => prices.reduce((sum, price) => sum + price, 0);\n",
     );
-    const missingEvidence = await reportAfterPassingTests(root, allTests);
-    expect(missingEvidence.testExitCode).toBe(0);
-    expect(missingEvidence.testOutput).toMatch(/^(?:#|ℹ)\s+pass 3\b/m);
-    expect(missingEvidence.validationExitCode).toBe(1);
-    expect(missingEvidence.reportExitCode).toBeNull();
-    await runValidate({ root, strict: false, profile: "atdd", failOn: "never", flowIds: [flowId] });
-    expect(hasFinding(await readFlowFindings(root), "QFAI-ATDD-131", flowId)).toBe(true);
-    await expect(
-      access(path.join(root, ".qfai/report/report.flow-0001.json")),
-    ).rejects.toMatchObject({
-      code: "ENOENT",
-    });
-    await put(
-      root,
-      `.qfai/evidence/coverage-depth-${flowId}.md`,
-      `# Coverage Depth Matrix for ${flowId}\n\nE2E: [checkout flow](../../tests/e2e/${flowId}.test.mjs)\n\n| ID | Layer | Oracle and test | Normal | Error | Boundary | Special | State transition | Combinatorial |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| ${storyId} | Integration | ${criterionId}.test.mjs | ✅ | n/a | n/a | n/a | n/a | n/a |\n| ${criterionId} | Integration | ${criterionId}.test.mjs | ✅ | n/a | n/a | n/a | n/a | n/a |\n| ${exampleId} | Unit | ${exampleId}.test.mjs | ✅ | n/a | n/a | n/a | n/a | n/a |\n`,
-    );
-    await put(
-      root,
-      `.qfai/evidence/atdd-${flowId}.md`,
-      `# ATDD ${flowId}\n\n## Coverage Depth Matrix\n\n- [Matrix](coverage-depth-${flowId}.md)\n- ✅ 3 / ⚠️ 0 / ❌ 0\n`,
-    );
     const verified = await reportAfterPassingTests(root, allTests);
     expect(verified.testExitCode).toBe(0);
     expect(verified.testOutput).toMatch(/^(?:#|ℹ)\s+pass 3\b/m);

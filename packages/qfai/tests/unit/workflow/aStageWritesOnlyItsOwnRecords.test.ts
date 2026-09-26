@@ -130,7 +130,7 @@ for (const [title, stage, path] of outsideRecords) {
 
 const SDD_EVIDENCE = ".qfai/evidence/sdd-BF-0001.md";
 const implementRecords = [IMPLEMENT_EVIDENCE];
-const atddRecords = [".qfai/evidence/atdd-BF-0001.md", ".qfai/evidence/coverage-depth-BF-0001.md"];
+const atddRecords = [".qfai/evidence/atdd-BF-0001.md"];
 
 const derivations: [string, [string, string, string], string[] | undefined][] = [
   ["implement", implement, implementRecords],

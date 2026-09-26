@@ -52,7 +52,6 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
   it("names current story-tree stage gates in its skip notice", () => {
     expect(SAAS_PACKAGE_SKIPPED_GATES).toEqual([
       "validateStoryTreeObligations",
-      "validateStoryTreeCoverageDepth",
       "validateTestTodoStubs",
       "validateStoryTreeDrift",
     ]);
@@ -62,9 +61,6 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
       "QFAI-STORY-008",
       "QFAI-STORY-009",
       "QFAI-SCAN-002",
-      "QFAI-ATDD-131",
-      "QFAI-ATDD-132",
-      "QFAI-ATDD-133",
       "QFAI-TEST-*",
       "QFAI-DRIFT-001",
       "QFAI-STORY-010",

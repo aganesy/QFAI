@@ -4,7 +4,7 @@
 
 - Parent: CAP-0015
 
-Requirement provenance: [approved concrete-review change](../../../../evidence/migration-spec-to-story/retired/decisions/CR-20260913-0007-concrete-pattern-review.md#requirement-source).
+Requirement provenance: the requirement source of the approved concrete-review change CR-20260913-0007, which git history keeps.
 
 As a QFAI user, I want optional advisory review that proposes missing concrete business-flow, US, AC, EX or TC coverage with rationale, so that real behavior is covered without numeric targets or demands for more abstract rules.
 
@@ -26,5 +26,5 @@ As a QFAI user, I want optional advisory review that proposes missing concrete b
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/02_User-stories.md#us-0015-0005`
+- Spec scope: the Scope section of retired spec-0015
+- Story block: `us-0015-0005` of retired spec-0015

@@ -11,14 +11,9 @@
  * something present when it is absent, and real code being deleted makes it
  * call something absent when it is present.
  */
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import { withoutComments, withoutCommentsOrLiterals } from "../helpers/sourceReduction.js";
-
-const SRC_ROOT = path.resolve(import.meta.dirname, "../../src");
 
 /** Spelled from pieces so this file is never its own trap. */
 const BACKTICK = "`";
@@ -162,22 +157,6 @@ describe("the shared source reduction", () => {
       ].join("\n");
       expect(withoutCommentsOrLiterals(prose)).not.toContain("aVanishedName");
     });
-  });
-
-  it("agrees with the tree on the module that broke the last generation", async () => {
-    // A regression pin on the measured file rather than on the mechanism, so
-    // it keeps its meaning if the reduction is ever rewritten again.
-    const source = await readFile(path.join(SRC_ROOT, "core/specPackParsers.ts"), "utf-8");
-    expect(withoutCommentsOrLiterals(source)).not.toContain("validateStoryTreeCoverageDepth");
-
-    // And the mirror: a module's own declaration must survive its reduction.
-    // The previous reduction erased this one, having re-framed the file from a
-    // regex some lines above it.
-    const depth = await readFile(
-      path.join(SRC_ROOT, "core/validators/storyTreeCoverageDepth.ts"),
-      "utf-8",
-    );
-    expect(withoutCommentsOrLiterals(depth)).toContain("validateStoryTreeCoverageDepth");
   });
 
   it("returns the same string for a repeated call, since the parse is memoised", () => {

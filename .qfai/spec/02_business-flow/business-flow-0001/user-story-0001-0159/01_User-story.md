@@ -35,5 +35,5 @@ As a requirements-analyst authoring UI contracts during `/qfai-sdd`, I want the 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/02_User-stories.md#us-0013-0011`
+- Spec scope: the Scope section of retired spec-0013
+- Story block: `us-0013-0011` of retired spec-0013

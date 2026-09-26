@@ -56,8 +56,9 @@ this run:
    makes the change. It appends one `decisions.md` row at WIP whose Content
    opens `Change request:` and names every story-tree and contract file it
    changed, and `decisions.md` when it appended any other row. The row's
-   Approach cites that answer as `<runId>/<authorizationId>` with its
-   `answeredBy`.
+   Approach cites that answer as `<runId>/<authorizationId>` and writes its
+   `answeredBy`, its `recordedAt` and the label of each chosen option exactly
+   as the run's authorization record holds them.
 3. The same attempt moves the row to DONE once every change the row names is
    written. The row stays at WIP only while changes it names remain for a later
    attempt of this stage, which moves it to DONE once it writes them.

@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { writeTracked } from "../../../src/core/workflow/fold.js";
+import { writeRunRecords } from "../../../src/core/workflow/fold.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
 
 const FLOW = "BF-0007";
@@ -176,7 +176,7 @@ it("The tracked summary of a run that binds no flow keeps a debt's null owning f
     const debt = { ...semanticEffect, resolvingOwner: "operator" };
     run.accept({ outcome: "accepted_with_debt", debts: [debt] });
 
-    await writeTracked(dir, run.records, run.snapshot);
+    await writeRunRecords(dir, run.records, run.snapshot);
     const summary: unknown = JSON.parse(await readFile(path.join(dir, "summary.json"), "utf8"));
 
     expect(summary).toMatchObject({ debts: [{ owningFlow: null }] });

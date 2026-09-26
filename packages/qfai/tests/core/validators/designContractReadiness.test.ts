@@ -7,7 +7,6 @@
  *
  * Plus preserved checks:
  *   - REQUIRED_PROTOTYPING_DESIGN_FILES (design-system.yaml, prototype-handoff.yaml)
- *   - DCON-019 premature prototyping contract (sdd stage)
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";

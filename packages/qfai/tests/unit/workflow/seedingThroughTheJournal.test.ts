@@ -129,22 +129,41 @@ function seeded(answeredBy: string, citation: (id: string) => string, text: stri
 
 const withNewExample = contract("EX-0001-0005-01, EX-0001-0005-03");
 
+// The approval the row carries: the answer cited, who gave it, when, and the option chosen.
+const ANSWERED_AT = "2026-09-26T00:00:00.000Z";
+const approval = (who: string) => (id: string) =>
+  `Answered ${RUN}/${id} by ${who} at ${ANSWERED_AT}: Apply it`;
+
 it("A change request citing the answer and the operator who gave it", () => {
-  expect(
-    seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-1`, withNewExample),
-  ).toBeUndefined();
+  expect(seeded("operator-1", approval("operator-1"), withNewExample)).toBeUndefined();
 });
 
 it("A change request naming someone whose name only begins with the operator's", () => {
-  expect(
-    seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-12`, withNewExample),
-  ).toEqual(expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]));
+  expect(seeded("operator-1", approval("operator-12"), withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
+});
+
+it("A change request that does not say when the answer was recorded", () => {
+  const citation = (id: string) => `Answered ${RUN}/${id} by operator-1: Apply it`;
+
+  expect(seeded("operator-1", citation, withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
+});
+
+it("A change request that does not name the option the operator chose", () => {
+  const citation = (id: string) => `Answered ${RUN}/${id} by operator-1 at ${ANSWERED_AT}`;
+
+  expect(seeded("operator-1", citation, withNewExample)).toEqual(
+    expect.arrayContaining([{ reason: "record-unauthorized", subject: "DEC-0002" }]),
+  );
 });
 
 it("Seeding that cites, instead of the new example, an example the story already had", () => {
   const cited = contract("EX-0001-0005-01, EX-0001-0005-02");
 
-  expect(seeded("operator-1", (id) => `Answered ${RUN}/${id} by operator-1`, cited)).toEqual([
+  expect(seeded("operator-1", approval("operator-1"), cited)).toEqual([
     { reason: "rule-changed", subject: CONTRACT },
   ]);
 });

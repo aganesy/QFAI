@@ -73,7 +73,7 @@ export interface WorkflowEvent {
   retry?: { attempt: number; nextDelaySeconds: number };
   measurement?: WorkflowMeasurement;
   diagnosis?: WorkflowDiagnosis;
-  // Runtime only: what the run has settled so far, which the tracked summary never copies.
+  // Runtime only: what the run has settled so far, which the run summary never copies.
   settled?: WorkflowSettled;
   adjustments?: WorkflowStartAdjustment[];
   // On an issued work order bound to a flow: which of its examples tests annotated then.
@@ -443,6 +443,9 @@ export interface WorkflowAuthorizationRef {
   kind: string;
   operation?: string | null;
   answeredBy?: string;
+  // When the answer was recorded, and the labels of the options it chose.
+  recordedAt?: string;
+  chosen?: string[];
   policy?: WorkflowPolicy;
 }
 

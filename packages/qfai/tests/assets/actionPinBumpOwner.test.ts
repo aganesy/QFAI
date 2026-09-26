@@ -375,10 +375,18 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
     // record that states a percentage is a record that can state the wrong percentage; the ten
     // percent test is computed from the artifact's own numbers, so a transcription error fails
     // this row instead of surviving it.
-    const artifact = readFileSync(
-      path.join(REPO_ROOT, ".qfai", "evidence", "timing-workers-spec-0017.md"),
+    //
+    // The artifact is the doc comment on `DECLARED_START`, with its ` * ` margin removed, so it
+    // sits beside the value it justifies and reaches every checkout.
+    const knobsSource = readFileSync(
+      path.join(REPO_ROOT, "packages", "qfai", "vitest.knobs.ts"),
       "utf-8",
     );
+    const declaration = knobsSource.indexOf("export const DECLARED_START");
+    expect(declaration, "vitest.knobs.ts must declare DECLARED_START").toBeGreaterThan(0);
+    const artifact = knobsSource
+      .slice(knobsSource.lastIndexOf("/**", declaration), declaration)
+      .replace(/^[ \t]*\* ?/gm, "");
 
     // CLAIM 1 — the largest project is NAMED, and named as a measurement rather than an
     // assumption. "Largest" is a property of the tree that changes as tests are added, so the

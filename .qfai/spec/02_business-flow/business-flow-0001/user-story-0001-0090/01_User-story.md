@@ -20,8 +20,8 @@ As a designer, I want `/qfai-discussion` to record the brand direction I choose 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0009`
+- Spec scope: the Scope section of retired spec-0010
+- Story block: `us-0010-0009` of retired spec-0010
 - Retitled and restated by the brand-direction change request that
   `decisions.md#DEC-0683` records; main's text at
   `b5d357c14:.qfai/specs/spec-0010/02_User-stories.md`.

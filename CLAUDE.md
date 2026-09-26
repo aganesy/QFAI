@@ -114,7 +114,8 @@ carries.
   discussion, evidence), plus the assistant tree. That tree is generated from
   `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot`, so an edit made
   directly to it is reverted by the next run and fails the tracked-tree diff in
-  `pnpm ci:gate`.
+  `pnpm ci:gate`. Evidence under `.qfai/evidence/` is local: it is ignored,
+  never committed, and reviewers read it in the working tree.
 
 The rule masters under `.agents/rules/` are symlinks to
 `packages/qfai/assets/init/root/.agents/rules/`, so editing one there edits the

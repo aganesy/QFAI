@@ -3,9 +3,9 @@
 ## User Story
 
 - Parent: CAP-0003
-- Goal: `qfai init` appends the QFAI managed block to the adopting project's root `.gitignore`: the marker line, ignore lines that include `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*` and `.qfai/review/*`, and then the governance negations that keep decision and evidence records tracked. The block carries no README negation and no `.qfai/discussion/discussion-*/`. A re-run strips every line an earlier release wrote and this one retired, the `review-*/` negations among them. With the `rule/ skill/ agent/ prompt/` assistant tree, decision records are kept tracked under the singular `.qfai/evidence/decision/`, and the plural negations become lines a re-run strips
+- Goal: `qfai init` appends the QFAI managed block to the adopting project's root `.gitignore`: the marker line, ignore lines that include `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/discussion/*` and `.qfai/review/*`, and then the governance negations, none of which re-includes a path under `.qfai/evidence/`, so every evidence record stays local. The block carries no README negation and no `.qfai/discussion/discussion-*/`. A re-run strips every line an earlier release wrote and this one retired, the `review-*/` negations among them. The evidence negations an earlier release wrote, the decision-record and run-record negations among them, are lines a re-run strips
 - Non-goals: ユーザー独自の gitignore エントリの変更/削除、review-pack を追跡したい場合のプロジェクト固有 negation 追加（プロジェクト側で明示追加する）
-- Notes: NFR-0012（冪等性）を満たす。`review-*/` directories are ignored by default; a project that wants to track one adds its own negation. The block also ignores the run-state directory `.qfai/run/` and keeps run evidence under `.qfai/evidence/workflow/` tracked (discussion-20260923171450572#REQ-0024)
+- Notes: NFR-0012（冪等性）を満たす。`review-*/` directories are ignored by default; a project that wants to track one adds its own negation. The block also ignores the run-state directory `.qfai/run/` (discussion-20260923171450572#REQ-0024), and run records under `.qfai/evidence/workflow/` stay ignored with the rest of `.qfai/evidence/`
 
 ## Legacy Source Scope
 
@@ -19,5 +19,5 @@
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0003/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0003/02_User-stories.md#us-0003-0015`
+- Spec scope: the Scope section of retired spec-0003
+- Story block: `us-0003-0015` of retired spec-0003

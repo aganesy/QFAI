@@ -15,7 +15,6 @@ import { isRecord } from "../../core/workflow/parse.js";
 import type { MigrationContext, MigrationStep } from "./harness.js";
 import { linksToSkill } from "./step11InstallEntry.js";
 
-const WORKFLOW_EVIDENCE_NEGATION = "!.qfai/evidence/workflow/";
 const RUN_SKILL = "qfai-run";
 
 function skillPath(skill: string, ...rest: string[]): string {
@@ -77,7 +76,7 @@ async function gitignoreItems(context: MigrationContext): Promise<string[]> {
       .split("\n")
       .map((line) => line.trimEnd()),
   );
-  return [QFAI_RUN_STATE_IGNORE, WORKFLOW_EVIDENCE_NEGATION]
+  return [QFAI_RUN_STATE_IGNORE]
     .filter((line) => !block.has(line))
     .map((line) => `gitignore: .gitignore: the QFAI managed block lacks \`${line}\``);
 }

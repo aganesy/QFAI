@@ -69,7 +69,7 @@ describe("migration managed gitignore update", () => {
     const updated = await readFile(gitignore, "utf8");
     expect(updated).toContain("project-only\n");
     expect(updated).toContain("QFAI managed");
-    expect(updated).toContain("!.qfai/evidence/decision/");
+    expect(updated).not.toContain("!.qfai/evidence/");
     expect((await step10.plan(context)).operations).toEqual([]);
     expect(await readFile(gitignore, "utf8")).toBe(updated);
   });

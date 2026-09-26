@@ -186,7 +186,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // quietly became a validator.
     //
     // Keep an explicit set so a removed code cannot silently make room for a
-    // new code from this guidance. Story-tree coverage owns the depth findings.
+    // new code from this guidance.
     expect(await atddFindingCodes()).toEqual([
       "QFAI-ATDD-101",
       "QFAI-ATDD-103",
@@ -200,9 +200,6 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-118",
       "QFAI-ATDD-119",
       "QFAI-ATDD-128",
-      "QFAI-ATDD-131",
-      "QFAI-ATDD-132",
-      "QFAI-ATDD-133",
       "QFAI-ATDD-134",
       "QFAI-ATDD-135",
     ]);

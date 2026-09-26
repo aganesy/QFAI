@@ -38,5 +38,5 @@ As a maintainer, I want validate to enforce current `/qfai-prototyping` skill co
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0027`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0027` of retired spec-0004

@@ -7,8 +7,8 @@
   exit code matrix introduced by the prototyping defect-remediation
   pack.
 - Owning flow: `BF-0001`
-- Used-by: `/qfai-prototyping` skill, CI lanes that drive
-  the autonomous loop
+- Used-by: `/qfai-prototyping` skill, and an operator driving the autonomous
+  loop locally
 - SSOT modules:
   - `packages/qfai/src/cli/commands/prototypingIterate.ts` (also hosts
     the local `clearEvidenceIterDirs` helper used by the cycle-0

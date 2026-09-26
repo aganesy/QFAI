@@ -27,7 +27,8 @@ and reporting.
 - `.qfai/discussion/`: discussion packs, the optional upstream input to a spec.
 - `.qfai/assistant/`: the assistant tree — `rule/`, `skill/`, `agent/`,
   `prompt/`, plus project-local `skill.local/` where needed.
-- `.qfai/evidence/`: the per-run evidence a skill is required to write.
+- `.qfai/evidence/`: the per-run evidence a skill writes. It is local and
+  ignored, and reviewers read it in the working tree.
 - `.qfai/review/`: review packs.
 - `.qfai/report/`: where `validate` and `report` write.
 - `qfai.config.yaml`: パス/検証ルール/出力設定

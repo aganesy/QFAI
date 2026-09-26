@@ -7,6 +7,7 @@ import { writeRecord } from "./persistence.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
 import type {
   WorkflowActor,
+  WorkflowAuthorization,
   WorkflowDecision,
   WorkflowDependency,
   WorkflowEvent,
@@ -108,16 +109,32 @@ function foldQuestion(snapshot: Snapshot, record: JournalRecord): Snapshot {
   };
 }
 
+// The labels of the options an answer chose; a value answer chose none.
+function chosenLabels(authorization: WorkflowAuthorization): string[] {
+  const { answer, question } = authorization;
+  if (!("optionIds" in answer)) return [];
+  return question.options
+    .filter((option) => answer.optionIds.includes(option.optionId))
+    .map((option) => option.label);
+}
+
 function foldAuthorization(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const authorization = record.authorization;
   if (!authorization) return snapshot;
   const openQuestions = (snapshot.openQuestions ?? []).filter(
     (question) => question.questionId !== authorization.questionId,
   );
-  const { authorizationId, kind, operation, answeredBy } = authorization;
+  const { authorizationId, kind, operation, answeredBy, recordedAt } = authorization;
   const authorizations = [
     ...(snapshot.authorizations ?? []),
-    { authorizationId, kind, operation, answeredBy },
+    {
+      authorizationId,
+      kind,
+      operation,
+      answeredBy,
+      recordedAt,
+      chosen: chosenLabels(authorization),
+    },
   ];
   const approval =
     authorization.operation === "CREATE"
@@ -454,13 +471,15 @@ function withActors(snapshot: Snapshot, record: JournalRecord): Snapshot {
   return { ...snapshot, actorHistory: [...(snapshot.actorHistory ?? []), ...joined] };
 }
 
-export const TRACKED_DIR = path.join(".qfai", "evidence", "workflow");
+// Where a run keeps its local records: a summary and a copy of each answer. The directory is
+// ignored; nothing here reaches a commit.
+export const RUN_RECORDS_DIR = path.join(".qfai", "evidence", "workflow");
 
 const ACCEPTED_OUTCOMES = ["accepted", "accepted_with_debt"];
 
-// Tracked evidence begins at the run's first `proceed` authorization or its first result accepted
-// as `accepted` or `accepted_with_debt`. A run that ends before either tracks nothing.
-function trackingBegun(records: readonly JournalRecord[]): boolean {
+// A run's records begin at its first `proceed` authorization or its first result accepted as
+// `accepted` or `accepted_with_debt`. A run that ends before either writes none.
+function recordingBegun(records: readonly JournalRecord[]): boolean {
   return records.some(
     (record) =>
       (record.event === "authorization-recorded" && record.authorization?.effect === "proceed") ||
@@ -468,7 +487,7 @@ function trackingBegun(records: readonly JournalRecord[]): boolean {
   );
 }
 
-// The tracked summary, from the journal: IDs, digests and outcomes, never request text, an
+// The run summary, from the journal: IDs, digests and outcomes, never request text, an
 // answer or anything the run settled.
 // SIMPLIFIED: a stage's receipt digests are those of its report copies.
 // Lift when: the core writes each accepted result under `results/` and digests it.
@@ -517,24 +536,24 @@ async function writeNew(file: string, content: string): Promise<IoRefusal | unde
   return exists ? undefined : writeRecord(file, content);
 }
 
-// Rewrites the tracked summary when the journal says something it does not, and writes each
+// Rewrites the run summary when the journal says something it does not, and writes each
 // authorization record once. The record itself is never rewritten.
-export async function writeTracked(
-  trackedDir: string,
+export async function writeRunRecords(
+  recordsDir: string,
   records: readonly JournalRecord[],
   snapshot: WorkflowSnapshot,
 ): Promise<IoRefusal | undefined> {
-  if (!trackingBegun(records)) return undefined;
-  await mkdir(path.join(trackedDir, "authorizations"), { recursive: true });
+  if (!recordingBegun(records)) return undefined;
+  await mkdir(path.join(recordsDir, "authorizations"), { recursive: true });
   for (const record of records) {
     const authorization = record.authorization;
     if (record.event !== "authorization-recorded" || !authorization) continue;
-    const file = path.join(trackedDir, "authorizations", `${authorization.authorizationId}.json`);
+    const file = path.join(recordsDir, "authorizations", `${authorization.authorizationId}.json`);
     const refused = await writeNew(file, `${JSON.stringify(authorization, null, 2)}\n`);
     if (refused) return refused;
   }
   const summary = summaryOf(records, snapshot);
-  const file = path.join(trackedDir, "summary.json");
+  const file = path.join(recordsDir, "summary.json");
   const existing = parseObject(await readFile(file).catch(() => Buffer.from("")));
   const { updatedAt: _written, ...kept } = existing ?? { updatedAt: "" };
   if (JSON.stringify(kept) === JSON.stringify(summary)) return undefined;

@@ -40,7 +40,6 @@ export const SEAM_TEST = "notification addresses: a sixth address is refused";
 
 // The acceptance stage's own records for the flow.
 const ATDD_EVIDENCE = ".qfai/evidence/atdd-BF-0001.md";
-const COVERAGE_MATRIX = ".qfai/evidence/coverage-depth-BF-0001.md";
 
 /** The routing proposal: one new story that creates its business flow. */
 export const FEATURE_PROPOSAL = {
@@ -196,9 +195,18 @@ const STORY_TREE: Record<string, string> = {
 /** The story-tree and contract files the story-authoring stage writes. */
 export const STORY_FILES = Object.keys(STORY_TREE);
 
-// The citation a `decisions.md` row carries for an answer this run recorded.
+// The labels of the options an authorization record's answer chose.
+function chosenLabels(record: unknown): string[] {
+  const chosen = list(record, "answer.optionIds");
+  return list(record, "question.options")
+    .filter((option) => chosen.includes(field(option, "optionId")))
+    .map((option) => String(field(option, "label")));
+}
+
+// The approval a `decisions.md` row carries for an answer this run recorded: its citation, who
+// gave it, when, and the options chosen.
 const cites = (runId: string, record: unknown) =>
-  `Answered ${runId}/${String(field(record, "authorizationId"))} by ${String(field(record, "answeredBy"))}`;
+  `Answered ${runId}/${String(field(record, "authorizationId"))} by ${String(field(record, "answeredBy"))} at ${String(field(record, "recordedAt"))}: ${chosenLabels(record).join(", ")}`;
 
 function decisionsTable(rows: string[]): string {
   return ["# Decisions", "", "## Decisions", "", "| ID | Content | Approach | Status |"]
@@ -272,26 +280,10 @@ const UNIT_TEXT = EXAMPLE_IDS.map(
   (id) => `// QFAI:${id}\nit("${id}", () => expect(add(five, "a@example.com")).toBe(false));\n`,
 ).join("\n");
 
-const n = "n/a | n/a | n/a | n/a | n/a";
-const COVERAGE_TEXT = [
-  "# Coverage Depth Matrix: BF-0001",
-  "",
-  "The E2E obligation of BF-0001 is [its E2E test](../../tests/e2e/notification-addresses.test.ts).",
-  "",
-  "| ID | Layer | Oracle and test | Normal | Error | Boundary | Special | State transition | Combinatorial |",
-  "| --- | ----- | --------------- | ------ | ----- | -------- | ------- | ---------------- | ------------- |",
-  `| US-0001-0001 | E2E | ${E2E_TEST} | ✅ | ${n} |`,
-  `| AC-0001-0001-01 | Integration | ${INTEGRATION_TEST} | ✅ | ${n} |`,
-  ...EXAMPLE_IDS.map((id) => `| ${id} | Unit | ${UNIT_TEST} | ✅ | ${n} |`),
-  "",
-].join("\n");
 const ATDD_TEXT = [
   "# ATDD evidence: BF-0001",
   "",
-  "## Coverage Depth Matrix",
-  "",
-  "- Matrix: `coverage-depth-BF-0001.md`",
-  "- ✅ 4 / ⚠ 0 / ❌ 0",
+  "Acceptance tests authored for BF-0001.",
   "",
 ].join("\n");
 
@@ -309,10 +301,9 @@ export async function throughAcceptance(root: string, runId: string, afterSdd: u
   }
   await write(root, E2E_TEST, E2E_TEXT);
   await write(root, INTEGRATION_TEST, INTEGRATION_TEXT);
-  await write(root, COVERAGE_MATRIX, COVERAGE_TEXT);
   await write(root, ATDD_EVIDENCE, ATDD_TEXT);
   const tests = await Promise.all(
-    [E2E_TEST, INTEGRATION_TEST, COVERAGE_MATRIX, ATDD_EVIDENCE].map((rel) => fileRef(root, rel)),
+    [E2E_TEST, INTEGRATION_TEST, ATDD_EVIDENCE].map((rel) => fileRef(root, rel)),
   );
   const { next: seam } = await acceptThenNext(root, runId, acceptance, "acceptance-1", {
     outcome: "needs_repair",
