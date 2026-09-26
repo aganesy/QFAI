@@ -94,6 +94,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   for a business flow. `--story <US-ID>` writes one skeleton per acceptance
   criterion of a story.
 
+- **`/qfai-sdd` checks its business rules against its examples.** After it
+  writes the rules, an agent that did not write them reads the rules and the
+  examples they cite. It raises findings on the flows, stories, criteria and
+  examples: a case a rule implies that no example states, a redundant example,
+  an example no rule explains, a rule its examples do not support, and a flow,
+  story or criterion split the rules show to be wrong.
+
+  - Each finding is adopted or rejected. A finding that rests on product intent
+    nothing written states goes to the user.
+  - Adopted findings are applied, and the affected rules are rewritten from
+    the updated examples. At most two cycles run.
+  - A rejected finding is recorded in `decisions.md` and is not raised again.
+  - The flow's SDD evidence records each cycle, and the completion reviewer
+    checks that record.
+
 ### Changed
 
 - **Breaking: specs move to the story tree.** A project's specifications live
