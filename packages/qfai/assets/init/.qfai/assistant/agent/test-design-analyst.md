@@ -47,8 +47,9 @@ coverage depth before a stage claims completion.
 - During SDD, an instance that wrote none of the BRs it reads is the finder of
   the concrete-abstract cycle, under
   `skill/qfai-sdd/references/concrete-abstract-cycle.md`. It reads each BR whose
-  Statement or Examples cell the invocation wrote or changed, the EXs each cites and the EXs the invocation
-  wrote or changed. It raises findings of five kinds against BF, US, AC and EX:
+  Statement or Examples cell the invocation wrote or changed, the EXs each
+  cites and the EXs the invocation wrote or changed. It raises findings of
+  five kinds against BF, US, AC and EX:
   a case the rule implies that no example states, a redundant example, an
   example no rule explains, a rule its examples do not support, and a flow,
   story or criterion split the rules show to be wrong. A finding names its kind

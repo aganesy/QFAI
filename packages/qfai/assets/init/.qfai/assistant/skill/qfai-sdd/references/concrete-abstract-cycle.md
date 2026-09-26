@@ -54,8 +54,9 @@ The griller runs a delegated session under
    rounds.
 2. It then adopts its own recommendation on each finding that is not critical.
    An author's dissent is recorded beside the decision.
-3. A finding that rests on product intent stated by no BR, no AC, the request
-   or the discussion is critical. It goes to the user, and no agent decides it.
+3. A finding that rests on product intent that no BR, no AC, the request nor
+   the discussion states is critical. It goes to the user, and no agent
+   decides it.
 
 The request bounds what a cycle may add. A proposed EX must be implied by an
 existing BR, an existing AC or the request. The griller rejects one that is not,

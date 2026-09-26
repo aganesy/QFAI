@@ -68,7 +68,7 @@ Scenario: Each Finding Is Decided Once, By The Right Party
   Given the findings a cycle raised,
   When they are decided,
   Then one griller for the cycle, which is neither the finder nor an author of an item a finding targets, puts them to the authors of the targeted items for at most two rounds and then adopts its own recommendation on each finding that is not critical, keeping any dissent beside it.
-  And a finding that rests on product intent no BR, AC, the request or the discussion states goes to the user, and a proposed EX that no existing BR, AC or the request implies is rejected.
+  And a finding that rests on product intent that no BR, no AC, the request nor the discussion states goes to the user, and a proposed EX that no existing BR, AC or the request implies is rejected.
 
 # AC-0001-0152-10
 # Parent: US-0001-0152
