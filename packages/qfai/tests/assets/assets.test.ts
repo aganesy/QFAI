@@ -179,7 +179,7 @@ const REQUIRED_VERSION_MENTIONS: readonly { readonly file: string; readonly vers
   // The release the migration guide is about. The migration contract requires
   // the guide to name it, without a `v`.
   {
-    file: "qfai-migration-spec-to-story/references/migration-guide.md",
+    file: "qfai-migration-v1-to-v2/references/migration-guide.md",
     version: "QFAI 2.0.0",
   },
 ];
@@ -258,7 +258,7 @@ describe("assets guardrails", () => {
     const delegated = new Set([
       "qfai-atdd",
       "qfai-implement",
-      "qfai-migration-spec-to-story",
+      "qfai-migration-v1-to-v2",
       "qfai-sdd",
     ]);
     const missing = (

@@ -1,7 +1,7 @@
 ---
-name: qfai-migration-spec-to-story
-title: QFAI Spec-to-Story Migration
-description: "Move an existing QFAI spec-pack project to the story-based spec tree using the bundled steps."
+name: qfai-migration-v1-to-v2
+title: QFAI 1.x to 2.x Migration
+description: "Move an existing QFAI 1.x spec-pack project to the 2.x story-based spec tree using the bundled steps, then install and check the free-text entry."
 allowed-tools: [Read, Glob, Write, Edit, Bash]
 roles:
   [
@@ -15,7 +15,7 @@ roles:
 routing-profile: architecture-heavy
 ---
 
-## /qfai-migration-spec-to-story
+## /qfai-migration-v1-to-v2
 
 [DRIFT-PROTOCOL:MANDATORY]
 
@@ -27,8 +27,8 @@ explicit assumptions in the migration report.
 
 Read `references/migration-guide.md` before changing the project. Run this
 skill from the project root, where `qfai.config.yaml` and a locally installed
-`qfai` package are available. The ten scripts use the installed package. They
-do not add a `qfai` subcommand or make network calls.
+`qfai` package are available. The twelve scripts use the installed package.
+They do not add a `qfai` subcommand or make network calls.
 Complete the launcher preflight in `.qfai/assistant/rule/shared-skill-operating-baseline.md`
 before running a CLI command.
 Use `rule/shared-skill-delegation-baseline.md` to route the declared roles and
@@ -37,9 +37,9 @@ keep authors separate from reviewers.
 ### Procedure
 
 1. Inspect the spec packs, contracts, assistant files and configured paths. If
-   the project already has the story tree and no migration ID map, run the ten
-   scripts to confirm their empty reports, then report that there is nothing to
-   migrate. Otherwise write
+   the project already has the story tree and no migration ID map, run steps 1
+   to 10 to confirm their empty reports, report that there is nothing to
+   migrate, and continue at item 6. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
    each old business rule's destination contract. Use the format in the guide.
@@ -60,9 +60,17 @@ keep authors separate from reviewers.
    Preserve any item the scripts could not place. After step 4 writes
    `id-map.json`, do not change `plan.yaml` to move a mapped item. Resolve
    remaining content in the new tree through `/qfai-sdd`.
-6. After step 10, run `npx qfai validate` through the launcher proven by preflight. Resolve
-   layout and chain errors. Use its BF, AC and EX test-obligation findings to
-   finish test coverage or record a permitted decision exception.
+6. After step 10, run steps 11 and 12 in order, each with `--dry-run` followed
+   by the real run, and keep their reports as in item 2. Step 11 installs the
+   free-text entry; step 12 checks it and writes nothing.
+7. Resolve every item step 12 lists under `## For a person`. Rerun step 11 for
+   an item it installs. A `qfai.config.yaml` routing override is the project's,
+   so ask its owner before changing it. Rerun step 12 until it exits 0.
+8. Then run `npx qfai validate` through the launcher proven by preflight.
+   Resolve layout and chain errors. Use its BF, AC and EX test-obligation
+   findings to finish test coverage or record a permitted decision exception.
+9. Hand the project's first free-text change request to `qfai-run`. From here
+   on, a change goes to it in plain words.
 
 | Step | Bundled script               | Result                                                         |
 | ---- | ---------------------------- | -------------------------------------------------------------- |
@@ -76,14 +84,16 @@ keep authors separate from reviewers.
 | 8    | `08-rewrite-annotations.mjs` | Rewrite resolvable test annotations.                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host integration links only.                           |
 | 10   | `10-update-gitignore.mjs`    | Refresh only the managed `.gitignore` block.                   |
+| 11   | `11-install-entry.mjs`       | Install skills, host links, entry directive and ignore lines.  |
+| 12   | `12-check-entry.mjs`         | Check, without writing, that a free-text run can start.        |
 
 Each script is invoked as
 `node <skill-dir>/scripts/<script>.mjs [--dry-run]`, with `<skill-dir>` set to
 this installed skill directory. `scripts/_step.mjs` is the shared package
-loader used by all ten entry points and must be shipped with them. Step 9 only
-repairs links. Do not run `npx qfai init --force` during migration.
+loader used by all twelve entry points and must be shipped with them. Step 9
+only repairs links. Do not run `npx qfai init --force` during migration.
 
-The scripts print `## Operations` even when empty. Steps 2 through 10 also print
+The scripts print `## Operations` even when empty. Steps 2 through 12 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints
 `## Annotations kept`. An empty section says `none`. Rerunning a completed step
 must change no file, and an interrupted step can be run again. The complete
@@ -92,7 +102,7 @@ write boundary is in `references/migration-guide.md#write-boundary`.
 ### Reviewer Gate
 
 The architecture reviewer checks the old-to-new mapping and preservation of
-unplaced content. The completion reviewer checks the ten reports, rerun
+unplaced content. The completion reviewer checks the twelve reports, rerun
 behavior, and validation result. Enforce the Drift Protocol and
 `rule/test-layers.md` when reviewing test obligations. Counts and effort
 estimates are signals, not gates. Record PASS or REVISE on the final tree.

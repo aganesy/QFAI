@@ -15,7 +15,7 @@ const fixtureRoot = path.join(packageRoot, "tests/fixtures/migration-spec-to-sto
 const cutoverFixtures = path.join(packageRoot, "tests/fixtures/bf0004MigrationCutover");
 const scriptRoot = path.join(
   packageRoot,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const scriptNames = [
   "01-rename-directories.mjs",
@@ -28,6 +28,8 @@ const scriptNames = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const temporaryRoots: string[] = [];
 
@@ -203,10 +205,10 @@ describe("BF-0004 migration outcomes", () => {
 
   // QFAI:BF-0004
   it("ships the migration guide with the installed skill and the release choices", async () => {
-    const skill = await text(root, ".qfai/assistant/skill/qfai-migration-spec-to-story/SKILL.md");
+    const skill = await text(root, ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md");
     const guide = await text(
       root,
-      ".qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md",
+      ".qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
     );
     expect(skill).toContain("references/migration-guide.md");
     expect(guide).toContain("QFAI 2.0.0 introduces");

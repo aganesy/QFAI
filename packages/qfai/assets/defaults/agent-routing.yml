@@ -359,7 +359,7 @@ routing:
         rerun_policy: changed-scope-dependents
     review_profile: ui-bearing
 
-  - skill: qfai-migration-spec-to-story
+  - skill: qfai-migration-v1-to-v2
     phases:
       - id: plan
         mandatory_agents: [requirements-analyst, solution-architect]

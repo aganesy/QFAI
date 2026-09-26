@@ -32,7 +32,7 @@ const fixtureRoot = path.join(packageRoot, "tests/fixtures/migration-spec-to-sto
 const completeRoot = path.join(packageRoot, "tests/fixtures/bf0004MigrationCutover");
 const scriptRoot = path.join(
   packageRoot,
-  "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/scripts",
+  "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/scripts",
 );
 const scriptNames = [
   "01-rename-directories.mjs",
@@ -45,6 +45,8 @@ const scriptNames = [
   "08-rewrite-annotations.mjs",
   "09-repoint-links.mjs",
   "10-update-gitignore.mjs",
+  "11-install-entry.mjs",
+  "12-check-entry.mjs",
 ] as const;
 const changedPathPatterns: readonly (readonly RegExp[])[] = [
   [
@@ -496,7 +498,7 @@ describe("BF-0004 acceptance criteria", () => {
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
       expect(result.issues[0]?.message).toContain(path.join(root, ".qfai/spec"));
-      expect(result.issues[0]?.message).toContain("/qfai-migration-spec-to-story");
+      expect(result.issues[0]?.message).toContain("/qfai-migration-v1-to-v2");
     }
   });
 
@@ -525,7 +527,7 @@ describe("BF-0004 acceptance criteria", () => {
     );
     const script = path.join(
       root,
-      ".qfai/assistant/skill/qfai-migration-spec-to-story/scripts/01-rename-directories.mjs",
+      ".qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs",
     );
     const result = run(root, process.execPath, [script, "--dry-run"]);
     expect(result.status, result.stderr).not.toBe(2);
@@ -2128,7 +2130,7 @@ describe("BF-0004 acceptance criteria", () => {
     const guide = await readFile(
       path.join(
         packageRoot,
-        "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/references/migration-guide.md",
+        "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/references/migration-guide.md",
       ),
       "utf8",
     );
@@ -2140,10 +2142,7 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0012-01
   it("instructs the installed skill to plan, preview, retain reports and validate", async () => {
     const skill = await readFile(
-      path.join(
-        packageRoot,
-        "assets/init/.qfai/assistant/skill/qfai-migration-spec-to-story/SKILL.md",
-      ),
+      path.join(packageRoot, "assets/init/.qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
       "utf8",
     );
     const required = [
@@ -2169,9 +2168,9 @@ describe("BF-0004 acceptance criteria", () => {
     await mkdir(path.join(legacyRoot, ".qfai/specs/spec-0001"), { recursive: true });
     await runInit({ dir: legacyRoot, force: false, dryRun: false, yes: true });
     for (const target of [root, legacyRoot]) {
-      const skill = path.join(target, ".qfai/assistant/skill/qfai-migration-spec-to-story");
+      const skill = path.join(target, ".qfai/assistant/skill/qfai-migration-v1-to-v2");
       expect(await readFile(path.join(skill, "SKILL.md"), "utf8")).toContain(
-        "qfai-migration-spec-to-story",
+        "qfai-migration-v1-to-v2",
       );
       const installedScripts = await readdir(path.join(skill, "scripts"));
       expect(installedScripts.filter((name) => /^\d{2}-.*\.mjs$/.test(name)).sort()).toEqual([
@@ -2179,9 +2178,9 @@ describe("BF-0004 acceptance criteria", () => {
       ]);
       expect(installedScripts).toContain("_step.mjs");
       for (const host of [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"]) {
-        const link = path.join(target, host, "qfai-migration-spec-to-story");
+        const link = path.join(target, host, "qfai-migration-v1-to-v2");
         expect((await readlink(link)).replace(/\\/g, "/")).toContain(
-          "assistant/skill/qfai-migration-spec-to-story",
+          "assistant/skill/qfai-migration-v1-to-v2",
         );
       }
     }

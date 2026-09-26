@@ -1437,7 +1437,7 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
   "QFAI-LAYOUT-001":
-    "Invoke the `/qfai-migration-spec-to-story` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
+    "Invoke the `/qfai-migration-v1-to-v2` skill in your AI assistant to move the old spec packs to the story tree, then rerun validate.",
   "QFAI-SCAN-002":
     "Fix the unreadable test path or reduce the configured test globs so the selected tests can all be scanned.",
   "QFAI-SPACK-102":
