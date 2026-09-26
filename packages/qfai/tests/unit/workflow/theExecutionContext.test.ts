@@ -33,7 +33,7 @@ it("Decide start", () => {
         digestKey: "b".repeat(64),
         policyDigests: { "qfai.config.yaml": "c".repeat(64) },
 
-        planDigests: { ".qfai/assistant/process/workflows/direct.yml": "e".repeat(64) },
+        planDigests: { "assets/defaults/workflows/direct.yml": "e".repeat(64) },
       },
     },
   );
@@ -46,7 +46,7 @@ it("Decide start", () => {
       qfaiVersion: "2.0.0",
       policyDigests: { "qfai.config.yaml": "c".repeat(64) },
 
-      planDigests: { ".qfai/assistant/process/workflows/direct.yml": "e".repeat(64) },
+      planDigests: { "assets/defaults/workflows/direct.yml": "e".repeat(64) },
       harness,
       requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
     },
