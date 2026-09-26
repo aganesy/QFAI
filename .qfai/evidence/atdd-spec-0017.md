@@ -3005,34 +3005,11 @@ revision at which this number can be made true. A branch-local discipline — in
 strongest argument in this record for deriving the count rather than committing it: a literal that only
 a merge can invalidate has no author to hold responsible for it.
 
-The count and its split across the two include roots are on one line, and both are derived by the same
-walk:
-
-e2e callsites at this tree: 2443 (packages/qfai/tests/assets 2250, packages/qfai/tests/e2e 193)
-
-**That line is the repair, and it is the seventh attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
-each found the per-root totals a round behind, and each repair re-typed them. The seventh INSTANCE is
-the merge above — which is why no round produced it — and the seventh REPAIR is this commit. The two
-are not the same event: the merge is what carried a count from one parent into a tree that holds both
-parents' callsites, and re-recording the derived count is what corrects it. The numbers are left out
-of this sentence on purpose — naming them here is a second literal only a merge can invalidate, which
-is the defect the paragraph above describes.
-
-**The per-root split used to be prose, and that is what made it recur.** It read as an independent
-second measurement agreeing with the derived total, but nothing produced it except a person typing what
-they had just run, and nothing checked it afterwards. `pin-stage-evidence-counts.mjs` re-pinned the
-total and left the sentence describing an earlier tree, every time; the last such gap read 937 against
-a tree holding 1728. Both numbers come from `deriveE2eCallsites()` — the split is what that walk
-returns on the way to the total — so writing one and typing the other was never the cheaper option.
-
-`stageEvidenceCounts.test.ts` compares the whole line with a fresh walk, so a commit that moves a
-callsite reddens until the line is re-pinned. The split is compared root by root rather than folded
-into the total, which is the one drift a total cannot see: a callsite moving between the two roots
-leaves it unchanged.
-
-It reads "at this tree" rather than naming a revision on purpose. A row cannot name the commit it is
-written in — round 10's `m1` — so pointing the guard at the sequence's last row would either make the row
-false or make the guard red at the commit that corrects it.
+**This record no longer carries the e2e callsite count.** The count described the whole test tree
+rather than anything in `spec-0017`, and `spec-0017` has since been retired into the story tree. The
+guard that compared the recorded line with the tree was removed in that migration, and the scripts that
+derived and wrote the line went with it, since nothing read the line any more. Where this record says
+elsewhere that the count is recorded or enforced, it describes the state before that retirement.
 
 **No sentence here claims how many commits follow the last row of the sequence.** Five rounds running,
 that sentence was wrong — "the two commits after it" against five, and before that "records only" against
