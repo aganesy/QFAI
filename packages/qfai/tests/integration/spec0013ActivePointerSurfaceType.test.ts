@@ -61,7 +61,7 @@ describe("spec-0013 active-pack resolver CHG-006", () => {
     expect(resolved).toBe(expected);
   });
 
-  it("QFAI:EX-0001-0160-02 — a dangling currentId names candidate packs and the recovery command", async () => {
+  it("QFAI:EX-0001-0160-03 — a dangling currentId names candidate packs and the recovery command", async () => {
     await makeDiscussionPack("discussion-20260101000000000");
     await makeDiscussionPack("discussion-20260202000000000");
     await writeDiscussionCurrentId(root, "discussion-20260303000000000");

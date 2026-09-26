@@ -12,7 +12,7 @@
  */
 // QFAI:EX-0001-0159-01
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -72,5 +72,37 @@ describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks 
     // on correct formatting, which says nothing about the instruction.
     const pattern = /(>=\s*1|≥\s*1|at least one)\s*`?primary[_\s-]?task/i;
     expect(content).toMatch(pattern);
+  });
+});
+
+const SDD_SKILL_DIR = path.resolve(TEMPLATE_PATH, "..", "..", "..");
+
+const LEGACY_DESIGN_CONTRACTS = [
+  "exploration-brief.yaml",
+  "evaluation-rubric.yaml",
+  "evaluator-calibration.yaml",
+  "selected-direction.yaml",
+  "reference-pool.yaml",
+  "brand-design.yaml",
+];
+
+describe("shipped qfai-sdd design contracts", () => {
+  // QFAI:EX-0001-0158-01
+  // QFAI:EX-0001-0158-02
+  it("writes no legacy design contract and lists the removed ones", async () => {
+    const templates = await readdir(path.join(SDD_SKILL_DIR, "templates"), { recursive: true });
+    const names = templates.map((entry) => path.basename(entry));
+    for (const legacy of LEGACY_DESIGN_CONTRACTS) {
+      expect(names).not.toContain(legacy);
+    }
+
+    const normalization = await readFile(
+      path.join(SDD_SKILL_DIR, "references", "ui-design-contract-normalization.md"),
+      "utf-8",
+    );
+    expect(normalization).toContain("MUST NOT be generated");
+    expect(normalization).toContain("Add the lock YAML to `<paths.contractsDir>/contracts.md`");
+    expect(normalization).toContain("design-system.yaml");
+    expect(normalization).toContain("prototype-handoff.yaml");
   });
 });

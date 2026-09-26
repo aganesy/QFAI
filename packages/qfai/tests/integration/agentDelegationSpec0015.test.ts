@@ -332,12 +332,28 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
+  // QFAI:EX-0001-0169-06
+  it("retries a saturated delegation and reports an exhausted budget", async () => {
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+      expect(taxonomy).toContain("`agent thread limit reached`");
+      expect(taxonomy).toContain("Bounded wait-and-retry on the same stage");
+      expect(taxonomy).toContain("report the class as `saturated (retry budget exhausted)`");
+      expect(taxonomy).toContain("`saturated` never authorises self-execution");
+    }
+  });
+
+  // QFAI:EX-0001-0169-07
   it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
     // The reviewer-budget branch mandates recording the gate as PENDING;
     // a schema that allows only PASS/REVISE leaves an agent no legal way
     // to do that.
     for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
       const content = await readAsset(file);
+      expect(content).toContain(
+        "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
+      );
       expect(content).toContain("Status (PASS/REVISE/PENDING)");
       expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
     }

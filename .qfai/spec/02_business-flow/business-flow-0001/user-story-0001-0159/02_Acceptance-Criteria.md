@@ -7,10 +7,10 @@ Feature: UI contract `primary_tasks` slot per screen
 
 # AC-0001-0159-01
 # Parent: US-0001-0159
-Scenario: UI contract template carries `primary_tasks: []` slot
-  Given the shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
+Scenario: UI contract template carries a `primary_tasks` list
+  Given the shipped UI contract template `packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/contracts/ui-contract.sample.yaml`,
   When the template is read at `qfai init` time or by `/qfai-sdd` during contract authoring,
-  Then every entry in `screens[]` carries a `primary_tasks: []` slot AND the requirements-analyst agent guide (under `.qfai/assistant/agents/requirements-analyst.md` or equivalent) instructs authoring ≥ 1 primary_task per screen.
+  Then every entry in `screens[]` carries a `primary_tasks` list AND the requirements-analyst agent guide (under `.qfai/assistant/agent/requirements-analyst.md` or equivalent) instructs authoring ≥ 1 primary_task per screen.
 
 # AC-0001-0159-02
 # Parent: US-0001-0159
