@@ -133,6 +133,15 @@ describe("BF-0002 CI verdict examples", () => {
     for (const state of ["success", "skipped"]) {
       expect(evaluateVerdict(needsWith(state)).exitCode).toBe(0);
     }
+    const mixed = Object.fromEntries(
+      declaredNeeds().map((name, index) => [
+        name,
+        { result: index % 2 === 0 ? "success" : "skipped" },
+      ]),
+    );
+    expect(new Set(Object.values(mixed).map((entry) => entry.result)).size).toBe(2);
+    const mixedRun = evaluateVerdict(mixed);
+    expect(mixedRun.exitCode, mixedRun.output).toBe(0);
   });
 
   it("rejects failed, cancelled, and unrecognized results", () => {

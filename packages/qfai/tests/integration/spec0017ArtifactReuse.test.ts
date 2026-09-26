@@ -133,8 +133,8 @@ async function readState(): Promise<ReuseState> {
   return { rebuildLegs: rebuildLegs.sort(), downloadSteps, packLifecycleSites };
 }
 
-// QFAI:EX-0002-0016-01
 describe("the build-artifact reuse rule holds, and holds vacuously until reuse is adopted", () => {
+  // QFAI:EX-0002-0016-01
   it("names the legs that would change, and binds the numbers to the moment one of them downloads", async () => {
     const state = await readState();
 
