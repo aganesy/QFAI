@@ -5,7 +5,7 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
 import { resolveImportLiteEntrypoint } from "../preflight/importLiteEvidence.js";
-import { isPristineStorySeed } from "../storyTree/pristineSeed.js";
+import { isStoryTreeProject } from "../storyTree/layout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -54,10 +54,13 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (!readiness.latestPackDir || !readiness.latestPackName) {
+    // On the story tree a discussion pack is optional: SDD may start from an
+    // explicit user requirement, and its own preflight stops when no usable
+    // source exists. A misnamed pack still fails on QFAI-DPACK-005 above.
     if (
       readiness.dangerousPackNames.length === 0 &&
       readiness.legacyPackNames.length === 0 &&
-      (await isPristineStorySeed(root, config))
+      (await isStoryTreeProject(root, config))
     ) {
       return issues;
     }

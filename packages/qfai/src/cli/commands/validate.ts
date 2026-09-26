@@ -1,11 +1,11 @@
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { FailOn, OutputFormat, QfaiConfig } from "../../core/config.js";
+import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
-import { hasStoryTreeEntries, resolveStoryTreeRoots } from "../../core/storyTree/layout.js";
+import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
@@ -350,16 +350,7 @@ export function scopedReportPath(
   return `${dir}${stem}.flow-${suffix}${ext}`;
 }
 
-/** Detect the story-tree layout through the configured specs directory. */
-export async function isStoryTreeProject(root: string, config: QfaiConfig): Promise<boolean> {
-  const specsDir = resolveStoryTreeRoots(root, config).specsDir;
-  try {
-    return hasStoryTreeEntries(await readdir(specsDir));
-  } catch (caught: unknown) {
-    if ((caught as NodeJS.ErrnoException).code === "ENOENT") return false;
-    throw caught;
-  }
-}
+export { isStoryTreeProject };
 
 /**
  * Compute the `.qfai/report/validate-<profile>.json` path that mirrors

@@ -107,6 +107,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A story-tree project no longer needs a discussion pack to validate.**
+  `qfai validate` reported `QFAI-DPACK-001` on every story-tree project past
+  its first edit that had no discussion pack, although `/qfai-sdd` may start
+  from an explicit user requirement. The finding now fires only where no story
+  tree exists and no import-lite entrypoint applies. A misnamed pack still
+  reports `QFAI-DPACK-005` or `QFAI-DPACK-006`.
+- **The CLI contract template validates as written.** Its `## Rules` table used
+  the columns Rule ID, Rule, Examples and Rule refs, which the business-rule
+  reader rejects. It now uses BR-ID, Statement and Examples.
 - **Shipped rules and messages name the story-tree locations.** The rules
   `qfai init` copies into `.agents/rules/` pointed at the removed
   `.qfai/assistant/catalog/`, `.qfai/assistant/constitution/`, `.qfai/specs/`

@@ -1,3 +1,4 @@
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
@@ -43,6 +44,17 @@ export function hasLegacySpecPackEntries(entries: readonly string[]): boolean {
 
 export function hasStoryTreeEntries(entries: readonly string[]): boolean {
   return STORY_TREE_ROOT_ENTRIES.some((entry) => entries.includes(entry));
+}
+
+/** Detect the story-tree layout through the configured specs directory. */
+export async function isStoryTreeProject(root: string, config: QfaiConfig): Promise<boolean> {
+  const specsDir = resolveStoryTreeRoots(root, config).specsDir;
+  try {
+    return hasStoryTreeEntries(await readdir(specsDir));
+  } catch (caught: unknown) {
+    if (caught instanceof Error && "code" in caught && caught.code === "ENOENT") return false;
+    throw caught;
+  }
 }
 
 export function storyTreeMarkdownPatterns(specsDir: string, contractsDir: string): string[] {
