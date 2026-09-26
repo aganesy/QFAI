@@ -28,6 +28,7 @@ export function sentencesOf(text: string): string[] {
     if (body === "") continue;
     if (TABLE_ROW.test(block)) {
       statements.push(body);
+      leadIn = "";
       continue;
     }
     const sentences = body.split(/(?<=[.!?])\s+(?=[A-Z`"(*_[])/);
@@ -45,6 +46,10 @@ export function sentencesOf(text: string): string[] {
 
 /** Asserts that one statement of `text` matches every pattern, and returns that statement. */
 export function expectSentence(text: string, what: string, ...patterns: RegExp[]): string {
+  expect(
+    patterns.length,
+    `${what}: no pattern given, so any statement would match`,
+  ).toBeGreaterThan(0);
   const found = sentencesOf(text).find((sentence) =>
     patterns.every((pattern) => pattern.test(sentence)),
   );

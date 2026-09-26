@@ -24,7 +24,10 @@
   (pre-draft grilling), DEC-0797 (triage, UPDATE:APPEND US-0001-0152),
   DEC-0798 to DEC-0800 (rejected options), DEC-0801 and DEC-0802 (cycle 1),
   DEC-0803 and DEC-0804 (cycle 2), DEC-0805 (`Change request:` for the files
-  this change writes).
+  this change writes), DEC-0806 (which rule governs a finding for the user
+  under a no-question mode inside a run), DEC-0807 (`Change request:` for the
+  wording of BR-0741, BR-0749, AC-0001-0152-09 and the matching item of
+  `qfai-workflow.md`).
 - Open-question rows: none. No finding was left without a decision.
 
 ## Pre-draft Grilling
@@ -122,21 +125,23 @@ this invocation, so every adopted change was applied directly (BR-0750). Cycle
 
 ## Open risks
 
-- The new ACs and EXs have no annotating test until the test slice lands, so
-  the dogfood backlog guard's `tdd` and `full` profiles count them against
-  `user-story-0001-0152/02_Acceptance-Criteria.md` and `03_Example.md`. The
-  pins in `scripts/dogfood-backlog.json` are not raised here.
-- The skill text, the `sdd-flow.md` evidence template section for the cycle
-  record, and the reviewer checklist that reads it land in a later slice.
-  Until then no shipped text tells `/qfai-sdd` to run the cycle.
-- DEC-0805 records the user's 2026-09-26 decisions as its approval, relayed by
-  the coordinating session rather than given in this session.
+- The tests that annotate AC-0001-0152-08 to -14 and EX-0001-0152-12 to -39
+  run in CI; this record claims no local run of the whole suite.
+- The cycle is agent guidance with no validator of its own. Its assurance is
+  the evidence record and the completion reviewer's check of it.
+- BR-0752 still reads as if its `--auto` sentence applied inside a run.
+  DEC-0806 settles that it applies outside a run only; the rule text is
+  unchanged.
+- DEC-0805 and DEC-0807 record the user's 2026-09-26 decisions as their
+  approval, relayed by the coordinating session rather than given in this
+  session.
 
 ## Final status
 
 - Status: `PASS`
-- Reason: the per-flow `sdd` gate and the drift gate report no error, and the
-  completion reviewer returned PASS on the repaired revision. The new examples
-  wait for their tests in the test slice.
-</content>
-</invoke>
+- Reason: the skill text, the `sdd-flow.md` evidence template section, the
+  reviewer checklist that reads it, and the tests for every new AC and EX are
+  in place. The per-flow `sdd` gate and the drift gate report no error, and
+  the dogfood backlog guard passes for the `sdd`, `tdd` and `full` profiles
+  with its pins unchanged. The completion reviewer's advisories on the
+  reviewed revision are applied.

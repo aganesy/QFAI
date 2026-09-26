@@ -137,7 +137,7 @@ describe("who decides a finding", () => {
       text,
       "product intent is critical",
       /product intent/i,
-      /no BR, no AC, the request or the discussion/i,
+      /no BR, no AC, the request nor the discussion states/i,
       /is critical/i,
     );
     expectSentence(text, "the user decides it", /goes to the user/i, /no agent decides it/i);
@@ -291,13 +291,19 @@ describe("the cycle inside a workflow run", () => {
 
   // QFAI:EX-0001-0152-22
   it("blocks on an adopted finding outside the checked scope, with no change request", async () => {
+    const text = await inRun();
     expectSentence(
-      await inRun(),
+      text,
       "blocked",
       /adopted finding on an item outside the run's checked scope is upstream drift/i,
       /no `Change request:` row/i,
       /item unchanged/i,
       /returns `blocked`/,
+    );
+    expectSentence(
+      text,
+      "the change is made outside the run",
+      /`\/qfai-sdd` invoked by name outside the run makes that change/,
     );
   });
 
@@ -438,6 +444,11 @@ describe("a decided finding is not raised again", () => {
       /includes it/i,
     );
     expectSentence(text, "wording", /Matching never goes by wording/i);
+    expectSentence(
+      text,
+      "a case outside the rejected one",
+      /does not bar a finding on the same IDs for an order of exactly 10 000/i,
+    );
     expectSentence(text, "reopening", /decision appended to reopen a REJECTED row lifts it/i);
   });
 

@@ -154,13 +154,9 @@ Planning and coverage estimates are signals, not gates. The gate records
 PASS or REVISE for the reviewed revision; an author does not review its own
 artifact.
 
-Where the concrete-abstract cycle ran, the completion reviewer returns REVISE,
-naming the cycle, finding or item at fault, when a cycle that ran has no
-evidence row, when the finder wrote a BR it read, when a finding the user did
-not decide names its finder or an author of an item it targets as adjudicator,
-or when an adopted change to an item that existed before the invocation was
-applied with no in-force triage approval or `Change request:` row whose
-approved change covers it.
+Where the concrete-abstract cycle ran, the completion reviewer returns REVISE
+on the grounds in
+`references/sdd-quality-gate.md#concrete-abstract-cycle-record`.
 
 When a stage needs user input or cannot proceed, record the question as a row of `open-questions.md` and report what the stage waits on. Follow the gate-failure repair protocol in the shared operating baseline. Do not bypass a failed gate.
 

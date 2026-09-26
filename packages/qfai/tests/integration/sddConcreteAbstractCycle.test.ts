@@ -236,10 +236,14 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(text, "the row", /one `decisions\.md` row at REJECTED/i);
     const template = await readShipped(DECISIONS_TEMPLATE);
     expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach", "Status"]);
-    const decisions =
-      "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | REJECTED |";
-    const issues = validateStoryTreeStructureModel(storyTree({ decisions }));
-    expect(issues.filter((issue) => issue.file?.endsWith("decisions.md") ?? false)).toEqual([]);
+    const register = (status: string): string =>
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | ${status} |`;
+    const decisionsIssues = (status: string) =>
+      validateStoryTreeStructureModel(storyTree({ decisions: register(status) })).filter(
+        (issue) => issue.file?.endsWith("decisions.md") ?? false,
+      );
+    expect(decisionsIssues("REJECTED")).toEqual([]);
+    expect(decisionsIssues("CLOSED")).not.toEqual([]);
   });
 
   // QFAI:AC-0001-0152-14
@@ -264,12 +268,16 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
       /`## Concrete-Abstract Cycle`/,
     );
     expectSentence(gate, "no validator", /No validator reads it/i);
-    const skill = await readShipped(SKILL);
-    expectSentence(
-      skill,
+    const skillGate = expectSentence(
+      await readShipped(SKILL),
       "the skill's gate",
       /concrete-abstract cycle ran/i,
       /completion reviewer returns REVISE/i,
+    );
+    await expectResolvedCitation(
+      SKILL,
+      skillGate,
+      "references/sdd-quality-gate.md#concrete-abstract-cycle-record",
     );
   });
 });
