@@ -273,3 +273,26 @@ describe("a UI contract entry no screen is read from is reported", () => {
     expect(codes).toContain("QFAI-CONTRACT-042");
   });
 });
+
+describe("the screen reader under an absolute contracts directory", () => {
+  // QFAI:EX-0001-0124-03
+  it("returns every screen of a contract outside the project root", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-root-"));
+    const contractsDir = await mkdtemp(path.join(os.tmpdir(), "qfai-ui-screens-abs-"));
+    roots.push(root, contractsDir);
+    await mkdir(path.join(contractsDir, "ui"), { recursive: true });
+    await writeFile(
+      path.join(contractsDir, "ui", "orders.yaml"),
+      [
+        "# QFAI-CONTRACT-ID: CON-UI-0007",
+        "screens:",
+        ...screen("home", "/"),
+        ...screen("settings", "/settings"),
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    const screens = await readUiContractScreenContracts(root, contractsDir);
+    expect(screens.map((item) => item.screenId).sort()).toEqual(["home", "settings"]);
+  });
+});

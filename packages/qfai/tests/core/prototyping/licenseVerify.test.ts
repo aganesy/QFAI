@@ -394,6 +394,7 @@ describe("licenseVerify — attribution is required", () => {
   // ideographic-space) is semantically the same class as
   // "missing"; rejecting only `undefined` / empty-string would
   // let `"   "` slip through.
+  // QFAI:EX-0001-0121-02
   it.each([
     ["spaces", "   "],
     ["tab + newline", "\t\n"],

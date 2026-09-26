@@ -316,8 +316,8 @@ const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<st
   ...overrides,
 });
 
-// QFAI:EX-0001-0120-01
 describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () => {
+  // QFAI:EX-0001-0120-06
   it("accepts a payload with blockingFindings, impressions and the top-level discriminators", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -342,7 +342,6 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
   });
 });
 
-// QFAI:EX-0001-0120-01
 describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365)", () => {
   it.each(FEEL_FIELDS as readonly FeelField[])(
     "rejects when impressions.'%s' is missing",
@@ -373,6 +372,7 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     expect(result.errors.some((e) => /unknown field: extraneousKey/.test(e))).toBe(true);
   });
 
+  // QFAI:EX-0001-0120-06
   it("rejects when an unknown nested key under impressions is present", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -542,6 +542,7 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
 // replaced by the SSOT-compliant required `softWarnings.timeBudget: boolean`
 // nested form.
 describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
+  // QFAI:EX-0001-0101-03
   it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {
     // `timeBudget` is derived from `wallTimeSec`, so the over-budget
     // wall time has to come with it.
@@ -632,6 +633,7 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
     expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#fff" }]);
   });
 
+  // QFAI:EX-0001-0101-03
   it("rejects the legacy flat timeBudgetSoftWarning key (closed-schema regression)", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({
@@ -677,6 +679,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
   // The CLI contract pins `cycle: 0..MAX_ITERATION_INDEX` (currently 0..9);
   // the parser must reject `cycle > 9` so reviewer-emitted payloads cannot
   // bypass the closed-schema contract via the upper-bound gap.
+  // QFAI:EX-0001-0120-06
   it("rejects when cycle exceeds MAX_ITERATION_INDEX (10 / 99 / 100)", () => {
     for (const bad of [10, 99, 100]) {
       const result = parseEvaluatorReview(baseReviewerPayload({ cycle: bad }));
@@ -723,6 +726,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     expect(stringy.ok).toBe(false);
   });
 
+  // QFAI:EX-0001-0120-06
   it("accepts a full SSOT-compliant payload with all 11 required fields", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({

@@ -317,6 +317,7 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
+  // QFAI:EX-0001-0132-01
   it("emits QFAI-PROT-002 when proseCritique is over the word cap", async () => {
     const root = await newTempDir();
     await seedPrototypingJson(root, {
@@ -385,6 +386,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
   });
 
+  // QFAI:EX-0001-0132-01
   it("emits QFAI-PROT-002 naming the character cap when a Japanese proseCritique is over it", async () => {
     const root = await newTempDir();
     const longJapanese = "情報設計は弱い。".repeat(400);
@@ -739,6 +741,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(rules).toContain("prototypingEvidence.review.blockingFindings");
   });
 
+  // QFAI:EX-0001-0110-01
   it("requires exactly four valid ordinal scores in both summary and persisted iteration", async () => {
     const root = await newTempDir();
     const iter = validIter(0);

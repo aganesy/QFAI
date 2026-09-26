@@ -17,6 +17,7 @@ import {
 } from "../../../../src/core/prototyping/blockedSummary.js";
 
 describe("buildBlockedSummary: literal header + 3 category lines", () => {
+  // QFAI:EX-0001-0141-01
   it("emits the literal `[BLOCKED] exit-64 prevented by:` header followed by 3 category lines", () => {
     const text = buildBlockedSummary({
       designMdViolations: [{ kind: "color", found: "#fff" }],
@@ -30,6 +31,7 @@ describe("buildBlockedSummary: literal header + 3 category lines", () => {
     expect(lines.length).toBe(1 + 3);
   });
 
+  // QFAI:EX-0001-0141-01
   it("names the top-3 categories in stable order with offender details", () => {
     const lines = buildBlockedCategoryLines({
       designMdViolations: [

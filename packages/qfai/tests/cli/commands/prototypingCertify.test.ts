@@ -218,6 +218,7 @@ async function reseal(root: string, evidenceRel: string, body: string): Promise<
 }
 
 describe("qfai prototyping certify UI contract screen review coverage", () => {
+  // QFAI:EX-0001-0122-05
   it("exits 64 and names the missing UI contract and screen when a frozen screen lacks review.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -809,6 +810,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(64);
   });
 
+  // QFAI:EX-0001-0122-03
   it("rejects legacy scope fields and malformed full IDs with exit 2", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

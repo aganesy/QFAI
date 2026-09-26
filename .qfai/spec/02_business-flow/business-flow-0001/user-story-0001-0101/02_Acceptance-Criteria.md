@@ -23,7 +23,7 @@ Scenario: AC-0001-0101-02
 # AC-0001-0101-03
 # Parent: US-0001-0101
 Scenario: Per-spec time-budget soft warning
-  Given the per-spec time-budget cap is 5 min/spec per cycle (OQ-0004) (5 min per UI contract per cycle on the story tree),
+  Given the per-spec time-budget cap is 5 min/spec per cycle (OQ-0004) (5 min per (UI contract, screen) review session on the story tree),
   When a spec × cycle exceeds the cap,
   Then the Reviewer payload records a `softWarnings.timeBudget` entry; the aggregator does NOT gate on it; only the global 10-cycle budget can hard-fail the run.
 ```
