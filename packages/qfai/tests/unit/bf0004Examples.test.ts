@@ -138,9 +138,10 @@ describe("BF-0004 migration examples", () => {
     );
     expect(links).toContain("await repairIntegrationWrappers(");
     expect(ignore).toContain(
-      'import { ensureRootGitignoreEntries } from "../../cli/commands/init.js"',
+      'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../cli/commands/init.js"',
     );
-    expect(ignore).toContain("await ensureRootGitignoreEntries(context.root, false");
+    expect(ignore).toContain("await ensureRootGitignoreEntries(root, false");
+    expect(ignore).toContain("await replaceRootGitignore(root, file,");
     expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });
@@ -729,7 +730,7 @@ describe("BF-0004 migration examples", () => {
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(prose).toMatch(
-      /already has the story tree and no migration ID map, run steps 1 to 10 to confirm their empty reports, report that there is nothing to migrate/,
+      /already has the story tree and no migration ID map, run steps 1 to 10\. When steps 1 to 9 list no operation, report that there is nothing to migrate/,
     );
   });
 
@@ -745,6 +746,13 @@ describe("BF-0004 migration examples", () => {
       expect(await runStep(step, [], { cwd: context.root, ...report.io })).toBe(0);
       expect(report.output).toContain("## Operations\nnone");
       expect(report.output).not.toContain("## For a person\n-");
+      if (step === 10) {
+        expect(report.output).toContain(
+          "## Git index\n- the project is not a git repository, so the index is unchanged\n",
+        );
+      } else {
+        expect(report.output).not.toContain("## Git index");
+      }
       expect(await treeHash(context.root)).toBe(before);
     }
   });

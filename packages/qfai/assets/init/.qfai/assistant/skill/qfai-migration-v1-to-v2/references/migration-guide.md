@@ -76,7 +76,7 @@ evidence. The scripts write no report file themselves.
 | 7    | `07-rules-to-contracts.mjs`  | Put rules into the contracts named by the plan.                                                         |
 | 8    | `08-rewrite-annotations.mjs` | Update resolvable test annotations; keep and report the rest.                                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host skill and agent links.                                                                     |
-| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block.                                                                 |
+| 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git: the managed block, its re-include lines and the git index.           |
 | 11   | `11-install-entry.mjs`       | Install the free-text entry: shipped skills, host skill links, entry directive and `.gitignore` lines.  |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that `npx qfai workflow start` would accept the project.                        |
 
@@ -102,6 +102,9 @@ network call. The scripts write only these targets:
 | `QFAI:` annotation lines in test files                                                                                                                      | 8                                    |
 | `.claude/skills`, `.agents/skills`, `.codex/skills`, `.github/skills`, `.claude/agents`, `.github/agents`                                                   | 9; 11 for the four skill directories |
 | Managed block of `.gitignore`                                                                                                                               | 10, 11                               |
+| A `.gitignore` line outside the managed block that re-includes `.qfai/evidence/`, removed                                                                   | 10                                   |
+| `.qfai/evidence/.gitignore`, deleted                                                                                                                        | 10                                   |
+| Git index entries under `.qfai/evidence/`, removed; the files stay on disk                                                                                  | 10                                   |
 | Shipped skill directories under `.qfai/assistant/skill/`, and `.qfai/evidence/migration-spec-to-story/legacy/skill/`                                        | 11                                   |
 | `AGENTS.md` and `CLAUDE.md`, only to add the entry directive, with a staging file beside each                                                               | 11                                   |
 | Temporary staging inside `.qfai/evidence/migration-spec-to-story/`, configured spec, contract or test directories, or `.qfai/report/` for the managed block | 1–8, 10, 11                          |
@@ -114,13 +117,14 @@ Step 12 writes nothing.
 
 Every report contains `## Operations`. Steps 2 through 12 also contain
 `## For a person`; step 5 contains `## Cases to examples`; step 8 contains
-`## Annotations kept`. Empty sections say `none`. Exit 0 means the step is
+`## Annotations kept`; step 10 contains `## Git index`. Empty sections say
+`none`. Exit 0 means the step is
 complete. Exit 2 means it refused before writing; read the message and fix the
 input or order. Exit 3 means the step completed but reports content that needs a
 person. An unexpected failure can be retried after the cause is fixed. A
-completed step is safe to run again and changes no file. If steps 1 to 10 all
+completed step is safe to run again and changes no file. If steps 1 to 9 all
 report `none` on a project already using the story tree, there is nothing to
-migrate; run steps 11 and 12 all the same.
+migrate; run steps 10 to 12 all the same.
 
 Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
 is archived under `retired/_policies/` and none of its sections was copied to
@@ -145,7 +149,22 @@ Step 8 changes test-case annotations to example annotations where the ID map
 resolves them. It changes an old user-story annotation to a business-flow
 annotation only in an E2E test. Contract annotations, unresolved annotations
 and old deferral markers stay in place and are reported. Step 9 changes only the
-host integration links. Step 10 changes only the managed `.gitignore` block.
+host integration links.
+
+Step 10 keeps `.qfai/evidence/` out of git:
+
+- it makes the managed `.gitignore` block equal the installed package's block;
+- it removes every `.gitignore` line that re-includes `.qfai/evidence` or a
+  path under it, and lists each one under `## Operations`. `!.qfai/`,
+  `!.qfai/install-provenance.json` and the `!.qfai/assistant` lines stay;
+- it deletes `.qfai/evidence/.gitignore`, and reports that path for a person
+  when it is not a regular file;
+- it removes every git index entry under `.qfai/evidence/`, as
+  `git rm -r --cached .qfai/evidence` would. The files stay on disk and nothing
+  is committed: commit the staged removals with the rest of the migration.
+
+`## Git index` says how many paths left the index, or why none did: the
+project is not a git repository, or its index tracks nothing there.
 
 ## Install and check the free-text entry
 
@@ -170,10 +189,12 @@ reported by name:
 | `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
 | `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
 | `entry-directive`     | `AGENTS.md` or `CLAUDE.md` lacks the entry directive                                             |
-| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`                                                |
+| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`, or a line re-includes `.qfai/evidence/`       |
 | `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
+| `evidence-tracked`    | Git tracks a path under `.qfai/evidence/`                                                        |
 
-Run step 11 again for what it installs. A routing override belongs to the
+Run step 11 again for what it installs, and step 10 again for an evidence
+re-include line or a tracked evidence path. A routing override belongs to the
 project, so its owner decides whether to restore the reviewer. Rerun step 12
 until it exits 0.
 
@@ -186,6 +207,11 @@ intentionally absent.
 
 Then send the project's first free-text change request to the `qfai-run`
 skill. The entry directive step 11 added points agents there.
+
+The plan, the ID map and the `legacy/` and `retired/` archives under
+`.qfai/evidence/migration-spec-to-story/` exist only in this working copy,
+like everything else under `.qfai/evidence/`. Keep a copy elsewhere if anyone
+needs them beyond it.
 
 A migration begun under the skill's earlier name,
 `qfai-migration-spec-to-story`, continues from the step it reached: the plan,

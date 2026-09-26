@@ -36,13 +36,14 @@ export type WriteSetArea =
   | "config"
   | "gitignore"
   | "gitignore-staging"
+  | "evidence-gitignore"
   | "links"
   | "test-annotations"
   | "skills"
   | "skill-archive"
   | "skill-links"
   | "entry-points";
-export type ReportSection = "Cases to examples" | "For a person" | "Annotations kept";
+export type ReportSection = "Cases to examples" | "Git index" | "For a person" | "Annotations kept";
 
 export type MigrationContext = {
   root: string;
@@ -63,8 +64,16 @@ export type MigrationOperation =
       target: string;
       targets?: readonly string[];
       description: string;
+      /** Report lines printed in place of one line per target. */
+      report?: readonly string[];
       apply: () => Promise<void>;
     };
+
+/** What a step does to the git index, reported apart from its file operations. */
+export type GitIndexPlan =
+  | { kind: "not-a-repository" }
+  | { kind: "nothing-tracked" }
+  | { kind: "untrack"; count: number; apply: () => void };
 
 export type StepPlan = {
   operations: MigrationOperation[];
@@ -72,6 +81,7 @@ export type StepPlan = {
   forAPerson?: string[];
   casesToExamples?: string[];
   annotationsKept?: string[];
+  gitIndex?: GitIndexPlan;
 };
 
 export type MigrationStep = {
@@ -473,6 +483,8 @@ function permitted(area: WriteSetArea, target: string, context: MigrationContext
       return target === path.join(root, "qfai.config.yaml");
     case "gitignore":
       return target === path.join(root, ".gitignore");
+    case "evidence-gitignore":
+      return target === path.join(root, ".qfai", "evidence", ".gitignore");
     case "gitignore-staging": {
       if (path.dirname(target) !== path.join(root, ".qfai", "report")) return false;
       const name = path.basename(target).replace(/\.owner$/, "");
@@ -945,6 +957,7 @@ function operationLine(operation: MigrationOperation): string {
 
 function operationLines(operation: MigrationOperation): string[] {
   if (operation.kind === "delegate") {
+    if (operation.report !== undefined) return [...operation.report];
     return (operation.targets ?? [operation.target]).map(
       (target) => `${target}: ${operation.description}`,
     );
@@ -956,20 +969,49 @@ function reportSection(name: string, entries: readonly string[]): string {
   return `## ${name}\n${entries.length === 0 ? "none" : entries.map((entry) => `- ${entry}`).join("\n")}\n`;
 }
 
+function pathCount(count: number): string {
+  return count === 1 ? "1 path" : `${count} paths`;
+}
+
+function gitIndexLines(plan: GitIndexPlan | undefined, dryRun: boolean): string[] {
+  switch (plan?.kind) {
+    case undefined:
+      return [];
+    case "not-a-repository":
+      return ["the project is not a git repository, so the index is unchanged"];
+    case "nothing-tracked":
+      return ["the git index tracks nothing under `.qfai/evidence/`, so it is unchanged"];
+    case "untrack":
+      return [
+        dryRun
+          ? `${pathCount(plan.count)} under \`.qfai/evidence/\` would leave the git index`
+          : `${pathCount(plan.count)} under \`.qfai/evidence/\` left the git index; the files stay on disk`,
+      ];
+  }
+}
+
+function sectionItems(section: ReportSection, plan: StepPlan, dryRun: boolean): string[] {
+  switch (section) {
+    case "For a person":
+      return plan.forAPerson ?? [];
+    case "Cases to examples":
+      return plan.casesToExamples ?? [];
+    case "Git index":
+      return gitIndexLines(plan.gitIndex, dryRun);
+    case "Annotations kept":
+      return plan.annotationsKept ?? [];
+  }
+}
+
 function renderReport(
   step: MigrationStep,
   plan: StepPlan,
   operations: readonly MigrationOperation[],
+  dryRun: boolean,
 ): string {
   let report = reportSection("Operations", operations.flatMap(operationLines));
   for (const section of step.sections ?? []) {
-    const items =
-      section === "For a person"
-        ? (plan.forAPerson ?? [])
-        : section === "Cases to examples"
-          ? (plan.casesToExamples ?? [])
-          : (plan.annotationsKept ?? []);
-    report += `\n${reportSection(section, items)}`;
+    report += `\n${reportSection(section, sectionItems(section, plan, dryRun))}`;
   }
   return report;
 }
@@ -990,8 +1032,9 @@ export async function executePlannedStep(
   }
   if (!dryRun) {
     await applyOperations(prepared.operations, context, step.number);
+    if (prepared.plan.gitIndex?.kind === "untrack") prepared.plan.gitIndex.apply();
   }
-  io.stdout.write(`${renderReport(step, prepared.plan, prepared.operations)}\n`);
+  io.stdout.write(`${renderReport(step, prepared.plan, prepared.operations, dryRun)}\n`);
   return (prepared.plan.forAPerson?.length ?? 0) > 0 ? 3 : 0;
 }
 
@@ -1128,21 +1171,14 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
         }
       }
       if (step === 10) {
-        const plan = await selected.plan(context);
-        const hasStaging = plan.operations.some(
-          (operation) =>
-            operation.kind === "delegate" &&
-            operation.targets?.some((target) => target !== ".gitignore"),
-        );
-        if (hasStaging || (plan.forAPerson?.length ?? 0) > 0) {
-          const cleanupStep: MigrationStep = {
-            ...selected,
-            plan: () => Promise.resolve(hasStaging ? plan : { ...plan, operations: [] }),
-          };
-          return await executePlannedStep(cleanupStep, context, argv.length === 1, io);
-        }
+        // A tree already on the story layout keeps its managed block unless
+        // staging needs reclaiming, and still keeps its evidence local.
+        const { planStep10 } = await import("./step10UpdateGitignore.js");
+        const plan = await planStep10(context, false);
+        const localStep: MigrationStep = { ...selected, plan: () => Promise.resolve(plan) };
+        return await executePlannedStep(localStep, context, argv.length === 1, io);
       }
-      io.stdout.write(`${renderReport(selected, { operations: [] }, [])}\n`);
+      io.stdout.write(`${renderReport(selected, { operations: [] }, [], false)}\n`);
       return 0;
     }
     if (step >= 2 && (await hasPendingRename(context))) {
@@ -1229,7 +1265,7 @@ export async function runStep(step: unknown, argv: unknown, io: MigrationIo): Pr
     }
     await applyOperations(remainder.operations, context, step);
     io.stdout.write(
-      `${renderReport(selected, remainder.plan, [...recovery.operations, ...remainder.operations])}\n`,
+      `${renderReport(selected, remainder.plan, [...recovery.operations, ...remainder.operations], false)}\n`,
     );
     return (remainder.plan.forAPerson?.length ?? 0) > 0 ? 3 : 0;
   }

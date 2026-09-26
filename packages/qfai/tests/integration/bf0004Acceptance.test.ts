@@ -474,9 +474,10 @@ describe("BF-0004 acceptance criteria", () => {
     );
     expect(links).toContain("await repairIntegrationWrappers(");
     expect(ignore).toContain(
-      'import { ensureRootGitignoreEntries } from "../../cli/commands/init.js"',
+      'import { ensureRootGitignoreEntries, replaceRootGitignore } from "../../cli/commands/init.js"',
     );
-    expect(ignore).toContain("await ensureRootGitignoreEntries(context.root, false");
+    expect(ignore).toContain("await ensureRootGitignoreEntries(root, false");
+    expect(ignore).toContain("await replaceRootGitignore(root, file,");
     expect(links).not.toMatch(/\b(?:symlink|unlink|rm|writeFile)\s*\(/);
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });
@@ -2068,6 +2069,23 @@ describe("BF-0004 acceptance criteria", () => {
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });
     await writeFile(path.join(journey.root, record), "{}\n");
     expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(0);
+  });
+
+  // QFAI:AC-0004-0012-04
+  it("directs the completion report to say the migration records are local", async () => {
+    // QFAI:EX-0004-0012-05
+    const skill = await readFile(
+      path.join(getInitAssetsDir(), ".qfai/assistant/skill/qfai-migration-v1-to-v2/SKILL.md"),
+      "utf8",
+    );
+    const prose = skill.replace(/\s+/g, " ");
+    const report = prose.slice(prose.indexOf("When you report the migration done"));
+    expect(report).toMatch(/^When you report the migration done, tell the person/);
+    expect(report).toContain("Git no longer tracks `.qfai/evidence/`");
+    expect(report).toContain(
+      "The plan, the ID map and the `legacy/` and `retired/` archives under `.qfai/evidence/migration-spec-to-story/`, including the archived copies of files the project customised, exist only in this working copy.",
+    );
+    expect(report).toContain("Anyone who needs them beyond it keeps a copy elsewhere.");
   });
 
   // QFAI:AC-0004-0012-02

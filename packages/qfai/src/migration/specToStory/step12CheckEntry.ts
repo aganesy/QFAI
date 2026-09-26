@@ -8,10 +8,11 @@ import {
 } from "../../cli/commands/init.js";
 import { AGENT_ENTRY_POINT_FILES } from "../../core/agentEntryPoints.js";
 import { loadConfig, readWorkflowMode } from "../../core/config.js";
-import { isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { QFAI_RUN_STATE_IGNORE } from "../../core/gitignore.js";
 import { allPlanRefusals, type PlanRefusal } from "../../core/workflow/plans.js";
 import { isRecord } from "../../core/workflow/parse.js";
+import { EVIDENCE_DIR, reincludesEvidence, trackedEvidence } from "./evidenceIndex.js";
 import type { MigrationContext, MigrationStep } from "./harness.js";
 import { linksToSkill } from "./step11InstallEntry.js";
 
@@ -76,9 +77,38 @@ async function gitignoreItems(context: MigrationContext): Promise<string[]> {
       .split("\n")
       .map((line) => line.trimEnd()),
   );
-  return [QFAI_RUN_STATE_IGNORE]
-    .filter((line) => !block.has(line))
-    .map((line) => `gitignore: .gitignore: the QFAI managed block lacks \`${line}\``);
+  const items = block.has(QFAI_RUN_STATE_IGNORE)
+    ? []
+    : [`gitignore: .gitignore: the QFAI managed block lacks \`${QFAI_RUN_STATE_IGNORE}\``];
+  for (const line of content.split("\n").filter(reincludesEvidence)) {
+    items.push(`gitignore: .gitignore: \`${line.trimEnd()}\` re-includes \`.qfai/evidence/\``);
+  }
+  return [...items, ...(await nestedIgnoreItems(context))];
+}
+
+/** Every negation in the nested file re-includes a path under `.qfai/evidence/`. */
+async function nestedIgnoreItems(context: MigrationContext): Promise<string[]> {
+  const relative = `${EVIDENCE_DIR}/.gitignore`;
+  let content: string;
+  try {
+    content = await readFile(path.join(context.root, relative), "utf8");
+  } catch (error) {
+    if (isEnoent(error) || (hasErrnoCode(error) && error.code === "EISDIR")) return [];
+    throw error;
+  }
+  return content
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.startsWith("!"))
+    .map(
+      (line) => `gitignore: ${relative}: \`${line}\` re-includes a path under \`.qfai/evidence/\``,
+    );
+}
+
+function trackedEvidenceItems(context: MigrationContext): string[] {
+  const tracked = trackedEvidence(context.root) ?? [];
+  if (tracked.length === 0) return [];
+  return [`evidence-tracked: git tracks ${tracked.map((entry) => `\`${entry}\``).join(", ")}`];
 }
 
 async function runLinkItems(context: MigrationContext): Promise<string[]> {
@@ -95,7 +125,8 @@ async function runLinkItems(context: MigrationContext): Promise<string[]> {
 
 /**
  * Makes the project checks `npx qfai workflow start` makes before it creates a
- * run, and checks what step 11 installs. It writes nothing and repairs nothing.
+ * run, checks what step 11 installs, and checks that git keeps `.qfai/evidence/`
+ * out of the index as step 10 leaves it. It writes nothing and repairs nothing.
  */
 export const step12: MigrationStep = {
   number: 12,
@@ -111,6 +142,7 @@ export const step12: MigrationStep = {
         ...(await entryDirectiveItems(context)),
         ...(await gitignoreItems(context)),
         ...(await runLinkItems(context)),
+        ...trackedEvidenceItems(context),
       ],
     };
   },

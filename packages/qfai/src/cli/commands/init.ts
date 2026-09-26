@@ -2264,7 +2264,7 @@ async function reclaimRootGitignoreStaging(
 }
 
 /** Stage inside QFAI's generated report area, then publish the complete file by rename. */
-async function replaceRootGitignore(
+export async function replaceRootGitignore(
   destRoot: string,
   target: string,
   content: string,

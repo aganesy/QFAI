@@ -99,7 +99,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     checks `npx qfai workflow start` makes, and checks what step 11
     installs. Each failure is listed for a person by name —
     `contract-undeclared`, `reviewer-missing`, `invalid-mode`,
-    `entry-directive`, `gitignore` or `qfai-run-link` — and the step exits 3.
+    `entry-directive`, `gitignore`, `qfai-run-link` or `evidence-tracked` —
+    and the step exits 3.
   - The skill then runs `npx qfai validate` and hands the first free-text
     change request to `qfai-run`.
 
@@ -311,6 +312,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     answered is refused.
   - **Breaking:** a local import-lite record under `.qfai/evidence/` no longer suppresses
     `QFAI-DPACK-001`.
+  - Migration step 10 (`10-update-gitignore.mjs`) takes a migrating project
+    there. It removes every `.gitignore` line that re-includes
+    `.qfai/evidence/`, deletes `.qfai/evidence/.gitignore`, and removes the
+    directory's entries from the git index without deleting the files. The
+    removals are left staged for the person to commit, and a new
+    `## Git index` section says how many paths left the index. The migration
+    plan, ID map and archives stay in that one working copy.
   - No CI lane runs the prototyping profile.
 
 ### Removed
