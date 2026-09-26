@@ -436,6 +436,7 @@
     "tests/integration/bf0001EarlyExamples.test.ts",
     "tests/integration/bf0001PlannerFirstContract.test.ts",
     "tests/integration/bf0001WorkflowDefinition.test.ts",
+    "tests/integration/designDirectionHandoff.test.ts",
     "tests/integration/bf0002Acceptance.test.ts",
     "tests/integration/bf0002DistributedSurfaceParity.test.ts",
     "tests/integration/bf0002PackBoundary.test.ts",
