@@ -179,6 +179,17 @@ function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workfl
   return { ...issued, events: [cleared, ...issued.events] };
 }
 
+// A long implement stage resumes at the first example of its flow that no test annotates yet.
+function withCheckpoint(workOrder: WorkflowWorkOrder, facts: WorkflowFacts): WorkflowWorkOrder {
+  const flowId = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
+  const obligations = facts.obligations;
+  if (workOrder.stageKind !== "implement" || !flowId || obligations?.flowId !== flowId) {
+    return workOrder;
+  }
+  const checkpointRef = obligations.exampleIds.find((id) => !obligations.annotated.includes(id));
+  return checkpointRef ? { ...workOrder, checkpointRef } : workOrder;
+}
+
 function resumeRunning(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
@@ -204,7 +215,10 @@ function resumeRunning(
   const run = { ...snapshot.run, sequence: snapshot.run.sequence + events.length };
   const receipts = classedReceipts(snapshot, facts);
   const classed = receipts.length > 0 ? { classedReceipts: receipts } : {};
-  return { verdict: { ok: true, run, workOrder, ...classed }, events };
+  return {
+    verdict: { ok: true, run, workOrder: withCheckpoint(workOrder, facts), ...classed },
+    events,
+  };
 }
 
 // `resume`: revalidate the stored run against the tree now, and return the work order `next`
