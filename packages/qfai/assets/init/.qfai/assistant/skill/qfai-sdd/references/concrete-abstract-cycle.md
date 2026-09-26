@@ -96,8 +96,9 @@ at TODO whose Content opens `Unadjudicated:`, followed by the finding and its
 target IDs. The per-flow gate reports that row as `QFAI-SPACK-102` until it is
 decided.
 
-Under `--auto` nothing is asked. A finding that would go to the user becomes that
-row in the cycle that raised it, and the evidence records it with no decision.
+Under `--auto`, outside a run, nothing is asked. A finding that would go to the
+user becomes that row in the cycle that raised it, and the evidence records it
+with no decision.
 
 ## Rejected findings
 
