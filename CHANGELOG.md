@@ -377,6 +377,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A work order that binds nothing now refuses a target.** The shipped
+  `work-order.schema.json` required a `target` on every other stage kind but
+  accepted one on the `route`, `discussion`, `maintenance` and `verify` work
+  orders, which carry none.
+
 - **The prototyping reference check reads the handoff from the configured
   contracts directory.** It read `prototype-handoff.yaml` only from
   `.qfai/contracts/design/`, so a project with another `paths.contractsDir`
