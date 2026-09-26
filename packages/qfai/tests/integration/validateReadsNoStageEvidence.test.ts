@@ -53,7 +53,6 @@ describe("validate reads no stage evidence", () => {
       const withRecord = await issuesOf(root);
 
       expect(identities(withRecord)).toEqual(identities(without));
-      expect(without.flat().map((item) => item.code)).not.toContain("QFAI-CONTRACT-031");
     });
   }, 120_000);
 
