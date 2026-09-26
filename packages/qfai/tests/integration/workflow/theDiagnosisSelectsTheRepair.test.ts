@@ -167,7 +167,10 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
   ]);
 }, 300_000);
 
-it("A test fix that changes what its test checks is refused, and reaches story authoring as a repair", async () => {
+// No active stage of the bugfix plan can change a criterion: its one story-authoring stage only
+// appends examples, and the run skipped it. So the repair goes back to routing, which settles a
+// plan that can.
+it("A test fix that changes what its test checks is refused, and its repair returns the run to routing", async () => {
   const root = await flowProject();
   const { runId, next: fix } = await diagnosed(root, {
     verdict: "defective-test",
@@ -204,11 +207,11 @@ it("A test fix that changes what its test checks is refused, and reaches story a
   expect({
     refused: [field(refused.json, "error.code"), reasons(refused.json)],
     unchanged,
-    repair: orderOf(repair.json).skill,
+    repair: [field(repair.json, "run.state"), orderOf(repair.json).stageKind],
   }).toEqual({
     refused: ["invalid-input", ["test-fix-meaning"]],
     unchanged: "running",
-    repair: "qfai-sdd",
+    repair: ["routing", "route"],
   });
 }, 300_000);
 
