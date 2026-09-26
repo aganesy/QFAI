@@ -1001,6 +1001,8 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     // single generic complaint.
     const rules = new Set(issues.map((i) => i.rule));
     for (const key of [
+      "iterIndex",
+      "reviewerId",
       "blockingFindings",
       "proseCritique",
       "pivotDirective",

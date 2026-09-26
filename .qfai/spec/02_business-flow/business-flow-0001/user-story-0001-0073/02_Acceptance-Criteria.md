@@ -5,13 +5,6 @@
 ```gherkin
 Feature: ATDD Reviewer Gate
 
-# AC-0001-0073-01
-# Parent: US-0001-0073
-Scenario: Forbidden Reference Enforcement
-  Given generated E2E and API test files
-  When the Reviewer checks them
-  Then zero `QFAI:SPEC-XXXX:TC-YYYY` annotations exist in `tests/e2e/**` or `tests/api/**`.
-
 # AC-0001-0073-02
 # Parent: US-0001-0073
 Scenario: Required acceptance-test gates and handoff
