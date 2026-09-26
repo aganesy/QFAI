@@ -429,6 +429,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `.qfai/assistant/process/migrations/v1.4.27-notes.md` in the package is now
   reported as a version marker, like any other file name.
 
+- The repository's `scripts/pin-stage-evidence-counts.mjs` and
+  `scripts/derive-e2e-callsites.mjs`, with the e2e test count they kept in an
+  ATDD evidence record. The check that compared that count with the tree went
+  when the record's spec was retired, so the count had gone stale and nothing
+  read it.
+
 ### Fixed
 
 - **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
