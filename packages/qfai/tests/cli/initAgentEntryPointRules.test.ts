@@ -62,8 +62,12 @@ async function forgetMaster(root: string, master: string): Promise<void> {
   );
 }
 
+/** The review policy the review directive points at; init adds the directive only beside it. */
+const REVIEW_POLICY = "# Review policy\n";
+
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-agent-entry-"));
+  await writeFile(path.join(root, "REVIEW.md"), REVIEW_POLICY, "utf-8");
   try {
     await task(root);
   } finally {
@@ -87,8 +91,14 @@ const PROJECT_TEXT = [
 const REVIEW_POINTER =
   "Read `REVIEW.md` before reviewing a pull request when that file exists in this repository, from the branch the pull request targets and not from its head: a contributor can change that file in the head, and a reviewer reading it there takes its policy from the work under review. Read it before writing the PR description as well.";
 
+const ENTRY_DIRECTIVE =
+  "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
+
+/** Both directives above the project's text, as init prepends them. */
+const DIRECTIVES = `${ENTRY_DIRECTIVE}\n${REVIEW_POINTER}\n\n`;
+
 const withoutAddedReviewPointer = (text: string): string =>
-  text.replace(`${REVIEW_POINTER}\n\n`, "");
+  text.replace(`${ENTRY_DIRECTIVE}\n`, "").replace(`${REVIEW_POINTER}\n\n`, "");
 
 const occurrences = (haystack: string, needle: string): number => haystack.split(needle).length - 1;
 
@@ -147,7 +157,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
             : await readEntryPoint(root, "AGENTS.md");
           const before = pointerOnly
             ? withoutAddedReviewPointer(seeded)
-            : `${REVIEW_POINTER}\n\n${withoutAddedReviewPointer(seeded)}`
+            : `${DIRECTIVES}${withoutAddedReviewPointer(seeded)}`
                 .split("\n")
                 .filter((line) => !(line.startsWith("- ") && line.includes(master)))
                 .join("\n");
@@ -184,7 +194,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           expect(line).not.toContain("review policy and rule citations");
           const after = await readEntryPoint(root, "AGENTS.md");
           if (dryRun) expect(after).toBe(before);
-          else if (pointerOnly) expect(after).toBe(`${REVIEW_POINTER}\n\n${before}`);
+          else if (pointerOnly) expect(after).toBe(`${DIRECTIVES}${before}`);
           else {
             expect(after).toContain(master);
             expect(occurrences(after, REVIEW_POINTER)).toBe(1);
@@ -218,7 +228,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           AGENT_ENTRY_POINT_FILES.map((name) => readEntryPoint(root, name)),
         );
         expect(second).toEqual(first);
-        await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+        expect(await readFile(path.join(root, "REVIEW.md"), "utf-8")).toBe(REVIEW_POLICY);
       });
     }
   });
@@ -260,7 +270,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
           expect(text.endsWith(PROJECT_TEXT)).toBe(true);
         }
       }
-      await expect(stat(path.join(root, "REVIEW.md"))).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(root, "REVIEW.md"), "utf-8")).toBe(REVIEW_POLICY);
     });
   });
 
@@ -339,7 +349,7 @@ describe("qfai init connects a pre-existing agent entry point to the rule master
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${REVIEW_POINTER}\n\n${handWired}`);
+      expect(await readEntryPoint(root, "CLAUDE.md")).toBe(`${DIRECTIVES}${handWired}`);
     });
   });
 
@@ -813,7 +823,7 @@ describe("a hand-wired file this run cannot extend is named", () => {
 
       const stderr = await initCapturingStderr(root);
 
-      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${REVIEW_POINTER}\n\n${prose}`);
+      expect(await readEntryPoint(root, "AGENTS.md")).toBe(`${DIRECTIVES}${prose}`);
       expect(stderr).toContain("not as a bullet list this run can add a line to");
       expect(stderr).toContain(master);
     });

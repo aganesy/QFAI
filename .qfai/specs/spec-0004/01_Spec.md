@@ -35,11 +35,27 @@
   - workflow-hygiene CI lane (CHG-007): a repository script wired into `pnpm ci:lint`, emitting `R-WORKFLOW-HYGIENE-DRIFT` / `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the lane's own rule set is owned by spec-0017 (`CAP-0017`) and its shipped-file targets by spec-0003. No validator and no finding code is added to `qfai validate` itself — same posture as the pack-location lane below.
   - pack-location CI lane (REQ-0167): `packages/qfai/scripts/check-pack-locations.mjs` wired into `pnpm ci:lint`, emits `R-PACK-LOCATION-DRIFT` (DR-0274 scope)
   - tracked-scratch CI lane: `scripts/check-tracked-scratch.mjs` wired into `pnpm ci:lint`, failing when git tracks any path under the scratch directory. Recorded here because this spec owns the `pnpm ci:lint` lane inventory; the script is a root toolchain file and belongs to spec-0017. No validator and no finding code is added to `qfai validate` itself — same posture as the two lanes above
+  - triage authorization reference: the triage approval check reads the one approval set `requiresApproval()` defines, and a row citing a workflow authorization in `Authorization-Ref` is checked against the record it names (`QFAI-TRIAGE-011`)
+  - governed-layer provenance for the installed plans under `.qfai/assistant/process/workflows/`, which the existing `QFAI-ASSETS-*` checks read as they read every other governed layer
 - Out:
   - report rendering details
   - prototyping runtime execution
   - deleted prototyping recommendation validator surface
   - legacy compatibility namespaces removed from package surface
+  - the `Authorization-Ref` column in the triage table format, and the `/qfai-sdd` Stage 1 check that writes it (spec-0013)
+  - the provenance lock's key for a two-segment layer, and the helper that maps a path to its governed layer (spec-0003)
+  - the workflow run, the authorization record, the staleness judgment while a run proceeds, the `workflow.mode` config issue and the refusals of `npx qfai workflow` (spec-0018)
+
+## Applicable Contracts
+
+| Contract   | File                                           | Governs here                                                                                                                       |
+| ---------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-VAL    | `.qfai/contracts/cli/qfai-validate.md`         | `## Triage authorization reference`: the one approval set, the column, the checks behind `QFAI-TRIAGE-011` and what is not checked |
+| CLI-INIT   | `.qfai/contracts/cli/qfai-init.md`             | `### Plan provenance and the upgrade record`: `process/workflows` is a governed layer. It states no finding                        |
+| CLI-WFFILE | `.qfai/contracts/cli/workflow-files.schema.md` | `## Authorization record` and the `summary.json` `targetBindings` of `## Tracked tree`: what the checks read                       |
+
+The CLI contracts declare no `CON-*` ID. `04_Business-Rules.md` names the section
+each rule added on 2026-09-24 is realized by, in `## Contract Realization`.
 
 ## Applicable NFR
 
@@ -47,11 +63,13 @@
 - NFR-0002: Same input yields same validate result
 - NFR-0003: Non-UI packs do not over-fire UI-bearing validators
 - NFR-0004: Actionable issues include concrete file/rule guidance
+- `discussion-20260923171450572#NFR-0017`: the `QFAI-TRIAGE-011` message is English. Held by the existing message-language guard, `packages/qfai/tests/unit/cliMessageLanguage.test.ts`; no rule here
 
 ## Applicable Policy
 
 - Policy: validate is the mechanical truth gate
 - Policy: new UI validators must stay deterministic
+- `_policies/08_Decisions.md` DR-0299: a new capability is approved once, at routing. The validator resolves the record a triage row cites and does not judge its staleness
 
 ## Evidence Summary
 
@@ -82,14 +100,9 @@
      DCON-030 → original REQ-0025). -->
 
 - REQ-0034: 4-layer asset-tree enforcement (v1.9.0) - `qfai validate` は `.qfai/assistant/` 直下の layer 名が `{constitution, manifest, catalog, process}` の 4 種類に限定されることを検証する。それ以外 (旧 `steering/` 等) は warning として surface する
-- REQ-0035: work-log frontmatter schema validation (v1.9.0) - プロジェクトルートの `.qfai/steering/*.md` (work-log entry) の YAML frontmatter を schema 検証。違反は `W-WORKLOG-SCHEMA` (severity warning, non-blocking)
-- REQ-0036: Reviewer-Gate drift findings (v1.9.0) - reviewer sub-agent 出力に `R-WORKLOG-DRIFT` / `R-REJECTED-READOPT` が含まれる場合、`justification:` field 非空を要求する (severity error, advisory-failing)
-- REQ-0037: decision-promotion gate (v1.9.0) - `W-PENDING-PROMOTION` finding + 専用 section を validate report に出力。`07_Decisions.md` row + entry archive + `promoted-to` back-ref のすべてが揃った時点で satisfied
-- REQ-0038: stale-entry surfacing (v1.9.0) - `.qfai/steering/*.md` で `status: active` かつ `updated` が 90 日以上前のエントリに `W-WORKLOG-STALE`
-- REQ-0039: link-integrity validation (v1.9.0) - work-log entry の `links: [...]` を resolve。各要素は `spec-NNNN` / `discussion-*` / `<entry-id>` (kebab-case ASCII、prefix 不要) のいずれかに解決必要 (canonical: `.qfai/contracts/cli/worklog-entry.schema.md` `links` セクション)。未解決は `W-WORKLOG-BROKEN-LINK`
+- REQ-0036: Reviewer-Gate re-adoption finding (v1.9.0) - when reviewer output carries `R-REJECTED-READOPT`, `qfai validate` requires a non-empty `justification:` (severity error, advisory-failing)
 - REQ-0040: `D-DEPRECATED-PATH` warning (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウト検出時に出力。本文で sunset minor version を明示。sunset 到達時に error に escalate
 - REQ-0041: SKILL.md `project_memory:` declaration enforcement (v1.9.0) - すべての `qfai-*` skill SKILL.md は `project_memory:` YAML block を宣言。未宣言 path への read は reject
-- REQ-0042: `R-HANDOFF-INCOMPLETE` finding (v1.9.0) - `kind: handoff` work-log entry の本文に 5 必須セクション (`## State of the task` / `## Next single action` / `## Constraints to preserve` / `## Open questions` / `## References to consult first`) のいずれかが欠落していれば error (advisory-failing per qfai-validate.md contract)
 - REQ-0043: `W-SKILL-DOC-BROKEN-REF` (v1.9.0) - SKILL.md 内の reference が新 layout で解決しない場合の warning
 - REQ-0044: `W-USER-EDIT-PRESERVED` informational pass-through (v1.9.0) - `qfai init --upgrade-assistant-tree` がユーザー編集を preserve した際の informational note を validate 側でも認識可能にする
 - REQ-0120: `validate.json` profile disambiguation - `qfai validate` は profile 別の出力を上書きせず、profile-suffixed path `.qfai/report/validate-<profile>.json` を必ず emit する。並行して、profile を明示した `validate.json` (常に直近 run を反映、`profile` field を持つ) も emit する。旧 `.qfai/output/validate.json` への書き込みは deprecation window 中は継続するが `D-DEPRECATED-PATH` (severity warning) を fire させ、sunset (`1.10.0`) で error にエスカレートする
@@ -108,13 +121,29 @@
 - REQ-0164: `auditProfile.ts` accepts string-only AND structured `{id,label,acceptance}` `primary_tasks` (DR-0268); `QFAI-AUD-020` warning names the `3..7` recommended count band (DR-0267); string-only continues to PASS during the deprecation window
 - REQ-0167: `packages/qfai/scripts/check-pack-locations.mjs` (DR-0274 staged/changed-dir scope) integrated into `pnpm ci:lint`; rejects misplaced `review-*/` / `discussion-*/` dirs with `R-PACK-LOCATION-DRIFT` referencing `.agents/rules/root-additions-policy.md`
 - REQ-0150: lint-shipping ID-class guard expansion — `packages/qfai/scripts/lint-shipping.ts` の `src-comment` ルールセットを拡張し、`REQ-NNNN` / `REQ-NNNN-NNNN` / `AC-NNNN-NNNN` / `TC-NNNN-NNNN` / `US-NNNN-NNNN` / `BR-NNNN-NNNN` の composite ID class を `src/**/*.ts` のコメント行で catch する (現状は確立済みの forbidden class のみ scan)。CHG-005 cycle で spec-0006 doctor.ts にこれら ID が leak し、manual implementation-reviewer audit のみで検出された defect を automation 化する。layer-2 post-build guard (`packages/qfai/scripts/check-no-internal-version-leakage.sh`) と SSOT-sync invariant に従い同一の regex 集合をミラーする。Acceptance signal: `pnpm ci:lint` 実行時に `REQ-0001-0001` などの composite ID class を含む新規コメント行を含む変更が exit 1 で fail する。
+- discussion-20260923060900824#REQ-0002: `qfai validate` no longer reads `.qfai/steering/`
+- discussion-20260923060900824#REQ-0004: `QFAI-TDDLIST-015` and `QFAI-TDDLIST-016` are removed
+- discussion-20260923060900824#REQ-0006: The shipped schema is withdrawn
+- discussion-20260923060900824#REQ-0010: An adopter's existing `.qfai/steering/` is left alone
+
+### discussion-20260923171450572 (2026-09-24)
+
+Pack-qualified, because the local list above already uses `REQ-0043` for a
+different requirement. `Home` is the contract section that realizes the
+requirement and the rules of `04_Business-Rules.md` that state it.
+
+| Requirement                             | Home                                                                                                |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `discussion-20260923171450572#REQ-0043` | CLI-VAL `## Triage authorization reference`; BR-0004-0036..BR-0004-0037, BR-0004-0039..BR-0004-0040 |
+| `discussion-20260923171450572#REQ-0057` | CLI-INIT `### Plan provenance and the upgrade record` defines the layer; BR-0004-0038               |
+| `discussion-20260923171450572#REQ-0065` | CLI-INIT `### Plan provenance and the upgrade record` defines the layer; BR-0004-0038               |
 
 ## Entry points
 
-- US range in this spec: US-0004-0001..US-0004-0039
-- AC range: AC-0004-0001..AC-0004-0039
-- BR range: BR-0004-0001..BR-0004-0033
-- EX range: EX-0004-0001..EX-0004-0041
-- TC range: TC-0004-0001..TC-0004-0073
+- US range in this spec: US-0004-0001..US-0004-0040
+- AC range: AC-0004-0001..AC-0004-0044
+- BR range: BR-0004-0001..BR-0004-0038
+- EX range: EX-0004-0001..EX-0004-0055
+- TC range: TC-0004-0001..TC-0004-0083
 - Primary actors: QA engineer, AI agent, CI pipeline
 - Notes: validate is the machine gate for current skill-first, contract-first downstream

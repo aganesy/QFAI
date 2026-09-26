@@ -10,6 +10,8 @@
 - US-0008-0006: Test Case Quality Depth Verification
 - US-0008-0007: ATDD Scaffold Bulk Skeleton Generation
 - US-0008-0008: Worker-Scoped Credential-Reuse Guidance
+- US-0008-0009: Author acceptance tests as a stage of a run
+- US-0008-0010: Fix a defective acceptance-layer test with ledger status untouched
 
 ## US-0008-0001: ATDD Test Volume Estimation
 
@@ -42,3 +44,26 @@ As a QA Engineer, I want `qfai atdd scaffold --spec spec-NNNN` to read the spec 
 ## US-0008-0008: Worker-Scoped Credential-Reuse Guidance
 
 As a QA Engineer running acceptance tests in parallel, I want `/qfai-atdd` to carry backend-agnostic guidance on reusing one authenticated session per parallel worker — the seven session-reuse rules, the companion rule that a caller-injected environment identifier forbids the harness from provisioning or tearing that environment down, and the credential-class script-naming rule as adopter guidance — so that I can stop authenticating once per test without the guidance picking a browser backend for me, and without QFAI adding a validator, a finding code, a test layer or an annotation token to police it.
+
+## US-0008-0009: Author acceptance tests as a stage of a run
+
+- Parent: CAP-0008
+- Source: discussion-20260923171450572#DUS-001
+- Goal: As an operator who asked for a feature once, I want `/qfai-atdd` to take its
+  acceptance work order from the run, write the acceptance tests and report RED
+  honestly, so that the run moves on to implementation without my typing a stage.
+- Non-goals: deciding the plan; the seam-only work order itself, which
+  `/qfai-implement` serves; judging whether the run is complete.
+- Notes: the ATDD side of the pack story. The seam-only round trip belongs here,
+  because it starts and ends inside the acceptance stage.
+
+## US-0008-0010: Fix a defective acceptance-layer test with ledger status untouched
+
+- Parent: CAP-0008
+- Source: discussion-20260923171450572#DUS-003
+- Goal: As an operator whose bug report traces to a broken acceptance test, I want
+  `/qfai-atdd` to fix that test without moving its ledger row, so that the record
+  still says what the obligation is and nothing claims it changed.
+- Non-goals: fixing a `Unit`, `Component` or all-`L1`/`L2` `Integration` test,
+  which `/qfai-implement` does; changing what the test expects.
+- Notes: the acceptance-layer half of the pack story (DR-0008-0004).

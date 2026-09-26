@@ -429,3 +429,31 @@ No other path triggers stop. LLM subjective DONE is forbidden.
 - AC-Refs: AC-0012-0084
 - When the teardown the server runner returns rejects, iterate MUST print `qfai prototyping iterate --auto-serve: teardown failed (<reason>)` on stdout, `<reason>` being the rejection's reason.
 - The rejection MUST NOT change the exit code: iterate returns what the cycle returned.
+
+## BR-0012-0136: orchestrated entry check (intent-driven entry)
+
+- AC-Refs: AC-0012-0176
+- The entry check and worker behaviour of `/qfai-prototyping` follow CLI-WF `### host:stage-skill-handover`, and its `SKILL.md` cites `references/orchestrated-mode.md` with one line.
+
+## BR-0012-0137: the Operations table (intent-driven entry)
+
+- AC-Refs: AC-0012-0177
+- The Operations table in `references/orchestrated-mode.md` of `/qfai-prototyping` lists exactly the operations CLI-WFFILE `### Vocabulary` assigns to `qfai-prototyping`.
+
+## BR-0012-0138: a prototype stage stays inside its work order (intent-driven entry)
+
+- AC-Refs: AC-0012-0178
+- Under a work order, `/qfai-prototyping` works only on the spec that the work order's `target` names (CLI-WF `### Work order`). It settles the one visual decision the plan needs within the existing `DESIGN.md` and contracts, and creates no contract.
+- When that spec is not UI-bearing, the skill writes nothing, neither a `DESIGN.md`, a UI contract nor a surface declaration, and returns outcome `blocked`, listing the cause in `debts` with `resolvingOwner` `operator`.
+- A standalone invocation keeps resolving every UI-bearing spec, as the Scope states.
+
+## Contract Realization
+
+The BR IDs sit in the last column: a row whose first cell is a BR ID is read as
+that rule's definition.
+
+| Contract   | Section                                      | Realized by  |
+| ---------- | -------------------------------------------- | ------------ |
+| CLI-WF     | `### host:stage-skill-handover`              | BR-0012-0136 |
+| CLI-WFFILE | `### Vocabulary`, `### The Operations table` | BR-0012-0137 |
+| CLI-WF     | `### Work order`, `### Stage result`         | BR-0012-0138 |

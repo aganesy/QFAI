@@ -61,7 +61,7 @@ The frozen families, none of which may take a new member:
 | `R-`       | rule/report drift            | `R-SKILL-MANIFEST-DRIFT`       |
 | `E_`       | spec-layer errors            | `E_TC_ORPHAN`                  |
 | `D-`       | deprecation / degradation    | `D-SCAFFOLD-PLACEHOLDER`       |
-| `W-`       | warnings                     | `W-WORKLOG-SCHEMA`             |
+| `W-`       | warnings                     | `W-ASSISTANT-LAYOUT`           |
 | `UIX-`     | prototyping UI checks        | `UIX-VAL-OQ-OPEN-CRITICAL`     |
 | `HANDOFF-` | handoff schema               | `HANDOFF-SCHEMA-NOT-OBJECT`    |
 | `TRACE_`   | traceability scope           | `TRACE_SHARED_SCOPE_VIOLATION` |

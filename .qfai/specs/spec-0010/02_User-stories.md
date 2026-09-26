@@ -10,10 +10,11 @@
 - US-0010-0006: Screen Contracts
 - US-0010-0007: Review Input Bundle
 - US-0010-0008: No Early Winner
-- US-0010-0009: DESIGN.md Draft Authoring
+- US-0010-0009: Design Direction Handoff
 - US-0010-0010: Legacy Sidecar Drop
 - US-0010-0011: Mock template emits anchor-form hrefs by default
 - US-0010-0012: Discussion writes the active session pointer
+- US-0010-0013: Resolve only the unsettled scope as a stage of a run
 
 ## US-0010-0001: Exploration Brief Authoring
 
@@ -45,11 +46,11 @@ As a prototyping reviewer, I want `50_review_input_bundle.md` to mention best-of
 
 ## US-0010-0008: No Early Winner
 
-As a QFAI user, I want discussion to stop short of selecting the winning visual direction, so that breakthrough can still happen inside prototyping.
+As a QFAI user, I want discussion to carry the screen explorations unranked and to record only the brand direction I choose, so that the screen design can still be found inside prototyping.
 
-## US-0010-0009: DESIGN.md Draft Authoring
+## US-0010-0009: Design Direction Handoff
 
-As a designer, I want `/qfai-discussion` to author root `DESIGN.md` so brand vision / visual identity become the single source of truth for downstream skills.
+As a designer, I want `/qfai-discussion` to record the brand direction I choose in `01_Context.md#Design Direction`, so that `/qfai-sdd` Phase 0 authors root `DESIGN.md` from my choice rather than from an assistant's guess.
 
 ## US-0010-0010: Legacy Sidecar Drop
 
@@ -62,3 +63,14 @@ As a discussion author writing HTML mocks in `03_Story-Workshop.md`, I want the 
 ## US-0010-0012: Discussion writes the active session pointer
 
 As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.qfai/state.json#discussion.currentId` so the just-authored pack becomes the discoverable active session for downstream skills, and I want a clear error naming the candidate dirs and the recovery command when the active pointer is missing or ambiguous. (REQ-0155 / DR-0266)
+
+## US-0010-0013: Resolve only the unsettled scope as a stage of a run
+
+- Parent: CAP-0010
+- Source: discussion-20260923171450572#REQ-0055
+- Goal: As an operator whose request needs a discussion before it can be
+  planned, I want the discussion stage of a run to ask only about what the run
+  has not settled, so that I am not asked again what I already answered.
+- Non-goals: how the run continues afterwards (spec-0018); grilling inside a run
+  in general (spec-0015).
+- Notes: its E2E row is `Blocked-By` spec-0018, whose run drives the stage.

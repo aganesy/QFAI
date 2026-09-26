@@ -1,7 +1,7 @@
 ---
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
-description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
+description: "Use when invoked by name or handed a QFAI work order. Writes and updates the layered SDD specs (_policies + spec-*) a request needs, against the specs that already exist."
 argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -31,6 +31,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-sdd - Unified SDD Workflow
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## Stage and Phase Order (Fixed)
 
@@ -93,9 +95,8 @@ approval-required row.
 - **`--auto` covers Stage 1 classification only.** An approval-required row is outside its scope, so rule 4 does not license deciding the row without the operator. This is a scope boundary, not an exception to rule 4.
 - **Never ask while `--auto` is active.** Rule 4 forbids AskUserQuestion _and_ plain text for the whole invocation, and a per-row scope boundary does not clear the flag. Whether an operator is present makes no difference — the no-question contract is what the caller bought with the flag.
 - **Never synthesize an `Approved By` value.** `Approved By` is the only trace that a spec deletion or merge was authorized, so an invented approver is a false audit record — worse than a stopped run.
-- **Stop the stage and hand the run back.** Leave `Approved By` as `-`, do not enter Phase 0, write a `consultation-needed` work-log entry (see `## Work-log entries`) naming every unapproved row with its Operation and target, and report that the approvals need a rerun without `--auto`. The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run, not a gate to route
+- **Stop the stage and hand the run back.** Leave `Approved By` as `-`, do not enter Phase 0, and report every unapproved row with its Operation and target. Ask for a rerun without `--auto`. The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run, not a gate to route
   around.
-- **The kind is `consultation-needed`, not `blocker`.** `.qfai/assistant/catalog/worklog-entry.schema.md` defines `consultation-needed` as "the skill needs user input to proceed" and `blocker` as a stuck skill; the user's approval releases this stop, so `blocker` would report a false state to anything that reads `kind`.
 - Runs whose Triage is entirely UPDATE:APPEND / UPDATE:MODIFY carry no approval-required row, so `--auto` completes them without a question.
 
 This changes no bucket in `## Default Autopilot Policy`: the six operations stay in `ask-user`, and `--auto` never moves them to auto-decide. Without `--auto`, Stage 1 collects each approval through AskUserQuestion as usual.
@@ -291,7 +292,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 2. Always run `npx qfai sdd preflight --fail-on error` before generating shared/spec artifacts. The command selects the active discussion-pack, counts the imported `REQ-*`, resolves the blockers and writes the summary itself. It writes it **run-scoped**, at `<paths.outDir>/preflight/run-<timestamp>/preflight_summary.md` with a `- run id:` line —
    `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` unless `qfai.config.yaml` moves `paths.outDir` — and copies the same body to `<paths.outDir>/preflight_summary.md` as the latest-run pointer. **Evidence cites the run-scoped path**: the pointer is rewritten by every rerun, so a citation to it stops naming the preflight the cycle actually saw. Take that path from the run
    itself (`summary:` in the text output, `preflightSummaryPath` under `--format json`) and use it everywhere below, so a project with a relocated `outDir` cites the summary that was actually written. Never hand-author the machine-computed part (`status` / `run id` / selected pack / REQ count): a typed `status: ready` is not evidence that a discussion-pack was actually found. Findings
-   the command cannot compute — e.g. a `W-PENDING-PROMOTION` decision still to promote in Stage 1 — belong in `Open Questions (Carry-over)`: pass them as `--assume "<finding>"`, or append them to that section **of the latest-run pointer** (a re-run reads its carry-over back from the pointer, so they survive step 3 below; a note appended only to a run-scoped copy is never read again).
+   the command cannot compute belong in `Open Questions (Carry-over)`: pass them as `--assume "<finding>"`, or append them to that section **of the latest-run pointer** (a re-run reads its carry-over back from the pointer, so they survive step 3 below; a note appended only to a run-scoped copy is never read again).
 3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`, and each UI contract YAML authored per `references/ui-contract-guide.md` (`primary_tasks` shape, the closed structured schema, and the `QFAI-AUD-001` / `QFAI-AUD-020` count-to-behavior table). UI-bearing
    targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
@@ -365,11 +366,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
-## Work-log entries
-
-Write a `.qfai/steering/<id>.md` entry when this stage hits one of the conditions in the `kind` trigger table of `.qfai/assistant/catalog/worklog-entry.schema.md` — `blocker`, `handoff`, `consultation-needed` and `decision` are the ones this stage reaches most. `npx qfai validate` polices the surface but nothing else asks for an entry, so an unwritten one is simply lost.
-
 ## Mandatory Outputs
+
+Record a decision in the spec's `07_Decisions.md` or a Change Request. Record a consultation or out-of-scope discovery in `08_Open-questions.md` or a Change Request.
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)

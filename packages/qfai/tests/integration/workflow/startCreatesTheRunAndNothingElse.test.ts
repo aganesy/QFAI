@@ -1,0 +1,47 @@
+// QFAI:SPEC-0018:TC-0018-0017
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import { afterEach, expect, it } from "vitest";
+
+import {
+  field,
+  inbox,
+  minimalProject,
+  removeProjects,
+  START_INPUT,
+  treeDigest,
+  workflow,
+} from "./workflowProject.js";
+
+afterEach(removeProjects);
+
+async function eventOf(root: string, runId: string, name: string): Promise<unknown> {
+  const text = await readFile(path.join(root, ".qfai", "runs", runId, "journal", name), "utf8");
+  return field(JSON.parse(text), "event");
+}
+
+it("TC-0018-0017 (TDD-0262): Built CLI start on a temp repo in mode active", async () => {
+  const root = await minimalProject();
+  const input = await inbox(root, null, "start", START_INPUT);
+  const outside = (rel: string) => rel.startsWith(".qfai/runs/");
+  const before = await treeDigest(root, outside);
+
+  const started = workflow(root, ["start", "--in", input]);
+  const runId = String(field(started.json, "run.id"));
+
+  expect({
+    exit: started.status,
+    state: field(started.json, "run.state"),
+    first: await eventOf(root, runId, "000001.json").catch(() => undefined),
+    second: await eventOf(root, runId, "000002.json").catch(() => undefined),
+    outsideUnchanged: (await treeDigest(root, outside)) === before,
+  }).toEqual({
+    exit: 0,
+    state: "routing",
+    first: "run-created",
+    second: "capture-request",
+    outsideUnchanged: true,
+  });
+});

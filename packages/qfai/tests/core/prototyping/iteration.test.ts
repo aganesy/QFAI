@@ -51,7 +51,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   it("returns null when layoutAntiPatternsDetected is non-empty (other conditions met)", () => {
     const iter = baseIter({
       blockingFindings: [],
-      layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
+      layoutAntiPatternsDetected: ["lap-007-state-not-represented"],
     });
     expect(shouldStop([iter])).toBeNull();
   });
