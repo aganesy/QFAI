@@ -3,8 +3,13 @@
 ## User Story
 
 - Parent: CAP-0003
-- Goal: `qfai init` installs `/qfai-migration-spec-to-story` and links it into the host skill directories like every shipped skill, on a fresh project and on one still on the spec-pack layout. The migration's scripts reuse init's integration-directory and managed-block writers rather than copies of them
-- Non-goals: the migration's steps, invocation and report (`.qfai/contracts/cli/qfai-migration-spec-to-story.md`, owned by spec-0018); a `qfai` subcommand for the migration
+- Goal: `qfai init` installs `/qfai-migration-v1-to-v2` and links it into the
+  host skill directories like every shipped skill, on a fresh project and on one
+  still on the spec-pack layout. The migration's scripts reuse init's
+  integration-directory and managed-block writers rather than copies of them
+- Non-goals: the migration's steps, invocation and report
+  (`.qfai/spec/03_contract/cli/qfai-migration-v1-to-v2.md`, owned by
+  spec-0018); a `qfai` subcommand for the migration
 - Notes: implements discussion-20260923063306456#REQ-0019
 
 ## Legacy Source Scope

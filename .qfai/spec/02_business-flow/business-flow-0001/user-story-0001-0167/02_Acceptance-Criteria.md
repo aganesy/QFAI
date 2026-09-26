@@ -30,7 +30,7 @@ Scenario: Built-in Routing Defaults and Project Overrides
 # AC-0001-0167-04
 # Parent: US-0001-0167
 Scenario: Migration Skill Routing
-  Given the routing defaults QFAI ships and the shipped `/qfai-migration-spec-to-story` skill,
+  Given the routing defaults QFAI ships and the shipped `/qfai-migration-v1-to-v2` skill,
   When the routing for that skill is read,
   Then it has three phases in order: `plan`, with `requirements-analyst` and `solution-architect` mandatory and `solution-architect` blocking; `execution`, with `devops-ci-engineer` mandatory; and `review`, with `completion-reviewer` and `architecture-reviewer` mandatory and both blocking. Its review profile is `architecture-heavy`.
   And the skill's `roles:` names every agent the entry binds and every reviewer `architecture-heavy` selects, and its `routing-profile:` is `architecture-heavy`, so `qfai validate` reports no `QFAI-AGENT-015` to `QFAI-AGENT-019` finding for it.

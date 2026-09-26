@@ -4,7 +4,7 @@
 
 - Parent: CAP-0018
 - Source: discussion-20260923063306456#DUS-006
-- Goal: As an adopter I want to run `/qfai-migration-spec-to-story` and have an
+- Goal: As an adopter I want to run `/qfai-migration-v1-to-v2` and have an
   AI plan the migration, run every step with a dry run first, and show me what
   is left for a person, so that the whole move is repeatable and reviewable.
 - Non-goals: an AI settling what a step listed for a person.
