@@ -415,12 +415,12 @@ export const CYCLE_OUT_OF_RANGE_PEEK_HINT =
  */
 const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
 
-// TODO(next-minor): runPrototypingIterate body is ~674 LOC and orchestrates
-// 13 distinct sections (peek, cycle range, primary-spec, zero-UI precheck,
-// DESIGN.md lock, cycle-0 reset, seed write, license verify, plan write,
-// auto-serve, capture, context write, blocked summary). CLAUDE.md project
-// rule asks for ~50 LOC per function. Candidate extractions for the next
-// minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
+// TODO(next-minor): runPrototypingIterate orchestrates 13 distinct sections
+// (peek, cycle range, primary-spec, zero-UI precheck, DESIGN.md lock,
+// cycle-0 reset, seed write, license verify, plan write, auto-serve,
+// capture, context write, blocked summary). Several of them are jobs of
+// their own rather than steps of the driver. Candidate extractions for the
+// next minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
 // runCycle0Reset(options, ...), runOptionalCaptureAndServe(options, dir),
 // emitAdvisorySummaries(options, protoJsonAbs). Pure structural refactor;
 // no semantic change expected.
@@ -1738,8 +1738,8 @@ async function emitCycleZeroSkeletons(input: {
 // into core/prototyping/captureUrlCompose.ts + captureScreensResolve.ts.
 // Both helpers are pure (no captured runPrototypingIterate state) and
 // orthogonal to the iterate driver's primary concerns (cycle gating /
-// drift detection / freeze / exit code dispatch). Extracting them lets
-// the driver shrink toward the CLAUDE.md ~50 LOC guidance and removes
+// drift detection / freeze / exit code dispatch). Extracting them keeps
+// the driver's module on those concerns and removes
 // the export-without-unit-test pressure on composeCaptureUrl by giving
 // it a natural module home with co-located tests.
 

@@ -45,6 +45,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The minimal-implementation rule names four additions a change leaves
+  out** (#2234). A change can clear every rung of the ladder and still add work
+  nobody asked for. A new section names the four shapes that takes: wider
+  scope, comments on untouched code, handling for a case that cannot happen,
+  and an abstraction for a one-time need. A function's length alone is not a
+  reason to extract a helper. The section keeps what § 2 of the rule already
+  requires, such as traceability annotations. The section after it moves from
+  § 4 to § 5.
+
 - **The READMEs put the free-text entry first.** The introduction, the quick
   start, the operating model and the minimal tutorial now start from describing
   the change to the agent in your own words; typing a stage skill such as
