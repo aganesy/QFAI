@@ -33,7 +33,10 @@
   },
   "then": {
     "not": {
-      "required": ["target"]
+      "required": ["target"],
+      "properties": {
+        "target": true
+      }
     }
   },
   "else": {
