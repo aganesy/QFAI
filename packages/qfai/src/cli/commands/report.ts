@@ -10,6 +10,7 @@ import { createReportData, formatReportJson, formatReportMarkdown } from "../../
 import { writeBusinessFlowReports } from "../../core/specPackReport.js";
 import { resolveFlowScope } from "../../core/flowScope.js";
 import { readStoryTreeModel } from "../../core/storyTree/tree.js";
+import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
@@ -18,7 +19,6 @@ import type { LegacyValidateJsonGate } from "./validate.js";
 import {
   appendIssue,
   evaluateLegacyValidateJsonGate,
-  isStoryTreeProject,
   profileSuffixedReportPath,
   scopedReportPath,
 } from "./validate.js";

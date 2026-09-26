@@ -6,6 +6,6 @@
 
 ## Rules
 
-| Rule ID | Rule         | Examples        | Rule refs |
-| ------- | ------------ | --------------- | --------- |
-| BR-0001 | Example rule | EX-0001-0001-01 | -         |
+| BR-ID   | Statement    | Examples        |
+| ------- | ------------ | --------------- |
+| BR-0001 | Example rule | EX-0001-0001-01 |

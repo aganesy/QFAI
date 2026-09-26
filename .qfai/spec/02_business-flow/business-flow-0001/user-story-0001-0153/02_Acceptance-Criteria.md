@@ -12,6 +12,12 @@ Scenario: No usable source stops SDD
   When SDD starts
   Then it stops and guides the operator to /qfai-discussion
 
+Scenario: Validation does not require a pack where SDD would not stop
+  Given a story-tree project with no discussion pack of any name
+  When `qfai validate` runs
+  Then it reports no missing discussion pack, because SDD may start from an explicit user requirement
+  And a misnamed pack still reports its naming finding and the missing pack
+
 Scenario: An incomplete discussion pack remains provenance
   Given a discussion pack exists but is incomplete, contradictory, or carries a blocking open question
   When SDD starts
