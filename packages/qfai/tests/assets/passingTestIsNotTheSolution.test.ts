@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const TREES = ["packages/qfai/assets/init/.qfai/assistant", ".qfai/assistant"];
 const HEADING = "## A passing test is not the solution";
+const CHECK = "hard-coded to the test's inputs";
+const ANCHOR = "catalog/test-layers.md#a-passing-test-is-not-the-solution";
 
 /** Collapse markdown soft wraps so assertions pin wording, not line breaks. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -53,7 +55,36 @@ describe("a ledger row is not met by code written for its test", () => {
       expect(green).toContain(
         "Minimal is measured against the row's obligation, not the test's inputs",
       );
-      expect(green).toContain("catalog/test-layers.md#a-passing-test-is-not-the-solution");
+      expect(green).toContain(ANCHOR);
+    });
+
+    it(`${tree}: every reviewer check that applies the rule names it`, async () => {
+      const places = [
+        ["agents", "implementation-reviewer.md"],
+        ["agents", "qa-gatekeeper.md"],
+        ["skills", "qfai-implement", "SKILL.md"],
+        ["skills", "qfai-atdd", "SKILL.md"],
+      ];
+      for (const place of places) {
+        const body = unwrap(await readFile(path.join(repoRoot, tree, ...place), "utf-8"));
+        expect(body, place.join("/")).toContain(CHECK);
+        expect(body, place.join("/")).toContain(ANCHOR);
+      }
     });
   }
+
+  it("the review policies and the minimal-implementation rule name it", async () => {
+    const read = (rel: string) => readFile(path.join(repoRoot, rel), "utf-8").then(unwrap);
+
+    expect(await read("REVIEW.md")).toContain("a value hard-coded to the test's inputs");
+    expect(
+      await read("packages/qfai/assets/init/.github/instructions/code-review.instructions.md"),
+    ).toContain(CHECK);
+    const rule = await read(
+      "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md",
+    );
+    const leavesOut = rule.split("## 4. What a change leaves out")[1]?.split(" ## ")[0] ?? "";
+    expect(leavesOut).toContain("Code written only to pass a test");
+    expect(leavesOut).toContain(ANCHOR);
+  });
 });

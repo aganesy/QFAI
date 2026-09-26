@@ -103,6 +103,8 @@ assertion past the contract — that is reviewer-originated scope, which
 `.qfai/assistant/constitution/drift-protocol.md` forbids. Full criteria and the weak-oracle shapes:
 `.qfai/assistant/skills/qfai-implement/references/oracle-strength.md`.
 
+Reject a GREEN written for the test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around (`.qfai/assistant/catalog/test-layers.md#a-passing-test-is-not-the-solution`).
+
 ## RED/GREEN Observation Gate (MUST)
 
 This is the gate `qfai-implement` routes here as blocking, per ledger row. Judge

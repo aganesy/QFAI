@@ -52,7 +52,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   that cannot be done as specified, or a test case that is wrong, goes to a
   Change Request rather than being worked around. The implementation skill's
   Green phase measures "minimum production code" against the row's obligation
-  and points to that clause.
+  and points to that clause. Reviewers now check for it: `implementation-reviewer`
+  and `qa-gatekeeper`, the reviewer gates of `qfai-implement` and `qfai-atdd`,
+  the shipped Copilot code-review instructions, and § 4 of the
+  minimal-implementation rule each name the clause.
 
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work

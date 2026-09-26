@@ -212,6 +212,7 @@ Use the shared schema.
     oracle checks;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
+  - no code written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around (`.qfai/assistant/catalog/test-layers.md#a-passing-test-is-not-the-solution`);
   - coverage floors and ratios are signals, not gates;
   - `scenario.feature` and coverage ledgers remain optional legacy inputs, not completion gates.
 - Route specialist reviewers from `.qfai/assistant/manifest/agent-routing.yml`.
