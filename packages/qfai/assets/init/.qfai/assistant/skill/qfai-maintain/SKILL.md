@@ -28,8 +28,8 @@ does: wording, a typo, a code comment, prose in a document.
 
 ## Never a maintenance edit
 
-These change behaviour even when the diff looks like text. Stop and return the
-run for reclassification instead of editing them:
+These change behaviour even when the diff looks like text. A change to one stops
+as [A semantic effect](#a-semantic-effect) says:
 
 - dependency updates;
 - workflow and CI files;
@@ -43,13 +43,24 @@ A file extension alone never makes a change a maintenance edit.
 ## The edit
 
 1. Read the write scope. Edit nothing outside it.
-2. Before each edit, judge whether it has a semantic effect: a changed command,
-   value, identifier, condition or rule. If it has one, stop before editing and
-   return the run for reclassification. Do not make the edit.
+2. Before editing, judge whether each planned edit has a semantic effect: a
+   changed command, value, identifier, condition or rule. If one has, stop before
+   editing as [A semantic effect](#a-semantic-effect) says. Do not make the edit.
 3. Make the edit.
 4. Run the applicable lint and link checks over the changed files.
 5. Hand the diff to an independent reviewer, who confirms it changes no
    behaviour.
+
+## A semantic effect
+
+A change to a file listed under [Never a maintenance edit](#never-a-maintenance-edit),
+or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
+edited.
+
+- In a run: return it as
+  `references/orchestrated-mode.md#a-semantic-effect` says. The run is
+  reclassified from there.
+- Invoked by name: stop, and report that the change is not a maintenance edit.
 
 ## What the stage returns
 
@@ -134,5 +145,5 @@ Follow `.qfai/assistant/rule/shared-skill-operating-baseline.md#completion-contr
 project_memory:
 
 - A maintenance edit changes what a reader reads, never what a program or an agent does.
-- A semantic effect found before an edit stops the edit and returns the run for reclassification.
+- A semantic effect found before an edit stops the edit; in a run it goes back for reclassification.
 - The reviewer of the diff is never the agent that made it.

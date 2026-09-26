@@ -2,8 +2,8 @@
  * Integration: the two entry skills a workflow run adds, `qfai-run` and `qfai-maintain`, and their
  * routing entries in the package defaults.
  *
- * Reads the shipped skill files and `assets/defaults/`. Well-formedness of the routing is the
- * routing validators'; what the workflow core does with a proposal is not this module's.
+ * Reads the shipped skill files and `assets/defaults/`, and runs the role and routing validators over
+ * them. What the workflow core does with a proposal is not this module's.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,10 +11,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
+import { defaultConfig } from "../../../src/core/config.js";
 import {
   ASSISTANT_ASSET_MAX_LINES,
   ASSISTANT_ASSET_MAX_LINE_CHARS,
 } from "../../../src/core/doctor/assetLineBudget.js";
+import { validateAgentDefinition } from "../../../src/core/validators/agentDefinition.js";
 import {
   PACKAGE_DEFAULTS,
   SHIPPED_ASSISTANT,
@@ -29,6 +31,7 @@ const RUN = "skill/qfai-run/SKILL.md";
 const PAYLOADS = "skill/qfai-run/references/payloads.md";
 const SCREENS = "skill/qfai-run/references/operator-screens.md";
 const MAINTAIN = "skill/qfai-maintain/SKILL.md";
+const MAINTAIN_RUN = "skill/qfai-maintain/references/orchestrated-mode.md";
 
 const SIX_PROFILES = [
   "architecture-heavy",
@@ -166,10 +169,26 @@ describe("qfai-maintain", () => {
 
   // QFAI:EX-0001-0198-04
   it("stops before an edit with a semantic effect and returns the run for reclassification", async () => {
-    const text = flat(sectionOf(await readShipped(MAINTAIN), "## The edit"));
-    expect(text).toMatch(/judge whether it has a semantic effect/i);
-    expect(text).toMatch(/stop before editing and return the run for reclassification/i);
-    expect(text).toMatch(/do not make the edit/i);
+    const skill = await readShipped(MAINTAIN);
+    const edit = flat(sectionOf(skill, "## The edit"));
+    expect(edit).toMatch(/judge whether each planned edit has a semantic effect/i);
+    expect(edit).toMatch(/stop before editing as \[A semantic effect\]/i);
+    expect(edit).toMatch(/do not make the edit/i);
+    const effect = flat(sectionOf(skill, "## A semantic effect"));
+    expect(effect).toMatch(/is not a maintenance edit\. nothing is edited/i);
+    expect(effect).toMatch(/`references\/orchestrated-mode\.md#a-semantic-effect`/);
+    expect(effect).toMatch(
+      /invoked by name: stop, and report that the change is not a maintenance edit/i,
+    );
+    const inRun = flat(sectionOf(await readShipped(MAINTAIN_RUN), "## A semantic effect"));
+    expect(inRun).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
+    expect(inRun).toMatch(/`debts` holds one entry for the finding/i);
+    expect(inRun).toMatch(/`findingCode` is `maintain-semantic-effect`/);
+    expect(inRun).toMatch(/`owningFlow` is `null`, because a `direct` run binds no flow/i);
+    expect(inRun).toMatch(/`detectingCommand` names the review or the command that found it/i);
+    expect(inRun).toMatch(
+      /`resolvingOwner` is the skill that owns that kind of change, never one the `direct` plan names/i,
+    );
   });
 });
 
@@ -198,6 +217,9 @@ describe("the entry skills' routing entries", () => {
     expect(authors, "the reviewer is not an author").not.toContain("completion-reviewer");
 
     expect(Object.keys(await profiles()).sort()).toEqual(SIX_PROFILES);
+
+    const shippedRoot = path.dirname(path.dirname(SHIPPED_ASSISTANT));
+    expect(await validateAgentDefinition(shippedRoot, defaultConfig)).toEqual([]);
   });
 });
 

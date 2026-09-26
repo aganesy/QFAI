@@ -52,6 +52,7 @@ Scenario: An SDD-kind stage changes the tree only on the operator's answer
   Given an sdd, sdd_append or sdd_delta work order
   When the stage has a proposal for the story-tree and contract files it would change
   Then it asks once and changes nothing: it opens one decision question showing the change target and the proposal, with outcome awaiting_input
-  And the attempt holding the human_decision makes the change and appends one Change request row naming every protected file it changed, already at WIP, with an Approach citing that answer
+  And the attempt holding the human_decision makes the change and appends one Change request row naming every protected file it changed, at WIP, with an Approach citing that answer
+  And that attempt moves the row to DONE once every change it names is written, leaving it at WIP only while changes remain for a later attempt of the same stage
   And a row citing only request_scope is refused record-unauthorized
 ```

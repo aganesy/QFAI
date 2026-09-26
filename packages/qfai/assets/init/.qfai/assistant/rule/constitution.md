@@ -3,6 +3,8 @@
 This document defines **non‑negotiable operating rules** for QFAI agents and subagents.
 It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but adapted to QFAI’s minimal workflow.
 
+Inside an `npx qfai workflow` run, what authorizes the run's work and the one target a work order binds its stage to are stated in `.qfai/assistant/rule/shared-skill-operating-baseline.md#what-authorizes-a-runs-work`. They add to these articles and except none.
+
 ---
 
 ## Absolute Rule — Output Language

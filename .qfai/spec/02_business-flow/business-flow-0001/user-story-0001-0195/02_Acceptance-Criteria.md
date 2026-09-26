@@ -78,6 +78,7 @@ Scenario: A change to the story tree waits for the operator's approval
   Given a story-authoring stage of a run that would change story-tree or contract files
   When it reaches the change
   Then it asks once and changes nothing: one question shows the change target and the proposal
-  And the attempt holding the operator's `human_decision` makes the change and appends one `Change request:` row naming those files, already at WIP, citing that answer
+  And the attempt holding the operator's `human_decision` makes the change and appends one `Change request:` row naming those files, at WIP, citing that answer
+  And that attempt moves the row to DONE once every change it names is written, leaving it at WIP only while changes remain for a later attempt of the same stage
   And a row citing only the run's `request_scope` is refused `record-unauthorized`
 ```

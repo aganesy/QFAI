@@ -184,6 +184,11 @@ delegation work order.
 | `error`   | `active`          | Handed a QFAI work order that matches no issued one  | Edit nothing, and return the refusal to the harness                                                                                          |
 | `off`     | `off` or `shadow` | Always                                               | No entry check. Behave as when invoked by name                                                                                               |
 
+A work order matches an issued one when its run, stage-instance and work-order
+IDs equal those of the outstanding work order that
+`npx qfai workflow status --run <runId>` reports. `status` only reads, so the
+check changes nothing in the run.
+
 ### What authorizes a run's work
 
 - The operator's first explicit request authorizes the run's work, within the

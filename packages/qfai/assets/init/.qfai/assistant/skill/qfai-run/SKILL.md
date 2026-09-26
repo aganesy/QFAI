@@ -61,12 +61,16 @@ Classify the request before any write call. Only `change` calls `start`.
    submit again. The operator sees nothing unless a question or a halt follows.
 4. **Announce.** Once the plan is checked, give the goal, the stages in order
    and the write scope. Ask nothing.
-5. **Drive.** Until `next` returns no work order: call `next`, hand the work
-   order whole to its executor skill in a sub-agent, write the stage result it
-   returns under `.qfai/run/<runId>/inbox/`, and call `accept`. A `retry`
-   names the delay to wait before handing the same work order over again.
-6. **Finish.** When the target is `qfai_done`, commit the run's changes, then
-   call `finish` and give the completion report.
+5. **Drive.** Call `next` and act on its work order, or on the run state it reports. Repeat. A routing work order goes back to step 2.
+   - Any other work order: hand it whole to its executor skill in a sub-agent, write
+     the stage result under `.qfai/run/<runId>/inbox/`, and call `accept`. A
+     `retry` names the delay before the same work order is handed over again.
+   - `awaiting_input`: put each open question as `references/operator-screens.md`
+     says, and relay each answer with `decision`.
+   - `blocked`: give the halt notice and stop.
+   - `ready` with every stage accepted: go to step 6.
+6. **Finish.** For `qfai_done`, commit the run's changes first. Then call
+   `finish` and give the completion report.
 
 ## User Questions (AskUserQuestion Protocol)
 
@@ -85,8 +89,7 @@ Follow `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 
 ### Orchestrator Protocol (MUST)
 
-- This skill creates no work order of its own: it hands on the ones `next`
-  returns, integrates the results and presents them.
+- This skill creates no work order of its own: it hands on the ones `next` returns, integrates the results and presents them.
 - Each stage runs in a sub-agent holding the executor skill and its work order.
 
 ### Capability Probe (MUST)
@@ -95,8 +98,7 @@ The first stage's delegation is the capability check. A result reporting it `una
 
 ### Delegation Failure (Hard Stop)
 
-- `unavailable`: submit the result with `delegation` set, and stop on the halt
-  the run returns.
+- `unavailable`: submit the result with `delegation` set, and stop on the halt the run returns.
 - `saturated`: wait out the `retry` the run returns.
 - Do not simulate roles. A stage is never done here in place of its skill.
 
@@ -110,15 +112,13 @@ Report one row per work order handed on.
 
 ### Reviewer Gate (MUST)
 
-This skill writes no artifact, so it runs no Reviewer of its own. Each stage's
-reviewers return PASS or REVISE on that stage's work, and `accept` refuses a
-result whose reviewer is not independent.
+This skill writes no artifact, so it runs no Reviewer of its own. Each stage's reviewers return PASS or REVISE
+on that stage's work, and `accept` refuses a result whose reviewer is not independent.
 
 - The Drift Protocol applies to the run: a stage that would change a story, a
   contract or a decision outside its work order stops and says so.
-- Test placement is each stage's, read against
-  `.qfai/assistant/rule/test-layers.md`. A test-layer ratio is a signal, not a
-  gate.
+- Test placement is each stage's, read against `.qfai/assistant/rule/test-layers.md`.
+  A test-layer ratio is a signal, not a gate.
 
 ## Default Autopilot Policy
 
