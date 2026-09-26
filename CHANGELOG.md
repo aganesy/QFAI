@@ -33,8 +33,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     only this run's `verify.json`, and needs an independent `qa-gatekeeper`
     pass. A run whose operator said not to commit completes as a verified
     working tree, never as done.
-  - `continue` resumes the worktree's one open run where it stopped, and
-    `stop` cancels it.
+  - Asking to resume or continue picks up the worktree's one open run where
+    it stopped, and asking to cancel stops it.
   - `workflow.mode` in `qfai.config.yaml` is `active` (the default), `shadow`,
     which proposes the route and writes nothing, or `off`. Any other value is
     a configuration error.
@@ -45,8 +45,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - `qfai-maintain` fixes a typo or other non-normative text inside a run, and
     stops before an edit that would change behaviour.
   - A run starts only on a host whose capability report covers what a run
-    needs. No host is declared supported in this release: that needs a
-    recorded routing eval.
+    needs. No host is declared supported in this release; that needs a
+    recorded evaluation of the host.
+  - `qfai init` opens `AGENTS.md` and `CLAUDE.md` with a line that sends a
+    first free-text change request to `qfai-run`, and adds it to an existing
+    file that lacks it. Its summary names the workflow mode in force.
 
 - **Story-tree checks.** `qfai validate` reads the story tree through two new
   rule families.
@@ -152,10 +155,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `<outDir>/business-flow-NNNN/coverage.md` and `traceability-graph.json` in
   place of the per-spec directories. `--flow` on `validate` and `report`
   scopes a run to one or more flows, and a scoped `report` reads
-  `validate.flow-<ids>.json` and writes `report.flow-<ids>.md`. A `--flow`
-  value that names no business flow is reported as `QFAI-FLOW-005` (`error`),
-  and no scoped result is written. `QFAI-FLOW-001` remains the Mermaid
-  `stateDiagram` warning.
+  `validate.flow-<ids>.json` and writes `report.flow-<ids>.md`. On
+  `validate`, a `--flow` value that names no business flow is reported as
+  `QFAI-FLOW-005` (`error`) and no scoped result is written; `report` refuses
+  it. `QFAI-FLOW-001` remains the Mermaid `stateDiagram` warning.
 
 - **Breaking: agent routing no longer lives in the project.** `qfai init` no
   longer writes `.qfai/assistant/manifest/agent-catalog.yml`,
@@ -168,7 +171,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `QFAI-DPACK-001`. A misnamed pack still reports `QFAI-DPACK-005` or
   `QFAI-DPACK-006`, and `QFAI-DPACK-001` with it.
 
-- **`qfai doctor` checks the story tree.** The `spec.layout` and
+- **Breaking: `qfai doctor` checks the story tree.** The `spec.layout` and
   `spec.capCatalogSpecColumn` checks are gone, and `prototyping.primarySpec`
   is now `prototyping.primaryUiContract`.
 
@@ -298,6 +301,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `prototyping.primaryUiContract: CON-UI-NNNN`. The old key is a
     configuration error, and migration leaves it in place.
 
+- **Breaking: the prototyping loop covers UI contracts, not a primary spec.**
+  `qfai prototyping iterate` evaluates every UI contract and each screen it
+  declares. `prototyping.json` records `uiContractsCovered` in place of
+  `specsCovered` and `frozenSpecsCovered`, the completion certificate records
+  `convergedUiContracts` and `laggingUiContracts` in place of `convergedSpecs`
+  and `laggingSpecs`, and each review is written to
+  `iter-NN/CON-UI-NNNN/<screen>.review.json`. A `prototyping.json` from 1.x
+  is reported as `QFAI-PROT-008` (`error`), and a 1.x certificate is not
+  accepted; re-seed the loop with `qfai prototyping iterate --cycle 0`.
+
 - **Breaking: four configuration keys that governed spec-pack checks.**
   `validation.traceability.scMustHaveTest` and
   `validation.traceability.unknownContractIdSeverity` are retired and reported
@@ -333,11 +346,10 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Files under `.qfai/steering/` are left untouched, and the migration skill
     does not move or rewrite them. Nothing reads them or reacts to them, so
     they can be deleted.
-  - A remaining `worklog-entry.schema.md` is reported as `QFAI-ASSETS-006`
-    until it is removed, like any file the release no longer ships.
-    `qfai init --force` removes it when it still matches its
-    `.assets.lock.json` record. An edited copy is left in place and reported
-    as a manual merge; delete it by hand.
+  - In a 1.x project the file is
+    `.qfai/assistant/catalog/worklog-entry.schema.md`, and migration step 3
+    archives it under `.qfai/evidence/migration-spec-to-story/retired/` with
+    the rest of `catalog/`.
 
 - **`cli-ux-guidelines.md`.** `qfai init` no longer writes it to
   `.qfai/assistant/catalog/` or anywhere else. The `--format text` grammar it
