@@ -4629,6 +4629,24 @@ new gate in the chain, and **exit 1 attributably at `lint:workflow-shape`** when
 mutation is in place. The aggregate genuinely reddens on shipped-shape drift, which is the property
 AC-0003-0035 exists for.
 
+## Document-lane mutation observations
+
+The six document-lane rows had passing tests when their spec restatement was
+requested. Each row's falsifying mutation failed its own assertion while the
+other rows in that case stayed green:
+
+| Row | Mutation | Observed failure |
+| --- | -------- | ---------------- |
+| `TDD-0058` | Change `check: [shape, mermaid]` to `check: [shape]` in `qfai-docs.yml`. | The leg list failed. |
+| `TDD-0059` | Change the docs aggregate's `name:`. | The external check name failed. |
+| `TDD-0060` | Change the drift step's pull-request condition in `qfai-validate.yml`. | The profile invocations failed. |
+| `TDD-0061` | Change the validate aggregate's `name:`. | The external check name failed. |
+| `TDD-0062` | Change the docs aggregate's `exit 1` to `exit 0`. | Six violations replaced none. |
+| `TDD-0063` | Change the result-binding guard in `aggregateFailureViolations`. | One violation replaced none. |
+
+`CR-20260923-0003` records the spec restatement and the order that returned
+these rows to execution.
+
 ## Spec completion determination: spec-0003 does NOT reach COMPLETE
 
 Ledger census at run close: **36 `done` / 17 `exception` / 3 `todo`** (56 rows). This run moved 29 rows
@@ -4665,6 +4683,12 @@ completion is declared.
 
 - `record:unchecked`, `TDD-0037`, Round 1: the entry's `Branch:` line says it records a test-only replacement and changes no branch, and a paragraph says the ledger still holds the old describe title. After `CR-20260923-0013` the entry carries the row's own falsifiability proof, and the ledger holds the renamed title.
 - `record:unchecked`, `TDD-0037`, Round 1: the round carries `RED test replacement` / `Replacement proof` fields, which `round-evidence.md` reserves for a `REVISE` that replaced the test. The proof was re-taken because a change request reset the row.
+- `record:QFAI-TDDLIST-008`, `TDD-0094` (the withdrawn row, which never merged under that ID), Round 1: the TC reference, RED result, Oracle proof and selector notes did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `e20a5cf87e4e23a3793530f8c052f905108dabe7aaf784deec52a57e6d032b43`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0095`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `0998eb9914dc405479f4f8d5ef1f9972f6c6867e78ebc30fcbf717d469f41c83`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0096`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `29a1f5840b58535ee39390887cff1e54613e6542cafd7c4302566aaa9a120c33`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0097`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `29e57295c3119a161f2fa13b75ec81e53053d3dd78bcde2f30caf0f7396e3352`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0098`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `fc7314fcc7737bab612ed72e8ad52a04d4d3ee7513b2e9ceb504a490a695ea74`; the original sealed review remains historical.
+- `record:QFAI-TDDLIST-008`, `TDD-0099`, Round 1: the TC reference, RED result and Oracle proof did not expose the recorded test run in the validator's fields. The ATDD entry now names the actual command, selected assertion failure and ledger TC reference. The completion and implementation reviewers re-attested PASS at `working-tree+8da24c6ba61734c4bfedfd7bf1e5a71ef8f2c41ebe7fbfb87425ed5ffc0bace9` over audited hash `d9205a74c005ef11d28e92a992119f148283bfc4c01de898bebe014a608ed3d4`; the original sealed review remains historical.
 
 Open entries from the reviews of `TDD-0094` in the `/qfai-implement` run started
 2026-09-25T03:24:00.000Z. Each is repaired in place before spec-0003 completion

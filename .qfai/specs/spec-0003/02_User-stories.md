@@ -16,7 +16,7 @@
 - US-0003-0012: instructions の force 更新 - --force で instructions を shipped テンプレートへ更新
 - US-0003-0013: instructions アクティベーション案内 - 作成時にガイダンスメッセージ表示
 - US-0003-0015: `.gitignore` managed block (v1.7.18) - `qfai init` ignores the artifacts QFAI generates (report, evidence, review, discussion) and keeps the governance records among them tracked
-- US-0003-0016: 4-layer asset-tree + work-log surface seeding (v1.9.0) - `qfai init` が `.qfai/assistant/{constitution,manifest,catalog,process}/` の 4 層およびプロジェクトルートに `.qfai/steering/` を seed
+- US-0003-0016: 4-layer asset-tree seeding (v1.9.0) - `qfai init` seeds the four layers of `.qfai/assistant/{constitution,manifest,catalog,process}/`
 - US-0003-0017: --upgrade-assistant-tree migration helper (v1.9.0) - 旧 `.qfai/assistant/steering/` レイアウトを 4-layer へ一括移行する flag。ユーザー編集を保全
 - US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成
 - US-0003-0019: assistantPaths.ts SSOT module (v1.9.0) - assistant-tree のパス文字列を単一の TypeScript module から供給し、hard-coded literal を排除
@@ -29,13 +29,14 @@
 - US-0003-0026: 配布 Node / package manager portability (CHG-007) - adopter の Node version ファイルを優先しつつ不在時は fail open、package manager 解決不能時は fail closed とし、lockfile 検出 install branch を全配布ファイルに拡張する
 - US-0003-0027: 配布 workflow 所有権コントラクト (CHG-007) - QFAI が adopter の workflows ディレクトリで何を所有するかを文書化・テストし、adopter 作成ファイルと `declined` ファイルを構造的に守る
 - US-0003-0028: 配布 set の structural contract gate (CHG-007) - 宣言された期待形状に対して配布 set を assert する gate が、pull request が実際に走らせる経路から semantic drift を落とす
+- US-0003-0029: Install or upgrade and get the free-text entry - `qfai init` and upgrade deliver the entry skill, its wrappers, the plans, the directive and the mode line, and keep the project's own edits
 
-## US-0003-0016: 4-layer asset-tree + work-log surface seeding
+## US-0003-0016: 4-layer asset-tree seeding
 
 - Parent: CAP-0003
-- Goal: `qfai init` が新規プロジェクトに対して assistant-tree の 4 層 (`constitution/`, `manifest/`, `catalog/`, `process/`) およびプロジェクトルートの `.qfai/steering/` (AI work-log surface) を seed することで、CHG-003 discussion pack で合意された新しいレイアウトを 1 コマンドで実体化する
-- Non-goals: validate-side enforcement (spec-0004 が担当)、frontmatter schema 検証 (spec-0004 担当)、Reviewer-Gate drift findings (spec-0015 担当)
-- Notes: REQ-0018 / REQ-0019 を実装する。`assistantPaths.ts` (REQ-0022) を経由してパス文字列を解決すること
+- Goal: `qfai init` seeds the four assistant-tree layers (`constitution/`, `manifest/`, `catalog/`, `process/`) in a new project, so the layout agreed in the CHG-003 discussion pack exists after one command
+- Non-goals: validate-side enforcement (spec-0004), Reviewer-Gate drift findings (spec-0015)
+- Notes: Implements REQ-0018; resolve paths through `assistantPaths.ts` (REQ-0022)
 
 ## US-0003-0017: --upgrade-assistant-tree migration helper
 
@@ -209,3 +210,20 @@
 - Goal: テストスイート内に保持された 1 つの宣言された期待形状に対して配布 set を assert する gate が、lint aggregate または test matrix から実行され、profile 値や failure threshold といった load-bearing な semantic 値の drift で exit 1 する
 - Non-goals: リポジトリ自身の複製との byte-identity 比較（比較対象は spec-0017 の上流 pack REQ-0025 で削除されるため operand が存在しない）、release 専用 gate aggregate への配置、numeric drift scoring
 - Notes: REQ-0031 を実装する。上流 pack REQ-0021 / OQ-0016。ordering: spec-0017 の上流 pack REQ-0025 と同一変更またはそれ以前に着地させる。既存 asset test の ad-hoc string assertion を subsume する際、その test-case annotation は保持または再登録する。The declared shape also pins each aggregate lane's always-run condition and the exact `needs` list it names
+
+## US-0003-0029: Install or upgrade and get the free-text entry
+
+- Parent: CAP-0003
+- Source: discussion-20260923171450572#DUS-009
+- Goal: As an adopter maintainer, I want `qfai init` and an upgrade to deliver `qfai-run`, its
+  wrappers, the plans, the entry directive and the ignore entries, and to show me what my own
+  edits leave out of step, so that my operators can use the free-text entry without further
+  setup and my edits survive.
+- Non-goals: the workflow core and what `start` refuses; the manifest entries for the two new
+  skills; merging a manifest on a plain upgrade; overwriting a skill the project edited without
+  `--force`.
+- Notes: the install half of the pack story. The run half is `spec-0018`'s, and its journey for
+  the same pack story discharges this story's E2E obligation, annotated with both story IDs. A
+  plain upgrade leaves `active` configured but not started until `qfai init --force` adds the
+  routing entries the release brings: the user accepted that on 2026-09-24, and spec-0015 holds
+  the record.

@@ -64,11 +64,13 @@ import {
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
   TRIAGE_UPDATE_SUBOPS,
+  requiresApproval,
   type TriageTopLevelOp,
   type TriageUpdateSubOp,
 } from "../sddTriage.js";
 import { loadLayerPolicy } from "../layerPolicy.js";
 import type { Issue, IssueSeverity } from "../types.js";
+import { authorizationRefIssue, type AuthorizationRow } from "./triageAuthorizationRef.js";
 import { issue } from "./utils.js";
 
 const LEDGER_REQUIRED_COLUMNS = [
@@ -170,7 +172,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds, specStatuses)));
-    issues.push(...(await validateTriageSectionForEntry(entry, knownSpecIds)));
+    issues.push(...(await validateTriageSectionForEntry(entry, knownSpecIds, root)));
     issues.push(...(await validateReOpenForEntry(entry, specsRoot)));
   }
 
@@ -181,7 +183,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, knownSpecIds)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, knownSpecIds, root)));
   issues.push(...validatePolicyOnlySources(await readTriageDeltas(entries, specsRoot)));
 
   return issues;
@@ -267,6 +269,7 @@ function validatePolicyOnlySources(deltas: readonly { path: string; text: string
 async function validatePoliciesDeltaTriage(
   specsRoot: string,
   knownSpecIds: ReadonlySet<string>,
+  projectRoot: string,
 ): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
   let text: string;
@@ -280,6 +283,7 @@ async function validatePoliciesDeltaTriage(
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
   const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
+  issues.push(...(await validateTriageAuthorizationRefs(text, deltaPath, projectRoot)));
   return issues;
 }
 
@@ -471,13 +475,6 @@ export function validateSpecStatus(
   return issues;
 }
 
-const APPROVAL_REQUIRED_OPS = new Set<TriageTopLevelOp>([
-  "CREATE",
-  "DELETE",
-  "SPLIT",
-  "MERGE",
-  "SUPERSEDE",
-]);
 const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operation"] as const;
 
 /**
@@ -760,6 +757,7 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
 async function validateTriageSectionForEntry(
   entry: SpecEntry,
   knownSpecIds: ReadonlySet<string>,
+  projectRoot: string,
 ): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
@@ -773,6 +771,7 @@ async function validateTriageSectionForEntry(
   }
   const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
+  issues.push(...(await validateTriageAuthorizationRefs(text, deltaPath, projectRoot)));
   return issues;
 }
 
@@ -941,6 +940,60 @@ export async function validateCreateRowCapabilityRefs(
   }
 
   return issues;
+}
+
+/**
+ * Enforce QFAI-TRIAGE-011 over every Triage table carrying an
+ * `Authorization-Ref` column: a row that needs approval and cites a workflow
+ * run's record must cite one that passes every check. The column is read by its
+ * header name, wherever it sits.
+ */
+async function validateTriageAuthorizationRefs(
+  text: string,
+  deltaPath: string,
+  projectRoot: string,
+): Promise<Issue[]> {
+  const sections = collectTriageSections(text);
+  const issues: Issue[] = [];
+  for (const section of sections) {
+    const tables = parseAllMarkdownTables(section.body);
+    for (const [tableIndex, table] of tables.entries()) {
+      if (!table.headers.some((h) => h.trim().toLowerCase() === "authorization-ref")) continue;
+      const scope = buildTriageScopeLabel(
+        sections.length,
+        section.index,
+        tables.length,
+        tableIndex,
+      );
+      for (const [rowIndex, row] of table.rows.entries()) {
+        const cited = authorizationRowOf(table.headers, row, rowIndex, scope);
+        const found = await authorizationRefIssue(cited, projectRoot, deltaPath);
+        if (found) issues.push(found);
+      }
+    }
+  }
+  return issues;
+}
+
+function authorizationRowOf(
+  headers: readonly string[],
+  row: readonly string[],
+  rowIndex: number,
+  scopeLabel: string,
+): AuthorizationRow {
+  const cell = (header: string): string => {
+    const index = headers.findIndex((h) => h.trim().toLowerCase() === header);
+    return index < 0 ? "" : (row[index] ?? "").trim();
+  };
+  const baseLabel = cell("source") || `row ${rowIndex + 1}`;
+  return {
+    label: scopeLabel ? `${scopeLabel} ${baseLabel}` : baseLabel,
+    operation: cell("operation"),
+    subOp: cell("sub-op"),
+    approvedBy: cell("approved by"),
+    rationale: cell("rationale"),
+    reference: cell("authorization-ref"),
+  };
 }
 
 /**
@@ -1360,11 +1413,14 @@ function validateTriageRows(
       }
       // `subUpper` is now narrowed to `TriageUpdateSubOp` without a
       // bare type assertion.
-      if (subUpper === "REMOVE" && (approvedCell.length === 0 || approvedCell === "-")) {
+      if (
+        requiresApproval({ update: subUpper }) &&
+        (approvedCell.length === 0 || approvedCell === "-")
+      ) {
         issues.push(
           issue(
             "QFAI-TRIAGE-005",
-            `Triage UPDATE:REMOVE は Approved By 必須です (${rowLabel})。`,
+            `Triage UPDATE:${subUpper} は Approved By 必須です (${rowLabel})。`,
             "error",
             deltaPath,
             "triage.approval",
@@ -1397,7 +1453,7 @@ function validateTriageRows(
       continue;
     }
 
-    if (APPROVAL_REQUIRED_OPS.has(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
+    if (requiresApproval(opUpper) && (approvedCell.length === 0 || approvedCell === "-")) {
       issues.push(
         issue(
           "QFAI-TRIAGE-005",

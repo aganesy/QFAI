@@ -1354,13 +1354,16 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // `D-DEPRECATED-PATH` error naming `--upgrade-assistant-tree`. Derived by running `qfai init`
     // into a temp root; restoring the old item reproduces `754c7708…` byte for byte.
     //
+    // Re-pinned for the work-log surface item, which the run no longer writes into the list of
+    // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
+    // that one item reproduces `cac822f9…` byte for byte.
+    //
     // Re-pinned for one more bullet on that same list, naming
     // `.agents/rules/action-reversibility.md` — the rule the run now seeds beside the other
-    // masters, which classifies an action by how hard it is to undo. Derived by running
-    // `qfai init` into a temp root and hashing what it wrote; dropping that one bullet reproduces
-    // `cac822f9…` byte for byte.
+    // masters, which classifies an action by how hard it is to undo. Derived by hashing what
+    // `qfai init` writes; dropping that one bullet reproduces `b786f88e…` byte for byte.
     ".github/copilot-instructions.md",
-    "b5a5074054e096ee5f5477d4f6bd652934e68e6e47c3a193974707620e9f4020",
+    "074ad970e0302d1940eaa4f0d3de027d97d71635f3ae19057ccbd30590d510c8",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1466,7 +1469,17 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Derived the same way, and checked the way the note below asks: removing
   // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
   // which is what makes this a review of one line.
-  [".gitignore", "c208ecdc03ad18a379512fd21bd13e32035bb1df008144cde7ea32b4fc9b798c"],
+  //
+  // Re-pinned for the workflow run's state and evidence, two lines:
+  //
+  //     .qfai/runs/
+  //     !.qfai/evidence/workflow/
+  //
+  // the per-checkout run state, which never belongs in a commit, and the
+  // tracked summary and authorization records `qfai validate` reads from a
+  // fresh clone. Derived the same way; removing those two lines from what the
+  // run wrote reproduces `c208ecdc…` byte for byte.
+  [".gitignore", "00125b9c9559b6886ad4b17da6ea74d6e96741ae828617f42447cf7f5ad08e17"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests
@@ -1515,13 +1528,18 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
   //
+  // Re-pinned for the entry directive both files now open with: one line sending a first
+  // free-text change request to the `qfai-run` skill, and the blank line after it. Derived by
+  // running `qfai init` into a temp root; removing those two lines from both written files
+  // reproduces `6083825b…` and `fe88c122…` byte for byte.
+  //
   // Re-pinned for one more bullet in the same block, naming
   // `.agents/rules/action-reversibility.md` — the rule the run now seeds beside the other masters,
-  // which classifies an action by how hard it is to undo. Derived by running `qfai init` into a
-  // temp root and hashing what it wrote; dropping that one bullet from both written files
-  // reproduces `6083825b…` and `fe88c122…` byte for byte.
-  ["AGENTS.md", "699f8bda9ecd973751ec5d66dba2dcb951a814d79dd4a94a0099669817c6aa14"],
-  ["CLAUDE.md", "bae5f05222f81077f80d1df49becb8449ae9f504e83a72fb50b8f4b91ab5d511"],
+  // which classifies an action by how hard it is to undo. Derived by hashing what `qfai init`
+  // writes; dropping that one bullet from both written files reproduces `51e3e03e…` and
+  // `07350d6a…` byte for byte.
+  ["AGENTS.md", "e60720deccbf026f0bc715f7aff40fb3134e2917cf6977e158fe1f55995c09b3"],
+  ["CLAUDE.md", "222a6943e60706a9c73be9b42ebba627cd60f68e4736d27138da50c7b36dd88a"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools

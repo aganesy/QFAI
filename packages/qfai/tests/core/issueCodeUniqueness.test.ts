@@ -192,8 +192,8 @@ describe("issue code uniqueness", () => {
 // `JustificationCatalogEntry` descriptor, not an emission. It does reach
 // `validate`, but only through `validateReviewerJustification` re-emitting a
 // code it read out of a reviewer report, a data-driven path no static census
-// can see; `R-WORKLOG-DRIFT` and `R-REJECTED-READOPT` reach it the same way and
-// have never been listed here either.
+// can see; `R-REJECTED-READOPT` reaches it the same way and has never been
+// listed here either.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
@@ -343,7 +343,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-AUTOPILOT-POLICY-MISSING",
   "R-EVIDENCE-MUTATION-UNLOGGED",
   "R-EXPLORATION-CERTIFY-ATTEMPT",
-  "R-HANDOFF-INCOMPLETE",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
@@ -527,7 +526,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-AUTOPILOT-POLICY-MISSING",
   "R-EVIDENCE-MUTATION-UNLOGGED",
   "R-EXPLORATION-CERTIFY-ATTEMPT",
-  "R-HANDOFF-INCOMPLETE",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",

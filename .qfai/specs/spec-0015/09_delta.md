@@ -1,5 +1,18 @@
 # 09 Delta
 
+## Triage (2026-09-23)
+
+`R-WORKLOG-DRIFT` leaves the reviewer justification set, so four items stop
+naming it as the pattern they follow.
+
+| Source                                | Subject                                                                                                                                      | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                     | Depends-On |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0003 | Reword "R-WORKLOG-DRIFT family pattern" in AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 to cite the justification rule directly | spec-0015     | UPDATE    | MODIFY | -           | Wording only. The obligation stays, and no ledger row changes | -          |
+
+- Ledger: no row changes. The four items keep their obligation, so TDD-0029,
+  which holds TC-0015-0027 at `done`, is not reset (DL-0003). No row is added or
+  retired, so no `Tier` is seeded.
+
 ## Triage (2026-09-13 concrete-pattern review)
 
 | Source                                                                         | Subject                                         | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                    |
@@ -14,11 +27,22 @@
 - Tags: @docs, @test
 - Summary: optional pattern review proposes concrete business-flow, US, AC, EX and TC coverage with rationale and no numeric target. Catalog bounds override old targets without overwriting adopter manifests. Existing IDs and independently required obligations remain intact.
 
+- Change ID: DELTA-0002
+- Date: 2026-09-23
+- Primary: Ops
+- Tags: @api, @docs
+- Summary: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite the
+  Reviewer-Gate justification contract instead of the `R-WORKLOG-DRIFT`
+  pattern. The obligation and every ledger row are unchanged.
+
 ## Update History
 
 | Date       | DL      | Summary                                                              |
 | ---------- | ------- | -------------------------------------------------------------------- |
 | 2026-09-14 | DL-0001 | Bound concrete-pattern review and record the authorized owner rerun. |
+| 2026-09-23 | DL-0002 | Cite the justification rule by its contract section.                 |
+| 2026-09-23 | DL-0003 | Replace only the citation in four items; no ledger row changes.      |
+| 2026-09-23 | DL-0004 | The citation resolves to the contract's rejection sentence.          |
 
 ## Decision Log
 
@@ -77,11 +101,144 @@ notes: Keep optional advisory review of concrete coverage without numeric or abs
     - .qfai/evidence/sdd-spec-0015.md
 ```
 
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md
+  - spec-0015/04_Business-Rules.md
+  - spec-0015/06_Test-Cases.md
+notes: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite the Reviewer-Gate justification contract in .qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle (DR-0015-0007).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Cite spec-0004 BR-0004-0017
+  reason: A foreign-namespace BR reference raises QFAI-SPACK-101 and TRACE_DOWNSTREAM_REF in 04_Business-Rules.md.
+  do_not: Cite another spec's BR, AC or US from this spec's item files.
+  temptation: BR-0004-0017 is where spec-0004 states the same rule.
+- option: Name R-REJECTED-READOPT as the pattern
+  reason: It swaps one code name for another instead of pointing at the rule.
+  do_not: Name a single finding code as the family the rule belongs to.
+  temptation: R-REJECTED-READOPT is the one code left in the justification set.
+
+### DL-0003
+
+#### Meta
+
+```yaml
+id: DL-0003
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md
+  - spec-0015/04_Business-Rules.md
+  - spec-0015/06_Test-Cases.md
+  - spec-0015/tdd/test-list.md
+notes: Only the citation phrase changes in the four items; the obligation is unchanged, so TDD-0029 stays done and no ledger row changes (DR-0015-0008).
+```
+
+#### Migration / Follow-ups
+
+- No migration required. The test TDD-0029 names asserts the rejection, not the phrase.
+- The header comment of `packages/qfai/tests/integration/validators/justificationRejectEmpty.test.ts` still names the "R-WORKLOG-DRIFT family" pattern. Rewording it is a `/qfai-implement` action under `discussion-20260923060900824#REQ-0017`, which leaves cosmetic test references to that stage.
+
+### DL-0004
+
+#### Meta
+
+```yaml
+id: DL-0004
+date: 2026-09-23
+primary: Ops
+tags: ["@api", "@docs"]
+compat: Improvement
+scope:
+  - spec-0015/03_Acceptance-Criteria.md (AC-0015-0014)
+  - spec-0015/04_Business-Rules.md (BR-0015-0009, BR-0015-0013)
+  - spec-0015/06_Test-Cases.md (TC-0015-0027)
+notes: The citation resolves to the rejection sentence of the Reviewer-Gate input bundle; BR-0015-0009's three-part content resolves to the R-PROMPT-SCANNER-DRIFT row (DR-0015-0009).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+- The rejection sentence was narrowed to the codes that require a justification, under the user's decision of 2026-09-23 recorded in spec-0004 DR-0004-0038 and DR-0004-0039. The eight catalog codes stay in it, so the four items keep their citation.
+
+#### Rejected
+
+- option: Re-point BR-0015-0009 and AC-0015-0014 to the prototyping finding-code section
+  reason: The four items cite the rejection rule, which the input-bundle section states.
+  do_not: Split one rule's citation across two anchors.
+  temptation: The code's own row is in the other section.
+- option: Widen the content clause of the input-bundle section
+  reason: It contradicts a recorded contract decision.
+  do_not: Widen the content clause of qfai-validate.md in this change.
+  temptation: The clause asks for a Decisions row ID these codes lack.
+
+### DL-0005
+
+#### Meta
+
+```yaml
+id: DL-0005
+date: 2026-09-24
+primary: Behavior
+tags: ["@docs"]
+compat: Compatibility
+scope:
+  - spec-0015
+  - manifest/agent-routing.yml
+  - contracts/cli/qfai-init.md
+notes: An upgraded project gains the qfai-run and qfai-maintain routing entries through qfai init --force (DR-0015-0010).
+```
+
+#### Migration / Follow-ups
+
+- The upgrade report and the fail-closed refusal at `start` name
+  `qfai init --force`. Their tests belong to spec-0003 and spec-0018.
+
+#### Rejected
+
+- option: Merge routing entries on every qfai init
+  reason: It changes the released --force behaviour the init contract states.
+  do_not: Run the add-only routing merge without --force.
+  temptation: The merge only adds entries.
+- option: Make manifest/ a provenance-governed layer
+  reason: It rewrites a layer qfai-configure owns.
+  do_not: Put the manifests under the provenance lock.
+  temptation: The lock already refreshes unmodified copies.
+
+#### Verification
+
+- The routing-manifest test case of BR-0015-0018 reads the shipped manifests only.
+
 ## Change Requests
 
-| CR ID            | Upstream artifact                | Mode      | Approved by                                             | Applied at |
-| ---------------- | -------------------------------- | --------- | ------------------------------------------------------- | ---------- |
-| CR-20260913-0007 | `spec-0015/04_Business-Rules.md` | re-derive | user (current session's delegated implementation scope) | -          |
+| CR ID            | Upstream artifact                                                                      | Mode      | Approved by                                             | Applied at           |
+| ---------------- | -------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------- | -------------------- |
+| CR-20260913-0007 | `spec-0015/04_Business-Rules.md`                                                       | re-derive | user (current session's delegated implementation scope) | -                    |
+| CR-20260924-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-24T18:26:35Z |
+| CR-20260925-0018 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user                                                    | 2026-09-24T19:00:08Z |
+| CR-20260925-0020 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-25T02:36:35Z |
+| CR-20260925-0022 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user                                                    | 2026-09-25T03:23:20Z |
+| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-25T06:04:36Z |
+| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                 | re-derive | user                                                    | 2026-09-25T07:34:27Z |
+| CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md` | re-derive | user                                                    | 2026-09-25T10:20:50Z |
 
 - Scoped physical changes are recorded. Applied at matches the CR and remains unset until the required owner gates complete.
 
@@ -249,3 +406,56 @@ Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — t
 - Regression: `packages/qfai/tests/assets/assets.test.ts` checks that each shipped `SKILL.md` hard-required bucket stays within the two common entries plus whatever that skill declares, and carries no withdrawn entry. It does not check the count, because narrowing is allowed.
 - ID stability: no US / AC / BR / EX / TC is renumbered, and nothing is appended.
 - Approved By: yusuke_senaga
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+| Source             | Subject                                                                                                                                   | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                   | Depends-On        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| REQ-0049, REQ-0057 | `agent-routing.yml` and `review-profiles.yml` gain `qfai-run` and `qfai-maintain`, each with a routing profile, roles and a routing block | spec-0015     | UPDATE    | APPEND | -           | AC-0015-0009 makes the routing manifest the single source. A new skill needs its profile, roles and routing block in the same change. Size: 22 AC today and 26 after the appends in this table, under the threshold                         | REQ-0033          |
+| REQ-0013           | A valid run binding counts as a supplied `primarySpecId`                                                                                  | spec-0015     | UPDATE    | MODIFY | -           | BR-0015-0010 lists `primarySpecId` as hard-required when absent. A binding a run supplies now counts as present, and the shared baseline states the exception. AC-0015-0015 and US-0015-0009 follow                                         | REQ-0033          |
+| REQ-0057           | How the three authorization kinds relate to the Default Autopilot Policy buckets                                                          | spec-0015     | UPDATE    | APPEND | -           | BR-0015-0010 owns the buckets. OQ-0008's recommendation maps `human_decision` onto the ask-user bucket and adds no new concept                                                                                                              | REQ-0033, OQ-0008 |
+| REQ-0040           | The history of authors, recommenders and reviewers is carried across a run                                                                | spec-0015     | UPDATE    | APPEND | -           | An agent never counts as the independent reviewer of its own authoring or recommendation anywhere in the run, and no reviewer is dropped to save tokens. An unavailable required delegation stops the run, as BR-0015-0003 already requires | REQ-0033          |
+| REQ-0055           | Grilling inside a run works only the remaining frontier                                                                                   | spec-0015     | UPDATE    | APPEND | -           | Settled inputs are taken as given, the split between user and delegated sessions is kept, and the run never invokes `qfai-grill`. No spec owns the grilling skills, and skill integration is this spec's                                    | REQ-0033          |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Modified in place, IDs kept, no `Source` added: US-0015-0009, AC-0015-0015 and
+  BR-0015-0010. A `primarySpecId` that a workflow run's binding supplies counts
+  as supplied. The existing test cases are unchanged.
+- Appended: AC-0015-0023..0026; BR-0015-0018..0021; DR-0015-0010 with DL-0005;
+  the `## Contract Realization` table in `04_Business-Rules.md`. No story is
+  added: AC-0015-0023 sits under US-0015-0001, because AC-0015-0009, the
+  routing-manifest criterion, traces to no story. AC-0015-0024 sits under
+  US-0015-0009, and AC-0015-0025 and AC-0015-0026 under US-0015-0003.
+- Resolved pack question: `discussion-20260923171450572#OQ-0008`, recorded in
+  `08_Open-questions.md`.
+- DR-0015-0100, cited by exception rows of the ledger, is not reused.
+- Size: AC 22 → 26, under the threshold. Test cases are budgeted at 14 new ones,
+  keeping the count at 50 or under.
+
+## 2026-09-24 — Phase 2c.1 obligation amendment
+
+- BR-0015-0021 is reworded, ID kept. A grilling session inside a run reads what
+  is settled from the work order's `settled` field (CLI-WF `### Work order`).
+- `## Contract Realization` gains two rows: BR-0015-0003 against CLI-WF
+  `### Stage result` (`delegation`), and BR-0015-0021 against `### Work order`.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+
+A later `origin/main` took more of these IDs, and the intent-driven ones moved again to
+the next free ones:
+
+- `DR-0015-0007` became `DR-0015-0010`, and its `DL-0002` became `DL-0005`.
+- `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010` became `CR-20260924-0007`,
+  `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
+  `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
+  Every reference here follows them.

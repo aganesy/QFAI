@@ -176,10 +176,31 @@ and that none were added or dropped — in the `Rationale` column of the
 7. **Stop.** Do not enter Phase 0 until every required-approval row has
    an approver recorded and every CREATE row cites a registered CAP.
    Stopping here is a reportable outcome, not a failure to repair: leave
-   `Approved By` as `-`, write a `consultation-needed` work-log entry
-   naming each unapproved row with its Operation and target, and report the
-   `QFAI-TRIAGE-005` errors as the reason the run stopped. Under `--auto`,
-   also ask for a rerun without `--auto` so the approvals can be collected.
+   `Approved By` as `-`, do not enter Phase 0, report every unapproved row
+   with its Operation and target, and report the `QFAI-TRIAGE-005` errors as
+   the reason the run stopped. Under `--auto`, also ask for a rerun without
+   `--auto` so the approvals can be collected.
+
+## Inside a workflow run
+
+Under a QFAI work order, the approval pass (step 5) changes by operation.
+
+- **`CREATE`.** Stage 1 checks the `human_decision` the work order cites
+  instead of asking. The check passes only when the record exists, matches the
+  row's operation and capability, and is not stale. A passing row is persisted with `Authorization-Ref` and
+  with `Approved By` copied as `answeredBy@YYYY-MM-DD`. A missing, mismatched or
+  stale approval persists no triage row and asks the operator nothing: the stage
+  returns `awaiting_input` naming the row and the reason. An approval is stale
+  when the scope digest it was given under changes, when the approved capability
+  text changes, or when a replan widens the scope. The clock alone never makes an
+  approval stale.
+- **`DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`** keep the approval question, inside and outside a run. A routing-time authorization approves none of them.
+
+Inside a run, Stage 1 asks the operator nothing itself. Its stage result opens
+the question as a `decision` question with outcome `awaiting_input`. The answer
+arrives through the work order's `authorizationRefs`. The row copies the
+answerer into `Approved By` as `answeredBy@YYYY-MM-DD` and carries no
+`Authorization-Ref`.
 
 ## Impact cascade (1 REQ → N rows)
 
@@ -223,6 +244,13 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 Optional: `Depends-On`, what the row waits on before its work can start.
+
+`Authorization-Ref` is optional and found by its header name, as `Depends-On`
+is. It is filled on an approval-required `CREATE` row only, and a row of any
+other operation carries no reference. Its value is
+`run-<17 digits>/<authorizationId>`: the run, then the cited record. A row
+citing a record copies `answeredBy@YYYY-MM-DD` from the record into
+`Approved By`. A row without the column, or with `-` in it, stays valid.
 
 `Depends-On` holds `-`, or a comma-separated list of what must finish first:
 
