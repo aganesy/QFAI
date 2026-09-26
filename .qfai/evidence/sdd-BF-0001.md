@@ -36,9 +36,9 @@ at `REVISE`; a Work Orders Summary row does not replace this record.
 
 | Phase | Session | Participants | Frontier | Recommendation | Disposition | Decision/OQ IDs | Ended at | Wrote at | Evidence |
 | ----- | ------- | ------------ | -------- | -------------- | ----------- | --------------- | -------- | -------- | -------- |
-| Triage and records | delegated, 2 rounds, ended `adopted` | griller-rr-1 (requirements-reviewer, griller); author-ra-1 (requirements-analyst); author-sa-1 (solution-architect) | Q1 placement; Q12 owning contract | Q1: UPDATE:APPEND to US-0001-0152, no Legacy Source Scope bullet. Q12: `story-tree-authoring.md` `## Rules`, citing BR-0005, BR-0316, BR-0320, BR-0321, BR-0733, BR-0734, BR-0736 and BR-0741 by ID | adopted; authors agreed | DEC-0797, DEC-0798, DEC-0799, DEC-0800 | 2026-09-26T04:10Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
-| Stories and examples | same session | same | Q2 finder input; Q3 `sdd_append`; Q4 stop; Q5 open findings; Q7 identity changes; AC and EX set | Seven ACs AC-0001-0152-08 to -14 and 18 EXs EX-0001-0152-12 to -29; Q5 widened to any finding with no decision when the loop ends | adopted; Q5 amended by both authors | DEC-0788 to DEC-0795, DEC-0796 | 2026-09-26T04:10Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
-| Contracts and rules | same session | same | Q6 runs; Q8 rejected findings and re-raise; Q9 adopted records; Q10 adjudicator; Q11 record and reviewer check; BR cut | Seven BRs BR-0748 to BR-0754. Q6: the cycle runs on the proposal before the one question BR-0741 allows; drift outside the checked scope returns `blocked`. Q10: one griller per cycle adjudicates, neither the finder nor an author of a targeted item | adopted; dissent on Q10 kept: author-ra-1 would have the finder grill and a separate agent classify only | DEC-0796 | 2026-09-26T04:10Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
+| Triage and records | delegated, 2 rounds, ended `adopted` | griller-rr-1 (requirements-reviewer, griller); author-ra-1 (requirements-analyst); author-sa-1 (solution-architect) | Q1 placement; Q12 owning contract | Q1: UPDATE:APPEND to US-0001-0152, no Legacy Source Scope bullet. Q12: `story-tree-authoring.md` `## Rules`, citing BR-0005, BR-0316, BR-0320, BR-0321, BR-0733, BR-0734, BR-0736 and BR-0741 by ID | adopted; authors agreed | DEC-0797, DEC-0798, DEC-0799, DEC-0800 | 2026-09-26T04:11Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
+| Stories and examples | same session | same | Q2 finder input; Q3 `sdd_append`; Q4 stop; Q5 open findings; Q7 identity changes; AC and EX set | Seven ACs AC-0001-0152-08 to -14 and 18 EXs EX-0001-0152-12 to -29; Q5 widened to any finding with no decision when the loop ends | adopted; Q5 amended by both authors | DEC-0788 to DEC-0795, DEC-0796 | 2026-09-26T04:11Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
+| Contracts and rules | same session | same | Q6 runs; Q8 rejected findings and re-raise; Q9 adopted records; Q10 adjudicator; Q11 record and reviewer check; BR cut | Seven BRs BR-0748 to BR-0754. Q6: the cycle runs on the proposal before the one question BR-0741 allows; drift outside the checked scope returns `blocked`. Q10: one griller per cycle adjudicates, neither the finder nor an author of a targeted item | adopted; dissent on Q10 kept: author-ra-1 would have the finder grill and a separate agent classify only | DEC-0796 | 2026-09-26T04:11Z | 2026-09-26T04:12Z | round files kept locally, not tracked |
 
 No critical decision was left for the user. The `Change request:` row the
 drift gate needs (DEC-0805) cites as its approval the user's decisions of
@@ -117,6 +117,8 @@ this invocation, so every adopted change was applied directly (BR-0750). Cycle
 
 | Reviewer | Verdict | Evidence |
 | -------- | ------- | -------- |
+| completion-reviewer, first pass | REVISE | DEC-0797 named EX-0001-0152-12 to -29 instead of -12 to -39; DEC-0805 claimed the user approved the design, which agents adopted in part. Both repaired; agent handles in the decision rows replaced by roles |
+| completion-reviewer, recheck | PASS | Both repairs correct; only rows this change adds differ; `--profile drift` 0 errors; `--profile sdd --flow BF-0001` 0 errors and the same 2 warnings. The verdict was relayed by the coordinating session |
 
 ## Open risks
 
@@ -132,7 +134,9 @@ this invocation, so every adopted change was applied directly (BR-0750). Cycle
 
 ## Final status
 
-- Status: `REVISE`
-- Reason: the completion reviewer has not yet returned a verdict.
+- Status: `PASS`
+- Reason: the per-flow `sdd` gate and the drift gate report no error, and the
+  completion reviewer returned PASS on the repaired revision. The new examples
+  wait for their tests in the test slice.
 </content>
 </invoke>
