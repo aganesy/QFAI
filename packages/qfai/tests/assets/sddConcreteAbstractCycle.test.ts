@@ -3,9 +3,17 @@
  *
  * The cycle is agent guidance with no validator of its own: the evidence record and the completion
  * reviewer are its assurance. So each example is discharged by the shipped statement that makes
- * the agent do what the example expects, read from the section that owns it. Each assertion binds
- * the distinguishing terms of one obligation into one statement, so a word left behind by a
- * rewrite that dropped the obligation does not keep the test green.
+ * the agent do what the example expects, read from the section that owns it:
+ *
+ * | Obligation                               | Owner                                                     |
+ * | ---------------------------------------- | --------------------------------------------------------- |
+ * | Trigger, finder, adjudication, routes    | `references/concrete-abstract-cycle.md`                   |
+ * | What each attempt of a run does          | `references/orchestrated-mode.md`, its cycle section      |
+ * | The REVISE grounds                       | `references/sdd-quality-gate.md`, its cycle-record section |
+ * | The record's columns and empty-cycle row | `templates/evidence/sdd-flow.md`                          |
+ *
+ * Each assertion requires the distinguishing terms of one obligation inside one statement, so a
+ * word left behind by a rewrite that dropped the obligation does not keep the test green.
  */
 import { describe, expect, it } from "vitest";
 
@@ -13,6 +21,8 @@ import { flat, readShipped, rowOf, sectionOf } from "../helpers/shippedAssistant
 import { expectSentence } from "../helpers/shippedSentences.js";
 
 const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
+const ORCHESTRATED = "skill/qfai-sdd/references/orchestrated-mode.md";
+const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
 const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
 
 async function section(file: string, heading: string): Promise<string> {
@@ -27,10 +37,13 @@ const adjudication = (): Promise<string> => section(CYCLE, "## Adjudication");
 const applying = (): Promise<string> => section(CYCLE, "## Applying an adopted finding");
 const loop = (): Promise<string> => section(CYCLE, "## Two cycles at most");
 const rejected = (): Promise<string> => section(CYCLE, "## Rejected findings");
-const inRun = (): Promise<string> => section(CYCLE, "## Inside a workflow run");
 const record = (): Promise<string> => section(CYCLE, "## The record");
+const inRun = (): Promise<string> =>
+  section(ORCHESTRATED, "## The concrete-abstract cycle in a run");
+const revise = (): Promise<string> => section(GATE, "## Concrete-abstract cycle record");
+const template = (): Promise<string> => section(EVIDENCE, "## Concrete-Abstract Cycle");
 
-/** The five kinds, each by the phrase that names it in the finder's table. */
+/** The five kinds, each by the phrase that names it. */
 const KINDS = [
   /case the rule implies that no example states/i,
   /redundant example/i,
@@ -39,36 +52,33 @@ const KINDS = [
   /flow, story or criterion split the rules show to be wrong/i,
 ] as const;
 
+/** Each rule the cycle affected is rewritten from its examples once the changes are in. */
+const REWRITE = [/rewrite each BR they affect/i, /from its updated EXs/i] as const;
+
 describe("when a cycle runs, and what the finder raises", () => {
   // QFAI:EX-0001-0152-12
   it("has a test-design-analyst that wrote none of the rules raise an unstated case, changing no file", async () => {
     const text = await finder();
-    expectSentence(text, "the finder", /test-design-analyst/, /wrote none of the BRs/i);
+    expectSentence(text, "the finder", /`test-design-analyst`/, /wrote none of the BRs it reads/i);
     expectSentence(
       text,
-      "the rules it reads",
+      "the rules read",
       /reads/i,
-      /each BR whose Statement or Examples cell/i,
+      /BR whose Statement or Examples cell/i,
       /wrote or changed/i,
     );
-    expectSentence(text, "the examples each rule cites", /reads/i, /EXs each of those BRs cites/i);
+    expectSentence(text, "the examples read", /reads/i, /EXs each of those BRs cites/i);
     for (const kind of KINDS) expect(flat(text), String(kind)).toMatch(kind);
-    expectSentence(text, "a boundary is an unstated case", KINDS[0], /boundary/i);
-    expectSentence(text, "a finding's identity", /finding names its kind/i, /IDs it targets/i);
+    expect(rowOf(text, "no example states"), "a boundary is an unstated case").toMatch(/boundary/i);
+    expectSentence(text, "a finding's identity", /names its kind/i, /IDs it targets/i);
     expectSentence(text, "raising writes nothing", /Raising/i, /changes no file/i);
-    expectSentence(
-      await adjudication(),
-      "the finding goes to one griller",
-      /Each cycle has one griller/i,
-    );
+    expectSentence(await adjudication(), "one griller decides", /Each cycle has one griller/i);
   });
 
   // QFAI:EX-0001-0152-13
   it("raises a cited example the Statement does not explain as a third-kind finding, not a missing citation", async () => {
     const text = await finder();
-    expect(rowOf(text, "no rule explains")).toMatch(
-      /cited EX whose case the BR's Statement does not explain/i,
-    );
+    expect(rowOf(text, "example no rule explains")).toMatch(/cited EX/i);
     expectSentence(
       text,
       "a cited but unexplained example",
@@ -86,7 +96,7 @@ describe("when a cycle runs, and what the finder raises", () => {
       "no cycle under seeding",
       /No cycle runs/i,
       /no cycle row/i,
-      /`defect-example-seeding`/,
+      /operation is `defect-example-seeding`/,
     );
   });
 
@@ -117,21 +127,17 @@ describe("who decides a finding", () => {
     expectSentence(text, "griller independence", /neither the finder nor an author of an item/i);
     expectSentence(
       text,
-      "two rounds with the authors",
+      "rounds",
       /puts the findings to the authors of the targeted items/i,
-      /at most two rounds/i,
+      /at most two/i,
     );
-    expectSentence(
-      text,
-      "adoption",
-      /adopts its own recommendation on each finding that is not critical/i,
-    );
+    expectSentence(text, "adoption", /adopts its own recommendation/i, /not critical/i);
     expectSentence(text, "dissent", /dissent is recorded beside the decision/i);
     expectSentence(
       text,
       "product intent is critical",
       /product intent/i,
-      /no BR, no AC, the request and the discussion state/i,
+      /no BR, no AC, the request or the discussion/i,
       /is critical/i,
     );
     expectSentence(text, "the user decides it", /goes to the user/i, /no agent decides it/i);
@@ -143,20 +149,23 @@ describe("who decides a finding", () => {
     expectSentence(
       text,
       "the scope bound",
-      /proposed EX must be implied by an existing BR, an existing AC or the request/i,
+      /proposed EX must be implied by/i,
+      /existing BR, an existing AC or the request/i,
     );
     expectSentence(text, "rejection", /griller rejects one that is not/i, /no EX is appended/i);
     const rows = await rejected();
     expectSentence(
       rows,
-      "one row per rejected finding",
+      "one row",
       /Each rejected finding is one `decisions\.md` row at REJECTED/i,
     );
     expectSentence(
       rows,
       "the row's Content",
       /Content names/i,
-      /the kind, the target IDs, and the case by the input that distinguishes it/i,
+      /kind/i,
+      /target IDs/i,
+      /case by the input that distinguishes it/i,
     );
     expectSentence(rows, "the row's Approach", /reason goes in Approach/i);
   });
@@ -169,22 +178,18 @@ describe("how an adopted finding changes the tree", () => {
     expect(rowOf(text, "An AC, EX or BR this invocation wrote")).toMatch(
       /Changed directly, with no approval/i,
     );
-    expectSentence(
-      text,
-      "rules follow the examples",
-      /rewrite each BR they affect from its updated EXs/i,
-    );
+    expectSentence(text, "rules follow the examples", ...REWRITE);
   });
 
   // QFAI:EX-0001-0152-18
   it("holds a change to an approved example behind a TODO change request and a REMOVE triage row", async () => {
     const text = await applying();
-    expect(rowOf(text, "existed when the invocation started")).toMatch(
-      /Changed only under an in-force `Change request:` row .*whose approved change covers this change/i,
-    );
-    expect(rowOf(text, "no row that covers the change")).toMatch(
-      /`Change request:` row at TODO and leave the item unchanged until the user approves it/i,
-    );
+    const existing = rowOf(text, "existed when the invocation started");
+    expect(existing).toMatch(/Changed only under an in-force `Change request:` row/i);
+    expect(existing).toMatch(/approved change covers this change/i);
+    const uncovered = rowOf(text, "no row that covers the change");
+    expect(uncovered).toMatch(/`Change request:` row at TODO/i);
+    expect(uncovered).toMatch(/item unchanged until the user approves it/i);
     expect(rowOf(text, "Removing an item that existed")).toMatch(
       /triage row naming UPDATE:REMOVE at TODO/i,
     );
@@ -192,9 +197,9 @@ describe("how an adopted finding changes the tree", () => {
 
   // QFAI:EX-0001-0152-19
   it("keeps the triage approval for splitting a story this invocation wrote", async () => {
-    expect(rowOf(await applying(), "splitting, merging or retiring a BF or US")).toMatch(
-      /Keeps its triage approval, even when this invocation wrote the item/i,
-    );
+    const row = rowOf(await applying(), "splitting, merging or retiring a BF or US");
+    expect(row).toMatch(/Keeps its triage approval/i);
+    expect(row).toMatch(/even when this invocation wrote the item/i);
   });
 
   // QFAI:EX-0001-0152-20
@@ -218,14 +223,10 @@ describe("how an adopted finding changes the tree", () => {
   // QFAI:EX-0001-0152-31
   it("splits a criterion this invocation wrote directly, with no triage row", async () => {
     const text = await applying();
-    expect(rowOf(text, "An AC, EX or BR this invocation wrote")).toMatch(
-      /AC it wrote is split the same way, with no triage row, and each EX re-cites the criterion it exercises/i,
-    );
-    expectSentence(
-      text,
-      "rules follow the split",
-      /rewrite each BR they affect from its updated EXs/i,
-    );
+    const wrote = rowOf(text, "An AC, EX or BR this invocation wrote");
+    expect(wrote).toMatch(/AC it wrote is split the same way, with no triage row/i);
+    expect(wrote).toMatch(/each EX re-cites the criterion it exercises/i);
+    expectSentence(text, "rules follow the split", ...REWRITE);
   });
 
   // QFAI:EX-0001-0152-32
@@ -236,11 +237,11 @@ describe("how an adopted finding changes the tree", () => {
       "coverage",
       /row naming the file does not cover a change it did not describe/i,
     );
-    expect(rowOf(text, "no row that covers the change")).toMatch(/at TODO/);
+    expect(rowOf(text, "no row that covers the change")).toMatch(/`Change request:` row at TODO/i);
     expectSentence(
-      await record(),
+      await revise(),
       "the reviewer catches it",
-      /REVISE/,
+      /returns REVISE/i,
       /adopted change to an item that existed when the invocation started/i,
       /no in-force triage approval or `Change request:` row whose approved change covers it/i,
     );
@@ -252,8 +253,9 @@ describe("how an adopted finding changes the tree", () => {
     const covered = rowOf(text, "existed when the invocation started");
     expect(covered).toMatch(/in-force `Change request:` row \(WIP or DONE\)/i);
     expect(covered).toMatch(/whose approved change covers this change/i);
-    expect(rowOf(text, "no row that covers the change")).toMatch(
-      /^\|\s*The same item, with no row/i,
+    // The TODO row is appended only where no row covers the change.
+    expect(rowOf(text, "Append a `Change request:` row at TODO")).toMatch(
+      /^\|\s*The same item, with no row that covers the change\s*\|/i,
     );
   });
 });
@@ -265,7 +267,7 @@ describe("the cycle inside a workflow run", () => {
     expectSentence(
       text,
       "the cycle comes first",
-      /first attempt runs the cycle on its proposal before it asks the one change question/i,
+      /first attempt runs the cycle on its proposal before it asks the change question/i,
     );
     expectSentence(
       text,
@@ -275,20 +277,26 @@ describe("the cycle inside a workflow run", () => {
     expectSentence(
       text,
       "a user finding is another question",
-      /finding that goes to the user is a further `decision` question of the same `awaiting_input` result/i,
+      /finding that goes to the user/i,
+      /further `decision` question/i,
+      /same `awaiting_input` result/i,
     );
-    expectSentence(text, "nothing is written", /first attempt writes nothing/i);
+    expectSentence(text, "nothing is written", /attempt still writes nothing/i);
+    expectSentence(
+      await section(ORCHESTRATED, "## A change to the story tree"),
+      "the first attempt's rule",
+      /first attempt asks once and changes nothing/i,
+    );
   });
 
   // QFAI:EX-0001-0152-22
   it("blocks on an adopted finding outside the checked scope, with no change request", async () => {
-    const text = await inRun();
-    expectSentence(text, "upstream drift", /outside the run's checked scope is upstream drift/i);
     expectSentence(
-      text,
+      await inRun(),
       "blocked",
-      /No `Change request:` row is appended/i,
-      /item stays unchanged/i,
+      /adopted finding on an item outside the run's checked scope is upstream drift/i,
+      /no `Change request:` row/i,
+      /item unchanged/i,
       /returns `blocked`/,
     );
   });
@@ -296,12 +304,18 @@ describe("the cycle inside a workflow run", () => {
   // QFAI:EX-0001-0152-33
   it("lets the answering attempt run no cycle and write the first attempt's rejections and evidence", async () => {
     const text = await inRun();
-    expectSentence(text, "no further cycle", /attempt holding the answer runs no further cycle/i);
+    expectSentence(text, "no further cycle", /attempt holding the answers runs no further cycle/i);
     expectSentence(
       text,
       "the deferred writes",
       /appends the REJECTED rows/i,
       /evidence rows of the cycles the first attempt ran/i,
+    );
+    expectSentence(
+      text,
+      "the change request names the register",
+      /`Change request:` row names `decisions\.md`/i,
+      /when it appended a row/i,
     );
     expectSentence(
       await rejected(),
@@ -320,11 +334,13 @@ describe("the cycle inside a workflow run", () => {
       /applies the answer to each finding the user decided/i,
       /`Unadjudicated:` row for each finding the user left open/i,
     );
+    expectSentence(text, "no further cycle", /attempt holding the answers runs no further cycle/i);
     expectSentence(
-      await applying(),
-      "rules follow the answer",
-      /rewrite each BR they affect from its updated EXs/i,
+      text,
+      "the change request names the registers",
+      /`Change request:` row names `decisions\.md` and `open-questions\.md`/i,
     );
+    expectSentence(await applying(), "rules follow the answer", ...REWRITE);
   });
 });
 
@@ -337,6 +353,12 @@ describe("how many cycles run", () => {
       "the empty cycle's row",
       /one row for each cycle that raised nothing/i,
     );
+    expectSentence(
+      await template(),
+      "the row's form",
+      /one row for a cycle that raised nothing/i,
+      /`none` in Finding/,
+    );
   });
 
   // QFAI:EX-0001-0152-24
@@ -347,7 +369,8 @@ describe("how many cycles run", () => {
       "the second cycle",
       /second cycle runs only after a first cycle that adopted a finding/i,
     );
-    expectSentence(text, "no third", /No third cycle runs, even when the second adopted one/i);
+    expectSentence(text, "no third", /No third cycle runs/i, /even when the second adopted one/i);
+    expectSentence(await applying(), "rules follow the second cycle", ...REWRITE);
   });
 
   // QFAI:EX-0001-0152-25
@@ -356,11 +379,12 @@ describe("how many cycles run", () => {
     expectSentence(text, "silence", /`--auto`/, /nothing is asked/i);
     expectSentence(
       text,
-      "the row",
-      /finding that would go to the user becomes that row in the cycle that raised it/i,
+      "the row at once",
+      /would go to the user becomes that row in the cycle that raised it/i,
     );
-    expectSentence(text, "the record", /evidence records it with no decision/i);
+    expectSentence(text, "no decision recorded", /evidence records it with no decision/i);
     expectSentence(text, "the gate", /per-flow gate reports that row as `QFAI-SPACK-102`/i);
+    expectSentence(await template(), "the record's form", /no decision has `none` in Decision/i);
   });
 
   // QFAI:EX-0001-0152-34
@@ -378,10 +402,16 @@ describe("how many cycles run", () => {
 
   // QFAI:EX-0001-0152-35
   it("stops after a cycle whose only finding was rejected, recording the finding and no empty-cycle row", async () => {
-    expectSentence(await loop(), "the stop", /cycle that adopts nothing ends the loop/i);
+    expectSentence(
+      await loop(),
+      "adopting nothing stops",
+      /cycle that adopts nothing ends the loop/i,
+    );
     const text = await record();
     expectSentence(text, "the finding's row", /one row per finding/i, /decision/i);
-    expectSentence(text, "the empty row is for raising nothing", /cycle that raised nothing/i);
+    // The empty row answers raising nothing, so a cycle that raised a finding and adopted none has none.
+    expectSentence(text, "the empty row", /one row for each cycle that raised nothing/i);
+    expectSentence(await template(), "the empty row's form", /cycle that raised nothing/i);
   });
 });
 
@@ -404,7 +434,8 @@ describe("a decided finding is not raised again", () => {
       "a case including the rejected one",
       /does not raise a finding again/i,
       /kind and target IDs of a finding already decided in this invocation, or of a REJECTED row/i,
-      /equal to that case, includes it/i,
+      /equal to that case/i,
+      /includes it/i,
     );
     expectSentence(text, "wording", /Matching never goes by wording/i);
     expectSentence(text, "reopening", /decision appended to reopen a REJECTED row lifts it/i);
@@ -417,7 +448,7 @@ describe("a decided finding is not raised again", () => {
       "a case inside the rejected one",
       /does not raise a finding again/i,
       /REJECTED row/,
-      /or is included in it/i,
+      /is included in it/i,
     );
   });
 
@@ -427,6 +458,7 @@ describe("a decided finding is not raised again", () => {
     expectSentence(
       text,
       "a declined change request",
+      /does not raise a finding again/i,
       /`Change request:` row at TODO or REJECTED already answers it/i,
     );
     expectSentence(
@@ -441,38 +473,44 @@ describe("a decided finding is not raised again", () => {
 describe("the record the completion reviewer checks", () => {
   // QFAI:EX-0001-0152-28
   it("returns REVISE on a missing cycle row, a finder that wrote a rule, and a dependent adjudicator", async () => {
-    const text = await record();
-    expectSentence(text, "a missing row", /REVISE/, /cycle that ran has no row/i);
-    expectSentence(text, "a dependent finder", /REVISE/, /finder wrote a BR it read/i);
+    const text = await revise();
+    expectSentence(
+      text,
+      "the reader",
+      /completion reviewer reads/i,
+      /`## Concrete-Abstract Cycle` table/,
+    );
+    expectSentence(text, "a missing row", /returns REVISE/i, /cycle that ran has no row/i);
+    expectSentence(text, "a dependent finder", /returns REVISE/i, /finder wrote a BR it read/i);
     expectSentence(
       text,
       "a dependent adjudicator",
-      /REVISE/,
-      /finding the user did not decide names as adjudicator its finder or an author of an item it targets/i,
+      /returns REVISE/i,
+      /finding the user did not decide/i,
+      /its finder, or an author of an item it targets, as adjudicator/i,
     );
-    expectSentence(text, "the finder is named", /finder, named in the Work Orders Summary/i);
-    const header = rowOf(await section(EVIDENCE, "## Concrete-Abstract Cycle"), "Adjudicator");
-    const cells = header
-      .split("|")
-      .map((cell) => cell.trim())
-      .filter((cell) => cell !== "");
-    expect(cells).toEqual([
-      "Cycle",
-      "Finding",
-      "Kind",
-      "Target IDs",
-      "Decision",
-      "Adjudicator",
-      "Reason",
-    ]);
+    expectSentence(
+      text,
+      "the fault is named",
+      /returns REVISE, naming the cycle, finding or item at fault/i,
+    );
+    const form = await template();
+    expect(
+      rowOf(form, "Adjudicator")
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter(Boolean),
+    ).toEqual(["Cycle", "Finding", "Kind", "Target IDs", "Decision", "Adjudicator", "Reason"]);
+    expectSentence(form, "the adjudicator", /Adjudicator is the cycle's griller, or `user`/i);
+    expectSentence(form, "the finder is named", /Name the finder in the Work Orders Summary/i);
   });
 
   // QFAI:EX-0001-0152-29
   it("returns REVISE on a change to an approved example with no change request covering it", async () => {
     expectSentence(
-      await record(),
+      await revise(),
       "an unapproved change",
-      /REVISE, naming the cycle, finding or item at fault/i,
+      /returns REVISE, naming the cycle, finding or item at fault/i,
       /adopted change to an item that existed when the invocation started/i,
       /no in-force triage approval or `Change request:` row whose approved change covers it/i,
     );

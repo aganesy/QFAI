@@ -35,19 +35,21 @@ async function section(file: string, heading: string): Promise<string> {
 
 /**
  * The shipped file a citation written in `from` names, relative to the assistant tree, and the
- * anchor it names. An absolute `.qfai/assistant/` path is read from the tree root; a bare path is
- * read beside the citing file, or from the skill directory when it opens with `references/` or
- * `templates/`, as the skill's own files write it.
+ * anchor it names. A `.qfai/assistant/` path, and one opening with `skill/`, `rule/` or `agent/` as
+ * an agent card writes it, is read from the tree root. One opening with `references/` or
+ * `templates/` is read from the skill directory, as the skill's own files write it, and any other
+ * is read beside the citing file.
  */
 function target(from: string, citation: string): { file: string; anchor: string } {
   const [raw = "", anchor = ""] = citation.split("#");
-  const skillDir = from.split("/").slice(0, 2).join("/");
-  const file = raw.startsWith(".qfai/assistant/")
-    ? raw.slice(".qfai/assistant/".length)
-    : /^(references|templates)\//.test(raw)
-      ? `${skillDir}/${raw}`
-      : path.posix.normalize(`${path.posix.dirname(from)}/${raw}`);
-  return { file, anchor };
+  if (raw.startsWith(".qfai/assistant/")) {
+    return { file: raw.slice(".qfai/assistant/".length), anchor };
+  }
+  if (/^(skill|rule|agent)\//.test(raw)) return { file: raw, anchor };
+  if (/^(references|templates)\//.test(raw)) {
+    return { file: `${from.split("/").slice(0, 2).join("/")}/${raw}`, anchor };
+  }
+  return { file: path.posix.normalize(`${path.posix.dirname(from)}/${raw}`), anchor };
 }
 
 /** Asserts that `text`, a part of `from`, cites `citation` and that it resolves. */
@@ -189,10 +191,25 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     expectSentence(note, "first attempt only", /first attempt only/i);
     const change = await section(ORCHESTRATED, "## A change to the story tree");
     expectSentence(change, "the one question", /first attempt asks once and changes nothing/i);
+    expectSentence(
+      note,
+      "before the question",
+      /runs the cycle on its proposal before it asks the change question/i,
+    );
+    expectSentence(
+      note,
+      "drift outside scope",
+      /outside the run's checked scope/i,
+      /returns `blocked`/,
+    );
     const reference = await section(CYCLE, "## Inside a workflow run");
-    expectSentence(reference, "before the question", /before it asks the one change question/i);
+    await expectResolvedCitation(CYCLE, reference, "orchestrated-mode.md");
+    expectSentence(
+      reference,
+      "the summary",
+      /runs in the first attempt, on the proposal, before the change question/i,
+    );
     expectSentence(reference, "no further cycle", /runs no further cycle/i);
-    expectSentence(reference, "drift outside scope", /returns `blocked`/);
   });
 
   // QFAI:AC-0001-0152-12
