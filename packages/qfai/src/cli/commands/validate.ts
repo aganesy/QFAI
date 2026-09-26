@@ -480,7 +480,6 @@ export const GATE_GROUP_FAMILIES = {
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-sdd": ["QFAI-DCON-019"],
   "design-contract-readiness-prototyping": [
     "QFAI-DCON-001",
     "QFAI-DCON-005",
@@ -517,7 +516,6 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
-  "design-contract-readiness-sdd": "sdd",
   drift: "drift",
   "saas-package-profile": "saas-package",
 };
@@ -558,7 +556,6 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "story-structure",
     "story-contract-index",
     "design-contract-readiness",
-    "design-contract-readiness-sdd",
     "sdd",
     "reviewer-gate-sdd",
     "reviewer-gate-shared",
@@ -1270,8 +1267,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
     "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
-  "QFAI-DCON-019":
-    "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
   "QFAI-DCON-031":

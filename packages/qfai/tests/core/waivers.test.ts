@@ -796,14 +796,6 @@ describe("applyWaivers", () => {
     "ATDD-112",
     "QFAI-ORPHAN-100",
     "QFAI-PLAN-002",
-    // Retired with the checks that read local evidence: validate no longer
-    // reads anything under `.qfai/evidence/`.
-    "QFAI-ATDD-131",
-    "QFAI-ATDD-132",
-    "QFAI-ATDD-133",
-    "QFAI-GRILL-001",
-    "QFAI-GRILL-002",
-    "QFAI-CONTRACT-031",
   ])("reports a waiver for retired rule %s as unmatched", async (rule) => {
     const root = await createRoot();
     try {
