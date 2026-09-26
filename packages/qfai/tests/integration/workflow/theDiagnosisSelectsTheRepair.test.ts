@@ -105,11 +105,27 @@ it("A defective test goes to the owner of its layer: qfai-atdd for a criterion, 
     verdict: "defective-test",
     matchedIds: [CRITERION],
   });
-  const byExample = await diagnosed(await flowProject(), {
+  const exampleRoot = await flowProject();
+  const byExample = await diagnosed(exampleRoot, {
     verdict: "defective-test",
     matchedIds: [EXAMPLE],
   });
+  const cited = { ids: [EXAMPLE], digest: "c".repeat(64) };
+  const fixed = await submit(
+    exampleRoot,
+    byExample.runId,
+    "accept",
+    resultFor(byExample.next.json, "fix-1", {
+      testObservation: "pass",
+      testFix: { citedBefore: cited, citedAfter: cited, reviewRef: REPORT, rerunRef: REPORT },
+    }),
+  );
+  const afterFix = workflow(exampleRoot, ["next", "--run", byExample.runId]);
 
+  expect([field(fixed.json, "run.state"), orderOf(afterFix.json).operation]).toEqual([
+    "ready",
+    "verify-full",
+  ]);
   expect([orderOf(byCriterion.next.json), orderOf(byExample.next.json)]).toEqual([
     {
       stageKind: "test_fix",

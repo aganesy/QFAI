@@ -67,10 +67,13 @@ it("resume returns the outstanding implement work order at the pending example, 
     second: [second.status, field(second.json, "error.code"), field(second.json, "run.id")],
     resumed: orderOf(resumed.json).stageKind,
     operation: orderOf(resumed.json).operation,
-    sameOrder:
-      field(resumed.json, "workOrder.workOrderId") === field(implement, "workOrder.workOrderId"),
-    stillSame:
-      field(again.json, "workOrder.workOrderId") === field(implement, "workOrder.workOrderId"),
+    // `resume` returns the same stage's work, not necessarily the same work order ID.
+    sameStage: [resumed, again].map(
+      (each) =>
+        field(each.json, "workOrder.stageInstanceId") ===
+          field(implement, "workOrder.stageInstanceId") &&
+        field(each.json, "workOrder.stageKind") === field(implement, "workOrder.stageKind"),
+    ),
     checkpoint: field(resumed.json, "workOrder.checkpointRef"),
     receipts: validities(resumed.json),
     questions: list(found.json, "questions"),
@@ -82,8 +85,7 @@ it("resume returns the outstanding implement work order at the pending example, 
     second: [2, "run-active", runId],
     resumed: "implement",
     operation: "implement",
-    sameOrder: true,
-    stillSame: true,
+    sameStage: [true, true],
     checkpoint: EXAMPLE_IDS[0],
     receipts: { any: true, allValid: true },
     questions: [],
