@@ -38,6 +38,10 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 3. Add each contract file to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
 4. For a visual UI surface, complete the DESIGN.md lock protocol before finalizing design contracts. A CLI-only surface does not require a visual lock.
 
+## Concrete-abstract cycle
+
+When Stage 4 wrote or changed a BR Statement or Examples cell, run the cycle in concrete-abstract-cycle.md before the gate: an independent test-design-analyst raises findings against the tree, one griller decides them, the adopted changes are applied, and the affected BRs are rewritten. At most two cycles run.
+
 ## Stage 5: gate, review, and completion
 
 Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN for each flow changed. Resolve errors in the owning

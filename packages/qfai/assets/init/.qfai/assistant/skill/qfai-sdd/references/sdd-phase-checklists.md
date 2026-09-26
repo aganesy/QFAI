@@ -49,6 +49,7 @@ AC already states:
   the row cites no `human_decision`.
 - `.qfai/evidence/sdd-BF-NNNN.md` records the diagnosed defect and the run ID,
   and names no path under `.qfai/run/`.
+- No concrete-abstract cycle runs, and the evidence gets no cycle row.
 
 ## Contracts and business rules
 
@@ -58,6 +59,18 @@ AC already states:
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
 - Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the flow evidence.
 - UI design contracts use the product's frozen DESIGN.md; the sample design was not frozen.
+
+## Concrete-abstract cycle
+
+Follow concrete-abstract-cycle.md.
+
+- A cycle ran when this invocation wrote or changed a BR Statement or Examples cell, and did not run otherwise or under `defect-example-seeding`.
+- The finder is a test-design-analyst that wrote none of the BRs it read. Each cycle had one griller, neither the finder nor an author of a targeted item.
+- A finding resting on product intent nothing written states went to the user. A proposed EX that no existing BR, existing AC or the request implies was rejected.
+- Each adopted change took the route its target's age allows, and the affected BRs were rewritten from their updated EXs.
+- No more than two cycles ran, and a cycle that adopted nothing ended the loop. A finding with no decision at the end is an `Unadjudicated:` open-question row.
+- Each rejected finding is a REJECTED decision row naming its kind, target IDs and case. No decided or rejected finding was raised again.
+- The flow evidence has a row per finding, a row for each cycle that raised nothing, and the finder in the Work Orders Summary.
 
 ## Validation and review
 

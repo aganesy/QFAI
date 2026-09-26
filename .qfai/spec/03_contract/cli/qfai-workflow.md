@@ -526,7 +526,9 @@ answer is appended only by the attempt that holds it:
   changed, so that `qfai validate --profile tdd` later in the run finds the
   change authorized by the drift gate. The stage asks once and changes nothing:
   it returns `awaiting_input` with one `decision` question showing the change
-  target and the proposal. The attempt holding the `human_decision` makes the
+  target and the proposal. A concrete-abstract cycle finding that goes to the
+  user adds a further `decision` question beside it, as BR-0751 in
+  `story-tree-authoring.md` states. The attempt holding the `human_decision` makes the
   change and appends the row at WIP, citing that answer. A row citing only
   `request_scope` is refused `record-unauthorized`.
 - An approval-free row, such as the UPDATE:APPEND a seeded example records,
