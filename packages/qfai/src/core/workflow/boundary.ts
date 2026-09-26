@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, readlink } from "node:fs/promises";
 import path from "node:path";
 
 import { hashAssistantAssetText } from "../assistantAssetProvenance.js";
@@ -9,11 +9,17 @@ import type { WorkflowBoundaryStart } from "./types.js";
 // The runtime tree is never tracked, so nothing under it is a run change.
 const RUNTIME = ".qfai/run/";
 
-// A path's content digest after CRLF normalization, or `null` when there is no file. Any other
-// failure to read it is the caller's.
+// What a path holds, as the boundary compares it: a regular file's content digest after CRLF
+// normalization, a link's target, the type of anything else, or `null` when nothing is there.
+// The link itself is judged, never what it points at, so a link out of the project is a change
+// like any other. Any other failure to read it is the caller's.
 async function contentDigest(root: string, file: string): Promise<string | null> {
+  const full = path.join(root, ...file.split("/"));
   try {
-    return hashAssistantAssetText(await readFile(path.join(root, ...file.split("/")), "utf8"));
+    const stats = await lstat(full);
+    if (stats.isSymbolicLink()) return `link:${await readlink(full)}`;
+    if (!stats.isFile()) return `type:${stats.isDirectory() ? "directory" : "other"}`;
+    return hashAssistantAssetText(await readFile(full, "utf8"));
   } catch (error) {
     if (isEnoent(error)) return null;
     throw error;

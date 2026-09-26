@@ -55,12 +55,7 @@ A file extension alone never makes a change a maintenance edit.
 
 A change to a file listed under [Never a maintenance edit](#never-a-maintenance-edit),
 or a planned edit with a semantic effect, is not a maintenance edit. Nothing is
-edited.
-
-- In a run: return it as
-  `references/orchestrated-mode.md#a-semantic-effect` says. The run is
-  reclassified from there.
-- Invoked by name: stop, and report that the change is not a maintenance edit.
+edited: stop, and report that the change is not a maintenance edit.
 
 ## What the stage returns
 

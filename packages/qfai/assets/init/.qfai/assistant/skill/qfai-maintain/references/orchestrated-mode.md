@@ -23,3 +23,5 @@ semantic effect, is returned this way, with nothing edited:
   - `resolvingOwner` is the skill that owns that kind of change, never one the
     `direct` plan names: `qfai-implement` for a code or configuration change,
     `qfai-sdd` for a story or contract.
+
+The run is reclassified from there.

@@ -181,13 +181,12 @@ describe("qfai-maintain", () => {
     expect(edit).toMatch(/judge whether each planned edit has a semantic effect/i);
     expect(edit).toMatch(/stop before editing as \[A semantic effect\]/i);
     expect(edit).toMatch(/do not make the edit/i);
+    // Invoked by name, the skill stops and says so; in a run, the reference says what it returns.
     const effect = flat(sectionOf(skill, "## A semantic effect"));
     expect(effect).toMatch(/is not a maintenance edit\. nothing is edited/i);
-    expect(effect).toMatch(/`references\/orchestrated-mode\.md#a-semantic-effect`/);
-    expect(effect).toMatch(
-      /invoked by name: stop, and report that the change is not a maintenance edit/i,
-    );
+    expect(effect).toMatch(/stop, and report that the change is not a maintenance edit/i);
     const inRun = flat(sectionOf(await readShipped(MAINTAIN_RUN), "## A semantic effect"));
+    expect(inRun).toMatch(/the run is reclassified from there/i);
     expect(inRun).toMatch(/the outcome is `needs_repair`, and `changedFiles` is empty/i);
     expect(inRun).toMatch(/`debts` holds one entry for the finding/i);
     expect(inRun).toMatch(/`findingCode` is `maintain-semantic-effect`/);

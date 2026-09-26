@@ -90,6 +90,9 @@ It asks you only what it cannot decide for you, such as whether to create a new 
 The stages fill the seeded story tree and follow the project's Standard commands in
 `<paths.contractsDir>/tech.md` (by default `.qfai/spec/03_contract/tech.md`) for its quality gates.
 
+To drive the stages yourself instead:
+Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
+
 ## What you can do (CLI commands)
 
 - `npx qfai --version` (alias `-V`)
