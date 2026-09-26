@@ -244,6 +244,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   such exemption on a passing run instead of reading only the compiler
   configuration.
 
+- **`qfai prototyping iterate` writes `design-system.yaml` when the loop
+  ends.** The cycle that stops the loop, on convergence (exit 64) or on the
+  cycle budget (exit 65), writes `<paths.contractsDir>/design/design-system.yaml`
+  from the root `DESIGN.md`: its token tables, `source: DESIGN.md`, and the
+  file's sha256 as `designMdSha256`. The same `DESIGN.md` always gives the
+  same bytes. The `/qfai-prototyping` skill no longer asks the agent to write
+  the file by hand.
+
 ### Removed
 
 - **Breaking: the spec-pack layout and every check that read it.** `qfai`
@@ -368,6 +376,11 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   reported as a version marker, like any other file name.
 
 ### Fixed
+
+- **A work order that binds nothing now refuses a target.** The shipped
+  `work-order.schema.json` required a `target` on every other stage kind but
+  accepted one on the `route`, `discussion`, `maintenance` and `verify` work
+  orders, which carry none.
 
 - **The prototyping reference check reads the handoff from the configured
   contracts directory.** It read `prototype-handoff.yaml` only from

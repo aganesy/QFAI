@@ -29,9 +29,11 @@ reads this as a read-only artifact.
 
 ### `<contractsDir>/design/design-system.yaml` (output contract)
 
-A deterministic, machine-generated **mirror of DESIGN.md tokens**. The
-loop does not extract values from the final HTML — that path is
-removed because it allowed drift from the SSOT.
+A deterministic **mirror of DESIGN.md tokens**. Do not write it:
+`npx qfai prototyping iterate` writes it on the cycle that ends the loop,
+the one that returns exit 64 or 65, from the root `DESIGN.md` that cycle
+read. Nothing is taken from the final HTML, so the mirror cannot drift
+from the SSOT.
 
 The mirror copies these keys verbatim from `DESIGN.md`:
 
@@ -44,9 +46,9 @@ The mirror copies these keys verbatim from `DESIGN.md`:
 - `visual.radius` (all 4 keys, required)
 - `visual.shadow` (all 3 keys, required)
 
-The mirror also records `source: DESIGN.md` and the
-`DESIGN.md.lock.yaml` sha256 so downstream tooling can detect drift.
-LLM assistance is not used here; the mirror is byte-deterministic.
+It also records `source: DESIGN.md` and `designMdSha256`, the sha256 of
+the `DESIGN.md` it copies, which is the value in `DESIGN.md.lock.yaml`.
+The same `DESIGN.md` always gives the same bytes.
 
 QFAI checks the prototype against these tokens. It does not read the
 product's stylesheet or Tailwind config, so a project that holds its
@@ -61,7 +63,8 @@ hold:
   `3xl`, so both directions pass for them without checking anything. Use
   `--token-([a-z0-9-]+)` or wider.
 
-When `DESIGN.md` names a `brand.theme`, the mirror copies it too. That
+When `DESIGN.md` names a `brand.theme`, the mirror copies it too, as
+`brand.theme`. That
 name is the instruction: install the theme, rather than reproduce
 thirty-two values by hand and hope they match. The values stay in the
 mirror because the gates read them, not because anyone should type
