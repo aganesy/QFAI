@@ -61,7 +61,9 @@ describe("BF-0001 story annotation layers", () => {
     const e2e = file("e2e", example);
     const findings = validateStoryTreeObligationsModel(model, [e2e], "tdd");
     expect(
-      findings.some((finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(example)),
+      findings.some(
+        (finding) => finding.code === "QFAI-STORY-006" && finding.refs?.includes(example),
+      ),
     ).toBe(true);
     expect(findings).toContainEqual(
       expect.objectContaining({ code: "QFAI-STORY-007", file: e2e.file, refs: [example] }),

@@ -171,7 +171,13 @@ function actorsRun(recommender?: string) {
     stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
   ]);
   const actor = recommender
-    ? { actor: { role: "recommender" as const, agentInstance: recommender, stageInstanceId: "routing" } }
+    ? {
+        actor: {
+          role: "recommender" as const,
+          agentInstance: recommender,
+          stageInstanceId: "routing",
+        },
+      }
     : {};
   const seed = readyWith(plan, flow).map((record) =>
     record.event === "plan-accepted" ? { ...record, ...actor } : record,

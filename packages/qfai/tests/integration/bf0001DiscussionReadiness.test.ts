@@ -92,8 +92,7 @@ it("blocks readiness when one of the fifteen required files is missing", async (
     const findings = await validateDiscussionPackReadiness(root, defaultConfig);
     expect(
       findings.some(
-        (finding) =>
-          finding.code === "QFAI-DPACK-002" && finding.refs?.includes("13_Deferred.md"),
+        (finding) => finding.code === "QFAI-DPACK-002" && finding.refs?.includes("13_Deferred.md"),
       ),
     ).toBe(true);
   } finally {

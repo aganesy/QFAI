@@ -168,9 +168,9 @@ describe("story-tree drift", () => {
     git("add", ".");
     git("commit", "-m", "rewrite request");
     const findings = await validateStoryTreeDrift(root, config(), "drift");
-    expect(
-      findings.some((item) => item.code === "QFAI-DRIFT-001" && item.file === decisions),
-    ).toBe(true);
+    expect(findings.some((item) => item.code === "QFAI-DRIFT-001" && item.file === decisions)).toBe(
+      true,
+    );
     expect(
       findings.some(
         (item) =>
@@ -205,8 +205,7 @@ describe("story-tree drift", () => {
     const rewritten = findings.filter((item) => item.code === "QFAI-STORY-010");
     expect(
       rewritten.some(
-        (item) =>
-          item.file === decisions && item.message.includes("DEC-0001 content"),
+        (item) => item.file === decisions && item.message.includes("DEC-0001 content"),
       ),
     ).toBe(true);
     expect(

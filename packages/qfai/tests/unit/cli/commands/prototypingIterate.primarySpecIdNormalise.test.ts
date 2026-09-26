@@ -16,7 +16,7 @@ describe("parsePrimaryUiContract", () => {
   });
 
   // QFAI:EX-0001-0142-01
-  it.each(["0001","1", "CON-UI-1", "CON-UI-10000", " con-UI-0001", "../CON-UI-0001"])(
+  it.each(["0001", "1", "CON-UI-1", "CON-UI-10000", " con-UI-0001", "../CON-UI-0001"])(
     "rejects non-canonical input %s without normalisation",
     (input) => {
       const result = parsePrimaryUiContract(input);

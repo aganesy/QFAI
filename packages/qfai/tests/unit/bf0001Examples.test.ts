@@ -766,7 +766,11 @@ describe("BF-0001 layer and exception examples", () => {
     // QFAI:EX-0001-0073-04
     const model = buildStoryTreeModel(files());
     const tests = [
-      testFile("tests/integration/unknown.test.ts", "integration", annotation("AC", "0001-0001-99")),
+      testFile(
+        "tests/integration/unknown.test.ts",
+        "integration",
+        annotation("AC", "0001-0001-99"),
+      ),
       testFile("tests/unit/known.test.ts", null, annotation("EX", "0001-0001-01")),
     ];
     const undeclared = validateStoryTreeObligationsModel(model, tests, "atdd").filter(

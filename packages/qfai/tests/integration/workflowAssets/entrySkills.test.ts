@@ -156,7 +156,9 @@ describe("qfai-run", () => {
   // QFAI:EX-0001-0201-17
   it("The operator-screens reference relays CLI strings in the operator's working language", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Every screen"));
-    expect(text).toMatch(/relay it in the operator's working language\. the cli's strings are english/i);
+    expect(text).toMatch(
+      /relay it in the operator's working language\. the cli's strings are english/i,
+    );
   });
 
   // QFAI:EX-0001-0192-07
