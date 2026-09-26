@@ -157,8 +157,8 @@ are and the pair is reported for a person: keep the copy you need, delete the
 other, and run step 11 again. A skill the package does not ship and
 `.qfai/assistant/skill.local/` are left alone. Step 11 also adds each missing
 host skill link, the entry directive at the top of `AGENTS.md` and `CLAUDE.md`,
-and the `.qfai/run/` and `!.qfai/evidence/workflow/` lines of the managed
-`.gitignore` block. A path it cannot write is reported with the reason.
+and the `.qfai/run/` line of the managed `.gitignore` block. A path it cannot
+write is reported with the reason.
 
 Step 12 makes the checks `npx qfai workflow start` makes on the project,
 without starting a run, and checks what step 11 installs. Each failed check is
@@ -170,7 +170,7 @@ reported by name:
 | `reviewer-missing`    | A `routing:` override in `qfai.config.yaml` drops a reviewer the package's default routing needs |
 | `invalid-mode`        | `workflow.mode` is set to anything other than `active`, `shadow` or `off`                        |
 | `entry-directive`     | `AGENTS.md` or `CLAUDE.md` lacks the entry directive                                             |
-| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/` or `!.qfai/evidence/workflow/`                 |
+| `gitignore`           | The managed `.gitignore` block lacks `.qfai/run/`                                                |
 | `qfai-run-link`       | A host skill directory has no link to `.qfai/assistant/skill/qfai-run/`                          |
 
 Run step 11 again for what it installs. A routing override belongs to the
