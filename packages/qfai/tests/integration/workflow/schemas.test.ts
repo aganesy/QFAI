@@ -202,6 +202,8 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     verify: validate(WORK_ORDER, order("verify")),
     implementWithTarget: validate(WORK_ORDER, order("implement", flow)),
     implementWithout: validate(WORK_ORDER, order("implement")),
+    maintenanceWithTarget: validate(WORK_ORDER, order("maintenance", flow)),
+    verifyWithTarget: validate(WORK_ORDER, order("verify", flow)),
   }).toEqual({
     route: true,
     discussion: true,
@@ -209,5 +211,7 @@ it("A work order carries a target unless it binds no flow and no new story", asy
     verify: true,
     implementWithTarget: true,
     implementWithout: false,
+    maintenanceWithTarget: false,
+    verifyWithTarget: false,
   });
 });

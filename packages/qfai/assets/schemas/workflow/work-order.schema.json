@@ -31,6 +31,14 @@
       }
     }
   },
+  "then": {
+    "not": {
+      "required": ["target"],
+      "properties": {
+        "target": true
+      }
+    }
+  },
   "else": {
     "required": ["target"],
     "properties": {

@@ -289,6 +289,11 @@ SSOT for every `screens[].id`:
 `<screen-id>` MUST be the underscore-normalized form per DR-0001-0007
 (OQ-0110=A) end-to-end.
 
+The convergence stop (exit 64) and the budget stop (exit 65) both write
+`<paths.contractsDir>/design/design-system.yaml`, the root `DESIGN.md`
+token mirror that `qfai-prototyping.md` specifies in its `iterate`
+section and in BR-0267.
+
 ## Exit-64 blocking-cause summary (REQ-0118)
 
 On every non-converged cycle, iterate MUST print a one-screen
