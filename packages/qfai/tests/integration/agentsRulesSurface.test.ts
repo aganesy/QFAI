@@ -172,7 +172,7 @@ describe("the minimal-implementation rule names the four shapes an addition take
       path.join(ROOT, "packages/qfai/assets/init/root/.agents/rules/minimal-implementation.md"),
       "utf-8",
     );
-    const section = text.split("## 4. What a change does not add")[1]?.split(/^## /m)[0];
+    const section = text.split("## 4. What a change leaves out")[1]?.split(/^## /m)[0];
     expect(section).toBeDefined();
     const shapes = Array.from(
       section?.matchAll(/^\|\s*([A-Z][a-z]+(?: [a-z]+)?)\s*\|/gm) ?? [],
@@ -184,6 +184,7 @@ describe("the minimal-implementation rule names the four shapes an addition take
     expect(flat).toContain("on code the change did not touch");
     expect(flat).toContain("for a case that cannot happen");
     expect(flat).toContain("A helper for an operation done once");
+    expect(flat).toContain("or one extracted for length alone");
     expect(flat).toContain("where the logic is not self-evident");
     expect(flat).toContain("Nothing here removes what § 2 keeps");
     expect(text).toContain("## 5. What this rule is not");

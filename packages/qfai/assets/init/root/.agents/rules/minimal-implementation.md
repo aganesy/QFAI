@@ -126,18 +126,18 @@ should.
 Do not mark what the ladder simply answered. A helper you did not write because
 the standard library has one is not a simplification; it is rung 3.
 
-## 4. What a change does not add
+## 4. What a change leaves out
 
 A shortcut is one way a change departs from what was asked. An addition is the
 other. An addition can clear every rung of the ladder, because each one is
 minimal on its own terms. Additions take four shapes, and each stays out.
 
-| Shape            | What stays out                                                                |
-| ---------------- | ----------------------------------------------------------------------------- |
-| Scope            | Cleanup of the code around a bug fix. Configurability on a simple feature.    |
-| Documentation    | Doc comments, comments and type annotations on code the change did not touch. |
-| Defensive coding | Error handling, a fallback or validation for a case that cannot happen.       |
-| Abstraction      | A helper for an operation done once. A design for a requirement nobody has.   |
+| Shape            | What stays out                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Scope            | Cleanup of the code around a bug fix. Configurability on a simple feature.                                     |
+| Documentation    | Doc comments, comments and type annotations on code the change did not touch.                                  |
+| Defensive coding | Error handling, a fallback or validation for a case that cannot happen.                                        |
+| Abstraction      | A helper for an operation done once, or one extracted for length alone. A design for a requirement nobody has. |
 
 A comment in the change goes where the logic is not self-evident.
 
