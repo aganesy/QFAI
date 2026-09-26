@@ -175,6 +175,9 @@ function replanBudgetStillSpent(snapshot: WorkflowSnapshot, facts: WorkflowFacts
 
 function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): WorkflowDecision {
   const { run } = snapshot;
+  // A cause found at `resume` is reported first, whatever holds the run.
+  const observed = observedCause(snapshot, facts);
+  if (observed) return refusedFailClosed(run, observed.cause);
   if (replanBudgetStillSpent(snapshot, facts)) {
     return {
       verdict: {
@@ -186,8 +189,6 @@ function resumeBlocked(snapshot: WorkflowSnapshot, facts: WorkflowFacts): Workfl
       events: [],
     };
   }
-  const observed = observedCause(snapshot, facts);
-  if (observed) return refusedFailClosed(run, observed.cause);
   const escaped = escapedPaths(snapshot, facts.observedChangedPaths ?? [], facts);
   const adjustments = repairAdjustments(snapshot, escaped, facts);
   if (!adjustments) return refusedFailClosed(run, "invariant-violation");

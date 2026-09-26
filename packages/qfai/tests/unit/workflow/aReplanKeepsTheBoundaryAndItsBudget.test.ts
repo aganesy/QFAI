@@ -216,3 +216,17 @@ it("resume of a run blocked on its spent replan budget, with the routing receipt
     released: ["running", "sdd_delta"],
   });
 });
+
+it("resume of a run blocked on its spent replan budget, after its qfai.config.yaml changed", () => {
+  const run = replanned(3);
+  const stale = { [run.snapshot.routingReceiptRef ?? ""]: "stale" } as const;
+  run.apply({ operation: "next" }, { flows: [FLOW], obligations, receiptValidity: stale });
+  const policyNow = { policyDigests: { "qfai.config.yaml": "f".repeat(64) }, planDigests: {} };
+
+  const resumed = run.apply(
+    { operation: "resume" },
+    { flows: [FLOW], obligations, receiptValidity: stale, policyNow },
+  );
+
+  expect(resumed.verdict.error).toMatchObject({ code: "fail-closed", cause: "policy-drift" });
+});

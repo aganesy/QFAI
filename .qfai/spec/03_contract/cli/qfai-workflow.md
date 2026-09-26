@@ -684,7 +684,9 @@ and take no further event.
   saturated delegation per work order, at 30, 60 and 120 seconds. Reaching one
   moves the run to `blocked` with blocker `budget-exhausted` and never counts as
   a pass. A replan `next` or `resume` needs on a run in `ready` once the replan
-  budget is spent takes the `budget-exhausted` edge to `blocked`.
+  budget is spent takes the `budget-exhausted` edge to `blocked`. `resume` of
+  that run reports a fail-closed cause first; otherwise it writes nothing while
+  the routing receipt stays stale, and releases the run once the receipt holds.
 
 A blocked run names exactly one cause from [Fail-closed](#fail-closed) or one
 blocker — `stage-blocked`, `delegation-unavailable`, `budget-exhausted` or
