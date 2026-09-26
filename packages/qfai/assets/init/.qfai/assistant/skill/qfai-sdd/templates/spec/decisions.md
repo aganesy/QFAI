@@ -14,6 +14,9 @@ No item is empty, and only the last two may take `none — <reason>`. What a
 kind of row must state in its Approach, such as a change request's proposed
 correction, goes inside these items. Write a `|` inside a cell as `\|`.
 
+A stage that does not own this file records its decisions in its own evidence
+file, with the same four items under the same rules.
+
 ## Decisions
 
 | ID  | Content | Approach | Status |

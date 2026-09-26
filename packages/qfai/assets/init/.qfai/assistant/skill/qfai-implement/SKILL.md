@@ -208,6 +208,8 @@ session is reported to the user without writing the artifact they stopped.
 List each open node beneath the record with its session ID. Record every
 adopted decision and user answer in the Work Orders Summary, keyed to this
 invocation and session; record `none` when no decision was settled.
+Each adopted decision's record carries the four labelled Approach items
+stated at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 Use one block per invocation, with a unique session ID for each row. Give
 the reviewer the run start in its work order so an older block cannot pass
 as the current run. `Revision` is a git revision or

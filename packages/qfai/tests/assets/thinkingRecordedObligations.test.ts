@@ -20,17 +20,42 @@ const SDD_GUIDANCE = [
   "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
   "assistant/skill/qfai-sdd/templates/change-request.md",
 ];
+const EVIDENCE_GUIDANCE = [
+  "assistant/skill/qfai-implement/SKILL.md",
+  "assistant/skill/qfai-implement/references/parallelization-policy.md",
+  "assistant/skill/qfai-atdd/SKILL.md",
+];
 
 const read = (tree: string, file: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, file), "utf-8");
 
-describe("a stage records each decision as a decisions.md row of one form", () => {
+describe("every decision a stage records carries one form", () => {
   for (const tree of TREES) {
-    it(`${tree}: the thinking rule points to decisions.md and its template`, async () => {
+    it(`${tree}: the thinking rule scopes decisions.md rows to its owner`, async () => {
       const article = await read(tree, ARTICLE);
       expect(article).toContain("## What the stage records");
-      expect(article).toContain("`<paths.specsDir>/decisions.md`");
+      expect(article).toContain(
+        "The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each",
+      );
+      expect(article).toContain("Every other stage records each decision in its own");
       expect(article).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
+      // The rule points to the schema and does not copy it.
+      for (const label of LABELS) expect(article).not.toContain(label);
+    });
+
+    it(`${tree}: the template applies the form to evidence records too`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "A stage that does not own this file records its decisions in its own evidence",
+      );
+    });
+
+    it(`${tree}: implement and atdd evidence guidance cites the template`, async () => {
+      for (const file of EVIDENCE_GUIDANCE) {
+        const text = await read(tree, file);
+        expect(text, file).toContain(`\`.qfai/assistant/skill/qfai-sdd/${TEMPLATE_CITATION}\``);
+        for (const label of LABELS) expect(text, file).not.toContain(label);
+      }
     });
 
     it(`${tree}: the reasoning procedure is gone`, async () => {

@@ -39,6 +39,7 @@ version: 1.1.0
 
 ## What the stage records
 
-A decision is recorded as one row of `.qfai/spec/decisions.md`, in the Approach
-form stated at the top of
+`qfai-sdd`, which owns `.qfai/spec/decisions.md`, records a decision as one row
+there. Every other stage records it in its own evidence file. Both use the
+Approach form stated at the top of
 `packages/qfai/assets/init/.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.

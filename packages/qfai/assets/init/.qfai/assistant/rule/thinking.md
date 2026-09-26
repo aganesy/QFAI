@@ -14,8 +14,11 @@ update_frequency: rare
 
 ## What the stage records
 
-Each decision a stage makes is recorded as one row of
-`<paths.specsDir>/decisions.md`. The row's Approach cell takes the form stated
+The stage that owns `<paths.specsDir>/decisions.md`, `qfai-sdd`, records each
+decision as one row there. Every other stage records each decision in its own
+evidence file.
+
+Either record carries the four labelled Approach items, under the rules stated
 at the top of `.qfai/assistant/skill/qfai-sdd/templates/spec/decisions.md`.
 
 ## When to stop and ask
