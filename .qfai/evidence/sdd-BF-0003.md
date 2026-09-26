@@ -22,10 +22,11 @@
 ## Decisions and open questions
 
 - Decision rows: DEC-0810 (cycle 1 adopted), DEC-0811 to DEC-0813 (cycle 1
-  rejected), DEC-0814 (cycle 2 adopted), DEC-0815 (`Change request:`).
+  rejected), DEC-0814 (cycle 2 adopted), DEC-0815 (`Change request:`),
+  DEC-0816 to DEC-0818 (the user's answers to OQ-0196 to OQ-0198).
 - Open-question rows: OQ-0196, OQ-0197 and OQ-0198, the three findings that rest
-  on a choice between the contract and the product. They are put to the user in
-  the review of this pull request, and no agent decided them.
+  on a choice between the contract and the product. No agent decided them. The
+  user answered all three on 2026-09-26, each with option 1, and they are DONE.
 
 ## Pre-draft Grilling
 
@@ -54,7 +55,7 @@ finder's or the author side's position is the dissent.
 | 1 | F1-04: BR-0184 says where a document records the order | a rule its examples do not support | BR-0184 | adopted: clause removed | griller-rr-1 | No run of the command can show it |
 | 1 | F1-05: Input and Expected of EX-0003-0006-04 are identical | a rule its examples do not support | EX-0003-0006-04, BR-0526 | adopted: Input and Expected separated | griller-rr-1 | Expected stated no outcome |
 | 1 | F1-06: the error leg of EX-0003-0007-02 is a missing config, which is a warning | an example no rule explains | EX-0003-0007-02, BR-0188, EX-0003-0001-03 | adopted: a prototyping error | griller-rr-1 | The product reports a missing config as a warning |
-| 1 | F1-07: BR-0188 promises group identifiers in JSON, which the product does not emit | a rule its examples do not support | BR-0188 | none: put to the user (OQ-0196) | user | Either withdraws a published promise or changes the product |
+| 1 | F1-07: BR-0188 promises group identifiers in JSON, which the product does not emit | a rule its examples do not support | BR-0188 | adopted: BR-0188 narrowed to text output (OQ-0196, DEC-0816) | user | Either withdraws a published promise or changes the product |
 | 1 | F1-08: `skills.integrity` drift alone under `--fail-on warning` | a case the rule implies that no example states | BR-0187, AC-0003-0007-01 | adopted: EX-0003-0007-03 | griller-rr-1 | BR-0187 states exit 1 |
 | 1 | F1-09: BR-0179 names a delegation its examples cannot show | a rule its examples do not support | BR-0179, EX-0003-0001-03, EX-0003-0002-01 | adopted: BR-0179 states the observable outcomes | griller-rr-1 | The rule named a function |
 | 1 | F1-10: a missing default `specsDir` is `info`, not a warning | a rule its examples do not support | EX-0003-0002-01, AC-0003-0002-01, US-0003-0002 | adopted: the configured non-default path | griller-rr-1 | No written rule states the default case, so none is added |
@@ -63,7 +64,7 @@ finder's or the author side's position is the dissent.
 | 1 | F1-13: explicit `--format json` has no rule and no named keys | an example no rule explains | EX-0003-0005-01, BR-0178, AC-0003-0005-01 | adopted: BR-0178 and the EX name the keys | griller-rr-1 | "Equivalent information" names nothing testable |
 | 1 | F1-14: BR-0182 says nothing reaches stdout | a rule its examples do not support | BR-0182, EX-0003-0005-02 | adopted: stdout carries the `doctor: wrote` line | griller-rr-1 | The product and the contract print it |
 | 1 | F1-15: `--out` under a missing parent directory | a case the rule implies that no example states | BR-0182, AC-0003-0005-02 | adopted: EX-0003-0005-03 | griller-rr-1 | BR-0182 states the directory is created |
-| 1 | F1-16: exit code with an error and no `--fail-on` | a case the rule implies that no example states | BR-0181, AC-0003-0012-01, AC-0003-0012-02, US-0003-0012 | none: case A put to the user (OQ-0197); case B covered by F1-17 | user | The product applies `validation.failOn`, which contradicts BR-0181 |
+| 1 | F1-16: exit code with an error and no `--fail-on` | a case the rule implies that no example states | BR-0181, AC-0003-0012-01, AC-0003-0012-02, US-0003-0012 | adopted: case A as BR-0181 rewritten to `validation.failOn`, AC-0003-0012-04 and EX-0003-0012-04 (OQ-0197, DEC-0817); case B covered by F1-17 | user | The product applies `validation.failOn`, which contradicts BR-0181 |
 | 1 | F1-17: EX-0003-0011-09 shows BR-0181's second clause | a flow, story or criterion split the rules show to be wrong | EX-0003-0011-09, AC-0003-0011-02, BR-0196, BR-0181 | adopted, amended: control Then in AC-0003-0011-02; BR-0181 cites the EX | griller-rr-1 | No ID moves. Dissent: finder proposed a US-0003-0012 criterion |
 | 1 | F1-18: a configured TTL of 30 days, and a pack exactly 14 days old | a case the rule implies that no example states | BR-0189, AC-0003-0008-01 | adopted: EX-0003-0008-03, EX-0003-0008-04 | griller-rr-1 | BR-0189 states both |
 | 1 | F1-19: `--autoremediate --yes` with no `--profile <skill>` expects `npm install` | a rule its examples do not support | EX-0003-0009-01, BR-0191, AC-0003-0009-01 | adopted: the Input names the profile; BR-0191 names the precondition | griller-rr-1 | The contract skips the install phase without it |
@@ -71,7 +72,7 @@ finder's or the author side's position is the dissent.
 | 1 | F1-21: BR-0191 lists three writes as if complete | a rule its examples do not support | BR-0191 | adopted: the list is no longer exhaustive | griller-rr-1 | The product writes more |
 | 1 | F1-22: `CI=false` and `GITHUB_ACTIONS=true` | a case the rule implies that no example states | BR-0192, AC-0003-0009-02 | adopted: EX-0003-0009-03, EX-0003-0009-04 | griller-rr-1 | The contract defines the CI predicate |
 | 1 | F1-23: three examples pack independent cases | a flow, story or criterion split the rules show to be wrong | EX-0003-0009-02, EX-0003-0010-02, EX-0003-0011-03 | adopted, amended: EX-0003-0009-05, EX-0003-0011-10, EX-0003-0011-11; EX-0003-0010-02 waits on OQ-0198 | griller-rr-1 | One failing leg hid the others |
-| 1 | F1-24: doctor never emits `R-SKILL-MANIFEST-DRIFT` | a rule its examples do not support | BR-0194, AC-0003-0010-02, EX-0003-0010-02, US-0003-0010 | none: put to the user (OQ-0198); the retired pack reference dropped | user | Either withdraws a stated promise or changes the product |
+| 1 | F1-24: doctor never emits `R-SKILL-MANIFEST-DRIFT` | a rule its examples do not support | BR-0194, AC-0003-0010-02, EX-0003-0010-02, US-0003-0010 | adopted: the drift clause removed from the US, AC, BR and EX (OQ-0198, DEC-0818); the retired pack reference dropped | user | Either withdraws a stated promise or changes the product |
 | 1 | F1-25: a relocated `paths.skillsDir` | a case the rule implies that no example states | BR-0193, AC-0003-0010-01 | adopted: EX-0003-0010-03 | griller-rr-1 | BR-0193 states it |
 | 1 | F1-26: BR-0193 cites an anchor that does not exist | a rule its examples do not support | BR-0193 | adopted: `#story-tree-paths` | griller-rr-1 | The reference resolved to nothing |
 | 1 | F1-27: a line-ending-only difference | a case the rule implies that no example states | BR-0195, AC-0003-0011-01 | adopted: EX-0003-0011-12 | griller-rr-1 | BR-0195 compares after normalization |
@@ -111,10 +112,10 @@ finder's or the author side's position is the dissent.
 | Layer | IDs or paths |
 | ----- | ------------ |
 | BF    | `BF-0003` (unchanged) |
-| US    | US-0003-0006, US-0003-0009 and US-0003-0010 (Goal or Non-goals text); no story created, split, merged or retired |
-| AC    | changed: AC-0003-0002-01, AC-0003-0006-01, AC-0003-0006-02, AC-0003-0007-01, AC-0003-0011-02, AC-0003-0011-03, AC-0003-0016-02; added: AC-0003-0001-03, AC-0003-0006-04, AC-0003-0008-03, AC-0003-0009-03, AC-0003-0012-03 |
-| EX    | changed: EX-0003-0001-01, EX-0003-0002-01, EX-0003-0005-01, EX-0003-0005-02, EX-0003-0006-01, EX-0003-0006-02, EX-0003-0006-04, EX-0003-0007-02, EX-0003-0009-01, EX-0003-0009-02, EX-0003-0011-03, EX-0003-0011-04, EX-0003-0011-06, EX-0003-0011-09, EX-0003-0013-02, EX-0003-0013-04, EX-0003-0013-06, EX-0003-0014-02, EX-0003-0014-09, EX-0003-0015-02; added: 35 examples, listed in DEC-0810 and DEC-0814; none removed |
-| BR    | BR-0178 to BR-0182, BR-0184, BR-0185, BR-0187, BR-0189, BR-0191 to BR-0199 and BR-0525 in `.qfai/spec/03_contract/cli/qfai-doctor.md`; BR-0200, BR-0202 to BR-0206, BR-0208 and BR-0209 in `.qfai/spec/03_contract/cli/qfai-guardrails.md`; no BR added |
+| US    | US-0003-0006, US-0003-0009 and US-0003-0010 (Goal or Non-goals text; US-0003-0010 loses its drift sentence); no story created, split, merged or retired |
+| AC    | changed: AC-0003-0002-01, AC-0003-0006-01, AC-0003-0006-02, AC-0003-0007-01, AC-0003-0010-02, AC-0003-0011-02, AC-0003-0011-03, AC-0003-0016-02; added: AC-0003-0001-03, AC-0003-0006-04, AC-0003-0008-03, AC-0003-0009-03, AC-0003-0012-03, AC-0003-0012-04 |
+| EX    | changed: EX-0003-0001-01, EX-0003-0002-01, EX-0003-0005-01, EX-0003-0005-02, EX-0003-0006-01, EX-0003-0006-02, EX-0003-0006-04, EX-0003-0007-02, EX-0003-0009-01, EX-0003-0009-02, EX-0003-0010-02, EX-0003-0011-03, EX-0003-0011-04, EX-0003-0011-06, EX-0003-0011-09, EX-0003-0013-02, EX-0003-0013-04, EX-0003-0013-06, EX-0003-0014-02, EX-0003-0014-09, EX-0003-0015-02; added: 36 examples, listed in DEC-0810, DEC-0814 and DEC-0817; none removed |
+| BR    | BR-0178 to BR-0182, BR-0184, BR-0185, BR-0187 to BR-0189, BR-0191 to BR-0199 and BR-0525 in `.qfai/spec/03_contract/cli/qfai-doctor.md`; BR-0200, BR-0202 to BR-0206, BR-0208 and BR-0209 in `.qfai/spec/03_contract/cli/qfai-guardrails.md`; no BR added |
 
 ## Contract executability
 
@@ -127,13 +128,15 @@ finder's or the author side's position is the dissent.
   a fresh `tsup` build of this branch.
 - Result: exit 0; error 0, warning 2 (`QFAI-DCON-034`, the sample `DESIGN.md`;
   `QFAI-REVIEW-002`, no review pack), both present before this change.
-- Run log: .qfai/report/run-20260926173554282 <!-- qfai:not-a-citation -->
+- Run log: .qfai/report/run-20260926175352944 <!-- qfai:not-a-citation -->
 - Other lanes: `--profile drift` reports 0 errors. `--profile tdd` reports no
   error on a BF-0003 item. The dogfood backlog guard passes for `tdd`, `full`
   and `sdd` with no pin raised. `check-mdschema.mjs --scope all`,
   `check-mermaid.mjs`, `check-doc-clarity.mjs`, markdownlint and prettier pass.
 - Tests: `bf0003DoctorExamples.test.ts` and `bf0003GuardrailsExamples.test.ts`
   are new, and every test file whose annotations changed passes on its own.
+  `skillManifestDrift.test.ts` no longer annotates EX-0003-0010-02, whose
+  drift clause the user removed; it still tests `qfai validate`.
 
 ## Work Orders Summary
 
@@ -145,6 +148,7 @@ finder's or the author side's position is the dissent.
 | 4 | test-design-analyst | finder-tda-2 | Finder, cycle 2; wrote no BR | the BRs and EXs cycle 1 changed | F2-01 to F2-18 | PASS |
 | 5 | requirements-reviewer | griller-rr-2 | Griller, cycle 2; neither finder nor author | the findings and the author side's answers | 18 adopted; two cycle-1 amendments ratified | PASS |
 | 6 | orchestrating agent | applier | Apply cycle 2; rewrite the BRs; tests; records | the adopted findings | story files, contracts, tests, DEC-0810 to DEC-0815, OQ-0196 to OQ-0198 | PASS |
+| 7 | orchestrating agent | applier | Apply the user's answers to OQ-0196 to OQ-0198 | the user's decisions of 2026-09-26 | BR-0181, BR-0188, BR-0194, US-0003-0010, AC-0003-0010-02, AC-0003-0012-04, EX-0003-0010-02, EX-0003-0012-04, DEC-0816 to DEC-0818 | PASS |
 
 ## Reviewer results
 
@@ -154,9 +158,6 @@ finder's or the author side's position is the dissent.
 
 ## Open risks
 
-- OQ-0196, OQ-0197 and OQ-0198 are open. Until the user answers, BR-0188,
-  BR-0181's omitted-flag clause and BR-0194's drift clause state behaviour the
-  product does not have.
 - The contract's `--out` prose says a relative path resolves against the
   process working directory, while the product resolves it against the root.
   EX-0003-0005-04 asserts only that the printed path is absolute. No finding

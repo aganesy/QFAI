@@ -306,21 +306,48 @@ describe("BF-0003 advisory grouping", () => {
   });
 });
 
+/** A seeded adopter tree whose only non-ok finding is one corrupted agent file (an error). */
+async function treeWithOneError(): Promise<string> {
+  const dir = await pool.seedAdopterTree();
+  await quietUnrelatedWarnings(dir);
+  const agentDir = path.join(dir, ".qfai", "assistant", "agent");
+  const agents = (await readdir(agentDir)).filter(
+    (name) => name.endsWith(".md") && name !== "README.md",
+  );
+  await writeFile(
+    path.join(agentDir, agents[0] ?? "missing.md"),
+    "---\nname: [unterminated\ndescription: broken\n---\n\nbody\n",
+    "utf-8",
+  );
+  return dir;
+}
+
 describe("BF-0003 failure threshold", () => {
+  it("follows validation.failOn when --fail-on is omitted, and never opts out", async () => {
+    // QFAI:AC-0003-0012-04
+    // QFAI:EX-0003-0012-04
+    const dir = await treeWithOneError();
+    const config = await readFile(path.join(dir, "qfai.config.yaml"), "utf-8");
+    expect(config).not.toMatch(/failOn:\s*(?:warning|never)/u);
+    const data = await createDoctorData({ startDir: dir, rootExplicit: true });
+    expect(data.summary.error).toBeGreaterThan(0);
+    const outPath = path.join(dir, ".qfai", "report", "doctor.json");
+    const omitted = await runDoctor({ root: dir, rootExplicit: true, format: "json", outPath });
+    expect(omitted).toBe(1);
+    const never = await runDoctor({
+      root: dir,
+      rootExplicit: true,
+      format: "json",
+      outPath,
+      failOn: "never",
+    });
+    expect(never).toBe(0);
+  });
+
   it("fails --fail-on warning on an error alone", async () => {
     // QFAI:AC-0003-0012-03
     // QFAI:EX-0003-0012-03
-    const dir = await pool.seedAdopterTree();
-    await quietUnrelatedWarnings(dir);
-    const agentDir = path.join(dir, ".qfai", "assistant", "agent");
-    const agents = (await readdir(agentDir)).filter(
-      (name) => name.endsWith(".md") && name !== "README.md",
-    );
-    await writeFile(
-      path.join(agentDir, agents[0] ?? "missing.md"),
-      "---\nname: [unterminated\ndescription: broken\n---\n\nbody\n",
-      "utf-8",
-    );
+    const dir = await treeWithOneError();
     const data = await createDoctorData({ startDir: dir, rootExplicit: true });
     expect(data.summary.warning).toBe(0);
     expect(data.summary.error).toBeGreaterThan(0);

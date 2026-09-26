@@ -2,13 +2,13 @@
 
 ## Scope
 
-The story tree contains 16 stories, 39 criteria and 79 examples. The existing BF journey is [bf0003DoctorRepairFlowE2E.test.ts](../../packages/qfai/tests/e2e/bf0003DoctorRepairFlowE2E.test.ts). The matrix lists every ID and records static test candidates and gaps.
+The story tree contains 16 stories, 40 criteria and 80 examples. The existing BF journey is [bf0003DoctorRepairFlowE2E.test.ts](../../packages/qfai/tests/e2e/bf0003DoctorRepairFlowE2E.test.ts). The matrix lists every ID and records static test candidates and gaps.
 
 ## Coverage Depth Matrix
 
 See [coverage-depth-BF-0003.md](coverage-depth-BF-0003.md).
 
-✅ 0 / ⚠️ 113 / ❌ 217 across 330 scored cells; 474 cells are not applicable.
+✅ 0 / ⚠️ 115 / ❌ 215 across 330 scored cells; 486 cells are not applicable.
 
 The new [BF-0003 acceptance integration tests](../../packages/qfai/tests/integration/bf0003Acceptance.test.ts) assert configuration presence and absence, configured path diagnostics, JSON and file output, failure thresholds, and workflow drift placement. The BF E2E journey now attributes seven stories to specific assertions. These 19 depth cells remain candidates until CI executes them. The workflow drift placement assertion checks the `warnings advisory of drift` heading required by `AC-0003-0011-02`.
 
