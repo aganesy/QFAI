@@ -5,20 +5,33 @@ import { afterEach, expect, it } from "vitest";
 
 import { planFacts } from "../../../src/core/workflow/observe.js";
 import { JournalRun, planOf, readyWith } from "../../unit/workflow/journalRun.js";
-import { removeStoryProjects, storyFacts, storyProject, write } from "./storyTreeFixture.js";
+import {
+  DECISIONS,
+  decisions,
+  removeStoryProjects,
+  storyFacts,
+  storyProject,
+  TEST,
+  write,
+} from "./storyTreeFixture.js";
 
 afterEach(removeStoryProjects);
 
 const FLOW_ID = "BF-0001";
 const CRITERION = "AC-0001-0001-01";
 
-// A bounded-change run bound to BF-0001 over a tree whose tests annotate `layers`, driven
-// through its sdd_delta stage; returns the stage `next` issues after it.
-async function stageAfterSddDelta(layers: Record<string, string[]>): Promise<string> {
+// A bounded-change run bound to BF-0001 over a tree whose tests annotate `layers` and whose
+// decisions table holds `decisionRows`, driven through its sdd_delta stage; returns the stage
+// `next` issues after it.
+async function stageAfterSddDelta(
+  layers: Record<string, string[]>,
+  decisionRows?: string[],
+): Promise<string> {
   const root = await storyProject();
   for (const [file, ids] of Object.entries(layers)) {
     await write(root, file, ids.map((id) => `// QFAI:${id}\nit("${id}", () => {});\n`).join("\n"));
   }
+  if (decisionRows) await write(root, DECISIONS, decisions(decisionRows));
   const bounded = (await planFacts())["bounded-change"]?.stages ?? [];
   const run = new JournalRun(readyWith(planOf("bounded-change", bounded, ["src/**"]), FLOW_ID));
   const facts = async () => storyFacts(root, run.snapshot);
@@ -51,4 +64,13 @@ it("The flow is annotated only in an integration test", async () => {
       "tests/integration/flow.test.ts": [FLOW_ID, CRITERION],
     }),
   ).toBe("acceptance");
+});
+
+// QFAI:EX-0001-0192-52
+it("A criterion a DONE test exception names, with no example annotated", async () => {
+  expect(
+    await stageAfterSddDelta({ "tests/e2e/flow.test.ts": [FLOW_ID], [TEST]: [] }, [
+      `| DEC-0002 | Test exception: ${CRITERION} | Covered by the flow's E2E test | DONE |`,
+    ]),
+  ).toBe("implement");
 });

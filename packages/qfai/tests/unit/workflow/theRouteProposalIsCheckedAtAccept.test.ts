@@ -239,6 +239,12 @@ it("flow-binding", () => {
   );
 });
 
+it("no flow is named", () => {
+  expect(boundedNaming([])).toEqual(
+    refused({ reason: "flow-binding", subject: "affectedFlowIds" }),
+  );
+});
+
 it("one flow is bound", () => {
   const bound = boundedNaming(["BF-0001"]);
   expect({

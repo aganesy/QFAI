@@ -229,6 +229,7 @@ const loadRefusals: [string, (text: string) => string][] = [
 ];
 
 for (const [reason, change] of loadRefusals) {
+  // QFAI:EX-0001-0199-10
   it(reason, async () => {
     const loaded = parsePlan(change(await packagedDirect()), "direct");
 
@@ -246,6 +247,7 @@ const retiredNames: [string, string, string][] = [
 ];
 
 for (const [title, from, to] of retiredNames) {
+  // QFAI:EX-0001-0199-10
   it(title, async () => {
     const loaded = parsePlan((await packagedDirect()).replace(from, to), "direct");
 
@@ -261,6 +263,7 @@ it("crlf-equal", async () => {
   expect(loaded.ok).toBe(true);
 });
 
+// QFAI:EX-0001-0199-11
 it("A plan copy under the project's assistant tree is never read", async () => {
   const root = await project();
   const copy = path.join(root, ".qfai", "assistant", "process", "workflows", "direct.yml");

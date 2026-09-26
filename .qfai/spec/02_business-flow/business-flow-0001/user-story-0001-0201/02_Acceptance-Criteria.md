@@ -45,4 +45,5 @@ Scenario: What ships keeps the repository's shipping rules
   When they are built, packed and written
   Then their size, version, launcher and language rules hold
   And tracked evidence holds no conversation text, secret or absolute path
+  And the shipped schemas and the parser accept and refuse the same payloads, and runtime state is written only under `.qfai/run/`
 ```
