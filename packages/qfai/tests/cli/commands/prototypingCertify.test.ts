@@ -218,7 +218,7 @@ async function reseal(root: string, evidenceRel: string, body: string): Promise<
 }
 
 describe("qfai prototyping certify UI contract screen review coverage", () => {
-  // QFAI:EX-0001-0122-05
+  // QFAI:EX-0001-0124-04
   it("exits 64 and names the missing UI contract and screen when a frozen screen lacks review.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

@@ -1900,6 +1900,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     }
   });
 
+  // QFAI:EX-0001-0125-04
   it("rejects a newly declared UI contract before honoring convergence", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1981,6 +1982,23 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     );
   }
 
+  // QFAI:EX-0001-0122-02
+  it("exits 2 with the re-seed instruction when the record has no frozenLicenseCatalog", async () => {
+    const root = await newTempDir();
+    // `undefined` drops the key from the serialized record.
+    await seedWithCatalog(root, undefined);
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/`--cycle 0/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("exits 2 when allowedSources is tampered (e.g. `pinterest` added)", async () => {
     const root = await newTempDir();
     await seedWithCatalog(root, {
@@ -2053,6 +2071,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
 // `[]`, skipping the exit-66 license gate entirely. Instead the iterate
 // command returns exit 2 with stderr naming the offending index + field.
 describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop (TC-0012-0413)", () => {
+  // QFAI:EX-0001-0121-02
   it("exits 2 and names the offending index/field when an imageSources entry is missing 'license'", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

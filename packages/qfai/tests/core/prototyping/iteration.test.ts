@@ -52,6 +52,7 @@ describe("shouldStop — convergence (TC-3.4.x)", () => {
   });
 
   // AC-0001-0120-02 behavior is exercised here; acceptance coverage belongs to integration.
+  // QFAI:EX-0001-0112-03
   it.each(["informationArchitecture", "navigationFlow", "usability", "functionality"] as const)(
     "does not converge when %s is only strong",
     (axis) => {
