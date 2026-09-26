@@ -246,7 +246,7 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     }
     const ignore = await readFile(path.join(root, ".gitignore"), "utf8");
     expect(ignore).toContain(".qfai/run/\n");
-    expect(ignore).toContain("!.qfai/evidence/workflow/\n");
+    expect(ignore).not.toContain("!.qfai/evidence/");
     expect(await readFile(path.join(root, ARCHIVE, "qfai-sdd/SKILL.md"), "utf8")).toBe(
       await readFile(path.join(FIXTURE, ".qfai/assistant/skills/qfai-sdd/SKILL.md"), "utf8"),
     );

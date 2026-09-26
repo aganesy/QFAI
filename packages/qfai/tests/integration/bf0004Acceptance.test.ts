@@ -2059,16 +2059,15 @@ describe("BF-0004 acceptance criteria", () => {
 
   // QFAI:AC-0004-0011-02
   // QFAI:EX-0004-0011-02
-  it("keeps decision evidence visible to Git after the ignore update", async () => {
+  it("keeps decision evidence out of Git after the ignore update", async () => {
     const ignore = await readFile(path.join(journey.root, ".gitignore"), "utf8");
-    expect(ignore).toContain("!.qfai/evidence/decision/");
-    expect(ignore).not.toContain("!.qfai/evidence/decisions/");
+    expect(ignore).not.toContain("!.qfai/evidence/");
     expect(ignore).toContain("# Local notes stay ignored.\nscratch/");
     expect((await ensureRootGitignoreEntries(journey.root, true, () => {})).copied).toEqual([]);
     const record = ".qfai/evidence/decision/bf4-acceptance.json";
     await mkdir(path.dirname(path.join(journey.root, record)), { recursive: true });
     await writeFile(path.join(journey.root, record), "{}\n");
-    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(1);
+    expect(run(journey.root, "git", ["check-ignore", "--quiet", record]).status).toBe(0);
   });
 
   // QFAI:AC-0004-0012-02
