@@ -28,4 +28,12 @@ Scenario: A person can read how to migrate before running the skill
   When a person opens the migration skill's references
   Then migration-guide.md is there, naming the release that brings the story tree as 2.0.0
   And it states that 2.x does not read the spec-pack layout: a project that keeps it stays on a pinned 1.x release, and a project that upgrades runs the migration first
+
+# AC-0004-0012-04
+# Parent: US-0004-0012
+Scenario: The person learns the migration records stay in the working copy only
+  Given the shipped SKILL.md of the migration skill
+  When an AI follows it to the end of a migration
+  Then it tells the person that git does not track .qfai/evidence/, so the plan, the ID map and the archives under .qfai/evidence/migration-spec-to-story/ exist only in that working copy
+  And that a person who needs the archived copies of customised files beyond it keeps a copy elsewhere
 ```
