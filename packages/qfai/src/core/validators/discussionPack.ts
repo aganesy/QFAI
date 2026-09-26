@@ -56,7 +56,8 @@ export async function validateDiscussionPackReadiness(
   if (!readiness.latestPackDir || !readiness.latestPackName) {
     // On the story tree a discussion pack is optional: SDD may start from an
     // explicit user requirement, and its own preflight stops when no usable
-    // source exists. A misnamed pack still fails on QFAI-DPACK-005 above.
+    // source exists. A pack of any other name still gets QFAI-DPACK-001 below,
+    // beside DPACK-005 or DPACK-006.
     if (
       readiness.dangerousPackNames.length === 0 &&
       readiness.legacyPackNames.length === 0 &&

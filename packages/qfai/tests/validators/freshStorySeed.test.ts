@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -61,6 +61,17 @@ describe("fresh story seed validation", () => {
       expect(
         (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
       ).not.toContain("QFAI-DPACK-001");
+    });
+  });
+
+  // QFAI:EX-0001-0153-02
+  it("still requires a correctly named pack on a story-tree project that holds a misnamed one", async () => {
+    await withInit(async (root) => {
+      await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
+
+      const codes = (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code);
+      expect(codes).toContain("QFAI-DPACK-005");
+      expect(codes).toContain("QFAI-DPACK-001");
     });
   });
 

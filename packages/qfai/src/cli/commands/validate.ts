@@ -5,7 +5,6 @@ import type { FailOn, OutputFormat } from "../../core/config.js";
 import { loadConfig } from "../../core/config.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { isStoryTreeId } from "../../core/storyTree/ids.js";
-import { isStoryTreeProject } from "../../core/storyTree/layout.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { toRelativePath } from "../../core/paths.js";
 import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
@@ -349,8 +348,6 @@ export function scopedReportPath(
   const suffix = Array.from(new Set(normalizedIds)).sort().join("+");
   return `${dir}${stem}.flow-${suffix}${ext}`;
 }
-
-export { isStoryTreeProject };
 
 /**
  * Compute the `.qfai/report/validate-<profile>.json` path that mirrors
