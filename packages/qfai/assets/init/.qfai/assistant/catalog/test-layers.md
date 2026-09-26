@@ -652,6 +652,27 @@ Treat these as review signals in the same class as volume floors — worth a fin
 - a very low `test_` functions per file ratio in a module that carries many obligations
 - a single selector whose recorded runtime grows monotonically across RED rounds
 
+## A passing test is not the solution
+
+A ledger row reaches `done` when its test passes. The test checks the solution;
+it does not define it. Code that passes for the test's inputs and fails for
+other valid inputs has not met the row's obligation, however green the gates
+read.
+
+- Do not hard-code a value to match a test case, and do not branch on a test's
+  own inputs.
+- Do not let a helper script or a workaround stand in for the standard tools
+  the task calls for.
+- Where the task cannot be done as specified, or a test case is itself wrong,
+  stop and report it. The route is a Change Request against the specification
+  (`.qfai/assistant/constitution/drift-protocol.md`), never an edit that makes
+  the wrong case pass.
+
+That last point is why this is stated here rather than left to review.
+Elsewhere, code written around a test is a quality problem. Under Article V it
+is also a false link in the chain from requirement to evidence, and nothing
+shows the break, because every gate is green.
+
 ## Test stub detection (QFAI-TEST-001 / -002 / -003)
 
 `QFAI-TEST-001` (error) reports the silent-placeholder construct of each supported stack:

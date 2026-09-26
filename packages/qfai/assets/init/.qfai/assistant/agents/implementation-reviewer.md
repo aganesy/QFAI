@@ -20,6 +20,7 @@ tools: [Read, Glob, Grep, Bash]
 - Check separation of concerns, fail-fast validation, least astonishment, and avoidance of premature optimization in changed code.
 - Enforce TypeScript review expectations: avoid unjustified assertions, over-complex generics and unchecked `unknown`.
   Flag a promise that is neither awaited nor returned. A return propagates only when its caller awaits or adopts the promise.
+- Check for code written only to pass a test: no value hard-coded to the test's inputs and no branch written only for the test, and a wrong test or infeasible task raised as a Change Request, not worked around (`.qfai/assistant/catalog/test-layers.md#a-passing-test-is-not-the-solution`).
 - File excess as `defect:code-quality` against constitution Article VII; tag it
   `delete`, `stdlib`, `native`, `yagni` or `shrink`. The tags cover code, controls,
   settings and explanatory copy. Admit it only when it names what to cut

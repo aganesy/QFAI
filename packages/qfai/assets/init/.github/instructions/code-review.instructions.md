@@ -44,6 +44,7 @@ Review checklist:
 - Performance: N+1, unnecessary full scans, expensive operations, caching.
 - Maintainability: duplication, naming clarity, modularity, responsibility boundaries.
 - Tests: appropriate unit/integration/e2e coverage; tests fail when code is wrong.
+- Code written for the test: no value hard-coded to the test's inputs and no branch written only for the test; a wrong test or infeasible task was raised as a Change Request, not worked around (`.qfai/assistant/catalog/test-layers.md#a-passing-test-is-not-the-solution`).
 - Docs/UX: README/RELEASE/usage steps are consistent and copy-pasteable; UI changes make sense.
 - Consistency/style: follow existing conventions; style-only nits should be labeled [NIT].
 - Writing (`.agents/rules/documentation-clarity.md`), for the diff only:

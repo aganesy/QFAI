@@ -45,6 +45,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Code written only to pass a test does not meet its ledger row** (#2235).
+  The shipped test-layer policy now states what the code under test may not do
+  to reach green: hard-code a value to match a test case, branch on a test's
+  inputs, or let a workaround stand in for the tools the task calls for. A task
+  that cannot be done as specified, or a test case that is wrong, goes to a
+  Change Request rather than being worked around. The implementation skill's
+  Green phase measures "minimum production code" against the row's obligation
+  and points to that clause. Reviewers now check for it: `implementation-reviewer`
+  and `qa-gatekeeper`, the reviewer gates of `qfai-implement` and `qfai-atdd`,
+  the shipped Copilot code-review instructions, and § 4 of the
+  minimal-implementation rule each name the clause.
+
 - **The minimal-implementation rule names four additions a change leaves
   out** (#2234). A change can clear every rung of the ladder and still add work
   nobody asked for. A new section names the four shapes that takes: wider

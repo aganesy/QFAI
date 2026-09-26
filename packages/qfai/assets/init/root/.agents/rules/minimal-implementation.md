@@ -141,6 +141,9 @@ minimal on its own terms. Additions take four shapes, and each stays out.
 
 A comment in the change goes where the logic is not self-evident.
 
+Code written only to pass a test stays out too: see
+`.qfai/assistant/catalog/test-layers.md#a-passing-test-is-not-the-solution`.
+
 § 2 puts validation at the trust boundary. Past it, a parsed value needs no
 second check. § 2 also says which failures are caught; every other one
 propagates.
