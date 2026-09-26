@@ -13,7 +13,7 @@ Scenario: Step 11 installs the free-text entry
   Then every skill directory the installed package ships equals the package's copy
   And each host skills directory links every shipped skill
   And `AGENTS.md` and `CLAUDE.md` carry the entry directive
-  And the managed `.gitignore` block carries `.qfai/run/` and `!.qfai/evidence/workflow/`
+  And the managed `.gitignore` block equals the installed package's block
 
 # AC-0004-0041-02
 # Parent: US-0004-0041

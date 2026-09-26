@@ -47,7 +47,10 @@ flowchart TD
 The ordered steps are directory rename, decision-table merge, catalog move,
 ID renumbering, TC-only case conversion, EX criterion derivation, rule move,
 test-annotation rewrite, host-link repointing and gitignore update. The
-step-4 ID map binds every later step to the approved plan.
+step-4 ID map binds every later step to the approved plan. Step 10 also keeps
+`.qfai/evidence/` local: it removes every `.gitignore` negation that
+re-includes it and takes it out of the git index, leaving the files on disk
+and the commit to the person.
 
 Steps 11 and 12 then install and check the free-text entry. Step 11 brings the
 shipped skills, their host links, the entry directive and the managed

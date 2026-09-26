@@ -5,10 +5,12 @@
 - Parent: CAP-0018
 - Source: discussion-20260923063306456#DUS-006
 - Goal: As an adopter I want steps 9 and 10 to point my host integration links
-  at the renamed skill and agent directories and keep my decision records
-  tracked, so that my AI host and git see the migrated project correctly.
-- Non-goals: rerunning `qfai init --force`; editing `.gitignore` outside its
-  managed block.
+  at the renamed skill and agent directories and stop git tracking
+  `.qfai/evidence/`, so that my AI host and git see the migrated project
+  correctly.
+- Non-goals: rerunning `qfai init --force`; editing a `.gitignore` line outside
+  its managed block, other than a negation that re-includes `.qfai/evidence/`;
+  committing the removal of `.qfai/evidence/` from the git index.
 
 ## Legacy Source Scope
 

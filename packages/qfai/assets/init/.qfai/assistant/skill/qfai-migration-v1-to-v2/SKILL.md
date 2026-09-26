@@ -38,7 +38,7 @@ keep authors separate from reviewers.
 
 1. Inspect the spec packs, contracts, assistant files and configured paths. If
    the project already has the story tree and no migration ID map, run steps 1
-   to 10 to confirm their empty reports, report that there is nothing to
+   to 10. When steps 1 to 9 list no operation, report that there is nothing to
    migrate, and continue at item 6. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
@@ -64,13 +64,21 @@ keep authors separate from reviewers.
    by the real run, and keep their reports as in item 2. Step 11 installs the
    free-text entry; step 12 checks it and writes nothing.
 7. Resolve every item step 12 lists under `## For a person`. Rerun step 11 for
-   an item it installs. A `qfai.config.yaml` routing override is the project's,
+   an item it installs, and step 10 for an evidence re-include line or an
+   `evidence-tracked` item. A `qfai.config.yaml` routing override is the project's,
    so ask its owner before changing it. Rerun step 12 until it exits 0.
 8. Then run `npx qfai validate` through the launcher proven by preflight.
    Resolve layout and chain errors. Use its BF, AC and EX test-obligation
    findings to finish test coverage or record a permitted decision exception.
 9. Hand the project's first free-text change request to `qfai-run`. From here
    on, a change goes to it in plain words.
+10. When you report the migration done, tell the person three things. Git no
+    longer tracks `.qfai/evidence/`, and step 10 left its removals staged for
+    them to commit with the migration. The plan, the ID map and the `legacy/`
+    and `retired/` archives under `.qfai/evidence/migration-spec-to-story/`,
+    including the archived copies of files the project customised, exist only
+    in this working copy. Anyone who needs them beyond it keeps a copy
+    elsewhere.
 
 | Step | Bundled script               | Result                                                         |
 | ---- | ---------------------------- | -------------------------------------------------------------- |
@@ -83,7 +91,7 @@ keep authors separate from reviewers.
 | 7    | `07-rules-to-contracts.mjs`  | Put business rules in their enforcing contracts.               |
 | 8    | `08-rewrite-annotations.mjs` | Rewrite resolvable test annotations.                           |
 | 9    | `09-repoint-links.mjs`       | Repoint host integration links only.                           |
-| 10   | `10-update-gitignore.mjs`    | Refresh only the managed `.gitignore` block.                   |
+| 10   | `10-update-gitignore.mjs`    | Keep `.qfai/evidence/` out of git.                             |
 | 11   | `11-install-entry.mjs`       | Install skills, host links, entry directive and ignore lines.  |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that a free-text run can start.        |
 
@@ -95,7 +103,7 @@ only repairs links. Do not run `npx qfai init --force` during migration.
 
 The scripts print `## Operations` even when empty. Steps 2 through 12 also print
 `## For a person`; step 5 prints `## Cases to examples`; step 8 prints
-`## Annotations kept`. An empty section says `none`. Rerunning a completed step
+`## Annotations kept`; step 10 prints `## Git index`. An empty section says `none`. Rerunning a completed step
 must change no file, and an interrupted step can be run again. The complete
 write boundary is in `references/migration-guide.md#write-boundary`.
 

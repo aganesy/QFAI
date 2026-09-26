@@ -66,8 +66,8 @@ exit codes. Run the next step only after the preceding one has completed.
 | 7    | `07-rules-to-contracts.mjs`  | Place rules in the planned enforcing contracts.                                          |
 | 8    | `08-rewrite-annotations.mjs` | Rewrite test annotations that the ID map resolves.                                       |
 | 9    | `09-repoint-links.mjs`       | Update host skill and agent links.                                                       |
-| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block.                                                  |
-| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host links, entry directive and `.gitignore` lines. |
+| 10   | `10-update-gitignore.mjs`    | Refresh the managed `.gitignore` block and stop tracking `.qfai/evidence/`.              |
+| 11   | `11-install-entry.mjs`       | Install the free-text entry: skills, host links, entry directive and `.gitignore` block. |
 | 12   | `12-check-entry.mjs`         | Check, without writing, that the free-text entry can start a run.                        |
 
 For example:
@@ -76,6 +76,10 @@ For example:
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs --dry-run
 node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs
 ```
+
+Step 10 removes every `.gitignore` negation that re-includes `.qfai/evidence/`
+and takes that directory out of the git index. The files stay on disk. Commit
+the resulting deletions with the rest of the migration.
 
 Step 11 replaces each shipped skill with the installed package's copy. A copy
 the project changed is moved whole to
@@ -90,13 +94,15 @@ or order. Exit 3 completes the step but leaves items in `## For a person`.
 Resolve those items before declaring migration complete. Completed steps are
 safe to rerun and should make no further changes. The scripts make no network
 calls, but can write configured paths outside `.qfai/`, test annotations,
-host integration links, `AGENTS.md`, `CLAUDE.md` and the managed `.gitignore`
-block. Read the skill guide's write-boundary table before approving a dry run.
+host integration links, `AGENTS.md`, `CLAUDE.md`, `.gitignore` and the git
+index. Read the skill guide's write-boundary table before approving a dry run.
 
 ## Review decisions and verify
 
 Keep the migration `legacy/` and `retired/` archives until every item is
-accounted for. A story with no flow, a rule with no contract, an example with
+accounted for. They sit under `.qfai/evidence/`, which git does not track, so
+they exist only in your working copy. Copy them elsewhere if you need them
+beyond it. A story with no flow, a rule with no contract, an example with
 no single criterion, an unresolved test annotation and a non-functional
 requirement with no destination need content-owner judgment. Do not copy a
 retired rule or example into the active tree merely to clear a report.
