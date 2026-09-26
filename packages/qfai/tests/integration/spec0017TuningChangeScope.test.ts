@@ -36,15 +36,12 @@ import workspace from "../../vitest.workspace";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const REPO_ROOT = path.resolve(PACKAGE_ROOT, "../..");
-const DECISIONS = path.join(
-  REPO_ROOT,
-  ".qfai",
-  "evidence",
-  "migration-spec-to-story",
-  "retired",
-  "spec-0017",
-  "07_Decisions.md",
-);
+/** The decision register, one table row per decision. */
+const DECISIONS = path.join(REPO_ROOT, ".qfai", "spec", "decisions.md");
+
+/** Every decision row in the register. */
+const decisionRows = (text: string): string[] =>
+  text.split(/\r?\n/).filter((line) => /^\| DEC-\d+ \|/.test(line));
 
 /** A GitHub Actions run identifier: a long bare integer. */
 const RUN_ID = /\b\d{9,14}\b/g;
@@ -195,7 +192,7 @@ describe("a moved project carries the run identifiers that justify the move", ()
     const moved = projects.filter((project) => project.departures.length > 0);
 
     const text = await readFile(DECISIONS, "utf8");
-    const sections = text.split(/^### /m).slice(1);
+    const sections = decisionRows(text);
     expect(
       sections.length,
       "the decision record must be readable for this to check it",
@@ -265,7 +262,7 @@ describe("a rerun-to-green rate above one in twenty reopens the setting", () => 
     // `BR-0017-0053` requires the record. None is, so nothing is owed — and the enumeration says that
     // positively instead of leaving an empty loop to stand for it.
     const text = await readFile(DECISIONS, "utf8");
-    const sections = text.split(/^### /m).slice(1);
+    const sections = decisionRows(text);
     const projectNames = readProjects().map((project) => project.name);
     const tuningRecords = sections.filter((section) =>
       projectNames.some((name) => section.includes(`tuned \`${name}\``)),

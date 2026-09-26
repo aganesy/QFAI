@@ -23,10 +23,10 @@ package carries.** It does not install its own package: there is no `qfai`
 dependency, and `scripts/check-not-a-dependency.mjs` refuses an install that
 would create one.
 
-| ディレクトリ     | 役割                                                                                                                                                                            | 修正してよいか                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                     | ✅ 開発対象                                                       |
-| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, evidence), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
+| ディレクトリ     | 役割                                                                                                                                                                                                              | 修正してよいか                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/qfai/` | **QFAI パッケージのソースコード**（実装・テスト・アセット）                                                                                                                                                       | ✅ 開発対象                                                       |
+| `.qfai/`         | This repository's own workflow artifacts (specs, contracts, discussion, and local evidence that is never committed), and the assistant tree generated from `packages/qfai/assets/init/.qfai/` by `pnpm sync:ssot` | ⚠️ The assistant tree is generated: edit `packages/qfai/` instead |
 
 - skill テンプレートやバリデータ等を改善したい場合は、必ず `packages/qfai/` 配下のソースを修正する。
 - An edit made directly to the generated assistant tree is reverted by the next

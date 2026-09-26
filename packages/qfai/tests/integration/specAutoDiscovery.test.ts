@@ -125,25 +125,6 @@ describe("TC-0014-0029: integration test existence", () => {
 // TC-0008-0011
 // QFAI:EX-0001-0074-01
 describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
-  it("the flow matrix records each required depth dimension and story-tree IDs", async () => {
-    const matrixPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "evidence",
-      "coverage-depth-BF-0001.md",
-    );
-    const content = await readFile(matrixPath, "utf-8");
-    expect(content).toContain("Coverage Depth Matrix — BF-0001");
-    expect(content).toMatch(
-      /\| Normal \| Error \| Boundary \| Special \| State transition \| Combinatorial \|/,
-    );
-    expect(content).toContain("| US-0001-0074 |");
-    expect(content).toContain("| AC-0001-0074-01 |");
-    expect(content).toContain("| EX-0001-0074-01 |");
-  });
-
   it("the story criterion assigns depth review to the business flow", async () => {
     const acPath = path.resolve(
       process.cwd(),
