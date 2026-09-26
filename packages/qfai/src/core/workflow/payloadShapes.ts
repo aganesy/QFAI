@@ -178,8 +178,12 @@ export const STAGE_RESULT = object(
     }),
     seam: everyField({ targetTestId: text, observation: text }),
     seamRequest: everyField({ targetTestId: text }),
-    testFix: everyField({ citedBefore: CITED, citedAfter: CITED, reviewRef: text, rerunRef: text }),
-    regressionFix: everyField({ testId: text, rerunRef: text, reviewRef: text }),
+    // A fix missing its review or re-run is refused with the fix's own reason, not as a shape.
+    testFix: object({ citedBefore: CITED, citedAfter: CITED, reviewRef: text, rerunRef: text }, [
+      "citedBefore",
+      "citedAfter",
+    ]),
+    regressionFix: object({ testId: text, rerunRef: text, reviewRef: text }, ["testId"]),
     diagnosis: everyField({
       verdict: oneOf("missing-test", "defective-test", "regression", "expectation-differs"),
       reproductionRef: text,

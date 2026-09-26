@@ -41,6 +41,7 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
   const workOrder = record.workOrder;
   if (!workOrder) return snapshot;
   const attempts = { ...snapshot.attempts, [workOrder.stageInstanceId]: workOrder.attempt };
+  const issuedStages = [...new Set([...(snapshot.issuedStages ?? []), workOrder.stageInstanceId])];
   const issuedRecordAreas = [
     ...new Set([...(snapshot.issuedRecordAreas ?? []), ...(workOrder.recordAreas ?? [])]),
   ];
@@ -49,6 +50,7 @@ function foldIssued(snapshot: Snapshot, record: JournalRecord): Snapshot {
     ...rest,
     outstandingWorkOrder: workOrder,
     attempts,
+    issuedStages,
     issuedRecordAreas,
     ...(record.obligationSet ? { issuedObligations: record.obligationSet } : {}),
     ...(record.recordsAtIssue ? { issuedRecords: record.recordsAtIssue } : {}),
@@ -65,6 +67,7 @@ function foldRouted(snapshot: Snapshot, record: JournalRecord): Snapshot {
     repairedStages: _repaired,
     repairRequest: _left,
     skippedStages: _skipped,
+    issuedStages: _issued,
     ...rest
   } = withoutWorkOrder(snapshot);
   const prior = [

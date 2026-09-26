@@ -158,6 +158,9 @@ function receiptRefusals(result: WorkflowResult, workOrder: WorkflowWorkOrder): 
   if (result.testObservation === "expected_red" && result.red?.failureKind !== "assertion") {
     refusals.push({ reason: "red-not-assertion", subject: "red" });
   }
+  // A fix's receipts are what an accepted fix rests on; a fix that hands its finding on, waits
+  // or stops has none to show.
+  if (result.outcome !== "accepted" && result.outcome !== "accepted_with_debt") return refusals;
   const fix = result.regressionFix;
   if (workOrder.stageKind === "regression_fix" && (!fix?.rerunRef || !fix.reviewRef)) {
     refusals.push({ reason: "regression-fix-receipt", subject: "regressionFix" });

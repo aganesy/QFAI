@@ -313,17 +313,20 @@ export async function receiptValidityOf(
   return Object.fromEntries(classed.flat());
 }
 
-// What the routing receipt depends on: every path and evidence file the proposal cites.
+// What the routing receipt depends on: every path and evidence file the proposal cites outside
+// the write scope it proposes. A file inside that scope is the run's to change, so its change
+// is the run's own work rather than a premise of the route going stale.
 export async function routingDependenciesOf(
   root: string,
   proposal: WorkflowProposal | undefined,
 ): Promise<WorkflowDependency[]> {
   const refs = [...(proposal?.expectedBehaviorRefs ?? []), ...(proposal?.observedRefs ?? [])];
+  const scope = proposal?.proposedWriteScope ?? [];
   const paths = [
     ...new Set(
       refs.flatMap((each) => (each.kind === "path" || each.kind === "evidence" ? [each.ref] : [])),
     ),
-  ];
+  ].filter((each) => !scope.some((area) => areaCovers(area, each)));
   const digested = await Promise.all(
     paths.map(async (each) => {
       const digest = await dependencyDigest(root, each);

@@ -42,9 +42,9 @@ function predicateHolds(
   }
 }
 
-// The plan's stages that run, in plan order. A stage already issued or accepted keeps running
-// whatever its predicate says now, since its own work can change what the predicate reads, and
-// one the run recorded as skipped stays skipped. Every other stage runs when its predicate holds.
+// The plan's stages that run, in plan order. A stage the run has issued keeps running whatever
+// its predicate says now, since its own work can change what the predicate reads, and one the
+// run recorded as skipped stays skipped. Every other stage runs when its predicate holds.
 export function activeStages(
   plan: Plan,
   snapshot: WorkflowSnapshot,
@@ -52,6 +52,7 @@ export function activeStages(
 ): PlanStages {
   const ran = new Set([
     ...(snapshot.acceptedStages ?? []).map((stage) => stage.stageInstanceId),
+    ...(snapshot.issuedStages ?? []),
     ...(snapshot.outstandingWorkOrder ? [snapshot.outstandingWorkOrder.stageInstanceId] : []),
   ]);
   const skipped = new Set(snapshot.skippedStages ?? []);

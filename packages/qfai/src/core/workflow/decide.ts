@@ -122,8 +122,11 @@ function decideAccept(
   if (!result) return notReady(run, "stage result");
   const refused = acceptPreamble(snapshot, result);
   if (refused) return refused;
-  // A cause found on a run in `running` or `routing` blocks it over that state's edge.
-  const found = foundCause(snapshot, facts);
+  // A cause found on a run in `running` or `routing` blocks it over that state's edge. The files
+  // the result names are judged by its own write-scope check first, so they raise no cause here.
+  const named = (result.changedFiles ?? []).map((changed) => changed.path);
+  const unnamed = (facts.observedChangedPaths ?? []).filter((file) => !named.includes(file));
+  const found = foundCause(snapshot, { ...facts, observedChangedPaths: unnamed });
   if (found && run.state === "running") {
     return blockOnResult(run, result, undefined, { ...found, owner: "operator" });
   }

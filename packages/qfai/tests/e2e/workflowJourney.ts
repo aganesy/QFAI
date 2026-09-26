@@ -223,6 +223,7 @@ export function resultFor(document: unknown, resultId: string, extra: object = {
     expectedSequence: field(workOrder, "expectedSequence"),
     outcome: "accepted",
     testObservation: "not_applicable",
+    actor: { agentInstance: `agent-${resultId}` },
     ...extra,
   };
 }

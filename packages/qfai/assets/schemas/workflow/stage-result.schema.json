@@ -204,7 +204,7 @@
     "testFix": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["citedBefore", "citedAfter", "reviewRef", "rerunRef"],
+      "required": ["citedBefore", "citedAfter"],
       "properties": {
         "citedBefore": {
           "description": "The BF, AC and EX IDs the test annotates, and a digest of the text of those items and of the rules that cite them.",
@@ -257,7 +257,7 @@
     "regressionFix": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["testId", "rerunRef", "reviewRef"],
+      "required": ["testId"],
       "properties": {
         "testId": {
           "type": "string",

@@ -395,6 +395,8 @@ export interface WorkflowSnapshot {
   repairedStages?: WorkflowAcceptedStage[];
   // The current plan's stages the run skipped because their predicate did not hold.
   skippedStages?: string[];
+  // The current plan's stages the run has issued a work order for.
+  issuedStages?: string[];
   // The stage results of every plan a replan replaced, kept for their receipts and debts.
   priorStages?: WorkflowAcceptedStage[];
   // What the routing receipt depends on, recorded when routing's result was accepted.

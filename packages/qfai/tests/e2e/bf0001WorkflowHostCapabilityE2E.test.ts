@@ -42,6 +42,7 @@ function undelegated(document: unknown) {
     expectedSequence: field(document, "workOrder.expectedSequence"),
     outcome: "unrun",
     testObservation: "unrun",
+    actor: { agentInstance: "discussion-agent-1" },
     delegation: { status: "unavailable", attempt: 1 },
   };
 }
