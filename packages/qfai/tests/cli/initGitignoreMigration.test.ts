@@ -43,6 +43,7 @@ const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
 describe("re-init preserves what the project chose to track", () => {
+  // QFAI:EX-0001-0033-09
   it("does not resurrect an ignore line the project removed from the block", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
