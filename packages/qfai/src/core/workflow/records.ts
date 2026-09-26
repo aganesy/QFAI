@@ -75,9 +75,11 @@ function namesWhole(text: string, name: string): boolean {
   return new RegExp(`(^|[^\\w-])${escaped}($|[^\\w-])`).test(text);
 }
 
-// Whether a row's Approach cites a `human_decision` this run recorded for the operation, as
-// `<runId>/<authorizationId>`, and names its `answeredBy` whole. A CREATE row of a new-story
-// work order cites the approval of that work order's own slot.
+// Whether a row's Approach carries the approval itself: it cites a `human_decision` this run
+// recorded for the operation, as `<runId>/<authorizationId>`, and names whole who answered, when
+// the answer was recorded, and the label of every option it chose. The run's own record is the
+// only copy of the answer, and it stays local, so the row has to say what was approved. A
+// CREATE row of a new-story work order cites the approval of that work order's own slot.
 function citesAnswer(
   snapshot: WorkflowSnapshot,
   row: RecordRow,
@@ -90,9 +92,14 @@ function citesAnswer(
       authorization.operation === operation &&
       (slotApproval === undefined || authorization.authorizationId === slotApproval) &&
       namesWhole(row.approach, `${snapshot.run.id}/${authorization.authorizationId}`) &&
-      Boolean(authorization.answeredBy) &&
-      namesWhole(row.approach, authorization.answeredBy ?? ""),
+      namesEach(row.approach, [authorization.answeredBy, authorization.recordedAt]) &&
+      (authorization.chosen ?? []).every((label) => namesWhole(row.approach, label)),
   );
+}
+
+// Whether `text` names every value whole; a value the record lacks cannot be named.
+function namesEach(text: string, values: readonly (string | undefined)[]): boolean {
+  return values.every((value) => Boolean(value) && namesWhole(text, value ?? ""));
 }
 
 // An appended row that needs an approval may stand at WIP or DONE only with the answer cited.

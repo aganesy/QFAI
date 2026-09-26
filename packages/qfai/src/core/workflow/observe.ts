@@ -12,7 +12,7 @@ import { assistantLayerDir } from "../paths/assistantPaths.js";
 import { readEffectiveRouting } from "../validators/agentDefinition.js";
 import { validateProject } from "../validate.js";
 import { resolveToolVersion } from "../version.js";
-import { changedSinceStart } from "./boundary.js";
+import { changedSinceStart, isRunChange } from "./boundary.js";
 import { areaCovers, everyStageResult } from "./common.js";
 import { isRecord } from "./parse.js";
 import {
@@ -389,12 +389,11 @@ export async function completionFacts(
     refs: [...(issue.refs ?? [])].sort(),
     severity: issue.severity,
   }));
-  const dirty = uncommittedPaths(root) ?? [];
+  const dirty = (uncommittedPaths(root) ?? []).filter(isRunChange);
   const changed = snapshot.boundary ? await changedSinceStart(root, snapshot.boundary) : dirty;
-  // Only the run's own changes and its workflow evidence wait on a commit; a path the operator
-  // left uncommitted before `start` is not the run's to deliver.
-  const evidence = `.qfai/evidence/workflow/${snapshot.run.id}/`;
-  const uncommitted = dirty.filter((file) => changed.includes(file) || file.startsWith(evidence));
+  // Only the run's own changes wait on a commit; a path the operator left uncommitted before
+  // `start` is not the run's to deliver, and neither are the runs' own local records.
+  const uncommitted = dirty.filter((file) => changed.includes(file));
   const validate =
     failOn === "never" ? { failOn: "error" as const, findings: [] } : { failOn, findings };
   const completion = {

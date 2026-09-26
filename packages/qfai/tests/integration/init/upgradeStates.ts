@@ -94,12 +94,16 @@ const OVERLAYS: Record<string, (root: string) => Promise<void>> = {
       }
     }
   },
+  // A block an earlier release wrote: no run-state ignore, and the negations that re-included
+  // records under the evidence directory.
   "older-gitignore": async (root) => {
     const file = path.join(root, ".gitignore");
     const kept = (await readFile(file, "utf-8"))
+      .replace(/\n+$/, "")
       .split("\n")
-      .filter((line) => line !== ".qfai/run/" && line !== "!.qfai/evidence/workflow/");
-    await writeFile(file, kept.join("\n"), "utf-8");
+      .filter((line) => line !== ".qfai/run/");
+    const retired = ["!.qfai/evidence/", "!.qfai/evidence/decision/", "!.qfai/evidence/workflow/"];
+    await writeFile(file, [...kept, ...retired, ""].join("\n"), "utf-8");
   },
 };
 

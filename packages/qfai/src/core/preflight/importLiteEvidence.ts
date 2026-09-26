@@ -60,7 +60,7 @@ export function resolveImportLiteEvidenceRoot(root: string): string {
  * alone is not evidence: an empty file, or the shipped template dropped in with
  * its placeholders untouched, names nothing traceable, yet it would clear
  * `QFAI-IMPLITE-001` and — through `resolveImportLiteEntrypoint` — flip the
- * preflight to `ready` and suppress `QFAI-DPACK-001` as well. Content is
+ * preflight to `ready` as well. Content is
  * therefore checked before a candidate is accepted, and an unusable record is
  * skipped rather than selected, so an older filled-in file still wins over a
  * newer hollow one.
@@ -164,8 +164,8 @@ const PLACEHOLDER_RE = /^<[^>]*>$/;
  * shape the shipped template arrives in, but a hand-edited file just as often
  * keeps `- URLs: TBD`, `none` or `(placeholder)`, which name nothing traceable
  * either: accepting them would clear `QFAI-IMPLITE-001` and, through
- * `resolveImportLiteEntrypoint`, suppress `QFAI-DPACK-001` on a project with no
- * recorded input source at all.
+ * `resolveImportLiteEntrypoint`, declare the preflight ready on a project with
+ * no recorded input source at all.
  */
 const UNFILLED_VALUES = new Set([
   "-",
@@ -258,8 +258,8 @@ function recordsImportLiteInputSource(text: string): boolean {
     // whole tail of the template lands in whichever section opened the fence.
     // `hasRecordedExcerpt` then reads the `Assumptions / Missing information`
     // and `Notes` headings as excerpt prose, and an untouched template one
-    // closing line short of well-formed clears `QFAI-IMPLITE-001` and
-    // suppresses `QFAI-DPACK-001` while naming nothing traceable. Past that
+    // closing line short of well-formed clears `QFAI-IMPLITE-001` while naming
+    // nothing traceable. Past that
     // line no section can be attributed, so the record is unusable rather than
     // partly readable; a well-formed sibling file still wins.
     return false;
@@ -382,8 +382,8 @@ function isIso8601DateTime(value: string): boolean {
  * `generated_at` is validated as a datetime, not merely as "something was
  * typed". A free-text value (`yesterday`) or an impossible one (`2026-99-99`)
  * left the artifact's provenance untraceable while still clearing
- * `QFAI-IMPLITE-001` and, through `resolveImportLiteEntrypoint`, suppressing
- * `QFAI-DPACK-001`. The check subsumes the unfilled-value rule: no placeholder
+ * `QFAI-IMPLITE-001` and, through `resolveImportLiteEntrypoint`, declaring the
+ * preflight ready. The check subsumes the unfilled-value rule: no placeholder
  * or filler parses as a date.
  */
 function hasRequiredMetadata(lines: string[]): boolean {
@@ -433,8 +433,10 @@ function hasRecordedExcerpt(lines: string[]): boolean {
  * against the entry count: `collectSpecEntries` also returns an entry for an
  * unknown or empty `spec-NNNN/` directory so the missing-fileset diagnostics
  * stay deterministic, so an empty `spec-0001/` plus an evidence file would
- * otherwise have flipped a brand-new project to `ready` and suppressed
- * `QFAI-DPACK-001` with it.
+ * otherwise have flipped a brand-new project to `ready`.
+ *
+ * Only the local preflight reads this. `validate` does not: the record lives
+ * under the ignored evidence directory, so a clean checkout never has it.
  */
 export async function resolveImportLiteEntrypoint(
   root: string,
@@ -453,7 +455,7 @@ export async function resolveImportLiteEntrypoint(
     // indistinguishable from "no pack at all". An unreadable discussion
     // directory (EACCES, I/O error) is an uninspectable input source, not an
     // absent one: allowing the fallback here would declare the preflight
-    // `ready` and silence `QFAI-DPACK-001` on a project nobody could check.
+    // `ready` on a project nobody could check.
     return null;
   }
   const packs = await findPacks(discussionRoot, "discussion");
@@ -474,7 +476,7 @@ const SPEC_ANCHOR_FILES = new Set(["01_spec.md", "01_user-stories.md", "spec.md"
  * The anchor has to carry something, not merely exist. Keying only on the
  * filename made `touch spec-0001/01_Spec.md` the whole cost of the fallback:
  * an empty anchor plus an evidence file flipped a project with no authored
- * spec at all to `ready` and suppressed `QFAI-DPACK-001`, which is the same
+ * spec at all to `ready`, which is the same
  * bypass the empty-directory rule above already closes one level up.
  */
 async function hasRecognizableSpecFile(dir: string): Promise<boolean> {

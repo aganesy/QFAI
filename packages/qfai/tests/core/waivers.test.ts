@@ -755,8 +755,8 @@ describe("applyWaivers", () => {
   // waivable — one emitted only at `error` is refused for that reason instead,
   // which the error-only case below covers.
   it.each([
-    ["QFAI-CONTRACT-031", "a code the emitter names through a constant"],
-    ["CONTRACT-031", "the back-compat stripped alias"],
+    ["QFAI-PROT-337", "a code the emitter names through a constant"],
+    ["PROT-337", "the back-compat stripped alias"],
     ["W-STALE-REFERENCE", "a single-segment prefixed code"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
@@ -796,6 +796,14 @@ describe("applyWaivers", () => {
     "ATDD-112",
     "QFAI-ORPHAN-100",
     "QFAI-PLAN-002",
+    // Retired with the checks that read local evidence: validate no longer
+    // reads anything under `.qfai/evidence/`.
+    "QFAI-ATDD-131",
+    "QFAI-ATDD-132",
+    "QFAI-ATDD-133",
+    "QFAI-GRILL-001",
+    "QFAI-GRILL-002",
+    "QFAI-CONTRACT-031",
   ])("reports a waiver for retired rule %s as unmatched", async (rule) => {
     const root = await createRoot();
     try {
@@ -863,7 +871,6 @@ describe("applyWaivers", () => {
     ["STORY-006", "the back-compat stripped alias"],
     ["QFAI-STORY-002", "a structure wrapper with fixed error severity"],
     ["QFAI-SPACK-102", "an open decision rejected by the story-tree wrapper"],
-    ["QFAI-ATDD-131", "a coverage matrix wrapper with fixed error severity"],
   ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
     const root = await createRoot();
     try {

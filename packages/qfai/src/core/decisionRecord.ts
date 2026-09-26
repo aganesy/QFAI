@@ -17,10 +17,8 @@
  * stable substring containment so e.g. "rejected-option re-adoption"
  * resolves to the `rejected-option` context.
  *
- * A decision record carries the operator's approval and cannot be
- * regenerated, so — unlike the regenerable stage evidence beside it —
- * `.qfai/evidence/decision/` is re-included by the managed `.gitignore`
- * block `qfai init` writes (`QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`).
+ * The record is local: `.qfai/evidence/` is ignored whole, and
+ * `qfai audit log` reads the records from this working tree.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

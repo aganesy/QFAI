@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0033-03
 import { execFile as execFileCb } from "node:child_process";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -33,7 +34,28 @@ async function withGitignore(
   }
 }
 
-describe("the managed block keeps governance records tracked", () => {
+/** Every negation an earlier managed block wrote under `.qfai/evidence/`. */
+const RETIRED_EVIDENCE_LINES = [
+  ".qfai/evidence/prototyping/*",
+  "!.qfai/evidence/",
+  "!.qfai/evidence/decision/",
+  "!.qfai/evidence/decision/**",
+  "!.qfai/evidence/prototyping/",
+  "!.qfai/evidence/prototyping/grilling.md",
+  "!.qfai/evidence/workflow/",
+  "!.qfai/evidence/change-request-*.md",
+  "!.qfai/evidence/decision-*.md",
+  "!.qfai/evidence/implement-*.md",
+  "!.qfai/evidence/sdd-*.md",
+  `!.qfai/evidence/discussion-${CANONICAL_TIMESTAMP_GLOB}.md`,
+  "!.qfai/evidence/atdd-*.md",
+  "!.qfai/evidence/import-lite.md",
+  `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
+  "!.qfai/evidence/coverage-depth-*.md",
+  "!.qfai/evidence/skeleton.md",
+];
+
+describe("the managed block ignores the evidence directory whole", () => {
   it("writes the negations after the ignore lines", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
     for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
@@ -51,16 +73,19 @@ describe("the managed block keeps governance records tracked", () => {
     }
   });
 
-  it("re-includes the directory writeDecisionRecord actually writes to", () => {
-    // `.qfai/evidence/decision/<ISO8601-stamp>.json` — git will not descend
-    // into a directory ignored by `.qfai/evidence/*`, so the directory itself
-    // must be negated before its contents.
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/**");
+  it("re-includes nothing under the evidence directory", () => {
     const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(lines.indexOf("!.qfai/evidence/decision/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decision/**"),
-    );
+    expect(lines).toContain(".qfai/evidence/*");
+    expect(lines.filter((line) => line.includes(".qfai/evidence/"))).toEqual([".qfai/evidence/*"]);
+  });
+
+  it("retires every line that re-included or re-ignored a record under it", () => {
+    // A rerun strips a retired line from the block, so an adopter's evidence
+    // becomes ignored on the next `qfai init`.
+    for (const line of RETIRED_EVIDENCE_LINES) {
+      expect(QFAI_GITIGNORE_LEGACY_LINES).toContain(line);
+      expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
+    }
   });
 
   it("retires the obsolete decision directory negations", () => {
@@ -70,113 +95,37 @@ describe("the managed block keeps governance records tracked", () => {
       expect(QFAI_GITIGNORE_BLOCK.split("\n")).not.toContain(line);
     }
   });
-
-  it("keeps the Phase: Skeleton record trackable", () => {
-    // `walking-skeleton.md` requires the enumerated `Skeleton debt` to land in
-    // the skeleton's own commit, and every later invocation reads the recorded
-    // exit status to decide whether an entrypoint is already proven. Ignored,
-    // both hold only inside the working directory that ran the phase.
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/skeleton.md");
-    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(lines.indexOf("!.qfai/evidence/skeleton.md")).toBeGreaterThan(
-      lines.indexOf(".qfai/evidence/*"),
-    );
-  });
-
-  it("re-includes the per-item evidence the completion gate anchors into", () => {
-    // Gate item 10 resolves every `test-list.md` Evidence anchor against
-    // `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
-    // for an E2E / API / Integration row. Ignored, the anchor resolves only on
-    // the machine that ran the gate.
-    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    for (const negation of ["!.qfai/evidence/implement-*.md", "!.qfai/evidence/atdd-*.md"]) {
-      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
-      expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
-    }
-  });
-
-  it("re-includes the parent directories a leaf negation cannot reach", () => {
-    // Git cannot re-include a path whose parent directory is excluded, so a
-    // pre-existing `.qfai/` or `.qfai/*` shadows the leaf negations entirely.
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/");
-    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    expect(lines.indexOf("!.qfai/")).toBeLessThan(lines.indexOf("!.qfai/evidence/"));
-    expect(lines.indexOf("!.qfai/evidence/")).toBeLessThan(
-      lines.indexOf("!.qfai/evidence/decision/"),
-    );
-  });
-
-  it("re-includes the implementation and ATDD evidence records", () => {
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/implement-*.md");
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/atdd-*.md");
-  });
-
-  it("re-includes the import-lite record, the only input source on that route", () => {
-    // A spec set imported without a discussion pack has no pack to commit, so
-    // this file is the whole of its provenance. Ignored, the fresh clone CI
-    // builds from has neither, and `QFAI-DPACK-001` fires on a route the
-    // skill documents as supported.
-    //
-    // Two entries, and the stamped one spells the stamp out to its full
-    // width. The check accepts no other width — it rejects the name outright
-    // rather than demoting it — so anything wider commits a file nothing
-    // reads. The width comes from the constant the check matches on, not from
-    // a literal typed here, because a copy is what lets the two drift.
-    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    for (const negation of [
-      "!.qfai/evidence/import-lite.md",
-      `!.qfai/evidence/import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
-    ]) {
-      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
-      expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
-    }
-    expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).not.toContain("!.qfai/evidence/import-lite*.md");
-  });
 });
 
 describe("git honours the managed block against a broad pre-existing rule", () => {
-  /** Files the managed block must keep ignored, whatever the pre-existing rule. */
-  const stillIgnored = [
+  /** Local records the managed block keeps out of every commit. */
+  const ignored = [
+    ".qfai/evidence/decision/2026-01-01T00-00-00.000Z.json",
+    ".qfai/evidence/implement-BF-0001.md",
+    ".qfai/evidence/atdd-BF-0001.md",
+    ".qfai/evidence/sdd-BF-0001.md",
+    ".qfai/evidence/discussion-20260101000000000.md",
+    ".qfai/evidence/import-lite-20260101000000000.md",
+    ".qfai/evidence/skeleton.md",
+    ".qfai/evidence/workflow/run-20260101000000000/summary.json",
+    ".qfai/evidence/prototyping/grilling.md",
     ".qfai/evidence/prototyping/mutation-log.jsonl",
     ".qfai/report/validate.json",
-    // The negation is narrow on purpose: the stage evidence no check reads
-    // stays a regenerable log, and re-including it was never the point.
-    ".qfai/evidence/verify-spec-0001.md",
-    // Hyphenated import-lite names that are not canonical stamps: one that is
-    // not digits at all, and one that is digits of the wrong width. The check
-    // rejects both outright rather than reading them as records, so committing
-    // either would put a file in the repository nothing reads.
-    ".qfai/evidence/import-lite-draft.md",
-    ".qfai/evidence/import-lite-2026.md",
-    // The same two shapes for a discussion run's record. The grilling check
-    // reads `discussion-` plus exactly the canonical stamp width, so a draft or
-    // a wrong-width backup names a run nothing resolves.
-    ".qfai/evidence/discussion-draft.md",
-    ".qfai/evidence/discussion-2026.md",
   ];
-  /** Governance records that must stay reachable. */
-  const stillTracked = [
-    ".qfai/evidence/decision/2026-01-01T00-00-00.000Z.json",
-    // The two files gate item 10 names, and the only ones it resolves an
-    // Evidence anchor against.
-    ".qfai/evidence/implement-spec-0001.md",
-    ".qfai/evidence/atdd-spec-0001.md",
-    // A spec's evidence carries the grilling trace a validator rule reads, so
-    // it is an input to a check rather than a log of one. Left ignored, the
-    // rule finds nothing on a fresh clone and reports the same clean result it
-    // reports for a run that grilled every phase.
-    ".qfai/evidence/sdd-spec-0001.md",
-    // A discussion run's record, which the same rule reads for the same reason,
-    // named with the canonical run stamp the check and the pack tree share.
-    ".qfai/evidence/discussion-20260101000000000.md",
-    // The stand-in for a discussion pack on the imported-spec-set route, named
-    // with the canonical 17-digit run stamp, and the template-named copy the
-    // check also accepts.
-    ".qfai/evidence/import-lite-20260101000000000.md",
-    ".qfai/evidence/import-lite.md",
-    ".qfai/evidence/skeleton.md",
-  ];
+  /** Records under `.qfai/` that stay in version control. */
+  const tracked = [".qfai/install-provenance.json", ".qfai/assistant/.assets.lock.json"];
+
+  async function isIgnored(root: string, relativePath: string): Promise<boolean> {
+    try {
+      await execFile("git", ["check-ignore", "-q", "--", relativePath], { cwd: root });
+      return true;
+    } catch (error: unknown) {
+      if (typeof error === "object" && error !== null && Reflect.get(error, "code") === 1) {
+        return false;
+      }
+      throw error;
+    }
+  }
 
   // This repository uses its own root `.qfai/` as an installed QFAI tree.
   // Evidence there is a local work area, so nothing under it may reach a commit.
@@ -194,26 +143,9 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     }
   });
 
-  async function isIgnored(root: string, relativePath: string): Promise<boolean> {
-    try {
-      await execFile("git", ["check-ignore", "-q", "--", relativePath], { cwd: root });
-      return true;
-    } catch (error: unknown) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        (error as { code?: number }).code === 1
-      ) {
-        return false;
-      }
-      throw error;
-    }
-  }
-
-  // The three shapes an adopting project's own `.gitignore` may already carry.
-  for (const preExisting of [".qfai/", ".qfai/*", ".qfai/evidence/"]) {
-    it(`keeps the decision record trackable under a pre-existing \`${preExisting}\``, async () => {
+  // The shapes an adopting project's own `.gitignore` may already carry, and none.
+  for (const preExisting of ["", ".qfai/", ".qfai/*", ".qfai/evidence/"]) {
+    it(`keeps evidence local under a pre-existing \`${preExisting}\``, async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gitignore-git-"));
       try {
         await execFile("git", ["init"], { cwd: root });
@@ -222,21 +154,17 @@ describe("git honours the managed block against a broad pre-existing rule", () =
           `node_modules/\n${preExisting}\n${QFAI_GITIGNORE_BLOCK}`,
           "utf-8",
         );
-        for (const relativePath of [...stillIgnored, ...stillTracked]) {
+        for (const relativePath of [...ignored, ...tracked]) {
           await mkdir(path.join(root, path.dirname(relativePath)), { recursive: true });
           await writeFile(path.join(root, relativePath), "{}\n", "utf-8");
         }
 
-        for (const relativePath of stillTracked) {
+        for (const relativePath of ignored) {
+          expect(await isIgnored(root, relativePath), `${relativePath} must be ignored`).toBe(true);
+        }
+        for (const relativePath of tracked) {
           expect(await isIgnored(root, relativePath), `${relativePath} must be trackable`).toBe(
             false,
-          );
-        }
-        // The parent re-inclusions must not widen the block: generated evidence
-        // and reports stay ignored.
-        for (const relativePath of stillIgnored) {
-          expect(await isIgnored(root, relativePath), `${relativePath} must stay ignored`).toBe(
-            true,
           );
         }
       } finally {
@@ -246,7 +174,7 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   }
 });
 
-describe("QFAI-REVIEW-001 does not punish tracking the audit trail", () => {
+describe("QFAI-REVIEW-001 does not punish a project's own ignore choices", () => {
   it("passes on a marker-only block with every ignore line removed", async () => {
     await withGitignore(`${QFAI_GITIGNORE_MARKER}\nnode_modules/\n`, (issues) => {
       expect(issues.some((entry) => entry.code === "QFAI-REVIEW-001")).toBe(false);

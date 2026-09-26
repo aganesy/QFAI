@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,7 +8,17 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateSddDesignContractReadiness } from "../../src/core/validators/designContractReadiness.js";
 
-type Seed = { prototypingEvidence?: boolean; designLock?: boolean };
+// Prototyping's records stay in the working tree that ran it, so a committed
+// design file with no record beside it is what every fresh checkout looks like.
+type Seed = { prototypingEvidence?: boolean; designLock?: boolean; committed?: boolean };
+
+function git(root: string, args: string[]): void {
+  const result = spawnSync("git", ["-c", "user.name=qfai", "-c", "user.email=q@x", ...args], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+}
 
 async function withProject(
   seed: Seed,
@@ -39,6 +50,13 @@ async function withProject(
     }
     if (seed.designLock) {
       await writeFile(path.join(designDir, "DESIGN.md.lock.yaml"), "sha256: abc\n", "utf-8");
+    }
+    if (seed.committed !== undefined) {
+      git(root, ["init", "-q"]);
+      if (seed.committed) {
+        git(root, ["add", "-A"]);
+        git(root, ["commit", "-qm", "design"]);
+      }
     }
 
     assertion(
@@ -75,6 +93,18 @@ describe("QFAI-DCON-019 keys on prototyping state, not file existence", () => {
     await withProject({}, (issues) => {
       expect(dcon019(issues)).toHaveLength(2);
       expect(dcon019(issues)[0]?.message).toContain("No prototyping evidence was found");
+    });
+  });
+
+  it("is silent on committed files when prototyping has not run in this working tree", async () => {
+    await withProject({ committed: true }, (issues) => {
+      expect(dcon019(issues)).toEqual([]);
+    });
+  });
+
+  it("reports files this working tree authored while prototyping has not run here", async () => {
+    await withProject({ committed: false }, (issues) => {
+      expect(dcon019(issues)).toHaveLength(2);
     });
   });
 

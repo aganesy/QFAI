@@ -74,8 +74,7 @@ describe("gitignorePatternMatches", () => {
 describe("negationSamplePath", () => {
   it.each([
     ["!coverage-depth-*.md", "coverage-depth-sample.md"],
-    ["!implement-*.md", "implement-spec-0001.md"],
-    ["!atdd-*.md", "atdd-spec-0001.md"],
+    ["!implement-*.md", "implement-sample.md"],
     ["!decisions/", "decisions/sample"],
     ["!decisions/**", "decisions/sample/leaf"],
     ["!.qfai/evidence/decision-*.md", ".qfai/evidence/decision-sample.md"],

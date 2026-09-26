@@ -25,6 +25,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { copyTemplateTree } from "../../src/cli/lib/fs.js";
 import { captureStdout } from "../helpers/stdout.js";
 import {
+  isPathIgnored,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
@@ -2757,15 +2758,9 @@ describe("qfai init", () => {
     }
   });
 
-  // The re-inclusion of `.qfai/evidence/prototyping/` exposes every descendant
-  // with no later rule of its own, so a block that hid that directory has to
-  // gain the line that re-ignores its contents. What counts as having hidden it
-  // is the whole question: a project may write the evidence tree, or the
-  // directory itself when it tracks the rest of its audit trail.
-  // The anchored spellings are in the list because a leading slash anchors a
-  // pattern to the directory its `.gitignore` sits in, which for the managed
-  // block is the project root — the same set, written the way a contributor
-  // who knows the syntax writes it.
+  // Nothing under the evidence directory is re-included, so whichever ignore a
+  // block carries over that tree keeps the prototype captures out of a commit,
+  // the anchored spellings included.
   it.each([
     ".qfai/evidence/*",
     ".qfai/evidence/prototyping/",
@@ -2787,15 +2782,14 @@ describe("qfai init", () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      // Asserted by position, because git applies the last matching pattern:
-      // the contents ignore has to land above the re-inclusion of the
-      // directory and of the one record inside it.
       const lines = (await readFile(path.join(root, ".gitignore"), "utf-8")).split("\n");
-      const contents = lines.indexOf(".qfai/evidence/prototyping/*");
-      expect(contents, "the contents ignore is missing").toBeGreaterThan(-1);
-      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/"));
-      expect(contents).toBeLessThan(lines.indexOf("!.qfai/evidence/prototyping/grilling.md"));
-      expect(lines.filter((line) => line === ".qfai/evidence/prototyping/*")).toHaveLength(1);
+      expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
+      for (const sample of [
+        ".qfai/evidence/prototyping/iter-00/home.png",
+        ".qfai/evidence/prototyping/grilling.md",
+      ]) {
+        expect(isPathIgnored(lines, sample), sample).toBe(true);
+      }
     } finally {
       await removeTempTree(root);
     }

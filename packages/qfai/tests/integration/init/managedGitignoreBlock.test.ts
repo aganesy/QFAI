@@ -1,5 +1,6 @@
 /**
- * Integration: the managed `.gitignore` block ignores run state and keeps run evidence tracked.
+ * Integration: the managed `.gitignore` block ignores run state and keeps the evidence directory
+ * local, run records included.
  *
  * `git check-ignore` is the oracle. The block's single source is `core/gitignore.ts`, so no case
  * counts its lines.
@@ -25,16 +26,16 @@ const occurrences = (text: string, line: string): number =>
 const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
-function expectRunStateIgnored(root: string): void {
+function expectRunStateAndEvidenceIgnored(root: string): void {
   expect(isIgnored(root, RUN_PATH), RUN_PATH).toBe(true);
-  expect(isIgnored(root, EVIDENCE_PATH), EVIDENCE_PATH).toBe(false);
+  expect(isIgnored(root, EVIDENCE_PATH), EVIDENCE_PATH).toBe(true);
 }
 
 describe("the managed gitignore block", () => {
-  it("Fresh init ignores run state and keeps run evidence tracked", async () => {
+  it("Fresh init ignores run state and the run's records", async () => {
     await withEmptyRepo(async (root) => {
       await initQuietly(root);
-      expectRunStateIgnored(root);
+      expectRunStateAndEvidenceIgnored(root);
       expect(occurrences(await readGitignore(root), QFAI_GITIGNORE_MARKER)).toBe(1);
     });
   });
@@ -45,8 +46,8 @@ describe("the managed gitignore block", () => {
       const upgraded = await readGitignore(root);
       expect(occurrences(upgraded, QFAI_GITIGNORE_MARKER)).toBe(1);
       expect(occurrences(upgraded, ".qfai/run/")).toBe(1);
-      expect(occurrences(upgraded, "!.qfai/evidence/workflow/")).toBe(1);
-      expectRunStateIgnored(root);
+      expect(upgraded).not.toContain("!.qfai/evidence/");
+      expectRunStateAndEvidenceIgnored(root);
 
       await initQuietly(root);
       expect(await readGitignore(root)).toBe(upgraded);
@@ -63,7 +64,8 @@ describe("the managed gitignore block", () => {
       expect(lines.filter((line) => line === QFAI_GITIGNORE_MARKER)).toHaveLength(1);
       const duplicated = lines.filter((line, index) => lines.indexOf(line) !== index);
       expect(duplicated, "no block line is duplicated").toEqual([]);
-      expectRunStateIgnored(root);
+      expect(lines.filter((line) => line.startsWith("!.qfai/evidence/"))).toEqual([]);
+      expectRunStateAndEvidenceIgnored(root);
     });
   });
 });

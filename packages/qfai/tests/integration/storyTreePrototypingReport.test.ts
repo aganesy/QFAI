@@ -64,7 +64,8 @@ afterEach(async () => {
 
 describe("story-tree prototyping report", () => {
   // QFAI:AC-0001-0067-02
-  it("shows the no-pack state and rerun guidance when evidence is absent", async () => {
+  // QFAI:EX-0001-0067-04
+  it("shows the no-pack state as prototyping not run here when evidence is absent", async () => {
     const root = await sandbox();
     await seedReportInput(root, validation());
     expect(await runReport({ root, format: "md", failOn: "never" })).toBe(0);
@@ -76,7 +77,10 @@ describe("story-tree prototyping report", () => {
     expect(markdown).toContain("## Prototyping");
     expect(markdown).toContain("- Status: no-pack");
     expect(markdown).toContain("### Calibration\n\n- Pack: not available");
-    expect(markdown).toContain("/qfai-prototyping");
+    expect(markdown).toContain(
+      "- Prototyping has not run in this working tree. Run /qfai-prototyping here.",
+    );
+    expect(markdown).not.toContain("missing evidence");
     expect(written).toContain("- Status: no-pack");
   });
 

@@ -8,6 +8,7 @@ import { hashDesignMd, isUnreplacedDesignMdSample, parseDesignMd } from "../desi
 import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
 import { readUiContractScreenContracts } from "../contracts/screenContracts.js";
+import { uncommittedPaths } from "../gitChanges.js";
 import { readUiContractInventory } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -377,13 +378,16 @@ async function validateRootDesignMdAndLock(
 }
 
 /**
- * True when `/qfai-prototyping` has demonstrably run in this project.
+ * True when `/qfai-prototyping` has demonstrably run in this working tree.
  *
  * `QFAI-DCON-019` guards against `/qfai-sdd` authoring prototyping outputs
  * early. Keyed on file existence alone it also fired on the same files after
  * prototyping legitimately produced them — where their *absence* is itself a
  * `QFAI-DCON-001` error — making the SDD stop condition permanently
  * unpassable for any UI-bearing project.
+ *
+ * The markers are local records under the ignored evidence directory, so their
+ * absence says only that prototyping has not run here.
  */
 async function hasPrototypingRun(root: string): Promise<boolean> {
   // Only artifacts /qfai-prototyping itself writes count. `DESIGN.md.lock.yaml`
@@ -415,9 +419,20 @@ async function validateNoPrematurePrototypingContracts(
   }
 
   const designDir = path.join(root, config.paths.contractsDir, "design");
+  // Only a file this working tree authored is judged against this working
+  // tree's records. A committed file may come from prototyping run elsewhere,
+  // and that run's records never reach a commit. Outside a git repository
+  // every file counts as authored here.
+  // SIMPLIFIED: compares paths relative to `root`, which git reports relative to
+  // the repository root. Lift when: a project whose root is below its
+  // repository root runs `/qfai-sdd`; this check then reports nothing there.
+  const uncommitted = uncommittedPaths(root);
   const issues: Issue[] = [];
   for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
     const filePath = path.join(designDir, fileName);
+    if (uncommitted !== null && !uncommitted.includes(toPosixRelative(root, filePath))) {
+      continue;
+    }
     try {
       await readFile(filePath, "utf-8");
       issues.push(
