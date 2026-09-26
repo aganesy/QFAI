@@ -661,3 +661,31 @@
 - Given a server runner whose teardown rejects with `Error: port 3000 still bound`,
 - When `iterate --auto-serve` completes a cycle that would otherwise exit 0,
 - Then stdout carries `qfai prototyping iterate --auto-serve: teardown failed (Error: port 3000 still bound)`, and iterate exits 0.
+
+## EX-0012-0192: Entry Check of `/qfai-prototyping` Under a Run
+
+- BR-Ref: BR-0012-0136
+- Given workflow mode `active`,
+- When `/qfai-prototyping` is picked by the host for free text with no work order, and later handed a valid work order,
+- Then the first edits nothing and passes the request to `qfai-run`, and the second does only that work order. `SKILL.md` has one line citing `references/orchestrated-mode.md`.
+
+## EX-0012-0193: The Operations Table of `/qfai-prototyping`
+
+- BR-Ref: BR-0012-0137
+- Given `qfai-prototyping/references/orchestrated-mode.md`,
+- When the first table under `## Operations` is read,
+- Then its `Operation` column holds exactly `existing-runtime-contract`.
+
+## EX-0012-0194: A Prototype Work Order on a UI-Bearing Target
+
+- BR-Ref: BR-0012-0138
+- Given a `prototype` work order whose `target` names spec A, in a project where spec A and spec B are both UI-bearing,
+- When `/qfai-prototyping` runs under it,
+- Then it settles the one visual decision the plan needs for spec A within the existing `DESIGN.md` and UI contracts, touches nothing of spec B, and creates no contract. A standalone `/qfai-prototyping` in the same project still resolves both specs.
+
+## EX-0012-0195: A Prototype Work Order on a Target With No UI Surface
+
+- BR-Ref: BR-0012-0138
+- Given a `prototype` work order whose `target` names a spec that declares no UI surface,
+- When `/qfai-prototyping` runs under it,
+- Then it writes no `DESIGN.md`, no UI contract and no surface declaration, and returns outcome `blocked` with one `debts` entry: its `cause` names the missing UI surface, its `owningSpec` is the target spec, and its `resolvingOwner` is `operator`.

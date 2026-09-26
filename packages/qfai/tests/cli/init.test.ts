@@ -34,7 +34,6 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
-import { WORKLOG_ENTRY_STATUSES } from "../../src/core/paths/assistantPaths.js";
 import {
   INTEGRATION_SURFACE_DIRS,
   validateIntegrationSurface,
@@ -3577,187 +3576,6 @@ describe("qfai init", () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): project-root .qfai/steering/ seed
-  it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (.gitkeep + _templates/entry.md)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      // No README: the surface's own contract is
-      // `.qfai/assistant/catalog/worklog-entry.schema.md`.
-      await expect(
-        readFile(path.join(root, ".qfai", "steering", "README.md"), "utf-8"),
-      ).rejects.toThrow();
-      const gitkeepStat = await lstat(path.join(root, ".qfai", "steering", ".gitkeep"));
-      expect(gitkeepStat.isFile()).toBe(true);
-      const tplBody = await readFile(
-        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
-        "utf-8",
-      );
-      expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
-      expect(tplBody).toContain("kind: decision");
-      expect(tplBody).toMatch(/promote-to:/);
-      // The status enum is derived from the same SSOT the validator reads
-      // (WORKLOG_ENTRY_STATUSES), so seed and validator cannot drift.
-      expect(tplBody).toContain(`enum: ${WORKLOG_ENTRY_STATUSES.join(" | ")}`);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // The seeded template's frontmatter survives a formatter, so the drift notice keeps meaning
-  // what it says.
-  //
-  // The seed is create-only and re-init compares it byte for byte against what this release
-  // generates. Column-aligned trailing comments are what breaks that pairing: Prettier collapses
-  // a run of spaces before a YAML `#`, so the first `prettier --write` over an adopter's tree
-  // rewrites a file the adopter never touched — and from then on **every** re-init reports
-  // `_templates/entry.md differs from the seed this qfai release generates`. A notice that fires
-  // forever on a file nobody edited is one a reader learns to skip, which costs the notice its
-  // one job: saying that a real seed change is waiting.
-  //
-  // Asserted as the PROPERTY rather than by running Prettier. Prettier is the repository's
-  // formatter and not this package's dependency; a test reaching up the workspace for it would
-  // couple the package suite to the monorepo layout for a claim the property states directly.
-  // The second half is what keeps the first honest — deleting every comment also satisfies
-  // "no run of spaces", and would pass a row that only forbade one.
-  it("TC-0003-0022 (TDD-0022): seeds a steering template whose frontmatter a formatter leaves alone", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-fmt-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const body = await readFile(
-        path.join(root, ".qfai", "steering", "_templates", "entry.md"),
-        "utf-8",
-      );
-      const lines = body.split(/\r?\n/);
-      const closing = lines.indexOf("---", 1);
-      expect(closing, "the seeded template must open with a frontmatter block").toBeGreaterThan(0);
-      const frontmatter = lines.slice(1, closing);
-
-      expect(
-        frontmatter.filter((line) => / {2,}/.test(line)),
-        "a run of spaces in the frontmatter is column alignment, and Prettier collapses it — " +
-          "which makes every later re-init report seed drift on a file nobody edited",
-      ).toEqual([]);
-
-      // Non-vacuity, both halves: the block was read, and it still carries the guidance the
-      // alignment existed to lay out.
-      expect(
-        frontmatter.length,
-        "the frontmatter must have lines for this to be about",
-      ).toBeGreaterThan(0);
-      expect(
-        frontmatter.filter((line) => line.includes(" # required;")).length,
-        "every field keeps its trailing `# required;` note: dropping the comments would satisfy " +
-          "the spacing claim above while removing what it protects",
-      ).toBe(frontmatter.length);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init preserves user edits in .qfai/steering/
-  it("TC-0003-0022 (TDD-0022): re-init does not overwrite user edits in .qfai/steering/_templates/entry.md", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022b-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      const userEdit = "---\nid: my-own-shape\n---\n";
-      await writeFile(templatePath, userEdit, "utf-8");
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const after = await readFile(templatePath, "utf-8");
-      expect(after).toBe(userEdit);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init reports a stale steering seed
-  it("TC-0003-0022 (TDD-0022): re-init reports .qfai/steering/ seed drift instead of skipping silently", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022c-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-
-      // An untouched tree is already current: the seed files appear in the
-      // skipped list and must not draw a drift notice.
-      const cleanRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-      expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
-
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
-
-      const staleRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(staleRun).toContain(
-        ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
-      );
-      expect(staleRun).toMatch(
-        /first differing line \d+; on disk \d+ lines, latest seed \d+ lines/,
-      );
-      expect(staleRun).toContain("create-only");
-      // The notice never implies a rewrite happened.
-      expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): CRLF is not drift
-  it("TC-0003-0022 (TDD-0022): re-init does not report drift for a CRLF copy of an unedited seed", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      // What core.autocrlf=true (or a Windows editor) leaves behind: the same
-      // body, every LF rewritten as CRLF.
-      const body = await readFile(templatePath, "utf-8");
-      await writeFile(templatePath, body.replace(/\n/g, "\r\n"), "utf-8");
-
-      const crlfRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
-      expect(crlfRun).not.toContain("could not be compared");
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
-  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): an uncomparable seed path is reported
-  it("TC-0003-0022 (TDD-0022): re-init reports a steering seed path it cannot compare", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022e-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      // A directory where the seed file belongs: occupied, so create-only skips
-      // it, but there is no body to compare — that must not read as "current".
-      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
-      // `removeTempTree` rather than a bare `rm`: this file routes every removal
-      // through the helper, and its `force` / retry contract is what is wanted
-      // here too — the seed is a regular file, so the recursive flag is inert.
-      await removeTempTree(templatePath);
-      await mkdir(templatePath, { recursive: true });
-
-      const blockedRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      });
-
-      expect(blockedRun).toContain(
-        ".qfai/steering/_templates/entry.md could not be compared against the seed this qfai release generates",
-      );
-      expect(blockedRun).toContain("whether it is current is unknown");
-      // Only the occupied path is reported, and the run still succeeds.
-      expect(blockedRun).not.toContain(".qfai/steering/.gitkeep could not be compared");
-      const dirStat = await lstat(templatePath);
-      expect(dirStat.isDirectory()).toBe(true);
-    } finally {
-      await removeTempTree(root);
-    }
-  });
-
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
@@ -4117,7 +3935,6 @@ describe("qfai init", () => {
     );
     expect(initSrc).toMatch(/from "\.\.\/\.\.\/core\/paths\/assistantPaths\.js"/);
     expect(initSrc).toContain("joinAssistantLayer");
-    expect(initSrc).toContain("joinProjectSteering");
     expect(initSrc).toContain("joinMigrationMemo");
     // Layer path strings in path-construction position (e.g. path.join with
     // literal "constitution"/"manifest"/"catalog"/"process") should not

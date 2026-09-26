@@ -874,3 +874,53 @@ Three kinds of work would move the `❌` cells, and they are different in kind:
 
 `BR-0003-0027` × Conditional is the one `❌` no test can raise: it governs how a change to the guard's
 pattern set is made, and is held by review.
+
+## Rows added by the work-log surface removal
+
+`CR-20260925-0010` withdrew every row this section scored, with its ledger rows and its tests:
+the test cases this branch numbered `TC-0003-0059` … `TC-0003-0061`, carried by `TDD-0094` …
+`TDD-0099`, and the business rules they covered, numbered `BR-0003-0049` and `BR-0003-0050`.
+
+The first test case, the first business rule and the first ledger row never merged under those
+numbers. Main assigned `TC-0003-0059`, `BR-0003-0049` and `TDD-0094` to the closed-legacy-window
+statement in the generated Copilot text, and the matrix above scores them. This section scores no
+row.
+
+**Relation to the matrix above.** Every other obligation of the pack is scored above, by a run that
+credits only a case that runs. Its totals are the ones that run's stage evidence restates, so they
+are left as computed. Two of its rows score obligations the work-log removal deleted, `TC-0003-0022`
+and `BR-0003-0016` (ledger row `TDD-0022` is tombstoned); the next full recompute drops them.
+
+### Totals for these rows
+
+**✅ 0 / ⚠️ 0 / ❌ 0**, `n/a` 0, across 0 scored cells.
+
+## Shared-artifact re-verify
+
+The work-log removal edited `packages/qfai/tests/integration/initSpec0003.test.ts`, which the
+`done` row `spec-0003/TDD-0001` names. No live row of this change carries the edit: the
+spec-0003 row it belonged to, `TDD-0022`, is deleted, and this change's `TDD-0095` … `TDD-0099`
+are withdrawn by `CR-20260925-0010`, so the record is stage-level. The completion gate reads
+it only once this file's `## Final status` names the stage review pack and a seal that still
+recomputes. That section and its stage review do not exist yet.
+
+### spec-0003/TDD-0001
+
+- Evidence file: .qfai/evidence/atdd-spec-0003.md
+- Revision: 03762f3cfe0d4233beafb427462d58116ad8b5de
+- Selector: TC-0003-0001: Empty directory initialization
+- Re-verify command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose -t "TC-0003-0001: Empty directory initialization|TC-0003-0025: assistantPaths\.ts SSOT module|TC-0003-0059 \(TDD-0094\): generated Copilot instructions state the closed legacy window|TC-0012-0434: Tailwind contract convergence within 3 cycles|TC-0012-0471: --emit-skeletons cross-spec frozenSurfaceUnion coverage|TC-0012-0472: opt-in default \+ --skeleton-mode full escalation|TC-0012-0479: mutation-log appends a JSONL entry per destructive iter-NN mutation" tests/integration/initCopilotLegacyWindow.test.ts tests/integration/initSpec0003.test.ts tests/integration/prototyping/emitSkeletonsCoverage.test.ts tests/integration/prototyping/mutationLog.test.ts tests/integration/prototyping/tailwindContractConvergence.test.ts, on the clean clone at that revision (batch 13 of the cross-spec re-run, recorded in tmp/xspec/selector-results2.json).
+- Re-verify result: PASS — exit 0; Test Files 5 passed (5); Tests 29 passed | 21 skipped (50). The row's one case, "writes .qfai/assistant/ and qfai.config.yaml, none of the six artifact directories, and a link to every skill in each of the four skills/ directories", is named as passed; captured in tmp/xspec/logs2/selector-13.log.
+- Proof command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose "tests/integration/initSpec0003.test.ts" "-t" "TC-0003-0001: Empty directory initialization", with the empty file packages/qfai/assets/init/.qfai/specs/.gitkeep created, the mutation the row's Round 1 Falsifiability command records. Run on the clean clone at 25d42885388fd1ab6a428adc7a3b8132c7acdb89; the test file (sha256 58827ca29a39ccbf0a858b6988031359f39a14a1c22c19fea59bc82de8f4ec09) and the mutated path (absent) are the same at 03762f3cfe0d4233beafb427462d58116ad8b5de.
+- Proof result: FAIL — exit 1; Tests 1 failed | 22 skipped (23). AssertionError at tests/integration/initSpec0003.test.ts:74:72, inside the row's own case: "init wrote an artifact directory under .qfai/: expected [ 'specs' ] to deeply equal []", the recorded failure. `qa-gatekeeper` passed the observation; captured in tmp/xspec/logs/0003-TDD-0001-artifact-dir-shipped-mutant.log.
+- Restored GREEN command: cd tmp/cross-spec-mutations-qa/repo/packages/qfai && node node_modules/vitest/vitest.mjs run --reporter=verbose "tests/integration/initSpec0003.test.ts" "-t" "TC-0003-0001: Empty directory initialization", after the created file and directory were removed and the tree was clean again.
+- Restored GREEN result: PASS — exit 0; Tests 1 passed | 22 skipped (23); captured in tmp/xspec/logs/0003-TDD-0001-artifact-dir-shipped-green.log.
+- RED test manifest:
+
+```text
+packages/qfai/tests/helpers/stdout.ts
+packages/qfai/tests/helpers/tempTree.ts
+packages/qfai/tests/integration/initSpec0003.test.ts
+```
+
+- RED test hash: 67095c7c430df9bbc07c22d874566e9c8f2dfe399172747e07c60569474f784c

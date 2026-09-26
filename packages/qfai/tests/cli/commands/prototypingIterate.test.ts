@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -648,6 +649,33 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(protoBody.designMd.path).toBe("DESIGN.md");
     expect(protoBody.designMd.sha256).toBe(hashDesignMd(CANONICAL_DESIGN_MD));
     expect(protoBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  // QFAI:SPEC-0012:TC-0012-0326
+  it("TC-0012-0326: cycle 0 records the DESIGN.md digest that the lock carries", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const designMd = await readFile(path.join(root, "DESIGN.md"), "utf-8");
+    const digest = createHash("sha256").update(designMd, "utf8").digest("hex");
+    const lockDir = path.join(root, ".qfai/contracts/design");
+    await mkdir(lockDir, { recursive: true });
+    await writeFile(
+      path.join(lockDir, "DESIGN.md.lock.yaml"),
+      `designMdPath: "DESIGN.md"\ndesignMdSha256: "${digest}"\n`,
+      "utf-8",
+    );
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+    });
+
+    expect(exit).toBe(0);
+    const recorded: unknown = JSON.parse(
+      await readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    );
+    expect(recorded).toMatchObject({ designMd: { path: "DESIGN.md", sha256: digest } });
   });
 
   it("TC-3.5.2: missing DESIGN.md → exit 2 with message", async () => {

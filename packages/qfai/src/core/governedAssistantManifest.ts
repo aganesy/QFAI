@@ -24,7 +24,6 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "catalog/test-layers.md",
   "catalog/ui-definition-protocol.md",
   "catalog/ui-procurement.md",
-  "catalog/worklog-entry.schema.md",
   "constitution/agent-selection.md",
   "constitution/change-classification.md",
   "constitution/communication.md",
@@ -39,4 +38,9 @@ export const SHIPPED_GOVERNED_ASSISTANT_FILES: readonly string[] = [
   "constitution/shared-skill-operating-baseline.md",
   "constitution/thinking.md",
   "constitution/workflow.md",
+  "process/workflows/bounded-change.yml",
+  "process/workflows/bugfix.yml",
+  "process/workflows/direct.yml",
+  "process/workflows/discovery.yml",
+  "process/workflows/feature.yml",
 ];

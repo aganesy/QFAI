@@ -474,7 +474,7 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain(
-      'description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."',
+      'description: "Use when invoked by name or handed a QFAI work order. Run and document quality gates (repo + qfai validate/report), fix until PASS."',
     );
     expect(content).toContain("Fix until PASS.");
     expect(content).toContain("If failing, produce an actionable fix list");
@@ -1818,11 +1818,12 @@ describe("assets guardrails", () => {
 
   it("keeps package README aligned with discussion completion contract", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
-    const readme = await readFile(readmePath, "utf-8");
+    // Line breaks read as spaces: the README wraps a sentence the skill keeps on one line.
+    const readme = (await readFile(readmePath, "utf-8")).replace(/\s*\n\s*/g, " ");
 
     // W-3: README must express canonical discussion completion contract
     expect(readme).toContain(
-      "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.",
+      "Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.",
     );
     expect(readme).toContain(
       "`qfai init` does not seed `.qfai` workflow artifacts such as specs, discussions,",
@@ -1990,6 +1991,7 @@ describe("assets guardrails", () => {
     expect(content).toContain("prototyping.yaml");
   });
 
+  // QFAI:SPEC-0002:TC-0002-0011
   it("ensures qfai-discussion skill and artifact rules use canonical pack wording", async () => {
     const skillPath = path.join(
       templateQfaiDir,
@@ -2016,8 +2018,9 @@ describe("assets guardrails", () => {
 
     // All three must express the canonical completion contract wording
     const canonicalPhrase =
-      "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.";
-    expect(packageReadme).toContain(canonicalPhrase);
+      "Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it.";
+    // The README wraps the phrase, so its line breaks read as spaces.
+    expect(packageReadme.replace(/\s*\n\s*/g, " ")).toContain(canonicalPhrase);
     expect(rules).toContain(canonicalPhrase);
     expect(skill).toContain(canonicalPhrase);
   });
@@ -2779,7 +2782,10 @@ describe("assets guardrails", () => {
     );
     const content = await readFile(rulesPath, "utf-8");
 
-    expect(content).toMatch(/ui-bearing discussion pack/i);
+    expect(content).toMatch(
+      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
+    );
+    expect(content).toMatch(/cli-only packs omit it/i);
     expect(content).toMatch(/ui_bearing:\s*false[\s\S]*typically omit `prototyping\.yaml`/i);
     expect(content).toContain("prototyping.yaml");
   });
@@ -2842,7 +2848,9 @@ describe("assets guardrails", () => {
     const content = await readFile(skillPath, "utf-8");
 
     expect(content).toContain("prototyping.yaml");
-    expect(content).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
+    expect(content).toMatch(
+      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
+    );
     expect(content).toMatch(/non-ui discussion packs typically omit it/i);
   });
 
@@ -2974,7 +2982,9 @@ describe("assets guardrails", () => {
     expect(readme).toMatch(
       /ui-bearing.*may include.*prototyping\.yaml|optional recommendation artifact/i,
     );
-    expect(skill).toMatch(/ui-bearing discussion packs may include `prototyping\.yaml`/i);
+    expect(skill).toMatch(
+      /discussion packs with a visual prototyping surface \(`web`, `mobile`, `desktop`, `mixed`\) may include `prototyping\.yaml`/i,
+    );
   });
 
   it("discussion artifact rules declare current non-blocking behavior for prototyping.yaml", async () => {

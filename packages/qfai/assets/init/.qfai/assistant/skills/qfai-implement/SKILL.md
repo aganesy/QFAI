@@ -1,7 +1,7 @@
 ---
 name: qfai-implement
 title: QFAI Implement (Unified TDD Micro-cycle)
-description: "Unified implementation skill that orchestrates the full TDD micro-cycle (Red/Green/Refactor) one test at a time using test-list.md as the execution ledger."
+description: "Use when invoked by name or handed a QFAI work order. Implements a spec's ledger rows test-first, one row at a time, with tdd/test-list.md as the execution ledger."
 argument-hint: "[spec-id]"
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, TodoWrite, Task, Agent]
 roles:
@@ -31,6 +31,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-implement - Unified TDD Micro-cycle
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## Preconditions
 
@@ -70,13 +72,9 @@ When unsure, read inputs in this order:
 
 ## Grilling (MANDATORY)
 
-Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions
-this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is
-restated here.
+Article IX of `.qfai/assistant/constitution/constitution.md` owns both sessions this stage runs, and `.agents/rules/grilling.md` owns the method. Neither is restated here.
 
-**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of
-session): a critical decision goes to the user at once, and after two rounds
-every other takes the griller's recommendation, recorded as an `agents` row.
+**Both are delegated sessions** (`.agents/rules/grilling.md` § Two kinds of session): a critical decision goes to the user at once, and after two rounds every other takes the griller's recommendation, recorded as an `agents` row.
 
 - **At the preflight.** A session over what the confidence check left uncertain,
   and nothing else. The bound is on the subject: the spec and the ledger are
@@ -257,7 +255,7 @@ the Work Orders Summary sits outside the run's block, so a row keyed by `Session
 - This skill processes **one test at a time** from `test-list.md`: at most one row is in `red` or `green` at any moment, except under an item-level parallel dispatch authorized by `## Parallelization Policy` below. A T1 row parked in `refactor` waiting for its review group (see Volume Policy) does not violate this.
 - Each item goes through the full TDD micro-cycle: write a **failing test** first, then make it pass, then refactor.
 - The execution ledger is located at `.qfai/specs/<spec-id>/tdd/test-list.md`.
-- Write a `.qfai/steering/<id>.md` work-log entry when this stage hits a condition in the `kind` trigger table of `.qfai/assistant/catalog/worklog-entry.schema.md` — `blocker`, `handoff`, `consultation-needed` and `decision` are the ones it reaches most. A stop is the one omission the tool can see: with a `Status=blocked` row in the ledger and no open (non-`archived`) `kind: blocker` / `kind: handoff` entry naming the spec — through its own `scope:`, or through `links:` on a `scope: global` entry — `npx qfai validate` reports `QFAI-TDDLIST-015`, which is a warning inside its migration window and an `error` from the release the finding itself names — from then on this stage's completion command fails until the entry exists. **The other triggers are advisory — nothing detects those omissions**, so an unwritten one is simply lost.
+- Record a stop in the ledger row's `Blocked-By`, naming what the row waits on and the status it left. Send a decision, a consultation or an out-of-scope discovery to `/qfai-sdd` as a Change Request. This stage does not edit `07_Decisions.md` or `08_Open-questions.md`.
 - Items are processed **serially** by default. Item-level parallel processing inside one spec is allowed only under `## Parallelization Policy` below — both its technical gate and its consent gate must hold, and user approval cannot override a technical DENY. Cross-spec parallelism is never allowed.
 - Status transitions follow a forward-only lifecycle: `todo` -> `red` -> `green` -> `refactor` -> `done`. That spine is not the whole table. `references/execution-ledger.md#allowed-transitions` is the complete and only list; it additionally carries the QA re-entry (`refactor` -> `red`), the resumption (`blocked` -> `todo`), the anomaly exit (`exception` -> `todo`), the reviewer loop (`refactor` -> `review-fix` -> `refactor`) and the approved upstream reset. **Never infer that an edge does not exist from its absence in this summary** — read the reference before writing a `Status` cell.
 - The `exception` status can be reached from any active status when an anomaly is detected, and leaves via `exception` -> `todo` once the anomaly is resolved. That exit needs no Change Request **when the row's approved obligation is unchanged** — nothing upstream moved, so the row simply restarts its cycle, keeping the anomaly's DR-ID, and it is what `TDDLIST_EXCEPTION_PARKED` asks for. **When the investigation finds the obligation itself was wrong**, this exit does not apply: that is an upstream change, and the row re-enters through the approved-Change-Request reset under the Drift Protocol (`references/change-request-reset.md`). Reading this line alone let a row restart on a changed obligation with no approval anywhere.
@@ -294,7 +292,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single record of what this skill has done and may still do. Status values are `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`, `done`, `exception`;
 the lifecycle is forward-only along `todo` -> `red` -> `green` -> `refactor` -> `done` plus the re-entry edges the reference enumerates, an `exception` requires a DR-ID, and a `blocked` row requires a `Blocked-By` naming the blocker **and the status it was blocked at** and is never selected. `blocked` is entered from **any active status**, not only from `todo` — a blocker that surfaces at `red`, `green` or `refactor` is filed there, not at `exception`.
 
-The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger. **This skill allocates no `TDD-ID`**: rows are upstream (Non-goals) and `/qfai-sdd` Phase 2b is their producer, so a scope gap that needs a new row is handed there through a Change Request — never appended here. Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation` and belongs to that phase; read it to check an id you were handed, and never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
+The eight required columns, the allowed transitions and the exception rules are in `references/execution-ledger.md`. Read it before writing to the ledger. **This skill allocates no `TDD-ID`**: rows are upstream (Non-goals) and `/qfai-sdd` Phase 2b is their producer, so a scope gap that needs a new row is handed there through a Change Request — never appended here. A diagnosed missing test on behaviour the spec already states is the one scope gap that raises no Change Request and adds no ledger row from this skill: `/qfai-sdd` appends the row. Every other scope gap still goes through a Change Request. Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation` and belongs to that phase; read it to check an id you were handed, and never guess the next value from a ledger another worktree holds, because that read is stale on arrival and `TDDLIST_DUPLICATE_ID` is an `error`.
 
 ## Required Process
 

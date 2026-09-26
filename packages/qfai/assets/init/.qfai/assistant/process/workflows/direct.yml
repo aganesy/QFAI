@@ -1,0 +1,13 @@
+route: direct
+stages:
+  - id: edit
+    kind: maintenance
+    skill: qfai-maintain
+    operation: non-normative-edit
+    when: always
+  - id: verify
+    kind: verify
+    skill: qfai-verify
+    operation: verify-full
+    when: always
+    after: [edit]

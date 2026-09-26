@@ -126,7 +126,33 @@ should.
 Do not mark what the ladder simply answered. A helper you did not write because
 the standard library has one is not a simplification; it is rung 3.
 
-## 4. What this rule is not
+## 4. What a change leaves out
+
+A shortcut is one way a change departs from what was asked. An addition is the
+other. An addition can clear every rung of the ladder, because each one is
+minimal on its own terms. Additions take four shapes, and each stays out.
+
+| Shape            | What stays out                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Scope            | Cleanup of the code around a bug fix. Configurability on a simple feature.                                     |
+| Documentation    | Doc comments, comments and type annotations on code the change did not touch.                                  |
+| Defensive coding | Error handling, a fallback or validation for a case that cannot happen.                                        |
+| Abstraction      | A helper for an operation done once, or one extracted for length alone. A design for a requirement nobody has. |
+
+A comment in the change goes where the logic is not self-evident.
+
+§ 2 puts validation at the trust boundary. Past it, a parsed value needs no
+second check. § 2 also says which failures are caught; every other one
+propagates.
+
+Nothing here removes what § 2 keeps. A traceability annotation the chain
+requires is not an added comment, and a failure the specification names is not
+a case that cannot happen.
+
+An addition someone does want is its own change, or an expansion declared under
+Article VII of `.qfai/assistant/constitution/constitution.md`.
+
+## 5. What this rule is not
 
 - Not a licence to skip a requirement. The spec is the authority.
 - Not a size limit. Shorter code that hides a failure path is worse than longer

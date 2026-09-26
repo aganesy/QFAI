@@ -165,7 +165,7 @@ the same file, which is how this duplicate went unreported.
 ## Impact scope
 
 - Specs: `spec-0013`
-- Plans: `none`
+- Plans: `.qfai/specs/spec-0013/10_Plan.md` — remove only the stale duplicate-ID pin and pending-application wording
 - Tests: the rows Phase 2b seeds for `TC-0013-0036` and `TC-0013-0037`,
   against `packages/qfai/tests/core/sddPreflight.test.ts`; and, through the
   `/qfai-atdd spec-0013` pass in action 3, every other ATDD-owned `spec-0013`
@@ -182,6 +182,7 @@ the same file, which is how this duplicate went unreported.
   `.qfai/specs/spec-0013/05_Examples.md`,
   `.qfai/specs/spec-0013/06_Test-Cases.md`,
   `.qfai/specs/spec-0013/09_delta.md`,
+  `.qfai/specs/spec-0013/10_Plan.md`,
   `.qfai/specs/spec-0013/tdd/test-list.md`
 
 ## Decision needed from user
@@ -196,7 +197,9 @@ requirements beneath them?
    records this Change Request as one row in `spec-0013/09_delta.md`'s
    `## Change Requests` table — `CR ID`, `Upstream artifact`, `Mode`,
    `Approved by`, `Applied at` — not as a `## Triage` row. It makes the edits in
-   `## Proposed change`, steps 1 to 5, and no other upstream edit.
+   `## Proposed change`, steps 1 to 5. It also removes the now-stale
+   duplicate-ID pin and pending-application wording from `10_Plan.md`; this
+   is a direct consequence of the selected option and adds no obligation.
 
 2. Phase 2b of that rerun seeds one `Integration` row per new test case, at
    `todo`, recording this CR's ID in `DR-ID`. It resets no existing row: no
@@ -229,6 +232,23 @@ rerun applied it on 2026-09-24, after the ledger repair.
 
 At application, `AC-0013-0026` and `AC-0013-0027` already exist. The
 approved next-free-ID rule therefore selects `AC-0013-0028`.
+
+The intent-driven work applied the same option a second time, on a line that
+had not seen this application. The user selected option 1 again, recorded at
+`2026-09-24T19:43:11Z`, and that rerun applied it at `2026-09-24T19:55:40Z` as
+`AC-0013-0042` with rows `spec-0013/TDD-0061` and `TDD-0062`. When the two
+lines were merged on 2026-09-25, this application stood and the second was
+withdrawn. No approved decision changed:
+
+- `AC-0013-0042` is removed from `03_Acceptance-Criteria.md`, and its ID stays reserved.
+  `AC-0013-0028` states the same criterion.
+- Its rows, renumbered to `spec-0013/TDD-0129` and `TDD-0130` by the merge, are
+  retired with tombstones in `tdd/test-list.md`.
+- Its test file, `packages/qfai/tests/integration/sddPreflightOptionalArtifact.test.ts`,
+  is deleted. Its two checks that this application's test lacked moved into
+  `packages/qfai/tests/integration/sddOptionalArtifactPreflight.test.ts`: the
+  command's exit code and JSON report, and the same verdict with a valid
+  artifact present.
 
 One precondition for action 3.2, found when approving. `packages/qfai/tests/core/sddPreflight.test.ts`
 is the file the two new rows bind to, and `.qfai/evidence/atdd-spec-0002.md`
