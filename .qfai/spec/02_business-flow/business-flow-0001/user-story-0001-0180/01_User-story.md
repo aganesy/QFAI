@@ -22,5 +22,5 @@ As a downstream-project operator on a legacy handoff file, I want `qfai handoff 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0015/02_User-stories.md#us-0015-0014`
+- Spec scope: the Scope section of retired spec-0015
+- Story block: `us-0015-0014` of retired spec-0015

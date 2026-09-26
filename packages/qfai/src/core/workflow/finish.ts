@@ -3,6 +3,7 @@ import {
   everyStageResult,
   executorSkill,
   isAuthorOrRecommender,
+  isRunChange,
   refusedInput,
 } from "./common.js";
 import { activeStages } from "./stages.js";
@@ -132,7 +133,8 @@ function heldAdjustments(snapshot: WorkflowSnapshot, facts: WorkflowFacts): stri
 
 // The cumulative changes outside the run change boundary. Its authorized set is the write and
 // record areas of every work order the run issued under every plan it has had, the current
-// plan's write scope, the core's own evidence tree, and each start adjustment that still holds.
+// plan's write scope, and each start adjustment that still holds. The runs' own records are no
+// run change, so they never escape.
 export function escapedPaths(
   snapshot: WorkflowSnapshot,
   changedPaths: readonly string[],
@@ -143,10 +145,11 @@ export function escapedPaths(
     ...(snapshot.issuedWriteAreas ?? []),
     ...(snapshot.issuedRecordAreas ?? []),
     ...(snapshot.outstandingWorkOrder?.recordAreas ?? []),
-    `.qfai/evidence/workflow/${snapshot.run.id}`,
     ...heldAdjustments(snapshot, facts),
   ];
-  return changedPaths.filter((changed) => !areas.some((area) => areaCovers(area, changed)));
+  return changedPaths
+    .filter(isRunChange)
+    .filter((changed) => !areas.some((area) => areaCovers(area, changed)));
 }
 
 // An example of the bound flow is processed once a test annotates it.

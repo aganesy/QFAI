@@ -64,6 +64,6 @@ describe("implementation evidence contract", () => {
     expect(revision).toMatch(
       /A verdict is stale when the state it claims to have reviewed differs/,
     );
-    expect(revision).toMatch(/Recompute every recorded seal when the pack is present/);
+    expect(revision).toMatch(/Recompute every recorded seal before accepting a verdict/);
   });
 });

@@ -1,5 +1,0 @@
-## Operations
-- .gitignore: maintain the managed QFAI block and its staging
-
-## For a person
-none

@@ -411,7 +411,6 @@ export const GATE_GROUP_FAMILIES = {
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
-  "grilling-discussion": ["QFAI-GRILL-002"],
   "research-summary": ["QFAI-RESEARCH-*"],
   "canonical-uix": [
     "UIX-VAL-3LAYER-*",
@@ -432,7 +431,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-011",
     "QFAI-SPACK-102",
   ],
-  "grilling-flow": ["QFAI-GRILL-001"],
   "story-contract-index": ["QFAI-CONTRACT-034"],
   "story-test-obligations": [
     "QFAI-STORY-006",
@@ -441,7 +439,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-STORY-009",
     "QFAI-SCAN-002",
   ],
-  "story-atdd-depth": ["QFAI-ATDD-131", "QFAI-ATDD-132", "QFAI-ATDD-133"],
   sdd: [
     "QFAI-AUTOPILOT-*",
     "W-ASSISTANT-LAYOUT",
@@ -471,7 +468,6 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-CONTRACT-014",
     "QFAI-CONTRACT-015",
     "QFAI-CONTRACT-020",
-    "QFAI-CONTRACT-031",
     "QFAI-CONTRACT-036",
     "QFAI-CONTRACT-037",
     "QFAI-CONTRACT-038",
@@ -484,7 +480,6 @@ export const GATE_GROUP_FAMILIES = {
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
   "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-sdd": ["QFAI-DCON-019"],
   "design-contract-readiness-prototyping": [
     "QFAI-DCON-001",
     "QFAI-DCON-005",
@@ -521,7 +516,6 @@ type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
-  "design-contract-readiness-sdd": "sdd",
   drift: "drift",
   "saas-package-profile": "saas-package",
 };
@@ -556,15 +550,12 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "research-summary",
     "canonical-uix",
     "review-artifacts",
-    "grilling-discussion",
     "root-design-md-parse",
   ],
   sdd: [
     "story-structure",
-    "grilling-flow",
     "story-contract-index",
     "design-contract-readiness",
-    "design-contract-readiness-sdd",
     "sdd",
     "reviewer-gate-sdd",
     "reviewer-gate-shared",
@@ -577,7 +568,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "review-artifacts",
   ],
   prototyping: PROTOTYPING_GATE_GROUPS,
-  atdd: ["story-test-obligations", "story-atdd-depth", "atdd-scaffold", "test-stubs"],
+  atdd: ["story-test-obligations", "atdd-scaffold", "test-stubs"],
   tdd: [
     "story-test-obligations",
     "test-stubs",
@@ -1183,7 +1174,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-010":
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
-  "QFAI-GRILL-001": "Each affected business flow records its pre-draft grilling checkpoint.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1202,12 +1192,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-TEST-003":
     "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
 
-  "QFAI-ATDD-131":
-    "Every BF has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-BF-NNNN.md`.",
-  "QFAI-ATDD-132":
-    "The Coverage Depth Matrix and ATDD evidence are tracked or unignored so their justifications are committed.",
-  "QFAI-ATDD-133":
-    "Each matrix covers its BF, US, AC, and EX obligations, and `.qfai/evidence/atdd-BF-NNNN.md` links it with matching counted totals.",
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
@@ -1283,8 +1267,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
   "QFAI-DCON-013":
     "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
-  "QFAI-DCON-019":
-    "design-system.yaml and prototype-handoff.yaml are produced by /qfai-prototyping, not /qfai-sdd.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
   "QFAI-DCON-031":
@@ -1426,11 +1408,6 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  * values that failed the check.
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
-  "QFAI-ATDD-131":
-    "Create the Coverage Depth Matrix for the named business flow under .qfai/evidence/.",
-  "QFAI-ATDD-132": "Track the named coverage matrix and ATDD evidence file in Git.",
-  "QFAI-ATDD-133":
-    "Repair the named matrix rows and six coverage axes, then make its counts match the linked ATDD evidence.",
   "QFAI-CONTRACT-034":
     "Correct the named contract index row or add its missing contract file, then rerun validate.",
   "QFAI-DRIFT-001":

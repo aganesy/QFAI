@@ -146,9 +146,7 @@ function recordAreasOf(
   const specs = facts.specsDir ?? DEFAULT_SPECS_DIR;
   const tables = [`${specs}/decisions.md`, `${specs}/open-questions.md`];
   const implement = flowId ? [`.qfai/evidence/implement-${flowId}.md`] : [];
-  const atdd = flowId
-    ? [`.qfai/evidence/atdd-${flowId}.md`, `.qfai/evidence/coverage-depth-${flowId}.md`]
-    : [];
+  const atdd = flowId ? [`.qfai/evidence/atdd-${flowId}.md`] : [];
   const sddEvidence = flowId ? [`.qfai/evidence/sdd-${flowId}.md`] : [];
   switch (workOrder.stageKind) {
     case "implement":

@@ -327,7 +327,7 @@ async function loadWaivers(
       validationIssues.push(
         issue(
           "QFAI-WAIVER-001",
-          `${label}: rule には findings が報告する code をそのまま指定してください（例: 'QFAI-STORY-006'、'QFAI-ATDD-131'）。許容形式: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
+          `${label}: rule must be the code a finding reports, as written (for example 'QFAI-STORY-006' or 'QFAI-STORY-008'). Accepted form: ^[A-Z][A-Z0-9]*([-_][A-Z0-9]+)*$`,
           "error",
           waiverPath,
           "WAIVER-001",
@@ -1146,10 +1146,10 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // one waiver file. `error` matches the emitter in
   // `validators/testTodoStubs.ts`, so the refusal is the same either way.
   { keys: ["QFAI-TEST-003", "TEST-003"], severity: "error" },
-  // The story-tree structure and coverage-depth validators use local wrappers
-  // with a fixed error severity. The generated scanner sees their code-first
-  // calls but cannot read through the wrappers to prove that severity. Pin
-  // their error-only status so a quiet run cannot accept an unsafe waiver.
+  // The story-tree structure validator uses a local wrapper with a fixed error
+  // severity. The generated scanner sees its code-first calls but cannot read
+  // through the wrapper to prove that severity. Pin its error-only status so a
+  // quiet run cannot accept an unsafe waiver.
   ...[
     "QFAI-STORY-001",
     "QFAI-STORY-002",
@@ -1158,9 +1158,6 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
     "QFAI-STORY-005",
     "QFAI-STORY-011",
     "QFAI-SPACK-102",
-    "QFAI-ATDD-131",
-    "QFAI-ATDD-132",
-    "QFAI-ATDD-133",
   ].map((code) => ({ keys: [code, code.slice("QFAI-".length)], severity: "error" as const })),
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },

@@ -38,5 +38,5 @@ As a contributor opening a PR, I want a `check-pack-locations.mjs` CI lane wired
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0004/02_User-stories.md#us-0004-0039`
+- Spec scope: the Scope section of retired spec-0004
+- Story block: `us-0004-0039` of retired spec-0004

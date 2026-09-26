@@ -35,7 +35,7 @@ function chosenOptions(question: WorkflowQuestion, optionIds: readonly string[])
   return valid ? chosen : undefined;
 }
 
-// A value is kept only as a digest under the run's key, so the tracked record cannot be
+// A value is kept only as a digest under the run's key, so the run's record cannot be
 // matched against a guess.
 export function keyedDigest(text: string, key: string | undefined) {
   if (!key || !/^[a-f0-9]{64}$/.test(key)) return undefined;

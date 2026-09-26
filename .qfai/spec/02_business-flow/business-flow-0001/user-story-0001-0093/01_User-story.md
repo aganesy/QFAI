@@ -20,5 +20,5 @@ As a QFAI user finishing a `/qfai-discussion` run, I want the skill to write `.q
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0012`
+- Spec scope: the Scope section of retired spec-0010
+- Story block: `us-0010-0012` of retired spec-0010

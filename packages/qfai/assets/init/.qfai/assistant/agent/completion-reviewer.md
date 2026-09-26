@@ -44,7 +44,7 @@ specialization_tags:
 - `qfai.config.yaml`, the affected story files under `<paths.specsDir>/02_business-flow/**`, governing decisions, and active contracts under `<paths.contractsDir>`.
 - `<paths.specsDir>/03_contract/tech.md` and `structure.md` for project commands and entrypoints.
 - The stage completion contract, changed artifacts, gate output and evidence at `.qfai/evidence/sdd-BF-NNNN.md`, `atdd-BF-NNNN.md` or `implement-BF-NNNN.md`, as applicable.
-- `.qfai/evidence/coverage-depth-BF-NNNN.md` when acceptance coverage is in scope; the current review pack and its seal.
+- The current review pack and its seal. Evidence is local: read it in the working tree under review.
 
 ## Deliverables
 

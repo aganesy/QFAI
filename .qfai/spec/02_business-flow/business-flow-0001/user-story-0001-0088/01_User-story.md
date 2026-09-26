@@ -20,5 +20,5 @@ As a prototyping reviewer, I want `50_review_input_bundle.md` to mention best-of
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0010/02_User-stories.md#us-0010-0007`
+- Spec scope: the Scope section of retired spec-0010
+- Story block: `us-0010-0007` of retired spec-0010

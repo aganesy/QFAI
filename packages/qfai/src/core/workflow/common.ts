@@ -24,6 +24,14 @@ export const UNTARGETED_KINDS = ["route", "discussion", "maintenance", "verify"]
 
 export const DEFAULT_SPECS_DIR = ".qfai/spec";
 
+// The runtime tree and the runs' own records are local, so nothing under them is a run change,
+// whether or not git ignores them.
+const LOCAL_TREES = [".qfai/run/", ".qfai/evidence/workflow/"];
+
+export function isRunChange(file: string): boolean {
+  return !LOCAL_TREES.some((tree) => file.startsWith(tree));
+}
+
 export function areaCovers(area: string, filePath: string): boolean {
   return (
     area === filePath ||

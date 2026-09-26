@@ -24,7 +24,7 @@ Scenario: The story-authoring work order carries the approval, and a stale or un
 
 # AC-0001-0192-03
 # Parent: US-0001-0192
-Scenario: Declining a new story ends the run with nothing tracked
+Scenario: Declining a new story ends the run with nothing written outside it
   Given the run is waiting on a `create` question
   When the operator answers do not create it
   Then the run ends `cancelled`
@@ -104,7 +104,7 @@ Scenario: A stage writes its own records and nothing that approves
   Given a work order bound to one business flow
   When the stage result changes that flow's own stage evidence
   Then `accept` takes the result
-  And a result that changes another flow's evidence, the run's tracked evidence, a decision record, a decisions table outside a story-authoring stage, or a story's criteria it was not given as a write area is refused `write-scope`
+  And a result that changes another flow's evidence, the run's records under `.qfai/evidence/workflow/`, a decision record, a decisions table outside a story-authoring stage, or a story's criteria it was not given as a write area is refused `write-scope`
 
 # AC-0001-0192-13
 # Parent: US-0001-0192
@@ -118,9 +118,10 @@ Scenario: The announced scope names the tracked files a stage will write
 # Parent: US-0001-0192
 Scenario: qfai_done requires committed tracked run changes
   Given a ready run whose target is `qfai_done`
-  When `finish` judges tracked run changes and tracked workflow evidence
-  Then any uncommitted file is reported as `uncommitted` and the run stays `ready`
-  And completion succeeds only after every such file is committed
+  When `finish` judges the tracked run changes
+  Then any uncommitted one is reported as `uncommitted` and the run stays `ready`
+  And completion succeeds only after every such change is committed
+  And the run's own records under `.qfai/evidence/workflow/` are no part of that check, whether or not git ignores them
 
 # AC-0001-0192-15
 # Parent: US-0001-0192
@@ -128,7 +129,7 @@ Scenario: Successful finish records completion only at runtime
   Given a ready run meeting its completion target
   When `finish` succeeds
   Then only the runtime journal and snapshot record `completed`
-  And the tracked summary keeps its state from its last write
+  And the run's local summary keeps its state from its last write
   And `status` reports the current state from the journal
 
 # AC-0001-0192-16
@@ -138,5 +139,6 @@ Scenario: A story-authoring stage only appends rows, and each approved row cites
   When `accept` compares `decisions.md` and `open-questions.md` with their state at issue
   Then a row present at issue is unchanged, apart from the Status of a row this run appended
   And an appended row naming an approval-required operation, or opening `Change request:`, stands at WIP or DONE only when its Approach cites a `human_decision` this run recorded for it
+  And that Approach states who answered, when, and each option chosen, as the run's authorization record holds them
   And any other result is refused with the run unchanged
 ```

@@ -40,9 +40,6 @@ const PLACEHOLDER_RE = /^(?:tbd|todo|n\/a|none|placeholder|example|lorem|to be d
 // (`discussion-YYYYMMDDhhmmssSSS`) deliberately does not match.
 
 type DesignContractReadinessStage = "sdd" | "prototyping";
-type SddDesignContractReadinessOptions = {
-  enforceNoPrematurePrototypingContracts?: boolean;
-};
 
 function toPosixRelative(root: string, targetPath: string): string {
   return path.relative(root, targetPath).replace(/\\/g, "/");
@@ -54,11 +51,8 @@ type YamlReadResult =
 export async function validateSddDesignContractReadiness(
   root: string,
   config: QfaiConfig,
-  options: SddDesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
-  return validateDesignContractReadinessForStage(root, config, "sdd", {
-    enforceNoPrematurePrototypingContracts: options.enforceNoPrematurePrototypingContracts ?? true,
-  });
+  return validateDesignContractReadinessForStage(root, config, "sdd");
 }
 
 /**
@@ -72,7 +66,7 @@ export async function validateSddDesignContractReadiness(
  * later, under a different skill, with the earlier gate having passed.
  *
  * The parse half only. The readiness validator also compares DESIGN.md against
- * its lock, requires UI contracts and rejects premature ones — all of which
+ * its lock and requires UI contracts — all of which
  * belong to later stages, and the lock in particular is `/qfai-sdd` Phase 0's
  * to clear. "The file is malformed" and "the file no longer matches its frozen
  * hash" are different failures with different owners, which is why this is a
@@ -132,7 +126,6 @@ async function validateDesignContractReadinessForStage(
   root: string,
   config: QfaiConfig,
   stage: DesignContractReadinessStage,
-  options: SddDesignContractReadinessOptions = {},
 ): Promise<Issue[]> {
   const uiBearing = (await readUiContractInventory(root, config)).some((entry) => entry.hasScreens);
 
@@ -189,8 +182,6 @@ async function validateDesignContractReadinessForStage(
   if (stage === "prototyping") {
     issues.push(...(await validateDesignSystem(root, config, rootResult.designMd)));
     issues.push(...(await validatePrototypeHandoff(root, config, rootResult.lockSha)));
-  } else if (options.enforceNoPrematurePrototypingContracts ?? true) {
-    issues.push(...(await validateNoPrematurePrototypingContracts(root, config)));
   }
   return issues;
 }
@@ -374,69 +365,6 @@ async function validateRootDesignMdAndLock(
   }
 
   return { issues, designMd, lockSha };
-}
-
-/**
- * True when `/qfai-prototyping` has demonstrably run in this project.
- *
- * `QFAI-DCON-019` guards against `/qfai-sdd` authoring prototyping outputs
- * early. Keyed on file existence alone it also fired on the same files after
- * prototyping legitimately produced them — where their *absence* is itself a
- * `QFAI-DCON-001` error — making the SDD stop condition permanently
- * unpassable for any UI-bearing project.
- */
-async function hasPrototypingRun(root: string): Promise<boolean> {
-  // Only artifacts /qfai-prototyping itself writes count. `DESIGN.md.lock.yaml`
-  // is deliberately NOT a marker: /qfai-sdd Phase 0 freezes the lock for every
-  // UI-bearing target before prototyping starts, so keying on it would make
-  // this guard unreachable in exactly the runs it exists to police.
-  const markers = [
-    path.join(root, ".qfai", "evidence", "prototyping", "prototyping.json"),
-    path.join(root, ".qfai", "evidence", "prototyping", "completion-certificate.json"),
-  ];
-  for (const marker of markers) {
-    try {
-      await readFile(marker, "utf-8");
-      return true;
-    } catch {
-      // try the next marker
-    }
-  }
-  return false;
-}
-
-async function validateNoPrematurePrototypingContracts(
-  root: string,
-  config: QfaiConfig,
-): Promise<Issue[]> {
-  // Prototyping has run: these files are its required outputs, not premature.
-  if (await hasPrototypingRun(root)) {
-    return [];
-  }
-
-  const designDir = path.join(root, config.paths.contractsDir, "design");
-  const issues: Issue[] = [];
-  for (const fileName of REQUIRED_PROTOTYPING_DESIGN_FILES) {
-    const filePath = path.join(designDir, fileName);
-    try {
-      await readFile(filePath, "utf-8");
-      issues.push(
-        issue(
-          "QFAI-DCON-019",
-          `${fileName} must be produced by /qfai-prototyping, not /qfai-sdd. No prototyping evidence was found, so this file appears to have been authored early.`,
-          "warning",
-          toPosixRelative(root, filePath),
-          "designContractReadiness.prematurePrototypingContract",
-          undefined,
-          "change",
-          "Run /qfai-prototyping to produce this file, or delete it if it was authored by mistake.",
-        ),
-      );
-    } catch {
-      // missing is expected before prototyping
-    }
-  }
-  return issues;
 }
 
 async function validateDesignSystem(

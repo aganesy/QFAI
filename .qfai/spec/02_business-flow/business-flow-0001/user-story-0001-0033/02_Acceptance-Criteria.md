@@ -16,24 +16,24 @@ Scenario: `qfai init` appends the QFAI managed block to the root `.gitignore`
   And it does not contain `.qfai/discussion/discussion-*/`
   And it contains neither `!.qfai/review/review-*/` nor `!.qfai/review/review-*/**`
   And the lines a user wrote outside the block are preserved
-  And with the `rule/ skill/ agent/ prompt/` assistant tree, it contains `!.qfai/evidence/decision/` and `!.qfai/evidence/decision/**`, and neither `!.qfai/evidence/decisions/` nor `!.qfai/evidence/decisions/**`
+  And it contains no line that negates `.qfai/evidence/` or a path under it
 
 # AC-0001-0033-02
 # Parent: US-0001-0033
 Scenario: レガシー管理ブロックからの自動移行
-  Given 旧バージョンの管理ブロック（`!.qfai/review/review-*/` と `!.qfai/review/review-*/**` を含む形式）が `.gitignore` に存在する
+  Given a managed block an earlier release wrote, carrying any line of the legacy set, is in `.gitignore`
   When `qfai init` を実行する
   Then marker 行は 1 件のみ残る
-  And レガシー行 `!.qfai/review/review-*/` と `!.qfai/review/review-*/**` は除去される
   And 新しい管理ブロックに置換される
+  And every line of the legacy set the block carried, the `review-*/` negations and the evidence negations among them, is removed
 
 # AC-0001-0033-03
 # Parent: US-0001-0033
-Scenario: The managed block ignores run state and keeps run evidence tracked
+Scenario: The managed block ignores run state and run records
   Given an empty git repository, or one whose managed block an earlier release wrote without the run-state lines
   When `qfai init` runs, and then runs again
   Then `git check-ignore` reports `.qfai/run/x` ignored
-  And it reports `.qfai/evidence/workflow/x/summary.json` not ignored
-  And the marker line, `.qfai/run/` and `!.qfai/evidence/workflow/` each occur once
+  And it reports `.qfai/evidence/workflow/x/summary.json` ignored
+  And the marker line and `.qfai/run/` each occur once, and `!.qfai/evidence/workflow/` does not occur
   And the second run leaves `.gitignore` byte-identical
 ```

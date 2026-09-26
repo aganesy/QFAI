@@ -30,7 +30,6 @@ import { validateContracts, validateUiContractParse } from "./validators/contrac
 import { validateUiScreenEntries } from "./validators/uiScreenEntries.js";
 import { validateDesignDirectionProposal } from "./validators/designDirectionProposal.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
-import { validateStoryTreeCoverageDepth } from "./validators/storyTreeCoverageDepth.js";
 import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
@@ -83,7 +82,6 @@ import {
   validateDesignMdPatchZone,
   detectEvidenceMutationUnlogged,
   validateAutopilotPolicy,
-  validateGrillingTrace,
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   stubSourceFilePattern,
@@ -509,10 +507,6 @@ async function runStoryProfileValidators(
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
     ...(await validateSddDesignContractReadiness(root, config)),
-    ...(await validateGrillingTrace(root, {
-      subjects: ["flow"],
-      flowScope: flowScope ? new Set(flowScope.flowIds) : undefined,
-    })),
     ...(await validateContractSsotModules(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
     ...(await validateSkillDocReferences(root, config)),
@@ -530,12 +524,6 @@ async function runStoryProfileValidators(
   ];
   const atdd = async (): Promise<Issue[]> => [
     ...(await validateStoryTreeObligations(root, config, "atdd", model)),
-    ...(await validateStoryTreeCoverageDepth(
-      root,
-      model,
-      flowScope,
-      resolvePath(root, config, "testsDir"),
-    )),
     ...(await validateScaffoldPlaceholder(root, config, flowScope ? { flowScope } : {})),
     ...(await validateTestTodoStubs(root, config, {
       ...acceptanceStubScan(root, config),
@@ -637,14 +625,6 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
-    // `QFAI-GRILL-001` (warning) on this run's own session record. The stage
-    // names `--profile discussion` as its completion gate, so a run that wrote
-    // no record could otherwise finish its own gate without the finding. The
-    // The discussion profile and full run both inspect discussion evidence.
-    ...(await validateGrillingTrace(root, {
-      subjects: ["discussion"],
-      discussionDir: config.paths.discussionDir,
-    })),
     // The RCP footer names `--profile discussion` as the review-cycle gate and
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
@@ -682,8 +662,8 @@ function reviewArtifactsScope(
  * The prototyping issue set at its validators' declared severity.
  *
  * `full` / `verify` call this one. The exploration relaxation belongs to the
- * prototyping profile, not to this validator group: its trigger is a file
- * committed to the repository under test
+ * prototyping profile, not to this validator group: its trigger is a local
+ * file in the working tree under test
  * (`.qfai/evidence/prototyping/prototyping.json#mode`), nothing resets it when
  * the project leaves the prototyping stage, and the last explicit mode is
  * inherited forward — so applying it here let an abandoned exploration loop

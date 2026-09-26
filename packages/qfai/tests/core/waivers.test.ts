@@ -755,8 +755,8 @@ describe("applyWaivers", () => {
   // waivable — one emitted only at `error` is refused for that reason instead,
   // which the error-only case below covers.
   it.each([
-    ["QFAI-CONTRACT-031", "a code the emitter names through a constant"],
-    ["CONTRACT-031", "the back-compat stripped alias"],
+    ["QFAI-PROT-337", "a code the emitter names through a constant"],
+    ["PROT-337", "the back-compat stripped alias"],
     ["W-STALE-REFERENCE", "a single-segment prefixed code"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
@@ -863,7 +863,6 @@ describe("applyWaivers", () => {
     ["STORY-006", "the back-compat stripped alias"],
     ["QFAI-STORY-002", "a structure wrapper with fixed error severity"],
     ["QFAI-SPACK-102", "an open decision rejected by the story-tree wrapper"],
-    ["QFAI-ATDD-131", "a coverage matrix wrapper with fixed error severity"],
   ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
     const root = await createRoot();
     try {

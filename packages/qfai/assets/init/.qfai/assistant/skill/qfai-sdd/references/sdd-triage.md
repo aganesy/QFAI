@@ -54,8 +54,9 @@ pass changes by operation.
   widens the scope. The clock alone never makes it stale.
 - **A passing CREATE.** The attempt that writes the stage's change appends the
   triage row at TODO. Its Approach cites the record as
-  `<runId>/<authorizationId>` and names its `answeredBy`. The row is then raised
-  to WIP.
+  `<runId>/<authorizationId>` and writes its `answeredBy`, its `recordedAt` and
+  the label of each chosen option exactly as the record holds them. The row is
+  then raised to WIP.
 - **A missing, mismatched or stale CREATE approval.** Stage 1 appends no triage
   row and asks the operator nothing. The stage returns `awaiting_input` naming
   the row and the reason.
@@ -63,8 +64,8 @@ pass changes by operation.
   approval approves none of them. Stage 1 opens the row's approval question as
   a `decision` question of its stage result, with outcome `awaiting_input`, and
   appends no row. The attempt that receives the answer through
-  `authorizationRefs` appends the row at TODO, citing that `human_decision` and
-  its `answeredBy`, and raises it to WIP.
+  `authorizationRefs` appends the row at TODO, cites that `human_decision` the
+  same way, and raises it to WIP.
 - **An approval-free row**, such as an UPDATE:APPEND, cites no answer.
 
 The table keeps exactly its four columns. The citation lives in Approach.

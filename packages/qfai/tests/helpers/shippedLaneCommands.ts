@@ -1380,94 +1380,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // The comment block is the whole delta: the rule lines are byte-identical to
   // the ones `c428b147…` covered.
   [".gitattributes", "8787db9bb4011d5461314183735ba22d84390d6008d73322ddf18fbc00ff7ff1"],
-  // The shipped `.gitignore` IS the generated managed block, so every governance
-  // negation moves this digest by construction. Four of them are why it stands
-  // where it does:
+  // The shipped `.gitignore` IS the generated managed block, so every line of it
+  // moves this digest by construction. The block ignores `.qfai/evidence/` whole
+  // and re-includes nothing under it; its only negations are `!.qfai/` and the
+  // four that keep the assistant tree and the install-provenance record
+  // reachable under a broad `.qfai/*` or `.qfai/**` rule a project already had.
   //
-  // - `!.qfai/assistant/`, `!.qfai/assistant/**` and
-  //   `!.qfai/assistant/.assets.lock.json`. Measured on a tree carrying a broad
-  //   `.qfai/*` (`git check-ignore`) and again on one carrying `.qfai/**`
-  //   (`git status --ignored`): without them the provenance record never reaches
-  //   a fresh clone, and every untouched governed file from an older release
-  //   then reads as a local fork; without the recursive one the record arrives
-  //   and the rules it vouches for do not.
-  // - `!.qfai/evidence/skeleton.md`. `Phase: Skeleton` enumerates its
-  //   `Skeleton debt` into that file, and every later invocation reads the
-  //   record to find the entrypoint's smoke command, re-runs it, and decides
-  //   from THAT exit status whether the entrypoint is still proven.
-  //   Ignored, both the debt and the command exist only in the working
-  //   directory that ran the phase.
-  //
-  // Derived by running `qfai init` into a temp root and reading what it wrote,
-  // which is how every predecessor was derived — not copied off a failure
-  // message. Those three lines are the whole delta: dropping exactly them from
-  // the file init writes today reproduces the previous digest
-  // `f35a2624…` byte for byte, which is what makes this a review of three lines
-  // rather than a re-blessing of the block.
-  //
-  // Re-pinned again for the two `import-lite` negations. The evidence
-  // directory is ignored wholesale, so the file recording where an imported
-  // spec set's requirements came from never reached a commit — and the warning
-  // that asks for it reads the committed tree. Two lines, for the two names
-  // the check accepts:
-  //
-  //     !.qfai/evidence/import-lite.md
-  //     !.qfai/evidence/import-lite-<17 digits>.md
-  //
-  // the copy an operator kept under the shipped template's own name, and the
-  // run-stamped one. The second line is written as `[0-9]` once per digit,
-  // which is what fixes the width: a shorthand for the repeat is not gitignore
-  // syntax, and anything wider commits a name the check rejects outright —
-  // a file in the repository that nothing reads.
-  //
-  // Derived the same way as its predecessors — `qfai init` into a temp root,
-  // then reading what it wrote — not copied off a failure message. Those two
-  // lines are the whole delta: dropping them from the file init writes today
-  // reproduces `4e72a478…` byte for byte.
-  // The skeleton evidence negation is a fourth line on the same footing: the
-  // phase that proves an entrypoint starts writes it, and the evidence
-  // directory is ignored wholesale, so without the negation the proof never
-  // reaches a commit either.
-  //
-  //     !.qfai/evidence/skeleton.md
-  //
-  // Re-pinned for the review tree as well. Nothing under `.qfai/review/` is
-  // tracked, so the two lines that carved an exception out of `.qfai/review/*`
-  // are gone:
-  //
-  //     !.qfai/review/
-  //     !.qfai/review/.legacy-packs
-  //
-  // and one ignore joined the block, for the archive location packs were moved
-  // to before the archive moved under `.qfai/review/` itself:
-  //
-  //     .qfai/review_archive/*
-  //
-  // Re-pinned again for the spec stage's evidence, which `QFAI-GRILL-001` reads:
-  //
-  //     !.qfai/evidence/sdd-*.md
-  //
-  // Re-pinned again for the prototyping session record, which is a user decision
-  // rather than regenerable stage evidence — three lines, in the order git reads
-  // them, because the last matching pattern is what decides:
-  //
-  //     .qfai/evidence/prototyping/*
-  //     !.qfai/evidence/prototyping/
-  //     !.qfai/evidence/prototyping/grilling.md
-  //
-  // Derived the way its predecessors were — `qfai init` into a temp root, then
-  // reading what it wrote.
-  //
-  // Re-pinned again for the discussion stage's evidence, which the same rule
-  // reads for its `## Grilling Session` section. The stamp is spelled out to
-  // its full width, as the import-lite negation spells out its own:
-  //
-  //     !.qfai/evidence/discussion-[0-9]…[0-9].md
-  //
-  // Derived the same way, and checked the way the note below asks: removing
-  // that one line from what the run wrote reproduces `cd2c521c…` byte for byte,
-  // which is what makes this a review of one line.
-  [".gitignore", "d33d2c83ea359d0549bc39260e0bd9d8e94bafa0a8b30383c13ee7e5a6fd17db"],
+  // To re-pin: run `qfai init` into a temp root and hash the `.gitignore` it
+  // wrote — never copy a value out of a failure message.
+  [".gitignore", "b7773796163f4f2fa0c9179eb8f4d54ebfdd35a9faf7d7b187b552b5925a919d"],
   // One bullet each, inside the managed cross-AI rules block: the
   // `documentation-clarity.md` master that the same run seeds beside them.
   // Removing that line from both files reproduces the previous digests

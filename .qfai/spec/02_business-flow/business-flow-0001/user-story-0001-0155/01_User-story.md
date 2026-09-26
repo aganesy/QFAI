@@ -4,7 +4,7 @@
 
 As a QFAI user, I want `qfai validate --fail-on error` to pass with error=0 before SDD completion, so that spec quality is verified.
 
-The story-tree validation pipeline runs its structure and contract-reference checks in `sdd`, test-obligation and coverage-depth checks in `atdd`, test-obligation and drift checks in `tdd`, and the drift check in `drift`. `full` and `verify` include the applicable checks from those profiles.
+The story-tree validation pipeline runs its structure and contract-reference checks in `sdd`, test-obligation checks in `atdd`, test-obligation and drift checks in `tdd`, and the drift check in `drift`. `full` and `verify` include the applicable checks from those profiles.
 
 ## Legacy Source Scope
 
@@ -37,5 +37,5 @@ The story-tree validation pipeline runs its structure and contract-reference che
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0013/02_User-stories.md#us-0013-0006`
+- Spec scope: the Scope section of retired spec-0013
+- Story block: `us-0013-0006` of retired spec-0013

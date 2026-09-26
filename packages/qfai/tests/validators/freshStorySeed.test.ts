@@ -8,6 +8,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { validateStorySteeringPlaceholders } from "../../src/core/validators/assistantAssets.js";
+import { resolveImportLiteEntrypoint } from "../../src/core/preflight/importLiteEvidence.js";
 import { validateDiscussionPackReadiness } from "../../src/core/validators/discussionPack.js";
 import { captureStdout } from "../helpers/stdout.js";
 
@@ -79,6 +80,43 @@ describe("fresh story seed validation", () => {
   it("still requires a discussion pack where no story tree exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-"));
     try {
+      expect(
+        (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
+      ).toContain("QFAI-DPACK-001");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:EX-0001-0153-02
+  it("still requires a discussion pack where only a local import-lite record stands in for one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-no-story-import-lite-"));
+    try {
+      const specDir = path.join(root, ".qfai", "spec", "spec-0001");
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n\nAuthored content.\n", "utf-8");
+      const evidenceDir = path.join(root, ".qfai", "evidence");
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(
+        path.join(evidenceDir, "import-lite.md"),
+        [
+          "# Import-lite evidence",
+          "",
+          "## Metadata",
+          "",
+          "- generated_at: 2026-04-01T00:00:00Z",
+          "- entrypoint: import-lite",
+          "",
+          "## Sources",
+          "",
+          "- URLs: https://example.com/requirements",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      // The local preflight still takes the record as its input source.
+      expect(await resolveImportLiteEntrypoint(root, defaultConfig)).not.toBeNull();
       expect(
         (await validateDiscussionPackReadiness(root, defaultConfig)).map((x) => x.code),
       ).toContain("QFAI-DPACK-001");

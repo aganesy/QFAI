@@ -24,5 +24,5 @@ As a reviewer, I want truthful evidence and placeholder rejection to remain enfo
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0014/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0014/02_User-stories.md#us-0014-0014`
+- Spec scope: the Scope section of retired spec-0014
+- Story block: `us-0014-0014` of retired spec-0014

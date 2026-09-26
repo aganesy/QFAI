@@ -54,5 +54,5 @@ As an operator running cycle 0 across a multi-spec frozen surface union, I want 
 
 ## Source Provenance
 
-- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/01_Spec.md#scope`
-- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0012/02_User-stories.md#us-0012-0138`
+- Spec scope: the Scope section of retired spec-0012
+- Story block: `us-0012-0138` of retired spec-0012

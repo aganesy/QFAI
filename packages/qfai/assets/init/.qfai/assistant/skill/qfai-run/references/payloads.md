@@ -151,6 +151,11 @@ A routing or stage result carries a question as:
 - A value answers as `"answer": { "value": "..." }`.
 - The operator's stop is `{ "stop": true, "answeredBy": "..." }`, whether or
   not a question is open.
+- An answer that approves a change is written into the `decisions.md` row the
+  run appends: who answered, when, and what was approved. The values come from
+  the run's authorization record: its `answeredBy`, its `recordedAt`, and the
+  `question.options[].label` of each option the answer chose. The run's own
+  records under `.qfai/evidence/workflow/` stay local and are never committed.
 
 ## Stage result
 

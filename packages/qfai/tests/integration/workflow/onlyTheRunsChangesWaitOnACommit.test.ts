@@ -50,7 +50,8 @@ it("finish on a worktree the operator left dirty before start", async () => {
   const verify = workflow(root, ["next", "--run", runId]);
   await submit(root, runId, "accept", await verifyResult(root, verify.json));
   const early = workflow(root, ["finish", "--run", runId]);
-  commitOnly(root, ["README.md", `.qfai/evidence/workflow/${runId}`]);
+  // The run's own records stay local and are never committed.
+  commitOnly(root, ["README.md"]);
   const done = workflow(root, ["finish", "--run", runId]);
 
   const uncommitted = list(early.json, "unmet").find(

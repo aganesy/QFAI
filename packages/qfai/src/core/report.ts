@@ -401,7 +401,11 @@ export function formatReportMarkdown(data: ReportData, options: { baseUrl?: stri
     }
     lines.push("");
   }
-  if (prototyping.status !== "complete") {
+  // Prototyping's records are local and never committed, so a missing pack
+  // says only that the loop has not run in this working tree.
+  if (prototyping.status === "no-pack") {
+    lines.push("- Prototyping has not run in this working tree. Run /qfai-prototyping here.", "");
+  } else if (prototyping.status !== "complete") {
     lines.push("- Rerun /qfai-prototyping after addressing the missing evidence or findings.", "");
   }
   lines.push("## Decision Guardrails", "", `- Total: ${data.guardrails.total}`);
