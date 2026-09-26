@@ -10,8 +10,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   takes a request stated in free text, proposes a route, and runs each stage of
   it through the skill that owns the stage. The operator types no stage name.
   The run stops only for a decision the agent cannot take: whether to create a
-  new story, whether to approve a change to the story tree, or a fact only the
-  operator holds.
+  new story, whether to approve a change to the story tree, whether to accept
+  a material risk such as data loss, a broken public contract or a production
+  effect, or a fact only the operator holds.
 
   - `npx qfai workflow` is the run control the skill calls. It has seven
     operations — `start`, `next`, `accept`, `decision`, `status`, `resume` and
@@ -25,8 +26,9 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `decisions.md` or `open-questions.md`, drops the test of an annotated
     example, or claims an approval the operator did not give is refused.
   - A story-tree change is made only by the stage attempt that holds the
-    operator's answer. It appends the `Change request:` row at WIP, citing
-    that answer as `<runId>/<authorizationId>`.
+    operator's answer. It appends the `Change request:` row citing that
+    answer as `<runId>/<authorizationId>`, and the row stands at DONE once
+    every change it names is written.
   - Only `finish` reports a run complete. It runs `validate` itself, reads
     only this run's `verify.json`, and needs an independent `qa-gatekeeper`
     pass. A run whose operator said not to commit completes as a verified

@@ -231,7 +231,8 @@ export async function approvedFeature(root: string, input: unknown = START_INPUT
 /**
  * The story-authoring stage: the first attempt asks for the change and changes nothing; the
  * attempt holding the answer writes the story tree, appends the CREATE row and the change
- * request, each at WIP citing its answer, and binds the slot.
+ * request, each citing its answer and at DONE once every change it names is written, and binds
+ * the slot.
  */
 export async function authorStory(root: string, runId: string, sdd: unknown, createId: unknown) {
   const asked = await submit(root, runId, "accept", {
@@ -249,8 +250,8 @@ export async function authorStory(root: string, runId: string, sdd: unknown, cre
     root,
     DECISIONS,
     decisionsTable([
-      `| DEC-0001 | CREATE ${FLOW_ID} and ${STORY_ID} | ${cites(runId, create)} | WIP |`,
-      `| DEC-0002 | Change request: ${[...STORY_FILES, DECISIONS].join(", ")} | ${cites(runId, approval)} | WIP |`,
+      `| DEC-0001 | CREATE ${FLOW_ID} and ${STORY_ID} | ${cites(runId, create)} | DONE |`,
+      `| DEC-0002 | Change request: ${[...STORY_FILES, DECISIONS].join(", ")} | ${cites(runId, approval)} | DONE |`,
     ]),
   );
   const changedFiles = await Promise.all(

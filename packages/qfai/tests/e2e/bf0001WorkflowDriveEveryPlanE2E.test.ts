@@ -198,6 +198,7 @@ async function driven(route: string) {
   const { issued, last } = await drive(root, runId);
   return {
     followsPlan: await followsPlan(route, issued),
+    kinds: issued.map((document) => field(document, "workOrder.stageKind")),
     ends: [
       field(last, "workOrder.stageKind") ?? null,
       field(last, "workOrder.executor.skill") ?? null,
@@ -206,15 +207,30 @@ async function driven(route: string) {
   };
 }
 
-for (const route of ["direct", "bugfix", "bounded-change", "feature"]) {
+// The stages each change route issues on a flow whose obligations tests already annotate: the
+// acceptance stage has nothing to do, and no UI contract asks for a prototype.
+const ISSUED: [string, string[]][] = [
+  ["direct", ["maintenance", "verify"]],
+  ["bugfix", ["diagnose", "regression_fix", "verify"]],
+  ["bounded-change", ["sdd_delta", "implement", "verify"]],
+  ["feature", ["sdd", "implement", "verify"]],
+];
+
+for (const [route, kinds] of ISSUED) {
   it(`the ${route} plan runs in plan order from next and accept alone, until next returns no work order`, async () => {
-    expect(await driven(route)).toEqual({ followsPlan: true, ends: [null, null], state: "ready" });
+    expect(await driven(route)).toEqual({
+      followsPlan: true,
+      kinds,
+      ends: [null, null],
+      state: "ready",
+    });
   }, 300_000);
 }
 
 it("the discovery plan hands the run back to routing, which qfai-run handles itself", async () => {
   expect(await driven("discovery")).toEqual({
     followsPlan: true,
+    kinds: ["discussion"],
     ends: ["route", "qfai-run"],
     state: "routing",
   });

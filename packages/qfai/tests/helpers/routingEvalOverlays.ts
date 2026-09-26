@@ -51,7 +51,7 @@ const FIXTURE_FLOW: Record<string, string> = {
   [`${STORY}/03_Example.md`]:
     "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| ----- | ------ | ----- | -------- |\n| EX-0001-0001-01 | AC-0001-0001-01 | A valid order | Accepted |\n",
   [CONTRACT]:
-    "# API Contract: orders\n\n## Rules\n\n| Rule ID | Rule | Examples | Rule refs |\n| ------- | ---- | -------- | --------- |\n| BR-0001 | An order is validated | EX-0001-0001-01 | - |\n",
+    "# API Contract: orders\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001 | An order is validated | EX-0001-0001-01 |\n",
 };
 
 // Writes the fixture flow once; a later fact adds to it.
@@ -70,7 +70,7 @@ const rule =
     const text = await readFile(path.join(root, CONTRACT), "utf8");
     const next = (text.match(/^\| BR-\d{4} /gm) ?? []).length + 1;
     const id = `BR-${String(next).padStart(4, "0")}`;
-    await appendTo(CONTRACT, `| ${id} | ${sentence(value)} | EX-0001-0001-01 | - |`)(root, value);
+    await appendTo(CONTRACT, `| ${id} | ${sentence(value)} | EX-0001-0001-01 |`)(root, value);
   };
 
 // A test annotating the fixture flow's example, or its criterion at an acceptance layer.
@@ -137,7 +137,9 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
     path.join("src", "profile.ts"),
     "export function canSeeProfile(loggedIn: boolean): boolean {\n  return loggedIn || true;\n}",
   ),
-  existingSpecRequiresAdmin: rule(() => "The admin screen requires an authenticated administrator"),
+  existingStoryRequiresAdmin: rule(
+    () => "The admin screen requires an authenticated administrator",
+  ),
   destructiveDataChange: appendTo(
     path.join("db", "migrations", "0001_old_orders.sql"),
     "CREATE TABLE old_orders (id integer);",
@@ -245,7 +247,7 @@ export const FACT_OVERLAYS: Readonly<Record<string, FactOverlay>> = {
   validDesignContractSupplied: stated,
   siblingUIOptInChangesE2EObligations: stated,
   requestedBehaviorClear: stated,
-  specSplit: withFlow,
+  storySplit: withFlow,
   productionDeployRequested: stated,
   specificEnvironmentUnconfirmed: stated,
   completionTarget: stated,

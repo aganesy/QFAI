@@ -188,10 +188,17 @@ it("Every routing prompt and rationale is English, and shared prompts stay share
   }).toEqual({ seeds: 64, cjk: [], phone: 1, resume: 1 });
 });
 
-it("No seed names a spec or a ledger", async () => {
+it("No seed names a spec or a ledger outside the prompt an operator typed", async () => {
   const text = `${await fixtureText("routing-seeds.jsonl")}${await fixtureText("fault-seeds.json")}`;
+  const seeds = await routingSeeds();
 
-  expect(text.match(/\bspec-\d{4}\b|\bledger\b|\bTC-\d{4}/gi) ?? []).toEqual([]);
+  expect({
+    ids: text.match(/\bspec-\d{4}\b|\bledger\b|\bTC-\d{4}/gi) ?? [],
+    factKeys: seeds.flatMap((each) =>
+      Object.keys(each.repoFacts).filter((key) => /^spec[A-Z]|Spec[A-Z]|^ledger|Ledger/.test(key)),
+    ),
+    rationales: seeds.filter((each) => /\bspecs?\b/i.test(each.rationale)).map((each) => each.id),
+  }).toEqual({ ids: [], factKeys: [], rationales: [] });
 });
 
 it("FAULT-015: story authoring appends the missing example, and the covered one stays annotated", async () => {
@@ -392,15 +399,20 @@ it("ROUTE-028", async () => {
   });
 });
 
-// Every fault ID a tracked test cites, and the files citing it. The fixtures and this file,
-// which names seeds to read them, do not count as citing.
+// Whether a vitest project of the pull-request job collects the package-relative `rel`.
+const INCLUDE_GLOBS = declaredIncludeGlobs().map(({ glob }) => glob);
+const collected = (rel: string) => INCLUDE_GLOBS.some((glob) => path.matchesGlob(rel, glob));
+
+// Every fault ID a collected test file cites, and the files citing it. The fixtures and this
+// file, which names seeds to read them, do not count as citing.
 async function faultCitations(): Promise<Map<string, string[]>> {
   const cited = new Map<string, string[]>();
   const entries = await readdir(TESTS, { recursive: true, withFileTypes: true });
   const self = fileURLToPath(import.meta.url);
   for (const entry of entries) {
     const file = path.join(entry.parentPath, entry.name);
-    if (!entry.isFile() || !file.endsWith(".ts") || file === self || file.startsWith(FIXTURES)) {
+    const rel = path.relative(path.resolve(TESTS, ".."), file).split(path.sep).join("/");
+    if (!entry.isFile() || !file.endsWith(".test.ts") || file === self || !collected(rel)) {
       continue;
     }
     for (const id of new Set((await readFile(file, "utf8")).match(/\bFAULT-\d{3}\b/g) ?? [])) {

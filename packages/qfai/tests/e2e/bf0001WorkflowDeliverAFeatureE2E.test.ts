@@ -157,7 +157,7 @@ it("the rows the story-authoring stage appended cite this run's answers, and the
     rows: rows.map((row) => [
       row.includes(cite(story.create)),
       row.includes(cite(story.approval)),
-      row.endsWith("| WIP |"),
+      row.endsWith("| DONE |"),
     ]),
     changeNamesEveryFile: [...STORY_FILES, DECISIONS].every((rel) => rows[1]?.includes(rel)),
     accepted: field(story.accepted.json, "run.state"),

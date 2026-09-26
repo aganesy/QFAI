@@ -105,9 +105,39 @@ async function jsonFiles(dir: string): Promise<unknown[]> {
 const read = (value: unknown, key: string): unknown =>
   typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 
+// The route the run's journal names: the checked plan's, or, for a run still waiting on an
+// answer at routing, the proposal's. The runtime snapshot answers when the journal names none.
+function routeOf(events: unknown[], snapshot: unknown): string | null {
+  const candidates = events.map((event) =>
+    read(event, "event") === "plan-accepted"
+      ? read(read(event, "plan"), "route")
+      : read(event, "event") === "unsettled-material-input"
+        ? read(read(event, "proposal"), "candidateRoute")
+        : undefined,
+  );
+  const route =
+    candidates.reverse().find((each) => typeof each === "string") ??
+    read(read(snapshot, "plan"), "route");
+  return typeof route === "string" ? route : null;
+}
+
+// Whether the run asked the operator anything a seed scores. A story-authoring stage asks for
+// every change it makes, so a question opened while an `sdd` or `sdd_delta` work order is the
+// last one issued does not count.
+function askedQuestion(events: unknown[]): boolean {
+  let outstanding: unknown;
+  for (const event of events) {
+    const name = read(event, "event");
+    if (name === "work-order-issued") outstanding = read(read(event, "workOrder"), "stageKind");
+    if (name === "question-opened" && outstanding !== "sdd" && outstanding !== "sdd_delta") {
+      return true;
+    }
+  }
+  return false;
+}
+
 // SIMPLIFIED: observes the route, the stage kinds the run issued work orders for, and whether
-// routing asked the operator anything. A story-authoring stage asks for every change it makes,
-// so only a question opened before the first stage is dispatched counts as routing asking.
+// the run asked the operator anything a seed scores.
 // Lift when: a host transcript format is settled, so the other behaviour a token names can be read.
 async function observe(root: string, seedId: string) {
   const runs = (await readdir(path.join(root, ".qfai", "run")).catch(() => [])).filter((name) =>
@@ -118,17 +148,16 @@ async function observe(root: string, seedId: string) {
     return { run: { seedId, route: null, observed: [], askedQuestion: false }, measurements: [] };
   }
   const runDir = path.join(root, ".qfai", "run", runId);
-  const events = (await jsonFiles(path.join(runDir, "journal"))).map((each) => read(each, "event"));
-  const dispatched = events.indexOf("dispatch-work-order");
-  const routingEvents = dispatched < 0 ? events : events.slice(0, dispatched);
+  const events = await jsonFiles(path.join(runDir, "journal"));
+  const snapshot: unknown = JSON.parse(
+    await readFile(path.join(runDir, "snapshot.json"), "utf8").catch(() => "null"),
+  );
   const orders = await jsonFiles(path.join(runDir, "work-orders"));
-  const summary = (await jsonFiles(path.join(root, ".qfai", "evidence", "workflow", runId)))[0];
-  const route = read(summary, "route");
   const run: RunRecord = {
     seedId,
-    route: typeof route === "string" ? route : null,
+    route: routeOf(events, snapshot),
     observed: orders.map((order) => String(read(order, "stageKind"))),
-    askedQuestion: routingEvents.includes("question-opened"),
+    askedQuestion: askedQuestion(events),
   };
   const results = await jsonFiles(path.join(runDir, "results"));
   return { run, measurements: results.map((result) => read(result, "measurement") ?? null) };

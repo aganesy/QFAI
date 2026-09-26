@@ -199,7 +199,8 @@ You type no stage name.
 - Say `continue` to resume an interrupted run where it stopped.
 - Say `stop` to cancel the run.
 - The run asks you only for a decision it cannot take: creating a new story, approving a change
-  to the story tree, or a fact only you hold.
+  to the story tree, accepting a material risk such as data loss, a broken public contract or a
+  production effect, or a fact only you hold.
 - Say you do not want a commit, and the run stops at a verified working tree instead of done.
 
 `workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
