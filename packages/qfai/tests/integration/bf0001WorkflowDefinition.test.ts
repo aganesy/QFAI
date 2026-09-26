@@ -135,6 +135,7 @@ describe("BF-0001 workflow definition", () => {
     expect(stages.every(({ label }) => !label.includes("Configure"))).toBe(true);
   });
 
+  // QFAI:AC-0001-0004-05
   // QFAI:EX-0001-0004-02
   it("ships all eleven non-negotiable constitution articles", async () => {
     const constitution = await readFile(rule("constitution.md"), "utf8");

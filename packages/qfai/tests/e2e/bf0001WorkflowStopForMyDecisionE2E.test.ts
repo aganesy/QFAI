@@ -103,7 +103,6 @@ const SCOPE = {
   recommendation: "keep",
 };
 
-// QFAI:EX-0001-0195-15
 it("an answer that changes the scope sends the run back to routing, and qfai-run takes that work order itself", async () => {
   const root = await initProject();
   const { runId, routed } = await routedRun(root, {

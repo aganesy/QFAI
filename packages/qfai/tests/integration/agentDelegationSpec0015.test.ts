@@ -344,6 +344,7 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
+  // QFAI:AC-0001-0169-06
   // QFAI:EX-0001-0169-07
   it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
     // The reviewer-budget branch mandates recording the gate as PENDING;

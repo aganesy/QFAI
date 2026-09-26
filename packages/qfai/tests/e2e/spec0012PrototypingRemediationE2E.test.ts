@@ -614,7 +614,6 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
 });
 
 describe("US-0012-0133: primaryUiContract requires a canonical contract ID", () => {
-  // QFAI:EX-0001-0142-01
   it("accepts a full UI contract ID and rejects legacy numeric pins", () => {
     expect(parsePrimaryUiContract("CON-UI-0001")).toEqual({
       ok: true,
