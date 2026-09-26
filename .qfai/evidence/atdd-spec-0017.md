@@ -394,7 +394,7 @@ Two things are left to `qa-gatekeeper` rather than decided here:
 
 ## Commands executed + key outputs
 
-<!-- qfai:not-a-citation .qfai/report/validate.log -->
+<!-- qfai:not-a-citation .qfai/report/validate.log .qfai/report/validate.spec-0017.json -->
 ```text
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 13 passed (13), exit 0
@@ -987,7 +987,7 @@ three-verdict labelling is the point — and stops being load-bearing for the st
 **Neither cited path was in the repository until round 8**, which round 8 measured with
 `git ls-files .qfai/report` — five paths, and `validate.spec-0017.json` not among them. So a later reader
 could not check the gate evidence this record cites. The JSON is force-added now (`.gitignore` covers
-`.qfai/report/*`, so every path there is opt-in). The 445 KB per-run directory is **not** added and is
+`.qfai/report/*`, so every path there is opt-in). The 445 KB per-run directory is **not** added and is <!-- qfai:not-a-citation -->
 marked regenerable instead: the command above rewrites it, and a run directory is named for its
 timestamp, so committing one fixes a name that the next run will not reproduce anyway.
 
@@ -3056,6 +3056,7 @@ all of which `ci:lint` and this block run). The commit that noticed a concurrent
 one figure re-dated the whole block instead of re-running it. That is the block's own recorded failure
 mode, for the third time.
 
+<!-- qfai:not-a-citation .qfai/report/validate.spec-0017.json -->
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0

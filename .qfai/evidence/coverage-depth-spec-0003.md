@@ -742,9 +742,9 @@ them is repaired here; this artifact scores coverage and does not edit tests, le
    - `AC-0003-0001` / `US-0003-0001` require `specs/`, `contracts/`, `discussion/`, `evidence/`,
      `review/` and `report/` under `.qfai/`. `initE2E.test.ts` asserts none of the six exists.
    - `BR-0003-0013`, `AC-0003-0015`, `EX-0003-0016`, `TC-0003-0018` and `US-0003-0015` list a nine-line
-     block with `.qfai/discussion/discussion-*/` and four README negations. `src/core/gitignore.ts`
+     block with `.qfai/discussion/discussion-*/` and four README negations. `src/core/gitignore.ts` <!-- qfai:not-a-citation -->
      now lists all five in `QFAI_GITIGNORE_LEGACY_LINES` — stripped on migration — and writes
-     `.qfai/discussion/*` plus governance negations. Both `initE2E.test.ts` cases assert the new form.
+     `.qfai/discussion/*` plus governance negations. Both `initE2E.test.ts` cases assert the new form. <!-- qfai:not-a-citation -->
    - `TC-0003-0022`, `AC-0003-0018`, `BR-0003-0016` and `REQ-0019` seed `.qfai/steering/README.md`.
      The case asserts it is absent.
    - `TC-0003-0026`, `AC-0003-0023`, `AC-0003-0024`, `BR-0003-0020` and `US-0003-0020` describe an open

@@ -1101,6 +1101,22 @@ function gitIndexListing(): string {
 const tracked = trackedPaths();
 
 /**
+ * An index holding one discussion pack, for the cases that need a pack citation
+ * to resolve.
+ *
+ * The repository tracks no discussion pack, so against its own index every pack
+ * citation is missing, and a case expecting `false` would pass for any reason.
+ */
+const SAMPLE_PACK = ".qfai/discussion/discussion-20260328212829687";
+const withSamplePack = trackedPaths(
+  [
+    `100644 0000000000000000000000000000000000000000 0\t${SAMPLE_PACK}/01_Context.md`,
+    `100644 0000000000000000000000000000000000000000 0\t${SAMPLE_PACK}/02_Inception-Deck.md`,
+    "",
+  ].join("\0"),
+);
+
+/**
  * Evidence files the repository carries, in path order.
  *
  * Markdown and JSON both: a decision record is written as JSON, its question,
@@ -2910,9 +2926,10 @@ describe("a glob is a claim about a set", () => {
   });
 
   it("keeps punctuation a code span closes right after", () => {
-    const pack = ".qfai/discussion/discussion-20260328212829687";
+    const pack = SAMPLE_PACK;
     expect(citationsIn(`see \`${pack}/01_Context.md,\` here`)).toEqual([`${pack}/01_Context.md,`]);
-    expect(resolves(`${pack}/01_Context.md,`)).toBe(false);
+    expect(resolves(`${pack}/01_Context.md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/01_Context.md,`, withSamplePack)).toBe(false);
     // In prose the same punctuation ends the sentence.
     expect(citationsIn(`see ${pack}/01_Context.md. Next`)).toEqual([`${pack}/01_Context.md`]);
   });
@@ -3136,8 +3153,9 @@ describe("a glob is a claim about a set", () => {
     // A `?` glob that names a tracked artifact still has to reach the matcher:
     // falling through to the exact-path lookup reports valid provenance as
     // missing, which is the opposite failure to the one the guard exists for.
-    const pack = ".qfai/discussion/discussion-20260328212829687";
-    expect(resolves(`${pack}/0?_Context.md`)).toBe(resolves(`${pack}/0*_Context.md`));
+    const pack = SAMPLE_PACK;
+    expect(resolves(`${pack}/0*_Context.md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/0?_Context.md`, withSamplePack)).toBe(true);
   });
 
   it("reads an extended glob group as the set it names", () => {
@@ -3154,10 +3172,10 @@ describe("a glob is a claim about a set", () => {
     // A group of literal alternatives carries no `*` or `?`, so a branch keyed
     // on those two fell through to the exact-path lookup and reported a tracked
     // artifact missing.
-    const pack = ".qfai/discussion/discussion-20260328212829687";
-    expect(resolves(`${pack}/@(01_Context|99_missing).md`)).toBe(true);
-    expect(resolves(`${pack}/@(98_missing|99_missing).md`)).toBe(false);
-    expect(resolves(`${pack}/!(01_Context).md`)).toBe(true);
+    const pack = SAMPLE_PACK;
+    expect(resolves(`${pack}/@(01_Context|99_missing).md`, withSamplePack)).toBe(true);
+    expect(resolves(`${pack}/@(98_missing|99_missing).md`, withSamplePack)).toBe(false);
+    expect(resolves(`${pack}/!(01_Context).md`, withSamplePack)).toBe(true);
   });
 
   it("keeps a quantified group whole in the grammar", () => {
