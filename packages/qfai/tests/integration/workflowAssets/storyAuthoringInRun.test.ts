@@ -20,6 +20,7 @@ async function section(file: string, heading: string): Promise<string> {
 }
 
 describe("Stage 1 approvals inside a run", () => {
+  // QFAI:AC-0001-0212-01
   // QFAI:EX-0001-0212-01
   it("checks a routing-time CREATE approval and cites it from the triage row", async () => {
     const pointer = await section(REFERENCE, "## Stage 1 approvals");
@@ -36,6 +37,7 @@ describe("Stage 1 approvals inside a run", () => {
     expect(text).toMatch(/the table keeps exactly its four columns/i);
   });
 
+  // QFAI:AC-0001-0212-02
   // QFAI:EX-0001-0212-02
   it("appends no row and asks nothing on a missing, mismatched or stale approval", async () => {
     const text = await section(TRIAGE, "## Inside a workflow run");
@@ -48,6 +50,7 @@ describe("Stage 1 approvals inside a run", () => {
     expect(text).toMatch(/the clock alone never makes it stale/i);
   });
 
+  // QFAI:AC-0001-0212-03
   // QFAI:EX-0001-0212-03
   it("opens the approval question for every other approval-required operation", async () => {
     const text = await section(TRIAGE, "## Inside a workflow run");
@@ -61,6 +64,7 @@ describe("Stage 1 approvals inside a run", () => {
     );
   });
 
+  // QFAI:AC-0001-0212-04
   // QFAI:EX-0001-0212-04
   it("lets --auto approve nothing inside a run", async () => {
     const text = await section(REFERENCE, "## `--auto` inside a run");
@@ -74,6 +78,7 @@ describe("Stage 1 approvals inside a run", () => {
 });
 
 describe("defect example seeding", () => {
+  // QFAI:AC-0001-0213-01
   // QFAI:EX-0001-0213-01
   it("appends one example under the matched criterion and cites it from the enforcing rule", async () => {
     const pointer = await section(REFERENCE, "## Operations");
@@ -95,6 +100,7 @@ describe("defect example seeding", () => {
     );
   });
 
+  // QFAI:AC-0001-0213-02
   // QFAI:EX-0001-0213-02
   it("changes no story, criterion, rule statement, existing example or test", async () => {
     const text = await section(CHECKLISTS, "### Defect example seeding");
@@ -105,6 +111,7 @@ describe("defect example seeding", () => {
     );
   });
 
+  // QFAI:AC-0001-0213-03
   // QFAI:EX-0001-0213-03
   it("records the appended example as one approval-free UPDATE:APPEND triage row", async () => {
     const text = await section(CHECKLISTS, "### Defect example seeding");
@@ -116,6 +123,7 @@ describe("defect example seeding", () => {
 });
 
 describe("qfai-sdd as a stage of a run", () => {
+  // QFAI:AC-0001-0214-01
   // QFAI:EX-0001-0214-01
   it("refuses a work order with no target, scopes a flow target and binds a new-story slot", async () => {
     const text = await section(REFERENCE, "## Operations");
@@ -128,6 +136,7 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(text).toMatch(/a `new_story` target's result reports one `bindings` entry per slot/i);
   });
 
+  // QFAI:AC-0001-0214-02
   // QFAI:EX-0001-0214-02
   it("ends at SDD when invoked by name, and hands a request to go to the end to a run", async () => {
     const text = await section(REFERENCE, "## Invoked by name");
@@ -135,6 +144,7 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(text).toMatch(/handed to a whole run through `qfai-run`/i);
   });
 
+  // QFAI:AC-0001-0214-03
   // QFAI:EX-0001-0214-03
   it("hands over, refuses or works the order as the entry check says", async () => {
     const text = await section(REFERENCE, "## Entry check");
@@ -147,6 +157,7 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(text).toMatch(/a valid work order is worked, and nothing else/i);
   });
 
+  // QFAI:AC-0001-0214-05
   // QFAI:EX-0001-0214-05
   it("recomputes the Stage 0 key and always reruns the preflight readiness check", async () => {
     const text = await section(REFERENCE, "## Stage 0");
@@ -155,6 +166,7 @@ describe("qfai-sdd as a stage of a run", () => {
     expect(text).toMatch(/`npx qfai sdd preflight` readiness check runs in every attempt/i);
   });
 
+  // QFAI:AC-0001-0214-06
   // QFAI:EX-0001-0214-06
   it("changes the story tree only on the operator's answer, and moves its change request row to DONE", async () => {
     const text = await section(REFERENCE, "## A change to the story tree");

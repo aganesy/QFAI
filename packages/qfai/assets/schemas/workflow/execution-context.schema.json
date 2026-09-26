@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:execution-context",
+  "title": "Execution context",
+  "description": "What start fixes for a run, as the run's snapshot records it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runId", "qfaiVersion", "policyDigests", "planDigests", "harness", "requestDigest"],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qfaiVersion": {
+      "description": "The released version of the package.",
+      "type": "string"
+    },
+    "policyDigests": {
+      "$ref": "#/$defs/digests"
+    },
+    "planDigests": {
+      "$ref": "#/$defs/digests"
+    },
+    "harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "capabilities"],
+      "properties": {
+        "host": {
+          "enum": ["claude-code", "codex"]
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fetchSkillBody",
+            "invokeStage",
+            "delegateSubAgent",
+            "relayQuestion",
+            "runShellAndTests",
+            "writeProjectRoot",
+            "keepRunRecord",
+            "resume"
+          ],
+          "properties": {
+            "fetchSkillBody": {
+              "type": "boolean"
+            },
+            "invokeStage": {
+              "type": "boolean"
+            },
+            "delegateSubAgent": {
+              "type": "boolean"
+            },
+            "relayQuestion": {
+              "type": "boolean"
+            },
+            "runShellAndTests": {
+              "type": "boolean"
+            },
+            "writeProjectRoot": {
+              "type": "boolean"
+            },
+            "keepRunRecord": {
+              "type": "boolean"
+            },
+            "resume": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "requestDigest": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "digests": {
+      "description": "A digest per project-relative path.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

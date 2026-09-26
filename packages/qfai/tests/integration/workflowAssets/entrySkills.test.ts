@@ -84,12 +84,14 @@ async function filesUnder(root: string): Promise<string[]> {
 }
 
 describe("qfai-run", () => {
+  // QFAI:AC-0001-0201-05
   // QFAI:EX-0001-0201-13
   it("keeps its SKILL.md within 150 lines", async () => {
     const lines = (await readShipped(RUN)).replace(/\n$/, "").split("\n");
     expect(lines.length).toBeLessThanOrEqual(150);
   });
 
+  // QFAI:AC-0001-0197-01
   // QFAI:EX-0001-0197-01
   it("starts a run only for a change, and serves every other request kind another way", async () => {
     const text = flat(sectionOf(await readShipped(RUN), "## Request kinds"));
@@ -102,6 +104,7 @@ describe("qfai-run", () => {
     expect(text).toMatch(/`read_only`: answer it in the conversation/i);
   });
 
+  // QFAI:AC-0001-0199-01
   // QFAI:EX-0001-0199-02
   it("writes nothing under shadow and starts no run under off", async () => {
     const mode = sectionOf(await readShipped(RUN), "## Mode");
@@ -114,6 +117,7 @@ describe("qfai-run", () => {
     );
   });
 
+  // QFAI:AC-0001-0192-13
   // QFAI:EX-0001-0192-40
   it("names the narrowest write areas per stage kind, and never a stage's own records", async () => {
     const text = sectionOf(await readShipped(PAYLOADS), "## Routing result");
@@ -140,6 +144,7 @@ describe("qfai-run", () => {
     expect(text).not.toMatch(/affectedSpecIds|newCapabilities|spec-id|\.qfai\/runs\//);
   });
 
+  // QFAI:AC-0001-0196-06
   // QFAI:EX-0001-0196-15
   it("offers recovery as a reverse diff of the run's own paths only", async () => {
     const text = flat(sectionOf(await readShipped(SCREENS), "## Halt notice"));
@@ -149,6 +154,7 @@ describe("qfai-run", () => {
 });
 
 describe("qfai-maintain", () => {
+  // QFAI:AC-0001-0198-01
   // QFAI:EX-0001-0198-02
   it("edits only non-normative text in the write scope and returns the four receipts", async () => {
     const skill = await readShipped(MAINTAIN);
@@ -167,6 +173,7 @@ describe("qfai-maintain", () => {
     }
   });
 
+  // QFAI:AC-0001-0198-02
   // QFAI:EX-0001-0198-04
   it("stops before an edit with a semantic effect and returns the run for reclassification", async () => {
     const skill = await readShipped(MAINTAIN);
@@ -193,7 +200,9 @@ describe("qfai-maintain", () => {
 });
 
 describe("the entry skills' routing entries", () => {
+  // QFAI:AC-0001-0167-05
   // QFAI:EX-0001-0167-08
+  // QFAI:AC-0001-0192-05
   // QFAI:EX-0001-0192-16
   it("routes qfai-run to the orchestrator only, and qfai-maintain to an author and an independent reviewer", async () => {
     const run = await routingEntry("qfai-run");

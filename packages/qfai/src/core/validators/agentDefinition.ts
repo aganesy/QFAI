@@ -139,6 +139,50 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
   return issues;
 }
 
+/** The agents and reviewers the package's agent catalog declares, by frontmatter `kind`. */
+async function packageAgentCatalog(): Promise<{ agents: Set<string>; reviewers: Set<string> }> {
+  const agentsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "agent");
+  const agents = new Set<string>();
+  const reviewers = new Set<string>();
+  for (const name of await readdir(agentsDir)) {
+    if (!name.endsWith(".md")) continue;
+    const parsed = parseAgentFrontmatter(await readFile(path.join(agentsDir, name), "utf-8"));
+    if (!parsed.ok) continue;
+    agents.add(parsed.frontmatter.name);
+    if (parsed.frontmatter.kind === "reviewer") reviewers.add(parsed.frontmatter.name);
+  }
+  return { agents, reviewers };
+}
+
+/**
+ * The routing and review profiles a reader other than validate works from: the package
+ * defaults, each entry replaced whole by the `qfai.config.yaml` override with the same key.
+ * `routing` is the effective set; `defaultRouting` the package's own, with no override.
+ */
+export async function readEffectiveRouting(
+  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
+): Promise<{
+  routing: Map<string, SkillRouting> | undefined;
+  defaultRouting: Map<string, SkillRouting> | undefined;
+  profiles: Map<string, ProfileSelection> | undefined;
+}> {
+  const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
+  const routingPath = path.join(defaultsDir, "agent-routing.yml");
+  const catalog = await packageAgentCatalog();
+  const ignored: Issue[] = [];
+  const [routing, defaultRouting, profiles] = await Promise.all([
+    validateRouting(routingPath, config.routing ?? [], catalog.agents, ignored),
+    validateRouting(routingPath, [], catalog.agents, ignored),
+    validateProfiles(
+      path.join(defaultsDir, "review-profiles.yml"),
+      config.reviewProfiles ?? {},
+      catalog.reviewers,
+      ignored,
+    ),
+  ]);
+  return { routing, defaultRouting, profiles };
+}
+
 async function validateRouting(
   routingPath: string,
   overrides: NonNullable<QfaiConfig["routing"]>,

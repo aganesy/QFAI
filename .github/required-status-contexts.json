@@ -417,7 +417,7 @@
         "Run future TypeScript compatibility check": "55db3b7f97fd7fad",
         "Run the package test suite on the floor (${{ matrix.slice }})": "cdce2fa04dd9f130",
         "Run tests (${{ matrix.slice }})": "cdce2fa04dd9f130",
-        "Run the Windows parity suites": "dc1afe97e4e22c9a",
+        "Run the Windows parity suites": "ba50f33ac55d61bd",
         "Run scanner coverage gate": "dbb04c7e4d66e944"
       },
       "verificationBodiesNote": [

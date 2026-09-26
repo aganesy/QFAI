@@ -50,7 +50,7 @@ import {
 import { applyWaivers } from "../../core/waivers.js";
 import { hasErrnoCode, isEnoent, isEperm } from "../../core/fs/errno.js";
 import { toRelativePath } from "../../core/paths.js";
-import { loadConfig, resolvePath } from "../../core/config.js";
+import { loadConfig, readWorkflowMode, resolvePath } from "../../core/config.js";
 import { CONTRACT_KIND_DIRS, hasLegacySpecPackEntries } from "../../core/storyTree/layout.js";
 import { deriveTestFileGlobs, withDerivedTestFileGlobs } from "../../core/testGlobDerivation.js";
 import {
@@ -66,6 +66,7 @@ import {
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_LEGACY_LINES,
+  QFAI_RUN_STATE_IGNORE,
   RETIRED_LINE_SUCCESSORS,
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
@@ -75,6 +76,8 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  addEntryDirective,
+  addEntryPointDirectives,
   addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
@@ -743,6 +746,8 @@ export async function runInit(
     );
   }
 
+  info(await workflowModeLine(destRoot));
+
   for (const note of [...upgradeResult.preservedNotes, ...differingSkillsNote(differingSkills)]) {
     info(note);
   }
@@ -760,6 +765,29 @@ export async function runInit(
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot);
   }
+}
+
+/**
+ * The summary line naming the workflow mode the project's config puts in force. Init writes no
+ * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
+ */
+async function workflowModeLine(destRoot: string): Promise<string> {
+  const { document } = await loadConfig(destRoot);
+  const mode = readWorkflowMode(document);
+  if (mode !== null) return `Workflow mode: ${mode}`;
+  const configured = JSON.stringify(configuredWorkflowMode(document));
+  return `Workflow mode: ${configured} is invalid; expected active, shadow or off`;
+}
+
+/** The value the config holds where the mode belongs: `workflow.mode`, or `workflow` itself. */
+function configuredWorkflowMode(document: unknown): unknown {
+  const workflow =
+    typeof document === "object" && document !== null && "workflow" in document
+      ? document.workflow
+      : undefined;
+  return typeof workflow === "object" && workflow !== null && "mode" in workflow
+    ? workflow.mode
+    : workflow;
 }
 
 // ---------------------------------------------------------------------------
@@ -2071,6 +2099,7 @@ export async function ensureRootGitignoreEntries(
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
+    gitignoreLines(managedBlock).includes(QFAI_RUN_STATE_IGNORE) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
     negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
@@ -2515,12 +2544,16 @@ function rebuildManagedBlock(existingBlock: string): string {
     !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
       ? [PROTOTYPING_CONTENTS_IGNORE]
       : [];
+  // Run state is added against the rule above as well: it is never a record a project tracks,
+  // and a block without it would leave every run's journal for `git add .` to stage.
+  const runState = present.has(QFAI_RUN_STATE_IGNORE) ? [] : [QFAI_RUN_STATE_IGNORE];
 
   return [
     QFAI_GITIGNORE_MARKER,
     ...kept,
     ...renamed,
     ...reIgnore,
+    ...runState,
     ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
@@ -2582,6 +2615,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
+  // A workflow run's tracked evidence. The nested `*` matches at every depth,
+  // so the directory and everything under it each need a line.
+  "!workflow/",
+  "!workflow/**",
   "!import-lite.md",
   `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
@@ -2823,6 +2860,9 @@ async function ensureAgentEntryPointRules(
     );
   }
 
+  // The review directive points at a policy file init never creates, so it is
+  // owed only where the project keeps one.
+  const hasReviewPolicy = await pathExists(path.join(destRoot, "REVIEW.md"));
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
     const toCite = await owed(name);
@@ -2876,7 +2916,8 @@ async function ensureAgentEntryPointRules(
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
       const cited = addRuleCitations(refreshed.text, section, toCite);
-      const merged = addReviewPointer(cited, template);
+      const reviewed = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
+      const merged = addEntryDirective(reviewed, template);
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
@@ -2889,7 +2930,11 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        ...describeRuleListUpdate(
+          cited !== refreshed.text,
+          { review: reviewed !== cited, entry: merged !== reviewed },
+          refreshed.refreshed,
+        ),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -2912,7 +2957,7 @@ async function ensureAgentEntryPointRules(
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
       const rulesAdded = addRuleCitationsToList(existing, section, uncited);
-      const merged = addReviewPointer(rulesAdded, template);
+      const merged = addEntryPointDirectives(rulesAdded, template, hasReviewPolicy);
       if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
         // numbered list, an indented bullet. Name the missing masters instead
@@ -2976,7 +3021,7 @@ async function ensureAgentEntryPointRules(
           : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      addReviewPointer(`${existing}${separator}${section}${end}`, template),
+      addEntryPointDirectives(`${existing}${separator}${section}${end}`, template, hasReviewPolicy),
       destRoot,
       existing,
     );
@@ -3097,7 +3142,11 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    ...describeRuleListUpdate(
+      merged !== refreshed.text,
+      { review: false, entry: false },
+      refreshed.refreshed,
+    ),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -3174,7 +3223,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  pointed: boolean,
+  directives: { review: boolean; entry: boolean },
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -3185,10 +3234,14 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  if (pointed) {
-    planned.push("add the review directive");
-    done.push("added the review directive");
-    byHand.push("add the review directive");
+  for (const [added, name] of [
+    [directives.entry, "entry"],
+    [directives.review, "review"],
+  ] as const) {
+    if (!added) continue;
+    planned.push(`add the ${name} directive`);
+    done.push(`added the ${name} directive`);
+    byHand.push(`add the ${name} directive`);
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
@@ -3655,7 +3708,8 @@ function managedBlockEnd(
     if (line.trim() === "" || line.trimStart().startsWith("#")) {
       break;
     }
-    if (knownLines.has(line)) {
+    // A CRLF checkout ends every line with a carriage return, which the known set lacks.
+    if (knownLines.has(line.trimEnd())) {
       lastKnown = index;
     }
   }
