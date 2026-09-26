@@ -191,6 +191,34 @@ describe("migration catalog move", () => {
     expect(second.output).toContain("## Operations\nnone");
   });
 
+  it("archives an overlay whose rule overlay already exists and leaves that overlay alone", async () => {
+    // QFAI:EX-0004-0006-07
+    const context = await fixture();
+    await put(context.root, ".qfai/assistant/rule/house.md", "# House\n");
+    await put(context.root, ".qfai/assistant/rule/house.local.md", "current overlay\n");
+    await put(context.root, ".qfai/assistant/constitution/house.local.md", "legacy overlay\r\n");
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    expect(result.output).toContain(
+      ".qfai/assistant/constitution/house.local.md: no rule master or the overlay destination exists",
+    );
+    expect(
+      await readFile(path.join(context.root, ".qfai/assistant/rule/house.local.md"), "utf8"),
+    ).toBe("current overlay\n");
+    expect(
+      await readFile(
+        path.join(
+          context.root,
+          ".qfai/evidence/migration-spec-to-story/retired/assistant/constitution/house.local.md",
+        ),
+        "utf8",
+      ),
+    ).toBe("legacy overlay\r\n");
+    await expect(
+      readFile(path.join(context.root, ".qfai/assistant/constitution/house.local.md")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("archives unconsumed files from all four retired assistant directories", async () => {
     // QFAI:EX-0004-0003-24
     const context = await fixture();

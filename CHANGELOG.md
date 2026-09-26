@@ -392,6 +392,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
+  only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a
+  plan's `from` selects. Each new `business-flow.md` now also carries that
+  section's text under Purpose, with its level-two headings lowered to level
+  three.
+
 - **A work order that binds nothing now refuses a target.** The shipped
   `work-order.schema.json` required a `target` on every other stage kind but
   accepted one on the `route`, `discussion`, `maintenance` and `verify` work

@@ -12,6 +12,8 @@ Scenario: The host integration links follow the singular directories
   When step 9 runs
   Then each link points at the singular directory
   And no other file changes and qfai init --force is not run
+  And an occupied user-owned wrapper or obsolete roster is left unchanged and listed under For a person with exit 3
+  And a path step 9 cannot inspect ends the run with exit 2 before any write
 
 # AC-0004-0011-02
 # Parent: US-0004-0011
