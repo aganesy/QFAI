@@ -114,10 +114,9 @@ export async function validateReviewArtifacts(
   try {
     const content = await readFile(rootGitignorePath, "utf-8");
     // The marker is the requirement. Which paths a project chooses to ignore
-    // is the project's call: `.qfai/evidence/**`, `.qfai/review/**` and
-    // `.qfai/discussion/**` hold governance records that a project may
-    // legitimately want tracked, and failing validation for tracking your own
-    // audit trail is the wrong answer.
+    // is the project's call: a project may legitimately want `.qfai/review/**`
+    // or `.qfai/discussion/**` tracked, and failing validation for that is the
+    // wrong answer.
     hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
     // Read across the WHOLE file, not just the managed block: an entry the
     // project ignores from its own section satisfies the recommendation just as

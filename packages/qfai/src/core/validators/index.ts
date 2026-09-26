@@ -7,7 +7,6 @@ export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
 export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
-export { validateStoryTreeCoverageDepth } from "./storyTreeCoverageDepth.js";
 export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";
 export {
@@ -96,7 +95,6 @@ export {
   validateAutopilotPolicy,
 } from "./autopilotPolicy.js";
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
-export { GRILLING_TRACE_CODES, validateGrillingTrace } from "./grillingTrace.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,

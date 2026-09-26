@@ -122,47 +122,6 @@ describe("TC-0014-0029: integration test existence", () => {
 // Quality Depth (TC-0008-0011..0012)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// TC-0008-0011
-// QFAI:EX-0001-0074-01
-describe("TC-0008-0011: Coverage Depth Matrix Produced and Verified", () => {
-  it("the flow matrix records each required depth dimension and story-tree IDs", async () => {
-    const matrixPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "evidence",
-      "coverage-depth-BF-0001.md",
-    );
-    const content = await readFile(matrixPath, "utf-8");
-    expect(content).toContain("Coverage Depth Matrix — BF-0001");
-    expect(content).toMatch(
-      /\| Normal \| Error \| Boundary \| Special \| State transition \| Combinatorial \|/,
-    );
-    expect(content).toContain("| US-0001-0074 |");
-    expect(content).toContain("| AC-0001-0074-01 |");
-    expect(content).toContain("| EX-0001-0074-01 |");
-  });
-
-  it("the story criterion assigns depth review to the business flow", async () => {
-    const acPath = path.resolve(
-      process.cwd(),
-      "..",
-      "..",
-      ".qfai",
-      "spec",
-      "02_business-flow",
-      "business-flow-0001",
-      "user-story-0001-0074",
-      "02_Acceptance-Criteria.md",
-    );
-    const content = await readFile(acPath, "utf-8");
-    expect(content).toContain("AC-0001-0074-01");
-    expect(content).toMatch(/normal\/error\/boundary\/special\/state-transition\/combinatorial/);
-    expect(content).toContain("one ATDD evidence file");
-  });
-});
-
 // TC-0008-0012
 // QFAI:EX-0001-0074-01
 describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
@@ -185,6 +144,6 @@ describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
   it("the example assigns missing error depth to the criterion row", async () => {
     const content = await readFile(path.join(storyDir, "03_Example.md"), "utf-8");
     expect(content).toContain("EX-0001-0074-01");
-    expect(content).toContain("❌ for Error path and is incomplete");
+    expect(content).toContain("flagged incomplete for its missing error path");
   });
 });

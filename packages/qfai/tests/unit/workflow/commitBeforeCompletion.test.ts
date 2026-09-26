@@ -2,7 +2,7 @@
 
 import { expect, it } from "vitest";
 
-import { RUN_ID, completion, finish, metFacts, readySnapshot } from "./finishFixture.js";
+import { completion, finish, metFacts, readySnapshot } from "./finishFixture.js";
 
 // `finish` on a ready `qfai_done` run whose only unmet condition is one uncommitted path.
 function finishWithUncommitted(path: string) {
@@ -23,11 +23,6 @@ function finishWithUncommitted(path: string) {
 
 const uncommitted: [string, string][] = [
   ["uncommitted tracked stage change", "src/notify/email.ts"],
-  ["uncommitted tracked summary", `.qfai/evidence/workflow/${RUN_ID}/summary.json`],
-  [
-    "uncommitted authorization file",
-    `.qfai/evidence/workflow/${RUN_ID}/authorizations/authorization-5.json`,
-  ],
 ];
 
 for (const [title, path] of uncommitted) {

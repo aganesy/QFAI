@@ -15,8 +15,19 @@ const RUN = "run-20260926000000000";
 const STORY = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0005";
 const CONTRACT = ".qfai/spec/03_contract/cli/notify.md";
 const DECISIONS = ".qfai/spec/decisions.md";
-const CREATE = { authorizationId: "authorization-4", operation: "CREATE" };
-const CHANGE = { authorizationId: "authorization-9", operation: "CHANGE_REQUEST" };
+const CREATE = {
+  authorizationId: "authorization-4",
+  operation: "CREATE",
+  recordedAt: "2026-09-26T01:00:00.000Z",
+  chosen: ["Create it"],
+};
+const CHANGE = {
+  authorizationId: "authorization-9",
+  operation: "CHANGE_REQUEST",
+  recordedAt: "2026-09-26T02:00:00.000Z",
+  // A change question whose selection allowed two, answered with both.
+  chosen: ["Apply it", "Seed the example"],
+};
 
 function table(rows: string[]): string {
   return ["# Decisions", "", "| ID | Content | Approach | Status |", "| --- | --- | --- | --- |"]
@@ -31,9 +42,14 @@ const ISSUED = [
   "| DEC-0002 | Keep one email per customer | Settled in discussion | DONE |",
 ];
 
-// A row citing an answer this run recorded, and the operator who gave it.
-const cites = (answer: { authorizationId: string }) =>
-  `Answered ${RUN}/${answer.authorizationId} by operator-1`;
+type Answer = typeof CREATE;
+type Stated = { who?: string; run?: string; at?: string; chosen?: string[] };
+
+// A row carrying an answer this run recorded: its citation, who gave it, when, and the label of
+// each option chosen. `stated` replaces what the row says instead.
+const cites = (answer: Answer, stated: Stated = {}) =>
+  `Answered ${stated.run ?? RUN}/${answer.authorizationId} by ${stated.who ?? "operator-1"} ` +
+  `at ${stated.at ?? answer.recordedAt}: ${(stated.chosen ?? answer.chosen).join(", ")}`;
 
 function contract(examples: string, statement = "One email per customer"): string {
   return [
@@ -223,7 +239,7 @@ it("An appended CREATE row at WIP citing this run's human_decision with another 
       stageKind: "sdd_delta",
       after: [
         ...ISSUED,
-        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | Answered ${RUN}/${CREATE.authorizationId} by operator-2 | WIP |`,
+        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${cites(CREATE, { who: "operator-2" })} | WIP |`,
       ],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
@@ -236,10 +252,85 @@ it("An appended CREATE row at WIP citing another run's human_decision", () => {
       stageKind: "sdd_delta",
       after: [
         ...ISSUED,
-        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | Answered run-20250101000000000/${CREATE.authorizationId} by operator-1 | WIP |`,
+        `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${cites(CREATE, { run: "run-20250101000000000" })} | WIP |`,
       ],
     }),
   ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP that does not say when the answer was recorded", () => {
+  const withoutTime = `Answered ${RUN}/${CREATE.authorizationId} by operator-1: Create it`;
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${withoutTime} | WIP |`],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP that does not name the option the operator chose", () => {
+  const withoutChoice = `Answered ${RUN}/${CREATE.authorizationId} by operator-1 at ${CREATE.recordedAt}`;
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${withoutChoice} | WIP |`],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP that states another recordedAt", () => {
+  const otherTime = cites(CREATE, { at: "2026-09-26T09:00:00.000Z" });
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${otherTime} | WIP |`],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// QFAI:EX-0001-0192-53
+it("An appended CREATE row at WIP that states an option the answer did not choose", () => {
+  const otherOption = cites(CREATE, { chosen: ["Leave it"] });
+  expect(
+    accept({
+      stageKind: "sdd_delta",
+      after: [...ISSUED, `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${otherOption} | WIP |`],
+    }),
+  ).toEqual(refused("record-unauthorized", "DEC-0003"));
+});
+
+// The change request an sdd result appends beside its cited CREATE row, and what `accept` says.
+function changeRequestStating(stated: Stated) {
+  return accept({
+    stageKind: "sdd",
+    changed: storyFiles,
+    after: [
+      ...ISSUED,
+      `| DEC-0003 | CREATE US-0001-0006 in BF-0001 | ${cites(CREATE)} | WIP |`,
+      `| DEC-0004 | Change request: ${storyFiles.join(", ")} | ${cites(CHANGE, stated)} | WIP |`,
+    ],
+  });
+}
+
+const changeRequestRefused = {
+  state: "running",
+  reasons: [
+    { reason: "record-unauthorized", subject: "DEC-0004" },
+    ...storyFiles.map((subject) => ({ reason: "record-unauthorized", subject })),
+  ],
+};
+
+// QFAI:EX-0001-0192-53
+it("A change request at WIP whose two-option answer it states with one label", () => {
+  expect(changeRequestStating({ chosen: ["Apply it"] })).toEqual(changeRequestRefused);
+});
+
+// QFAI:EX-0001-0192-53
+it("A change request at WIP that states another recordedAt", () => {
+  expect(changeRequestStating({ at: "2026-09-26T09:00:00.000Z" })).toEqual(changeRequestRefused);
 });
 
 it("An sdd result whose change request cites only the run's request_scope", () => {
