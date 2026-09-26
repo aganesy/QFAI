@@ -151,6 +151,24 @@ describe("qfai-run", () => {
     expect(text).toMatch(/recovery is a reverse diff limited to the paths the run wrote/i);
     expect(text).toMatch(/never offer a reset, a stash, a branch switch or a worktree removal/i);
   });
+
+  // QFAI:AC-0001-0201-05
+  // QFAI:EX-0001-0201-17
+  it("The operator-screens reference relays CLI strings in the operator's working language", async () => {
+    const text = flat(sectionOf(await readShipped(SCREENS), "## Every screen"));
+    expect(text).toMatch(
+      /relay it in the operator's working language\. the cli's strings are english/i,
+    );
+  });
+
+  // QFAI:EX-0001-0192-07
+  it("announces the checked plan in plain words, naming no route or stage identifier and asking nothing", async () => {
+    const screens = await readShipped(SCREENS);
+    expect(flat(sectionOf(screens, "## Every screen"))).toMatch(
+      /no route identifier, stage kind or internal id/i,
+    );
+    expect(flat(sectionOf(screens, "## The announcement"))).toMatch(/it asks nothing/i);
+  });
 });
 
 describe("qfai-maintain", () => {

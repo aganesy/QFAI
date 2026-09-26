@@ -16,9 +16,9 @@ Scenario: Test-case annotations become example annotations, and story annotation
 # AC-0004-0010-02
 # Parent: US-0004-0010
 Scenario: Annotations with no new counterpart stay and are listed
-  Given a story annotation outside the E2E layer, a QFAI:CON-* annotation, an old deferral marker, and a test-case annotation the ID map does not hold
+  Given a story annotation outside the E2E layer, a QFAI:CON-* annotation, an old deferral marker, a test-case annotation the ID map does not hold, and an annotation naming neither a test case nor a story
   When step 8 runs
   Then none of them changes
   And the first three are listed under Annotations kept with the file and line
-  And the unresolved one is listed under For a person
+  And the last two are listed under For a person
 ```

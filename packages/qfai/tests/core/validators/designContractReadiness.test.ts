@@ -166,6 +166,8 @@ async function seedPrototypingDesignYamls(root: string): Promise<void> {
 }
 
 describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
+  // QFAI:EX-0001-0042-03
+  // QFAI:EX-0001-0042-04
   it("TC-3.8.1: new file set passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -189,6 +191,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(dcon030?.severity).toBe("error");
   });
 
+  // QFAI:EX-0001-0042-04
   it("TC-3.8.3: missing DESIGN.md.lock.yaml → DCON-031", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -196,6 +199,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await rm(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), { force: true });
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+    expect(issues.find((i) => i.code === "QFAI-DCON-031")?.severity).toBe("error");
   });
 
   it("TC-3.8.5: REQUIRED_PROTOTYPING_DESIGN_FILES preserved (prototyping stage)", async () => {
@@ -236,6 +240,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     expect(codes.has("QFAI-DCON-001")).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-04
   it("validatePrototypingDesignContractReadiness emits DCON-032 on sha mismatch", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -245,6 +250,7 @@ describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
     await writeFile(path.join(root, "DESIGN.md"), `${VALID_DESIGN_MD}\n`, "utf-8");
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-032");
+    expect(issues.find((i) => i.code === "QFAI-DCON-032")?.severity).toBe("error");
   });
 
   it("well-formed prototype-handoff.yaml does NOT emit DCON-013 (numeric finalIterIndex accepted)", async () => {
@@ -1076,6 +1082,7 @@ procurement:
   });
 
   // QFAI:EX-0001-0117-01
+  // QFAI:EX-0001-0042-05
   it("design-system.yaml mirror with diverging color value → DCON-005 with diff diagnostic", async () => {
     // The mirror is contractually a verbatim DESIGN.md
     // copy. A hand-authored mirror that disagrees with DESIGN.md must
@@ -1109,6 +1116,7 @@ procurement:
     expect(dcon005[0]?.message).toContain("visual.colors.primary");
     expect(dcon005[0]?.message).toContain("#FF0000");
     expect(dcon005[0]?.message).toContain("#1F2937");
+    expect(dcon005[0]?.severity).toBe("error");
   });
 
   it("legitimate full mirror with typography.scale + weight passes (no false-positive 'fabricated key' DCON-005)", async () => {
@@ -1523,6 +1531,7 @@ procurement:
     ).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-03
   it("malformed root DESIGN.md WITHOUT lock yaml still surfaces DCON-033 (parse error)", async () => {
     // Pre-fix, parseDesignMd was nested under
     // `designMdText !== null && lockText !== null`, so a project
@@ -1539,6 +1548,7 @@ procurement:
     const codes = issues.map((i) => i.code);
     expect(codes).toContain("QFAI-DCON-031"); // missing lock
     expect(codes).toContain("QFAI-DCON-033"); // parse failure now also surfaced
+    expect(issues.find((i) => i.code === "QFAI-DCON-033")?.severity).toBe("error");
   });
 
   it("design-system.yaml mirror missing one DESIGN.md sub-key → DCON-005 missing-key diagnostic", async () => {

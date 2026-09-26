@@ -20,24 +20,31 @@ const oqTable = [
   filler,
 ].join("\n");
 
+/** Writes the fifteen required files of a readiness-clean pack, and returns the pack directory. */
+async function writeCompletePack(root: string): Promise<string> {
+  const pack = path.join(root, ".qfai", "discussion", "discussion-20260923063306456");
+  await mkdir(pack, { recursive: true });
+  for (const name of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {
+    const body =
+      name === "11_OQ-Register.md"
+        ? oqTable
+        : name === "03_Story-Workshop.md"
+          ? `# Story Workshop\n\n${filler}\n\`\`\`mermaid\nflowchart TD\n  Start --> Finish\n\`\`\`\n`
+          : `# ${name}\n\n${filler}`;
+    await writeFile(path.join(pack, name), body, "utf8");
+  }
+  return pack;
+}
+
 // QFAI:EX-0001-0013-01
 // QFAI:EX-0001-0014-01
 // QFAI:EX-0001-0014-02
+// QFAI:EX-0001-0014-03
 it("accepts a complete fifteen-file pack and blocks open or undocumented deferred questions", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
   try {
-    const pack = path.join(root, ".qfai", "discussion", "discussion-20260923063306456");
-    await mkdir(pack, { recursive: true });
     expect(REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES).toHaveLength(15);
-    for (const name of REQUIRED_DISCUSSION_PACK_MARKDOWN_FILES) {
-      const body =
-        name === "11_OQ-Register.md"
-          ? oqTable
-          : name === "03_Story-Workshop.md"
-            ? `# Story Workshop\n\n${filler}\n\`\`\`mermaid\nflowchart TD\n  Start --> Finish\n\`\`\`\n`
-            : `# ${name}\n\n${filler}`;
-      await writeFile(path.join(pack, name), body, "utf8");
-    }
+    const pack = await writeCompletePack(root);
     expect(await validateDiscussionPackReadiness(root, defaultConfig)).toEqual([]);
 
     await writeFile(
@@ -61,6 +68,31 @@ it("accepts a complete fifteen-file pack and blocks open or undocumented deferre
     expect(
       deferred.some(
         (finding) => finding.code === "QFAI-DPACK-007" && finding.refs?.includes("OQ-0001"),
+      ),
+    ).toBe(true);
+
+    await writeFile(
+      path.join(pack, "13_Deferred.md"),
+      `# Deferred\n\n| OQ-ID | Reason |\n| --- | --- |\n| OQ-0001 | The owner revisits the route after launch. |\n\n${filler}`,
+      "utf8",
+    );
+    const documented = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(documented.filter((finding) => finding.refs?.includes("OQ-0001"))).toEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// QFAI:EX-0001-0013-02
+it("blocks readiness when one of the fifteen required files is missing", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf1-discussion-"));
+  try {
+    const pack = await writeCompletePack(root);
+    await rm(path.join(pack, "13_Deferred.md"));
+    const findings = await validateDiscussionPackReadiness(root, defaultConfig);
+    expect(
+      findings.some(
+        (finding) => finding.code === "QFAI-DPACK-002" && finding.refs?.includes("13_Deferred.md"),
       ),
     ).toBe(true);
   } finally {

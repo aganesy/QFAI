@@ -125,6 +125,33 @@ describe("TC-0004-0068: saas-package profile rejects missing DCON-005 attestatio
     expect(carried?.severity).toBe("warning");
   });
 
+  // QFAI:EX-0001-0051-01
+  it("does not pass when the prototyping-profile validate fails", async () => {
+    await seedAttestation();
+    const prototypingIssues = [
+      {
+        code: "QFAI-FAKE-002",
+        severity: "error" as const,
+        category: "canonical" as const,
+        message: "synthetic prototyping failure",
+      },
+    ];
+    const issues = await runSaasPackageProfile(root, defaultConfig, prototypingIssues);
+    expect(issues.find((i) => i.code === "QFAI-FAKE-002")?.severity).toBe("error");
+  });
+
+  // QFAI:EX-0001-0051-01
+  it("does not pass with a malformed CLI-HANDOFF handoff", async () => {
+    await seedAttestation();
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "just a string\n", "utf-8");
+    const issues = await runSaasPackageProfile(root, defaultConfig, []);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "D-SAAS-PACKAGE-HANDOFF-SCHEMA", severity: "error" }),
+      ]),
+    );
+  });
+
   // Pin the outside-root absolute-path fallback for the rel display.
   // When `config.paths.contractsDir` is an absolute path that resolves
   // OUTSIDE `root`, the `D-SAAS-PACKAGE-ATTESTATION-MISSING` message

@@ -85,17 +85,17 @@ it("A record for an older package version supports no claim, and one for this ve
   const current = await version();
   const older = { host: "claude-code", version: "0.0.1", verdict: { blocked: false } };
   const recorded = { ...older, version: current };
+  const blocked = { ...recorded, verdict: { blocked: true } };
+  const unsupported = [
+    `README.md: \`claude-code\` is claimed with no passing record for ${current}`,
+    `packages/qfai/README.md: \`claude-code\` is claimed with no passing record for ${current}`,
+  ];
 
   expect({
     older: claimProblems(await claimingCopies(), [older], current),
+    blocked: claimProblems(await claimingCopies(), [blocked], current),
     current: claimProblems(await claimingCopies(), [recorded], current),
-  }).toEqual({
-    older: [
-      `README.md: \`claude-code\` is claimed with no passing record for ${current}`,
-      `packages/qfai/README.md: \`claude-code\` is claimed with no passing record for ${current}`,
-    ],
-    current: [],
-  });
+  }).toEqual({ older: unsupported, blocked: unsupported, current: [] });
 });
 
 it("Both READMEs put the free-text entry first and name the words the operator types", async () => {

@@ -15,9 +15,9 @@ Scenario: --run-validate で内部バリデーション実行
 
 # AC-0001-0063-02
 # Parent: US-0001-0063
-Scenario: --run-validate + --phase refinement の phase guard
-  Given CI 環境でスペック構造が存在する
-  When `qfai report --run-validate --phase refinement` を実行する
-  Then phase guard エラーが表示される
-  And exit code 1 で終了する
+Scenario: A narrow profile in CI is reported, not fatal
+  Given a CI environment and a story tree
+  When `qfai report --run-validate --profile atdd` runs
+  Then the written validate result carries `QFAI-VALIDATE-017` at warning, and the report warns that a full scan is still needed
+  And that finding alone does not make the exit code non-zero
 ```

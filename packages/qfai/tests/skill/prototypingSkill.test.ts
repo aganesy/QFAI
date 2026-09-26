@@ -100,6 +100,17 @@ describe("prototyping skill validator", () => {
     expect(hasMandatoryEvidencePaths(VALID_SKILL_CONTENT)).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-01
+  it("reports a missing required section and missing canonical evidence paths", () => {
+    const withoutSection = VALID_SKILL_CONTENT.replace("## Required References\n", "");
+    expect(checkRequiredSections(withoutSection).missing).toEqual(["## Required References"]);
+    const withoutPaths = VALID_SKILL_CONTENT.replace(
+      "Screenshot evidence path: .qfai/evidence/prototyping/iter-NN/<screen>.png\n",
+      "",
+    ).replace("HTML snapshot path: .qfai/evidence/prototyping/iter-NN/<screen>.html", "");
+    expect(hasMandatoryEvidencePaths(withoutPaths)).toBe(false);
+  });
+
   it("documents environment preconditions as a separate step", () => {
     expect(hasEnvironmentPreconditions(VALID_SKILL_CONTENT)).toBe(true);
   });
@@ -151,6 +162,7 @@ describe("prototyping skill validator", () => {
     expect(hasPlaywrightCliFallback(`Run \`${form} --version\` first.`)).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-01
   it("flags banned phrases when v1.x mode wording is reintroduced", () => {
     // v2.0 (spec-0012 absorbed): mode (recommended_mode / low-cost / standard) and
     // L1/L2 reviewer separation are removed. The banned-phrase scanner

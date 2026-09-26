@@ -15,9 +15,8 @@ Scenario: --profile <skill> probes the manifest's runtimeDependencies
 
 # AC-0003-0010-02
 # Parent: US-0003-0010
-Scenario: 空 manifest は probe せず、manifest↔probe drift は error (error/boundary)
+Scenario: An empty manifest is not probed (boundary)
   Given `runtimeDependencies` が空配列の manifest
   When `qfai doctor --profile <skill>` を実行する
   Then probe finding は 1 件も emit されない (false positive なし)
-  And 別ケースで manifest 宣言と probe 結果が drift した場合は `R-SKILL-MANIFEST-DRIFT` (SSOT-sync Pair III) が emit される
 ```

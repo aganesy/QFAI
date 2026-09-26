@@ -28,4 +28,12 @@ Scenario: A test fix without its review or re-run is refused
   When the result is submitted
   Then `accept` refuses it
   And the obligation set stays as it was
+
+# AC-0001-0194-04
+# Parent: US-0001-0194
+Scenario: A review counts only from an instance the run has not recorded as author or recommender
+  Given stage results that name their `actor`
+  When a later result is reviewed
+  Then every work order's `actorHistory` holds the recorded authors, recommenders and reviewers
+  And a review by the result's own `actor`, an author or a recommender is refused, and a result with no `actor` is refused
 ```

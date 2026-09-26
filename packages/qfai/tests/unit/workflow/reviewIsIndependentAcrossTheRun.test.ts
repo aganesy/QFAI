@@ -151,8 +151,9 @@ it("A review result whose reviewer instance the actor history shows as the autho
   });
 });
 
-// A bounded run driven through the journal, each result naming the agent that produced it.
-function actorsRun() {
+// A bounded run driven through the journal, each result naming the agent that produced it, and
+// its accepted routing result naming `recommender` when one is given.
+function actorsRun(recommender?: string) {
   const flow = "BF-0007";
   const facts = {
     flows: [flow],
@@ -169,7 +170,19 @@ function actorsRun() {
     stage("bounded-implement", "implement", "qfai-implement", "implement"),
     stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
   ]);
-  const run = new JournalRun(readyWith(plan, flow));
+  const actor = recommender
+    ? {
+        actor: {
+          role: "recommender" as const,
+          agentInstance: recommender,
+          stageInstanceId: "routing",
+        },
+      }
+    : {};
+  const seed = readyWith(plan, flow).map((record) =>
+    record.event === "plan-accepted" ? { ...record, ...actor } : record,
+  );
+  const run = new JournalRun(seed);
   run.next(facts);
   run.accept({ actor: { agentInstance: "sdd-1" } }, facts);
   run.next(facts);
@@ -207,6 +220,16 @@ it("A verify result reviewed by the instance that authored the implement stage",
         { actor: { agentInstance: "verify-1" }, reviewResults: [review("implement-1")] },
         facts,
       ),
+    ),
+  ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
+});
+
+it("A verify result reviewed by the instance that produced the routing result", () => {
+  const { run, facts } = actorsRun("run-1");
+
+  expect(
+    reasonsOf(
+      run.accept({ actor: { agentInstance: "verify-1" }, reviewResults: [review("run-1")] }, facts),
     ),
   ).toEqual([{ reason: "reviewer-not-independent", subject: "reviewResults[0]" }]);
 });

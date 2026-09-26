@@ -75,6 +75,7 @@ describe("migration managed gitignore update", () => {
   });
 
   it("reclaims an authenticated half-state when the managed block is current", async () => {
+    // QFAI:EX-0004-0003-27
     const root = await mkdtemp(path.join(tmpdir(), "qfai-migration-gitignore-"));
     roots.push(root);
     const context: MigrationContext = {
@@ -108,6 +109,8 @@ describe("migration managed gitignore update", () => {
     await writeFile(path.join(stageDir, `${name}.owner`), marker, "utf8");
     await writeFile(path.join(stageDir, conflict), "user data", "utf8");
     await writeFile(path.join(stageDir, `${conflict}.owner`), "invalid marker", "utf8");
+    const unmarked = `.gitignore-${exited.pid}-${randomUUID()}.tmp`;
+    await writeFile(path.join(stageDir, unmarked), "no marker", "utf8");
 
     const planned = await step10.plan(context);
     const stage = `.qfai/report/${name}`;
@@ -118,7 +121,7 @@ describe("migration managed gitignore update", () => {
     });
     expect(planned.forAPerson?.join("\n")).toContain(conflict);
     expect(await readFile(gitignore, "utf8")).toBe(before);
-    expect(await readdir(stageDir)).toHaveLength(4);
+    expect(await readdir(stageDir)).toHaveLength(5);
 
     let output = "";
     const io = {
@@ -131,11 +134,17 @@ describe("migration managed gitignore update", () => {
     };
     expect(await runStep(10, ["--dry-run"], { cwd: root, ...io })).toBe(3);
     expect(output).toContain(`${stage}.owner`);
-    expect(await readdir(stageDir)).toHaveLength(4);
+    expect(await readdir(stageDir)).toHaveLength(5);
 
     output = "";
     expect(await runStep(10, [], { cwd: root, ...io })).toBe(3);
-    expect((await readdir(stageDir)).sort()).toEqual([conflict, `${conflict}.owner`].sort());
+    expect((await readdir(stageDir)).sort()).toEqual(
+      [conflict, `${conflict}.owner`, unmarked].sort(),
+    );
+    expect(await readFile(path.join(stageDir, unmarked), "utf8")).toBe("no marker");
+    expect(await readFile(path.join(stageDir, conflict), "utf8")).toBe("user data");
+    expect(await readFile(path.join(stageDir, `${conflict}.owner`), "utf8")).toBe("invalid marker");
+    expect(output.slice(output.indexOf("## For a person"))).toContain(conflict);
     expect(await readFile(gitignore, "utf8")).toBe(before);
     expect((await step10.plan(context)).operations).toEqual([]);
   });

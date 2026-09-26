@@ -118,6 +118,7 @@ describe("agent cards are the only definitions", () => {
 });
 
 describe("routing defaults are package data", () => {
+  // QFAI:EX-0001-0164-01
   it("keeps routing and review profiles together outside init assets", async () => {
     const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
       routing: Array<{ skill: string; phases: Array<{ id: string }>; review_profile: string }>;
@@ -130,6 +131,19 @@ describe("routing defaults are package data", () => {
     expect(Object.keys(profiles.profiles)).not.toContain("full-harness");
     expect(profiles.optional_modes).toHaveProperty("pattern-doubler");
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
+  });
+
+  // QFAI:AC-0001-0170-02
+  // QFAI:EX-0001-0170-01
+  it("defines devils-advocate as an advisory mode that needs an alternative", async () => {
+    const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
+      optional_modes: Record<string, Record<string, unknown>>;
+    };
+    const mode = profiles.optional_modes["devils-advocate"];
+    expect(mode?.kind).toBe("advisory");
+    expect(String(mode?.description)).toContain("do not block completion by default");
+    expect(mode?.alternative_required).toBe(true);
+    expect(mode?.bare_negation_invalid).toBe(true);
   });
 
   it("routes the migration skill through the required three phases", async () => {
@@ -329,15 +343,48 @@ describe("delegation failure taxonomy is actionable", () => {
     }
   });
 
+  // QFAI:EX-0001-0169-06
+  it("retries a saturated delegation and reports an exhausted budget", async () => {
+    for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
+      const content = await readAsset(file);
+      const taxonomy = getSection(content, "### Delegation Failure Taxonomy (MUST)");
+      expect(taxonomy).toContain("`agent thread limit reached`");
+      expect(taxonomy).toContain("Bounded wait-and-retry on the same stage");
+      expect(taxonomy).toContain("report the class as `saturated (retry budget exhausted)`");
+      expect(taxonomy).toContain("`saturated` never authorises self-execution");
+    }
+  });
+
+  // QFAI:AC-0001-0169-06
+  // QFAI:EX-0001-0169-07
   it("admits PENDING in the Work Orders status vocabulary everywhere it is mandated", async () => {
     // The reviewer-budget branch mandates recording the gate as PENDING;
     // a schema that allows only PASS/REVISE leaves an agent no legal way
     // to do that.
     for (const file of [SHARED_DELEGATION_BASELINE, LIVE_SHARED_DELEGATION_BASELINE]) {
       const content = await readAsset(file);
+      expect(content).toContain(
+        "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
+      );
       expect(content).toContain("Status (PASS/REVISE/PENDING)");
       expect(getSection(content, "### Reviewer budget exhausted")).toContain("`PENDING`");
     }
+    const sddEvidence = await readAsset(
+      path.join(
+        ASSETS,
+        "init",
+        ".qfai",
+        "assistant",
+        "skill",
+        "qfai-sdd",
+        "templates",
+        "evidence",
+        "sdd-flow.md",
+      ),
+    );
+    expect(sddEvidence).toContain(
+      "| Step | Role (sub-agent) | Agent instance | Task title | Input (refs) | Output (refs) | Status (PASS/REVISE/PENDING) |",
+    );
     for (const skillId of SKILLS_WITH_STATUS_VOCABULARY) {
       const content = await readAsset(shippedSkill(skillId));
       // The closing `)` is what separates the retired schema from the current

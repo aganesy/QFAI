@@ -17,6 +17,7 @@ const unwrap = (text: string): string => text.replace(/\s*\n\s*#?\s*/g, " ");
 
 describe("the lock's frozenAt says what it is and what checks it", () => {
   for (const tree of TREES) {
+    // QFAI:EX-0001-0157-01
     it(`${tree}: a re-freeze writes every field, and no gate reads frozenAt`, async () => {
       // A freeze that rewrote only the hash passed every gate, and a green run
       // read as evidence the timestamp had moved with it.
@@ -29,6 +30,7 @@ describe("the lock's frozenAt says what it is and what checks it", () => {
       const sample = unwrap(await read(tree, "templates/contracts/design-md-lock.sample.yaml"));
       expect(sample).toContain("Every freeze rewrites the whole file");
       expect(sample).toContain("none reads frozenAt");
+      expect(sample).toContain("designMdSha256");
     });
   }
 });

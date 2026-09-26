@@ -36,6 +36,7 @@ Scenario: Running a step again is safe
   When the step is run again
   Then no file changes
   And given a tree that step left half migrated, running it again leaves the tree an uninterrupted run leaves
+  And step 10 leaves in place, and lists under For a person, staging it cannot verify as its own
 
 # AC-0004-0003-05
 # Parent: US-0004-0003

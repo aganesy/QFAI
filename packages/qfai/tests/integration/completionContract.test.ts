@@ -100,6 +100,13 @@ describe("BF completion gate", () => {
     expect(parallelPolicy).toContain("Retake evidence whose source revision changed");
   });
 
+  it("rejects a phase entry with a status and no command or result", async () => {
+    // QFAI:EX-0001-0097-07
+    const c = await loadContent();
+    expect(c).toContain("Evidence without a command and result pair does not prove a");
+    expect(c).toMatch(/RED, GREEN, and Refactor commands and observed\s+results/);
+  });
+
   it("runs the same BF-scoped TDD command at checkpoint and completion", async () => {
     // QFAI:EX-0001-0097-05
     const c = await loadContent();

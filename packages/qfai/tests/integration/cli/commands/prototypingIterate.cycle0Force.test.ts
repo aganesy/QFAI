@@ -258,6 +258,31 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(entries).toContain("iter-00");
   });
 
+  // QFAI:EX-0001-0140-04
+  it("keeps legacy spec evidence when re-seeding over a legacy scope record", async () => {
+    const root = await newTempDir();
+    await seedProject(root);
+    const evidenceRoot = path.join(root, ".qfai/evidence/prototyping");
+    await mkdir(evidenceRoot, { recursive: true });
+    await writeFile(
+      path.join(evidenceRoot, "prototyping.json"),
+      JSON.stringify({ specsCovered: ["0012"] }),
+      "utf-8",
+    );
+    const legacyReview = path.join(evidenceRoot, "iter-02/spec-0012/home.review.json");
+    await mkdir(path.dirname(legacyReview), { recursive: true });
+    await writeFile(legacyReview, "legacy review", "utf-8");
+
+    const exit = await runPrototypingIterate({
+      root,
+      cycle: 0,
+      targetUrl: "http://localhost:5173",
+      force: true,
+    });
+    expect(exit).toBe(0);
+    expect(await readFile(legacyReview, "utf-8")).toBe("legacy review");
+  });
+
   it("backs up an iter-00 that is a regular file", async () => {
     // The rename takes the entry whole whatever it is. Walked as a directory
     // it raised ENOTDIR, and the reset stopped before the rename it had just
@@ -619,6 +644,7 @@ describe("iterate --cycle 0 destructive-rerun gate", () => {
     expect(stderr.join("")).toContain("iter-01 was removed before this failed");
   });
 
+  // QFAI:EX-0001-0140-03
   it("puts back what the reset moved when clearing the iteration directories fails", async () => {
     // The moves stand until the whole reset does. A run that stopped here left
     // the previous loop's captures in a backup directory nothing would move

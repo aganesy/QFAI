@@ -266,7 +266,7 @@ EX-0018-0061,EX-0001-0196-01,carried,carried by meaning
 EX-0018-0062,EX-0001-0196-02,carried,restated with story-tree names
 EX-0018-0063,EX-0001-0196-03,carried,carried by meaning
 EX-0018-0064,EX-0001-0196-04,carried,restated with story-tree names
-EX-0018-0065,EX-0001-0196-05,carried,carried by meaning
+EX-0018-0065,EX-0001-0196-06,carried,carried by meaning
 EX-0018-0066,EX-0001-0196-06,carried,carried by meaning
 EX-0018-0067,EX-0001-0196-07,carried,restated with story-tree names
 EX-0018-0068,EX-0001-0196-08,carried,carried by meaning
@@ -481,7 +481,7 @@ TC-0018-0106,EX-0001-0196-03,dropped,the story tree has no test cases; the test 
 TC-0018-0107,EX-0001-0196-03,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-03
 TC-0018-0108,EX-0001-0196-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-04
 TC-0018-0109,EX-0001-0196-04,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-04
-TC-0018-0110,EX-0001-0196-05,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-05
+TC-0018-0110,EX-0001-0196-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-06
 TC-0018-0111,EX-0001-0196-06,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-06
 TC-0018-0112,EX-0001-0196-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-07
 TC-0018-0113,EX-0001-0196-07,dropped,the story tree has no test cases; the test that carries this case annotates EX-0001-0196-07

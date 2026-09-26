@@ -39,6 +39,7 @@ Scenario: The checked plan is announced in the operator's words
   Then the operator sees the goal, the stages in order and the write scope
   And no route or stage identifier appears
   And the announcement asks nothing
+  And a proposal that fails a check, with an unknown ID or path, a malformed reference, or not exactly one bound flow, is refused and routing stays where it was
 
 # AC-0001-0192-05
 # Parent: US-0001-0192

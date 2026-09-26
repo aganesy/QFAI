@@ -43,4 +43,11 @@ Scenario: Grilling inside a run works only the remaining frontier
   Then it takes what the work order's `settled` field records as settled, and works only the remaining frontier
   And it keeps the split between user sessions and delegated sessions
   And no run invokes `qfai-grill`
+
+# AC-0001-0169-06
+# Parent: US-0001-0169
+Scenario: Work orders are recorded in one table
+  Given a stage that delegates work orders
+  When its artifact is written
+  Then it carries a Work Orders Summary table with the columns Step, Role (sub-agent), Agent instance, Task title, Input (refs), Output (refs) and Status (PASS/REVISE/PENDING)
 ```

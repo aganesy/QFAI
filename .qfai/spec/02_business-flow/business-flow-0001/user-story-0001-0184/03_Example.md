@@ -10,3 +10,4 @@
 | EX-0001-0184-04 | AC-0001-0184-03 | MCP server returns HTTP 429 with Retry-After: 30                                        | Agent waits 30 seconds, retries the request, logs "Rate limited, retrying after 30s"                          |
 | EX-0001-0184-05 | AC-0001-0184-04 | MCP template for Brave Search tested against Claude (.mcp.json) and Codex (config.toml) | Both configs parse successfully; MCP server starts and responds in both environments                          |
 | EX-0001-0184-06 | AC-0001-0184-01 | Developer in enterprise environment with sensitive data                                 | Documentation shows both hosted URL and npx modes; recommendation: "Use local npx for sensitive environments" |
+| EX-0001-0184-07 | AC-0001-0184-01 | Every shipped MCP template under `web-research/mcp-templates/`                          | No template configures SSE transport: none holds `"type": "sse"`, `transport = "sse"` or an `/sse` endpoint   |

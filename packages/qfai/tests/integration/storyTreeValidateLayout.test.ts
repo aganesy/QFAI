@@ -35,6 +35,7 @@ function configured() {
 }
 
 describe("story-tree layout dispatch", () => {
+  // QFAI:EX-0001-0053-01
   it("runs story findings only when the configured spec root has no legacy pack", async () => {
     await put(
       `${specs}/02_business-flow/business-flow-0001/business-flow.md`,
@@ -55,6 +56,7 @@ describe("story-tree layout dispatch", () => {
     expect(legacyResult.issues.some((item) => item.code.startsWith("QFAI-STORY-"))).toBe(false);
   });
 
+  // QFAI:EX-0001-0053-01
   it("fails every profile on the old layout with one migration finding", async () => {
     await mkdir(path.join(root, specs, "spec-0001"), { recursive: true });
     const profiles: ValidationProfile[] = [
@@ -77,6 +79,7 @@ describe("story-tree layout dispatch", () => {
     }
   });
 
+  // QFAI:EX-0001-0053-01
   it("detects the former default spec root when the new root is configured", async () => {
     await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
 

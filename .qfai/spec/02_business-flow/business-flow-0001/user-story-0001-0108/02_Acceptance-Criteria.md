@@ -15,14 +15,15 @@ Scenario: pivotDirective Enum
 # AC-0001-0108-02
 # Parent: US-0001-0108
 Scenario: pivotDirective Rule — pivot
-  Given the latest 3 iters each have `informationArchitecture ∈ {weak, acceptable}` and the latest iter has `layoutAntiPatternsDetected.length > 0`,
-  When `computePivotDirective(history)` runs,
-  Then it returns `"pivot"`.
+  Given `open(r)` is the number of `blockingFindings` plus `layoutAntiPatternsDetected` in review `r`, and `open(latest) > 0`, `open(latest) >= open(prior)` and `open(prior) >= open(prior2)`,
+  When the reviewer writes `pivotDirective` by the rule the shipped reviewer prompt states,
+  Then it writes `"pivot"`.
 
 # AC-0001-0108-03
 # Parent: US-0001-0108
-Scenario: pivotDirective Rule — continue
-  Given the latest iter has `≥ 2` of the 4 UX axes strictly improved by `ordinalIndex` (weak=0, acceptable=1, strong=2, exceptional=3) versus the prior iter,
-  When `computePivotDirective(history)` runs,
-  Then it returns `"continue"`. Otherwise (and not `pivot`) it returns `"refine"`.
+Scenario: pivotDirective Rule — continue or refine
+  Given the pivot condition does not hold,
+  When the reviewer writes `pivotDirective` by the rule the shipped reviewer prompt states,
+  Then it writes `"continue"` when a prior review exists and `open(latest) < open(prior)`, and `"refine"` otherwise.
+  And each of the four UX axis scores in the review is one of `weak`, `acceptable`, `strong` or `exceptional`; any other value is rejected.
 ```

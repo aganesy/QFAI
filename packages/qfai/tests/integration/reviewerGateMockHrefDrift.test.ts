@@ -91,6 +91,7 @@ afterEach(async () => {
 });
 
 describe("TC-0010-0011: detectMockHrefDrift emits R-MOCK-HREF-DRIFT on template↔validator asymmetry", () => {
+  // QFAI:EX-0001-0092-05
   it("does NOT fire when template is anchor-form and validator is strict (symmetric)", async () => {
     await seedPair(root, { template: TEMPLATE_ANCHOR, validator: VALIDATOR_STRICT });
     const issues = await detectMockHrefDrift(root);

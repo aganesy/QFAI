@@ -145,7 +145,7 @@ describe("BF-0004 migration examples", () => {
     expect(ignore).not.toMatch(/\b(?:writeFile|appendFile|rename)\s*\(/);
   });
 
-  it("reports only the old layout across five profiles, ahead of a missing story file", async () => {
+  it("reports only the old layout across every profile, ahead of a missing story file", async () => {
     // QFAI:EX-0004-0002-01
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
@@ -156,7 +156,17 @@ describe("BF-0004 migration examples", () => {
       ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
       "# New\n",
     );
-    for (const profile of ["sdd", "atdd", "tdd", "full", "drift"] as const) {
+    for (const profile of [
+      "discussion",
+      "sdd",
+      "prototyping",
+      "atdd",
+      "tdd",
+      "verify",
+      "full",
+      "saas-package",
+      "drift",
+    ] as const) {
       const result = await validateProject(
         context.root,
         {
@@ -176,6 +186,59 @@ describe("BF-0004 migration examples", () => {
       );
       expect(result.issues[0]?.message).not.toContain("03_Example.md");
     }
+  });
+
+  it("reports a policies-only old layout ahead of a missing story file", async () => {
+    // QFAI:EX-0004-0002-02
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(context.root, ".qfai/spec/_policies/01_Objective.md", "# Old\n");
+    await put(
+      context.root,
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
+      "# New\n",
+    );
+    const result = await validateProject(
+      context.root,
+      {
+        config: context.config,
+        issues: [],
+        configPath: path.join(context.root, "qfai.config.yaml"),
+      },
+      { profile: "sdd" },
+    );
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
+    expect(result.issues[0]?.message).toContain(path.join(context.root, ".qfai/spec"));
+    expect(result.issues[0]?.message).toMatch(
+      /; run \/qfai-migration-v1-to-v2 before validation\.$/,
+    );
+  });
+
+  it("reports the former default spec root when the new root is configured", async () => {
+    // QFAI:EX-0004-0002-03
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    await put(context.root, ".qfai/specs/spec-0001/01_Spec.md", "# Old\n");
+    await put(
+      context.root,
+      ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md",
+      "# New\n",
+    );
+    const result = await validateProject(
+      context.root,
+      {
+        config: context.config,
+        issues: [],
+        configPath: path.join(context.root, "qfai.config.yaml"),
+      },
+      { profile: "full" },
+    );
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.code).toBe("QFAI-LAYOUT-001");
+    expect(result.issues[0]?.message).toContain(path.join(context.root, ".qfai/specs"));
   });
 
   it("refuses a truncated migration ID map before step 5 changes any bytes", async () => {
@@ -416,6 +479,28 @@ describe("BF-0004 migration examples", () => {
     expect(request?.approach).toMatch(/^\.qfai\/decisions\/CR-20260101-0001\.md:/);
   });
 
+  it("appends after the rows decisions.md already holds without changing them", async () => {
+    // QFAI:EX-0004-0005-09
+    const context = await fixture(
+      "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
+    );
+    const existing =
+      "# Decisions\n\n## Decisions\n\n| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | First kept decision | Kept | DONE |\n| DEC-0002 | Second kept decision | Kept | TODO |\n";
+    await put(context.root, ".qfai/spec/decisions.md", existing);
+    await put(
+      context.root,
+      ".qfai/spec/spec-0001/07_Decisions.md",
+      "# Decisions\n\n### DR-0001: Choose A\n\n- Status: accepted\n",
+    );
+    expect((await run(step02, context)).code).toBe(0);
+    const text = await read(context.root, ".qfai/spec/decisions.md");
+    const rows = parseRecordTable(text, "decisions").rows;
+    expect(rows.map((row) => row.id)).toEqual(["DEC-0001", "DEC-0002", "DEC-0003"]);
+    expect(rows[2]?.content).toContain("DR-0001");
+    for (const line of existing.split("\n").filter((entry) => entry.startsWith("| DEC-")))
+      expect(text).toContain(line);
+  });
+
   it("records a retired pack without placing it in a new flow", async () => {
     const context = await fixture(
       "paths:\n  specsDir: .qfai/spec\n  contractsDir: .qfai/spec/03_contract\n",
@@ -566,7 +651,14 @@ describe("BF-0004 migration examples", () => {
     const before = await treeHash(context.root);
     const badOption = capture();
     expect(await runStep(1, ["--force"], { cwd: context.root, ...badOption.io })).toBe(2);
-    expect(badOption.error).toContain("--dry-run");
+    expect(badOption.error).toContain("--force");
+    expect(await treeHash(context.root)).toBe(before);
+    const withDryRun = capture();
+    expect(
+      await runStep(1, ["--dry-run", "--force"], { cwd: context.root, ...withDryRun.io }),
+    ).toBe(2);
+    expect(withDryRun.error).toContain("--force");
+    expect(withDryRun.output).toBe("");
     expect(await treeHash(context.root)).toBe(before);
     const missingRoot = capture();
     expect(await runStep(1, [], { cwd: path.join(context.root, ".qfai"), ...missingRoot.io })).toBe(
@@ -611,6 +703,10 @@ describe("BF-0004 migration examples", () => {
     expect(await runStep(5, [], { cwd: context.root, ...missingMap.io })).toBe(2);
     expect(missingMap.error).toContain("Run step 4");
     expect(await treeHash(context.root)).toBe(noMapBefore);
+    const annotationsWithoutMap = capture();
+    expect(await runStep(8, [], { cwd: context.root, ...annotationsWithoutMap.io })).toBe(2);
+    expect(annotationsWithoutMap.error).toContain("Run step 4");
+    expect(await treeHash(context.root)).toBe(noMapBefore);
   });
 
   it("ships the plan, dry-run, evidence, deduplication and validation procedure in order", async () => {
@@ -632,6 +728,9 @@ describe("BF-0004 migration examples", () => {
     const positions = markers.map((marker) => prose.indexOf(marker));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(prose).toMatch(
+      /already has the story tree and no migration ID map, run steps 1 to 10 to confirm their empty reports, report that there is nothing to migrate/,
+    );
   });
 
   it("reports no operations for all ten steps in an already migrated project", async () => {
@@ -664,6 +763,11 @@ describe("BF-0004 migration examples", () => {
     expect(guide).toContain("QFAI 2.x does not read the old spec-pack layout");
     expect(guide).toContain("pinned 1.x release");
     expect(guide).toContain("migrate the project before using");
+    expect(guide).toContain(
+      "node .qfai/assistant/skill/qfai-migration-v1-to-v2/scripts/01-rename-directories.mjs",
+    );
+    expect(guide).toContain("## Resolve the reports");
+    expect(guide).toContain("Resolve each `## For a person` row");
     expect(guide).not.toMatch(/(?:BF|US|AC|EX|BR)-00(?:1\d|[2-9]\d)/);
   });
 });

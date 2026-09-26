@@ -24,6 +24,7 @@ describe.each(trees)("decision records in %s", (tree) => {
 });
 
 describe("the decision record home is tracked", () => {
+  // QFAI:EX-0001-0176-02
   it("re-includes the singular directory in the managed ignore block", () => {
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/");
     expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain("!.qfai/evidence/decision/**");

@@ -8,9 +8,10 @@ Feature: Git symlink 設定 + Windows 対応
 # AC-0001-0028-01
 # Parent: US-0001-0028
 Scenario: git config core.symlinks 設定
-  Given Git リポジトリ内で `qfai init` を実行する
-  When init 処理が開始される
-  Then `git config core.symlinks true` が実行される
+  Given `qfai init` runs
+  When init starts
+  Then inside a Git repository it runs `git config core.symlinks true`
+  And outside a Git repository it changes no `core.symlinks` setting
 
 # AC-0001-0028-02
 # Parent: US-0001-0028

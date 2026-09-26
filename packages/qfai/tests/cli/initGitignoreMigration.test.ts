@@ -43,6 +43,7 @@ const readGitignore = (root: string): Promise<string> =>
   readFile(path.join(root, ".gitignore"), "utf-8");
 
 describe("re-init preserves what the project chose to track", () => {
+  // QFAI:EX-0001-0033-09
   it("does not resurrect an ignore line the project removed from the block", async () => {
     await withProject(async (root) => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
@@ -334,6 +335,7 @@ describe("a retired line inside the block does not truncate it", () => {
     });
   });
 
+  // QFAI:EX-0001-0033-08
   it("still leaves a project line written under the block outside it", async () => {
     // The protection the old walk bought, kept. Widening it to tolerate unknown lines INSIDE
     // the block must not swallow the lines a project appended directly under it with no blank

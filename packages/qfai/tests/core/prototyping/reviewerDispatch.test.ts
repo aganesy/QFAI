@@ -126,6 +126,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts[0]).toMatchObject({ ok: true, attemptIndex: 0 });
   });
 
+  // QFAI:EX-0001-0122-05
   it("retries up to attemptLimit and returns 'retryExhausted' when every attempt fails", async () => {
     let calls = 0;
     const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
@@ -285,6 +286,7 @@ describe("dispatchReviewerToPair (interface stub)", () => {
     expect(outcome.attempts[1]?.ok).toBe(true);
   });
 
+  // QFAI:EX-0001-0122-05
   it("omits reviewJson when every attempt fails (retryExhausted)", async () => {
     const outcome = await dispatchReviewerToPair("CON-UI-0012", "dashboard", {
       attemptLimit: 2,

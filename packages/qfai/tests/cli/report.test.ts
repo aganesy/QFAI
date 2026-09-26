@@ -138,6 +138,41 @@ describe("qfai report on a story tree", () => {
     await expect(runReport({ root, format: "json" })).rejects.toThrow("invalid shape");
   });
 
+  // QFAI:EX-0001-0064-01
+  it("exits 2 and names the missing input when no validate output exists", async () => {
+    const root = await storyRoot();
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(await runReport({ root, format: "md" })).toBe(2);
+    expect(stderr.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+      "input file not found",
+    );
+  });
+
+  // QFAI:EX-0001-0063-02
+  it("reports a narrow profile run in CI at warning without failing on it", async () => {
+    const root = await storyRoot();
+    vi.stubEnv("CI", "true");
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      const exit = await runReport({ root, format: "md", runValidate: true, profile: "atdd" });
+      const written = JSON.parse(
+        await readFile(path.join(root, ".qfai/report/validate.json"), "utf8"),
+      ) as { issues: Issue[] };
+      expect(written.issues).toContainEqual(
+        expect.objectContaining({ code: "QFAI-VALIDATE-017", severity: "warning" }),
+      );
+      expect(stdout.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain(
+        "run a full scan",
+      );
+      const otherErrors = written.issues.filter(
+        (item) => item.severity === "error" && item.code !== "QFAI-VALIDATE-017",
+      );
+      expect(exit).toBe(otherErrors.length > 0 ? 1 : 0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("requires a scoped input file for --flow", async () => {
     const root = await storyRoot();
     await writeValidation(root, []);

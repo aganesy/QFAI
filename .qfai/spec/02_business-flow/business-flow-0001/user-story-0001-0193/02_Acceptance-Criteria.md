@@ -12,7 +12,7 @@ Scenario: A missing test is written against the example that states the case
   When the plan continues
   Then an example that already states the case needs no story-authoring stage, and acceptance or implement writes its test
   And when no example states it, the next stage is `sdd_append`, carrying the diagnosis as the reason
-  And acceptance runs only when the case needs an acceptance-layer test, then implement and a full verify follow
+  And acceptance runs under `acceptance_obligations_unmet`, then implement and a full verify follow
 
 # AC-0001-0193-02
 # Parent: US-0001-0193

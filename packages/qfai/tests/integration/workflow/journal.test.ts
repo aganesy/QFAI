@@ -2,6 +2,7 @@
 // QFAI:AC-0001-0196-01
 // QFAI:AC-0001-0196-04
 // QFAI:AC-0001-0196-05
+// QFAI:AC-0001-0196-09
 // QFAI:AC-0001-0199-01
 // QFAI:AC-0001-0201-05
 // QFAI:EX-0001-0195-11
@@ -93,6 +94,7 @@ async function trackedSummary(root: string, runId: string): Promise<unknown> {
   return JSON.parse(await readFile(file, "utf8").catch(() => "null"));
 }
 
+// QFAI:EX-0001-0201-39
 it("Built CLI run with a distinctive request sentence under a temp root", async () => {
   const root = await minimalProject();
   const sentence = "Paint the zebra crossing ultraviolet at dawn.";
@@ -116,7 +118,15 @@ it("Built CLI run with a distinctive request sentence under a temp root", async 
       requestDigest ===
       createHmac("sha256", Buffer.from(key, "hex")).update(sentence).digest("hex"),
     bare: requestDigest === createHash("sha256").update(sentence).digest("hex"),
-  }).toEqual({ files: true, sentence: false, root: false, keyed: true, bare: false });
+    secret: tracked.some((text) => text.includes(key)),
+  }).toEqual({
+    files: true,
+    sentence: false,
+    root: false,
+    keyed: true,
+    bare: false,
+    secret: false,
+  });
 });
 
 it("Built CLI run from start to finish on a temp project", async () => {

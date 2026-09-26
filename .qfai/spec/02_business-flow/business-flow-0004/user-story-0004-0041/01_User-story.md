@@ -9,10 +9,10 @@
   and `npx qfai workflow start` accepts the project without further setup.
 - Non-goals: creating a run; changing a routing or review-profile override the
   project wrote; repairing an item step 12 reports; installing agent cards.
-- Notes: requested by the user on 2026-09-26 (DEC-0828). The skill's name
+- Notes: requested by the user on 2026-09-26 (DEC-0919). The skill's name
   becomes `qfai-migration-v1-to-v2`; the old name is a retired skill ID, and the
   evidence directory keeps its name so a migration already under way continues.
 
 ## Source Provenance
 
-- Change request: `decisions.md#DEC-0828`
+- Change request: `decisions.md#DEC-0919`

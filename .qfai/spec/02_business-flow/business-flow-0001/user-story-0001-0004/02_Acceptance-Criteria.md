@@ -41,4 +41,11 @@ Scenario: A workflow route is not a change type
   When it is read
   Then it states that the workflow routes are orthogonal to the Change Type values
   And choosing a route selects no Change Type, and a Change Type selects no route
+
+# AC-0001-0004-05
+# Parent: US-0001-0004
+Scenario: The constitution's articles are non-negotiable
+  Given the shipped `constitution.md`
+  When its articles are read
+  Then it lists Articles I to XI as non-negotiable rules, with no exception
 ```

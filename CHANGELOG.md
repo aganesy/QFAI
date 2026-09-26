@@ -419,6 +419,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
+  only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a
+  plan's `from` selects. Each new `business-flow.md` now also carries that
+  section's text under Purpose, with its level-two headings lowered to level
+  three.
+
+- **Migration step 3 stops before writing on two overlays of one name.** When
+  `.qfai/assistant/constitution/` and `.qfai/assistant/catalog/` both hold
+  `<name>.local.md`, and either could move beside `rule/<name>.md`,
+  `03-move-catalog.mjs` planned both moves to one path and failed after earlier
+  writes. It now writes nothing, lists both overlays under `## For a person`
+  and exits 3; keep one and run the step again.
+
 - **A work order that binds nothing now refuses a target.** The shipped
   `work-order.schema.json` required a `target` on every other stage kind but
   accepted one on the `route`, `discussion`, `maintenance` and `verify` work

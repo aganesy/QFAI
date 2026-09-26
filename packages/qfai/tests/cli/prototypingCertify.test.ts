@@ -391,6 +391,7 @@ describe("qfai prototyping certify (generate)", () => {
     expect(await runPrototypingCertify({ root, check: false })).toBe(2);
   });
 
+  // QFAI:EX-0001-0122-04
   it("exits 2 when prototyping.json#uiContractsCovered is malformed (empty array)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -618,6 +619,7 @@ describe("qfai prototyping show-ui-contract", () => {
     await writeFile(path.join(dir, "prototyping.json"), JSON.stringify(record), "utf-8");
   }
 
+  // QFAI:EX-0001-0125-02
   it("shows the frozen and live UI contract IDs with a full primary descriptor", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

@@ -652,6 +652,39 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(protoBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  // QFAI:EX-0001-0114-02
+  it("exits 2 at cycle 0 when DESIGN.md differs from the lock, naming both digests", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const lockSha = "a".repeat(64);
+    const lockDir = path.join(root, ".qfai/spec/03_contract/design");
+    await mkdir(lockDir, { recursive: true });
+    await writeFile(
+      path.join(lockDir, "DESIGN.md.lock.yaml"),
+      ['designMdPath: "DESIGN.md"', `designMdSha256: "${lockSha}"`, ""].join("\n"),
+      "utf-8",
+    );
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingIterate({
+        root,
+        cycle: 0,
+        targetUrl: "http://localhost:5173",
+      });
+      expect(exit).toBe(2);
+      const stderr = errorSpy.mock.calls.flat().join(" ");
+      expect(stderr).toContain(`lock=${lockSha}`);
+      expect(stderr).toContain(`current=${hashDesignMd(CANONICAL_DESIGN_MD)}`);
+      expect(stderr).toContain("refreeze");
+    } finally {
+      errorSpy.mockRestore();
+    }
+    await expect(
+      readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+    ).rejects.toThrow();
+  });
+
   it("TC-3.5.2: missing DESIGN.md → exit 2 with message", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { skipDesignMd: true });
@@ -1407,6 +1440,7 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", () => {
+  // QFAI:EX-0001-0115-01
   it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
     // TC-0012-0373 pins the canonical operator-facing stderr phrase
     // "DESIGN.md hash mismatch" plus "re-run from cycle 0" so the
@@ -1812,6 +1846,7 @@ describe("runPrototypingIterate UI contract scope", () => {
     );
   }
 
+  // QFAI:EX-0001-0118-06
   it("freezes every UI-bearing contract and emits the full set in the plan", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1833,6 +1868,39 @@ describe("runPrototypingIterate UI contract scope", () => {
     expect(plan.uiContracts).toEqual(record.uiContractsCovered);
   });
 
+  // QFAI:EX-0001-0142-01
+  it("lets --primary-ui-contract win over the configured primary UI contract", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    const configPath = path.join(root, "qfai.config.yaml");
+    const config = await readFile(configPath, "utf-8");
+    await writeFile(
+      configPath,
+      `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
+      "utf-8",
+    );
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      // The configured pin names a contract that does not exist.
+      expect(
+        await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:3000" }),
+      ).toBe(2);
+      // The flag replaces it, so the run resolves CON-UI-0001.
+      expect(
+        await runPrototypingIterate({
+          root,
+          cycle: 0,
+          targetUrl: "http://localhost:3000",
+          primaryUiContract: "CON-UI-0001",
+        }),
+      ).toBe(0);
+    } finally {
+      stderr.mockRestore();
+    }
+  });
+
+  // QFAI:EX-0001-0125-04
   it("rejects a newly declared UI contract before honoring convergence", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -1914,6 +1982,23 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
     );
   }
 
+  // QFAI:EX-0001-0122-02
+  it("exits 2 with the re-seed instruction when the record has no frozenLicenseCatalog", async () => {
+    const root = await newTempDir();
+    // `undefined` drops the key from the serialized record.
+    await seedWithCatalog(root, undefined);
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingIterate({ root, cycle: 1 })).toBe(2);
+      const stderr = errorSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      expect(stderr).toMatch(/`--cycle 0/);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("exits 2 when allowedSources is tampered (e.g. `pinterest` added)", async () => {
     const root = await newTempDir();
     await seedWithCatalog(root, {
@@ -1986,6 +2071,7 @@ describe("runPrototypingIterate cycle >= 1 — frozenLicenseCatalog drift hard-f
 // `[]`, skipping the exit-66 license gate entirely. Instead the iterate
 // command returns exit 2 with stderr naming the offending index + field.
 describe("runPrototypingIterate cycle >= 1 — malformed imageSources hard-stop (TC-0012-0413)", () => {
+  // QFAI:EX-0001-0121-02
   it("exits 2 and names the offending index/field when an imageSources entry is missing 'license'", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
