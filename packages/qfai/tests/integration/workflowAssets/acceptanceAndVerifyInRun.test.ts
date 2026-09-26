@@ -153,9 +153,10 @@ describe("qfai-verify in a workflow run", () => {
     const text = flat(raw);
     expect(text).toMatch(/verify edits no artifact another owner holds/i);
     expect(text).toMatch(/returns `needs_repair`, with the finding listed in `debts`/i);
-    expect(rowOf(raw, "`spec gap`")).toMatch(/`qfai-sdd`/);
-    expect(rowOf(raw, "`acceptance-test defect`")).toMatch(/`qfai-atdd`/);
-    expect(rowOf(raw, "`implementation defect`")).toMatch(/`qfai-implement`/);
+    expect(rowOf(raw, "| A story or contract gap ")).toMatch(/`qfai-sdd`/);
+    expect(rowOf(raw, "| An acceptance-test defect ")).toMatch(/`qfai-atdd`/);
+    expect(rowOf(raw, "| An implementation defect ")).toMatch(/`qfai-implement`/);
+    expect(text).toMatch(/these three are the only repairs verify routes/i);
   });
 
   // QFAI:EX-0001-0215-06

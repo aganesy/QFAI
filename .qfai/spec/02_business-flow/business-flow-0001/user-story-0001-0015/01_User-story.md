@@ -28,4 +28,4 @@ As a maintainer, I want UI-bearing detection to control whether exploration-firs
 - Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0002/02_User-stories.md#us-0002-0003`
 - AC-0001-0015-01 restated by the brand-direction change request that
   `decisions.md#DEC-0683` records; main's text at
-  `origin/main:.qfai/specs/spec-0002/03_Acceptance-Criteria.md`.
+  `b5d357c14:.qfai/specs/spec-0002/03_Acceptance-Criteria.md`.

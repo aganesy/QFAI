@@ -74,20 +74,20 @@ from a fresh clone.
 
 `summary.json`:
 
-| Field              | Content                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `runId`            | The run ID                                                                                                   |
-| `qfaiVersion`      | The package version that wrote the run. The only version the file carries                                    |
-| `route`            | The checked route                                                                                            |
-| `completionTarget` | `qfai_done` or `working_tree`                                                                                |
-| `state`            | The state when this tracked summary was last written; the runtime journal holds the current state            |
-| `targetBindings`   | `{ slotId, flowId, storyIds }` per bound `new_story` slot. IDs only, no story text                           |
-| `stages`           | `{ stageInstanceId, stageKind, outcome, testObservation, receiptDigests, reviewerRoles }` per stage instance |
-| `authorizationIds` | The authorizations under `authorizations/`                                                                   |
-| `debts`            | `{ findingCode, path, cause, owningFlow, detectingCommand, resolvingOwner, blockingExtent }` each            |
-| `requestDigest`    | HMAC-SHA-256 of the request text under the run's digest key, lowercase hex                                   |
-| `createdAt`        | When the run was created                                                                                     |
-| `updatedAt`        | When the file was last written                                                                               |
+| Field              | Content                                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runId`            | The run ID                                                                                                                                                |
+| `qfaiVersion`      | The package version that wrote the run. The only version the file carries                                                                                 |
+| `route`            | The checked route                                                                                                                                         |
+| `completionTarget` | `qfai_done` or `working_tree`                                                                                                                             |
+| `state`            | The state when this tracked summary was last written; the runtime journal holds the current state                                                         |
+| `targetBindings`   | `{ slotId, flowId, storyIds }` per bound `new_story` slot. IDs only, no story text                                                                        |
+| `stages`           | `{ stageInstanceId, stageKind, outcome, testObservation, receiptDigests, reviewerRoles }` per stage instance                                              |
+| `authorizationIds` | The authorizations under `authorizations/`                                                                                                                |
+| `debts`            | `{ findingCode, path, cause, owningFlow, detectingCommand, resolvingOwner, blockingExtent }` each; `owningFlow` may be `null` in a run that binds no flow |
+| `requestDigest`    | HMAC-SHA-256 of the request text under the run's digest key, lowercase hex                                                                                |
+| `createdAt`        | When the run was created                                                                                                                                  |
+| `updatedAt`        | When the file was last written                                                                                                                            |
 
 - **First write.** Tracked evidence is first written at the run's first
   `proceed` authorization or its first accepted stage result, as
@@ -328,8 +328,8 @@ Rule refs: BR-0671, BR-0672, BR-0673
 | BR-0546 | Every change route's last stage is a full verify, and skipping a stage never skips a test obligation.                                                                                                                                                                                                 | EX-0001-0192-14 |
 | BR-0619 | The `direct` plan is a maintenance stage by `qfai-maintain`, then a full verify.                                                                                                                                                                                                                      | EX-0001-0198-01 |
 | BR-0631 | The plans load from the package's `assets/defaults/workflows/` and are never installed into a project. A plan with an unknown stage, a cycle or no path to verify is refused on load as trigger (b), and a copy under the project's `.qfai/assistant/` is never read.                                 | EX-0001-0199-09 |
-| BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it. | EX-0001-0193-13 |
 | BR-0649 | Shipped schemas, plans and skills carry no private version marker and no internal identifier, and the only version they name is `qfaiVersion`.                                                                                                                                                        | EX-0001-0201-15 |
 | BR-0652 | Tracked evidence under `.qfai/evidence/workflow/` holds no conversation text, secret, token or absolute path, and request text and free-text answers appear there only as keyed digests.                                                                                                              | EX-0001-0201-18 |
 | BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                                                 | EX-0001-0201-19 |
 | BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                                                               | EX-0001-0201-20 |
+| BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it. | EX-0001-0193-13 |

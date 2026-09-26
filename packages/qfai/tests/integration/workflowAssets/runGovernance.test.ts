@@ -82,6 +82,12 @@ describe("governance inside a run", () => {
       /a QFAI work order binds the stage to its target: one business flow, or one new-story slot/i,
     );
     expect(text).toMatch(/these statements add to the constitution\. they except no article/i);
+    const pointer =
+      /`\.qfai\/assistant\/rule\/shared-skill-operating-baseline\.md#what-authorizes-a-runs-work`/;
+    const constitution = flat(await readShipped("rule/constitution.md"));
+    expect(constitution).toMatch(pointer);
+    expect(constitution).toMatch(/they add to these articles and except none/i);
+    expect(await passage(DELEGATION, "## Inside a workflow run")).toMatch(pointer);
   });
 
   // QFAI:AC-0001-0004-04

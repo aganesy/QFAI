@@ -11,8 +11,9 @@ For this skill:
 
 - In mode `active`, a request with no work order and no name is passed to
   `qfai-run` with nothing edited.
-- A worker checks the run, stage instance and work-order IDs against the work
-  order, then does only that work order's work.
+- A worker checks the run, stage instance and work-order IDs against the
+  outstanding work order, as the full check states, then does only that work
+  order's work.
 
 The rest of this file applies to a worker.
 

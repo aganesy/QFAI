@@ -168,7 +168,7 @@ describe("qfai-sdd as a stage of a run", () => {
 
   // QFAI:AC-0001-0214-06
   // QFAI:EX-0001-0214-06
-  it("changes the story tree only on the operator's answer, with a change request row at WIP", async () => {
+  it("changes the story tree only on the operator's answer, and moves its change request row to DONE", async () => {
     const text = await section(REFERENCE, "## A change to the story tree");
     expect(text).toMatch(/the first attempt asks once and changes nothing/i);
     expect(text).toMatch(
@@ -178,13 +178,19 @@ describe("qfai-sdd as a stage of a run", () => {
       /the attempt that holds the answer, received through `authorizationRefs`, makes the change/i,
     );
     expect(text).toMatch(
-      /appends one `decisions\.md` row, already at WIP, whose Content opens `Change request:`/i,
+      /appends one `decisions\.md` row at WIP whose Content opens `Change request:`/i,
     );
     expect(text).toMatch(
       /names every story-tree and contract file it changed, and `decisions\.md` when it appended any other row/i,
     );
     expect(text).toMatch(
-      /a row that cites only the run's `request_scope` is refused\. it is not left at TODO/i,
+      /the same attempt moves the row to DONE once every change the row names is written/i,
+    );
+    expect(text).toMatch(
+      /stays at WIP only while changes it names remain for a later attempt of this stage/i,
+    );
+    expect(text).toMatch(
+      /a row that cites only the run's `request_scope` is refused\. leaving the row at TODO does not avoid the refusal/i,
     );
   });
 });

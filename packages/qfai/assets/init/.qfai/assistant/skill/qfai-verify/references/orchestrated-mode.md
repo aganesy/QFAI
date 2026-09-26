@@ -11,8 +11,9 @@ For this skill:
 
 - In mode `active`, a request with no work order and no name is passed to
   `qfai-run` with nothing edited.
-- A worker checks the run, stage instance and work-order IDs against the work
-  order, then does only that work order's work.
+- A worker checks the run, stage instance and work-order IDs against the
+  outstanding work order, as the full check states, then does only that work
+  order's work.
 
 The rest of this file applies to a worker.
 
@@ -47,13 +48,13 @@ Verify edits no artifact another owner holds. A finding it did not cause
 returns `needs_repair`, with the finding listed in `debts` under its
 `resolvingOwner`, so the run sends the repair there.
 
-| Repair kind              | `resolvingOwner` |
-| ------------------------ | ---------------- |
-| `spec gap`               | `qfai-sdd`       |
-| `acceptance-test defect` | `qfai-atdd`      |
-| `implementation defect`  | `qfai-implement` |
+| Finding                   | `resolvingOwner` |
+| ------------------------- | ---------------- |
+| A story or contract gap   | `qfai-sdd`       |
+| An acceptance-test defect | `qfai-atdd`      |
+| An implementation defect  | `qfai-implement` |
 
-These three are the only repair kinds. A spec gap is a story or contract gap.
+These three are the only repairs verify routes.
 
 ## A missing environment
 
