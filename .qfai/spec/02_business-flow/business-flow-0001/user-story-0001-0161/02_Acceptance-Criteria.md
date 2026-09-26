@@ -3,14 +3,15 @@
 ## Criteria
 
 ```gherkin
-Feature: `primary_tasks` count band + accepted shape documented
+Feature: `primary_tasks` ceiling + accepted shape documented
 
 # AC-0001-0161-01
 # Parent: US-0001-0161
-Scenario: `primary_tasks` count band documented and named in warning
+Scenario: `primary_tasks` ceiling documented and named in warning
   Given the `ui-contract.sample.yaml` template comments and `references/ui-contract-guide.md`,
   When they are read,
-  Then the recommended `primary_tasks` count band 3..7 (DR-0267) is documented, and the `QFAI-AUD-020` warning text names the band; below 3 or above 7 emits the warning.
+  Then the recommended ceiling of 7 `primary_tasks` per screen is documented, and the `QFAI-AUD-020` warning text names it
+  And a screen declaring more than 7 emits the warning, while one declaring 1 to 7 does not, because there is no floor
 
 # AC-0001-0161-02
 # Parent: US-0001-0161

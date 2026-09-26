@@ -8,7 +8,7 @@ The matrix maps every ID from the current story tree to a layer, an assertion ca
 
 ## Coverage Depth Matrix
 
-[coverage-depth-BF-0001.md](coverage-depth-BF-0001.md) — ✅ 0 / ⚠️ 126 / ❌ 2569. The counts cover scored cells; `—` means the row has no declared case in that dimension.
+[coverage-depth-BF-0001.md](coverage-depth-BF-0001.md) — ✅ 0 / ⚠️ 126 / ❌ 2571. The counts cover scored cells; `—` means the row has no declared case in that dimension.
 
 ## Evidence and remaining work
 

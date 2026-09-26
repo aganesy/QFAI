@@ -86,6 +86,23 @@ const LEGACY_DESIGN_CONTRACTS = [
   "brand-design.yaml",
 ];
 
+describe("shipped primary_tasks ceiling", () => {
+  // QFAI:AC-0001-0161-01
+  // QFAI:EX-0001-0161-01
+  it("documents a ceiling of 7 and no floor in the template and the guide", async () => {
+    const template = await readFile(TEMPLATE_PATH, "utf-8");
+    expect(template).toContain("Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).");
+
+    const guide = await readFile(
+      path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"),
+      "utf-8",
+    );
+    expect(guide).toContain("## Recommended ceiling: at most 7");
+    expect(guide).toMatch(/\| 1\.\.7 +\| passes silently/);
+    expect(guide).toMatch(/\| 8\+ +\| `QFAI-AUD-020` warning/);
+  });
+});
+
 describe("shipped qfai-sdd design contracts", () => {
   // QFAI:EX-0001-0158-01
   // QFAI:EX-0001-0158-02

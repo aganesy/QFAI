@@ -133,6 +133,19 @@ describe("routing defaults are package data", () => {
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");
   });
 
+  // QFAI:AC-0001-0170-02
+  // QFAI:EX-0001-0170-01
+  it("defines devils-advocate as an advisory mode that needs an alternative", async () => {
+    const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
+      optional_modes: Record<string, Record<string, unknown>>;
+    };
+    const mode = profiles.optional_modes["devils-advocate"];
+    expect(mode?.kind).toBe("advisory");
+    expect(String(mode?.description)).toContain("do not block completion by default");
+    expect(mode?.alternative_required).toBe(true);
+    expect(mode?.bare_negation_invalid).toBe(true);
+  });
+
   it("routes the migration skill through the required three phases", async () => {
     const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
       routing: Array<{

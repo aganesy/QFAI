@@ -123,7 +123,8 @@ describe("spec-0013 primary_tasks ceiling + shape CHG-006", () => {
     expect(warning?.message ?? "").toMatch(/at most 7/);
   });
 
-  it("QFAI:EX-0001-0161-01 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
+  // QFAI:AC-0001-0161-01
+  it("QFAI:EX-0001-0161-04 — boundary: count 8 warns; 2, 3 and 7 do not", async () => {
     // count == 2: silent, because there is no floor
     {
       const issues = await withinBandIssues(

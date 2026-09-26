@@ -742,6 +742,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
   });
 
   // QFAI:EX-0001-0110-01
+  // QFAI:EX-0001-0108-01
   it("requires exactly four valid ordinal scores in both summary and persisted iteration", async () => {
     const root = await newTempDir();
     const iter = validIter(0);

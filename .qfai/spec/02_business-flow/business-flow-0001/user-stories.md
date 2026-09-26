@@ -161,7 +161,7 @@
 | US-0001-0158 | Active Design Contract Surface Reduction                                               | `user-story-0001-0158/` |
 | US-0001-0159 | UI contract `primary_tasks` slot per screen                                            | `user-story-0001-0159/` |
 | US-0001-0160 | Resolve active discussion pack via single helper                                       | `user-story-0001-0160/` |
-| US-0001-0161 | `primary_tasks` count band + accepted shape documented                                 | `user-story-0001-0161/` |
+| US-0001-0161 | `primary_tasks` ceiling + accepted shape documented                                    | `user-story-0001-0161/` |
 | US-0001-0162 | Canonical verification validators                                                      | `user-story-0001-0162/` |
 | US-0001-0163 | Truthful verification evidence                                                         | `user-story-0001-0163/` |
 | US-0001-0164 | Contract-first verification gates                                                      | `user-story-0001-0164/` |

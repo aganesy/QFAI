@@ -14,8 +14,9 @@ Scenario: Optional Review Mode Concrete Alternative
 
 # AC-0001-0170-02
 # Parent: US-0001-0170
-Scenario: Devils-Advocate 3-FAIL Demotion
-  Given 3 consecutive devils-advocate FAILs
-  When checked
-  Then advisory demotion is triggered (blocking power lost for current review cycle).
+Scenario: Devils-Advocate Is Advisory
+  Given the built-in review profiles
+  When the `devils-advocate` optional mode is read
+  Then it is advisory and does not block completion by default
+  And it requires a concrete alternative on FAIL and treats a bare negation as invalid
 ```
