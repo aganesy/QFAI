@@ -90,8 +90,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
   - Step 11 (`11-install-entry.mjs`) brings each shipped skill up to the
     installed package and adds the missing host skill links, the entry
-    directive in `AGENTS.md` and `CLAUDE.md`, and the `.qfai/run/` and
-    `!.qfai/evidence/workflow/` lines of the managed `.gitignore` block. A
+    directive in `AGENTS.md` and `CLAUDE.md`, and the `.qfai/run/` line of
+    the managed `.gitignore` block. A
     skill the project changed is moved whole to
     `.qfai/evidence/migration-spec-to-story/legacy/skill/<id>/` first, never
     deleted.
@@ -309,7 +309,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     the answer was recorded, and the label of each chosen option, exactly as
     the run's authorization record holds them. A row that names only who
     answered is refused.
-  - A local import-lite record under `.qfai/evidence/` no longer suppresses
+  - **Breaking:** a local import-lite record under `.qfai/evidence/` no longer suppresses
     `QFAI-DPACK-001`.
   - No CI lane runs the prototyping profile.
 

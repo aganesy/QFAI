@@ -62,6 +62,9 @@ describe("shipped instructions keep evidence local", () => {
   it("records an approval in the decision row, not in a committed run record", async () => {
     const payloads = await read("skill/qfai-run/references/payloads.md");
     expect(payloads).toContain("is written into the `decisions.md` row the run appends");
+    expect(payloads).toMatch(
+      /its `answeredBy`, its `recordedAt`, and the\s+`question\.options\[\]\.label` of each option the answer chose/,
+    );
     expect(payloads).toContain("stay local and are never committed");
   });
 });
