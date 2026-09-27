@@ -26,6 +26,8 @@ structure:
             regex: true
           - pattern: '(?m)^[ \t]*(?:>|```|~~~)'
             regex: true
+          - pattern: '(?m)^[ \t]{0,3}<[!/?A-Za-z]'
+            regex: true
           - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
           - pattern: '(?:\A(?:[ \t]*\n)*|\n[ \t]*\n)(?: {4}|\t)'

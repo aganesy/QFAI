@@ -326,6 +326,12 @@ describe("a closed policy section rejects content of another kind", () => {
     ["a thematic break in a prose section", "initiative", "## Initiative\n\n", "---\n\n"],
     ["a thematic break in a list section", "objective", "## Non-goals\n\n", "- - -\n\n"],
     [
+      "an HTML comment in a prose section",
+      "initiative",
+      "## Initiative\n\n",
+      "<!-- hidden -->\n\n",
+    ],
+    [
       "a pipe paragraph after a table",
       "objective",
       "`<command or threshold that measures it>` |\n",

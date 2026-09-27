@@ -286,11 +286,22 @@ describe("migration catalog move", () => {
       ".qfai/spec/_policies/07_Constraints.md",
       "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n|| Node 22 | Runtime | Build |\n",
     );
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/product.md",
+      "# Product\n\n## Non-goals\n\n   - Resale.\n- Rentals.\n",
+    );
     const result = await run(context);
     expect(result.code).toBe(3);
-    expect(
-      await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8"),
-    ).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n");
+    const objective = await readFile(
+      path.join(context.specsDir, "01_policy", "objective.md"),
+      "utf8",
+    );
+    expect(objective).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n");
+    expect(objective).not.toContain("Rentals");
+    expect(result.output).toContain(
+      '.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Non-goals" of .qfai/assistant/catalog/product.md by hand',
+    );
     expect(conformance(context.specsDir, "objective")).toContain("No violations");
     expect(result.output).toContain(
       '.qfai/spec/01_policy/glossary.md ## Terms: carry the "Owner" column of "## Terms" in .qfai/spec/_policies/06_Glossary.md by hand',

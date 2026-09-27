@@ -162,7 +162,11 @@ function listItems(body: string, keys: readonly string[] = []): string[] | null 
     if (/^\s*#/.test(line)) return null;
     const marker = /^( {0,3})- \S/.exec(line);
     base ??= marker?.[1]?.length ?? null;
-    if (marker && marker[1]?.length === base) items.push(line.trimStart());
+    const markerIndent = marker?.[1]?.length;
+    if (markerIndent !== undefined && markerIndent === base) items.push(line.trimStart());
+    // A marker indented less than two past the first item's is neither its sibling at the
+    // same indentation nor clearly nested under it, so a person reads the list.
+    else if (markerIndent !== undefined && markerIndent < (base ?? 0) + 2) return null;
     else if (blank || items.length === 0 || /^[ \t]?[^-\s]/.test(line)) return null;
     else {
       // The item is written from column 0, so its content starts at column 2; a line
