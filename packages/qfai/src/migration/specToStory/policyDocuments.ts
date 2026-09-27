@@ -295,6 +295,29 @@ function moveConstraintSection(draft: PolicyDraft, section: PolicySection): stri
   return person;
 }
 
+/**
+ * Moves the rows of an old architecture-constraints table that carry a `TC-` ID
+ * into the Technical Constraints section of a constraint draft. Returns what a
+ * person has to do with the rest.
+ */
+export function moveTechnicalConstraints(draft: PolicyDraft, section: PolicySection): string[] {
+  const into = "Technical Constraints";
+  const table = tableRows(section.body, CONSTRAINT_COLUMNS);
+  if (table === null) return [rewrite(draft, section, into)];
+  const person = table.dropped.map(
+    (column) =>
+      `${draft.target} ## ${into}: carry the "${column}" column of "## ${section.heading}" in ${section.source} by hand (kept at ${section.archive})`,
+  );
+  for (const row of table.rows) {
+    if (/^TC-\d+$/.test(row[0] ?? "")) addUnique(draft.rows, into, [row], sameRow);
+    else
+      person.push(
+        `${draft.target} ## ${into}: give ${row[0] || "a row with no ID"} of "## ${section.heading}" in ${section.source} a TC- ID by hand (kept at ${section.archive})`,
+      );
+  }
+  return person;
+}
+
 async function templateText(name: PolicyDocument): Promise<string> {
   const root = getInitAssetsDir();
   for (const dir of ["skill", "skills"]) {

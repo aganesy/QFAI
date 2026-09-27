@@ -188,6 +188,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
 
+- **The story tree has no `structure.md`.** `qfai init` no longer writes
+  `03_contract/structure.md`, and nothing reads it. Its facts have other
+  homes:
+  - Each entrypoint is a Skeleton line in the Standard commands section of
+    `03_contract/tech.md`: `` - Skeleton: `<entry>` -> `<command>` ``.
+  - An architecture boundary is a Technical Constraints row of
+    `01_policy/constraint.md`.
+  - The paths that render a user-visible surface are `uiux.surfacePaths` in
+    `qfai.config.yaml`: a list of globs, or `[]` for a project that renders
+    none. `/qfai-configure` writes it, and the UI-affecting check reads it.
+  - `QFAI-ASSETS-003` checks `tech.md` alone for unfilled placeholders.
+  - Migration step 3 moves the old structure catalog into those three places
+    and lists the rest under `## For a person`.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

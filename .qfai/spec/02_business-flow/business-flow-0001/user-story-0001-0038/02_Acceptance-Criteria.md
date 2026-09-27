@@ -40,5 +40,5 @@ Scenario: Spec-pack layout left to the migration skill
 Scenario: Policy and contract files replace the catalog seeds
   Given an empty project directory, which `qfai init` lays out as the story tree
   When `qfai init` runs
-  Then `.qfai/spec/01_policy/objective.md`, `initiative.md` and `principle.md` and `.qfai/spec/03_contract/tech.md` and `structure.md` are written, and none of `catalog/product.md`, `catalog/manifest.md`, `catalog/tech.md` and `catalog/structure.md` is, so no fact is seeded in two places
+  Then `.qfai/spec/01_policy/objective.md`, `initiative.md` and `principle.md` and `.qfai/spec/03_contract/tech.md` are written, and none of `catalog/product.md`, `catalog/manifest.md`, `catalog/tech.md` and `catalog/structure.md` is, so no fact is seeded in two places
 ```

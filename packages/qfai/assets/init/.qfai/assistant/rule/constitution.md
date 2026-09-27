@@ -65,8 +65,8 @@ policy and contract files. These are complementary obligations.
 Outputs MUST align with:
 
 - repository structure and conventions
-- chosen tools / runtimes
-- architecture boundaries
+- chosen tools / runtimes (`<paths.contractsDir>/tech.md`)
+- architecture boundaries (the Technical Constraints of `<paths.specsDir>/01_policy/constraint.md`)
 
 ---
 
