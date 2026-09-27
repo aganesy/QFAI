@@ -114,12 +114,11 @@ The routing work order's result carries the proposal.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
-| Stage kind              | Write areas                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `sdd_delta`             | The story and contract files of the bound flow it changes               |
-| `sdd`                   | The new story's directory, or the new flow's for a story that needs one |
-| `discussion`            | Its tracked records, and `DESIGN.md` for a UI-bearing target            |
-| `prototype`, UI-bearing | `<paths.contractsDir>/design/**`                                        |
+| Stage kind   | Write areas                                                             |
+| ------------ | ----------------------------------------------------------------------- |
+| `sdd_delta`  | The story and contract files of the bound flow it changes               |
+| `sdd`        | The new story's directory, or the new flow's for a story that needs one |
+| `discussion` | Its tracked records, and `DESIGN.md` for a UI-bearing target            |
 
 A stage's own evidence file and table rows are not named: the run derives them
 from the stage kind.

@@ -884,7 +884,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         // value; presence flips the boolean. Only meaningful for
         // `qfai prototyping iterate`; main.ts wires it through only on
         // the iterate path. See
-        // .qfai/contracts/cli/qfai-prototyping-iterate.md.
+        // .qfai/spec/03_contract/cli/cli-0014-qfai-prototyping-iterate.md.
         if (ownedByPrototyping("iterate")) {
           options.prototypingCheckConvergence = true;
         } else {

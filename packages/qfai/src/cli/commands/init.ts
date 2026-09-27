@@ -1031,7 +1031,7 @@ async function syncGovernedAssistantAssets(
   destRoot: string,
   options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
 ): Promise<GovernedAssetsResult> {
-  // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
+  // Path SSOT (`.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
   // move of `ASSISTANT_DIR` cannot leave the provenance record, the refresh and
   // the retire pass operating on a tree the validators no longer read.

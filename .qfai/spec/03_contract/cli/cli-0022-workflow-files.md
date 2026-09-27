@@ -1,4 +1,4 @@
-# Workflow Files Contract
+# CLI-0022: Workflow Files
 
 - Contract scope: the files `npx qfai workflow` writes and reads, the local
   records of a run, the plans the package ships, and the JSON Schemas the
@@ -10,9 +10,9 @@
   - `packages/qfai/src/core/gitignore.ts` (the managed `.gitignore` block)
   - `packages/qfai/src/core/packLocator.ts` (`CANONICAL_TIMESTAMP_*`, the width
     of a run ID)
-- Companion contracts: `.qfai/spec/03_contract/cli/qfai-workflow.md` for the
+- Companion contracts: `.qfai/spec/03_contract/cli/cli-0017-qfai-workflow.md` for the
   operations that write these files and the payload fields;
-  `.qfai/spec/03_contract/cli/qfai-init.md` for the ignore lines
+  `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md` for the ignore lines
 
 The payload parsers and the plan loader live under
 `packages/qfai/src/core/workflow/`, the five schemas under
@@ -92,7 +92,7 @@ approved itself ([Authorization record](#authorization-record)).
 
 - **First write.** Run records are first written at the run's first `proceed`
   authorization or its first accepted stage result, as
-  `qfai-workflow.md#decline-audit` states. From then on `summary.json` is
+  `cli-0017-qfai-workflow.md#decline-audit` states. From then on `summary.json` is
   rewritten at every write operation that changes the run, except `finish`. An
   authorization file is written when recorded. Both use a temporary file and a
   rename. `finish` records `completed` only in the runtime journal and
@@ -147,7 +147,7 @@ approved itself ([Authorization record](#authorization-record)).
 - The row therefore reads the same where the record is absent. No column is
   added to the table. The core checks the row against the record when it
   accepts the stage that appended the row
-  (`qfai-workflow.md#story-tree-records`).
+  (`cli-0017-qfai-workflow.md#story-tree-records`).
 
 ## Plan files
 
@@ -221,7 +221,7 @@ internal identifier.
 
 - A step is named `<owner>-<name>`. Its owner is the skill whose name is
   `qfai-` and that prefix, or `common` for a `common-*` step, as
-  `assistant-steps.md` defines the step tree.
+  `cli-0002-assistant-steps.md` defines the step tree.
 - The routing work order has kind `route`, executor `qfai-run` and operation
   `route`. No plan names it.
 - `implement-seam` is never a plan step. The core issues a work order whose
@@ -234,7 +234,7 @@ internal identifier.
   `test_defect_example_layer`. A step with none always runs when its stage
   runs.
 - `proposed` holds when the checked route proposal lists the step in
-  `optionalSteps` (`qfai-workflow.md#route-proposal`).
+  `optionalSteps` (`cli-0017-qfai-workflow.md#route-proposal`).
 - `test_defect_acceptance_layer` holds when the diagnosis's first matched ID is
   a BF or an AC, and `test_defect_example_layer` when it is an EX, as
   `.qfai/assistant/rule/test-layers.md` maps those layers. The `bugfix` plan's
@@ -247,7 +247,7 @@ internal identifier.
 - `acceptance_obligations_unmet` holds when a BF of the bound flow has no
   annotating test in the E2E layer, or an AC of it has none in the integration
   or API layer. Layers and annotations are read as
-  `qfai-validate.md#what-counts-as-a-test` reads them: an item an exception row
+  `cli-0016-qfai-validate.md#what-counts-as-a-test` reads them: an item an exception row
   in force exempts counts as met, and an EX's coverage does not affect the
   predicate.
 - `diagnosis_missing_test` holds whenever the diagnosis is `missing-test`,
@@ -295,7 +295,7 @@ The route-proposal schema and the runtime parser require every entry in
 closed `kind` values are `request`, `flow-id`, `contract-id`, `path` and
 `evidence`. The normative array allows the first four; the observed array
 allows `path` and `evidence`. `ref` is a nonempty string. The parser also checks
-the field-specific value rules in `qfai-workflow.md#route-proposal`. Neither
+the field-specific value rules in `cli-0017-qfai-workflow.md#route-proposal`. Neither
 boundary accepts a legacy string entry, an unknown kind, or an extra entry key.
 Such payloads are `invalid-input` with reason `schema`, before proposal checks.
 Parser and schema verdicts agree on these shape cases.
@@ -306,7 +306,7 @@ every field of the shape the schema gives it, the proposal of a routing result
 included, and no key the schema does not declare. A payload that fails is
 `invalid-input` with reason `schema` before the run reads it, naming each
 faulty field. An `approved` or `authorization` key is refused as
-`qfai-workflow.md#stage-result` states.
+`cli-0017-qfai-workflow.md#stage-result` states.
 
 - They ship because `package.json#files` lists `assets/`. `qfai init` does not
   copy them into a project, and `qfai-run`'s reference shows each payload as a
@@ -343,4 +343,4 @@ Rule refs: BR-0671, BR-0672, BR-0673
 | BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                                                                                                                  | EX-0001-0201-19                                                                     |
 | BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                                                                                                                                | EX-0001-0201-20                                                                     |
 | BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it.                                                                  | EX-0001-0193-13, EX-0001-0193-01, EX-0001-0193-03, EX-0001-0193-11, EX-0001-0194-06 |
-| BR-0745 | `acceptance_obligations_unmet` holds when a BF of the bound flow has no annotating test in the E2E layer, or an AC of it has none in the integration or API layer, as `qfai-validate.md#what-counts-as-a-test` reads layers and annotations. An item an exception row in force exempts counts as met, and an EX's coverage does not affect it.                         | EX-0001-0192-51, EX-0001-0192-52                                                    |
+| BR-0745 | `acceptance_obligations_unmet` holds when a BF of the bound flow has no annotating test in the E2E layer, or an AC of it has none in the integration or API layer, as `cli-0016-qfai-validate.md#what-counts-as-a-test` reads layers and annotations. An item an exception row in force exempts counts as met, and an EX's coverage does not affect it.                | EX-0001-0192-51, EX-0001-0192-52                                                    |

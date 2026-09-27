@@ -10,7 +10,14 @@ import { describe, expect, it } from "vitest";
 
 // tests/core/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const CONTRACT = path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "qfai-prototyping.md");
+const CONTRACT = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "03_contract",
+  "cli",
+  "cli-0013-qfai-prototyping.md",
+);
 
 describe("`qfai prototyping` CLI contract surface", () => {
   it("specifies capture outputs and evidence only for the opt-in path", async () => {

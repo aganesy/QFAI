@@ -21,7 +21,7 @@
  * requires before any install / tracked-file write. That prompt is NOT
  * implemented yet — this CLI is non-interactive today — so the pass runs
  * unattended either way. That is a known deviation from the contract (see
- * `.qfai/contracts/cli/qfai-doctor.md`), not a relaxation of it.
+ * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`), not a relaxation of it.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and

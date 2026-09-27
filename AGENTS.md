@@ -46,16 +46,15 @@ and for the files QFAI writes into a consuming project.
 
 - Markdown, and they carry no `QFAI-CONTRACT-ID`. The `api/` / `db/` / `ui/`
   contract validators do not scan them.
-- Indexed in `.qfai/spec/03_contract/contracts.md`, with `CLI-*`
-  short ids.
-- Named `qfai-<command>.md` for one command's surface, and after the skill
-  (`qfai-migration-v1-to-v2.md`) for the scripts one skill bundles, since
-  those scripts are not a `qfai` command. A subject name instead —
-  `shipped-workflows.md` — means the file holds an ownership boundary that
-  more than one command shares.
+- Each declares its ID in the H1: `# CLI-NNNN: <title>`. The number is unique
+  across every contract kind and is never reused.
+- Named `cli-NNNN-<slug>.md` after that ID. The slug is the command
+  (`cli-0016-qfai-validate.md`), the skill whose scripts it covers
+  (`cli-0012-qfai-migration-v1-to-v2.md`), or the subject several commands share
+  (`cli-0020-shipped-workflows.md`).
+- Indexed by ID in `.qfai/spec/03_contract/contracts.md`, one row per contract.
 
-No check enforces the naming or the index entry. A new file that skips either is
-caught in review or not at all.
+`qfai validate` reports a contract whose ID, file name and index row disagree.
 
 ## バージョン規律 (全 AI 必読)
 

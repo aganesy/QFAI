@@ -31,7 +31,7 @@
  *   counts are AC-0006-0025. Two of them are owned by NOBODY — the finding's
  *   ORDINAL position inside its bucket, and the empty-bucket placeholder
  *   wording, whose rendered string is in no AC, no TC and no clause of
- *   `.qfai/contracts/cli/qfai-doctor.md`, and is pinned by no test in the
+ *   `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, and is pinned by no test in the
  *   package (measured, both by grep). Unowned is not an invitation: the TC
  *   requires MEMBERSHIP of a bucket, not order within it, and an assertion
  *   stricter than the contract encodes a reviewer-originated obligation, which
@@ -45,7 +45,7 @@
  * "warnings advisory of drift". `formatDoctorText` renders
  * `== warnings advisory of drift ==`. The two DENOTE the
  * same bucket — BR-0006-0011 declares the group header strings stable
- * identifiers and `.qfai/contracts/cli/qfai-doctor.md` § "Finding grouping"
+ * identifiers and `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` § "Finding grouping"
  * mandates exactly the two buckets — so this file needles the RENDERED literal
  * and never the spec's prose. Neither side is "fixed" here; the mapping is
  * recorded instead, since editing either would be a spec change dressed as a

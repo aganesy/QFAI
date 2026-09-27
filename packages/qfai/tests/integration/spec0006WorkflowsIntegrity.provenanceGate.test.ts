@@ -5,7 +5,7 @@
  * The comparison set of `workflows.integrity` is the set of names the
  * `.qfai/install-provenance.json` record carries — never a filename pattern.
  * The reserved `qfai-` prefix is a reservation notice, not a selector
- * (`.qfai/contracts/cli/shipped-workflows.md` §1), so an adopter who authored
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` §1), so an adopter who authored
  * a colliding name first owns that file and it is `adopter-owned`: silent in
  * `qfai doctor`, forever (§3).
  *

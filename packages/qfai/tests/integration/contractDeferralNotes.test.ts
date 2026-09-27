@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  *
  * A note of the shape "NOT YET IMPLEMENTED in vX.Y.Z — scheduled for vA.B.C+"
  * expires silently: the only way to notice the deadline arrived is to diff the
- * contract against `packages/qfai/package.json#version`. `qfai-init.md` carried
+ * contract against `packages/qfai/package.json#version`. `cli-0011-qfai-init.md` carried
  * two such notes (`--allow-dirty`, exit 65) whose target version shipped with
  * neither behaviour implemented. Either a contract describes what the code does
  * today, or it points at a tracking issue — never at a version number.
@@ -99,8 +99,8 @@ describe("CLI contracts do not defer behaviour to a version number", () => {
   });
 });
 
-describe("qfai-init.md matches the additive assistant-tree upgrade", () => {
-  const contractPath = path.join(CONTRACTS_DIR, "cli", "qfai-init.md");
+describe("cli-0011-qfai-init.md matches the additive assistant-tree upgrade", () => {
+  const contractPath = path.join(CONTRACTS_DIR, "cli", "cli-0011-qfai-init.md");
   const initSourcePath = path.join(ROOT, "packages", "qfai", "src", "cli", "commands", "init.ts");
 
   it("copies only named legacy steering and instruction files", async () => {
@@ -387,9 +387,12 @@ function carriesCode(node: ts.Node, code: string): boolean {
   return found;
 }
 
-describe("qfai-validate.md documents only finding codes the source can emit", () => {
+describe("cli-0016-qfai-validate.md documents only finding codes the source can emit", () => {
   it("every code in the delta table is emitted by a module the runner invokes", async () => {
-    const contract = await readFile(path.join(CONTRACTS_DIR, "cli", "qfai-validate.md"), "utf-8");
+    const contract = await readFile(
+      path.join(CONTRACTS_DIR, "cli", "cli-0016-qfai-validate.md"),
+      "utf-8",
+    );
     const section = contract.split("## New finding codes (this delta)")[1] ?? "";
     const table = section.split(/^## /m)[0] ?? "";
 

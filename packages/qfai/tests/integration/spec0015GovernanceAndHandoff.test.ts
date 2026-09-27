@@ -273,7 +273,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
   const repoRoot = path.resolve(__dirname, "../../../..");
   it("QFAI:EX-0001-0178-01 — the active routing contract keeps membership and severity separate", async () => {
     const text = await readFile(
-      path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "assistant-routing.md"),
+      path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "cli-0001-assistant-routing.md"),
       "utf-8",
     );
     const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0354 |"));

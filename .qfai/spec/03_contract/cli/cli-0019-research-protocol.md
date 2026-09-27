@@ -1,4 +1,4 @@
-# Research Protocol Contract
+# CLI-0019: Research Protocol
 
 - Contract scope: the `web-research` skill's source and citation pipeline
 - Owning flow: `BF-0001`

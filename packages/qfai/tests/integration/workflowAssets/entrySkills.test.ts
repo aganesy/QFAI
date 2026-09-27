@@ -132,7 +132,6 @@ describe("qfai-run", () => {
     expect(rowOf(text, "`discussion`")).toMatch(
       /its tracked records, and `DESIGN\.md` for a UI-bearing target/i,
     );
-    expect(rowOf(text, "`prototype`")).toMatch(/`<paths\.contractsDir>\/design\/\*\*`/);
     const flatText = flat(text);
     expect(flatText).toMatch(
       /never names `\.git\/`, `\.qfai\/run\/`, `\.qfai\/evidence\/workflow\/`, `\.qfai\/evidence\/decision\/`/,

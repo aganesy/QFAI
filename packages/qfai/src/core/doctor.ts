@@ -220,7 +220,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // Pinning every config issue to `warning` made `doctor --fail-on error`
     // exit 0 on a config the loader had rejected — a value past its sunset
     // reads as "normalized with defaults" rather than as the blocking fault
-    // `qfai-doctor.md` says it is. The check now carries the worst severity
+    // `cli-0008-qfai-doctor.md` says it is. The check now carries the worst severity
     // the loader actually reported.
     const configHasError = issues.some((issue) => issue.severity === "error");
     addCheck(checks, {

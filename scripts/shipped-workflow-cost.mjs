@@ -31,7 +31,7 @@
  * Every `if:` the templates use is read against the path's facts, and a condition this does not
  * recognise throws. A pin that guessed would be a figure nobody can check, and the next condition
  * shape would enter the cost silently. The recognised forms are exactly the ones the shipped
- * contract permits, and `.qfai/contracts/cli/shipped-workflows.md` dimension 6 is what keeps that
+ * contract permits, and `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` dimension 6 is what keeps that
  * list short.
  */
 import { readFileSync } from "node:fs";

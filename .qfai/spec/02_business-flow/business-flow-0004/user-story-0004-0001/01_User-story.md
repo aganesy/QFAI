@@ -6,5 +6,5 @@ As an adopter, I want `qfai init` to install `/qfai-migration-v1-to-v2` and link
 
 ## Non-goals
 
-- The migration's steps, invocation and report, which `.qfai/spec/03_contract/cli/qfai-migration-v1-to-v2.md` owns.
+- The migration's steps, invocation and report, which `.qfai/spec/03_contract/cli/cli-0012-qfai-migration-v1-to-v2.md` owns.
 - A `qfai` subcommand for the migration.

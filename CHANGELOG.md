@@ -266,6 +266,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     section goes to `01_policy/constraint.md`. Anything else is listed under
     `## For a person`, and the step exits 3.
 
+- **`contracts.md` is one contract index table.** The template `qfai init`
+  seeds, and its schema, hold only `## Contract Index` with the columns `ID`,
+  `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+  `Short ID`, `Entity` and `Declared ID` columns are gone.
+  - `qfai-sdd` ships a CLI contract template, `cli/cli-NNNN-title.md`: the
+    `# CLI-NNNN: <title>` heading, `## Ownership boundary` and one
+    `## Business rules` table. A closed schema for that shape ships beside it.
+  - The `prototype` stage of a `qfai-run` route no longer names
+    `<paths.contractsDir>/design/**` as a write area. Nothing is written there.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

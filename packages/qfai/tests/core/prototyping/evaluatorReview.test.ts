@@ -537,7 +537,7 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
 });
 
 // QFAI:EX-0001-0101-03 — aligns with
-// the CLI contract §Review payload SSOT (`.qfai/contracts/cli/qfai-prototyping.md`
+// the CLI contract §Review payload SSOT (`.qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md`
 // L161-200). The legacy flat `timeBudgetSoftWarning?: string` field is
 // replaced by the SSOT-compliant required `softWarnings.timeBudget: boolean`
 // nested form.

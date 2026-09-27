@@ -3,7 +3,7 @@
  * gate.
  *
  * Covers the gate half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/shipped-workflows.md`, CLI-WFSET §5): ONE declared
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, CLI-0020 §5): ONE declared
  * shape, whose values live in exactly one module (`shippedWorkflowShape.ts`
  * beside this file), diffed against a workflow tree and reporting
  * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with the drifted value and the expected
@@ -67,7 +67,7 @@ const CONTRACT_PATH = path.join(
   "spec",
   "03_contract",
   "cli",
-  "shipped-workflows.md",
+  "cli-0020-shipped-workflows.md",
 );
 
 /** The owning story, scanned for value restatements. */

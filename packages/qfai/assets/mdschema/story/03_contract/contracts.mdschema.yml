@@ -1,19 +1,28 @@
-# Document schema: `<contractsDir>/contracts.md`
+# Document schema: <contractsDir>/contracts.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# Contracts$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: The index of every contract in this tree.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
-      - heading:
-          pattern: "^## Purpose$"
-          regex: true
-        description: Why the index exists.
-        allow_additional: true
-        optional: true
       - heading:
           pattern: "^## Contract Index$"
           regex: true
-        description: Contract files and their declared IDs.
-        allow_additional: true
+        description: One row per contract, in ID order; the table may have no rows.
+        allow_additional: false
+        tables:
+          - min: 1
+            max: 1
+            required_headers: [ID, Title, File, Depends On, Reconciled With, Purpose]
+        forbidden_text:
+          - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
