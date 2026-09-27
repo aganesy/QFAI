@@ -320,6 +320,18 @@ export const step03: MigrationStep = {
       const fallback = route(source, "", context);
       if (isPolicyDocument(fallback)) {
         draftFor(fallback);
+        const h1 = parseHeadings(content).find((item) => item.level === 1);
+        if (
+          h1 &&
+          content
+            .split(/\r?\n/)
+            .slice(0, h1.line - 1)
+            .join("\n")
+            .trim() !== ""
+        )
+          forAPerson.push(
+            `${fallback}: rewrite the text before the title of ${source} by hand (kept at ${archive})`,
+          );
         if (preamble)
           forAPerson.push(
             `${fallback}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,

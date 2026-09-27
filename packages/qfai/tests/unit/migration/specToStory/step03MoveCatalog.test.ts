@@ -230,6 +230,44 @@ describe("migration catalog move", () => {
     }
   });
 
+  it("moves an indented list and sends ragged, split and prefixed content to a person", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "---\nowner: product\n---\n# 01 Objective\n\n## Out of scope\n\n  - Refunds.\n    Handled by support.\n  - Returns.\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- | --- |\n| Order | A request |\n\n| Term | Definition |\n| --- | --- |\n| Receipt | Proof |\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/07_Constraints.md",
+      "# 07 Constraints\n\n## Constraints\n\n| ID | Constraint | Rationale | Impact |\n| --- | --- | --- | --- |\n| TC-01 | Node 22 | Runtime | Build | extra |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const retired = ".qfai/evidence/migration-spec-to-story/retired/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md: rewrite the text before the title of .qfai/spec/_policies/01_Objective.md by hand (kept at ${retired}/01_Objective.md)`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of .qfai/spec/_policies/06_Glossary.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of .qfai/spec/_policies/07_Constraints.md by hand`,
+    );
+    expect(
+      await readFile(path.join(context.specsDir, "01_policy", "objective.md"), "utf8"),
+    ).toContain("## Non-goals\n\n- Refunds.\n  Handled by support.\n- Returns.\n");
+    for (const name of ["objective", "glossary", "constraint"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
     // QFAI:EX-0004-0006-03
     // QFAI:EX-0004-0003-21

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { parseAllMarkdownTables } from "../../core/specPackParsers.js";
+import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { MigrationInputError } from "./harness.js";
 
@@ -145,19 +145,26 @@ const nonBlank = (body: string): string[] =>
  * the policy schemas accept it, or null. A line under an item continues that item.
  */
 function listItems(body: string, keys: readonly string[] = []): string[] | null {
-  const lines = body.replace(/\r\n/g, "\n").trim().split("\n");
+  const lines = body
+    .replace(/\r\n/g, "\n")
+    .replace(/^(?:[ \t]*\n)+/, "")
+    .trimEnd()
+    .split("\n");
   if (lines.length === 0 || lines[0] === "") return null;
   const items: string[] = [];
   let blank = true;
+  let base: number | null = null;
   for (const line of lines) {
     if (line.trim() === "") {
       blank = true;
       continue;
     }
     if (/^\s*#/.test(line)) return null;
-    if (/^ ?- \S/.test(line)) items.push(line.trimStart());
+    const marker = /^( {0,3})- \S/.exec(line);
+    base ??= marker?.[1]?.length ?? null;
+    if (marker && marker[1]?.length === base) items.push(line.trimStart());
     else if (blank || items.length === 0 || /^[ \t]?[^-\s]/.test(line)) return null;
-    else items[items.length - 1] = `${items.at(-1) ?? ""}\n${line}`;
+    else items[items.length - 1] = `${items.at(-1) ?? ""}\n${line.slice(base ?? 0)}`;
     blank = false;
   }
   const hasKey = (key: string): boolean => items.some((item) => item.startsWith(`- ${key}: `));
@@ -191,11 +198,12 @@ function tableRows(
 ): { rows: string[][]; dropped: string[] } | null {
   const lines = nonBlank(body);
   if (lines.length < 2 || lines.some((line) => !line.trimStart().startsWith("|"))) return null;
-  const tables = parseAllMarkdownTables(lines.join("\n"));
+  const tables = parseAllMarkdownTables(body.replace(/\r\n/g, "\n").trim());
   const table = tables[0];
   if (tables.length !== 1 || table === undefined || table.rows.length !== lines.length - 2) {
     return null;
   }
+  if (table.rows.some((row) => row.length > table.headers.length)) return null;
   const headers = table.headers.map((header) => header.trim().toLowerCase());
   const indexes = columns.map((column) =>
     [column, ...(aliases[column] ?? [])]
@@ -300,10 +308,9 @@ async function templateText(name: PolicyDocument): Promise<string> {
   throw new MigrationInputError(`The qfai-sdd template for 01_policy/${name} is missing`);
 }
 
-const cell = (value: string): string => value.replace(/\|/g, "\\|");
-
 function tableText(columns: readonly string[], rows: string[][]): string {
-  const line = (cells: readonly string[]): string => `| ${cells.map(cell).join(" | ")} |`;
+  const line = (cells: readonly string[]): string =>
+    `| ${cells.map(escapeTableCell).join(" | ")} |`;
   return [line(columns), line(columns.map(() => "---")), ...rows.map(line)].join("\n");
 }
 
