@@ -183,7 +183,8 @@ export async function validateReviewerJustification(
       // lint failure. The deferred-catalog rule grants ONE
       // exemption and this branch was taking two — it says the gate "does not
       // re-derive, re-word or re-classify" the payload, that both codes are
-      // "declared lint-failure codes in `CLI-0020`, i.e. error class", and that
+      // declared lint-failure codes of the shipped-workflows contract, i.e.
+      // error class, and that
       // what is deferred until catalog registration lands is REJECTING them for
       // an empty `justification:`. Nothing there defers the severity.
       if (DEFERRED_CATALOG_REGISTRATION_CODE_SET.has(code)) {
