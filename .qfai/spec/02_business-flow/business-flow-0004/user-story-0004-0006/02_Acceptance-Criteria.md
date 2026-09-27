@@ -44,4 +44,12 @@ Feature: Move policy and catalog content into the merged files once
     Then the contract holds only its heading, `## Ownership boundary` and `## Business rules`
     And every part left out is listed under For a person with the old file and its archived copy
     And once step 7 has written its rules the contract passes the CLI contract schema
+
+  # AC-0004-0006-06
+  Scenario: A 1.x file that is no contract is archived for a person
+    Given a Markdown file under `api/`, `db/` or `ui/`, and files under `design/`
+    When step 3 runs
+    Then none of them takes a contract ID or is written to the contract tree
+    And each is kept whole under the migration's retired contract archive
+    And each is listed under For a person with its archived copy and why it is no contract
 ```

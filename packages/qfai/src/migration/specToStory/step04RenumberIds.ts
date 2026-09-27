@@ -11,7 +11,7 @@ import { CONTRACT_KIND_BY_DIR, nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { OLD_CONTRACT_TOKEN } from "./contractIds.js";
+import { notAContract, OLD_CONTRACT_TOKEN } from "./contractIds.js";
 import {
   ID_MAP_PATH,
   oldContractIds,
@@ -186,9 +186,14 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
       throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
     }
     const [kindDirectory, ...below] = entry.contract.split(/[\\/]/);
+    const refused = notAContract(entry.contract.replace(/\\/g, "/"));
+    if (refused !== null)
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} names ${placement}, which holds no contract: ${refused}`,
+      );
     if (below.length === 0 || !Object.keys(CONTRACT_KIND_BY_DIR).includes(kindDirectory ?? "")) {
       throw new MigrationInputError(
-        `${PLAN_PATH}: ${entry.id} names ${placement}, which is not under cli/, api/, db/, ui/ or design/`,
+        `${PLAN_PATH}: ${entry.id} names ${placement}, which is not under cli/, api/, db/ or ui/`,
       );
     }
     if (seenRules.has(entry.id))

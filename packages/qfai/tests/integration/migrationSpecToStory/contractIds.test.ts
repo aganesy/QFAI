@@ -269,7 +269,7 @@ describe("migration contract IDs", () => {
     const root = await project();
     await run(step03, root);
     for (const [contract, message] of [
-      ["tech.md", "which is not under cli/, api/, db/, ui/ or design/"],
+      ["tech.md", "which is not under cli/, api/, db/ or ui/"],
       ["api/missing.yaml", "which is not a contract file"],
     ] as const) {
       await putPack(root, "As a buyer, I place an order.", "Orders are stored.", contract);
@@ -277,6 +277,30 @@ describe("migration contract IDs", () => {
       const result = await run(step04, root);
       expect(result.code).toBe(2);
       expect(result.errors).toContain(`BR-0001-0001 names ${contract}, ${message}`);
+      expect(await files(root)).toEqual(before);
+    }
+  });
+
+  it("refuses a rule destination that holds no contract", async () => {
+    // QFAI:EX-0004-0007-27
+    const root = await project();
+    await put(root, `${CONTRACTS}/api/orders.md`, "# Orders API\n");
+    await put(root, `${CONTRACTS}/design/order.md`, "# Order screen\n");
+    await run(step03, root);
+    for (const [contract, reason] of [
+      ["api/orders.md", "Markdown is not a contract: api/ holds OpenAPI YAML or JSON contracts"],
+      [
+        "design/order.md",
+        "design/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract",
+      ],
+    ] as const) {
+      await putPack(root, "As a buyer, I place an order.", "Orders are stored.", contract);
+      const before = await files(root);
+      const result = await run(step04, root);
+      expect(result.code).toBe(2);
+      expect(result.errors).toContain(
+        `BR-0001-0001 names ${contract}, which holds no contract: ${reason}`,
+      );
       expect(await files(root)).toEqual(before);
     }
   });
@@ -495,5 +519,67 @@ describe("migration CLI contract shape", () => {
     expect(forAPerson(result.output)).toContain(
       `${NEW}: BR-0001-0001: its statement names BR-0001-0009; a statement in a CLI contract names no rule, so rewrite it by hand`,
     );
+  });
+});
+
+describe("migration files that are no contract", () => {
+  const RETIRED = `${EVIDENCE}/retired/contract`;
+  const NUMBERED = [
+    "api/api-0002-orders.yaml",
+    "cli/cli-0001-orders.md",
+    "contracts.md",
+    "db/db-0003-orders.sql",
+    "ui/ui-0004-receipt.yaml",
+  ];
+
+  // QFAI:AC-0004-0006-06
+  it("archives a Markdown file under api/, db/ or ui/ unnumbered and names its directory's form", async () => {
+    // QFAI:EX-0004-0006-24
+    const root = await project();
+    const markdown = [
+      ["api/orders.md", "# Orders API\n\nPOST /orders accepts an order.\n", "OpenAPI YAML or JSON"],
+      ["db/schema.md", "# Order storage\n", "SQL"],
+      ["ui/receipt.md", "# Receipt screen\n", "YAML"],
+    ] as const;
+    for (const [relative, content] of markdown)
+      await put(root, `${CONTRACTS}/${relative}`, content);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await files(path.join(root, CONTRACTS))).toEqual(NUMBERED);
+    const map = await text(root, `${EVIDENCE}/contract-map.json`);
+    for (const [relative, content, form] of markdown) {
+      expect(map).not.toContain(relative);
+      expect(await text(root, `${RETIRED}/${relative}`)).toBe(content);
+      expect(forAPerson(result.output)).toContain(
+        `${CONTRACTS}/${relative}: Markdown is not a contract: ${relative.split("/")[0]}/ holds ${form} contracts; rewrite what it states by hand (kept at ${RETIRED}/${relative})`,
+      );
+    }
+    expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
+  });
+
+  it("archives the whole design/ directory unnumbered and names each of its files", async () => {
+    // QFAI:EX-0004-0006-25
+    const root = await project();
+    const design = [
+      ["design/order.md", "# Order screen\n\nThe receipt shows the order ID.\n"],
+      ["design/design-system.yaml", "colors:\n  primary: '#003366'\n"],
+      ["design/screens/home.yaml", "screens: []\n"],
+    ] as const;
+    for (const [relative, content] of design) await put(root, `${CONTRACTS}/${relative}`, content);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await files(path.join(root, CONTRACTS))).toEqual(NUMBERED);
+    await expect(readdir(path.join(root, CONTRACTS, "design"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    const reason =
+      "design/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract";
+    for (const [relative, content] of design) {
+      expect(await text(root, `${RETIRED}/${relative}`)).toBe(content);
+      expect(forAPerson(result.output)).toContain(
+        `${CONTRACTS}/${relative}: ${reason}; rewrite what it states by hand (kept at ${RETIRED}/${relative})`,
+      );
+    }
+    expect(await text(root, `${EVIDENCE}/contract-map.json`)).not.toContain("design/");
   });
 });

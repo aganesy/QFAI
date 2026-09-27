@@ -37,8 +37,9 @@ records. A `from` value is an exact H2 heading in the old
 value `_policies/04_Business-Flow.md`. If `from` is omitted, the script writes a
 template flow and reports that its diagram needs a person. A contract path is
 relative to the configured contracts directory, lies under `cli/`, `api/`,
-`db/`, `ui/` or `design/`, and names the contract file as it is before step 3
-renames it.
+`db/` or `ui/`, and names the contract file as it is before step 3 renames it.
+A Markdown file under `api/`, `db/` or `ui/` and a file under `design/` hold no
+contract, so a rule cannot be placed in one.
 
 ```yaml
 flows:
@@ -53,7 +54,7 @@ rules:
 
 Use IDs from the old files in this plan. Assign each old story and rule at most
 once. A `from` value that matches no old flow or matches several, an invalid
-plan, a duplicate assignment, or a contract path that is outside the five
+plan, a duplicate assignment, or a contract path that is outside the four
 contract directories or names no contract stops step 4 before writing. Check
 the step-4 dry run before accepting its numbering. Step 4 writes
 `.qfai/evidence/migration-spec-to-story/id-map.json` once. Later steps use that
@@ -71,8 +72,8 @@ the file to match:
 | `api/api-0001-orders.yaml` | `CON-API-0001` | API-0002 | `api/api-0002-orders.yaml` |
 | `db/db-0001-orders.sql`    | `CON-DB-0001`  | DB-0003  | `db/db-0003-orders.sql`    |
 
-- Numbers run across all contracts, in the order CLI, API, DB, UI, design,
-  then by the old number, then by path. No two contracts share a number.
+- Numbers run across all contracts, in the order CLI, API, DB, UI, then by
+  the old number, then by path. No two contracts share a number.
 - The new ID replaces the old one in the file's declaration: the H1 of a
   Markdown contract, as `# CLI-0001: <title>`, and the `QFAI-CONTRACT-ID` line
   of any other. The old IDs in `-- Depends on:` and `x-qfai-depends-on` become
@@ -84,9 +85,20 @@ the file to match:
 - Step 7 writes the new IDs into rule statements, and step 8 changes a
   `QFAI:CON-API-0001` test annotation to `QFAI:API-0002`.
 
-`design/DESIGN.md.lock.yaml`, `design/design-system.yaml` and
-`design/prototype-handoff.yaml` are not contracts. Step 3 gives them no ID, and
-QFAI 2.x reads none of them. The handoff is now the `handoff` object of
+Step 3 gives no ID to a file that is not a 2.x contract, and does not write it
+into the new tree:
+
+| Old file                                     | Why it is not a contract                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| A Markdown file under `api/`, `db/` or `ui/` | Those directories hold OpenAPI YAML or JSON, SQL and UI YAML contracts                                  |
+| Any file under `design/`                     | The directory no longer exists: the brand belongs in the root `DESIGN.md`, a screen in a `ui/` contract |
+
+Step 3 moves each one to
+`.qfai/evidence/migration-spec-to-story/retired/contract/` under its old path,
+`design/` as one directory, and lists each file under `## For a person` with
+its archived copy. Rewrite what the file states in the form its row names.
+
+The old `design/prototype-handoff.yaml` is now the `handoff` object of
 `.qfai/evidence/prototyping/prototyping.json`, which `/qfai-prototyping` writes
 when a loop ends with the prototype accepted. The migration does not convert
 the old file into it.
@@ -171,9 +183,6 @@ and a `## Business rules` table, and nothing else.
 Step 7 then writes the contract's rules into that table. A rule whose statement
 names another rule is written and listed for a person, because a CLI contract's
 rule cites only examples.
-
-A Markdown contract under `api/`, `db/`, `ui/` or `design/` keeps its own body:
-step 3 changes only its H1, and step 7 adds the `## Business rules` table.
 
 ## Run the bundled steps
 

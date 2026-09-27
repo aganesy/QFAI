@@ -154,7 +154,7 @@ afterAll(async () => {
 
 describe("BF-0004 migration outcomes", () => {
   // QFAI:BF-0004
-  it("writes mapped rules and their citing examples into YAML, SQL and Markdown contracts", async () => {
+  it("writes mapped rules and their citing examples into YAML and SQL contracts", async () => {
     const ids = map.ids["spec-0001"];
     if (!ids) throw new Error("Missing migrated spec-0001 ID map");
     const yaml = parse(await text(root, ".qfai/spec/03_contract/api/api-0001-order.yaml")) as {
@@ -165,14 +165,14 @@ describe("BF-0004 migration outcomes", () => {
       statement: "A valid order receives a receipt.",
       examples: [ids["EX-0001-0001"], ids["EX-0001-0003"]],
     });
+    expect(yaml["x-qfai-rules"]).toContainEqual({
+      id: ids["BR-0001-0003"],
+      statement: "An empty order has no receipt screen.",
+      examples: [ids["EX-0001-0002"]],
+    });
     const sql = await text(root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
     expect(sql).toContain(
       `-- Rule ${ids["BR-0001-0002"]}: An accepted order keeps its identifier.\n-- Examples: ${ids["EX-0001-0001"]}, ${ids["EX-0001-0003"]}`,
-    );
-    const markdown = await text(root, ".qfai/spec/03_contract/design/design-0003-order.md");
-    expect(markdown).toContain("## Business rules\n\n| BR-ID | Statement | Examples |");
-    expect(markdown).toContain(
-      `| ${ids["BR-0001-0003"]} | An empty order has no receipt screen. | ${ids["EX-0001-0002"]} |`,
     );
   });
 
