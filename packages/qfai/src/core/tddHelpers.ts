@@ -275,7 +275,7 @@ export function collectLedgerTables(content: string): LedgerTable[] {
  *
  * `catalog/test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and
  * `tests/api/**`, so those rows record their obligation in `US-Refs` /
- * `CON-API-Refs`.
+ * `API-Refs`.
  *
  * **One set, two rules.** `tddList.ts` reads it to raise
  * `TDDLIST_OBLIGATION_LAYER_MISMATCH` on a `TC-*` placed there, and
