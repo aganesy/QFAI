@@ -1355,7 +1355,7 @@ describe("BF-0004 acceptance criteria", () => {
     const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
     await writeFile(
       stories,
-      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I can track it.\n`,
+      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I want to track the receipt, so that I know where the order is.\n`,
     );
     const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
     await writeFile(
