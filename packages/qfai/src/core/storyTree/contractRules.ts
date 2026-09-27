@@ -105,7 +105,7 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       const body = sections.get(name)?.body;
       if (body === undefined) continue;
       readMarkdownRules(file, name, body, rules, errors);
-      const ref = MARKDOWN_REFS.exec(body);
+      const ref = MARKDOWN_REFS.exec(name === BUSINESS_RULES ? maskNonSpecRegions(body) : body);
       if (ref && name === BUSINESS_RULES) {
         errors.push(`A Rule refs line is not allowed under ## ${BUSINESS_RULES} in ${file}`);
       } else if (ref) {

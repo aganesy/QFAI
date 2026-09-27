@@ -285,6 +285,12 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     expect(parseContractRules(check, twoTables).errors).toEqual([
       `More than one Business rules table in ${check}`,
     ]);
+    const commentedRefs = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "```md\nRule refs: BR-0001\n```\n",
+    );
+    expect(parseContractRules(check, commentedRefs).errors).toEqual([]);
   });
 
   it("declares nothing when a file mixes a new and an old declaration", () => {
@@ -329,13 +335,24 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n",
     );
     expect(await indexFindings(root)).toEqual([]);
+    await put(root, `${contracts}/cli/cli-0002-check.md`, "# CLI-0002: Check\n");
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n| - | `cli/cli-0002-check.md` |\n",
+    );
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract number 0002 is declared by more than one contract: /,
+      ),
+    ]);
   });
 
   it("checks the apply order of a DB-NNNN contract", async () => {
     const root = await contractTree([], {
       "db/db-0004-orders.sql": DB_CONTRACT,
       "db/db-0005-lines.sql":
-        "-- QFAI-CONTRACT-ID: DB-0005\n-- Depends on: -\nCREATE TABLE lines (o int REFERENCES orders (id));\n",
+        "-- Depends on: -\n-- See DB-0004 for orders.\n-- QFAI-CONTRACT-ID: DB-0005\nCREATE TABLE lines (o int REFERENCES orders (id));\n",
     });
     const files = ["db/db-0004-orders.sql", "db/db-0005-lines.sql"].map((file) =>
       path.join(root, contracts, file),
@@ -351,9 +368,14 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       "api/api-0002-orders.yaml": API_CONTRACT,
       "db/db-0004-orders.sql": DB_CONTRACT,
     });
-    await put(root, "tests/api/orders.test.ts", "// QFAI:API-0002\n// QFAI:DB-0004\n");
+    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
+    await put(
+      root,
+      "tests/api/orders.test.ts",
+      "// QFAI:API-0002\n// QFAI:DB-0004\n// QFAI:API-0003-copy\n// QFAI:API-0003-0001\n",
+    );
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect([...result.activeApiContractIds]).toEqual(["API-0002"]);
+    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
     expect([...result.activeDbContractIds]).toEqual(["DB-0004"]);
     expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
   });

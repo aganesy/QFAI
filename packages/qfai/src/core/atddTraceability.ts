@@ -8,7 +8,7 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "./config.js";
 import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
-import { extractDeclaredContractIds } from "./contractsDecl.js";
+import { declaredContractId, extractDeclaredContractIds } from "./contractsDecl.js";
 import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
 import {
   collectFilesByGlobs,
@@ -456,7 +456,7 @@ const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 // SIMPLIFIED: `CON-API-*` and `CON-DB-*` are still read beside `API-NNNN` and `DB-NNNN`.
 // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+|API-\d{4})\b/g;
+const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+\b|API-\d{4}(?![\w-]))/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
  *
@@ -465,7 +465,7 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+|API-\d{4})\b/g;
  * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
  * A `QFAI:CON-DB-0002` written into a test was silently invisible.
  */
-const DB_TEST_ANNOTATION_RE = /\bQFAI:(CON-DB-\d+|DB-\d{4})\b/g;
+const DB_TEST_ANNOTATION_RE = /\bQFAI:(CON-DB-\d+\b|DB-\d{4}(?![\w-]))/g;
 
 /** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
 const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
@@ -2056,6 +2056,12 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
         (planned ? deferred : active).add(normalized);
       }
     }
+  }
+  // A Markdown contract declares its ID in its H1, as the story-tree model reads it.
+  const markdown = await fg("**/*.md", { cwd: apiRoot, absolute: true, onlyFiles: true });
+  for (const file of markdown.sort()) {
+    const id = declaredContractId(file, await readSafe(file));
+    if (id !== null && API_CONTRACT_ID_RE.test(id)) active.add(id);
   }
 
   return { active, deferred };

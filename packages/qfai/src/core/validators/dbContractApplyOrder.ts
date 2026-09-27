@@ -22,7 +22,7 @@
 
 import path from "node:path";
 
-import { extractDeclaredDependencies } from "../contractsDecl.js";
+import { extractDeclaredContractIds, extractDeclaredDependencies } from "../contractsDecl.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -31,7 +31,7 @@ export const DB_CONTRACT_APPLY_ORDER_RULE_ID = "QFAI-CONTRACT-036";
 
 // SIMPLIFIED: a `CON-DB-*` ID is still read beside a `DB-NNNN` one.
 // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-const CONTRACT_ID = /\bCON-DB-[A-Za-z0-9_-]+|\bDB-\d{4}\b/;
+const CONTRACT_ID = /^(?:CON-DB-[A-Za-z0-9_-]+|DB-\d{4})$/;
 
 /**
  * `CREATE TABLE [IF NOT EXISTS] <name>` and `REFERENCES <name>`.
@@ -102,7 +102,7 @@ async function readContractFiles(
     if (!text) {
       continue;
     }
-    const contractId = CONTRACT_ID.exec(text)?.[0];
+    const contractId = extractDeclaredContractIds(text).find((id) => CONTRACT_ID.test(id));
     if (contractId === undefined) {
       // A `db/` file with no contract id is already reported by
       // `QFAI-CONTRACT-010`; do not pile a second finding onto it.

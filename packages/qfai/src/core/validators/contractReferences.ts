@@ -108,6 +108,7 @@ export async function validateStoryTreeContractReferences(
       );
     }
   }
+  issues.push(...duplicateContractNumbers(model));
   return issues;
 }
 
