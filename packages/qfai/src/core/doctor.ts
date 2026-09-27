@@ -53,6 +53,7 @@ import {
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
+import { checkDocsLane } from "./doctor/docsLane.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -658,6 +659,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   }
+
+  addCheck(checks, await checkDocsLane(root));
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);

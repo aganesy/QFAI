@@ -169,27 +169,35 @@ describe("BF-0001 develop and verify a QFAI project", () => {
       `${spec}/01_policy/objective.md`,
       "# Objective\n\n## Objective\n\n- Outcome: Buyers can complete checkout.\n- Evidence: Project need recorded by the owner.\n\n## Users\n\n- Primary user: Buyer completing a purchase.\n\n## Success criteria\n\n- Measure: A cart total is correct for every selected item.\n\n## Non-goals\n\n- Outside this initiative: Payment settlement.\n",
     );
-    await put(root, `${flow}/business-flow.md`, `# ${flowId}: Complete checkout\n`);
+    await put(
+      root,
+      `${flow}/business-flow.md`,
+      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\nNot drawn yet.\n`,
+    );
     await put(
       root,
       `${spec}/02_business-flow/business-flows.md`,
-      `# Business Flows\n\n| BF-ID | Name |\n| --- | --- |\n| ${flowId} | Complete checkout |\n`,
+      `# Business Flows\n\n## Flows\n\n| BF-ID | Flow | Path |\n| --- | --- | --- |\n| ${flowId} | Complete checkout | \`business-flow-0001/\` |\n`,
     );
     await put(
       root,
       `${flow}/user-stories.md`,
-      `# User Stories\n\n| US-ID | Name |\n| --- | --- |\n| ${storyId} | Checkout a cart |\n`,
+      `# User Stories\n\n## Stories\n\n| US-ID | Story | Path |\n| --- | --- | --- |\n| ${storyId} | Checkout a cart | \`user-story-0001-0001/\` |\n`,
     );
-    await put(root, `${story}/01_User-story.md`, `# ${storyId}: Checkout a cart\n`);
+    await put(
+      root,
+      `${story}/01_User-story.md`,
+      `# ${storyId}: Checkout a cart\n\n## User Story\n\nAs a buyer, I want the cart total, so that I pay the right amount.\n`,
+    );
     await put(
       root,
       `${story}/02_Acceptance-Criteria.md`,
-      `# Acceptance Criteria\n\n\`\`\`gherkin\n# ${criterionId}\nScenario: total selected items\n  Given a cart with two items\n  When the buyer checks out\n  Then the total is the sum of both prices\n\`\`\`\n`,
+      `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: Checkout a cart\n  # ${criterionId}\n  Scenario: total selected items\n    Given a cart with two items\n    When the buyer checks out\n    Then the total is the sum of both prices\n\`\`\`\n`,
     );
     await put(
       root,
       `${story}/03_Example.md`,
-      `# Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| ${exampleId} | ${criterionId} | 20 and 30 | 50 |\n`,
+      `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| ${exampleId} | ${criterionId} | 20 and 30 | 50 |\n`,
     );
     await put(
       root,
@@ -223,7 +231,7 @@ describe("BF-0001 develop and verify a QFAI project", () => {
     await put(
       root,
       `${flow}/business-flow.md`,
-      `# ${flowId}: Complete checkout\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n`,
+      `# ${flowId}: Complete checkout\n\n## Purpose\n\nA buyer completes checkout.\n\n## Flow\n\n\`\`\`mermaid\nflowchart TD\n  Need[Buyer needs a total] --> Story[Define checkout and its contract]\n  Story --> Verify[Verify acceptance and implementation]\n\`\`\`\n`,
     );
     await put(
       root,

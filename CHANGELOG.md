@@ -235,6 +235,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Migration step 3 moves the old structure catalog into those three places
     and lists the rest under `## For a person`.
 
+- **Every spec-tree document is checked against its schema, and the check is
+  required.** `npx qfai validate` runs the shipped document-schema checker in
+  the `sdd`, `verify` and `full` profiles. Each violation is a
+  `QFAI-DOCSCHEMA-001` error naming the document, line and column, and a
+  check that could not run is `QFAI-DOCSCHEMA-002`.
+
+  - `@jackchuka/mdschema` 0.15.4 is now a dependency of the package, and the
+    shipped `qfai-docs.yml` installs the same version.
+  - `npx qfai doctor` reports an error in `workflows.docsLane` when
+    `.github/workflows/qfai-docs.yml` is missing, and names the packaged copy
+    to restore.
+  - `npx qfai init` ships the rule master `.agents/rules/document-schema.md`
+    and cites it from the `AGENTS.md`, `CLAUDE.md` and
+    `copilot-instructions.md` it writes.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves
@@ -462,6 +477,17 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - No CI lane runs the prototyping profile.
 
 ### Removed
+
+- **A spec document can no longer opt out of its schema.**
+  `<!-- mdschema:ignore -->` is now reported as a violation, under every
+  `--scope` of the document lane and by `npx qfai validate`, and the document
+  is still checked.
+- **The 1.x spec-pack and policy schemas are gone.** The `spec/` and
+  `policies/` schemas, their manifest entries and the `when:` routing that
+  sent a retired spec pack to its own schema are removed.
+- **`validation.require.specSections` is removed.** No validator read it. A
+  document's sections come only from the shipped schemas, and
+  `qfai.config.yaml` has no `validation.require` section.
 
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,

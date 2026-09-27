@@ -46,7 +46,6 @@ function makeConfig(overrides: { primaryUiContract?: string; packPath?: string }
     },
     validation: {
       failOn: "error",
-      require: { specSections: [] },
       testStrategy: {
         requireLayerTags: false,
         requireSizeTags: false,

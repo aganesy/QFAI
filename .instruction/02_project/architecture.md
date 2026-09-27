@@ -13,6 +13,8 @@ QFAI Toolkit は CLI と検証エンジンを単一パッケージとして配�
 
 - `packages/qfai/`: CLI とコア（npm 配布対象）
 - `packages/qfai/assets/init/`: `qfai init` のテンプレート（`.qfai/` と `qfai.config.yaml` など）
+- `packages/qfai/assets/mdschema/` and `packages/qfai/assets/scripts/`: the
+  document schemas and the checkers that run them, shipped with the package
 - `packages/qfai/docs/`: design notes and the finding-code reference. Not shipped.
 - `.agents/rules/`: the rule masters every assistant follows.
 - `scripts/`: the lint and guard scripts the quality gate runs.

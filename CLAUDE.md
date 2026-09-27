@@ -53,10 +53,12 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`). The
   surface, the forbidden identifier shapes and the four guards are in
   `.agents/rules/distributed-surface.local.md`.
-- SDD ドキュメントの構造 (章構成 / リスト / 表の必須列 / Gherkin / Mermaid) は
-  `packages/qfai/assets/mdschema/**` が SSOT。`pnpm lint:mdschema` と
-  `pnpm lint:mermaid` が強制する。see `.claude/rules/document-schema.md`
-  (master: `.agents/rules/document-schema.md`).
+- Every spec-tree document conforms to its closed schema in
+  `packages/qfai/assets/mdschema/**`: `pnpm lint:mdschema`, the shipped docs
+  lane and `qfai validate` check it, and no document opts out. See
+  `.claude/rules/document-schema.md` (master:
+  `.agents/rules/document-schema.md`), plus `document-schema.local.md` for the
+  lanes and how a schema is changed here.
 - This repository is written in English: source, comments, Markdown,
   `CHANGELOG.md`, commit messages, and pull request and issue text. It does not
   fix the language an assistant replies in, nor what an adopter writes in their
