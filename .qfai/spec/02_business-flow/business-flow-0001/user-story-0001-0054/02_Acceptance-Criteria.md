@@ -31,4 +31,11 @@ Feature: Contract index and contract-layer validation
     When `qfai validate` runs
     Then `QFAI-CONTRACT-000` is not raised for that directory
     And it is still raised for a kind directory that holds no contract of its kind
+
+  # AC-0001-0054-05
+  Scenario: Only a db contract that declares one DB ID takes part in the apply-order check
+    Given the story tree, and `db/` contracts whose DDL points a foreign key at a table another contract creates
+    When `qfai validate --profile sdd` runs
+    Then `QFAI-CONTRACT-036` takes a `db/` file as the owner of the tables it creates only when the file declares exactly one contract ID and that ID is a `DB-NNNN` ID
+    And a `db/` file that declares an ID of another kind, or more than one ID, neither owns a table nor receives that finding
 ```
