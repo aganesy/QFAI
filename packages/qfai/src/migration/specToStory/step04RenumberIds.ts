@@ -11,7 +11,12 @@ import { storyPaths } from "../../core/storyTree/layout.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { ID_MAP_PATH, readIdMap, serializeIdMap, type MigrationIdMap } from "./idMap.js";
-import { parseLegacyRecords, retiredLegacyStatus, withoutLegacyRecords } from "./legacyRecords.js";
+import {
+  parseLegacyRecords,
+  plainExampleCells,
+  retiredLegacyStatus,
+  withoutLegacyRecords,
+} from "./legacyRecords.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -342,12 +347,61 @@ export function parseOldCriteria(text: string): OldCriterion[] {
     .map(({ criterion }) => criterion);
 }
 
-function criterionScenario(criterion: OldCriterion): string | null {
+type GherkinItem = { keyword: string; name: string; lines: string[] };
+/** What a convertible criterion writes: its one named scenario, or null for the placeholder. */
+type CriterionShape = { scenario: string | null; dropped: string[] };
+
+const GHERKIN_ITEM = /^\s*(Background|Scenario Outline|Scenario Template|Scenario):[ \t]*(.*?)\s*$/;
+const ID_ONLY_NAME = /^(?:US|AC)-\d{4}-\d{4}(?:-\d{2})?:?$/;
+
+/** The scenario a criterion holds when none of its old items is one named `Scenario:`. */
+const PLACEHOLDER_SCENARIO = [
+  "Scenario: <the outcome this criterion accepts>",
+  "  Given <a starting state>",
+  "  When <the user acts>",
+  "  Then <the expected outcome>",
+].join("\n");
+
+/** Each `Background`, `Scenario` and `Scenario Outline` of a criterion, with the lines under it. */
+function gherkinItems(source: string): GherkinItem[] {
+  const items: GherkinItem[] = [];
+  let docString = false;
+  for (const line of source.replace(/\r\n/g, "\n").split("\n")) {
+    const delimiter = /^\s*"""/.test(line);
+    const header = docString || delimiter ? null : GHERKIN_ITEM.exec(line);
+    if (delimiter) docString = !docString;
+    if (header) items.push({ keyword: header[1] ?? "", name: header[2] ?? "", lines: [line] });
+    else items.at(-1)?.lines.push(line);
+  }
+  return items;
+}
+
+/** An item's text without the blank, tag and comment lines that lead into the next item. */
+function itemText(item: GherkinItem): string {
+  const lines = [...item.lines];
+  while (lines.length > 1 && /^\s*(?:@|#|$)/.test(lines.at(-1) ?? "")) lines.pop();
+  return lines.join("\n");
+}
+
+function droppedItem(item: GherkinItem): string {
+  if (item.keyword === "Background") return item.name ? `Background "${item.name}"` : "Background";
+  if (item.keyword !== "Scenario") return `${item.keyword} "${item.name}"`;
+  if (item.name === "") return "Scenario with no name";
+  if (ID_ONLY_NAME.test(item.name)) return `Scenario named only by its ID ${item.name}`;
+  return `further Scenario "${item.name}"`;
+}
+
+/**
+ * The shape a criterion is written in, or null when it has no `Scenario` with Given, When and
+ * Then lines. A criterion holds one named `Scenario:`: the first one it has. Every other
+ * `Background`, `Scenario` and `Scenario Outline` is dropped and named for a person.
+ */
+function criterionShape(criterion: OldCriterion): CriterionShape | null {
   const fenced = /```gherkin\s*\n([\s\S]*?)\n```/m.exec(criterion.text)?.[1];
   const source = fenced ?? criterion.text.replace(/\n```[\s\S]*$/m, "");
   const start = source.search(/^Scenario(?: Outline)?:\s+\S/m);
   if (start < 0) return null;
-  const scenario = source.slice(start).trim();
+  const scenario = source.slice(start);
   if (
     !/^\s*Given\s+\S/m.test(scenario) ||
     !/^\s*When\s+\S/m.test(scenario) ||
@@ -355,12 +409,27 @@ function criterionScenario(criterion: OldCriterion): string | null {
   ) {
     return null;
   }
-  return scenario;
+  const items = gherkinItems(source);
+  const kept = items.find(
+    (item) => item.keyword === "Scenario" && item.name !== "" && !ID_ONLY_NAME.test(item.name),
+  );
+  return {
+    scenario: kept === undefined ? null : itemText(kept),
+    dropped: items.filter((item) => item !== kept).map(droppedItem),
+  };
 }
 
 function hasConvertibleCriterion(id: string, criteria: ReadonlyMap<string, OldCriterion>): boolean {
   const criterion = criteria.get(id);
-  return criterion !== undefined && criterionScenario(criterion) !== null;
+  return criterion !== undefined && criterionShape(criterion) !== null;
+}
+
+const BACKGROUND_LINE = /^\s*Background:/gm;
+
+/** How many `Background:` lines of a criteria file lie outside every criterion. */
+function backgroundsOutsideCriteria(text: string, criteria: readonly OldCriterion[]): number {
+  const count = (value: string): number => (value.match(BACKGROUND_LINE) ?? []).length;
+  return count(text) - criteria.reduce((total, criterion) => total + count(criterion.text), 0);
 }
 
 function splitIds(value: string, prefix: string): string[] {
@@ -553,6 +622,11 @@ function reportUnplaced(
   for (const pack of packs) {
     if (pack.retired) continue;
     const base = relative(root, pack.dir);
+    if (backgroundsOutsideCriteria(pack.raw["03_Acceptance-Criteria.md"], pack.criteria) > 0) {
+      forAPerson.push(
+        `${base}/03_Acceptance-Criteria.md: a Background outside every criterion is not written`,
+      );
+    }
     for (const story of pack.stories) {
       if (!placedStories.has(story.id)) {
         forAPerson.push(`${base}/02_User-stories.md: ${story.id} has no flow in plan.yaml`);
@@ -563,7 +637,7 @@ function reportUnplaced(
         forAPerson.push(
           `${base}/03_Acceptance-Criteria.md: ${criterion.id} has no single placed story`,
         );
-      } else if (criterionScenario(criterion) === null) {
+      } else if (criterionShape(criterion) === null) {
         forAPerson.push(
           `${base}/03_Acceptance-Criteria.md: ${criterion.id} has no convertible Gherkin scenario`,
         );
@@ -591,7 +665,7 @@ function reportUnplaced(
         testCase.criteria.length === 1 &&
         criterion !== undefined &&
         ownerByCriterion.has(criterion) &&
-        pack.criteria.some((item) => item.id === criterion && criterionScenario(item) !== null);
+        pack.criteria.some((item) => item.id === criterion && criterionShape(item) !== null);
       if (
         testCase.invalidExampleReference ||
         testCase.examples.length + testCase.danglingExamples.length > 1
@@ -753,11 +827,37 @@ function outputCriteria(
 ): string | null {
   if (criteria.length === 0) return null;
   const blocks = criteria.map((criterion) => {
-    const scenario = criterionScenario(criterion);
-    if (scenario === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
+    const shape = criterionShape(criterion);
+    if (shape === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
+    const scenario = shape.scenario ?? PLACEHOLDER_SCENARIO;
     return `  # ${ids[criterion.id]}\n${indentedScenario(replacedIds(scenario, ids))}`;
   });
   return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n${blocks.join("\n\n")}\n\`\`\`\n`;
+}
+
+/** What `outputCriteria` does not write as it stands: each dropped item, and each placeholder. */
+function criteriaForAPerson(
+  source: string,
+  criteriaFile: string,
+  criteria: readonly OldCriterion[],
+  ids: Record<string, string>,
+): string[] {
+  const forAPerson: string[] = [];
+  for (const criterion of criteria) {
+    const shape = criterionShape(criterion);
+    if (shape === null) continue;
+    for (const item of shape.dropped) {
+      forAPerson.push(
+        `${source}: ${criterion.id} ${item} is not written; a criterion holds one named Scenario`,
+      );
+    }
+    if (shape.scenario === null) {
+      forAPerson.push(
+        `${criteriaFile}: ${ids[criterion.id] ?? criterion.id} holds a placeholder Scenario; write it`,
+      );
+    }
+  }
+  return forAPerson;
 }
 
 function outputExamples(
@@ -969,7 +1069,7 @@ export const step04: MigrationStep = {
           const criteria = pack.criteria
             .filter(
               (item) =>
-                ownerByCriterion.get(item.id) === planned.id && criterionScenario(item) !== null,
+                ownerByCriterion.get(item.id) === planned.id && criterionShape(item) !== null,
             )
             .map((item) => item.id);
           const examples = [
@@ -1112,17 +1212,30 @@ export const step04: MigrationStep = {
         const locations = storyPaths(specsRelative, flowId, storyId);
         const packMap = map.ids[pack.id] ?? {};
         const mappedCriteria = pack.criteria.filter(
-          (item) => ownerByCriterion.get(item.id) === story.id && criterionScenario(item) !== null,
+          (item) => ownerByCriterion.get(item.id) === story.id && criterionShape(item) !== null,
+        );
+        const [storyFile = "", criteriaFile = "", exampleFile = ""] = locations.files;
+        forAPerson.push(
+          ...criteriaForAPerson(
+            `${relative(context.root, pack.dir)}/03_Acceptance-Criteria.md`,
+            criteriaFile,
+            mappedCriteria,
+            packMap,
+          ),
         );
         const mappedExamples = pack.examples
           .filter((item) => ownerByCriterion.get(exampleCriterion.get(item.id) ?? "") === story.id)
-          .map((item) => ({
-            id: packMap[item.id] ?? "",
-            criterionId: packMap[exampleCriterion.get(item.id) ?? ""] ?? "",
-            input: item.input,
-            expected: item.expected,
-          }));
-        const [storyFile = "", criteriaFile = ""] = locations.files;
+          .map((item) => {
+            const id = packMap[item.id] ?? "";
+            const plain = plainExampleCells(item.input, item.expected);
+            for (const column of plain.notPlain) {
+              forAPerson.push(
+                `${exampleFile}: ${id} ${column} is Gherkin steps, not one plain value; rewrite it`,
+              );
+            }
+            const criterionId = packMap[exampleCriterion.get(item.id) ?? ""] ?? "";
+            return { id, criterionId, input: plain.input, expected: plain.expected };
+          });
         const parts = storyParts(story.body);
         if (parts === null) {
           forAPerson.push(
@@ -1149,7 +1262,7 @@ export const step04: MigrationStep = {
         }
         operations.push({
           kind: "write",
-          target: locations.files[2] ?? "",
+          target: exampleFile,
           content: outputExamples(mappedExamples),
         });
       }
