@@ -16,6 +16,7 @@ import {
   hasEnvironmentPreconditions,
   hasPreflightGuidance,
   hasPlaywrightCliFallback,
+  validatePrototypingSkillContent,
 } from "../../src/core/validators/skill/prototypingSkill.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -94,6 +95,19 @@ describe("prototyping skill validator", () => {
   it("limits prototyping to UI contracts with declared screens", () => {
     expect(hasUiContractScope(VALID_SKILL_CONTENT)).toBe(true);
     expect(hasUiContractScope("ui_bearing: false specs are excluded.")).toBe(false);
+  });
+
+  it("does not read the retired CON-UI-NNNN form as the UI contract scope", () => {
+    // QFAI:EX-0001-0042-18
+    const retired = VALID_SKILL_CONTENT.replace("full UI-NNNN ID", "full CON-UI-NNNN ID");
+
+    expect(hasUiContractScope(retired)).toBe(false);
+    expect(validatePrototypingSkillContent(retired).issues.map((item) => item.code)).toContain(
+      "UIX-VAL-SKILL-UI-BEARING-FALSE",
+    );
+    expect(
+      validatePrototypingSkillContent(VALID_SKILL_CONTENT).issues.map((item) => item.code),
+    ).not.toContain("UIX-VAL-SKILL-UI-BEARING-FALSE");
   });
 
   it("documents static-first semantics", () => {
