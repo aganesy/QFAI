@@ -454,7 +454,9 @@ function restoreTestNames(masked: string, original: string, patterns: readonly R
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
-const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
+// SIMPLIFIED: `CON-API-*` and `CON-DB-*` are still read beside `API-NNNN` and `DB-NNNN`.
+// Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+|API-\d{4})\b/g;
 /**
  * `CON-DB-*` annotation, the DB peer of the API form above.
  *
@@ -463,7 +465,7 @@ const API_TEST_ANNOTATION_RE = /\bQFAI:CON-API-(\d+)\b/g;
  * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
  * A `QFAI:CON-DB-0002` written into a test was silently invisible.
  */
-const DB_TEST_ANNOTATION_RE = /\bQFAI:CON-DB-(\d+)\b/g;
+const DB_TEST_ANNOTATION_RE = /\bQFAI:(CON-DB-\d+|DB-\d{4})\b/g;
 
 /** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
 const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
@@ -471,8 +473,8 @@ const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
-const API_CONTRACT_ID_RE = /^CON-API-\d+$/;
-const DB_CONTRACT_ID_RE = /^CON-DB-\d+$/;
+const API_CONTRACT_ID_RE = /^(?:CON-API-\d+|API-\d{4})$/;
+const DB_CONTRACT_ID_RE = /^(?:CON-DB-\d+|DB-\d{4})$/;
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -1295,10 +1297,10 @@ function unreadableDirectoryOf(root: string, error: unknown): string | null {
 const UNCOUNTED_TEST_DIRS = ["atdd"];
 
 /** Any QFAI test annotation, in any of its forms. */
-const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-)/;
+const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-|(?:API|DB)-\d{4})/;
 
 /** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
-const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-)/;
+const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-|(?:API|DB)-\d{4})/;
 
 /**
  * Whether a legacy file's annotations are all ones ATDD no longer owes.
@@ -3625,11 +3627,11 @@ function extractSpecScopedAnnotations(text: string, pattern: RegExp): SpecScoped
 function extractApiContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(API_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-API-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }
@@ -3637,11 +3639,11 @@ function extractApiContractAnnotations(text: string): string[] {
 function extractDbContractAnnotations(text: string): string[] {
   const ids = new Set<string>();
   for (const match of text.matchAll(cloneGlobal(DB_TEST_ANNOTATION_RE))) {
-    const short = match[1];
-    if (!short) {
+    const id = match[1];
+    if (!id) {
       continue;
     }
-    ids.add(`CON-DB-${short}`);
+    ids.add(id);
   }
   return Array.from(ids).sort((left, right) => left.localeCompare(right));
 }

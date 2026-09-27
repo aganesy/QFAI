@@ -24,8 +24,8 @@ export function declaredContractId(file: string, text: string): string | null {
     const heading = parseHeadings(text).find((item) => item.level === 1);
     return MARKDOWN_CONTRACT_H1_RE.exec(heading?.title ?? "")?.[1] ?? null;
   }
-  const ids = extractDeclaredContractIds(text).filter(isContractId);
-  return ids.length === 1 ? (ids[0] ?? null) : null;
+  const [id, ...others] = extractDeclaredContractIds(text);
+  return id !== undefined && others.length === 0 && isContractId(id) ? id : null;
 }
 
 export function extractDeclaredContractIds(text: string): string[] {

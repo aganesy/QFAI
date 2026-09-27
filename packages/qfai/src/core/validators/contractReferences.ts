@@ -10,7 +10,7 @@ import {
 } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
-import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
+import { CONTRACT_KIND_BY_DIR, contractNumber, isContractId } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 
@@ -36,9 +36,12 @@ export async function validateStoryTreeContractReferences(
   const { contractsDir } = resolveStoryTreeRoots(root, config);
   const indexFile = path.join(contractsDir, "contracts.md");
   const tables = parseIndexTables(await readSafe(indexFile));
-  const current = tables.find(
+  const currentTables = tables.filter(
     (table) => table.headers.map(normalizeHeaderKey).join("|") === INDEX_COLUMNS,
   );
+  const current =
+    currentTables.find((table) => table.heading.toLowerCase() === "contract index") ??
+    currentTables[0];
   if (current) {
     return validateContractIndex({ root, contractsDir, indexFile }, current.rows, model);
   }
@@ -236,6 +239,7 @@ function bareCell(cell: string): string {
  */
 function canonicalCellContractId(cell: string): string | undefined {
   const bare = cell.trim().replace(CELL_DECORATION_RE, "").trim();
+  if (isContractId(bare.toUpperCase())) return bare.toUpperCase();
   const match = CANONICAL_CELL_ID_RE.exec(bare);
   const kind = match?.[1]?.toUpperCase();
   const number = match?.[2];

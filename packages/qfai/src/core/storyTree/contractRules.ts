@@ -3,7 +3,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { extractH2Sections } from "../parse/markdown.js";
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
 export type ContractRule = {
   id: string;
@@ -117,7 +117,11 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
   return { rules, refs: [...new Set(refs)].sort(), errors };
 }
 
-/** Reads one section's rules table, whose columns are exactly BR-ID, Statement and Examples. */
+/**
+ * Reads one section's rules table, whose columns are exactly BR-ID, Statement and
+ * Examples. A table inside a code block or an HTML comment is not the rules table,
+ * and `## Business rules` holds exactly one.
+ */
 function readMarkdownRules(
   file: string,
   section: string,
@@ -125,9 +129,14 @@ function readMarkdownRules(
   rules: ContractRule[],
   errors: string[],
 ): void {
-  const table = parseAllMarkdownTables(body)[0];
+  const tables = parseAllMarkdownTables(maskNonSpecRegions(body));
+  const table = tables[0];
   if (!table) {
     errors.push(`Missing ${section} table in ${file}`);
+    return;
+  }
+  if (section === BUSINESS_RULES && tables.length > 1) {
+    errors.push(`More than one ${section} table in ${file}`);
     return;
   }
   const [idColumn, statementColumn, examplesColumn] = ["BR-ID", "Statement", "Examples"].map(
