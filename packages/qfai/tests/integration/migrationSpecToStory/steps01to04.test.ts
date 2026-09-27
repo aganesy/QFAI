@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -236,6 +236,8 @@ describe("migration steps 1 to 4", () => {
   });
 
   it("writes a stable ID map and story files from the plan", async () => {
+    // QFAI:EX-0004-0007-14
+    // QFAI:EX-0004-0007-15
     await withProject(async (root) => {
       await put(
         root,
@@ -255,12 +257,12 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/spec/spec-0001/02_User-stories.md",
-        "# Stories\n\n## US-0001-0001: Place an order\n\n- Goal: Place an order.\n",
+        "# Stories\n\n## US-0001-0001: Place an order\n\n- Parent: CAP-0001\n- Source: discussion-20260101000000000#DUS-001\n- Flow: BF-0001\n- Goal: As a buyer, I want to place an order,\n  so that the cart becomes a purchase.\n- Non-goals: Shipping.\n",
       );
       await put(
         root,
         ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place one order\n  Given an empty cart\n  When an item is added\n  Then the order is accepted\n```\n",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place one order\n Given an empty cart\n When an item is added\n Then the order is accepted\n\n# AC-0001-0002\n# Parent: US-0001-0001\nScenario Outline: Place <count> items\n Given <count> items\n When the order is placed\n Then the order is accepted\n Examples:\n   | count |\n   | 2     |\n```\n",
       );
       await put(
         root,
@@ -311,12 +313,42 @@ describe("migration steps 1 to 4", () => {
         ),
         "utf8",
       );
-      expect(story).toContain("## Legacy Source Scope\n\n### In\n\n- Order placement.");
-      expect(story).toContain(
-        "- Spec scope: `.qfai/evidence/migration-spec-to-story/retired/spec-0001/01_Spec.md#scope`",
+      expect(story).toBe(
+        "# US-0001-0001: Place an order\n\n## User Story\n\nAs a buyer, I want to place an order, so that the cart becomes a purchase.\n\n## Non-goals\n\n- Shipping.\n",
       );
-      expect(story).toContain(
-        "- Story block: `.qfai/evidence/migration-spec-to-story/retired/spec-0001/02_User-stories.md#us-0001-0001`",
+      expect(
+        await readFile(
+          path.join(
+            root,
+            ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md",
+          ),
+          "utf8",
+        ),
+      ).toBe(
+        [
+          "# Acceptance Criteria",
+          "",
+          "## Criteria",
+          "",
+          "```gherkin",
+          "Feature: Place an order",
+          "  # AC-0001-0001-01",
+          "  Scenario: Place one order",
+          "    Given an empty cart",
+          "    When an item is added",
+          "    Then the order is accepted",
+          "",
+          "  # AC-0001-0001-02",
+          "  Scenario Outline: Place <count> items",
+          "    Given <count> items",
+          "    When the order is placed",
+          "    Then the order is accepted",
+          "    Examples:",
+          "      | count |",
+          "      | 2     |",
+          "```",
+          "",
+        ].join("\n"),
       );
       const second = await run(step04, await context(root));
       expect(second.code).toBe(0);
@@ -389,7 +421,8 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
-  it("carries one pack's scope and the distinct source block into each of its stories", async () => {
+  it("writes a story block that is not one story sentence as it stands, for a person", async () => {
+    // QFAI:EX-0004-0007-16
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -409,20 +442,17 @@ describe("migration steps 1 to 4", () => {
       );
       const result = await run(step04, await context(root));
       expect(result.code).toBe(3);
-      for (const [id, goal] of [
-        ["0001", "Place order."],
-        ["0002", "Review order."],
+      for (const [id, title] of [
+        ["0001", "Place order"],
+        ["0002", "Review order"],
       ] as const) {
-        const story = await readFile(
-          path.join(
-            root,
-            `.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-${id}/01_User-story.md`,
-          ),
-          "utf8",
+        const file = `.qfai/spec/02_business-flow/business-flow-0001/user-story-0001-${id}/01_User-story.md`;
+        expect(await readFile(path.join(root, file), "utf8")).toBe(
+          `# US-0001-${id}: ${title}\n\n## User Story\n\n- Goal: ${title}.\n`,
         );
-        expect(story).toContain(`- Goal: ${goal}`);
-        expect(story).toContain("## Legacy Source Scope\n\n- In: Orders.");
-        expect(story).toContain(`02_User-stories.md#us-0001-${id}`);
+        expect(result.output).toContain(
+          `${file}: US-0001-${id} is not one "As a <actor>, I want <goal>, so that <benefit>." sentence`,
+        );
       }
     });
   });
@@ -468,6 +498,7 @@ describe("migration steps 1 to 4", () => {
   });
 
   it("keeps prose criteria for a person instead of writing invalid Gherkin", async () => {
+    // QFAI:EX-0004-0007-17
     await withProject(async (root) => {
       await put(
         root,
@@ -506,14 +537,14 @@ describe("migration steps 1 to 4", () => {
       expect(
         await readFile(path.join(root, ".qfai/spec/spec-0001/03_Acceptance-Criteria.md"), "utf8"),
       ).toContain("The order is accepted.");
-      const storyCriteria = await readFile(
-        path.join(
-          root,
-          ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md",
-        ),
-        "utf8",
+      const storyDir = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
+      expect((await readdir(path.join(root, storyDir))).sort()).toEqual([
+        "01_User-story.md",
+        "03_Example.md",
+      ]);
+      expect(result.output).toContain(
+        `${storyDir}/02_Acceptance-Criteria.md: US-0001-0001 has no criterion that takes a new ID`,
       );
-      expect(storyCriteria).not.toContain("The order is accepted.");
     });
   });
 

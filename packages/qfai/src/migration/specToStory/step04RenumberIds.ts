@@ -619,42 +619,111 @@ function reportUnplaced(
   return forAPerson;
 }
 
-function sourceScope(pack: OldPack): string | null {
-  const text = pack.raw["01_Spec.md"];
-  const headings = parseHeadings(text).filter(
-    (heading) => heading.level === 2 && heading.title === "Scope",
-  );
-  if (headings.length > 1) {
-    throw new MigrationInputError(`${pack.id}/01_Spec.md has several Scope sections`);
+const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
+/** Fields of an old story block that the archive keeps and the story tree does not. */
+const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
+
+type StoryParts = { sentence: string; nonGoals: string[] };
+type BlockEntry =
+  | { kind: "field"; key: string; value: string; items: string[] }
+  | { kind: "paragraph"; text: string };
+
+function storyBlockEntries(body: string): BlockEntry[] {
+  const entries: BlockEntry[] = [];
+  let current: BlockEntry | null = null;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
+    const item = /^\s+[-*]\s+(.*)$/.exec(line);
+    if (line.trim() === "") {
+      if (current?.kind === "paragraph") current = null;
+    } else if (field) {
+      current = {
+        kind: "field",
+        key: (field[1] ?? "").toLowerCase(),
+        value: field[2] ?? "",
+        items: [],
+      };
+      entries.push(current);
+    } else if (current?.kind === "field" && item) {
+      current.items.push(item[1] ?? "");
+    } else if (current?.kind === "field" && /^\s/.test(line)) {
+      const last = current.items.length - 1;
+      if (last >= 0) current.items[last] = `${current.items[last]} ${line.trim()}`;
+      else current.value = `${current.value} ${line.trim()}`;
+    } else if (current?.kind === "paragraph") {
+      current.text = `${current.text} ${line.trim()}`;
+    } else {
+      current = { kind: "paragraph", text: line.trim() };
+      entries.push(current);
+    }
   }
-  return headings.length === 1 ? extractH2Sections(text).get("Scope")?.body.trim() || null : null;
+  return entries;
+}
+
+/**
+ * The one `As a …, I want …, so that ….` sentence of an old story block and its
+ * non-goals, or null when the block holds anything else. The sentence is the
+ * block's one paragraph or its `Goal` field.
+ */
+function storyParts(body: string): StoryParts | null {
+  const sentences: string[] = [];
+  const nonGoals: string[] = [];
+  for (const entry of storyBlockEntries(body)) {
+    if (entry.kind === "paragraph") {
+      sentences.push(entry.text);
+    } else if (entry.key === "non-goals") {
+      nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
+    } else if (entry.items.length > 0) {
+      return null;
+    } else if (entry.key === "goal") {
+      sentences.push(entry.value);
+    } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      return null;
+    }
+  }
+  const sentence = sentences[0]?.replace(/\s+/g, " ").trim() ?? "";
+  return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
 }
 
 function outputStory(
   story: OldStory,
   newId: string,
   ids: Record<string, string>,
-  pack: OldPack,
-  scope: string | null,
+  parts: StoryParts | null,
 ): string {
-  const body = replacedIds(story.body, ids).trim();
-  const archive = `.qfai/evidence/migration-spec-to-story/retired/${pack.id}`;
-  const sourceScopeText = scope ?? "The legacy source has no Scope section.";
-  return `# ${newId}: ${story.title}\n\n## User Story\n\n${body}\n\n## Legacy Source Scope\n\n${sourceScopeText}\n\n## Source Provenance\n\n- Spec scope: \`${archive}/01_Spec.md#scope\`\n- Story block: \`${archive}/02_User-stories.md#${story.id.toLowerCase()}\`\n`;
+  const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
+  if (parts === null) return `${heading}${replacedIds(story.body, ids).trim()}\n`;
+  const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
+  return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
+}
+
+/** A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps. */
+function indentedScenario(scenario: string): string {
+  const lines = scenario.split("\n");
+  const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
+  const step = lines.find((line) => /^\s*(?:Given|When|Then|And|But)\s/.test(line));
+  const stepIndent = step === undefined ? 0 : indent(step);
+  return lines
+    .map((line, index) => {
+      if (line.trim() === "") return "";
+      if (index === 0) return `  ${line.trim()}`;
+      return `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trim()}`;
+    })
+    .join("\n");
 }
 
 function outputCriteria(
   story: OldStory,
   criteria: readonly OldCriterion[],
   ids: Record<string, string>,
-): string {
-  if (criteria.length === 0) return `# Acceptance Criteria\n\n## Criteria\n`;
+): string | null {
+  if (criteria.length === 0) return null;
   const blocks = criteria.map((criterion) => {
     const scenario = criterionScenario(criterion);
     if (scenario === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
-    return `# ${ids[criterion.id]}\n# Parent: ${ids[story.id]}\n${replacedIds(scenario, ids)}`;
+    return `  # ${ids[criterion.id]}\n${indentedScenario(replacedIds(scenario, ids))}`;
   });
-  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n\n${blocks.join("\n\n")}\n\`\`\`\n`;
+  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n${blocks.join("\n\n")}\n\`\`\`\n`;
 }
 
 function outputExamples(
@@ -956,8 +1025,6 @@ export const step04: MigrationStep = {
       )) ??
       "";
     const fallbackDiagram = await templateDiagram();
-    const scopeByPack = new Map(packs.map((pack) => [pack.id, sourceScope(pack)] as const));
-    const missingScopes = new Set<string>();
     operations.push({
       kind: "write",
       target: `${specsRelative}/02_business-flow/business-flows.md`,
@@ -994,11 +1061,6 @@ export const step04: MigrationStep = {
         if (!story || !pack || !storyId) continue;
         const locations = storyPaths(specsRelative, flowId, storyId);
         const packMap = map.ids[pack.id] ?? {};
-        const scope = scopeByPack.get(pack.id) ?? null;
-        if (scope === null && !missingScopes.has(pack.id)) {
-          forAPerson.push(`${relative(context.root, pack.dir)}/01_Spec.md: Scope is missing`);
-          missingScopes.add(pack.id);
-        }
         const mappedCriteria = pack.criteria.filter(
           (item) => ownerByCriterion.get(item.id) === story.id && criterionScenario(item) !== null,
         );
@@ -1010,16 +1072,24 @@ export const step04: MigrationStep = {
             input: item.input,
             expected: item.expected,
           }));
+        const [storyFile = "", criteriaFile = ""] = locations.files;
+        const parts = storyParts(story.body);
+        if (parts === null) {
+          forAPerson.push(
+            `${storyFile}: ${storyId} is not one "As a <actor>, I want <goal>, so that <benefit>." sentence; rewrite its User Story`,
+          );
+        }
         operations.push({
           kind: "write",
-          target: locations.files[0] ?? "",
-          content: outputStory(story, storyId, packMap, pack, scope),
+          target: storyFile,
+          content: outputStory(story, storyId, packMap, parts),
         });
-        operations.push({
-          kind: "write",
-          target: locations.files[1] ?? "",
-          content: outputCriteria(story, mappedCriteria, packMap),
-        });
+        const criteriaText = outputCriteria(story, mappedCriteria, packMap);
+        if (criteriaText === null) {
+          forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
+        } else {
+          operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
+        }
         operations.push({
           kind: "write",
           target: locations.files[2] ?? "",

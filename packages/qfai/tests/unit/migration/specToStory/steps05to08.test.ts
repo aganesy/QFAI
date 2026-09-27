@@ -306,7 +306,7 @@ describe("migration steps 5 to 8", () => {
       path.join(flow, "user-story-0001-0002/02_Acceptance-Criteria.md"),
       "utf8",
     );
-    expect(criteria).toContain("# AC-0001-0002-01\n# Parent: US-0001-0002");
+    expect(criteria).toContain("  # AC-0001-0002-01\n  Scenario: Order");
     expect(await readFile(path.join(flow, "user-story-0001-0002/03_Example.md"), "utf8")).toContain(
       "| EX-0001-0002-01 | AC-0001-0002-01 | A full cart | Accepted |",
     );
