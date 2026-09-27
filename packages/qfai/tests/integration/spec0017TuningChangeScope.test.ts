@@ -13,7 +13,7 @@
  *
  * The split keeps clause 2's subject **bound** to clause 1's change — the CR records that its own first
  * attempt unbound them, which would have turned one guard into two independently satisfiable ones and
- * lost the attributability `OC-80` is about.
+ * lost the attributability `BR-0018-0078` is about.
  *
  * ## Why a green run here is not a vacuous one
  *
@@ -164,7 +164,7 @@ describe("at most one runner project is moved off the declared parallelism value
     const described = moved.map((project) => `${project.name}: ${project.departures.join(", ")}`);
     expect(
       described.length > 1 ? described : [],
-      "one tuning change per pull request (OC-80): batching two makes an emergent race unattributable, " +
+      "one tuning change per pull request (BR-0018-0078): batching two makes an emergent race unattributable, " +
         "so a second departing project fails this however the run history reads",
     ).toEqual([]);
 

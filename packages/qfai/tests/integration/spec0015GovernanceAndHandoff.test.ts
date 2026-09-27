@@ -276,7 +276,7 @@ describe("spec-0015 finding-code catalog CHG-006", () => {
       path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "cli-0001-assistant-routing.md"),
       "utf-8",
     );
-    const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0354 |"));
+    const rule = text.split(/\r?\n/).find((line) => line.includes("| BR-0001-0014 |"));
     expect(rule).toBeDefined();
     expect(rule).toMatch(/membership only/i);
     expect(rule).toMatch(/per-code severity/i);
