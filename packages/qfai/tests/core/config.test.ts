@@ -24,6 +24,44 @@ describe("story-tree default paths", () => {
   });
 });
 
+describe("uiux.surfacePaths", () => {
+  async function surfacePathsOf(configBody: string) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-surface-paths-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), configBody, "utf-8");
+      const { config, issues } = await loadConfig(root);
+      return { surfacePaths: config.uiux?.surfacePaths, issues };
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  // QFAI:EX-0001-0078-05
+  it("reads a list of globs, an empty list, and an absent key apart", async () => {
+    const listed = await surfacePathsOf(
+      "uiux:\n  surfacePaths:\n    - src/ui/**\n    - tests/e2e/**\n",
+    );
+    expect(listed).toEqual({ surfacePaths: ["src/ui/**", "tests/e2e/**"], issues: [] });
+    expect(await surfacePathsOf("uiux:\n  surfacePaths: []\n")).toEqual({
+      surfacePaths: [],
+      issues: [],
+    });
+    expect(await surfacePathsOf("paths:\n  specsDir: .qfai/spec\n")).toEqual({
+      surfacePaths: undefined,
+      issues: [],
+    });
+  });
+
+  // QFAI:EX-0001-0078-06
+  it("reports a value that is not a list of globs and declares nothing", async () => {
+    const { surfacePaths, issues } = await surfacePathsOf("uiux:\n  surfacePaths: src/ui/**\n");
+    expect(issues.map((entry) => entry.message)).toContain(
+      "uiux.surfacePaths must be a list of non-empty glob strings.",
+    );
+    expect(surfacePaths).toBeUndefined();
+  });
+});
+
 describe("assistant routing overrides", () => {
   it("loads complete routing entries and review profiles without merging defaults", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));

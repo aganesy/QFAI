@@ -848,14 +848,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`QFAI-CONTRACT-050` is removed.** `qfai validate` no longer checks the
   `- SSOT modules:` entries of a contract, which never names an implementation
   file.
+- **Unused UI-affecting and TDD ledger code is removed.** No command called
+  the code that matched a path against `uiux.surfacePaths` or linked a ledger
+  obligation to a UI contract. The `/qfai-implement` reference on UI-affecting
+  examples still tells the agent to do both. No shipped file writes the
+  ledger columns the removed code read.
 
 ### Fixed
-
-- **The UI-affecting check reads an API obligation by its current ID.** It
-  looked up an API obligation only in the retired `CON-API-*` form, so an
-  `API-NNNN` obligation never reached the contract behind it. It now reads an
-  `API-NNNN` ID from the API contract whose `QFAI-CONTRACT-ID` line declares
-  it, and a `CON-API-*` value has no entry.
 
 - **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
   - A business-flow `traceability-graph.json` names a Markdown, CLI or design
