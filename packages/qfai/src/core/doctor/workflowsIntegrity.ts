@@ -44,10 +44,10 @@
  * and the contradiction is named on both sides so a later reader can check it
  * rather than take it on trust. The implemented rule requires normalized-text
  * comparison. Contradicting it: the file-state table in §3 of
- * `.qfai/contracts/cli/shipped-workflows.md`, whose `installed` / `modified`
+ * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, whose `installed` / `modified`
  * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
  * sentence of the `workflows.integrity` section of
- * `.qfai/contracts/cli/qfai-doctor.md`, which says "whose bytes differ".
+ * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, which says "whose bytes differ".
  * Neither file contains the string `normaliz`, `CRLF` or 改行 anywhere
  * (measured, not assumed), so the normalized basis is attributable to the
  * business rule ALONE.
@@ -135,7 +135,7 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * `packagedDir` left that list one row EARLIER, and its departure is still worth
  * stating, because the consumer is not the one this comment used to predict: the
  * drift advisory's MESSAGE names it as the packaged source path to copy from, per
- * the required message content of `.qfai/contracts/cli/qfai-doctor.md`. Its
+ * the required message content of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`. Its
  * `details` slot has since landed with TDD-0036 / TC-0006-0034, so
  * the field now has TWO consumers, and the older sentence here — which said the
  * slot was "still outstanding" — was true when written and false from that commit

@@ -8,7 +8,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const readRepo = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
 const flat = (text: string): string => text.replace(/\s+/g, " ");
 
-const CONTRACT = ".qfai/spec/03_contract/cli/qfai-init.md";
+const CONTRACT = ".qfai/spec/03_contract/cli/cli-0011-qfai-init.md";
 const IMPL = "packages/qfai/src/cli/commands/init.ts";
 
 function upgradeHelperBody(source: string): string | undefined {

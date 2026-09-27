@@ -59,7 +59,8 @@ qfai report → .qfai/report/report.md
   and cites the EX IDs it explains.
 - Place contracts under `.qfai/spec/03_contract/` and keep
   `03_contract/contracts.md` current. API, DB, UI and design contracts retain
-  their `QFAI-CONTRACT-ID` declarations; CLI contracts use indexed `CLI-*` IDs.
+  their `QFAI-CONTRACT-ID` declarations; a CLI contract declares `CLI-NNNN` in
+  its H1.
 
 ### Phase 3: 検証とレポート
 

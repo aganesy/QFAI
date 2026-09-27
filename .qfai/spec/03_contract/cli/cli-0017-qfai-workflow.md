@@ -1,4 +1,4 @@
-# CLI Contract: `qfai workflow`
+# CLI-0017: `qfai workflow`
 
 - Contract scope: the `npx qfai workflow` command surface — seven operations,
   their input and output, the run state machine and the final gate — and the
@@ -22,11 +22,11 @@
   - `packages/qfai/src/core/validators/storyTreeObligations.ts` (the obligation
     model: which BF, AC and EX IDs a flow holds, and which tests annotate them)
 - Companion contracts:
-  - `.qfai/spec/03_contract/cli/workflow-files.md` — the run trees, the local
+  - `.qfai/spec/03_contract/cli/cli-0022-workflow-files.md` — the run trees, the local
     run records, the authorization record, the plan files and the shipped schemas
-  - `.qfai/spec/03_contract/cli/qfai-init.md` — what `qfai init` installs for
+  - `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md` — what `qfai init` installs for
     this surface, and its mode line
-  - `.qfai/spec/03_contract/cli/qfai-validate.md` — the drift gate that reads the
+  - `.qfai/spec/03_contract/cli/cli-0016-qfai-validate.md` — the drift gate that reads the
     `Change request:` rows a run appends, and the config issue for an invalid
     `workflow.mode`
 
@@ -191,7 +191,7 @@ The only operation that judges completion. See [Completion](#completion).
 
 Field names are exact. An unknown key in any payload is refused `invalid-input`
 with reason `schema`. Paths are project-relative and use `/`. The shipped
-schemas that encode these payloads are named in `workflow-files.md`.
+schemas that encode these payloads are named in `cli-0022-workflow-files.md`.
 
 ### Start input
 
@@ -235,9 +235,9 @@ The `proposal` of a routing result.
 
 Each reference is exactly `{ kind, ref }`, with a nonempty string `ref` and a
 closed `kind`. `request` has `ref: "request"`; `flow-id` names a `BF-NNNN`;
-`contract-id` names a Short ID of `contracts.md`. `path` and `evidence` name
-project-relative file paths, without a glob or root escape. `evidence` is
-observed-only and is checked as a path, so naming a missing test or log cannot
+`contract-id` names a contract ID listed in `contracts.md`. `path` and
+`evidence` name project-relative file paths, without a glob or root escape.
+`evidence` is observed-only and is checked as a path, so naming a missing test or log cannot
 bypass `unknown-path`. A `kind` allowed in one reference array is not inferred
 from the spelling of `ref` or from an observer fact. A bare string or an unknown
 or disallowed `kind` is refused `invalid-input` with reason `schema` before
@@ -312,7 +312,7 @@ bound flow as its `target`. A plan with no other stage binds no flow.
 
 A stage of a run processes the examples of its obligation set that no test
 annotates, one at a time in ascending ID order, as
-`delivery-workflow.md` states for a stage invoked by name. Pending OQ-0191:
+`cli-0004-delivery-workflow.md` states for a stage invoked by name. Pending OQ-0191:
 which of those examples a work order hands to a stage when the flow holds many.
 
 `recordAreas` holds the records a stage is defined to write for the flow its
@@ -350,10 +350,10 @@ counts with the `implementation-heavy` reviewers instead:
 `completion-reviewer`, `qa-gatekeeper` and `implementation-reviewer`. Every
 other step keeps its own profile.
 
-A step's owner is read from its name, as `workflow-files.md#vocabulary` states.
+A step's owner is read from its name, as `cli-0022-workflow-files.md#vocabulary` states.
 
 `scope.allowedEffects` holds each external effect the stage declares in its plan
-(`workflow-files.md#format`, `stages[].effects`) that the run's
+(`cli-0022-workflow-files.md#format`, `stages[].effects`) that the run's
 `project_policy` authorization also names. An effect the stage declares and no
 `project_policy` names is left out. The stage runs without it, the core performs
 no external effect itself, and the completion report lists the effect as not
@@ -512,7 +512,7 @@ by review.
 
 A story-authoring stage (`sdd`, `sdd_append`, `sdd_delta`) records its triage
 and its change requests as rows of `decisions.md`, and its open questions as
-rows of `open-questions.md`, as `story-tree-authoring.md` states. At `accept`
+rows of `open-questions.md`, as `cli-0021-story-tree-authoring.md` states. At `accept`
 of such a result the core compares both tables with their state at issue:
 
 - Every row present at issue keeps its ID, Content and Approach and stays in the
@@ -523,7 +523,7 @@ of such a result the core compares both tables with their state at issue:
   `Change request:` may stand at WIP or DONE only when its Approach cites the
   `<runId>/<authorizationId>` of a `human_decision` this run recorded for it and
   states that record's `answeredBy`, its `recordedAt` and the label of each
-  option it chose, as `workflow-files.md#authorization-record` sets out. The
+  option it chose, as `cli-0022-workflow-files.md#authorization-record` sets out. The
   core checks each against the run's local authorization record. Otherwise the
   result is `record-unauthorized`.
 
@@ -548,7 +548,7 @@ answer is appended only by the attempt that holds it:
   it returns `awaiting_input` with one `decision` question showing the change
   target and the proposal. A concrete-abstract cycle finding that goes to the
   user adds a further `decision` question beside it, as BR-0751 in
-  `story-tree-authoring.md` states. The attempt holding the `human_decision`
+  `cli-0021-story-tree-authoring.md` states. The attempt holding the `human_decision`
   makes the change and appends the row at WIP, citing that answer. A row citing
   only `request_scope` is refused `record-unauthorized`.
 - An approval-free row, such as the UPDATE:APPEND a seeded example records,
@@ -564,7 +564,7 @@ A row a run appends carries no options or recommendation of its own, as BR-0005
 asks of a change request raised outside a run: they are the ones the stage's
 question showed. The row states the option the operator chose, and the run's
 local authorization record holds the whole question
-(`workflow-files.md#authorization-record`).
+(`cli-0022-workflow-files.md#authorization-record`).
 
 A stage that finds upstream drift outside the run's checked scope appends no
 `Change request:` row for it. It returns `blocked`, and the change is made by
@@ -653,7 +653,7 @@ operator. The core records `capture: "agent_captured"`.
 - When the `sdd` result reports `bindings`, the core appends a binding event and
   writes the binding into `summary.json`.
 
-The record's fields and where it is kept are in `workflow-files.md`.
+The record's fields and where it is kept are in `cli-0022-workflow-files.md`.
 
 ## State machine
 
@@ -936,13 +936,13 @@ Every condition has a fixed `owner`, which extends the rule that a blocked run
 names `operator` or the step or skill that owns the work
 ([State machine](#state-machine)):
 
-| `condition`                        | `owner`                                                                                                                                                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                                                    |
-| `stage-unaccepted`                 | The skill of the stage with no accepted result, as `workflow-files.md#vocabulary` maps its stage kind; for `test_fix`, the skill the kind of the diagnosis's first matched ID selects |
-| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill owning the verify stage's steps                                                                                                                              |
-| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                                           |
-| Every other condition              | `operator`                                                                                                                                                                            |
+| `condition`                        | `owner`                                                                                                                                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `work-order-outstanding`           | The skill the outstanding work order was issued to                                                                                                                                             |
+| `stage-unaccepted`                 | The skill of the stage with no accepted result, as `cli-0022-workflow-files.md#vocabulary` maps its stage kind; for `test_fix`, the skill the kind of the diagnosis's first matched ID selects |
+| `verify-missing`, `verify-foreign` | `qfai-verify`, the skill owning the verify stage's steps                                                                                                                                       |
+| `debt-open`                        | The debt's `resolvingOwner`                                                                                                                                                                    |
+| Every other condition              | `operator`                                                                                                                                                                                     |
 
 A run with no accepted verify stage is reported as `verify-missing` only, never
 also as `stage-unaccepted`.
@@ -1249,7 +1249,7 @@ harness, or an operator by hand.
 | `npx qfai workflow finish`   | The target met, `qfai_done` or `working_tree`; the run moves to `completed` | No accepted verify stage: `verify-missing`, exit 1, state unchanged                       | The unmet conditions, each once, exit 1, state unchanged. A terminal run is refused `run-terminal`                                                                |
 
 `accept` never returns a completion verdict, and `resume` never starts a host
-session. The init summary's mode line is `qfai-init.md`'s.
+session. The init summary's mode line is `cli-0011-qfai-init.md`'s.
 
 ## Release evidence
 
@@ -1402,7 +1402,7 @@ Rule refs: BR-0147, BR-0148, BR-0241, BR-0320, BR-0341, BR-0676, BR-0680, BR-068
 | BR-0655 | A work order's `recordAreas` hold only the stage's own records for the bound flow, derived by the core from the stage kind at issue as `### Work order` tabulates it. They never hold a protected path, a story's `01_User-story.md` or `02_Acceptance-Criteria.md`, or another flow's evidence.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | EX-0001-0192-38, EX-0001-0192-49                                                                                                                                                                                                                                                                                 |
 | BR-0656 | `qfai-run`'s route proposal names in `proposedWriteScope` every file an `sdd`, `sdd_delta`, `discussion` or UI-bearing `prototype` stage will write that the project's git does not ignore, and never a path the `protected-surface` check refuses.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | EX-0001-0192-39                                                                                                                                                                                                                                                                                                  |
 | BR-0657 | A stage that finds upstream drift appends no `Change request:` row for it: drift inside the run's checked write scope is returned `needs_repair` owned by `qfai-sdd`, and drift outside it is returned `blocked` with each finding listed in `debts`, so the core names `scope-dependency`, the notice lists every finding and the owning stage to invoke by name, and `resume` reissues the stage once the change is approved. Known limit: a change outside the run's scope is applied only by the owning stage invoked by name, outside a run.                                                                                                                                                                                                                                                                                                                                                 | EX-0001-0195-12                                                                                                                                                                                                                                                                                                  |
-| BR-0658 | Each stage kind names only its narrowest set: `sdd_delta` the story and contract files of the bound flow it changes; `sdd` the new story's directory, or the new flow's for a slot that creates a flow; `discussion` its tracked records, plus `DESIGN.md` for a UI-bearing target; a UI-bearing `prototype` `<paths.contractsDir>/design/**`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | EX-0001-0192-40                                                                                                                                                                                                                                                                                                  |
+| BR-0658 | Each stage kind names only its narrowest set: `sdd_delta` the story and contract files of the bound flow it changes; `sdd` the new story's directory, or the new flow's for a slot that creates a flow; `discussion` its tracked records, plus `DESIGN.md` for a UI-bearing target.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | EX-0001-0192-40                                                                                                                                                                                                                                                                                                  |
 | BR-0659 | At every write operation and `finish`, the core judges cumulative changes against the `start` state and the authorized set of `## Run change boundary`. A `scope-dependency` repair outside the run adjusts that state only for paths the blocker names and a `Change request:` row at WIP or DONE approves, at their recorded digests, and every other external change fails closed. The core's run records under `.qfai/evidence/workflow/<runId>/` are no run change, whether or not git ignores them, and a stage result that lists one in `changedFiles` is refused `write-scope`.                                                                                                                                                                                                                                                                                                           | EX-0001-0196-22, EX-0001-0196-23, EX-0001-0196-24                                                                                                                                                                                                                                                                |
 | BR-0660 | For `qfai_done`, `finish` reports `uncommitted` and leaves the run `ready` while any tracked run change under the run change boundary is uncommitted; every such change must be committed before the completion event, and the run records under `.qfai/evidence/workflow/<runId>/` are no part of that check, whether or not git ignores them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | EX-0001-0192-41                                                                                                                                                                                                                                                                                                  |
 | BR-0661 | A successful `finish` for either target records `completed` only in the runtime journal and snapshot, leaves the run's local `summary.json` at its last-written state, and makes `status` derive the current state from the journal.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | EX-0001-0192-42, EX-0001-0192-43                                                                                                                                                                                                                                                                                 |

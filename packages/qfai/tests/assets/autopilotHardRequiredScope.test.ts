@@ -40,7 +40,7 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
 
   it("the CLI contract rejects a bare primary UI contract ID", async () => {
     const contract = await readFile(
-      path.join(root, ".qfai/spec/03_contract/cli/qfai-prototyping.md"),
+      path.join(root, ".qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md"),
       "utf-8",
     );
     expect(contract).toContain("`--primary-ui-contract` flag");

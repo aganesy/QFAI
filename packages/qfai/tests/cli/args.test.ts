@@ -553,7 +553,7 @@ describe("parseArgs", () => {
   // Unknown-flag handling. Pre-fix the flag switch ended with a bare
   // `default: break;`, so any unrecognized `--token` was silently
   // dropped: `qfai init --dryrun` performed a REAL init and still
-  // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
+  // exited 0. `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md` reserves exit 2 for
   // CLI-arg errors, so an unknown flag must markInvalid() with 2.
   describe("unknown flags", () => {
     // The usage-error code is one number for every command. Asserted over a

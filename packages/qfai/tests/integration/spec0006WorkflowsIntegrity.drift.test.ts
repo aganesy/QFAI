@@ -5,8 +5,8 @@
  * shipped GitHub Actions workflow whose content no longer matches the copy
  * inside the installed package is surfaced by the `workflows.integrity`
  * check at severity `info`, naming the stale file by its adopter-tree
- * relative path. See `.qfai/contracts/cli/qfai-doctor.md`
- * (`workflows.integrity`) and `.qfai/contracts/cli/shipped-workflows.md`.
+ * relative path. See `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
+ * (`workflows.integrity`) and `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`.
  *
  * The primary observation point is `createDoctorData` rather than the reader,
  * so a finding that is produced but never registered fails here instead of
@@ -519,7 +519,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
   // must NOT fire. It lives in this row because this row introduces that
   // emission, and narrowing a new emission to its own licence is part of
   // adding it — the licence is the closed state enum of
-  // `.qfai/contracts/cli/shipped-workflows.md` §3, where a name with no
+  // `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` §3, where a name with no
   // provenance entry is `adopter-owned` (present on disk) or `absent`, and
   // BOTH rows mandate silence from `qfai doctor`. The doctor contract states
   // the same thing twice: its emission table keys `ok` to `installed` alone,

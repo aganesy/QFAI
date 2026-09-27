@@ -1,4 +1,4 @@
-# Assistant Steps Contract
+# CLI-0002: Assistant Steps
 
 - Contract scope: the step tree under `.qfai/assistant/step/`, the `STEP.md`
   frontmatter, the `steps:` list of a skill that owns steps, how such a skill
@@ -10,13 +10,13 @@
 - SSOT modules:
   - `packages/qfai/src/core/validators/stepTree.ts` (the step-tree check)
 - Companion contracts:
-  - `.qfai/spec/03_contract/cli/workflow-files.md` for the plan steps and the
+  - `.qfai/spec/03_contract/cli/cli-0022-workflow-files.md` for the plan steps and the
     predicates that make a step active
-  - `.qfai/spec/03_contract/cli/qfai-workflow.md#work-order` for the steps and
+  - `.qfai/spec/03_contract/cli/cli-0017-qfai-workflow.md#work-order` for the steps and
     reviewers a work order carries
-  - `.qfai/spec/03_contract/cli/assistant-routing.md` for the routing entry and
+  - `.qfai/spec/03_contract/cli/cli-0001-assistant-routing.md` for the routing entry and
     review profile of each step
-  - `.qfai/spec/03_contract/cli/qfai-init.md` for the rest of the assistant
+  - `.qfai/spec/03_contract/cli/cli-0011-qfai-init.md` for the rest of the assistant
     tree
 
 ## Behavior
@@ -58,7 +58,7 @@ the host's skills, and runs its steps itself when invoked by name.
 | `owner`           | The parent skill that owns the step, or `common`                                                                     |
 | `purpose`         | One sentence: what the step produces                                                                                 |
 | `requires`        | The common steps this step runs. A list, possibly empty                                                              |
-| `roles`           | The agents the step may dispatch, checked against its routing entry as `assistant-routing.md` states                 |
+| `roles`           | The agents the step may dispatch, checked against its routing entry as `cli-0001-assistant-routing.md` states        |
 | `routing-profile` | The step's review profile, a profile the review-profile defaults define. Absent for a step with no review of its own |
 
 A step with no `routing-profile` runs inside a stage or a parent run whose other
@@ -113,7 +113,7 @@ No review runs between two steps.
   by `qfai-implement` or `qfai-atdd` takes the `implementation-heavy` reviewers
   in that union.
 - The review of the whole change stays the independent `qa-gatekeeper` PASS
-  that `finish` requires (`qfai-workflow.md#completion`).
+  that `finish` requires (`cli-0017-qfai-workflow.md#completion`).
 
 ### Distribution
 
@@ -142,7 +142,7 @@ naming the file and the cause:
 
 A project missing a step a plan names does not start a run: `npx qfai workflow
 start` refuses as fail-closed with cause `contract-undeclared`
-(`qfai-workflow.md#fail-closed`).
+(`cli-0017-qfai-workflow.md#fail-closed`).
 
 ## Rules
 
@@ -150,7 +150,7 @@ start` refuses as fail-closed with cause `contract-undeclared`
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | BR-0774 | Steps Live in One Flat Tree - A step is the directory `.qfai/assistant/step/<name>/`, one level under `step/`, whose entry file is `STEP.md`. The directory name equals the `name` in its `STEP.md`, and the name has the form `<owner>-<name>` with no `qfai-` prefix. No file under `step/` is named `SKILL.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | EX-0001-0203-21, EX-0001-0217-01, EX-0001-0217-02, EX-0001-0217-03                                                                     |
 | BR-0775 | The `STEP.md` Frontmatter - A `STEP.md` frontmatter carries `name`, `owner`, `purpose`, `requires`, `roles` and, for a step with a review of its own, `routing-profile`. `owner` is a parent skill or `common`. A step with no `routing-profile` adds no reviewer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | EX-0001-0217-03, EX-0001-0217-04, EX-0001-0216-06, EX-0001-0167-09                                                                     |
-| BR-0672 | Each Stage Skill Lists Its Steps - A skill that owns a step a built-in plan names lists, in its `SKILL.md` frontmatter `steps:`, every step it owns in the order they run; any other entry is a `common-*` step. Every step a plan gives one of its stages is on that list. Its body names each step with the condition that skips it and has the agent read only the current step's `STEP.md`; it holds no step's procedure. It carries no `routing-profile:`, and its `roles:` is `orchestrator` plus the union of the `roles:` of the steps it lists. Its entry check and step loop are those of `.qfai/assistant/rule/shared-skill-operating-baseline.md`. The skill set is read from the owners of the steps `.qfai/spec/03_contract/cli/workflow-files.md#vocabulary` lists.                                          | EX-0001-0202-08, EX-0001-0204-02, EX-0001-0206-03, EX-0001-0207-02, EX-0001-0211-02, EX-0001-0214-04, EX-0001-0215-08                  |
+| BR-0672 | Each Stage Skill Lists Its Steps - A skill that owns a step a built-in plan names lists, in its `SKILL.md` frontmatter `steps:`, every step it owns in the order they run; any other entry is a `common-*` step. Every step a plan gives one of its stages is on that list. Its body names each step with the condition that skips it and has the agent read only the current step's `STEP.md`; it holds no step's procedure. It carries no `routing-profile:`, and its `roles:` is `orchestrator` plus the union of the `roles:` of the steps it lists. Its entry check and step loop are those of `.qfai/assistant/rule/shared-skill-operating-baseline.md`. The skill set is read from the owners of the steps `.qfai/spec/03_contract/cli/cli-0022-workflow-files.md#vocabulary` lists.                                 | EX-0001-0202-08, EX-0001-0204-02, EX-0001-0206-03, EX-0001-0207-02, EX-0001-0211-02, EX-0001-0214-04, EX-0001-0215-08                  |
 | BR-0776 | A Step Requires at Most One Hop - A step's `requires` names only `common-*` steps, and a `common-*` step's `requires` is empty, so no chain of steps is deeper than parent, step and common step.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | EX-0001-0217-07                                                                                                                        |
 | BR-0777 | Steps Ship With the Assistant Tree and Stay Out of Host Skill Lists - `qfai init` installs every shipped step under `.qfai/assistant/step/` with the rest of the assistant tree. A plain upgrade leaves a step whose copy differs from the shipped one as it is, and `--force` replaces it, as for a shipped skill. No host skills directory holds an entry for a step.                                                                                                                                                                                                                                                                                                                                                                                                                                                     | EX-0001-0203-01, EX-0001-0203-21, EX-0001-0203-22                                                                                      |
 | BR-0778 | The Step-Tree Check Fails Closed - `qfai validate` reports `QFAI-SKILLS-016` at severity error for a `SKILL.md` under `step/`; a step directory without `STEP.md`; a `name` that differs from its directory; an `owner` that is neither `common` nor an installed skill that lists steps; a parent `steps:` entry, a plan step or a `requires` entry naming no installed step; a step, not `common-*`, that its owner's `steps:` does not list; a step no parent lists, no plan uses and no step requires, other than `common-review-cycle`, which every parent runs after its last step; and a `requires` that breaks BR-0776. The shipped tree raises none of them. `npx qfai workflow start` refuses a project missing a step a built-in plan names as fail-closed with cause `contract-undeclared`, and creates no run. | EX-0001-0217-01, EX-0001-0217-02, EX-0001-0217-03, EX-0001-0217-04, EX-0001-0217-05, EX-0001-0217-06, EX-0001-0217-07, EX-0001-0217-08 |

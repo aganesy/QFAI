@@ -408,7 +408,7 @@ describe("delegation failure taxonomy is actionable", () => {
         "spec",
         "03_contract",
         "cli",
-        "assistant-routing.md",
+        "cli-0001-assistant-routing.md",
       ),
     );
     const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0344 |"));

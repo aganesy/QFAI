@@ -53,7 +53,7 @@ async function readShipped(relative: string): Promise<string[]> {
 
 describe("shipped reviewer payload schema", () => {
   // The defect this file guards: five `src/` comments named
-  // `.qfai/contracts/cli/qfai-prototyping.md` as the payload SSOT, and
+  // `.qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md` as the payload SSOT, and
   // `qfai init` ships no `contracts/` tree at all — so the reviewer
   // sub-agent, which runs inside the consuming project, could not open the
   // one document that describes the schema its output is parsed against.

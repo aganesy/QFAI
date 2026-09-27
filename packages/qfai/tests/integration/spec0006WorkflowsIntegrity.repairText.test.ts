@@ -3,7 +3,7 @@
  * advisory (`qfai doctor`).
  *
  * The oracle is the four "Required message content" items of
- * `.qfai/contracts/cli/qfai-doctor.md`'s `workflows.integrity` section, each
+ * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`'s `workflows.integrity` section, each
  * restated at its own labelled assertion below. THE PRIMARY ORACLE IS EXACT
  * EQUALITY on the whole MESSAGE, composed test-side; the three named needles
  * survive it as labelled restatements. Requirement 1 belongs to the sibling

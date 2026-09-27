@@ -96,7 +96,7 @@ export async function validateSkillDocReferences(
     // User-defined non-qfai-* skills under the configured skill directory are
     // intentionally NOT flagged so consumers can author their own
     // SKILL.md without colliding with QFAI's path-migration finding.
-    // The severity matches the qfai-validate.md contract.
+    // The severity matches the cli-0016-qfai-validate.md contract.
     if (QFAI_SKILL_ID_RE.test(skillId)) {
       for (const ref of NON_CANONICAL_REFS) {
         if (ref.pattern.test(body)) {

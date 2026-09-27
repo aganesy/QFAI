@@ -29,7 +29,7 @@ Feature: shipped workflow drift detection (detection half)
     And the body names no refresh command, CLI verb or flag
     And a shipped name in the `absent` state, with no provenance entry and no file on disk, never appears in a drift finding (never installed is not deleted; when a stale file with an entry sits in the same tree, only that file is reported)
     And the `declined` state, with a provenance entry and a file deleted after install, is a different state from `absent` and is outside this criterion; AC-0003-0011-06 owns how it is reported
-    And `absent` and `declined` are not treated alike as missing; classifying either name as missing or deliberately deleted for ownership belongs to the ownership contract in `.qfai/spec/03_contract/cli/shipped-workflows.md` and is outside this criterion
+    And `absent` and `declined` are not treated alike as missing; classifying either name as missing or deliberately deleted for ownership belongs to the ownership contract in `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` and is outside this criterion
     And when the shipped copy inside the installed package cannot be resolved, the check is skipped at severity `info`
 
   # AC-0003-0011-04

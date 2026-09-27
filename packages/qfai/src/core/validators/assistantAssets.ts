@@ -515,7 +515,7 @@ async function validateAssistantAssetProvenance(
 
   let shipped: Record<string, string>;
   try {
-    // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree
+    // Path SSOT (`.qfai/spec/03_contract/cli/cli-0011-qfai-init.md`): the assistant-tree
     // segments come from `assistantPaths.ts` in init and in validate alike, so
     // a future move of `ASSISTANT_DIR` cannot leave the two reading different
     // trees.

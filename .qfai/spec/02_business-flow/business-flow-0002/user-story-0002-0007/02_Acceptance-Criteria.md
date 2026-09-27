@@ -7,7 +7,7 @@ Feature: Shipped workflow ownership contract
   # AC-0002-0007-01
   Scenario: Ownership comes from the shipped name lists and provenance
     Given a fixture whose adopter workflows directory holds (a) an adopter-created file whose name collides with a name QFAI ships, (b) a file QFAI installed by the record and the adopter then deleted, and (c) a hand-edited installed file
-    When the write-set and prune-set resolution path and the provenance reader are inspected against the ownership boundary `.qfai/contracts/cli/shipped-workflows.md` (`CLI-WFSET`) sets, and `qfai init` runs on the fixture
+    When the write-set and prune-set resolution path and the provenance reader are inspected against the ownership boundary `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` (`CLI-0020`) sets, and `qfai init` runs on the fixture
     Then the `qfai-` prefix is treated as a reservation notice and never as a selector: the write set equals the in-binary `SHIPPED_WORKFLOW_NAMES` and the prune set the in-binary `RETIRED_WORKFLOW_NAMES`, and neither comes from a `qfai-*` glob over the adopter's disk
     And provenance is read from `.qfai/install-provenance.json`, which is tracked, carries no `schemaVersion` and holds the sha256 of the bytes QFAI wrote, and it is consulted before every overwrite or prune
     And the reader treats an absent file, a missing `workflows` key and invalid JSON as empty, and does not throw

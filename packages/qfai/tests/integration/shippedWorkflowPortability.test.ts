@@ -3,7 +3,7 @@
  * directions.
  *
  * Covers the portability half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5 dimension 2 and
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, CLI-0020 §5 dimension 2 and
  * §6): the shipped setup-install column resolves the adopter's Node version
  * and the adopter's package manager from the adopter's own tree, and the two
  * resolutions degrade in OPPOSITE directions — an absent Node version file
@@ -35,7 +35,7 @@ import {
 
 /**
  * The Node version the shipped setup falls open to when the adopter pins
- * none. Value SSOT is this suite per CLI-WFSET §5; the shipped header block
+ * none. Value SSOT is this suite per CLI-0020 §5; the shipped header block
  * must document the same literal.
  */
 const DOCUMENTED_NODE_VERSION = "20";
@@ -341,7 +341,7 @@ describe("TC-0003-0043 (TDD-0043): absent Node version file falls open to the do
   //   `node-version-file:` input is present — so a resolution that runs
   //   but feeds nothing cannot pass this row.
   // - The version-file list and the fall-open literal are value SSOT in
-  //   this suite per CLI-WFSET §5. Header-block COMPLETENESS is
+  //   this suite per CLI-0020 §5. Header-block COMPLETENESS is
   //   TC-0003-0042's surface; that the header documents THIS literal is
   //   this row's, asserted in it1.
   // - The `node-version-file:` half of it3 is the fail-closed form the

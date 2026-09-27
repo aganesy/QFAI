@@ -3,7 +3,7 @@
  * hygiene.
  *
  * Covers the operational-bounding half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5 dimension 3 and
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, CLI-0020 §5 dimension 3 and
  * §6): every shipped job is bounded (reachable least-privilege
  * `permissions:` block, `timeout-minutes:`) and every shipped workflow
  * cancels superseded runs via a ref-scoped `concurrency:` group. The

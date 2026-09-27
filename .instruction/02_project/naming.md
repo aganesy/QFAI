@@ -63,7 +63,9 @@ one kind of content each section holds. `qfai validate` reports a violation as
 
 - API, DB, UI and design contracts declare one
   `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`.
-- CLI contracts use `CLI-*` short IDs in `03_contract/contracts.md`.
+- A CLI contract declares `# CLI-NNNN: <title>` as its H1 and is named
+  `cli/cli-NNNN-<slug>.md`.
+- `03_contract/contracts.md` lists every contract by that ID.
 
 ## Examples and test annotations
 

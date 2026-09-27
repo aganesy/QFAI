@@ -1,4 +1,4 @@
-# CLI Contract: `qfai handoff upgrade`
+# CLI-0010: `qfai handoff upgrade`
 
 - Contract scope: the public legacy-handoff conversion command
 - Migration origin: `spec-0015`

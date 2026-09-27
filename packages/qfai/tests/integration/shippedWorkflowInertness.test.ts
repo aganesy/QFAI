@@ -3,7 +3,7 @@
  * set.
  *
  * Covers the inertness half of the shipped-workflows contract
- * (`.qfai/contracts/cli/shipped-workflows.md`, CLI-WFSET §5 dimensions 6
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, CLI-0020 §5 dimensions 6
  * and 8): every shipped test lane stays declared but keyed on the
  * adopter's own opt-in — the presence of the matching layer-named test
  * script (test:unit, test:component, test:integration, test:api,
@@ -36,7 +36,7 @@ import { captureStdout } from "../helpers/stdout.js";
 const ORCHESTRATOR = "qfai-tests.yml";
 const ORCHESTRATOR_REL = path.join(".github", "workflows", ORCHESTRATOR);
 
-/** The five lane layers (value SSOT in the suite per CLI-WFSET §5). */
+/** The five lane layers (value SSOT in the suite per CLI-0020 §5). */
 const LANE_LAYERS = ["unit", "component", "integration", "api", "e2e"] as const;
 
 /** The detection lane-set output at its widest (the full superset). */

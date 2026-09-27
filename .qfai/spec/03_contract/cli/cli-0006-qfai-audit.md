@@ -1,4 +1,4 @@
-# CLI Contract: `qfai audit log`
+# CLI-0006: `qfai audit log`
 
 - Contract scope: the public read-only command for envelope-deviation decision records
 - Migration origin: `spec-0015` (`REQ-0171`, `AC-0015-0019`, `BR-0015-0014`)

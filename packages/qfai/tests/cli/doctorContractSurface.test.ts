@@ -1,7 +1,7 @@
 /**
  * The `qfai doctor` CLI contract must describe the command that ships.
  *
- * `.qfai/spec/03_contract/cli/qfai-doctor.md` declared a one-flag surface
+ * `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` declared a one-flag surface
  * (`qfai doctor [--profile <name>]`), labelled its inputs "read; never
  * written", and asserted in Non-goals that doctor "is read-only". The binary
  * accepts `--clean` and `--autoremediate` as well, and those two rewrite
@@ -23,7 +23,14 @@ import { describe, expect, it } from "vitest";
 // tests/cli/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
-const CONTRACT = path.join(repoRoot, ".qfai", "spec", "03_contract", "cli", "qfai-doctor.md");
+const CONTRACT = path.join(
+  repoRoot,
+  ".qfai",
+  "spec",
+  "03_contract",
+  "cli",
+  "cli-0008-qfai-doctor.md",
+);
 const ARGS = path.join(repoRoot, "packages", "qfai", "src", "cli", "lib", "args.ts");
 const DOCTOR_MODULE_DIR = path.join(repoRoot, "packages", "qfai", "src", "core", "doctor");
 

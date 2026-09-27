@@ -26,7 +26,7 @@ import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
 const CONTRACT_PATH = path.resolve(
   __dirname,
-  "../../../../../.qfai/spec/03_contract/cli/qfai-validate.md",
+  "../../../../../.qfai/spec/03_contract/cli/cli-0016-qfai-validate.md",
 );
 
 const OPTIONAL_SLOTS = {
@@ -51,7 +51,7 @@ async function readGuideline(): Promise<string> {
   const content = (await readFile(CONTRACT_PATH, "utf-8")).replace(/\r\n/g, "\n");
   const section = /\n### Text output grammar\n([\s\S]*?)(?=\n## |\n### |$)/.exec(content)?.[1];
   if (section === undefined) {
-    throw new Error("qfai-validate.md no longer has a Text output grammar section");
+    throw new Error("cli-0016-qfai-validate.md no longer has a Text output grammar section");
   }
   return section;
 }

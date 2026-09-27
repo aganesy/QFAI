@@ -2289,9 +2289,8 @@ describe("assets guardrails", () => {
     expect(findTableArityMismatches(contractsTemplate)).toEqual([]);
     const [table] = parseAllMarkdownTables(contractsTemplate);
     expect(table?.headers).toEqual([
-      "Short ID",
-      "Entity",
-      "Declared ID",
+      "ID",
+      "Title",
       "File",
       "Depends On",
       "Reconciled With",
@@ -2531,6 +2530,7 @@ describe("assets guardrails", () => {
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md",
       "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md",
       "03_contract/cli/command.md",
+      "03_contract/cli/cli-NNNN-title.md",
       "03_contract/contracts.md",
       "03_contract/tech.md",
       "decisions.md",

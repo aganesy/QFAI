@@ -672,7 +672,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     // places an agent is already reading when it is about to write the
     // sentence, which is where a rule it has not opened still reaches it.
     it.each([
-      ".qfai/spec/03_contract/cli/qfai-validate.md",
+      ".qfai/spec/03_contract/cli/cli-0016-qfai-validate.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-experience-architect.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/frontend-engineer.md",
       "packages/qfai/assets/init/.qfai/assistant/agent/product-surface-reviewer.md",
