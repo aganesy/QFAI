@@ -612,7 +612,7 @@ export type AtddCodeTraceabilityResult = {
   deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
-   * Every declared `CON-API-*`, active and deferred alike. This is the public
+   * Every declared `API-NNNN` or `CON-API-*`, active and deferred alike. This is the public
    * meaning the field has always had — adding `x-qfai-status: planned` defers
    * the test obligation, it does not un-declare the contract, so an external
    * consumer using this set for "is this ID declared?" must keep seeing it.
@@ -621,24 +621,24 @@ export type AtddCodeTraceabilityResult = {
   /** The subset that carries the `QFAI-ATDD-113` obligation. */
   activeApiContractIds: Set<string>;
   /**
-   * `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * `API-NNNN` and `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
    * contract declares `x-qfai-status: planned`. Reported as `info` so the
    * deferral stays visible instead of silently shrinking the gate.
    */
   deferredApiContractIds: Set<string>;
   contractsDbRoot: string;
-  /** Every declared `CON-DB-*`, active and deferred alike. */
+  /** Every declared `DB-NNNN` or `CON-DB-*`, active and deferred alike. */
   dbContractIds: Set<string>;
   /** The subset that carries the `QFAI-ATDD-115` obligation. */
   activeDbContractIds: Set<string>;
-  /** `CON-DB-*` deferred by `-- x-qfai-status: planned`; reported at `info`. */
+  /** `DB-NNNN` and `CON-DB-*` IDs deferred by `-- x-qfai-status: planned`; reported at `info`. */
   deferredDbContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
     api: Map<string, Set<string>>;
     /**
-     * `CON-DB-*` references found in integration tests. L3 Integration is the
+     * `DB-NNNN` and `CON-DB-*` references found in integration tests. L3 Integration is the
      * layer whose declared scope is real-infrastructure integration including
      * the database, so it is the one that can actually exercise a DB contract.
      */

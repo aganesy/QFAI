@@ -198,6 +198,14 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(ruleFindings(tree(text))).toEqual([
       `A Rule refs line is not allowed under ## Business rules in ${check}`,
     ]);
+    const indented = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "   Rule refs: BR-0003-0001",
+    );
+    expect(parseContractRules(check, indented).errors).toEqual([
+      `A Rule refs line is not allowed under ## Business rules in ${check}`,
+    ]);
     const columns =
       "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-0003-0001 | Two columns |\n";
     expect(parseContractRules(check, columns).errors).toEqual([

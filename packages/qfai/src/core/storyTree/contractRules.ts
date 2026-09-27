@@ -17,7 +17,7 @@ export type ContractRuleScan = { rules: ContractRule[]; refs: string[]; errors: 
 const SQL_RULE = /^-- Rule (BR-[A-Za-z0-9_-]+):\s*(.*)$/;
 const SQL_EXAMPLES = /^-- Examples:\s*(.*)$/;
 const SQL_REFS = /^-- Rule refs:\s*(.*)$/;
-const MARKDOWN_REFS = /^Rule refs:\s*(.*)$/m;
+const MARKDOWN_REFS = /^ {0,3}Rule refs:\s*(.*)$/m;
 const BUSINESS_RULES = "Business rules";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -97,8 +97,9 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   } else if (extension === ".md") {
-    const sections = extractH2Sections(maskNonSpecRegions(text));
-    const businessRulesSections = parseHeadings(maskNonSpecRegions(text)).filter(
+    const rendered = maskNonSpecRegions(text);
+    const sections = extractH2Sections(rendered);
+    const businessRulesSections = parseHeadings(rendered).filter(
       (heading) => heading.level === 2 && heading.title === BUSINESS_RULES,
     ).length;
     if (businessRulesSections > 1) {
