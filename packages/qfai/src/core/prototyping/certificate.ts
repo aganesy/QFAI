@@ -119,7 +119,7 @@ export async function buildCompletionCertificate(
     )
   ) {
     throw new Error(
-      "certificate UI contract lists must contain distinct CON-UI-NNNN IDs and partition uiContractsCovered",
+      "certificate UI contract lists must contain distinct UI-NNNN IDs and partition uiContractsCovered",
     );
   }
   const evidenceDigests = await scanEvidenceDigests(inputs.evidenceRoot);
@@ -202,8 +202,7 @@ function isValidUiContractPartition(
 ): covered is string[] {
   if (!isStringArray(covered) || covered.length === 0) return false;
   if (!isStringArray(converged) || !isStringArray(lagging)) return false;
-  if (![...covered, ...converged, ...lagging].every((id) => /^CON-UI-\d{4}$/.test(id)))
-    return false;
+  if (![...covered, ...converged, ...lagging].every((id) => /^UI-\d{4}$/.test(id))) return false;
   const coveredSet = new Set(covered);
   const partition = [...converged, ...lagging];
   return (

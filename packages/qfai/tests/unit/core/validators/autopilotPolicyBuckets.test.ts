@@ -130,7 +130,7 @@ describe("hard-required names with hyphens", () => {
       retired: [],
       unknown: [],
     });
-    expect(classifyHardRequiredEntries(["a full `CON-UI-NNNN`"], "qfai-verify")).toEqual({
+    expect(classifyHardRequiredEntries(["a full `UI-NNNN`"], "qfai-verify")).toEqual({
       retired: [],
       unknown: [],
     });
@@ -138,7 +138,7 @@ describe("hard-required names with hyphens", () => {
       classifyHardRequiredEntries(
         [
           "brand intent when a prototyping-scoped run consumes an unresolved visual design decision",
-          "a full `CON-UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract",
+          "a full `UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract",
           "a usable story source when a flow-scoped run cannot resolve it",
           "an affected `BF-NNNN` when a flow-scoped run cannot resolve it",
         ],

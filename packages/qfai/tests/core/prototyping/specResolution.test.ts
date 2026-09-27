@@ -69,24 +69,24 @@ async function uiContract(
 }
 
 describe("UI contract prototyping scope", () => {
-  it("uses declared CON-UI IDs with screens across nested yaml and yml files", async () => {
+  it("uses declared UI IDs with screens across nested yaml and yml files", async () => {
     const root = await fixtureRoot();
-    await uiContract(root, "nested/checkout.yml", "CON-UI-0042", "[{id: checkout}]");
-    await uiContract(root, "home.yaml", "CON-UI-0001", "[{id: home}]");
-    await uiContract(root, "empty.yaml", "CON-UI-0007", "[]");
-    await uiContract(root, "wrong.yaml", "CON-API-0009", "[{id: api}]");
+    await uiContract(root, "nested/checkout.yml", "UI-0042", "[{id: checkout}]");
+    await uiContract(root, "home.yaml", "UI-0001", "[{id: home}]");
+    await uiContract(root, "empty.yaml", "UI-0007", "[]");
+    await uiContract(root, "wrong.yaml", "API-0009", "[{id: api}]");
 
-    expect(await resolveAllUiBearingSpecs(root, config())).toEqual(["CON-UI-0001", "CON-UI-0042"]);
+    expect(await resolveAllUiBearingSpecs(root, config())).toEqual(["UI-0001", "UI-0042"]);
     expect(
       (await readUiContractInventory(root, config())).find(
-        (entry) => entry.uiContractId === "CON-UI-0042",
+        (entry) => entry.uiContractId === "UI-0042",
       ),
     ).toMatchObject({
       screenIds: ["checkout"],
       contractPath: ".qfai/spec/03_contract/ui/nested/checkout.yml",
     });
     expect(await resolvePrimaryPrototypingSpec(root, config())).toEqual({
-      uiContractId: "CON-UI-0001",
+      uiContractId: "UI-0001",
       contractPath: ".qfai/spec/03_contract/ui/home.yaml",
       source: "contract-scan",
     });
@@ -94,12 +94,12 @@ describe("UI contract prototyping scope", () => {
 
   it("honours a full primary pin only when that contract has screens", async () => {
     const root = await fixtureRoot();
-    await uiContract(root, "home.yaml", "CON-UI-0001", "[{id: home}]");
-    await uiContract(root, "detail.yaml", "CON-UI-0042", "[{id: detail}]");
-    expect((await resolvePrimaryPrototypingSpec(root, config("CON-UI-0042")))?.uiContractId).toBe(
-      "CON-UI-0042",
+    await uiContract(root, "home.yaml", "UI-0001", "[{id: home}]");
+    await uiContract(root, "detail.yaml", "UI-0042", "[{id: detail}]");
+    expect((await resolvePrimaryPrototypingSpec(root, config("UI-0042")))?.uiContractId).toBe(
+      "UI-0042",
     );
-    expect(await resolvePrimaryPrototypingSpec(root, config("CON-UI-9999"))).toBeUndefined();
+    expect(await resolvePrimaryPrototypingSpec(root, config("UI-9999"))).toBeUndefined();
   });
 
   it("does not infer UI-bearing from a spec marker or file name", async () => {
@@ -107,7 +107,7 @@ describe("UI contract prototyping scope", () => {
     const spec = path.join(root, ".qfai/spec/spec-0001/01_Spec.md");
     await mkdir(path.dirname(spec), { recursive: true });
     await writeFile(spec, "---\nsurface_type: ui-bearing\n---\n# Prototyping\n", "utf-8");
-    await uiContract(root, "spec-0001.yaml", "CON-UI-0001", "[]");
+    await uiContract(root, "spec-0001.yaml", "UI-0001", "[]");
     expect(await resolveAllUiBearingSpecs(root, config())).toEqual([]);
   });
 });
@@ -116,22 +116,20 @@ describe("frozen UI contract scope", () => {
   it("rejects old fields, absent arrays, and unsafe IDs", () => {
     expect(readUiContractsCovered({ specsCovered: ["0001"] })).toEqual({ kind: "legacy" });
     expect(
-      readUiContractsCovered({ frozenSpecsCovered: ["0001"], uiContractsCovered: ["CON-UI-0001"] }),
+      readUiContractsCovered({ frozenSpecsCovered: ["0001"], uiContractsCovered: ["UI-0001"] }),
     ).toEqual({ kind: "legacy" });
     expect(readUiContractsCovered({ uiContractsCovered: [] }).kind).toBe("malformed");
-    expect(readUiContractsCovered({ uiContractsCovered: ["../CON-UI-0001"] }).kind).toBe(
-      "malformed",
-    );
+    expect(readUiContractsCovered({ uiContractsCovered: ["../UI-0001"] }).kind).toBe("malformed");
   });
 
   it("compares one frozen full-ID set with a live snapshot", () => {
-    const frozen = readUiContractsCovered({ uiContractsCovered: ["CON-UI-0001", "CON-UI-0007"] });
+    const frozen = readUiContractsCovered({ uiContractsCovered: ["UI-0001", "UI-0007"] });
     expect(frozen.kind).toBe("ok");
     if (frozen.kind !== "ok") return;
-    expect(checkUiContractsCoveredDrift(frozen.value, ["CON-UI-0007", "CON-UI-0042"])).toEqual({
+    expect(checkUiContractsCoveredDrift(frozen.value, ["UI-0007", "UI-0042"])).toEqual({
       drifted: true,
-      added: ["CON-UI-0042"],
-      removed: ["CON-UI-0001"],
+      added: ["UI-0042"],
+      removed: ["UI-0001"],
     });
   });
 });

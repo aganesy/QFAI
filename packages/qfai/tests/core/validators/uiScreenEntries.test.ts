@@ -284,7 +284,7 @@ describe("the screen reader under an absolute contracts directory", () => {
     await writeFile(
       path.join(contractsDir, "ui", "orders.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0007",
+        "# QFAI-CONTRACT-ID: UI-0007",
         "screens:",
         ...screen("home", "/"),
         ...screen("settings", "/settings"),

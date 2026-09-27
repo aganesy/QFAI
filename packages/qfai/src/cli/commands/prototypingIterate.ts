@@ -657,7 +657,7 @@ export async function runPrototypingIterate(
   const resolved = await resolvePrimaryPrototypingSpec(options.root, effectiveConfig);
   if (!resolved) {
     error(
-      "qfai prototyping iterate: no UI contract with a CON-UI-NNNN declaration and " +
+      "qfai prototyping iterate: no UI contract with a UI-NNNN declaration and " +
         "at least one screens[] entry was found under contractsDir/ui.",
     );
     return 2;
@@ -3558,7 +3558,7 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
   if (unionSpecs.length === 0) {
     info(
       "qfai prototyping iterate: no UI-bearing contracts resolved — deterministic no-op. " +
-        "Declare a CON-UI-NNNN contract with a non-empty screens[] under contractsDir/ui to enable the loop.",
+        "Declare a UI-NNNN contract with a non-empty screens[] under contractsDir/ui to enable the loop.",
     );
     return { shortCircuit: true, exitCode: 0 };
   }

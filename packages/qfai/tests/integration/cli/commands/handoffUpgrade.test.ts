@@ -53,7 +53,7 @@ function shellArg(value: string): string {
 const LEGACY_BODY = `# legacy session handoff
 companyName: Acme
 primarySpecId: spec-0012
-primaryUiContract: CON-UI-0012
+primaryUiContract: UI-0012
 startDate: 2026-05-27
 unrecognizedField: legacy-only-data
 customNotes: "remember to migrate"
@@ -75,7 +75,7 @@ describe("TC-0015-0030: handoff upgrade emits conforming yaml + preserves origin
     const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
     // Canonical slots mapped.
     expect(body).toMatch(/companyName: "Acme"/);
-    expect(body).toMatch(/^primaryUiContract: "CON-UI-0012"$/m);
+    expect(body).toMatch(/^primaryUiContract: "UI-0012"$/m);
     expect(body).toMatch(/^ {2}primarySpecId: spec-0012$/m);
     expect(body).not.toMatch(/^primarySpecId:/m);
     expect(body).toMatch(/startDate: "2026-05-27"/);

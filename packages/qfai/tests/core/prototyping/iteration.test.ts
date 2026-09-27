@@ -242,9 +242,9 @@ describe("shouldStopAcrossSpecs — UI contract AND convergence", () => {
   // QFAI:EX-0001-0120-03
   it("returns null when 2/3 pairs are converged and the 3rd has a finding open", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
   });
@@ -252,9 +252,9 @@ describe("shouldStopAcrossSpecs — UI contract AND convergence", () => {
   // QFAI:EX-0001-0120-03
   it("returns converged when all 3 pairs are converged", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0007", screen: "detail", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0007", screen: "detail", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: convergedIter },
     ]);
     expect(result.stopReason).toBe("converged");
     expect(result.laggingUiContracts).toEqual([]);
@@ -263,12 +263,12 @@ describe("shouldStopAcrossSpecs — UI contract AND convergence", () => {
   // QFAI:EX-0001-0120-04
   it("names every lagging UI contract when convergence is not achieved", () => {
     const result = shouldStopAcrossSpecs([
-      { uiContractId: "CON-UI-0007", screen: "dashboard", latestIteration: convergedIter },
-      { uiContractId: "CON-UI-0011", screen: "list", latestIteration: laggingIter },
-      { uiContractId: "CON-UI-0013", screen: "page", latestIteration: laggingIter },
+      { uiContractId: "UI-0007", screen: "dashboard", latestIteration: convergedIter },
+      { uiContractId: "UI-0011", screen: "list", latestIteration: laggingIter },
+      { uiContractId: "UI-0013", screen: "page", latestIteration: laggingIter },
     ]);
     expect(result.stopReason).toBeNull();
-    expect(result.laggingUiContracts).toEqual(["CON-UI-0011", "CON-UI-0013"]);
+    expect(result.laggingUiContracts).toEqual(["UI-0011", "UI-0013"]);
   });
 });
 

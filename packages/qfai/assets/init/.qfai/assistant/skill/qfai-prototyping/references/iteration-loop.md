@@ -14,7 +14,7 @@
 ```text
 .qfai/prototype/iter-NN/index.html
 .qfai/evidence/prototyping/iter-NN/review.json
-.qfai/evidence/prototyping/iter-NN/CON-UI-NNNN/<screen>.review.json
+.qfai/evidence/prototyping/iter-NN/UI-NNNN/<screen>.review.json
 .qfai/evidence/prototyping/iter-NN/{<screen>.png, <screen>.html, <screen>.signals.json} (--capture only)
 ```
 
@@ -40,7 +40,7 @@ unexpected screen, duplicate screen/kind pair, or duplicate path. Check that
 every cited artifact exists and store paths relative to
 `.qfai/evidence/prototyping/`. Without `--capture`, store `[]`;
 with it, require screenshot and HTML entries for every screen. The closed
-`CON-UI-NNNN/<screen>.review.json` payload has no `evidenceRefs` key. The pure
+`UI-NNNN/<screen>.review.json` payload has no `evidenceRefs` key. The pure
 `buildEvidenceRefs()` helper does not perform this write for the CLI.
 
 `progress.md` is one file for the whole run. The generator appends a
