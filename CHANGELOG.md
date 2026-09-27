@@ -800,6 +800,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **The UI-affecting check reads an API obligation by its current ID.** It
+  looked up an API obligation only in the retired `CON-API-*` form, so an
+  `API-NNNN` obligation never reached the contract behind it. It now reads an
+  `API-NNNN` ID from the API contract whose `QFAI-CONTRACT-ID` line declares
+  it, and a `CON-API-*` value has no entry.
+
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
   issue, and `qfai prototyping iterate` then took the first UI contract as
