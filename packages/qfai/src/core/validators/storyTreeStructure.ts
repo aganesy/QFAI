@@ -3,8 +3,10 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import {
+  contractNumber,
   isStoryTreeId,
   itemIdMatchesStory,
+  ruleContractNumber,
   storyIdMatchesFlow,
   type StoryTreeIdKind,
 } from "../storyTree/ids.js";
@@ -250,6 +252,28 @@ export function validateStoryTreeStructureModel(model: StoryTreeModel): Issue[] 
   }
   for (const error of model.errors) {
     issues.push(finding("QFAI-STORY-005", error, ""));
+  }
+  issues.push(...validateRuleContractNumbers(model));
+  return issues;
+}
+
+/** A `BR-NNNN-NNNN` carries the number of the contract that declares it. */
+function validateRuleContractNumbers(model: StoryTreeModel): Issue[] {
+  const contractByFile = new Map(model.contracts.map(({ id, file }) => [file, id]));
+  const issues: Issue[] = [];
+  for (const rule of model.rules) {
+    const number = ruleContractNumber(rule.id);
+    if (number === null) continue;
+    const contractId = contractByFile.get(rule.file);
+    if (contractId && contractNumber(contractId) === number) continue;
+    issues.push(
+      finding(
+        "QFAI-STORY-005",
+        `${rule.id} does not carry the number of its contract ${contractId ?? "(no contract ID)"} in ${rule.file}`,
+        rule.file,
+        [rule.id],
+      ),
+    );
   }
   return issues;
 }

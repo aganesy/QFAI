@@ -18,6 +18,7 @@ const SQL_RULE = /^-- Rule (BR-[A-Za-z0-9_-]+):\s*(.*)$/;
 const SQL_EXAMPLES = /^-- Examples:\s*(.*)$/;
 const SQL_REFS = /^-- Rule refs:\s*(.*)$/;
 const MARKDOWN_REFS = /^Rule refs:\s*(.*)$/m;
+const BUSINESS_RULES = "Business rules";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -96,38 +97,60 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   } else if (extension === ".md") {
-    const section = extractH2Sections(text).get("Rules");
-    if (section) {
-      const table = parseAllMarkdownTables(section.body)[0];
-      if (!table) errors.push(`Missing Rules table in ${file}`);
-      if (table) {
-        const columns = ["BR-ID", "Statement", "Examples"].map((name) =>
-          table.headers.indexOf(name),
-        );
-        const [idColumn, statementColumn, examplesColumn] = columns;
-        if (
-          table.headers.length === columns.length &&
-          idColumn !== undefined &&
-          statementColumn !== undefined &&
-          examplesColumn !== undefined &&
-          columns.every((column) => column >= 0)
-        ) {
-          for (const row of table.rows) {
-            rules.push({
-              id: row[idColumn] ?? "",
-              statement: row[statementColumn] ?? "",
-              examples: splitRefs(row[examplesColumn] ?? ""),
-              file,
-            });
-          }
-        } else {
-          errors.push(`Invalid Rules columns in ${file}`);
-        }
+    const sections = extractH2Sections(text);
+    // SIMPLIFIED: `## Rules`, and the `Rule refs:` line it may carry, are still read
+    // beside `## Business rules`.
+    // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+    for (const name of [BUSINESS_RULES, "Rules"]) {
+      const body = sections.get(name)?.body;
+      if (body === undefined) continue;
+      readMarkdownRules(file, name, body, rules, errors);
+      const ref = MARKDOWN_REFS.exec(body);
+      if (ref && name === BUSINESS_RULES) {
+        errors.push(`A Rule refs line is not allowed under ## ${BUSINESS_RULES} in ${file}`);
+      } else if (ref) {
+        refs.push(...splitRefs(ref[1] ?? ""));
       }
-      const ref = MARKDOWN_REFS.exec(section.body);
-      if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   }
 
   return { rules, refs: [...new Set(refs)].sort(), errors };
+}
+
+/** Reads one section's rules table, whose columns are exactly BR-ID, Statement and Examples. */
+function readMarkdownRules(
+  file: string,
+  section: string,
+  body: string,
+  rules: ContractRule[],
+  errors: string[],
+): void {
+  const table = parseAllMarkdownTables(body)[0];
+  if (!table) {
+    errors.push(`Missing ${section} table in ${file}`);
+    return;
+  }
+  const [idColumn, statementColumn, examplesColumn] = ["BR-ID", "Statement", "Examples"].map(
+    (name) => table.headers.indexOf(name),
+  );
+  if (
+    table.headers.length !== 3 ||
+    idColumn === undefined ||
+    statementColumn === undefined ||
+    examplesColumn === undefined ||
+    idColumn < 0 ||
+    statementColumn < 0 ||
+    examplesColumn < 0
+  ) {
+    errors.push(`Invalid ${section} columns in ${file}`);
+    return;
+  }
+  for (const row of table.rows) {
+    rules.push({
+      id: row[idColumn] ?? "",
+      statement: row[statementColumn] ?? "",
+      examples: splitRefs(row[examplesColumn] ?? ""),
+      file,
+    });
+  }
 }

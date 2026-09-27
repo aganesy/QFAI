@@ -29,4 +29,12 @@ Scenario: The next ID is the highest plus one
   When the next ID of a shape is chosen
   Then it is the highest ID of that shape the tree names under the same parent (the flow for a US, the story for an AC or EX), `decisions.md` rows included, plus one
   And a gap is never filled and a retired ID is never reissued
+
+# AC-0001-0008-04
+# Parent: US-0001-0008
+Scenario: A contract numbers its own business rules
+  Given a contract under a kind directory of `paths.contractsDir` on the story tree, declaring a contract ID `<KIND>-NNNN`
+  When the business rules it declares are read, or its next rule ID is chosen
+  Then a rule may take the ID `BR-<contract number>-NNNN`, and one whose first segment is not the number of the contract that declares it is an error
+  And the next rule ID of that contract is the highest `BR-<contract number>-NNNN` the tree names, `decisions.md` rows included, plus one
 ```

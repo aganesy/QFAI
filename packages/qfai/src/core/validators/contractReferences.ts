@@ -10,6 +10,7 @@ import {
 } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
+import { CONTRACT_KIND_BY_DIR, contractNumber } from "../storyTree/ids.js";
 import type { StoryTreeModel } from "../storyTree/tree.js";
 import { resolveStoryTreeRoots } from "../storyTree/layout.js";
 
@@ -35,6 +36,15 @@ export async function validateStoryTreeContractReferences(
   const { contractsDir } = resolveStoryTreeRoots(root, config);
   const indexFile = path.join(contractsDir, "contracts.md");
   const tables = parseIndexTables(await readSafe(indexFile));
+  const current = tables.find(
+    (table) => table.headers.map(normalizeHeaderKey).join("|") === INDEX_COLUMNS,
+  );
+  if (current) {
+    return validateContractIndex({ root, contractsDir, indexFile }, current.rows, model);
+  }
+  // SIMPLIFIED: an index without the `ID | Title | File | Depends On | Reconciled With |
+  // Purpose` columns is still read by its `Declared ID` and `File` columns.
+  // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
   const indexedIds = new Set<string>();
   const indexedPaths = new Set<string>();
   for (const table of tables) {
@@ -96,6 +106,118 @@ export async function validateStoryTreeContractReferences(
     }
   }
   return issues;
+}
+
+/** The current index columns, as {@link normalizeHeaderKey} spells them. */
+const INDEX_COLUMNS = "id|title|file|dependson|reconciledwith|purpose";
+
+type IndexLocation = { root: string; contractsDir: string; indexFile: string };
+type ListedContract = { id: string; file: string };
+
+function indexIssue(message: string, file: string, refs: string[]): Issue {
+  return issue("QFAI-CONTRACT-034", message, "error", file, "contracts.storyTreeIndex", refs);
+}
+
+/** The contract kind of a path under the contracts directory, or `null` outside a kind directory. */
+function contractKind(relative: string): string | null {
+  const [directory, ...rest] = relative.split("/");
+  if (rest.length === 0) return null;
+  return Object.entries(CONTRACT_KIND_BY_DIR).find(([name]) => name === directory)?.[1] ?? null;
+}
+
+/**
+ * Checks the index in its current columns. Each contract file under a kind
+ * directory declares an ID of that kind, is named `<kind>-NNNN-<slug>.<ext>`
+ * after it, and has a row whose ID and File agree with it. A number belongs to
+ * one contract, and every row names a contract file.
+ */
+function validateContractIndex(
+  location: IndexLocation,
+  rows: IndexTableRow[],
+  model: StoryTreeModel,
+): Issue[] {
+  const listed: ListedContract[] = rows.map((row) => ({
+    id: bareCell(row.cells[0] ?? ""),
+    file: toPosixPath(bareCell(row.cells[2] ?? "")).replace(/^\.\//, ""),
+  }));
+  const declared = new Map(model.contracts.map(({ id, file }) => [file, id]));
+  const matched = new Set<ListedContract>();
+  const issues: Issue[] = [];
+  for (const file of model.contractFiles) {
+    const relative = toPosixPath(path.relative(location.contractsDir, file));
+    const kind = contractKind(relative);
+    if (!kind) continue;
+    const spellings = [
+      relative,
+      toPosixPath(path.relative(location.root, file)),
+      toPosixPath(file),
+    ];
+    const row = listed.find((entry) => spellings.includes(entry.file));
+    if (row) matched.add(row);
+    const id = declared.get(file) ?? null;
+    const problems = contractFileProblems(relative, kind, id, row, location.indexFile);
+    if (problems.length > 0) {
+      issues.push(
+        indexIssue(`Contract file ${file} ${problems.join(", and ")}`, file, [id ?? file]),
+      );
+    }
+  }
+  for (const row of listed.filter((entry) => !matched.has(entry))) {
+    issues.push(
+      indexIssue(
+        `${location.indexFile} lists ${row.id || "(empty)"} with ${row.file || "(empty)"}, which is not a contract file`,
+        location.indexFile,
+        [row.id],
+      ),
+    );
+  }
+  issues.push(...duplicateContractNumbers(model));
+  return issues;
+}
+
+function contractFileProblems(
+  relative: string,
+  kind: string,
+  id: string | null,
+  row: ListedContract | undefined,
+  indexFile: string,
+): string[] {
+  const problems: string[] = [];
+  if (!id) problems.push("declares no contract ID");
+  else if (!id.startsWith(`${kind}-`)) problems.push(`declares ${id}, whose kind is not ${kind}`);
+  const prefix = `${kind.toLowerCase()}-${(id && contractNumber(id)) ?? String.raw`\d{4}`}-`;
+  if (
+    !new RegExp(String.raw`^${prefix}[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+)+$`).test(
+      path.posix.basename(relative),
+    )
+  ) {
+    problems.push(`is not named ${kind.toLowerCase()}-NNNN-<slug> after its contract ID`);
+  }
+  if (!row) problems.push(`has no row in ${indexFile}`);
+  else if (row.id !== (id ?? "")) problems.push(`is listed as ${row.id || "(empty)"}`);
+  return problems;
+}
+
+/** Contract numbers are unique across kinds. */
+function duplicateContractNumbers(model: StoryTreeModel): Issue[] {
+  const byNumber = new Map<string, string[]>();
+  for (const { id, file } of model.contracts) {
+    const number = contractNumber(id) ?? id;
+    byNumber.set(number, [...(byNumber.get(number) ?? []), file]);
+  }
+  return [...byNumber.entries()]
+    .filter(([, files]) => files.length > 1)
+    .map(([number, files]) =>
+      indexIssue(
+        `Contract number ${number} is declared by more than one contract: ${files.join(", ")}`,
+        files[0] ?? "",
+        [number],
+      ),
+    );
+}
+
+function bareCell(cell: string): string {
+  return cell.trim().replace(CELL_DECORATION_RE, "").trim();
 }
 
 /**
