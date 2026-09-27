@@ -23,7 +23,9 @@ describe.each(trees)("owner rerun in %s", (tree) => {
       path.join(repoRoot, tree, "assistant/rule/drift-protocol.md"),
       "utf-8",
     );
-    expect(rule).toContain("A contract with a CON ID is selected by its full ID");
+    expect(rule).toContain(
+      "A contract with a contract ID, such as `API-0002`, is selected by its full ID",
+    );
     expect(rule).toContain("a contract without one is selected by its repository-relative path");
     expect(rule.replace(/\s+/g, " ")).toContain("Do not shorten API, DB, or UI references");
   });
