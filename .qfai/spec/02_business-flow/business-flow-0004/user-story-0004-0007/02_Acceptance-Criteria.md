@@ -11,7 +11,9 @@ Feature: Build the flows and stories from the plan
     Then every story, criterion and example is in its story directory under its new ID
     And each story file holds its story sentence and each criteria file its Gherkin, in the shape of the `qfai-sdd` templates
     And each flow has its business-flow.md and user-stories.md, and business-flows.md lists every flow
+    And each business-flow.md is in the shape of the `qfai-sdd` template: its old section's prose as its purpose, or the template's placeholder where there is none, its diagram, and one placeholder alternate or exception path
     And id-map.json maps every old ID to its new one
+    And every flow is listed under For a person, so that a person writes its alternate and exception paths, and step 4 exits 3
 
   # AC-0004-0007-02
   Scenario: Step 4 does not guess

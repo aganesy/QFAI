@@ -204,6 +204,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
     exits 3.
 
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
+
 - **The business-flow and story documents have closed schemas.** The document
   lane now refuses any section, table, list or code block in these six
   documents that their `qfai-sdd` template does not declare, and the templates
