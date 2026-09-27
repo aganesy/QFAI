@@ -232,6 +232,7 @@ describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
 // effect of the `list --active` ambiguity error — i.e. only while the
 // operator is already stuck. Enumeration is the unflagged
 // behaviour of the verb instead, with the active pointer marked by `*`.
+// QFAI:EX-0001-0093-05
 describe("bare `discussion list` enumerates packs", () => {
   it("prints every pack, marking the active pointer target", async () => {
     await makePack("discussion-20260101000000000");
@@ -363,6 +364,7 @@ describe("bare `discussion list` enumerates packs", () => {
   // "which packs exist?" from the DEFAULT `.qfai/discussion` while the
   // operator believes they are seeing the configured location — a wrong
   // candidate set handed back under exit 0. The listing must abort.
+  // QFAI:EX-0001-0093-06
   it("exits non-zero naming the config problem instead of listing the default dir", async () => {
     const { writeFile } = await import("node:fs/promises");
     await makePack("discussion-20260101000000000");

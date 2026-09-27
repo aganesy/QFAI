@@ -106,6 +106,7 @@ describe("TC-0015-0022: writeDecisionRecord writes .qfai/evidence/decision/<ts>.
     }
   });
 
+  // QFAI:EX-0001-0179-02
   it("reads the new store without silently including unmigrated records from the old store", async () => {
     const oldDir = path.join(root, ".qfai", "evidence", "decisions");
     await mkdir(oldDir, { recursive: true });

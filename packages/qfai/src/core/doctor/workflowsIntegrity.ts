@@ -43,7 +43,7 @@
  * The contracts do not merely omit that basis, they state the OPPOSITE one,
  * and the contradiction is named on both sides so a later reader can check it
  * rather than take it on trust. The implemented rule requires normalized-text
- * comparison. Contradicting it: the file-state table in §3 of
+ * comparison. Contradicting it: the file-state rule of
  * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, whose `installed` / `modified`
  * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
  * sentence of the `workflows.integrity` rules of
@@ -201,7 +201,7 @@ export type WorkflowsIntegrityDiff = {
   /**
    * Root-relative POSIX paths of the recorded names whose installed file is
    * ABSENT, sorted by codepoint — the `declined` row of the shipped-workflows
-   * state enum (§3): an entry present, the file deliberately removed.
+   * state enum: an entry present, the file deliberately removed.
    *
    * Reported as PAYLOAD and never as a trigger. `status` is keyed on `modified`
    * alone, so a tree whose recorded names were all removed stays `ok` and emits
@@ -209,7 +209,7 @@ export type WorkflowsIntegrityDiff = {
    * TC-0006-0035 pins with a guard. (An earlier draft of this sentence said it
    * "emits nothing", which is measurably false: the run prints
    * `[ok] workflows.integrity: installed shipped workflow(s) match the packaged
-   * copy`.) Reporting no drift finding is what §3's "never reported again"
+   * copy`.) Reporting no drift finding is what the contract's "never reported again"
    * requires. This field exists so that an operator reading a finding raised for
    * some OTHER name can see that QFAI knows the missing file is missing and is
    * leaving it alone.
@@ -236,7 +236,7 @@ export type WorkflowsIntegrityDiff = {
    * was looked at. The record is empty for a missing, unreadable or malformed
    * file by contract, and an empty record puts every shipped name in the
    * `adopter-owned` or `absent` row of the shipped-workflows state enum
-   * (§3) — both of which the enum and the doctor contract's emission table
+   * — both of which the enum and the doctor contract's emission table
    * require to stay SILENT, the latter keying `ok` to `installed` alone. So a
    * consumer must be able to tell "compared some names, all matched" from
    * "compared no names", and the second must produce no output.
@@ -581,7 +581,7 @@ export async function diffInstalledShippedWorkflows(
   // `status` reads `modified` ALONE. A declined-only tree therefore stays `ok`
   // and emits NO DRIFT FINDING — the `ok` check itself is still registered; see
   // the `declined` field's docstring above, which carries the measurement. The
-  // shipped-workflows contract §3 says a declined name is never reported again,
+  // shipped-workflows contract says a declined name is never reported again,
   // so promoting it to a trigger here would report it forever. TC-0006-0035 is
   // the boundary that pins this.
   return {

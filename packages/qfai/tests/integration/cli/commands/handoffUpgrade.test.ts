@@ -292,6 +292,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     return path.join(root, ".qfai", "handoff.yaml");
   }
 
+  // QFAI:EX-0001-0180-02
   it("refuses to overwrite an existing canonical handoff without --force", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -332,6 +333,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect(body).toMatch(/companyName: "FreshCo"/);
   });
 
+  // QFAI:EX-0001-0180-02
   it("with --force, backs the prior file up to <dest>.backup-<ISO> before overwriting", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -622,6 +624,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     }
   });
 
+  // QFAI:EX-0001-0180-03
   it("honours --dry-run: nothing is written and the preview names the refusal", async () => {
     const destAbs = await seedCanonicalAndLegacy();
     const out: string[] = [];
@@ -646,6 +649,7 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
   });
 
+  // QFAI:EX-0001-0180-03
   it("honours --dry-run on a clean project without creating the destination", async () => {
     await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
     const out: string[] = [];

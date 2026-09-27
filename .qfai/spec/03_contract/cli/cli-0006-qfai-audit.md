@@ -1,61 +1,18 @@
 # CLI-0006: `qfai audit log`
 
-- Contract scope: the public read-only command for envelope-deviation decision records
-- Migration origin: `spec-0015` (`REQ-0171`, `AC-0015-0019`, `BR-0015-0014`)
-- Used-by: operators reviewing approvals recorded under `REQ-0158`
-- SSOT modules:
-  - `packages/qfai/src/cli/lib/args.ts` and `packages/qfai/src/cli/main.ts`
-  - `packages/qfai/src/cli/commands/auditLog.ts`
-  - `packages/qfai/src/core/decisionRecord.ts` (record writer and reader)
-  - `packages/qfai/src/core/gitignore.ts` (tracked governance-record path)
+## Ownership boundary
 
-## Current command
+This contract decides what `qfai audit log` reads, how it filters and orders the envelope-deviation decision records, what it prints, how it exits, and how a record file in the store it reads is named.
 
-```text
-qfai audit log [--scope <value>] [--operator <value>]
-               [--clause <substring>] [--format table|json]
-```
+When a decision record is written, and which fields it holds, are decided by the assistant-routing contract (CLI-0001). Whether `.qfai/evidence/` is tracked by git is decided by the `qfai init` contract (CLI-0011).
 
-The command reads `.qfai/evidence/decision/*.json` under the resolved project
-root. The migration moves existing records there; the command does not read
-the former `.qfai/evidence/decisions/` directory. It never writes a record.
-`--scope` matches `scope` exactly,
-`--operator` matches `operatorIdentity` exactly, and `--clause` matches a
-case-sensitive substring of `envelopeContractClause`. Supplied filters are
-combined with AND. Records are ordered by descending `timestamp` string.
+## Business rules
 
-The default `table` format is tab-separated text, with the unconditional
-header `timestamp\tscope\toperator\tclause`. Each data row contains those
-four fields in that order. An empty store or a filter with no matches prints
-only the header on stdout and a `no decision records matched` hint on stderr.
-`--format json` prints an array of objects with `timestamp`, `scope`,
-`operatorIdentity`, `envelopeContractClause`, `question`, and `answer`; an
-empty result is `[]` with no no-match hint. The command strips the reader's
-internal `__file` field from JSON output.
-
-An absent directory is an empty store. The reader considers `.json` entries;
-it skips an unreadable entry, invalid JSON, and JSON that is not an object.
-Missing or non-string record fields become empty strings in the result. A
-directory read failure exits 1 and reports it on stderr. A missing or unknown
-`audit` subcommand, an invalid option, or a `--format` value other than
-`table` or `json` is a CLI argument error (exit 2). Successful reads, including
-empty results, exit 0.
-
-## Decision-record source
-
-The library writer `writeDecisionRecord` creates a JSON record only when
-`envelopeContractClause` contains one of `skill-envelope`,
-`architectural-decision`, `rejected-option`, or `scope-expansion`, ignoring
-case. Other questions create no file. A record holds `question`, `answer`,
-`scope`, `operatorIdentity`, `timestamp`, and `envelopeContractClause`. Its
-filename uses a Windows-safe ISO-8601 timestamp; exclusive creation and a
-numeric suffix protect records written in the same millisecond. The records
-are local: the managed `.gitignore` block ignores `.qfai/evidence/` as a whole,
-so the command lists the records of the checkout it runs in. The command's SHOULD-level status describes the convenience
-of the query; it does not make the decision record optional.
-
-## Rules
-
-| BR-ID   | Statement                                                                                                                                                                                                                                                                                                                                                                                                                | Examples        |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
-| BR-0355 | `qfai audit log` filter + format surface - Per DR-0271, `qfai audit log` (SHOULD) lists `.qfai/evidence/decision/<ts>.json` records newest-first with filters `--scope`, `--operator`, `--clause` (on `envelopeContractClause`) and `--format table\|json` defaulting to `table`. - SHOULD-level because `.qfai/evidence/decision/` is human-readable JSON; the CLI is an ergonomic improvement, not a hard requirement. | EX-0001-0179-01 |
+| BR-ID        | Statement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Examples                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| BR-0006-0001 | `qfai audit log` lists the decision records in `.qfai/evidence/decision/*.json` newest-first, by descending `timestamp` string. `--scope` matches `scope` exactly, `--operator` matches `operatorIdentity` exactly, and `--clause` matches a case-sensitive substring of `envelopeContractClause`; the filters given are combined with AND. `--format table\|json` selects the output, `table` by default. The command is a convenience over human-readable JSON records and does not make recording a decision optional. | EX-0001-0179-01                  |
+| BR-0006-0002 | The command reads the records under the resolved project root only, never the former `.qfai/evidence/decisions/` directory, and never writes a record. An absent directory is an empty store. An entry that cannot be read, is not valid JSON or is not a JSON object is skipped, and a missing or non-string field reads as an empty string.                                                                                                                                                                             | EX-0001-0179-02                  |
+| BR-0006-0003 | The `table` format is tab-separated text whose first line is always the header `timestamp\tscope\toperator\tclause`, followed by one row per record holding those four fields in that order. When no record matches, it prints only the header on standard output and `no decision records matched` on standard error.                                                                                                                                                                                                    | EX-0001-0179-01, EX-0001-0179-02 |
+| BR-0006-0004 | `--format json` prints one array of objects holding `timestamp`, `scope`, `operatorIdentity`, `envelopeContractClause`, `question` and `answer`, and no field internal to the reader. An empty result is `[]`, with no message on standard error.                                                                                                                                                                                                                                                                         | EX-0001-0179-01, EX-0001-0179-02 |
+| BR-0006-0005 | Every successful read exits 0, an empty result included. A failure reading the record directory exits 1 and reports the reason on standard error. A missing or unknown `audit` subcommand, an invalid option, or a `--format` value other than `table` or `json` is an argument error and exits 2.                                                                                                                                                                                                                        | EX-0001-0179-02, EX-0001-0179-03 |
+| BR-0006-0006 | A decision record's file name is a Windows-safe ISO-8601 timestamp. The record is created exclusively, and records written in the same millisecond take a numeric suffix, so no record overwrites another.                                                                                                                                                                                                                                                                                                                | EX-0001-0176-01                  |

@@ -153,6 +153,7 @@ describe("qfai report on a story tree", () => {
     }
   });
 
+  // QFAI:EX-0001-0068-04
   it("requires a scoped input file for --flow", async () => {
     const root = await storyRoot();
     await writeValidation(root, []);
@@ -174,6 +175,7 @@ describe("qfai report on a story tree", () => {
     expect(await exists(path.join(root, ".qfai/report/report.spec-0001.md"))).toBe(false);
   });
 
+  // QFAI:EX-0001-0064-02
   it("refuses a legacy spec layout", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacy-"));
     roots.push(root);
