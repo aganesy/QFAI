@@ -77,6 +77,57 @@ The exception is bounded by what it covers.
   it; in degraded mode it is the only committer, so a sweeping stage there mixes every sibling's work into one commit.
 - Isolation requirements for concurrent stages are defined once in `.qfai/assistant/rule/workflow.md#concurrency-stage-independent-mandatory`.
 
+### Host backstops above the declared shape
+
+The dispatch limits in this baseline and in each skill's own policy are read by
+the agent doing the dispatch. A run that has lost its way is the one least likely
+to apply them, so nothing here bounds a run that spawns more workers than it
+declared, nests delegation deeper than the stage intended, or keeps spending.
+
+Some hosts can. A host control holds whatever the dispatching agent decides.
+QFAI sets none of them, so the host defaults stand.
+
+**A backstop sits above the declared shape, never at it.** A cap equal to the
+declared concurrency turns the ceiling into the policy: the first stage that
+legitimately needs its full declared fan-out is blocked by a control that exists
+to catch runaway delegation. The backstop fires when something has gone wrong;
+the policy decides the ordinary case.
+
+Claude Code 2.1.217 or later:
+
+| Control                                                                              | Default                      | What it bounds                                             |
+| ------------------------------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------- |
+| `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`                                               | 3 (1 in 2.1.217 and 2.1.218) | How deep delegation nests. `1` turns nesting off           |
+| `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`                                               | 20                           | How many sub-agents run at once                            |
+| `--max-budget-usd` in print mode; `maxBudgetUsd` / `max_budget_usd` in the Agent SDK | none                         | What one run may spend, in US dollars, sub-agents included |
+
+Codex:
+
+| Control                                                                                   | Default                    | What it bounds                                                        |
+| ----------------------------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------- |
+| `agents.max_concurrent_threads_per_session` in `config.toml` (alias `agents.max_threads`) | chosen by Codex when unset | How many spawned-agent threads are open at once, the primary excluded |
+
+No equivalent was confirmed for nesting depth or for a spend cap.
+
+GitHub Copilot CLI:
+
+| Control                                                                  | Default                          | What it bounds                           |
+| ------------------------------------------------------------------------ | -------------------------------- | ---------------------------------------- |
+| `subagents.maxDepth` setting, or `COPILOT_SUBAGENT_MAX_DEPTH`            | 4                                | How deep sub-agents nest                 |
+| `subagents.maxConcurrency` setting, or `COPILOT_SUBAGENT_MAX_CONCURRENT` | set by the Copilot plan, 2 to 32 | How many sub-agents run at once          |
+| `--max-ai-credits`                                                       | unset                            | AI credits per response, as a soft limit |
+
+The two settings take effect only on usage-based billing plans.
+
+VS Code Copilot agent mode:
+
+| Control                                        | Default | What it bounds                                                        |
+| ---------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `chat.subagents.allowInvocationsFromSubagents` | `false` | Whether a sub-agent may start sub-agents. Nesting stops at depth five |
+
+No equivalent was confirmed for concurrent sub-agents or for a spend cap. None
+was confirmed for any of the three in the Copilot cloud agent.
+
 ## Work Orders Summary
 
 Every major artifact in the stage should include this table schema:
@@ -110,6 +161,12 @@ An **independent reviewer** is a sub-agent that did **not** author or edit any a
 - Role name alone never establishes independence. Routing dispatches by role; independence is a separate constraint the routed agent must satisfy and attest to.
 - A reviewer that discovers it authored or edited a review target MUST stop, declare the conflict, and hand the same evidence set to a non-participating reviewer. It MUST NOT return `PASS` on an artifact it authored.
 - This definition governs every skill. Skill-local wording (e.g. `qfai-configure`'s "a reviewer who did not modify the config") is an instance of it, not a competing rule.
+
+**The reviewer gate is not self-verification.** Model guidance advising "don't
+use subagents to verify your own work" does not apply to this gate. The
+definition above already excludes an agent reviewing its own output. A verdict
+is also recorded and pinned to a hash of the reviewed state, not consumed by the
+author.
 
 #### A griller's recommendations, and what they disqualify
 

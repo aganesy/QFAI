@@ -132,6 +132,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The delegation baseline names the host limits above the declared shape**
+  (#2239). Dispatch limits are read by the agent that dispatches, so nothing in
+  QFAI bounded a run that spawned more workers, nested delegation deeper or kept
+  spending past what it declared. A new section in
+  `rule/shared-skill-delegation-baseline.md` lists the controls a host provides
+  for nesting depth, concurrent sub-agents and spend, with their defaults: Claude
+  Code 2.1.217 or later, Codex, the GitHub Copilot CLI and VS Code agent mode.
+  Where no equivalent was confirmed, it says so. QFAI sets none of them, and the
+  section states that such a limit sits above the declared shape, never at it.
+  The implementation skill's parallelization policy points to it.
+
+- **The reviewer gate is not self-verification.** The independent-reviewer
+  definition now says why guidance against using sub-agents to verify your own
+  work does not reach the reviewer gate: an independent reviewer authored none
+  of what it reviews, and its verdict is recorded and pinned to a hash of the
+  reviewed state rather than consumed by the author.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves
