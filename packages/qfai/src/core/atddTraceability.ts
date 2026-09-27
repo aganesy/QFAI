@@ -1666,9 +1666,10 @@ function normalizeLevel(level: string): string {
  * each excluded TC at `info`, so the exclusion is visible rather than silent.
  *
  * The members are lower-case, so a `Level` goes through {@link normalizeLevel}
- * before it is looked up.
+ * before it is looked up. Adding a spelling here takes the only test obligation
+ * away from every TC declaring it.
  */
-const NO_ATDD_OBLIGATION_LEVELS = new Set(["unit", "component", "l1", "l2"]);
+const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
