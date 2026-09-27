@@ -1,7 +1,33 @@
-const CONTRACT_DECLARATION_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(CON-(?:API|UI|DB)-\d+)\s*(?:\*\/)?\s*$/gm;
-const CONTRACT_DECLARATION_LINE_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:CON-(?:API|UI|DB)-\d+)\s*(?:\*\/)?\s*$/;
+import { parseHeadings } from "./parse/markdown.js";
+import { maskNonSpecRegions } from "./specPackParsers.js";
+import { isContractId } from "./storyTree/ids.js";
+
+// SIMPLIFIED: a declaration may still name a `CON-*` ID beside a `<KIND>-NNNN` one.
+// Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+const DECLARED_ID = String.raw`CON-(?:API|UI|DB)-\d+|(?:CLI|API|DB|UI|DESIGN)-\d{4}`;
+const CONTRACT_DECLARATION_RE = new RegExp(
+  String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(${DECLARED_ID})\s*(?:\*\/)?\s*$`,
+  "gm",
+);
+const CONTRACT_DECLARATION_LINE_RE = new RegExp(
+  String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:${DECLARED_ID})\s*(?:\*\/)?\s*$`,
+);
+/** `# CLI-0001: <title>`, the H1 a Markdown contract declares its ID in. */
+const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI|DESIGN)-\d{4}):\s+\S/;
+
+/**
+ * The `<KIND>-NNNN` ID a contract file declares, or `null` when it declares
+ * none: the first rendered H1 of a Markdown contract, and the one `QFAI-CONTRACT-ID`
+ * line of any other file. Several such lines declare nothing.
+ */
+export function declaredContractId(file: string, text: string): string | null {
+  if (file.toLowerCase().endsWith(".md")) {
+    const heading = parseHeadings(maskNonSpecRegions(text)).find((item) => item.level === 1);
+    return MARKDOWN_CONTRACT_H1_RE.exec(heading?.title ?? "")?.[1] ?? null;
+  }
+  const [id, ...others] = extractDeclaredContractIds(text);
+  return id !== undefined && others.length === 0 && isContractId(id) ? id : null;
+}
 
 export function extractDeclaredContractIds(text: string): string[] {
   const ids: string[] = [];
@@ -34,8 +60,8 @@ export function stripContractDeclarationLines(text: string): string {
  *
  * Two forms, matching what each contract kind already uses for metadata:
  *
- * - `.sql`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003`
- * - `.yaml` / `.json`: `x-qfai-depends-on: [CON-API-0002]`, flow or block
+ * - `.sql`: a comment line `-- Depends on: DB-0002, DB-0003`
+ * - `.yaml` / `.json`: `x-qfai-depends-on: [API-0002]`, flow or block
  *
  * This is **apply order**, not every reference. A body-resolved runtime
  * reference (a foreign key resolved after both objects exist, an API calling
@@ -47,7 +73,7 @@ export function stripContractDeclarationLines(text: string): string {
  * The comment marker is required, and the key must sit at column 0.
  *
  * Both anchors keep a *declaration* distinct from *prose about* one. With the
- * marker optional, a line reading `Depends on: CON-API-0002` inside an OpenAPI
+ * marker optional, a line reading `Depends on: API-0002` inside an OpenAPI
  * `description: |` block — the natural place to explain a **runtime** reference,
  * which this key must never list — counted as the file's apply-order
  * declaration: it suppressed `QFAI-CONTRACT-015` and fed its ids to the index
@@ -59,9 +85,9 @@ const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+
 /**
  * A trailing `#` comment is part of the line, not part of the value.
  *
- * `x-qfai-depends-on: [CON-DB-0001] # DB を先に適用` is valid YAML and the
+ * `x-qfai-depends-on: [DB-0001] # DB を先に適用` is valid YAML and the
  * natural way to say *why* the order holds, but an end-of-line anchor stopped
- * matching it. The scalar fallback then read `[CON-DB-0001] # …` as a value that
+ * matching it. The scalar fallback then read `[DB-0001] # …` as a value that
  * is not one of the "none" spellings, so a conforming declaration produced
  * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-033`.
  */
@@ -69,7 +95,7 @@ const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#
 /**
  * The block form, where a `#` comment may follow the key and every item.
  *
- * `- CON-DB-0001 # schema first` is valid YAML and says the same thing the flow
+ * `- DB-0001 # schema first` is valid YAML and says the same thing the flow
  * form's trailing comment does, but the item pattern allowed only whitespace
  * after the value, so the sequence ended at the first commented item and every
  * later one was dropped — silently, and worst where it matters most: a
@@ -180,7 +206,7 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
  * The values a YAML block sequence lists, with each item's comment dropped.
  *
  * Scanning the matched block text for ids instead would read a comment as part
- * of the declaration: `- CON-DB-0001 # replaces CON-DB-0002` would list two
+ * of the declaration: `- DB-0001 # replaces DB-0002` would list two
  * dependencies, one of which the author explicitly said is not one.
  */
 function blockSequenceValues(blob: string): string[] {
@@ -195,7 +221,7 @@ function blockSequenceValues(blob: string): string[] {
 }
 
 /** A cell/element holding a contract id and nothing else. */
-const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
+const CONTRACT_ID_EXACT_RE = new RegExp(`^(?:${DECLARED_ID})$`, "i");
 
 /**
  * The ids a listed declaration states, or `undefined` when an element of it is
@@ -203,7 +229,7 @@ const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
  *
  * **Every** element must be one. Harvesting only the recognisable ids and
  * discarding the rest let a half-written declaration read as a finished one:
- * `-- Depends on: CON-DB-0001, TBD` yielded `["CON-DB-0001"]`, so
+ * `-- Depends on: DB-0001, TBD` yielded `["DB-0001"]`, so
  * `QFAI-CONTRACT-015` saw a declaration, `-014` found every id it was given to
  * resolve, and an index cell mirroring just the known half agreed with it under
  * `-033`. The undetermined element left no trace anywhere, which is the one
@@ -231,7 +257,7 @@ function dependencyIdsFromElements(elements: string[]): string[] | undefined {
 /**
  * The ids a comment line or a YAML flow sequence states.
  *
- * Both write the list as text: `CON-DB-0002, CON-DB-0003` in a `-- Depends on:`
+ * Both write the list as text: `DB-0002, DB-0003` in a `-- Depends on:`
  * comment, the same between brackets in `x-qfai-depends-on: [...]`. An empty
  * value is the flow spelling of "none" and lists nothing; anything else is
  * split on commas and whitespace so that every token is judged on its own.
@@ -250,8 +276,8 @@ function textDependencyIds(value: string): string[] | undefined {
  *
  * The value must be an **array**, and every element a bare contract id. Reading
  * ids out of a stringification of the whole value instead accepted anything that
- * merely *contained* one: `{"note": "CON-API-0002"}`, or a single unwrapped
- * `"CON-API-0002"`, yielded a dependency and returned early from
+ * merely *contained* one: `{"note": "API-0002"}`, or a single unwrapped
+ * `"API-0002"`, yielded a dependency and returned early from
  * `hasDependencyDeclaration`, so a value that states no apply order passed
  * parsing, the `QFAI-CONTRACT-014` reference check and the `QFAI-CONTRACT-033`
  * index mirror as though it did. `["TBD"]` / `[null]` are rejected for the same
@@ -330,7 +356,7 @@ export function extractDeclaredDependencies(text: string, file?: string): string
  * A **partly** stated order does not count either. The answer is derived from
  * {@link extractDeclaredDependencies}, which yields nothing unless every listed
  * element is a contract id (see {@link dependencyIdsFromElements}), so
- * `CON-DB-0001, TBD` reads as silence here rather than as the finished
+ * `DB-0001, TBD` reads as silence here rather than as the finished
  * declaration its resolvable half made it look like.
  */
 export function hasDependencyDeclaration(text: string, file?: string): boolean {

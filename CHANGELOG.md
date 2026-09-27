@@ -152,7 +152,33 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     its owner does not list or that nothing uses, and a `requires` list that
     names anything but common steps, or appears on a common step.
 
+- **Contracts can carry their own IDs, and number their rules after them.**
+  `qfai validate` reads the new forms beside the current ones.
+  - A contract under `cli/`, `api/`, `db/`, `ui/` or `design/` declares a
+    contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
+    contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
+    otherwise. The number is unique across kinds.
+  - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
+    another number is a BR-to-EX error (`QFAI-STORY-005`).
+  - A Markdown contract may hold its rules under `## Business rules`, which is
+    read like `## Rules` but refuses a `Rule refs:` line.
+  - A `contracts.md` index with the columns `ID`, `Title`, `File`,
+    `Depends On`, `Reconciled With` and `Purpose` is checked against every
+    contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
+    declares and has a row that agrees with both. A disagreement is
+    `QFAI-CONTRACT-034`.
+
 ### Changed
+
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
 
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`

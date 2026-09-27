@@ -59,7 +59,7 @@ async function seedUiContract(root: string, contractId: string): Promise<void> {
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, `ui-${contractId}.yaml`),
-    `# QFAI-CONTRACT-ID: CON-UI-${contractId}\nscreens:\n  - id: home\n`,
+    `# QFAI-CONTRACT-ID: UI-${contractId}\nscreens:\n  - id: home\n`,
     "utf-8",
   );
 }
@@ -86,7 +86,7 @@ describe("validateSpecIdLinkage", () => {
   it("accepts UI contract IDs that declare screens", async () => {
     const root = await newTempDir();
     await seedUiContract(root, "0001");
-    await seedPrototypingJson(root, ["CON-UI-0001"]);
+    await seedPrototypingJson(root, ["UI-0001"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toEqual([]);
@@ -95,12 +95,12 @@ describe("validateSpecIdLinkage", () => {
   it("emits QFAI-PROT-008 when the frozen UI contract is missing", async () => {
     const root = await newTempDir();
     await seedUiContract(root, "0001");
-    await seedPrototypingJson(root, ["CON-UI-9999"]);
+    await seedPrototypingJson(root, ["UI-9999"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-008");
-    expect(issues[0]?.message).toContain("CON-UI-9999");
+    expect(issues[0]?.message).toContain("UI-9999");
   });
 
   it("emits QFAI-PROT-008 when a UI contract ID is malformed", async () => {

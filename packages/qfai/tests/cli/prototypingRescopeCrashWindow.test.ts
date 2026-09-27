@@ -95,7 +95,7 @@ async function loopWithRetiredSurface(): Promise<string> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: [{id: home, route: /}]\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens: [{id: home, route: /}]\n",
     "utf-8",
   );
 
@@ -107,8 +107,8 @@ async function loopWithRetiredSurface(): Promise<string> {
       {
         runId: "r",
         cycle: 3,
-        uiContractsCovered: ["CON-UI-0001", "CON-UI-0011"],
-        frozenSurfaceUnion: ["CON-UI-0001", "CON-UI-0011"],
+        uiContractsCovered: ["UI-0001", "UI-0011"],
+        frozenSurfaceUnion: ["UI-0001", "UI-0011"],
         stopReason: null,
       },
       null,
@@ -123,14 +123,14 @@ async function loopWithRetiredSurface(): Promise<string> {
   );
   await writeFile(
     path.join(iter, "iterate-plan.json"),
-    `${JSON.stringify({ cycle: 0, screens: [{ uiContractId: "CON-UI-0001" }, { uiContractId: "CON-UI-0011" }] }, null, 2)}\n`,
+    `${JSON.stringify({ cycle: 0, screens: [{ uiContractId: "UI-0001" }, { uiContractId: "UI-0011" }] }, null, 2)}\n`,
     "utf-8",
   );
   return root;
 }
 
 const run = (root: string): Promise<number> =>
-  runPrototypingRescope({ root, remove: ["CON-UI-0011"], reason: "DELTA-022", dryRun: false });
+  runPrototypingRescope({ root, remove: ["UI-0011"], reason: "DELTA-022", dryRun: false });
 
 const readJson = async (abs: string): Promise<Record<string, unknown>> =>
   JSON.parse(await readFile(abs, "utf-8")) as Record<string, unknown>;
@@ -154,19 +154,19 @@ describe("a rescope that dies before its last write", () => {
     // Mid-crash state: derived artifacts done, frozen union untouched. That is
     // what makes the re-run possible — the surface is still frozen, so the
     // refusal does not fire.
-    expect((await readJson(protoAbs)).frozenSurfaceUnion).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect((await readJson(protoAbs)).frozenSurfaceUnion).toEqual(["UI-0001", "UI-0011"]);
     expect((await readJson(reviewAbs)).retiredSurfaces).toHaveLength(1);
 
     writeFileSpy.mockImplementation(passThrough);
     expect(await run(root)).toBe(0);
 
     // Converged, and nothing was applied twice.
-    expect((await readJson(protoAbs)).frozenSurfaceUnion).toEqual(["CON-UI-0001"]);
+    expect((await readJson(protoAbs)).frozenSurfaceUnion).toEqual(["UI-0001"]);
     expect((await readJson(protoAbs)).rescopeLog).toHaveLength(1);
     expect((await readJson(reviewAbs)).retiredSurfaces).toHaveLength(1);
     expect((await readJson(reviewAbs)).proseCritique).toBe("twelve screens");
     const plan = (await readJson(planAbs)).screens as { uiContractId: string }[];
-    expect(plan.map((screen) => screen.uiContractId)).toEqual(["CON-UI-0001"]);
+    expect(plan.map((screen) => screen.uiContractId)).toEqual(["UI-0001"]);
   });
 
   it("would be unrecoverable if the authoritative write came first", async () => {
@@ -182,8 +182,8 @@ describe("a rescope that dies before its last write", () => {
         {
           runId: "r",
           cycle: 3,
-          uiContractsCovered: ["CON-UI-0001"],
-          frozenSurfaceUnion: ["CON-UI-0001"],
+          uiContractsCovered: ["UI-0001"],
+          frozenSurfaceUnion: ["UI-0001"],
           stopReason: null,
         },
         null,
@@ -197,6 +197,6 @@ describe("a rescope that dies before its last write", () => {
     // retired surface, with no route back.
     const plan = (await readJson(path.join(evidenceDir(root), "iter-00", "iterate-plan.json")))
       .screens as { uiContractId: string }[];
-    expect(plan.map((screen) => screen.uiContractId)).toEqual(["CON-UI-0001", "CON-UI-0011"]);
+    expect(plan.map((screen) => screen.uiContractId)).toEqual(["UI-0001", "UI-0011"]);
   });
 });

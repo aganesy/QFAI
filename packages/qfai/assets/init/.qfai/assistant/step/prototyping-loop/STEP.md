@@ -214,7 +214,7 @@ filename template. Without `--capture`, store `evidenceRefs: []`; the reviewer
 still operates Playwright live. With `--capture`, require a screenshot and HTML
 path for every declared screen, then copy one `kind: screenshot` and one
 `kind: html` entry per screen. The per-screen
-`CON-UI-NNNN/<screen>.review.json` payloads stay closed and contain no
+`UI-NNNN/<screen>.review.json` payloads stay closed and contain no
 `evidenceRefs` field. `buildEvidenceRefs()` is a pure helper, not an automatic
 CLI writer for this transcription.
 

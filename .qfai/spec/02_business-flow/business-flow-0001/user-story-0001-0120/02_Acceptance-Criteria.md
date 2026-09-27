@@ -8,7 +8,7 @@ Feature:
 # AC-0001-0120-01
 # Parent: US-0001-0120
 Scenario: Qualitative review payload schema per spec × screen
-  Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` (`iter-NN/CON-UI-NNNN/<screen>.review.json` on the story tree),
+  Given `.qfai/evidence/prototyping/iter-NN/spec-NNNN/<screen>.review.json` (`iter-NN/UI-NNNN/<screen>.review.json` on the story tree),
   When validated,
   Then it contains exactly the 4 ordinal UX axes (`informationArchitecture`, `navigationFlow`, `usability`, `functionality`, each in `{weak, acceptable, strong, exceptional}`) AND the six qualitative `*Feel` prose fields (`operability`, `transitionFeel`, `crossScreenContinuity`, `userStoryFeel`, `acceptanceCriteriaFeel`, `menuReachabilityFeel`), each bounded ≤ 200 words, AND `layoutAntiPatternsDetected[]` AND `designMdViolations[]`.
 

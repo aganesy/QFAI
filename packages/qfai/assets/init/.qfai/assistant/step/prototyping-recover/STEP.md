@@ -55,7 +55,7 @@ catch. `rescope` is the operation that applies such a decision without
 discarding the loop:
 
 ```bash
-npx qfai prototyping rescope --remove CON-UI-0001 --reason "<decision that retired it>"
+npx qfai prototyping rescope --remove UI-0001 --reason "<decision that retired it>"
 ```
 
 It drops the surface from `frozenSurfaceUnion`, prunes it from any captured

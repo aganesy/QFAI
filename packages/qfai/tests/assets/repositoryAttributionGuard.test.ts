@@ -44,17 +44,14 @@ describe("repository attribution matcher", () => {
     });
 
     it("when the artifact is a contract id", () => {
-      // The old branch spelled contracts `CON-NNNN-NNNN`, a form that exists
-      // nowhere. `contract-artifact-rules.md` defines `CON-API-*` / `CON-DB-*`
-      // / `CON-UI-*`, so every real contract misattribution walked past.
-      expect(matchRepositoryAttribution("this repository's CON-DB-0007 owns the write path")).toBe(
-        "this repository's CON-DB-0007",
+      expect(matchRepositoryAttribution("this repository's DB-0007 owns the write path")).toBe(
+        "this repository's DB-0007",
       );
-      expect(matchRepositoryAttribution("`CON-API-0001` belongs to this repository")).toBe(
-        "`CON-API-0001` belongs to this repository",
+      expect(matchRepositoryAttribution("`API-0001` belongs to this repository")).toBe(
+        "`API-0001` belongs to this repository",
       );
-      expect(matchRepositoryAttribution("this repository's `CON-UI-0003` is frozen")).toBe(
-        "this repository's `CON-UI-0003`",
+      expect(matchRepositoryAttribution("this repository's `UI-0003` is frozen")).toBe(
+        "this repository's `UI-0003`",
       );
     });
 

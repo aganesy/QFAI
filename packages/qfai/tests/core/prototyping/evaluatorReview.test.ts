@@ -302,7 +302,7 @@ const BASE_IMPRESSIONS: Record<FeelField, string> = {
 };
 
 const baseReviewerPayload = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
-  uiContractId: "CON-UI-0012",
+  uiContractId: "UI-0012",
   screenId: "home",
   cycle: 0,
   sessionStatus: "ok",
@@ -327,7 +327,7 @@ describe("parseEvaluatorReview — full payload acceptance (TC-0012-0364)", () =
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.review.uiContractId).toBe("CON-UI-0012");
+    expect(result.review.uiContractId).toBe("UI-0012");
     expect(result.review.screenId).toBe("home");
     expect(result.review.sessionStatus).toBe("ok");
     expect(result.review.blockingFindings).toEqual(["home: the empty state is not represented"]);
@@ -403,12 +403,12 @@ describe("parseEvaluatorReview — rejection with named field path (TC-0012-0365
     const empty = parseEvaluatorReview(baseReviewerPayload({ uiContractId: "" }));
     expect(empty.ok).toBe(false);
     if (!empty.ok) {
-      expect(empty.errors.some((e) => /uiContractId must match CON-UI-NNNN/.test(e))).toBe(true);
+      expect(empty.errors.some((e) => /uiContractId must match UI-NNNN/.test(e))).toBe(true);
     }
   });
 
   it("rejects bare, noncanonical, and legacy UI contract identity", () => {
-    for (const uiContractId of ["0012", "spec-0012", "CON-UI-12", "../CON-UI-0012"]) {
+    for (const uiContractId of ["0012", "spec-0012", "UI-12", "../UI-0012"]) {
       const result = parseEvaluatorReview(baseReviewerPayload({ uiContractId }));
       expect(result.ok).toBe(false);
     }

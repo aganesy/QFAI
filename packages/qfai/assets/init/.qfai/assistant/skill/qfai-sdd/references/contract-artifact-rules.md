@@ -36,16 +36,16 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   is asked for nothing. A marker counts as rendered wherever its text appears,
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
-- **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `CON-UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
+- **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
 - `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
-- Use prefixes `CON-API-*`, `CON-DB-*`, and `CON-UI-*`.
+- Use prefixes `API-*`, `DB-*`, and `UI-*`.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract <paths.contractsDir>/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
   table necessarily becomes N cross-referencing files. State the resulting
   composition rather than leaving every consumer to reconstruct it from the DDL:
-  - `db/`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003` (or `-`)
-  - `api/` / `ui/`: a top-level `x-qfai-depends-on: [CON-API-0002]`, YAML flow
+  - `db/`: a comment line `-- Depends on: DB-0002, DB-0003` (or `-`)
+  - `api/` / `ui/`: a top-level `x-qfai-depends-on: [API-0002]`, YAML flow
     or block form. An `api/` contract may also be `.json`, with the same key as
     a JSON array; `ui/` collects `.yaml` / `.yml` only.
   - Mirror the same list in `<paths.contractsDir>/contracts.md`'s `Depends On` column.
@@ -62,7 +62,7 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
     at all. Write `-` when nothing must be applied first: "no dependencies" and
     "never stated" are different claims, and only the first is checkable. The
     key on its own (`-- Depends on:` with nothing after it) is still silence,
-    and so is a list holding anything but `CON-*` ids: in `CON-DB-0001, TBD`
+    and so is a list holding anything but contract IDs: in `DB-0001, TBD`
     the resolvable half would otherwise make an undetermined order look
     settled, leaving `TBD` unreported by every check.
   - `QFAI-CONTRACT-032` reports a contract index table that dropped the
@@ -77,10 +77,10 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
     another contract's file otherwise passes every check while sending the
     reader to the wrong contract. A glob or a `<slug>` placeholder names no one
     file and is left alone.
-  - Only tables whose `Declared ID` column holds `CON-*` ids are held to these
+  - Only tables whose `Declared ID` column holds contract IDs are held to these
     rules; a table indexing another artifact kind by slug is left alone, and an
     empty one qualifies only under a `DB` / `API` / `UI` contract heading.
-    Coverage is read from a `Declared ID` cell that **is** a full `CON-*` id: a
+    Coverage is read from a `Declared ID` cell that **is** a full contract ID: a
     `Short ID` — in its own column or written into this one — cannot stand in
     for a blank or mistyped one. An example table inside a code fence is
     documentation, not index data, and is not read either.
@@ -133,10 +133,10 @@ Contracts are validated per file; agreement _between_ contracts is an authoring 
 - Resolve the contradiction in the contracts, in the contract-authoring stage. Never resolve it downstream by
   fabricating values that satisfy both.
 - Record the pairing you reconciled in the `Reconciled With` column of `<paths.contractsDir>/contracts.md`,
-  as `CON-*` ids or `-`, so the scope is declared rather than guessed. Nothing else recovers it
+  as contract IDs or `-`, so the scope is declared rather than guessed. Nothing else recovers it
   later: `Depends On` is apply order by its own definition, and `QFAI-CONTRACT-040` matches on
   normalized field names, so neither can say which of several contracts declaring `status` this
-  pairing actually was. A later `/qfai-sdd --contract <CON-ID>` rerun reads that column to decide
+  pairing actually was. A later `/qfai-sdd --contract <contract-ID>` rerun reads that column to decide
   what it has to reconcile.
 
 `QFAI-CONTRACT-040` mechanizes the state/status-domain part of this rule. It reports `warning`, and
@@ -205,7 +205,7 @@ satisfied by a file that cannot run.
   line of the form:
 
   ```text
-  - Executability: CON-DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
+  - Executability: DB-NNNN — applied to scratch DB; every declared write path driven twice; <command> / <result>
   ```
 
   The evidence is local, so no validator reads the line. The completion

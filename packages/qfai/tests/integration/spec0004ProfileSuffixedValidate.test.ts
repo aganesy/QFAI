@@ -304,7 +304,7 @@ describe("certify reads the prototyping-profile validate report", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0004.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0004\nscreens:\n  - id: home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0004\nscreens:\n  - id: home\n    route: /\n",
       "utf-8",
     );
     const protoDir = path.join(root, ".qfai/evidence/prototyping");
@@ -317,8 +317,8 @@ describe("certify reads the prototyping-profile validate report", () => {
         designMd: { sha256: "0".repeat(64) },
         reviewerGate: { result: "PASS" },
         iterations: [{}],
-        uiContractsCovered: ["CON-UI-0004"],
-        frozenSurfaceUnion: ["CON-UI-0004"],
+        uiContractsCovered: ["UI-0004"],
+        frozenSurfaceUnion: ["UI-0004"],
       }),
       "utf-8",
     );
