@@ -1,14 +1,11 @@
 import {
   areaCovers,
-  executorSkill,
   isAuthorOrRecommender,
   notReady,
   REPLAN_BUDGET,
   RESULT_ID,
   refusedWith,
-  servingStage,
   skillOwnerOf,
-  stageSkills,
   STORY_AUTHORING_KINDS,
   type PlanStage,
 } from "./common.js";
@@ -16,6 +13,7 @@ import { approvalIsStale, currentStory, reaskCreate } from "./issue.js";
 import { carriedAuthorization, parseMeasurement, parseQuestionInput } from "./parse.js";
 import { storyTreeChecks } from "./records.js";
 import { activeStages } from "./stages.js";
+import { activeSteps, repairOwnerOf, servingStage, servingSteps, stepNamesOf } from "./steps.js";
 import type {
   InputRefusal,
   InputRefusalReason,
@@ -364,37 +362,32 @@ function outcomeIsAcceptable(result: WorkflowResult, stageKind: string): boolean
 
 const DIAGNOSIS_VERDICTS = ["missing-test", "defective-test", "regression", "expectation-differs"];
 
-// Whether the result names the plan stage the run is at, with the fields that stage needs.
 // The outstanding work order's stage when it repairs a finding another stage detected, and the
-// owner it was issued to.
+// steps that serve the finding's owner there.
 function repairStageOf(snapshot: WorkflowSnapshot, selected: readonly PlanStage[]) {
-  const request = snapshot.repairRequest;
-  const workOrder = snapshot.outstandingWorkOrder;
-  if (!request || !workOrder || workOrder.stageInstanceId === request.stageInstanceId) {
-    return undefined;
-  }
+  const { repairRequest: request, outstandingWorkOrder: workOrder, plan } = snapshot;
+  const owner = repairOwnerOf(snapshot);
+  if (!request || !workOrder || !plan || !owner) return undefined;
+  if (workOrder.stageInstanceId === request.stageInstanceId) return undefined;
   const stage = selected.find((each) => each.stageInstanceId === workOrder.stageInstanceId);
-  const executor = workOrder.executor?.skill;
-  if (!stage || !executor || !stageSkills(stage, snapshot.diagnosis).includes(executor)) {
-    return undefined;
-  }
-  return { stage, executor };
+  if (!stage) return undefined;
+  return { stage, steps: servingSteps(stage, owner, plan, snapshot.diagnosis) };
 }
 
+// Whether the result names the plan stage the run is at, with the fields that stage needs.
 function stageResultIsBroken(
   snapshot: WorkflowSnapshot,
   workOrder: WorkflowWorkOrder,
   stage: PlanStage,
   result: WorkflowResult,
-  executor = executorSkill(stage, snapshot.diagnosis),
+  steps: string[],
 ): boolean {
   const flowTarget = workOrder.target?.kind === "flow" ? workOrder.target.flowId : undefined;
   const diagnosis = result.diagnosis;
   return (
     workOrder.stageInstanceId !== stage.stageInstanceId ||
     workOrder.stageKind !== stage.stageKind ||
-    workOrder.executor?.skill !== executor ||
-    workOrder.operation !== stage.operation ||
+    stepNamesOf(workOrder).join(",") !== steps.join(",") ||
     (flowTarget !== undefined && flowTarget !== snapshot.flowBinding?.flowId) ||
     (stage.stageKind === "diagnose" &&
       (!diagnosis ||
@@ -447,7 +440,8 @@ function acceptedEvents(
   ];
 }
 
-// A repair needs a new plan when a finding's owner is a skill no active stage of the plan serves.
+// A repair needs a new plan when no active step of the plan serves a finding's owner: a step the
+// plan gates with `proposed` and the proposal did not list is not active.
 function repairOutsidePlan(
   snapshot: WorkflowSnapshot,
   result: WorkflowResult,
@@ -458,7 +452,7 @@ function repairOutsidePlan(
   const selected = activeStages(plan, snapshot, facts);
   return (result.debts ?? []).some((debt) => {
     const owner = skillOwnerOf(debt);
-    return owner !== undefined && !servingStage(selected, owner, snapshot.diagnosis);
+    return owner !== undefined && !servingStage(selected, owner, plan, snapshot.diagnosis);
   });
 }
 
@@ -530,12 +524,9 @@ export function acceptStageResult(
   // A repair stage is one of the plan's own, issued out of order to the finding's owner.
   const repair = repairStageOf(snapshot, selected);
   const stage = repair?.stage ?? selected[accepted.length];
-  if (
-    !plan ||
-    !workOrder ||
-    !stage ||
-    stageResultIsBroken(snapshot, workOrder, stage, result, repair?.executor)
-  ) {
+  if (!plan || !workOrder || !stage) return notReady(run, "stage result");
+  const steps = repair?.steps ?? activeSteps(stage, plan, snapshot.diagnosis);
+  if (stageResultIsBroken(snapshot, workOrder, stage, result, steps)) {
     return notReady(run, "stage result");
   }
   const storyTree = storyTreeChecks(snapshot, workOrder, result, facts);

@@ -2,7 +2,7 @@
 
 ## Source Registry
 
-Repository facts follow `.qfai/assistant/skill/qfai-discussion/SKILL.md#reviewer-gate-must`.
+Repository facts follow `.qfai/assistant/step/discussion-pack/STEP.md#gate`.
 Each fact names where it was read, beside the fact itself or by the `SRC-ID` of
 the row that holds it. A row nobody cites leaves the reader to work out which
 fact it backs, which is the check this registry exists for.

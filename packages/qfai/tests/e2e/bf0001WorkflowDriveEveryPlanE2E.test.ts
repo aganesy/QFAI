@@ -3,10 +3,9 @@
  * E2E: `qfai-run` drives each built-in plan with `next` and `accept` alone.
  *
  * On a `qfai init` project, a run on each of the five plans is fed canned accepted results. Every
- * work order `next` issues names the executor skill and operation its plan gives that stage, in
- * plan order, until `next` has nothing left: `workOrder: null` for a change route, and the
- * routing work order `qfai-run` handles itself once `discovery` hands the run back to routing.
- * The operator types no stage name; the only input they give is an answer to a question.
+ * work order `next` issues names the steps its plan gives that stage, in plan order, until
+ * `next` has nothing left: `workOrder: null` for a change route, and the routing work order
+ * `qfai-run` handles itself once `discovery` hands the run back to routing. The operator types no stage name; the only input they give is an answer to a question.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -27,6 +26,7 @@ import {
   routedRun,
   submit,
   resultFor,
+  stepNames,
   workflow,
   write,
 } from "./workflowJourney.js";
@@ -44,8 +44,7 @@ const PLANS = path.resolve(
 
 interface PlanStage {
   kind: string;
-  skills: string[];
-  operation: string;
+  steps: string[];
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -54,15 +53,20 @@ function record(value: unknown): Record<string, unknown> {
     : {};
 }
 
-// The stages of the package's plan for `route`, in plan order.
+// A plan step entry that always runs: a bare name. An entry with its own `when` runs only when
+// the proposal or the diagnosis selects it, and none of these runs does.
+function unconditionalStep(entry: unknown): string[] {
+  return typeof entry === "string" ? [entry] : [];
+}
+
+// The stages of the package's plan for `route`, in plan order, with the steps each always runs.
 async function planStages(route: string): Promise<PlanStage[]> {
   const plan = record(parseYaml(await readFile(path.join(PLANS, `${route}.yml`), "utf8")));
   return (Array.isArray(plan.stages) ? plan.stages : []).map((stage) => {
-    const { kind, skill, operation } = record(stage);
+    const { kind, steps } = record(stage);
     return {
       kind: String(kind),
-      skills: (Array.isArray(skill) ? skill : [skill]).map(String),
-      operation: String(operation),
+      steps: (Array.isArray(steps) ? steps : []).flatMap(unconditionalStep),
     };
   });
 }
@@ -109,7 +113,7 @@ async function drive(root: string, runId: string) {
   throw new Error("the plan did not end within twelve stages");
 }
 
-// Whether every issued order names its plan stage's skill and operation, in plan order.
+// Whether every issued order names its plan stage's steps, in plan order.
 async function followsPlan(route: string, issued: unknown[]) {
   const stages = await planStages(route);
   let position = -1;
@@ -118,9 +122,7 @@ async function followsPlan(route: string, issued: unknown[]) {
     const index = stages.findIndex((stage, at) => at > position && stage.kind === kind);
     const stage = stages[index];
     if (!stage) return false;
-    const skill = String(field(document, "workOrder.executor.skill"));
-    if (!stage.skills.includes(skill)) return false;
-    if (field(document, "workOrder.operation") !== stage.operation) return false;
+    if (JSON.stringify(stepNames(document)) !== JSON.stringify(stage.steps)) return false;
     position = index;
   }
   return issued.length > 0;

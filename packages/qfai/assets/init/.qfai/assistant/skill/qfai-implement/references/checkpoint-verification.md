@@ -1,8 +1,9 @@
 # Checkpoint Verification
 
-## Command source
-
-Resolve paths.contractsDir from qfai.config.yaml. The Standard commands section of <paths.contractsDir>/tech.md is the only source for Test, Lint, Typecheck, and Build commands. Record an absent command as unavailable with its reason. Do not reconstruct it from package.json or a framework convention.
+Test, Lint, Typecheck and Build commands come from
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#standard-commands-mandatory`.
+Each gate is run, recorded and repaired as
+`.qfai/assistant/step/common-gate-run/STEP.md` states.
 
 ## Per example
 
@@ -16,6 +17,4 @@ Run qfai validate --profile tdd --fail-on error --flow BF-NNNN for the invocatio
 
 The validate run may exit nonzero while other unimplemented examples remain; record the findings and continue the next lowest EX. Completion requires a fresh scoped result with no open EX obligation, plus the project gates and required reviewer verdicts on the final revision.
 
-## Failure handling
-
-A failed command is repaired and rerun on the same integrated tree. If a gate cannot run, record the concrete missing input or environment and keep completion open. A measured change in test duration or count is recorded with before and after commands, not treated as a pass by assertion alone.
+A measured change in test duration or count is recorded with before and after commands, not treated as a pass by assertion alone.

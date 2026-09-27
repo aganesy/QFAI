@@ -38,13 +38,16 @@ const CRITERIA = path.join(
   PACKAGE_ROOT,
   "tests/fixtures/bf0004MigrationCutover/legacy-criteria.md",
 );
-const SKILL_ASSETS = path.join(getInitAssetsDir(), ".qfai/assistant/skill");
+const ASSISTANT_ASSETS = path.join(getInitAssetsDir(), ".qfai/assistant");
+const SKILL_ASSETS = path.join(ASSISTANT_ASSETS, "skill");
+const STEP_ASSETS = path.join(ASSISTANT_ASSETS, "step");
 const HOST_SKILL_DIRS = [".claude/skills", ".agents/skills", ".codex/skills", ".github/skills"];
 const ARCHIVE = ".qfai/evidence/migration-spec-to-story/legacy/skill";
 const DIRECTIVE =
   "Send a first free-text change request to the `qfai-run` skill, which takes it through `npx qfai workflow` to completion.";
 const STEP11_WRITE_SET = [
   ".qfai/assistant/skill/",
+  ".qfai/assistant/step/",
   `${ARCHIVE}/`,
   ...HOST_SKILL_DIRS.map((dir) => `${dir}/`),
   "AGENTS.md",
@@ -100,9 +103,9 @@ function changedPaths(before: Map<string, string>, after: Map<string, string>): 
   return [...all].filter((file) => before.get(file) !== after.get(file)).sort();
 }
 
-async function sameAsPackage(root: string, id: string): Promise<boolean> {
-  const shipped = path.join(SKILL_ASSETS, id);
-  const installed = path.join(root, ".qfai/assistant/skill", id);
+async function sameAsPackage(root: string, id: string, layer = "skill"): Promise<boolean> {
+  const shipped = path.join(ASSISTANT_ASSETS, layer, id);
+  const installed = path.join(root, ".qfai/assistant", layer, id);
   const files = await collectTemplateFiles(shipped);
   const present = (await readdir(installed, { recursive: true, withFileTypes: true })).filter(
     (entry) => !entry.isDirectory(),
@@ -118,6 +121,10 @@ async function sameAsPackage(root: string, id: string): Promise<boolean> {
 
 async function shippedSkills(): Promise<string[]> {
   return (await readdir(SKILL_ASSETS)).sort();
+}
+
+async function shippedSteps(): Promise<string[]> {
+  return (await readdir(STEP_ASSETS)).sort();
 }
 
 /**
@@ -176,14 +183,14 @@ async function writeConfig(root: string, edit: (config: Record<string, unknown>)
   await writeFile(file, stringifyYaml(config));
 }
 
-/** The default `qfai-sdd` routing entry with `completion-reviewer` taken out of its review phase. */
+/** The default `sdd-triage` routing entry with `completion-reviewer` taken out of its review phase. */
 async function routingWithoutCompletionReviewer(): Promise<Record<string, unknown>> {
   const defaults: unknown = parseYaml(
     await readFile(path.resolve(getInitAssetsDir(), "../defaults/agent-routing.yml"), "utf8"),
   );
   const routing = isRecord(defaults) && Array.isArray(defaults.routing) ? defaults.routing : [];
-  const entry: unknown = routing.find((item) => isRecord(item) && item.skill === "qfai-sdd");
-  if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no qfai-sdd routing");
+  const entry: unknown = routing.find((item) => isRecord(item) && item.step === "sdd-triage");
+  if (!isRecord(entry) || !Array.isArray(entry.phases)) throw new Error("no sdd-triage routing");
   const phases = entry.phases.map((phase: unknown) =>
     isRecord(phase) && phase.id === "review"
       ? {
@@ -436,6 +443,14 @@ describe("migration steps 11 and 12: the free-text entry", () => {
         expect(reached, `${dir}/${id}`).toBe(true);
       }
     }
+    const steps = await shippedSteps();
+    expect(steps).toEqual(expect.arrayContaining(["sdd-gate", "maintain-edit"]));
+    for (const id of steps) {
+      expect(await sameAsPackage(root, id, "step"), id).toBe(true);
+      for (const dir of HOST_SKILL_DIRS) {
+        expect(await lstat(path.join(root, dir, id)).catch(() => null), `${dir}/${id}`).toBeNull();
+      }
+    }
     for (const [name, heading] of [
       ["AGENTS.md", "# Our agents"],
       ["CLAUDE.md", "# Our Claude"],
@@ -547,13 +562,13 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     const result = await stepIn(root, 12);
     expect(result.code).toBe(3);
     expect(section(result.output, "For a person")).toEqual([
-      "reviewer-missing: qfai.config.yaml: the `routing:` override for `qfai-sdd` drops `completion-reviewer`, which the package's default routing requires",
+      "reviewer-missing: qfai.config.yaml: the `routing:` override for `sdd-triage` drops `completion-reviewer`, which the package's default routing requires",
     ]);
     expect(await fingerprint(root)).toBe(before);
   });
 
   // QFAI:AC-0004-0041-04
-  it("names an invalid workflow mode and a skill whose Operations table lacks a plan operation", async () => {
+  it("names an invalid workflow mode and a plan step that is not installed", async () => {
     // QFAI:EX-0004-0041-07
     // QFAI:EX-0004-0041-08
     const paused = await clone(migrated11);
@@ -568,27 +583,15 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     ]);
     expect(await fingerprint(paused)).toBe(before);
 
-    const table = await clone(migrated11);
-    const reference = path.join(
-      table,
-      ".qfai/assistant/skill/qfai-sdd/references/orchestrated-mode.md",
-    );
-    const text = await readFile(reference, "utf8");
-    const row = text.split("\n").find((line) => /^\| `[a-z-]+` \|/.test(line));
-    if (row === undefined) throw new Error("qfai-sdd declares no operation");
-    const operation = /`([a-z-]+)`/.exec(row)?.[1] ?? "";
-    await writeFile(reference, text.replace(`${row}\n`, ""));
-    const contract = await stepIn(table, 12);
+    const missing = await clone(migrated11);
+    await rm(path.join(missing, ".qfai/assistant/step/sdd-gate"), { recursive: true });
+    const before12 = await fingerprint(missing);
+    const contract = await stepIn(missing, 12);
     expect(contract.code).toBe(3);
-    const items = section(contract.output, "For a person");
-    expect(items.length).toBeGreaterThan(0);
-    for (const item of items) {
-      expect(item).toMatch(
-        new RegExp(
-          `^contract-undeclared: \\.qfai/assistant/skill/qfai-sdd/references/orchestrated-mode\\.md: the Operations table of \`qfai-sdd\` lacks \`${operation}\``,
-        ),
-      );
-    }
+    expect(section(contract.output, "For a person")).toEqual([
+      "contract-undeclared: .qfai/assistant/step/sdd-gate/STEP.md: the bugfix plan runs this step and it is not installed",
+    ]);
+    expect(await fingerprint(missing)).toBe(before12);
   });
 
   // QFAI:AC-0004-0041-04

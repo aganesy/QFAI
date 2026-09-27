@@ -4,40 +4,17 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type AcceptResult = NonNullable<Parameters<typeof decide>[1]["result"]>;
 
 const plan = {
   route: "bounded-change",
   stages: [
-    {
-      stageInstanceId: "bounded-sdd-delta",
-      stageKind: "sdd_delta",
-      skill: "qfai-sdd",
-      operation: "update-or-applicability-check",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-acceptance",
-      stageKind: "acceptance",
-      skill: "qfai-atdd",
-      operation: "author-acceptance-tests",
-      when: "acceptance_obligations_unmet",
-    },
-    {
-      stageInstanceId: "bounded-implement",
-      stageKind: "implement",
-      skill: "qfai-implement",
-      operation: "implement",
-      when: "always",
-    },
-    {
-      stageInstanceId: "bounded-verify",
-      stageKind: "verify",
-      skill: "qfai-verify",
-      operation: "verify-full",
-      when: "always",
-    },
+    planStage("bounded-sdd-delta", "sdd_delta", "always"),
+    planStage("bounded-acceptance", "acceptance", "acceptance_obligations_unmet"),
+    planStage("bounded-implement", "implement", "always"),
+    planStage("bounded-verify", "verify", "always"),
   ],
 };
 const flowBinding = { flowId: "BF-0007" };
@@ -117,8 +94,8 @@ it("An acceptance result with testObservation", () => {
   expect({
     state: accepted.verdict.run?.state,
     nextStage: next.verdict.workOrder?.stageKind,
-    nextSkill: next.verdict.workOrder?.executor?.skill,
-  }).toEqual({ state: "ready", nextStage: "implement", nextSkill: "qfai-implement" });
+    nextSteps: next.verdict.workOrder?.steps,
+  }).toEqual({ state: "ready", nextStage: "implement", nextSteps: kindSteps("implement") });
 });
 
 it("collection", () => {

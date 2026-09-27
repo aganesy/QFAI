@@ -110,9 +110,12 @@ export async function storyFacts(root: string, snapshot: WorkflowSnapshot) {
   return storyFactsOf(root, config, snapshot.flowBinding?.flowId, snapshot.diagnosis);
 }
 
-function stage(stageKind: string, skill: string, operation: string, when = "always") {
-  return { stageInstanceId: stageKind, stageKind, skill, operation, when };
+function stage(stageKind: string, steps: string[], when = "always") {
+  return { stageInstanceId: stageKind, stageKind, steps: steps.map((name) => ({ name })), when };
 }
+
+const VERIFY = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
+const IMPLEMENT = ["implement-tdd", "implement-checkpoint"];
 
 const acceptedStage = (stageKind: string) => ({
   stageInstanceId: stageKind,
@@ -121,16 +124,16 @@ const acceptedStage = (stageKind: string) => ({
 });
 
 const BOUNDED = [
-  stage("sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-  stage("implement", "qfai-implement", "implement"),
-  stage("verify", "qfai-verify", "verify-full"),
+  stage("sdd_delta", ["sdd-triage", "sdd-story", "sdd-gate"]),
+  stage("implement", IMPLEMENT),
+  stage("verify", VERIFY),
 ];
 
 const BUGFIX = [
-  stage("diagnose", "qfai-implement", "diagnose-only"),
-  stage("sdd_append", "qfai-sdd", "defect-example-seeding", "missing_example_needed"),
-  stage("implement", "qfai-implement", "implement", "diagnosis_missing_test"),
-  stage("verify", "qfai-verify", "verify-full"),
+  stage("diagnose", ["implement-diagnose"]),
+  stage("sdd_append", ["sdd-story", "sdd-gate"], "missing_example_needed"),
+  stage("implement", IMPLEMENT, "diagnosis_missing_test"),
+  stage("verify", VERIFY),
 ];
 
 /**

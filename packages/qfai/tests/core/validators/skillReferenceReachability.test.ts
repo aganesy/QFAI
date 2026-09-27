@@ -420,6 +420,24 @@ describe("skill reference reachability", () => {
     }
   });
 
+  it("follows a step's STEP.md as a root, by project-root-relative path", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
+    try {
+      await writeSkillFixture(root);
+      const stepDir = path.join(root, ".qfai", "assistant", "step", "demo-step");
+      await mkdir(stepDir, { recursive: true });
+      await writeFile(
+        path.join(stepDir, "STEP.md"),
+        "# demo-step\n\nRead `.qfai/assistant/skill/demo-skill/references/orphan.md`.\n",
+        "utf-8",
+      );
+
+      expect(await reachabilityIssues(root)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("follows a chain through a tree the crawl skips, to its end", async () => {
     // The crawl passes over a hidden skill directory, so a document there is read
     // only where a reachable step names it — and each link is found by

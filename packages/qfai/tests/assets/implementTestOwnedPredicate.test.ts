@@ -12,7 +12,7 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe.each(trees)("%s — implementation RED evidence", (tree) => {
   it("rejects collection failures and an assertion unrelated to the example", async () => {
     const [skill, admissibility] = await Promise.all([
-      read(tree, "assistant/skill/qfai-implement/SKILL.md"),
+      read(tree, "assistant/step/implement-tdd/STEP.md"),
       read(tree, "assistant/skill/qfai-implement/references/red-admissibility.md"),
     ]);
     expect(skill).toContain("A load error, missing dependency, or broken fixture is");
@@ -24,7 +24,7 @@ describe.each(trees)("%s — implementation RED evidence", (tree) => {
 
   it("records a passing existing behavior as a falsifiability probe and restores it", async () => {
     const [skill, probe] = await Promise.all([
-      read(tree, "assistant/skill/qfai-implement/SKILL.md"),
+      read(tree, "assistant/step/implement-tdd/STEP.md"),
       read(tree, "assistant/skill/qfai-implement/references/red-not-observable.md"),
     ]);
     expect(skill).toContain("references/red-not-observable.md");

@@ -11,7 +11,8 @@ const read = (tree: string, file: string): Promise<string> =>
 describe("SDD writes the selected story tree", () => {
   for (const tree of trees) {
     it(tree + ": keeps the three story files and two decision registers", async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-story/STEP.md");
+      const triage = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const rules = await read(
         tree,
         "assistant/skill/qfai-sdd/references/spec-traceability-rules.md",
@@ -20,8 +21,8 @@ describe("SDD writes the selected story tree", () => {
         expect(skill).toContain(file);
         expect(rules).toContain(file);
       }
-      expect(skill).toContain("decisions.md");
-      expect(skill).toContain("open-questions.md");
+      expect(triage).toContain("decisions.md");
+      expect(triage).toContain("open-questions.md");
       expect(skill).not.toContain("16_Traceability-ledger.md");
     });
   }

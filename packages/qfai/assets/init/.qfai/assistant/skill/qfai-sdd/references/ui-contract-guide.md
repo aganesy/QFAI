@@ -197,7 +197,7 @@ A malformed UI contract or an empty screen list is an authoring failure. Fix the
 
 ## Design lock
 
-For a UI-bearing visual flow, use `design-md-authoring.md` and `ui-design-contract-normalization.md` to validate the root `DESIGN.md`, record its lock, and normalize approved screen decisions. A CLI-only flow without a visual secondary surface does not need a brand lock.
+For a UI-bearing visual flow, the root `DESIGN.md` and its lock are `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with `ui-design-contract-normalization.md`. A CLI-only flow without a visual secondary surface does not need a brand lock.
 
 ## Review checklist
 

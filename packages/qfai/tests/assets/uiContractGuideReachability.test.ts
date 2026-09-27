@@ -12,10 +12,12 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("qfai-sdd UI contract guide is reachable", () => {
   for (const tree of trees) {
     it(`${tree}: reads the guide for UI work and gates the design lock`, async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-contract/STEP.md");
       const guide = await read(tree, "assistant/skill/qfai-sdd/references/ui-contract-guide.md");
-      expect(skill).toContain("For UI work also read `references/ui-contract-guide.md`");
-      expect(skill).toContain("before finalizing design contracts");
+      expect(skill).toContain(
+        "For UI work, `.qfai/assistant/skill/qfai-sdd/references/ui-contract-guide.md`",
+      );
+      expect(skill).toContain("`common-design-md`");
       expect(guide).toContain("## Design lock");
       expect(guide).toContain("## Screen contract rules");
     });

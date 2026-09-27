@@ -17,6 +17,7 @@ import {
   removeProjects,
   resultFor,
   routedRun,
+  stepNames,
   submit,
   workflow,
   write,
@@ -83,15 +84,14 @@ it("the direct plan edits the one file, verifies in full, and finish completes t
     ),
     stages: [edit, verify].map((each) => [
       field(each.json, "workOrder.stageKind"),
-      field(each.json, "workOrder.executor.skill"),
-      field(each.json, "workOrder.operation"),
+      stepNames(each.json),
     ]),
     target: [finished.status, field(finished.json, "target")],
   }).toEqual({
     states: ["ready", "running", "ready", "running", "ready", "completed"],
     stages: [
-      ["maintenance", "qfai-maintain", "non-normative-edit"],
-      ["verify", "qfai-verify", "verify-full"],
+      ["maintenance", ["maintain-edit"]],
+      ["verify", ["verify-context", "verify-qfai-gate", "verify-repo-gate"]],
     ],
     target: [0, "qfai_done"],
   });

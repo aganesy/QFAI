@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const assistant = path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant");
 
@@ -13,7 +15,7 @@ async function read(relative: string): Promise<string> {
 
 describe("story-tree acceptance and implementation assets", () => {
   it("uses the BF, AC and EX layer split and records non-gating volume signals", async () => {
-    const atdd = await read("skill/qfai-atdd/SKILL.md");
+    const atdd = await read("step/atdd-author/STEP.md");
     const volume = await read("skill/qfai-atdd/references/volume-signals.md");
     expect(atdd).toContain("QFAI:BF-NNNN");
     expect(atdd).toContain("QFAI:AC-NNNN-NNNN-NN");
@@ -107,7 +109,7 @@ describe("story-tree acceptance and implementation assets", () => {
     expect(evidence).toContain("RED, the temporary falsifiability mutation, GREEN");
     expect(evidence).toContain("Review pack seal");
     expect(evidence).toContain("A later result does not retitle an earlier observation");
-    const implement = await read("skill/qfai-implement/SKILL.md");
+    const implement = await read("step/implement-tdd/STEP.md");
     expect(implement).toContain("implementation-reviewer checks code and tests");
     expect(implement).toContain("Each required reviewer must pass the same final revision");
   });
@@ -123,7 +125,7 @@ describe("story-tree acceptance and implementation assets", () => {
 
   it("keeps the assistant file budget and review boundaries explicit", async () => {
     const baseline = await read("rule/shared-skill-operating-baseline.md");
-    const implement = await read("skill/qfai-implement/SKILL.md");
+    const implement = await readImplementFlowSteps(assistant);
     const gatekeeper = await read("agent/qa-gatekeeper.md");
     expect(baseline).toContain("800 lines per assistant asset file");
     expect(implement).toContain("The author does not certify their own result");

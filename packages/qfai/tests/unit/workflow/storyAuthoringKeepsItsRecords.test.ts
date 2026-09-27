@@ -8,6 +8,7 @@ import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
 import { JournalRun, planOf, readyWith, stage } from "./journalRun.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 
@@ -78,21 +79,14 @@ interface Accepted {
 // A story-authoring work order issued against `ISSUED`, and its result accepted against `after`.
 function accept(accepted: Accepted) {
   const { stageKind, after, changed = [], outcome = "accepted" } = accepted;
-  const stage = {
-    stageInstanceId: stageKind,
-    stageKind,
-    skill: "qfai-sdd",
-    operation: "op",
-    when: "always",
-  };
+  const stage = planStage(stageKind, stageKind, "always");
   const workOrder = {
     workOrderId: `work-order-${stageKind}-1`,
     stageInstanceId: stageKind,
     attempt: 1,
     stageKind,
     target: { kind: "flow" as const, flowId: "BF-0001" },
-    executor: { skill: "qfai-sdd" },
-    operation: "op",
+    steps: kindSteps(stageKind),
     scope: { writeAreas: [".qfai/spec/02_business-flow/**"] },
     recordAreas: [DECISIONS, ".qfai/spec/open-questions.md", CONTRACT],
   };
@@ -489,9 +483,9 @@ function laterAttemptMovesItsRow(outcome: "needs_repair" | "blocked") {
   const plan = planOf(
     "bounded-change",
     [
-      stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-      stage("bounded-implement", "implement", "qfai-implement", "implement"),
-      stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+      stage("bounded-sdd-delta", "sdd_delta"),
+      stage("bounded-implement", "implement"),
+      stage("bounded-verify", "verify"),
     ],
     [".qfai/spec/02_business-flow/business-flow-0001/**"],
   );

@@ -121,13 +121,13 @@ describe("routing defaults are package data", () => {
   // QFAI:EX-0001-0164-01
   it("keeps routing and review profiles together outside init assets", async () => {
     const routing = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "agent-routing.yml"))) as {
-      routing: Array<{ skill: string; phases: Array<{ id: string }>; review_profile: string }>;
+      routing: Array<{ step?: string; phases: Array<{ id: string }>; review_profile: string }>;
     };
     const profiles = parseYaml(await readAsset(path.join(DEFAULTS_DIR, "review-profiles.yml"))) as {
       profiles: Record<string, unknown>;
       optional_modes: Record<string, unknown>;
     };
-    expect(routing.routing.some((entry) => entry.skill === "qfai-sdd")).toBe(true);
+    expect(routing.routing.some((entry) => entry.step === "sdd-triage")).toBe(true);
     expect(Object.keys(profiles.profiles)).not.toContain("full-harness");
     expect(profiles.optional_modes).toHaveProperty("pattern-doubler");
     expect(profiles.optional_modes).toHaveProperty("devils-advocate");

@@ -41,7 +41,7 @@ Do not use a sibling's in-flight findings to hold or clear the current flow. Rec
 - The flow evidence's `## Pre-draft Grilling` table names the stage, disposition, decision adjudicator, and timing before the first dependent write.
 - The Work Orders Summary names the participants, decisions, and disposition.
 - Reviewers are independent of authors and every routed blocking reviewer returned PASS.
-- A REVISE finding was fixed and reviewed again under review-cycle-playbook.md.
+- A REVISE finding was fixed and reviewed again under `.qfai/assistant/step/common-review-cycle/STEP.md`.
 - Evidence records the source, changed IDs and files, contract executability, commands, reviewer verdicts, rejected options excluded, and remaining risks.
 - No approval-required operation is treated as approved from silence, --auto, or a generic instruction to continue.
 

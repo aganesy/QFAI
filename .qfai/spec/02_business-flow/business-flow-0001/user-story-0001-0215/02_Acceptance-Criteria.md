@@ -54,12 +54,12 @@ Scenario: The verify stage follows the stage-skill handover
   When /qfai-verify is selected with no work order and not by name
   Then it edits nothing and passes the request to qfai-run
   And a worker handed a work order checks the run, stage and work-order IDs and does only that work
-  And SKILL.md cites references/orchestrated-mode.md with one line
 
 # AC-0001-0215-07
 # Parent: US-0001-0215
-Scenario: The Operations table lists what the plan vocabulary assigns to qfai-verify
-  Given the qfai-verify reference references/orchestrated-mode.md
-  When its Operations table is read
-  Then it lists exactly the operation the plan vocabulary assigns to qfai-verify
+Scenario: qfai-verify lists the steps every verify stage runs
+  Given the qfai-verify SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-verify, in the order a verify stage runs them
+  And every verify stage of a plan names exactly those steps
 ```

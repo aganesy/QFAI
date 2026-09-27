@@ -28,7 +28,7 @@ import { collectFiles, DEFAULT_IGNORE_DIRS } from "../fs.js";
 import { hasErrnoCode, isEnoent } from "../fs/errno.js";
 import { readBoundedRegularFile, scanBoundedRegularFile } from "../../shared/boundedRead.js";
 import { parseHeadings } from "../parse/markdown.js";
-import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
+import { ASSISTANT_DIR, joinAssistantLayer } from "../paths/assistantPaths.js";
 import { escapeRegExp } from "../regex.js";
 import { splitMarkdownRow } from "../specPackParsers.js";
 import { hasLegacySpecPackEntries } from "../storyTree/layout.js";
@@ -472,7 +472,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     ...(await collectReferenceGraphIssues(
       root,
       skillsDir,
-      new Map([...documents, ...probedEntryPoints]),
+      new Map([...documents, ...probedEntryPoints, ...(await readStepEntryPoints(root))]),
       {
         unreadable,
         unreadableFiles,
@@ -2197,7 +2197,11 @@ function collectReachableDocuments(
   documents: Map<string, string>,
 ): Set<string> {
   const files = [...documents.keys()];
-  const reachable = new Set(files.filter((file) => isSkillEntryPoint(context.skillsDir, file)));
+  const reachable = new Set(
+    files.filter(
+      (file) => isSkillEntryPoint(context.skillsDir, file) || isStepEntryPoint(context.root, file),
+    ),
+  );
   // Which targets the token scan cannot spell is a property of the target's own
   // path — it does not depend on who is citing it — so it is decided once for
   // the whole walk instead of re-tested for every (citing file, target) pair.
@@ -2278,8 +2282,43 @@ function isSkillEntryPoint(skillsDir: string, file: string): boolean {
 }
 
 /**
+ * `<step layer>/<step>/STEP.md`. A parent skill runs its steps by reading them,
+ * so each installed step is a root of the reference graph like a skill's entry
+ * point, and a reference only a step cites is reached.
+ */
+function isStepEntryPoint(root: string, file: string): boolean {
+  const segments = toPosixRelative(joinAssistantLayer(root, "step"), file).split("/");
+  return (
+    segments.length === 2 &&
+    segments[1] === "STEP.md" &&
+    segments[0] !== "" &&
+    segments[0] !== ".." &&
+    segments[0]?.startsWith(".") !== true
+  );
+}
+
+/** Each installed step's `STEP.md`, read as the host reads a cited document. */
+async function readStepEntryPoints(root: string): Promise<Map<string, string>> {
+  const stepsDir = joinAssistantLayer(root, "step");
+  const found = new Map<string, string>();
+  let names: string[];
+  try {
+    names = await readdir(stepsDir);
+  } catch {
+    return found;
+  }
+  for (const name of names.sort()) {
+    const file = path.join(stepsDir, name, "STEP.md");
+    if (!isStepEntryPoint(root, file)) continue;
+    const read = await readCitedDocument(file);
+    if (read.kind === "text") found.set(file, read.text);
+  }
+  return found;
+}
+
+/**
  * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
- * `.qfai/assistant/skill/qfai-sdd/references/rcp_footer.md`.
+ * `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md`.
  *
  * The name classes are Unicode and the extension is matched case-insensitively
  * because that is how the files themselves are collected: `collectFiles`
@@ -2467,9 +2506,9 @@ function skillsDirPrefixPattern(root: string, skillsDir: string): RegExp | null 
  * A citation names one file, so the edge must land on one file.
  *
  * Matching a bare basename made every same-named document reachable at once:
- * `qfai-sdd/SKILL.md` citing `references/review-cycle-playbook.md` also lit up
- * `qfai-discussion/references/review-cycle-playbook.md`, which no discussion
- * document reaches. Each token is instead resolved against the citing
+ * `qfai-sdd/SKILL.md` citing `references/guide.md` also lit up a
+ * `references/guide.md` in another skill, which no document of that skill
+ * reaches. Each token is instead resolved against the citing
  * document's own directory, its skill root, the skills root and the project
  * root — so a cross-skill edge exists only where the path spells one out.
  *

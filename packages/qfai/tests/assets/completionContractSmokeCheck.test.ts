@@ -21,7 +21,7 @@ describe("completion smoke checks", () => {
   });
 
   it("implements a current-flow checkpoint even when no EX remains", async () => {
-    const implement = await read("skill/qfai-implement/SKILL.md");
+    const implement = await read("step/implement-checkpoint/STEP.md");
     const checkpoint = await read("skill/qfai-implement/references/checkpoint-verification.md");
     expect(implement).toContain(
       "When no EX work remains at entry, still run the current flow checkpoint",
@@ -31,7 +31,7 @@ describe("completion smoke checks", () => {
   });
 
   it("ATDD checks current BF tests and evidence before completion", async () => {
-    const atdd = await read("skill/qfai-atdd/SKILL.md");
+    const atdd = await read("step/atdd-author/STEP.md");
     expect(atdd).toContain("Every BF and AC obligation");
     expect(atdd).toContain("The flow's ATDD evidence is current");
     expect(atdd).toContain("qfai validate --profile atdd --flow BF-NNNN --fail-on error");

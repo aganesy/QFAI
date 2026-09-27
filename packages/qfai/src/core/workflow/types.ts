@@ -202,8 +202,11 @@ export interface WorkflowWorkOrder {
   attempt: number;
   stageKind: string;
   target?: WorkflowTarget;
+  // The routing work order's executor and operation, which no plan names.
   executor?: { skill: string };
   operation?: string;
+  // A plan stage's active steps, in order, each with its entry file's project-relative path.
+  steps?: { name: string; path: string }[];
   authorizationRefs?: string[];
   parentWorkOrderId?: string;
   checkpointRef?: string;
@@ -326,13 +329,16 @@ export interface ProposalRefusal {
   subject: string;
 }
 
+// One step of a plan stage, with the step predicate it runs under when it has one.
+export interface PlanStep {
+  name: string;
+  when?: string;
+}
+
 export type PlanStages = {
   stageInstanceId: string;
   stageKind: string;
-  skill?: string;
-  // Both skills of a `test_fix` stage, when it names two.
-  skills?: string[];
-  operation?: string;
+  steps?: PlanStep[];
   when?: string;
   effects?: string[];
 }[];
@@ -345,6 +351,8 @@ export interface WorkflowPlan {
   expectedBehaviorRefs: RouteReference<NormativeReferenceKind>[];
   observedRefs: RouteReference<ObservedReferenceKind>[];
   riskSignals?: string[];
+  // The `proposed` steps the checked proposal asked for.
+  optionalSteps?: string[];
 }
 
 export interface WorkflowDiagnosis {
@@ -368,6 +376,7 @@ export interface WorkflowSnapshot {
     stages: PlanStages;
     writeScope?: string[];
     riskSignals?: string[];
+    optionalSteps?: string[];
   };
   flowBinding?: { flowId: string };
   diagnosis?: WorkflowDiagnosis | null;
@@ -507,6 +516,8 @@ export interface WorkflowProposal {
   observedRefs: RouteReference<ObservedReferenceKind>[];
   newStories: WorkflowNewStory[];
   requiredStages: string[];
+  // The steps the plan gates with `proposed` that this request needs.
+  optionalSteps?: string[];
 }
 
 export interface WorkflowResult {
@@ -603,7 +614,7 @@ export interface WorkflowFacts {
   completion?: WorkflowCompletionFacts;
   // What `start` fixes for the run: its minted ID and key, and the tool and policy it runs under.
   start?: Omit<WorkflowExecutionContext, "harness" | "requestDigest"> & { digestKey: string };
-  // The always-required reviewers of the review profile each skill is routed to.
+  // The always-required reviewers of the review profile each step is routed to.
   reviewerRoles?: Record<string, string[]>;
   // A fail-closed cause an observer found for this operation.
   cause?: FailClosedCause;

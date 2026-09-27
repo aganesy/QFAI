@@ -6,6 +6,7 @@ import { acceptRouting } from "./proposal.js";
 import { acceptPreamble, acceptSeamOnly, acceptStageResult, blockOnResult } from "./result.js";
 import { decideResume, foundCause } from "./resume.js";
 import { decideStart } from "./start.js";
+import { isSeamOrder } from "./steps.js";
 import type {
   WorkflowDecision,
   WorkflowFacts,
@@ -65,7 +66,7 @@ function replayOf(snapshot: WorkflowSnapshot, input: WorkflowInput): WorkflowDec
   return replayedAnswer(snapshot, input);
 }
 
-// The routing work order. Its kind, skill and operation are built in, and no plan names it; it
+// The routing work order. Its kind, executor and operation are built in, and no plan names it; it
 // changes no state, and `next` returns it again until its result is accepted.
 function issueRouting(snapshot: WorkflowSnapshot): WorkflowDecision {
   const { run, outstandingWorkOrder } = snapshot;
@@ -137,7 +138,7 @@ function decideAccept(
     return acceptRouting(snapshot, result, facts);
   }
   if (run.state !== "running" || !workOrder) return notReady(run, "stage result");
-  if (workOrder.operation === "seam-only") return acceptSeamOnly(snapshot, workOrder, result);
+  if (isSeamOrder(workOrder)) return acceptSeamOnly(snapshot, workOrder, result);
   return acceptStageResult(snapshot, result, facts);
 }
 

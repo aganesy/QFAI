@@ -3,27 +3,16 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-example-seeding",
-      "missing_example_needed",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
+    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
   writeScope: ["src/forms/**"],
 };
 const reproductionRef = "evidence/empty-value-reproduction.json";

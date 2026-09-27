@@ -13,7 +13,7 @@ describe("--auto question and approval boundary", () => {
   for (const tree of trees) {
     it(`${tree}: shared protocol asks nothing and SDD does not self-approve`, async () => {
       const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
+      const skill = await read(tree, "assistant/step/sdd-triage/STEP.md");
       const triage = await read(tree, "assistant/skill/qfai-sdd/references/sdd-triage.md");
       expect(baseline).toContain("When `--auto` is active, ask nothing");
       expect(skill).toContain("sdd-triage.md");

@@ -149,9 +149,7 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
         stages: plans[route].stages.map((stage) => ({
           stageInstanceId: stage.id,
           stageKind: stage.kind,
-          ...(stage.skills[0] ? { skill: stage.skills[0] } : {}),
-          ...(stage.skills.length > 1 ? { skills: stage.skills } : {}),
-          operation: stage.operation,
+          steps: stage.steps,
           when: stage.when,
           ...(stage.effects.length > 0 ? { effects: stage.effects } : {}),
         })),
@@ -160,14 +158,15 @@ export async function planFacts(): Promise<NonNullable<WorkflowFacts["plans"]>> 
   );
 }
 
-// The always-required reviewers of the review profile the effective routing gives each skill.
+// The always-required reviewers of the review profile the effective routing gives each step,
+// keyed by the step's name as its routing entry names it.
 export async function reviewerRolesOf(config: QfaiConfig): Promise<Record<string, string[]>> {
   const { routing, profiles } = await readEffectiveRouting(config);
   const roles: Record<string, string[]> = {};
-  for (const [skill, entry] of routing ?? []) {
+  for (const [step, entry] of routing ?? []) {
     const profile = entry.reviewProfile ? profiles?.get(entry.reviewProfile) : undefined;
     if (!profile) continue;
-    roles[skill] = [...profile.reviewers]
+    roles[step] = [...profile.reviewers]
       .filter(([, binding]) => binding === "required")
       .map(([reviewer]) => reviewer);
   }

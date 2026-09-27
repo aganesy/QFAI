@@ -22,8 +22,11 @@ describe("flow evidence identifies the test it proves", () => {
     });
 
     it(`${tree}: the handoff carries the same test identity into implementation`, async () => {
-      const atdd = await read(tree, "qfai-atdd/SKILL.md");
-      const implement = await read(tree, "qfai-implement/SKILL.md");
+      const atdd = await read(tree, "../step/atdd-author/STEP.md");
+      const implement = await readFile(
+        path.join(root, tree, "assistant/step/implement-tdd/STEP.md"),
+        "utf-8",
+      );
       expect(atdd).toContain("test paths and selectors");
       expect(implement).toContain(".qfai/evidence/atdd-BF-NNNN.md");
       expect(implement).toContain("An EX test must be collected by the runner and by validation");

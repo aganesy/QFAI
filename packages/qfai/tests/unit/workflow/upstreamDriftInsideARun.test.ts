@@ -3,22 +3,17 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { issuedSteps, planStage } from "./kindSteps.js";
 
 type Snapshot = NonNullable<Parameters<typeof decide>[0]>;
 type Result = NonNullable<Parameters<typeof decide>[1]["result"]>;
 type Debt = NonNullable<Result["debts"]>[number];
 
 const stages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-  ["bounded-implement", "implement", "qfai-implement", "implement"],
-  ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when: "always",
-}));
+  planStage("bounded-sdd-delta", "sdd_delta", "always"),
+  planStage("bounded-implement", "implement", "always"),
+  planStage("bounded-verify", "verify", "always"),
+];
 const plan = {
   route: "bounded-change",
   writeScope: ["src/notify/**", ".qfai/specs/BF-0001/**"],
@@ -134,9 +129,9 @@ it("drift inside the checked scope goes to qfai-sdd", () => {
     facts,
   );
 
-  expect({ state: run.state, executor: next.verdict.workOrder?.executor }).toEqual({
+  expect({ state: run.state, steps: next.verdict.workOrder?.steps }).toEqual({
     state: "ready",
-    executor: { skill: "qfai-sdd" },
+    steps: issuedSteps("sdd-triage", "sdd-story", "sdd-gate"),
   });
 });
 

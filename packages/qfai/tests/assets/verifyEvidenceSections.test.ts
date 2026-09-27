@@ -4,7 +4,7 @@
  * The prose list named seven sections and called itself exhaustive and ordered,
  * while the copy/paste skeleton below it carried ten `##` headings — the three
  * extras (`QFAI gates`, `Repo gates`, `Next actions (if any)`) interleaved
- * rather than appended. `qfai-verify/SKILL.md` treats the file as binding and
+ * rather than appended. The verify steps treat the file as binding and
  * forbids deleting a heading without saying which shape is the authority, so an
  * operator following the list dropped exactly the headings the skill's own
  * obligations depend on. Nothing machine-checks the file; this test does.
@@ -103,8 +103,8 @@ describe("verify evidence template", () => {
     });
 
     it(`${tree}: the three formerly unlisted headings are named as required`, async () => {
-      // These are the headings SKILL.md's own obligations depend on: it splits
-      // gate output into QFAI/Repo buckets and makes "next actions" a
+      // These are the headings the verify steps depend on: they split
+      // gate output into QFAI/Repo buckets and make "next actions" a
       // completion-checklist item. Dropping them is the regression this guards.
       const listed = listedSections(await read(tree));
 

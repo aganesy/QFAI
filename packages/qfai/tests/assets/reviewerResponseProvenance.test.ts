@@ -94,20 +94,9 @@ describe("reviewer response provenance", () => {
   });
 
   it("requires the provenance lines at every skill-level reviewer gate", async () => {
-    for (const content of await readShipped("skill/qfai-implement/SKILL.md")) {
+    for (const content of await readShipped("step/implement-tdd/STEP.md")) {
       expect(content).toContain("rule/shared-skill-delegation-baseline.md");
       expect(content).toContain("references/review-artifact-layout.md");
-    }
-
-    for (const relative of ["skill/qfai-discussion/SKILL.md"]) {
-      for (const content of await readShipped(relative)) {
-        expect(
-          content,
-          `${relative} must cite the provenance pair in its shared schema line`,
-        ).toContain(
-          "reviewer response `Reviewer role:` + `Reviewed artifact:` + `Result: PASS | REVISE`",
-        );
-      }
     }
 
     for (const content of await readShipped("skill/web-research/SKILL.md")) {

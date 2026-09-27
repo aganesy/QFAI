@@ -11,7 +11,7 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 describe.each(trees)("%s oracle strength", (tree) => {
   it("requires an example assertion that fails for the owned behavior", async () => {
-    const skill = await read(tree, "assistant/skill/qfai-implement/SKILL.md");
+    const skill = await read(tree, "assistant/step/implement-tdd/STEP.md");
     const proof = await read(tree, "assistant/skill/qfai-implement/references/oracle-strength.md");
     expect(skill.replace(/\s+/g, " ")).toContain("a falsifiable assertion");
     expect(proof).toContain("smallest valid change to the owned predicate");

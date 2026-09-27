@@ -52,10 +52,10 @@ function headingLevel(line: string): number {
 }
 
 /**
- * Every skill a built-in workflow plan names, held literally so a change to the set is a change to
- * the tests that read it.
+ * Every skill owning a step a built-in workflow plan runs, held literally so a change to the set is
+ * a change to the tests that read it.
  */
-export const PLAN_SKILLS = [
+export const PLAN_STEP_OWNERS = [
   "qfai-sdd",
   "qfai-atdd",
   "qfai-implement",
@@ -68,6 +68,53 @@ export const PLAN_SKILLS = [
 /** The five built-in plans, one per route. */
 export const PLAN_ROUTES = ["direct", "bugfix", "bounded-change", "feature", "discovery"] as const;
 
+/** One step of a built-in plan stage, with the predicate of its own it carries, if any. */
+export interface ShippedPlanStep {
+  name: string;
+  when?: string;
+}
+
+function planStepOf(entry: unknown): ShippedPlanStep[] {
+  if (typeof entry === "string") return [{ name: entry }];
+  if (typeof entry !== "object" || entry === null || !("step" in entry)) return [];
+  const { step } = entry;
+  const when = "when" in entry ? entry.when : undefined;
+  if (typeof step !== "string") return [];
+  return [typeof when === "string" ? { name: step, when } : { name: step }];
+}
+
+/** Each stage of a built-in plan: its ID, kind and predicate, and its steps in order. */
+export async function planStageSteps(
+  route: string,
+): Promise<{ id: string; kind: string; when: string; steps: ShippedPlanStep[] }[]> {
+  const parsed: unknown = parse(await readDefault(`workflows/${route}.yml`));
+  const stages: unknown[] =
+    typeof parsed === "object" && parsed !== null && "stages" in parsed
+      ? Array.isArray(parsed.stages)
+        ? parsed.stages
+        : []
+      : [];
+  return stages.flatMap((stage) => {
+    if (typeof stage !== "object" || stage === null) return [];
+    const record = Object.fromEntries(Object.entries(stage));
+    const steps: unknown[] = Array.isArray(record.steps) ? record.steps : [];
+    return [
+      {
+        id: String(record.id),
+        kind: String(record.kind),
+        when: String(record.when),
+        steps: steps.flatMap(planStepOf),
+      },
+    ];
+  });
+}
+
+/** The `steps:` a shipped skill's `SKILL.md` front matter lists, in order. */
+export async function skillSteps(skill: string): Promise<string[]> {
+  const steps = frontMatterOf(await readShipped(`skill/${skill}/SKILL.md`)).steps;
+  return Array.isArray(steps) ? steps.map(String) : [];
+}
+
 /** The YAML front matter of a shipped `SKILL.md`, parsed; `{}` when there is none. */
 export function frontMatterOf(text: string): Record<string, unknown> {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text);
@@ -75,29 +122,6 @@ export function frontMatterOf(text: string): Record<string, unknown> {
   const parsed: unknown = body === undefined ? null : parse(body);
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
   return Object.fromEntries(Object.entries(parsed));
-}
-
-/**
- * The Operations table of an `orchestrated-mode.md`, read the way the workflow file contract defines
- * it: the first table under a heading exactly `## Operations`, its first column's header, and the
- * backticked ID each cell of that column holds.
- */
-export function operationsOf(text: string): { header: string; ids: string[] } {
-  const section = /^## Operations\s*$/m.test(text) ? sectionOf(text, "## Operations\n") : "";
-  const rows = section
-    .split("\n")
-    .filter((line) => line.startsWith("|"))
-    .map((line) =>
-      line
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim()),
-    );
-  const [head, , ...body] = rows;
-  return {
-    header: head?.[0] ?? "",
-    ids: body.map((cells) => /^`([^`]+)`$/.exec(cells[0] ?? "")?.[1] ?? `<${cells[0] ?? ""}>`),
-  };
 }
 
 /** The first table row of `text` whose cells hold `token`, or `""`. */

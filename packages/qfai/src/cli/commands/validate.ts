@@ -1278,15 +1278,15 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DCON-034":
     "Root DESIGN.md must be the project's own brand SSOT, not the unreplaced qfai sample seeded by `qfai init`.",
   "QFAI-AGENT-015":
-    "Every role a skill declares is dispatchable: some routing phase or its review profile selects it.",
+    "Every role a step or skill declares is dispatchable: some routing phase or its review profile selects it.",
   "QFAI-AGENT-016":
-    "Every routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
+    "Every routed step's `STEP.md` and routed skill's `SKILL.md` frontmatter parses, and its `roles:` and `routing-profile:` are usable, so the routing cross-check has something to read.",
   "QFAI-AGENT-017":
-    "Every skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
+    "Every step or skill that declares a `routing-profile:` is routed at least one dispatchable phase by the routing manifest.",
   "QFAI-AGENT-018":
-    "Each routed skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
+    "Each routed step or skill has exactly one review gate, named by both sides and defined in the review-profile manifest.",
   "QFAI-AGENT-019":
-    "A skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
+    "A step's or skill's `roles:` is a superset of every agent the routing manifest binds to it, including the reviewers its review profile selects.",
   "QFAI-RESEARCH-012":
     "The latest discussion pack carries a `## Research Summary` section, so the research-first protocol has something to check.",
   "QFAI-PROT-337":
@@ -1358,6 +1358,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every document under the skills tree can be read, so reference reachability is decided over the whole graph rather than over the part that happened to open.",
   "QFAI-SKILLS-015":
     "Every skill carries both fields a host registers it by: a `name:` that is its own directory, in lowercase letters, digits and single hyphens to 64 characters, and a `description:` with text in it, to 1024 characters and with no `<` or `>` — a skill that should not be offered to the model declares `disable-model-invocation: true` and keeps the description, rather than dropping the field and losing the registration with it.",
+  "QFAI-SKILLS-016":
+    "The step layer holds only `STEP.md` steps named after their directories; each is owned by `common` or by a skill whose `steps:` lists it, `requires:` names only installed `common-*` steps, every step a skill or a workflow plan names is installed and used, and a skill that lists steps declares `orchestrator` and every role those steps declare.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
@@ -1479,6 +1481,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Make the skill's `routing-profile:` and the route's `review_profile:` name the same profile. Define package defaults in `packages/qfai/assets/defaults/review-profiles.yml`; use `qfai.config.yaml#routing` and `#reviewProfiles` for complete project-specific overrides.",
   "QFAI-AGENT-019":
     "Add the agent to the skill's `roles:`, or remove its binding from `packages/qfai/assets/defaults/agent-routing.yml` or `review-profiles.yml`. For a project-specific binding, override the complete route or profile in `qfai.config.yaml`.",
+  "QFAI-SKILLS-016":
+    "Run `qfai init --force` to restore the shipped step tree. For a step of the project's own, fix the `STEP.md` or the `steps:` list the message names: rename a `SKILL.md` under the step layer to `STEP.md`, match `name:` to the directory, set `owner:` to `common` or to the skill that lists the step, keep `requires:` to installed `common-*` steps, and add the roles the message names to the skill's `roles:`.",
   // The orphan-prohibition emitter passes no `suggested_action` on any path, so
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an

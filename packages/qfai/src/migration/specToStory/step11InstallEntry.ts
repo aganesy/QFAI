@@ -1,4 +1,4 @@
-import { lstat, mkdir, readdir, readlink, realpath, rename } from "node:fs/promises";
+import { lstat, mkdir, readdir, readlink, realpath, rename, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -23,6 +23,35 @@ export function packageQfaiAssets(): string {
 
 export async function shippedSkillIds(): Promise<string[]> {
   return collectCanonicalSkillIds(path.join(packageQfaiAssets(), "assistant"));
+}
+
+/** The two assistant layers step 11 installs: the skills, and the steps they run. */
+type Layer = "skill" | "step";
+
+/** Where a step directory that was replaced is kept whole, beside the skill archive. */
+export const STEP_ARCHIVE_DIR = path.join(path.dirname(SKILL_ARCHIVE_DIR), "step");
+
+/** Each step the package ships: a directory under `assistant/step/` holding a `STEP.md`. */
+export async function shippedStepIds(): Promise<string[]> {
+  const dir = path.join(packageQfaiAssets(), "assistant", "step");
+  const entries = await readdir(dir, { withFileTypes: true }).catch((error: unknown) => {
+    if (isEnoent(error)) return [];
+    throw error;
+  });
+  const ids: string[] = [];
+  for (const entry of entries.filter((each) => each.isDirectory())) {
+    const doc = await stat(path.join(dir, entry.name, "STEP.md")).catch(() => null);
+    if (doc?.isFile() === true) ids.push(entry.name);
+  }
+  return ids.sort();
+}
+
+function layerDir(context: MigrationContext, layer: Layer, id: string): string {
+  return path.join(context.root, ".qfai", "assistant", layer, id);
+}
+
+function archiveDir(context: MigrationContext, layer: Layer, id: string): string {
+  return path.join(context.root, layer === "skill" ? SKILL_ARCHIVE_DIR : STEP_ARCHIVE_DIR, id);
 }
 
 function projectPath(context: MigrationContext, absolute: string): string {
@@ -66,8 +95,8 @@ function sameTree(
   return left.size === right.size && containedIn(left, right);
 }
 
-async function packageHashes(id: string): Promise<Map<string, string | null>> {
-  const dir = path.join(packageQfaiAssets(), "assistant", "skill", id);
+async function packageHashes(layer: Layer, id: string): Promise<Map<string, string | null>> {
+  const dir = path.join(packageQfaiAssets(), "assistant", layer, id);
   const hashes = new Map<string, string | null>();
   for (const file of await collectTemplateFiles(dir)) {
     hashes.set(
@@ -80,11 +109,12 @@ async function packageHashes(id: string): Promise<Map<string, string | null>> {
 
 function installOperation(
   context: MigrationContext,
+  layer: Layer,
   id: string,
   files: readonly string[],
 ): MigrationOperation | null {
-  const skillDir = path.join(context.root, ".qfai", "assistant", "skill", id);
-  const targets = files.map((file) => projectPath(context, path.join(skillDir, file)));
+  const dir = layerDir(context, layer, id);
+  const targets = files.map((file) => projectPath(context, path.join(dir, file)));
   const first = targets[0];
   if (first === undefined) return null;
   return {
@@ -98,21 +128,21 @@ function installOperation(
       const result = await copyTemplatePaths(
         packageQfaiAssets(),
         path.join(context.root, ".qfai"),
-        [path.join("assistant", "skill", id)],
+        [path.join("assistant", layer, id)],
         { force: false, dryRun: false, conflictPolicy: "skip" },
       );
       const written = new Set(result.copied.map((file) => projectPath(context, file)));
       const missing = targets.filter((target) => !written.has(target));
       if (missing.length > 0) {
-        throw new Error(`Skill installation did not complete: ${missing.join(", ")}`);
+        throw new Error(`The ${layer} installation did not complete: ${missing.join(", ")}`);
       }
     },
   };
 }
 
-function archiveOperation(context: MigrationContext, id: string): MigrationOperation {
-  const source = path.join(context.root, ".qfai", "assistant", "skill", id);
-  const archive = path.join(context.root, SKILL_ARCHIVE_DIR, id);
+function archiveOperation(context: MigrationContext, layer: Layer, id: string): MigrationOperation {
+  const source = layerDir(context, layer, id);
+  const archive = archiveDir(context, layer, id);
   return {
     kind: "delegate",
     target: projectPath(context, source),
@@ -129,31 +159,36 @@ function archiveOperation(context: MigrationContext, id: string): MigrationOpera
 }
 
 /**
- * What bringing one shipped skill up to the package's copy takes. A copy that
- * differs is archived whole first. Where the archive already exists, the
- * directory is either the remainder of an interrupted install, which is
+ * What bringing one shipped skill or step up to the package's copy takes. A
+ * copy that differs is archived whole first. Where the archive already exists,
+ * the directory is either the remainder of an interrupted install, which is
  * finished, or a second project copy, which is left for a person.
  */
-async function planSkill(context: MigrationContext, id: string, plan: StepPlan): Promise<void> {
-  const skillDir = path.join(context.root, ".qfai", "assistant", "skill", id);
-  const archive = path.join(context.root, SKILL_ARCHIVE_DIR, id);
-  const shipped = await packageHashes(id);
-  const current = await treeHashes(skillDir);
+async function planLayerEntry(
+  context: MigrationContext,
+  layer: Layer,
+  id: string,
+  plan: StepPlan,
+): Promise<void> {
+  const dir = layerDir(context, layer, id);
+  const archive = archiveDir(context, layer, id);
+  const shipped = await packageHashes(layer, id);
+  const current = await treeHashes(dir);
   if (current !== null && sameTree(current, shipped)) return;
   const archived = await treeHashes(archive);
   if (current !== null && archived !== null && !containedIn(current, shipped)) {
     const reason = sameTree(current, archived)
-      ? "the archive already holds this copy; delete the skill directory and run step 11 again"
+      ? `the archive already holds this copy; delete the ${layer} directory and run step 11 again`
       : "the archive already holds a different copy; keep the one you need, delete the other and run step 11 again";
     plan.forAPerson?.push(
-      `${projectPath(context, skillDir)} and ${projectPath(context, archive)}: ${reason}`,
+      `${projectPath(context, dir)} and ${projectPath(context, archive)}: ${reason}`,
     );
     return;
   }
   const resume = current !== null && archived !== null;
-  if (current !== null && !resume) plan.operations.push(archiveOperation(context, id));
+  if (current !== null && !resume) plan.operations.push(archiveOperation(context, layer, id));
   const files = [...shipped.keys()].filter((file) => !resume || !current.has(file)).sort();
-  const install = installOperation(context, id, files);
+  const install = installOperation(context, layer, id, files);
   if (install !== null) plan.operations.push(install);
 }
 
@@ -246,6 +281,8 @@ export const step11: MigrationStep = {
   writeSet: [
     "skills",
     "skill-archive",
+    "steps",
+    "step-archive",
     "skill-links",
     "entry-points",
     "gitignore",
@@ -255,7 +292,8 @@ export const step11: MigrationStep = {
   async plan(context) {
     const plan: StepPlan = { operations: [], forAPerson: [] };
     const ids = await shippedSkillIds();
-    for (const id of ids) await planSkill(context, id, plan);
+    for (const id of ids) await planLayerEntry(context, "skill", id, plan);
+    for (const id of await shippedStepIds()) await planLayerEntry(context, "step", id, plan);
     await planLinks(context, ids, plan);
     await planEntryPoints(context, plan);
     const gitignore = await step10.plan(context);

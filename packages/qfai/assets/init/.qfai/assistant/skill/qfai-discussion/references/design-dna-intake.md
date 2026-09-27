@@ -41,7 +41,7 @@ the screen.
 
 One decision sets how the product looks, and only the user can make it:
 which published theme the product is built on. Nothing downstream asks
-again — `/qfai-sdd`'s `03_contract` step authors tokens from whatever is recorded — so
+again — `/qfai-sdd`'s `common-design-md` step authors tokens from whatever is recorded — so
 an unasked question becomes an invented brand.
 
 Route the ask through
@@ -77,7 +77,7 @@ the classification and the chosen direction into `01_Context.md`, both
 reference registries into `04_Sources.md`, and the screen-level decisions
 into `uiux/`.
 
-Root `DESIGN.md` is written later, by `/qfai-sdd`'s `03_contract` step, which reads
+Root `DESIGN.md` is written later, by `/qfai-sdd`'s `common-design-md` step, which reads
 those records. The mapping from answer to field is
 `qfai-sdd/references/design-md-authoring.md`.
 

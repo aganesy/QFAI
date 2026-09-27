@@ -76,6 +76,7 @@ The routing work order's result carries the proposal.
     "proposedWriteScope": ["src/checkout/**", "tests/checkout/**"],
     "protectedTargets": [],
     "requiredStages": ["diagnose", "implement", "verify"],
+    "optionalSteps": [],
     "rationale": "A short reason a reviewer can check"
   }
 }
@@ -103,6 +104,13 @@ The routing work order's result carries the proposal.
   `.qfai/evidence/workflow/`, `.qfai/evidence/decision/`, or `decisions.md` or
   `open-questions.md` under `paths.specsDir`, and never overlaps a protected
   target. The run refuses any of these.
+- `optionalSteps` names each step the plan runs only when proposed that the
+  request needs: `sdd-flow`, `sdd-contract` or `common-design-md` for a story
+  change that touches a flow, a contract or `DESIGN.md`; `atdd-credentials`
+  for acceptance tests that sign in; `discussion-uiux` for a product with
+  screens. The run refuses a step the plan does not run that way. A stage that
+  finds it needs a step nobody proposed returns `needs_repair` naming that step
+  as `resolvingOwner`, and the run goes back to routing.
 
 Each stage kind adds only its narrowest set to `proposedWriteScope`:
 
@@ -157,9 +165,53 @@ A routing or stage result carries a question as:
   `question.options[].label` of each option the answer chose. The run's own
   records under `.qfai/evidence/workflow/` stay local and are never committed.
 
+## Work order
+
+`next` returns one per stage. Hand it whole to one sub-agent.
+
+```json
+{
+  "runId": "run-20260927090000000",
+  "workOrderId": "work-order-implement-1",
+  "stageInstanceId": "implement",
+  "attempt": 1,
+  "stageKind": "implement",
+  "target": { "kind": "flow", "flowId": "BF-0002" },
+  "steps": [
+    { "name": "implement-tdd", "path": ".qfai/assistant/step/implement-tdd/STEP.md" },
+    {
+      "name": "implement-checkpoint",
+      "path": ".qfai/assistant/step/implement-checkpoint/STEP.md"
+    }
+  ],
+  "scope": {
+    "digest": "<scope digest>",
+    "writeAreas": ["src/checkout/**", "tests/checkout/**"],
+    "protectedTargets": [],
+    "allowedEffects": [],
+    "nonGoals": []
+  },
+  "recordAreas": [".qfai/evidence/implement-BF-0002.md"],
+  "inputs": [],
+  "requiredGates": [],
+  "requiredReviewerRoles": ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"],
+  "actorHistory": [],
+  "authorizationRefs": [],
+  "priorStageReceiptRefs": [],
+  "expectedSequence": 9
+}
+```
+
+- `steps` lists the steps the stage runs, in order. The sub-agent reads a
+  step's `path` when it reaches that step, never before.
+- The stage is reviewed once, after its last step, by every role in
+  `requiredReviewerRoles`.
+- The routing work order carries `executor` `qfai-run` and `operation` `route`
+  instead of `steps`.
+
 ## Stage result
 
-The executor skill returns it. `qfai-run` writes it to the run's inbox as the
+The sub-agent that ran the work order's steps returns it. `qfai-run` writes it to the run's inbox as the
 skill gave it, and never edits its outcome, its review results or its
 changed-file list. It names its author in `actor`, as the routing result does.
 A result with no `actor`, a field of the wrong shape or an unknown key is

@@ -7,7 +7,7 @@
  * A missing fact is asked once as a value with no recommendation, and the discussion stage is
  * handed what the run has settled before the run returns to routing.
  */
-import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -21,6 +21,7 @@ import {
   removeProjects,
   resultFor,
   routedRun,
+  stepNames,
   submit,
   workflow,
 } from "./workflowJourney.js";
@@ -143,23 +144,25 @@ it("one missing fact is asked as a value, and the discussion stage gets what is 
   const issued = workflow(root, ["next", "--run", runId]);
   const settled = field(issued.json, "workOrder.settled");
   const returned = await submit(root, runId, "accept", resultFor(issued.json, "discussion-1"));
-  const reference = await readFile(
-    path.join(root, ".qfai/assistant/skill/qfai-discussion/references/orchestrated-mode.md"),
-    "utf8",
+  const installed = list(issued.json, "workOrder.steps").every((step) =>
+    existsSync(path.join(root, String(field(step, "path")))),
   );
 
   expect({
     question: [field(question, "kind"), field(question, "recommendation")],
     answered: field(answered.json, "run.state"),
-    stage: [field(issued.json, "workOrder.stageKind"), field(issued.json, "workOrder.operation")],
+    stage: [field(issued.json, "workOrder.stageKind"), stepNames(issued.json)],
     routingResult: Object.values(Object(settled)).includes("route-1"),
     answers: Object.values(Object(settled)).find((value) => Array.isArray(value)),
     returned: field(returned.json, "run.state"),
-    installed: reference.includes("`resolve-unsettled-product-scope`"),
+    installed,
   }).toEqual({
     question: ["fact", undefined],
     answered: "ready",
-    stage: ["discussion", "resolve-unsettled-product-scope"],
+    stage: [
+      "discussion",
+      ["discussion-research", "discussion-interview", "discussion-pack", "discussion-oq"],
+    ],
     routingResult: true,
     answers: [{ questionId, text: FORMAT.text, chosen: "CSV" }],
     returned: "routing",

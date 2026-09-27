@@ -70,9 +70,9 @@ Scenario: A working-tree result is never reported as done
 Scenario: A missing seam is added before RED, and the main work only after
   Given an acceptance test cannot reach its assertion because a route is missing
   When the acceptance stage asks for the seam
-  Then implement receives a seam-only work order
+  Then the core issues a work order whose one step is `implement-seam`
   And control returns to the same acceptance stage instance, which takes RED at the assertion
-  And a seam-only result that makes the assertion pass is refused
+  And an `implement-seam` result that makes the assertion pass is refused
 
 # AC-0001-0192-09
 # Parent: US-0001-0192

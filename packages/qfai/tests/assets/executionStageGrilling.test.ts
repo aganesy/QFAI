@@ -21,6 +21,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const CONSTITUTION = "assistant/rule/constitution.md";
 const STAGES = ["qfai-implement", "qfai-atdd", "qfai-verify"];
+/** Where a split stage states its sessions: the step that holds its preflight. */
+const GRILLING_FILE: Readonly<Record<string, string>> = {
+  "qfai-implement": "assistant/step/implement-tdd/STEP.md",
+  "qfai-atdd": "assistant/step/atdd-scaffold/STEP.md",
+  "qfai-verify": "assistant/step/verify-context/STEP.md",
+};
+const grillingFile = (skill: string): string =>
+  GRILLING_FILE[skill] ?? `assistant/skill/${skill}/SKILL.md`;
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -132,7 +140,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
     // Three skills carrying three copies of one rule is three chances to drift,
     // and the drift surfaces as three agents behaving differently at the same
     // moment.
-    const body = await read(`assistant/skill/${skill}/SKILL.md`);
+    const body = await read(grillingFile(skill));
     expectPhrase(body, "## Grilling (MANDATORY)");
     expectPhrase(body, "Article IX of `.qfai/assistant/rule/constitution.md` owns");
     expectPhrase(body, "Neither is restated here.");
@@ -147,7 +155,7 @@ describe.each(TREES)("%s — grilling in the execution stages", (tree) => {
   it.each(STAGES)("%s does not restate the method", async (skill) => {
     // The rule's parts qualify each other, so a partial copy states the
     // opposite of what the rule says.
-    const body = await read(`assistant/skill/${skill}/SKILL.md`);
+    const body = await read(grillingFile(skill));
     for (const mechanic of [
       /the whole frontier at once/i,
       /each question numbered/i,

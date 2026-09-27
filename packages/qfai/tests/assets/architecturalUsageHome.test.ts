@@ -10,10 +10,11 @@ const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 describe("architectural rules have one story-tree home", () => {
   for (const tree of trees) {
     it(`${tree}: technical constraints and quality commands are owned by tech.md`, async () => {
-      const skill = await readFile(
-        path.join(root, tree, "assistant/skill/qfai-sdd/SKILL.md"),
+      const step = await readFile(
+        path.join(root, tree, "assistant/step/sdd-flow/STEP.md"),
         "utf-8",
       );
+      const skill = step.replace(/\s+/g, " ");
       const template = await readFile(
         path.join(root, tree, "assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md"),
         "utf-8",

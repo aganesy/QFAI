@@ -28,14 +28,8 @@ function refusalItem(refusal: PlanRefusal): string {
   switch (refusal.reason) {
     case "reviewer-missing":
       return `reviewer-missing: qfai.config.yaml: the \`routing:\` override for \`${skill}\` drops \`${detail}\`, which the package's default routing requires`;
-    case "skill-missing":
-      return `contract-undeclared: ${skillPath(skill)}: the ${refusal.route} plan names this skill and it is not installed`;
-    case "operations-pair-omitted":
-      return `contract-undeclared: ${skillPath(skill, "references/orchestrated-mode.md")}: the Operations table of \`${skill}\` lacks \`${detail}\`, which the ${refusal.route} plan dispatches to it`;
-    case "operations-table-missing":
-    case "operations-first-column":
-    case "operations-cell-not-id":
-      return `contract-undeclared: ${skillPath(skill, "references/orchestrated-mode.md")}: the Operations table of \`${skill}\` cannot be read (${refusal.reason})`;
+    case "step-missing":
+      return `contract-undeclared: .qfai/assistant/step/${skill}/STEP.md: the ${refusal.route} plan runs this step and it is not installed`;
     default:
       return `contract-undeclared: the built-in ${refusal.route} plan: it does not load (${refusal.reason} at ${refusal.subject}); reinstall the qfai package`;
   }

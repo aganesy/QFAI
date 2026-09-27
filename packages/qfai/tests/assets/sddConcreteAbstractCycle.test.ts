@@ -8,7 +8,7 @@
  * | Obligation                               | Owner                                                     |
  * | ---------------------------------------- | --------------------------------------------------------- |
  * | Trigger, finder, adjudication, routes    | `references/concrete-abstract-cycle.md`                   |
- * | What each attempt of a run does          | `references/orchestrated-mode.md`, its cycle section      |
+ * | What each attempt of a run does          | `step/sdd-cycle/STEP.md`, its run section                 |
  * | The REVISE grounds                       | `references/sdd-quality-gate.md`, its cycle-record section |
  * | The record's columns and empty-cycle row | `templates/evidence/sdd-flow.md`                          |
  *
@@ -21,7 +21,8 @@ import { flat, readShipped, rowOf, sectionOf } from "../helpers/shippedAssistant
 import { expectSentence } from "../helpers/shippedSentences.js";
 
 const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
-const ORCHESTRATED = "skill/qfai-sdd/references/orchestrated-mode.md";
+const CYCLE_STEP = "step/sdd-cycle/STEP.md";
+const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
 const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
 
@@ -38,8 +39,7 @@ const applying = (): Promise<string> => section(CYCLE, "## Applying an adopted f
 const loop = (): Promise<string> => section(CYCLE, "## Two cycles at most");
 const rejected = (): Promise<string> => section(CYCLE, "## Rejected findings");
 const record = (): Promise<string> => section(CYCLE, "## The record");
-const inRun = (): Promise<string> =>
-  section(ORCHESTRATED, "## The concrete-abstract cycle in a run");
+const inRun = (): Promise<string> => section(CYCLE_STEP, "## Inside a workflow run");
 const revise = (): Promise<string> => section(GATE, "## Concrete-abstract cycle record");
 const template = (): Promise<string> => section(EVIDENCE, "## Concrete-Abstract Cycle");
 
@@ -90,13 +90,13 @@ describe("when a cycle runs, and what the finder raises", () => {
   });
 
   // QFAI:EX-0001-0152-14
-  it("runs no cycle for a defect example seeding work order", async () => {
+  it("runs no cycle in a stage that appends a defect's example", async () => {
     expectSentence(
       await when(),
       "no cycle under seeding",
       /No cycle runs/i,
       /no cycle row/i,
-      /operation is `defect-example-seeding`/,
+      /stage is of kind `sdd_append`/,
     );
   });
 
@@ -283,7 +283,7 @@ describe("the cycle inside a workflow run", () => {
     );
     expectSentence(text, "nothing is written", /attempt still writes nothing/i);
     expectSentence(
-      await section(ORCHESTRATED, "## A change to the story tree"),
+      await section(TRIAGE, "### A change to the story tree"),
       "the first attempt's rule",
       /first attempt asks once and changes nothing/i,
     );

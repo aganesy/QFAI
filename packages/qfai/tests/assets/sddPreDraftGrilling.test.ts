@@ -12,7 +12,6 @@ const read = (tree: string, relative: string): Promise<string> =>
 describe("qfai-sdd pre-draft grilling", () => {
   for (const tree of trees) {
     it(`${tree}: requires a checkpoint before each design-writing stage`, async () => {
-      const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
       const loop = await read(
         tree,
         "assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md",
@@ -28,7 +27,11 @@ describe("qfai-sdd pre-draft grilling", () => {
         expect(loop).toContain(stage);
       }
       expect(loop).toContain("before this invocation's first design mutation");
-      expect(skill).toContain("A skipped checkpoint fails the gate");
+      expect(loop).toContain("A skipped checkpoint fails the gate");
+      for (const step of ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract"]) {
+        const text = await read(tree, `assistant/step/${step}/STEP.md`);
+        expect(text, step).toContain("references/sdd-pre-draft-grilling.md");
+      }
       expect(gate).toContain("A skipped checkpoint fails the gate");
       expect(evidence).toContain("## Pre-draft Grilling");
       expect(evidence).toContain("before its first story-tree");

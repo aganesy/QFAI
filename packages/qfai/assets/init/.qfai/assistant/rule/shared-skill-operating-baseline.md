@@ -72,6 +72,10 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 
 ## User Questions (AskUserQuestion Protocol)
 
+This section binds every skill and every step as written. A skill or step does
+not restate it: it names only the questions of its own, and with `--auto` it
+asks nothing and records explicit assumptions in its stage evidence.
+
 - When a question to the user is needed, use AskUserQuestion if the tool is available. **No question is exempt** — a confirmation and a yes-or-no take the same path as anything else, because an exception is what an agent reaches for when it would rather not ask. The form a question takes is owned by `.agents/rules/user-questions.md`; this section is where it binds a skill.
 - Availability is judged for **this question in this invocation**. A tool the mode withholds, or one that cannot carry the answer's shape, is unavailable for that question and takes the fallback below. A mode that permits no question at all — `--auto` — is read before this: nothing is asked, so there is no question whose availability to judge, and the fallback is not its route.
 - Where the question has choices and AskUserQuestion supports them, prefer structured choices over free-text input. An open answer — one with no listable set of candidates — takes the free-text path instead; the preference ranks two ways of asking one question, and never turns an open answer into a choice. A name, a number or a sentence is usually open and is not open by type.
@@ -102,6 +106,51 @@ A pointer only resolves if the reader knows what base to resolve it against. The
   Under an explicit `--auto` the session asks nothing, a delegated one still adopts every decision that is not critical, and each node it could not settle is opened as a question in the register the stage reads. Each node, not each decision: a fact only
   the user holds cannot be settled from evidence either, and a fact declared undefaultable stops the run rather than taking a value nobody has. Where a document requires the field to hold something, write the defaulted value and label it an assumption beside that open question; what is forbidden is the assumption with no open question against it (Article X, rule 6).
 
+## Default Autopilot Policy (Shared)
+
+Every `qfai-*` `SKILL.md` carries a `## Default Autopilot Policy` section with
+three named buckets. They collapse avoidable per-session prompts to zero or one
+by classifying each decision the skill performs. The prototype below is what a
+skill's section is drawn from; the section lists the entries that skill reaches
+and restates neither this preamble nor the narrowing rule.
+
+| Bucket          | Prototype entries                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `auto-decide`   | output formatting; ID / sequence numbering; append-vs-create on subject overlap; equivalent-option pick                                                                                                            |
+| `ask-user`      | approval-required governance operations (a category); destructive operations (rm / overwrite / force-push); version-pin changes (`package.json#version`, branch pin); scope expansions outside the active envelope |
+| `hard-required` | brand intent; the undefaultable inputs the skill itself consumes, declared per skill                                                                                                                               |
+
+- **Equivalent-option pick means demonstrably equivalent.** A design choice is
+  not one: moving it to `auto-decide` records a design nobody agreed to as
+  decided.
+- **The governance category is instantiated per skill.** The triage operations
+  CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE are the common
+  instance, each asked with a prompt that names the target and the rationale.
+- **An interview skill asks its own frontier.** A skill whose own operation is
+  the interview lists, under `ask-user`, the decisions a declared grilling
+  session puts to the user and the confirmation that closes it. No other skill
+  may.
+
+**Narrowing and widening.** A skill MAY narrow any of the three buckets (drop an
+entry the skill cannot reach), and MAY instantiate a category entry —
+`approval-required governance operations` — with the operations its own run
+cannot authorize for itself. `hard-required` also takes the undefaultable inputs
+this skill itself consumes, declared per skill and checked against that
+declaration; the bucket is what a run cannot proceed without, and no prototype
+can enumerate that for a skill it does not know. Otherwise a skill MUST NOT
+introduce an entry outside the prototype's categories. Widening triggers a
+Reviewer-Gate finding.
+
+**Steps.** An entry that only one step of a parent reaches may also be written
+in that step's `## Autopilot` section. The parent's `## Default Autopilot Policy`
+still lists every entry its steps reach, because that section is the one the
+policy check reads.
+
+Route every `ask-user` and `hard-required` item through
+[User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol),
+including its `--auto` rule. What each bucket needs inside a workflow run is
+[Default Autopilot Policy inside a run](#default-autopilot-policy-inside-a-run).
+
 ## Canonical qfai Launcher (Mandatory)
 
 - **Launcher preflight — run once, before the first gate.** Confirm the project resolves qfai from its own dependencies. Either proof is sufficient:
@@ -120,7 +169,28 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 - Never launch a gate as a bare `qfai` command: qfai is a project dependency, not a global one, so that is `command not found` on a normal local install — and a gate that cannot run is a gate that silently passes.
 - The preflight is the guard, not a flag. `npx` runs "a command from a local **or remote** npm package": with nothing resolvable locally it downloads and runs one (non-interactive shells do this without prompting), and `npx --no-install` still executes a copy already sitting in the npx cache. Neither spelling can tell you the qfai that ran was this project's; only the preflight can.
 - If the launcher cannot be resolved at any point, the gate is UNRUN, not PASS. Report it as a blocker instead of completing the stage.
-- The project's gate commands belong in the Standard commands section of `<paths.contractsDir>/tech.md`. The CI workflow generated by `npx qfai init` is the one deliberate exception: it runs before any project install can be assumed and must still be able to bootstrap.
+- The project's gate commands belong in the Standard commands section of `<paths.contractsDir>/tech.md` ([Standard Commands](#standard-commands-mandatory) below). The CI workflow generated by `npx qfai init` is the one deliberate exception: it runs before any project install can be assumed and must still be able to bootstrap.
+
+## Standard Commands (Mandatory)
+
+A project's gate commands have one home:
+`<paths.contractsDir>/tech.md#standard-commands-copy-paste`. The directory comes
+from `qfai.config.yaml`.
+
+- **Read them there and nowhere else.** Install, Format, Test, Lint, Typecheck,
+  Build, Skeleton and Validate come from that section. Do not infer one from the
+  package manager, a framework convention or another stack.
+- **A section that offers only a whole-project command is used as written.** A
+  narrower command is used only where that section, or the runner's checked-in
+  configuration, declares it.
+- **A capability with no entry is UNRUN, not passed.** Discover the command from
+  the task-runner manifest, then the CI configuration, then the contributing
+  docs, as `.qfai/assistant/rule/quality.md` sets out. Record it in that
+  section before it is used, where this stage owns the file; otherwise route the
+  gap to its owner through `.qfai/assistant/rule/drift-protocol.md`.
+- **No other document restates the commands.** It points at that section.
+
+The `common-gate-run` step runs a gate from this section and records it.
 
 ## FORMAT SSOT (Mandatory)
 
@@ -131,18 +201,12 @@ A pointer only resolves if the reader knows what base to resolve it against. The
 
 ## Stage 0 - Steering completion refresh (mandatory)
 
-Check these files under `<paths.specsDir>` before or during the stage when facts are missing or stale:
-
-- `01_policy/objective.md` and `01_policy/initiative.md`
-- `01_policy/principle.md` and `01_policy/constraint.md`
-- `03_contract/structure.md` and `03_contract/tech.md`
-
-Rules:
-
-- Detect incomplete content such as empty sections, placeholder-only text, `<...>`, `TBD`, or stale facts.
-- Fill verified facts only when this stage owns the file; otherwise route the change to its owner through `.qfai/assistant/rule/drift-protocol.md`.
-- If something cannot be verified, record an Open Question in `<paths.specsDir>/open-questions.md` and ask the user, subject to the invocation's question policy.
-- Route new facts discovered during the stage to the owning artifact.
+Every stage starts with the steering refresh, and does not continue affected
+work on stale steering. The contract is
+`.qfai/assistant/rule/workflow.md#stage-0--steering-refresh-contract-mandatory`.
+The procedure — which files, what counts as incomplete, how a fact is filled
+and where an unverifiable one goes — is the `common-steering-refresh` step. A
+skill or step cites the step and restates none of it.
 
 ### Inside a workflow run
 
@@ -201,6 +265,54 @@ check changes nothing in the run.
   `actor: { agentInstance }`. The run records that instance as the work's
   author and never counts it as the work's independent reviewer.
 - These statements add to the constitution. They except no article.
+
+## Running Steps (Mandatory)
+
+A step is one part of a parent skill's procedure, kept at
+`.qfai/assistant/step/<name>/STEP.md`. No host lists a step as a skill; a step
+runs only from its parent or from a work order.
+
+- **A step's `requires` names only `common-*` steps**, and a `common-*` step
+  requires nothing. The deepest chain is parent, step, common step.
+- **A step's review profile is its `routing-profile`.** A step without one has
+  no review of its own. A parent has no profile of its own.
+- **Routing and review-profile overrides in `qfai.config.yaml` are keyed by
+  step name.**
+
+### A parent skill invoked by name
+
+1. Run the [entry check](#workflow-run-entry-check-mandatory).
+2. Take the steps from the parent's `steps:` list, in that order. Skip a step
+   only where the parent's body names the condition that skips it.
+3. For each step: read that step's `STEP.md` and no other, run it, and pass its
+   gate. Run a `common-*` step it `requires` at the point the step calls it.
+   Then move to the next step.
+4. After the last step, run one review through `common-review-cycle`. The
+   reviewers are the union of the reviewers the profiles of the steps that ran
+   require, with each conditional reviewer whose condition holds.
+5. Complete as the parent's completion section says, reporting what each step
+   produced.
+
+A step skipped on a condition that later turns out to hold is run in its place
+in the order, before the review.
+
+### A work order's steps
+
+A workflow sub-agent handed a QFAI work order runs the steps the work order
+names, in its `steps:` list, and no other.
+
+1. Run the entry check in the `worker` state.
+2. For each listed step, in order: read the `STEP.md` at its `path` and no
+   other, run it, and pass its gate. A step the parent lists and the work order
+   does not is not run. Where the work needs an unlisted step, return the
+   replan outcome rather than run it.
+3. Take what the work order's `settled` field records as settled, and ask none
+   of it again.
+4. Run one review through `common-review-cycle` at the end, with the work
+   order's `requiredReviewerRoles`. The run computed that set; do not recompute
+   it or drop a role from it.
+5. Return the stage result the work order asks for. A finding another owner
+   must repair is a debt naming that owner, not an edit made here.
 
 ## Default Autopilot Policy inside a run
 

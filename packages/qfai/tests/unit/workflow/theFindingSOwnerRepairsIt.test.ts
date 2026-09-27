@@ -14,16 +14,13 @@ const FLOW = "BF-0007";
 const bounded = planOf(
   "bounded-change",
   [
-    stage("bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-    stage("bounded-implement", "implement", "qfai-implement", "implement"),
-    stage("bounded-verify", "verify", "qfai-verify", "verify-full"),
+    stage("bounded-sdd-delta", "sdd_delta"),
+    stage("bounded-implement", "implement"),
+    stage("bounded-verify", "verify"),
   ],
   ["src/notify/**", ".qfai/spec/02_business-flow/business-flow-0007/**"],
 );
-const direct = planOf("direct", [
-  stage("edit", "maintenance", "qfai-maintain", "non-normative-edit"),
-  stage("verify", "verify", "qfai-verify", "verify-full"),
-]);
+const direct = planOf("direct", [stage("edit", "maintenance"), stage("verify", "verify")]);
 
 // What every operation of a bounded run observes: the flows, and the bound flow's examples.
 const facts = {
@@ -58,11 +55,16 @@ function verifying(): JournalRun {
   return run;
 }
 
-// Where each `next` sends the run, as stage instance, attempt and executor.
+// Where each `next` sends the run, as stage instance, attempt and the steps it runs.
 function issued(run: JournalRun) {
   const workOrder = run.next(facts);
-  return `${workOrder.stageInstanceId}#${String(workOrder.attempt)}@${workOrder.executor?.skill ?? ""}`;
+  const steps = (workOrder.steps ?? []).map((step) => step.name).join("+");
+  return `${workOrder.stageInstanceId}#${String(workOrder.attempt)}@${steps}`;
 }
+
+const SDD_DELTA = "sdd-triage+sdd-story+sdd-gate";
+const IMPLEMENT = "implement-tdd+implement-checkpoint";
+const VERIFY = "verify-context+verify-qfai-gate+verify-repo-gate";
 
 it("A verify result needs_repair whose finding sits in a story file with resolvingOwner qfai-sdd", () => {
   const run = verifying();
@@ -77,8 +79,8 @@ it("A verify result needs_repair whose finding sits in a story file with resolvi
   const after = run.apply({ operation: "next" }, facts).verdict.workOrder;
 
   expect({ repair, recheck, after, accepted: run.snapshot.acceptedStages?.length }).toEqual({
-    repair: "bounded-sdd-delta#2@qfai-sdd",
-    recheck: "bounded-verify#2@qfai-verify",
+    repair: `bounded-sdd-delta#2@${SDD_DELTA}`,
+    recheck: `bounded-verify#2@${VERIFY}`,
     after: null,
     accepted: 3,
   });
@@ -99,9 +101,9 @@ it("A verify result needs_repair whose findings name two owners the plan serves"
   run.accept({}, facts);
 
   expect([first, second, issued(run)]).toEqual([
-    "bounded-sdd-delta#2@qfai-sdd",
-    "bounded-implement#2@qfai-implement",
-    "bounded-verify#2@qfai-verify",
+    `bounded-sdd-delta#2@${SDD_DELTA}`,
+    `bounded-implement#2@${IMPLEMENT}`,
+    `bounded-verify#2@${VERIFY}`,
   ]);
 });
 

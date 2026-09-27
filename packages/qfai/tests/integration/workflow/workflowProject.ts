@@ -1,8 +1,7 @@
 /**
  * The minimal project a built-CLI workflow case runs `start` in, with no `qfai init`: one stub
- * skill per skill a package plan names, with an Operations table covering the pairs the plans
- * use. The plans and the routing stay in the package. The tree is a git repository with
- * everything committed.
+ * `STEP.md` per step a package plan runs. The plans and the routing stay in the package. The
+ * tree is a git repository with everything committed.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -49,9 +48,15 @@ function git(root: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
 }
 
-// Every (skill, operation) pair the package's plans use.
-async function planPairs(): Promise<Map<string, Set<string>>> {
-  const pairs = new Map<string, Set<string>>();
+function stepName(entry: unknown): string | undefined {
+  if (typeof entry === "string") return entry;
+  if (typeof entry !== "object" || entry === null || !("step" in entry)) return undefined;
+  return typeof entry.step === "string" ? entry.step : undefined;
+}
+
+// Every step the package's plans run.
+export async function planStepNames(): Promise<Set<string>> {
+  const steps = new Set<string>();
   for (const name of await readdir(PLANS)) {
     const plan: unknown = parseYaml(await readFile(path.join(PLANS, name), "utf8"));
     const stages: unknown[] =
@@ -59,24 +64,19 @@ async function planPairs(): Promise<Map<string, Set<string>>> {
         ? plan.stages
         : [];
     for (const stage of stages) {
-      if (typeof stage !== "object" || stage === null) continue;
-      const skills: unknown = "skill" in stage ? stage.skill : undefined;
-      const operation = "operation" in stage ? String(stage.operation) : "";
-      for (const skill of Array.isArray(skills) ? skills : [skills]) {
-        pairs.set(String(skill), (pairs.get(String(skill)) ?? new Set()).add(operation));
-      }
+      if (typeof stage !== "object" || stage === null || !("steps" in stage)) continue;
+      const entries: unknown[] = Array.isArray(stage.steps) ? stage.steps : [];
+      for (const step of entries.map(stepName)) if (step) steps.add(step);
     }
   }
-  return pairs;
+  return steps;
 }
 
-async function writeStubSkills(root: string): Promise<void> {
-  for (const [skill, operations] of await planPairs()) {
-    const dir = path.join(root, ".qfai", "assistant", "skill", skill, "references");
+async function writeStubSteps(root: string): Promise<void> {
+  for (const step of await planStepNames()) {
+    const dir = path.join(root, ".qfai", "assistant", "step", step);
     await mkdir(dir, { recursive: true });
-    const rows = [...operations].map((operation) => `| \`${operation}\` | stub |`);
-    const table = ["## Operations", "", "| Operation | What |", "| --- | --- |", ...rows];
-    await writeFile(path.join(dir, "orchestrated-mode.md"), `# ${skill}\n\n${table.join("\n")}\n`);
+    await writeFile(path.join(dir, "STEP.md"), `# ${step}\n`);
   }
 }
 
@@ -84,7 +84,7 @@ async function writeStubSkills(root: string): Promise<void> {
 export async function minimalProject(config?: string, prefix = "qfai-workflow-"): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), prefix));
   roots.push(root);
-  await writeStubSkills(root);
+  await writeStubSteps(root);
   if (config !== undefined) await writeFile(path.join(root, "qfai.config.yaml"), config);
   // As `qfai init` ignores them: the runtime tree, and the reports a stage writes.
   await writeFile(path.join(root, ".gitignore"), "/.qfai/run/\n/.qfai/report/\n");

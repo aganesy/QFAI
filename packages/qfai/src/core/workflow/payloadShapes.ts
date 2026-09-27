@@ -106,6 +106,7 @@ export const ROUTE_PROPOSAL = object(
     proposedWriteScope: list(text),
     protectedTargets: list(text),
     requiredStages: list(text),
+    optionalSteps: list(text),
     rationale: text,
     confidence: { kind: "number" },
   },
