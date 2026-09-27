@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                    | Expected                                                                                                                                                                                                                                                                              |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0002-0008-01 | AC-0002-0008-01 | Plant divergent shipped-lane profile and failure-threshold values, run the gate, and count the declared shape dimensions | The gate exits 1 with `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`, the observed value and the expected value; a clean tree exits 0. The declared shape pins all ten dimensions of CLI-WFSET section 5. The asset tests it subsumed retain their test-case references on the expected-shape side. |
+| EX-0002-0008-02 | AC-0002-0008-01 | gate の invocation path を `pnpm ci:lint` と `pnpm ci:gate` の両方で検索                                                 | `pnpm ci:lint` に現れ、`pnpm ci:gate` には現れない。planted violation が pull request を red にする                                                                                                                                                                                   |

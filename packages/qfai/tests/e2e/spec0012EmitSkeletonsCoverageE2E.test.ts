@@ -8,7 +8,7 @@
  * default-OFF posture is asserted in addition to the opt-in normal
  * path so the v1.9.1 no-regression contract has a sticky test.
  */
-// QFAI:SPEC-0012:US-0012-0138
+// QFAI:BF-0001
 
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -78,12 +78,11 @@ async function seedProjectWithUiContracts(root: string): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/out",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "validation:",
@@ -91,22 +90,20 @@ async function seedProjectWithUiContracts(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
-  await writeFile(
-    path.join(specDir, "01_Spec.md"),
-    "# 01\n\n- Spec: spec-0001\n- Parent: CAP-0001\nsurface_type: ui-bearing\n",
-    "utf-8",
-  );
   // Seed a UI contract so resolveSurfaceUnion has a non-empty union
   // for the emit-skeletons coverage path.
-  const uiDir = path.join(root, ".qfai/contracts/ui");
+  const uiDir = path.join(root, ".qfai/spec/03_contract/ui");
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    ["screens:", "  - id: home", "    route: /", "  - id: settings", "    route: /settings"].join(
-      "\n",
-    ),
+    [
+      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "screens:",
+      "  - id: home",
+      "    route: /",
+      "  - id: settings",
+      "    route: /settings",
+    ].join("\n"),
     "utf-8",
   );
 }

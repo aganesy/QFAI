@@ -48,7 +48,9 @@ export type CompletionCertificate = {
     readonly timestamp: string;
   };
   readonly iterationCount: number;
-  readonly specsCovered: ReadonlyArray<string>;
+  readonly uiContractsCovered: ReadonlyArray<string>;
+  readonly convergedUiContracts: ReadonlyArray<string>;
+  readonly laggingUiContracts: ReadonlyArray<string>;
   /**
    * Frozen DESIGN.md reference. `path` is the project-root relative path
    * (POSIX) and `sha256` is the hex digest of the file contents at the
@@ -85,7 +87,9 @@ export type BuildCertificateInputs = {
   verifyRun: { status: string; ranAt: string };
   reviewerSignoff: { reviewerId: string; approved: boolean; timestamp: string };
   iterationCount: number;
-  specsCovered: readonly string[];
+  uiContractsCovered: readonly string[];
+  convergedUiContracts: readonly string[];
+  laggingUiContracts: readonly string[];
   /**
    * Optional DESIGN.md binding. When supplied, the certificate carries
    * the path + sha256 so `--check` can detect post-certify edits to the
@@ -107,6 +111,17 @@ export type BuildCertificateInputs = {
 export async function buildCompletionCertificate(
   inputs: BuildCertificateInputs,
 ): Promise<CompletionCertificate> {
+  if (
+    !isValidUiContractPartition(
+      inputs.uiContractsCovered,
+      inputs.convergedUiContracts,
+      inputs.laggingUiContracts,
+    )
+  ) {
+    throw new Error(
+      "certificate UI contract lists must contain distinct CON-UI-NNNN IDs and partition uiContractsCovered",
+    );
+  }
   const evidenceDigests = await scanEvidenceDigests(inputs.evidenceRoot);
   const cert: CompletionCertificate = {
     runId: inputs.runId,
@@ -117,7 +132,9 @@ export async function buildCompletionCertificate(
     verifyRun: inputs.verifyRun,
     reviewerSignoff: inputs.reviewerSignoff,
     iterationCount: inputs.iterationCount,
-    specsCovered: [...inputs.specsCovered],
+    uiContractsCovered: [...inputs.uiContractsCovered],
+    convergedUiContracts: [...inputs.convergedUiContracts],
+    laggingUiContracts: [...inputs.laggingUiContracts],
     ...(inputs.designMd ? { designMd: { ...inputs.designMd } } : {}),
     ...(typeof inputs.scope === "string" && inputs.scope.length > 0 ? { scope: inputs.scope } : {}),
     ...(inputs.notes && inputs.notes.length > 0 ? { notes: [...inputs.notes] } : {}),
@@ -162,7 +179,9 @@ type CompletionCertificateRecord = {
     timestamp: string;
   };
   iterationCount: number;
-  specsCovered: string[];
+  uiContractsCovered: string[];
+  convergedUiContracts: string[];
+  laggingUiContracts: string[];
   designMd?: { path: string; sha256: string };
   scope?: string;
   notes?: string[];
@@ -174,6 +193,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isValidUiContractPartition(
+  covered: unknown,
+  converged: unknown,
+  lagging: unknown,
+): covered is string[] {
+  if (!isStringArray(covered) || covered.length === 0) return false;
+  if (!isStringArray(converged) || !isStringArray(lagging)) return false;
+  if (![...covered, ...converged, ...lagging].every((id) => /^CON-UI-\d{4}$/.test(id)))
+    return false;
+  const coveredSet = new Set(covered);
+  const partition = [...converged, ...lagging];
+  return (
+    coveredSet.size === covered.length &&
+    new Set(partition).size === partition.length &&
+    partition.length === covered.length &&
+    partition.every((id) => coveredSet.has(id))
+  );
 }
 
 function isEvidenceDigestArray(
@@ -215,7 +253,11 @@ function isMinimallyValidCertificate(value: unknown): value is CompletionCertifi
   if (typeof reviewerSignoff.approved !== "boolean") return false;
   if (typeof reviewerSignoff.timestamp !== "string") return false;
   if (typeof v.iterationCount !== "number") return false;
-  if (!isStringArray(v.specsCovered)) return false;
+  if ("specsCovered" in v || "convergedSpecs" in v || "laggingSpecs" in v) return false;
+  if (
+    !isValidUiContractPartition(v.uiContractsCovered, v.convergedUiContracts, v.laggingUiContracts)
+  )
+    return false;
   if (v.designMd !== undefined) {
     if (!isRecord(v.designMd)) return false;
     if (typeof v.designMd.path !== "string" || typeof v.designMd.sha256 !== "string") {
@@ -264,7 +306,9 @@ function normalizeCompletionCertificate(value: unknown): CompletionCertificate |
       timestamp: reviewerSignoff.timestamp,
     },
     iterationCount: record.iterationCount,
-    specsCovered: [...record.specsCovered],
+    uiContractsCovered: [...record.uiContractsCovered],
+    convergedUiContracts: [...record.convergedUiContracts],
+    laggingUiContracts: [...record.laggingUiContracts],
     ...(record.designMd
       ? { designMd: { path: record.designMd.path, sha256: record.designMd.sha256 } }
       : {}),

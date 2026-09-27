@@ -35,15 +35,15 @@
  * ## Digest basis: newline-normalized TEXT
  *
  * Both sides are digested as the sha256 of their newline-normalized text,
- * which is the basis BR-0006-0018 requires (改行正規化後の内容一致) and which
+ * which the workflow integrity rule requires and which
  * the sibling skills-integrity diff already uses. Digesting raw bytes instead
  * would report every installed workflow as drifted on a CRLF checkout — a
  * false advisory for every Windows adopter.
  *
  * The contracts do not merely omit that basis, they state the OPPOSITE one,
  * and the contradiction is named on both sides so a later reader can check it
- * rather than take it on trust. Implemented: BR-0006-0018 (改行正規化後の内容
- * 一致). Contradicting it: the file-state table in §3 of
+ * rather than take it on trust. The implemented rule requires normalized-text
+ * comparison. Contradicting it: the file-state table in §3 of
  * `.qfai/contracts/cli/shipped-workflows.md`, whose `installed` / `modified`
  * rows key on `bytes == packaged` / `bytes != packaged`; and the opening
  * sentence of the `workflows.integrity` section of
@@ -122,19 +122,21 @@ export type WorkflowsIntegrityStatus = "ok" | "modified" | "skipped_unresolved";
  * appended to, because a reader who stops at the first sentence would otherwise
  * be told the opposite of what the code does. `status === "skipped_unresolved"`
  * was claimed-but-unconsumed, held for the unresolvable-packaged-copy skip of
- * BR-0006-0020; TDD-0039 landed that skip, so `doctor.ts` now reads the member on
+ * the unresolved-copy rule; TDD-0039 landed that skip, so `doctor.ts` now reads
+ * the member on
  * an arm of its own and the claim is discharged rather than pending.
  *
  * What that paragraph CONSTRAINED still holds, and the arm is now what enforces
  * it: widening this status widens the skip, so a second route into
- * `skipped_unresolved` must be one BR-0006-0020's skip is true of. The longer
- * argument is version controlled at `.qfai/evidence/implement-spec-0006.md`.
+ * `skipped_unresolved` must be one where the unresolved-copy rule requires a
+ * skip. The longer argument is version controlled at
+ * `.qfai/evidence/implement-spec-0006.md`.
  *
  * `packagedDir` left that list one row EARLIER, and its departure is still worth
  * stating, because the consumer is not the one this comment used to predict: the
  * drift advisory's MESSAGE names it as the packaged source path to copy from, per
  * the required message content of `.qfai/contracts/cli/qfai-doctor.md`. Its
- * `details` slot (BR-0006-0022) has since landed with TDD-0036 / TC-0006-0034, so
+ * `details` slot has since landed with TDD-0036 / TC-0006-0034, so
  * the field now has TWO consumers, and the older sentence here — which said the
  * slot was "still outstanding" — was true when written and false from that commit
  * onward. It is corrected rather than annotated, because this paragraph's whole
@@ -246,7 +248,7 @@ export type WorkflowsIntegrityDiff = {
    *
    * Not narrowed to "names that resolved to `installed`", which would be the
    * stronger-looking predicate and is wrong: a tree whose recorded files were
-   * all deliberately removed has zero `installed` names, and BR-0006-0022
+   * all deliberately removed has zero `installed` names, and the workflow rule
    * requires severity `ok` there — truthfully, because QFAI EXAMINED every
    * recorded name and found nothing stale.
    *

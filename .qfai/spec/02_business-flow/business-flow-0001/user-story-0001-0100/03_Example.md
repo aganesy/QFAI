@@ -1,0 +1,8 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                  | Expected                                                                                                                                                                                                                  |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0100-01 | AC-0001-0100-01 | Given the prototyping delegation map names implementation, review scoring, and build roles. When the skill dispatches a default reviewer-driven cycle. | Then each role has a documented owner, no fixed third capture identity is required, and an invalid role assignment is reported as a delegation finding. For an opt-in `--capture` cycle, capture responsibility is named. |
+| EX-0001-0100-02 | AC-0001-0100-01 | Given the same sub-agent identity is assigned to generation and review. When the cycle dispatches both roles.                                          | Then the assignment is rejected with a delegation finding; generation and review use distinct sub-agent identities.                                                                                                       |

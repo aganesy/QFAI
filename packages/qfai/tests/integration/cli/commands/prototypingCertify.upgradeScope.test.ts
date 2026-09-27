@@ -18,7 +18,7 @@
  * by absence of the scope-limited markers.
  */
 
-// QFAI:SPEC-0014:TC-0014-0036
+// QFAI:EX-0001-0166-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -28,6 +28,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingCertify } from "../../../../src/cli/commands/prototypingCertify.js";
 import { hashDesignMd } from "../../../../src/core/design/designMd.js";
+import { CERTIFY_UI_CONTRACT, seedCertifyUiEvidence } from "./certifyUiFixture.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../../../src/core/saasPackage/skippedGates.js";
 
 /**
@@ -121,38 +122,32 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
     path.join(root, "qfai.config.yaml"),
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
       "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  skillsDir: .qfai/assistant/skill",
+      "  promptsDir: .qfai/assistant/prompt",
       "  srcDir: src",
       "  testsDir: tests",
       "",
     ].join("\n"),
     "utf-8",
   );
-  await mkdir(path.join(root, ".qfai/specs/spec-0014"), { recursive: true });
-  await writeFile(
-    path.join(root, ".qfai/specs/spec-0014/01_Spec.md"),
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0014\n",
-    "utf-8",
-  );
   await writeFile(path.join(root, "DESIGN.md"), CERT_DESIGN_MD, "utf-8");
   const iter00 = path.join(root, ".qfai/evidence/prototyping/iter-00");
   await mkdir(iter00, { recursive: true });
   await writeFile(path.join(iter00, "index.html"), CLEAN_FINAL_HTML, "utf-8");
+  await seedCertifyUiEvidence(root, iter00);
   await mkdir(path.join(root, ".qfai/output"), { recursive: true });
   await mkdir(path.join(root, ".qfai/report"), { recursive: true });
   const validateBody = JSON.stringify({
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeFile(path.join(root, ".qfai/report/validate.json"), validateBody, "utf-8");
-  await writeFile(path.join(root, ".qfai/output/validate.json"), validateBody, "utf-8");
+  await writeFile(path.join(root, ".qfai/report/validate-prototyping.json"), validateBody, "utf-8");
   await writeFile(
-    path.join(root, ".qfai/output/verify.json"),
+    path.join(root, ".qfai/report/verify.json"),
     JSON.stringify({ status: "PASS", scope: "prototyping" }),
     "utf-8",
   );
@@ -161,7 +156,8 @@ async function seedSaasPackageHappyPath(root: string): Promise<void> {
     surface: "web",
     runId: "run-saas-package",
     designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-    specsCovered: ["0014"],
+    uiContractsCovered: [CERTIFY_UI_CONTRACT],
+    frozenSurfaceUnion: [CERTIFY_UI_CONTRACT],
     reviewerGate: {
       result: "PASS",
       signoff: { reviewerId: "test-reviewer", timestamp: "2026-05-27T00:00:00Z" },
@@ -462,12 +458,12 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
       path.join(root, "qfai.config.yaml"),
       [
         "paths:",
-        "  contractsDir: .qfai/contracts",
-        "  specsDir: .qfai/specs",
+        "  contractsDir: .qfai/spec/03_contract",
+        "  specsDir: .qfai/spec",
         "  discussionDir: .qfai/discussion",
         "  outDir: .qfai/output",
-        "  skillsDir: .qfai/assistant/skills",
-        "  promptsDir: .qfai/assistant/skills",
+        "  skillsDir: .qfai/assistant/skill",
+        "  promptsDir: .qfai/assistant/prompt",
         "  srcDir: src",
         "  testsDir: tests",
         "output:",
@@ -479,7 +475,7 @@ describe("certify --upgrade-scope full upgrades a saas-package cert to full DONE
     // Mirror the validate.json the certify pre-seal gate reads against
     // the custom path, so the prerequisite "validate.json#counts.error=0"
     // gate keeps passing under the override.
-    const customValidatePath = path.join(root, "custom/report.json");
+    const customValidatePath = path.join(root, "custom/report-prototyping.json");
     await mkdir(path.dirname(customValidatePath), { recursive: true });
     await writeFile(
       customValidatePath,

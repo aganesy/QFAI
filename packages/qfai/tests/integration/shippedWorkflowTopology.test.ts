@@ -102,7 +102,7 @@ function collectDeclaredLayers(doc: unknown, body = ""): string[] {
   return [...declared];
 }
 
-// QFAI:SPEC-0003:TC-0003-0035
+// QFAI:EX-0002-0003-02
 describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation is jobs inside the orchestrator", () => {
   it("no shipped file references another shipped file, including the uses: ./.github/workflows/ form", async () => {
     const files = await loadShippedWorkflows();
@@ -161,7 +161,7 @@ describe("TC-0003-0035 (TDD-0035): zero cross-file references; layer separation 
   });
 });
 
-// QFAI:SPEC-0003:TC-0003-0034
+// QFAI:EX-0002-0003-01
 describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed filename are both rejected", () => {
   // Recorded deviation (delivery-planner ruling for this row): the TC's
   // literal Action — running `pnpm verify:pack` against a planted and a
@@ -171,9 +171,8 @@ describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed fi
   // shape is (a) the same topology predicate implemented here and run
   // over planted TEMP COPIES of the shipped `.github/` tree (never the
   // real assets), and (b) a static backstop pinning that
-  // `scripts/verify-pack.mjs` still carries its `allowedRootGithubEntries`
-  // allow-list and throw path, so the pack-time rejection the TC names
-  // remains wired.
+  // `scripts/verify-pack.mjs` still calls the shared child allow-list,
+  // so the pack-time rejection this case names remains wired.
   const SHIPPED_FILENAME_RE = /^qfai-[a-z0-9-]+\.yml$/;
 
   type TopologyViolation = { entry: string; rule: string };
@@ -254,15 +253,18 @@ describe("TC-0003-0034 (TDD-0034): planted actions directory and non-prefixed fi
     await expect(scanShippedGithubTopology(shippedGithubDir())).resolves.toEqual([]);
   });
 
-  it("static backstop: scripts/verify-pack.mjs retains the allowedRootGithubEntries allow-list and its throw path", async () => {
+  it("static backstop: pack verification calls the shipped GitHub child allow-list", async () => {
     const verifyPackSource = await readFile(path.join(repoRoot, "scripts", "verify-pack.mjs"), {
       encoding: "utf-8",
     });
-    // The pack-time half of the TC: an `actions/` directory stays a hard
-    // pack failure because the immediate children of the shipped .github/
-    // are allow-listed to exactly `workflows` and any other entry throws.
-    expect(verifyPackSource).toContain('const allowedRootGithubEntries = new Set(["workflows"]);');
-    expect(verifyPackSource).toContain("must not exist (only workflows/ is permitted)");
-    expect(verifyPackSource).toContain("if (!allowedRootGithubEntries.has(entry))");
+    const topologySource = await readFile(
+      path.join(repoRoot, "scripts", "lib", "pack-github-topology.mjs"),
+      { encoding: "utf-8" },
+    );
+    expect(verifyPackSource).toContain('from "./lib/pack-github-topology.mjs"');
+    expect(verifyPackSource).toContain("assertPackagedGithubTopology(rootGithubDir)");
+    expect(topologySource).toContain('const allowedRootGithubEntries = new Set(["workflows"]);');
+    expect(topologySource).toContain("must not exist (only workflows/ is permitted)");
+    expect(topologySource).toContain("if (!allowedRootGithubEntries.has(entry))");
   });
 });

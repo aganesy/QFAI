@@ -1,184 +1,60 @@
-/**
- * Every required spec file ships a template.
- *
- * `qfai-sdd/SKILL.md` lists `_policies/01..11` and the per-spec `01..10` as Mandatory
- * Outputs and says "the canonical file set is defined by skill templates", while
- * Critical Constraint 1 forbids reaching for any non-skill-local template. The
- * tree shipped 7 of 11 `_policies` files and 9 of 10 per-spec files, and all
- * five missing ones are gated at `error` by `E_SPEC_MISSING_FILESET`.
- *
- * This test is the guard the issue asks for: a future required-file addition
- * cannot ship without its template.
- */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  REQUIRED_LAYERED_SHARED_FILES_V1421,
-  REQUIRED_LAYERED_SPEC_FILES_V1421,
-} from "../../src/core/specLayout.js";
-import { validateTriageSection } from "../../src/core/validators/specPack.js";
-
-// tests/assets/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const roots = ["packages/qfai/assets/init/.qfai", ".qfai"];
+const relative = "assistant/skill/qfai-sdd/templates/spec";
 
-const SKILL = "assistant/skills/qfai-sdd";
-const TEMPLATES = `${SKILL}/templates/specs`;
+const read = (root: string, file: string): Promise<string> =>
+  readFile(path.join(repoRoot, root, relative, file), "utf8");
 
-const readSkillFile = (tree: string, rel: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, SKILL, rel), "utf-8");
-
-const listTemplates = (tree: string, sub: string): Promise<string[]> =>
-  readdir(path.join(repoRoot, tree, TEMPLATES, sub));
-
-const readTemplate = (tree: string, rel: string): Promise<string> =>
-  readFile(path.join(repoRoot, tree, TEMPLATES, rel), "utf-8");
-
-/**
- * The catalog is the required set; the shipped required file lists come from
- * `specLayout.ts`, kept in sync with `spec_required_files.json`.
- */
-const REQUIRED = {
-  _policies: REQUIRED_LAYERED_SHARED_FILES_V1421,
-  spec: REQUIRED_LAYERED_SPEC_FILES_V1421,
-} as const;
-
-describe("qfai-sdd ships a template for every required spec file", () => {
-  for (const tree of QFAI_TREES) {
-    for (const [sub, required] of Object.entries(REQUIRED)) {
-      it(`${tree}: ${sub}/ covers every required file`, async () => {
-        const present = new Set(await listTemplates(tree, sub));
-        const missing = required.filter((name) => !present.has(name));
-
-        expect(missing).toEqual([]);
-      });
-    }
-
-    it(`${tree}: 10_Plan.md ships the allowed heading shape`, async () => {
-      // `QFAI-PLAN-002/003/004` grade this file's headings at `error`, and the
-      // only positive statement of what IS allowed was buried in a validator's
-      // suggested_action string. The skeleton makes them satisfiable by
-      // construction rather than by trial and error.
-      const plan = await readTemplate(tree, "spec/10_Plan.md");
-
-      for (const heading of [
-        "## Implementation approach",
-        "## Test approach",
-        "## NFR approach",
-        "## Risk mitigation",
+describe("qfai-sdd story-tree templates", () => {
+  for (const root of roots) {
+    it(`${root}: carries the policy, flow, contract, and decision homes`, async () => {
+      for (const file of [
+        "decisions.md",
+        "open-questions.md",
+        "01_policy/objective.md",
+        "01_policy/initiative.md",
+        "01_policy/principle.md",
+        "01_policy/glossary.md",
+        "01_policy/constraint.md",
+        "02_business-flow/business-flows.md",
+        "02_business-flow/business-flow-NNNN/business-flow.md",
+        "02_business-flow/business-flow-NNNN/user-stories.md",
+        "03_contract/contracts.md",
+        "03_contract/tech.md",
+        "03_contract/structure.md",
       ]) {
-        expect(plan).toContain(heading);
+        expect(await read(root, file), file).not.toBe("");
       }
     });
 
-    it(`${tree}: 10_Plan.md's own headings pass its validators`, async () => {
-      // A template that trips the gate it exists to satisfy would be worse than
-      // no template. These are the three rejecting patterns from
-      // `layerCoverage.ts`, applied to the template's headings.
-      const plan = await readTemplate(tree, "spec/10_Plan.md");
-      const headings = plan
-        .split(/\r?\n/)
-        .filter((line) => /^#{1,6}\s+\S/.test(line))
-        .map((line) => line.replace(/^#{1,6}\s+/, ""));
+    it(`${root}: a story directory has exactly the three authorized files`, async () => {
+      const storyDir = path.join(
+        repoRoot,
+        root,
+        relative,
+        "02_business-flow/business-flow-NNNN/user-story-NNNN-NNNN",
+      );
+      expect((await readdir(storyDir)).sort()).toEqual([
+        "01_User-story.md",
+        "02_Acceptance-Criteria.md",
+        "03_Example.md",
+      ]);
+      expect(await read(root, "02_business-flow/business-flow-NNNN/business-flow.md")).toMatch(
+        /\b(?:flowchart|sequenceDiagram)\b/,
+      );
+    });
 
-      const forbidden = [
-        /\b(?:changelog|history|updated\s*at|update\s*history)\b|改訂履歴|更新履歴/i,
-        /\b(?:release\s*candidate|go\s*\/?\s*no\s*\/?\s*go|rc)\b|リリース可否/i,
-        /^(?:status|progress|todo|remaining|done|wip)$/i,
-      ];
-
-      for (const heading of headings) {
-        for (const pattern of forbidden) {
-          expect(pattern.test(heading), `heading "${heading}" trips ${pattern}`).toBe(false);
-        }
+    it(`${root}: decision tables use four cells and reserve status changes`, async () => {
+      for (const file of ["decisions.md", "open-questions.md"]) {
+        const template = await read(root, file);
+        expect(template).toMatch(/^\| ID\s*\| Content\s*\| Approach\s*\| Status\s*\|$/m);
       }
-    });
-
-    it(`${tree}: 10_Plan.md says where progress, history and release live`, async () => {
-      const plan = await readTemplate(tree, "spec/10_Plan.md");
-
-      expect(plan).toContain("`tdd/test-list.md`");
-      expect(plan).toContain("`09_delta.md`");
-      expect(plan).toContain("release\njudgement nowhere in the spec pack");
-    });
-
-    it(`${tree}: the four new _policies templates carry authoring rules`, async () => {
-      for (const name of [
-        "01_Objective.md",
-        "02_Initiative.md",
-        "06_Glossary.md",
-        "07_Constraints.md",
-      ]) {
-        const text = await readTemplate(tree, `_policies/${name}`);
-        expect(text, name).toContain("## Authoring rules");
-      }
-    });
-
-    it(`${tree}: the _policies templates do not name lower-layer IDs`, async () => {
-      // `_policies/**` must not define or own `US`/`AC`/`BR`/`EX`/`TC` items,
-      // and `QFAI-LAYER-100` is a token scan — a template that carried one
-      // would ship a guaranteed finding.
-      //
-      // Any digit count counts, not just the four the ban patterns match
-      // a short placeholder such as `EX-01` reads as a reserved-layer
-      // ID to the author, and renumbering it to the pack's own four-digit
-      // house convention turns the file into a hard `error`.
-      for (const name of REQUIRED._policies) {
-        const text = await readTemplate(tree, `_policies/${name}`);
-        expect(text.match(/\b(?:US|AC|BR|EX|TC)-\d+/g) ?? [], name).toEqual([]);
-      }
-    });
-
-    it(`${tree}: the delta templates state their multi-run layout`, async () => {
-      // `/qfai-sdd` re-runs against an existing spec, but the templates were
-      // single-shot, so operators invented dated `## Triage — <date>` headings.
-      // That trailer is read by no Triage validator and every row under it goes
-      // unchecked, while a parenthesised round is graded like any other section.
-      // The templates must state that grammar themselves, and ship one heading
-      // of each kind so a first run starts from the shape it describes.
-      for (const rel of ["spec/09_delta.md", "_policies/10_delta.md"]) {
-        const text = await readTemplate(tree, rel);
-
-        expect(text.match(/^## Triage\s*$/gm) ?? [], rel).toHaveLength(1);
-        expect(text.match(/^## Change Summary\s*$/gm) ?? [], rel).toHaveLength(1);
-        expect(text, rel).toMatch(/^### DELTA-\d{4} \(YYYY-MM-DD\)$/m);
-        expect(text, rel).toMatch(/[Ee]very `## Triage`\s+section in the file is validated/);
-        expect(text, rel).toMatch(/`## Triage \(\d{4}-\d{2}-\d{2}\)`/);
-        expect(text, rel).not.toMatch(/first `## Triage`/);
-      }
-    });
-
-    it(`${tree}: a re-run's H3 sub-section stays inside the graded ## Triage`, async () => {
-      // The H3 shape is only safe because a section ends at a heading of the
-      // same or higher level, so per-run sub-tables stay inside the extracted
-      // `## Triage`. Grade the shipped template, then grade it again with a
-      // second run appended the way the template tells operators to append it.
-      const text = await readTemplate(tree, "spec/09_delta.md");
-      const secondRun = [
-        "### DELTA-0002 (YYYY-MM-DD)",
-        "",
-        "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
-        "| REQ-0002 | second run | spec-0001 | UPDATE | APPEND | - | re-run |",
-        "",
-        "## Rationale",
-      ].join("\n");
-      const rerun = text.replace("## Rationale", secondRun);
-
-      expect(validateTriageSection(text, "spec-0001/09_delta.md")).toEqual([]);
-      expect(validateTriageSection(rerun, "spec-0001/09_delta.md")).toEqual([]);
-    });
-
-    it(`${tree}: Phase 4 states the re-run append rule`, async () => {
-      const checklist = await readSkillFile(tree, "references/sdd-phase-checklists.md");
-
-      expect(checklist).toContain("A re-run appends one `### DELTA-NNNN (YYYY-MM-DD)` sub-section");
-      expect(checklist).toMatch(/[Ee]very `## Triage` section is validated/);
-      expect(checklist).not.toMatch(/first `## Triage`/);
     });
   }
 });

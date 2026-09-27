@@ -11,7 +11,7 @@ const skillPath = path.join(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "web-research",
   "SKILL.md",
 );
@@ -21,7 +21,7 @@ async function readSkill(): Promise<string> {
 }
 
 describe("web-research observability", () => {
-  // QFAI:SPEC-0016:TC-0016-0015 (TDD-0023)
+  // QFAI:EX-0001-0188-02 (TDD-0023)
   it("log completeness - 6 mandatory field categories, no secrets", async () => {
     const content = await readSkill();
 
@@ -44,7 +44,7 @@ describe("web-research observability", () => {
     expect(content).toMatch(/no\s+secret|secret\s+exclusion|credential|sensitive/i);
   });
 
-  // QFAI:SPEC-0016:TC-0016-0016 (TDD-0024)
+  // QFAI:EX-0001-0188-01 (TDD-0024)
   it("secret exclusion - API key not in log, content hash instead", async () => {
     const content = await readSkill();
 

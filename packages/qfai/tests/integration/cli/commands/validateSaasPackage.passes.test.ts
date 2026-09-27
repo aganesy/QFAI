@@ -4,7 +4,7 @@
  *
  * - Given a temp-dir repo where the prototyping pipeline produces
  *   no error findings, the design-system attestation is present at
- *   `.qfai/contracts/design/design-system.yaml`, and a conformant
+ *   `.qfai/spec/03_contract/design/design-system.yaml`, and a conformant
  *   handoff exists at `.qfai/handoff.yaml`, the saas-package profile
  *   PASSes (no error severities, exit 0).
  * - The validation result emits ONE `D-SAAS-PACKAGE-VERIFY-SKIPPED`
@@ -14,7 +14,7 @@
  * Drives `runValidate` directly (no subprocess shell-out) so the
  * harness can read the in-memory validation result deterministically.
  */
-// QFAI:SPEC-0004:TC-0004-0067
+// QFAI:EX-0001-0051-01
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -30,7 +30,7 @@ let savedCiEnv: string | undefined;
 let savedGhaEnv: string | undefined;
 
 async function seedDesignSystemAttestation(): Promise<void> {
-  const dir = path.join(root, ".qfai", "contracts", "design");
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "design");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "design-system.yaml"),
@@ -38,7 +38,7 @@ async function seedDesignSystemAttestation(): Promise<void> {
       "# Design-system attestation (DCON-005)",
       "surfaces:",
       "  - id: dashboard",
-      "    tokens-source: .qfai/contracts/design/tokens.yaml",
+      "    tokens-source: .qfai/spec/03_contract/design/tokens.yaml",
       "tokens: {}",
       "",
     ].join("\n"),

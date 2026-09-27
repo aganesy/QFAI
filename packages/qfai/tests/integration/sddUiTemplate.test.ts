@@ -10,9 +10,9 @@
  * not this test's subject. It ships filled entries, because a template that
  * emits an empty list hands the author a document that does not validate.
  */
-// QFAI:SPEC-0013:TC-0013-0025
+// QFAI:EX-0001-0159-01
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
@@ -26,7 +26,7 @@ const TEMPLATE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "skills",
+  "skill",
   "qfai-sdd",
   "templates",
   "contracts",
@@ -41,7 +41,7 @@ const AGENT_GUIDE_PATH = path.resolve(
   "init",
   ".qfai",
   "assistant",
-  "agents",
+  "agent",
   "requirements-analyst.md",
 );
 
@@ -72,5 +72,59 @@ describe("TC-0013-0025: shipped ui-contract.sample.yaml carries a primary_tasks 
     // on correct formatting, which says nothing about the instruction.
     const pattern = /(>=\s*1|≥\s*1|at least one)\s*`?primary[_\s-]?task/i;
     expect(content).toMatch(pattern);
+  });
+});
+
+const SDD_SKILL_DIR = path.resolve(TEMPLATE_PATH, "..", "..", "..");
+
+const LEGACY_DESIGN_CONTRACTS = [
+  "exploration-brief.yaml",
+  "evaluation-rubric.yaml",
+  "evaluator-calibration.yaml",
+  "selected-direction.yaml",
+  "reference-pool.yaml",
+  "brand-design.yaml",
+];
+
+describe("shipped primary_tasks ceiling", () => {
+  // QFAI:AC-0001-0161-01
+  // QFAI:EX-0001-0161-01
+  it("documents a ceiling of 7 and no floor in the template and the guide", async () => {
+    const template = await readFile(TEMPLATE_PATH, "utf-8");
+    expect(template).toContain("Recommended ceiling: at most 7 entries per screen (QFAI-AUD-020).");
+
+    const guide = await readFile(
+      path.join(SDD_SKILL_DIR, "references", "ui-contract-guide.md"),
+      "utf-8",
+    );
+    expect(guide).toContain("## Recommended ceiling: at most 7");
+    expect(guide).toMatch(/\| 1\.\.7 +\| passes silently/);
+    expect(guide).toMatch(/\| 8\+ +\| `QFAI-AUD-020` warning/);
+  });
+});
+
+describe("shipped qfai-sdd design contracts", () => {
+  // QFAI:EX-0001-0158-01
+  // QFAI:EX-0001-0158-02
+  it("writes no legacy design contract and lists the removed ones", async () => {
+    const templates = await readdir(path.join(SDD_SKILL_DIR, "templates"), { recursive: true });
+    const names = templates.map((entry) => path.basename(entry));
+    for (const legacy of LEGACY_DESIGN_CONTRACTS) {
+      expect(names).not.toContain(legacy);
+    }
+
+    const normalization = await readFile(
+      path.join(SDD_SKILL_DIR, "references", "ui-design-contract-normalization.md"),
+      "utf-8",
+    );
+    expect(normalization).toContain("MUST NOT be generated");
+    const designMd = await readFile(
+      path.join(SDD_SKILL_DIR, "..", "..", "step", "common-design-md", "STEP.md"),
+      "utf-8",
+    );
+    expect(normalization).toContain("common-design-md/STEP.md#author-and-freeze");
+    expect(designMd).toContain("Add the lock YAML to `<paths.contractsDir>/contracts.md`");
+    expect(normalization).toContain("design-system.yaml");
+    expect(normalization).toContain("prototype-handoff.yaml");
   });
 });

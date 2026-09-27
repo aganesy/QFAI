@@ -285,15 +285,15 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  * Reviewer-driven per-spec / per-screen review payload.
  *
  * This is the schema written to
- * `iter-NN/spec-NNNN/<screen>.review.json` by the product-surface
+ * `iter-NN/CON-UI-NNNN/<screen>.review.json` by the product-surface
  * reviewer sub-agent and consumed by the prototyping CLI loop. The
  * SSOT for this schema is the shipped reference at
- * `.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`,
+ * `.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`,
  * which `qfai init` installs into every consuming project — the
  * reviewer sub-agent runs there and has to be able to read it.
  *
  * Shape (11 required top-level fields, per that reference):
- *   - top-level discriminators (`specId`, `screenId`, `cycle`,
+ *   - top-level discriminators (`uiContractId`, `screenId`, `cycle`,
  *     `sessionStatus`, `retryCount`) identify the (spec, screen, cycle)
  *     triple and the Reviewer Playwright session outcome (the
  *     `sessionStatus` enum mirrors {@link ReviewerSessionStatus} in
@@ -335,7 +335,7 @@ export type ReviewerSoftWarnings = {
 };
 
 export type ReviewerPayload = {
-  readonly specId: string;
+  readonly uiContractId: string;
   readonly screenId: string;
   readonly cycle: number;
   readonly sessionStatus: ReviewerSessionStatus;
@@ -353,7 +353,7 @@ export type ParseReviewerPayloadResult =
   | { readonly ok: false; readonly errors: readonly string[] };
 
 const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
-  "specId",
+  "uiContractId",
   "screenId",
   "cycle",
   "sessionStatus",
@@ -377,7 +377,7 @@ const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudg
  * a multi-screen spec would otherwise have to inflate every pair's
  * flag (which this same relation check rejects). Declared by the
  * shipped reference
- * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
+ * (`.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`
  * §Field rules). `softWarnings.timeBudget` is `true` iff `wallTimeSec`
  * exceeds this cap — the parser enforces that relation so a payload
  * cannot record a 301-second session with the warning switched off.
@@ -528,14 +528,15 @@ function pushDmvErrors(
 /**
  * Parse and validate a reviewer-driven per-spec / per-screen review
  * payload against the shipped reference
- * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`).
+ * (`.qfai/assistant/skill/qfai-prototyping/references/review-payload-schema.md`).
  *
  * Fail-fast on shape errors but aggregate every named-field violation
  * so callers can render the full diagnostic surface in one pass — the
  * reviewer prompt typically fixes more than one problem per retry.
  *
  * Validation rules (closed schema, 11 required top-level fields):
- *   - `specId` / `screenId` required as non-empty strings
+ *   - `uiContractId` required in canonical `CON-UI-NNNN` form;
+ *     `screenId` required as a non-empty string
  *   - `cycle` required as an integer in `0..MAX_ITERATION_INDEX`
  *     (currently `0..9`); upper-bound violations are rejected to keep
  *     the closed-schema contract symmetric with the CLI `--cycle` range
@@ -568,13 +569,13 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
     return { ok: false, errors: ["review payload must be a JSON object"] };
   }
 
-  let specId: string | null = null;
-  if (!("specId" in input)) {
-    errors.push("missing field: specId");
-  } else if (typeof input.specId !== "string" || input.specId.trim().length === 0) {
-    errors.push("specId must be a non-empty string");
+  let uiContractId: string | null = null;
+  if (!("uiContractId" in input)) {
+    errors.push("missing field: uiContractId");
+  } else if (typeof input.uiContractId !== "string" || !/^CON-UI-\d{4}$/.test(input.uiContractId)) {
+    errors.push("uiContractId must match CON-UI-NNNN");
   } else {
-    specId = input.specId;
+    uiContractId = input.uiContractId;
   }
 
   let screenId: string | null = null;
@@ -704,7 +705,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
 
   if (
     errors.length > 0 ||
-    specId === null ||
+    uiContractId === null ||
     screenId === null ||
     cycle === null ||
     sessionStatus === null ||
@@ -720,7 +721,7 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   }
 
   const review: ReviewerPayload = {
-    specId,
+    uiContractId,
     screenId,
     cycle,
     sessionStatus,

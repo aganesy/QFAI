@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
-import { resolveImportLiteEntrypoint } from "../preflight/importLiteEvidence.js";
+import { isStoryTreeProject } from "../storyTree/layout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -53,14 +53,15 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (!readiness.latestPackDir || !readiness.latestPackName) {
-    // The import-lite entrypoint is the sanctioned substitute for a project
-    // that already carries specs and never ran `/qfai-discussion`
-    // (`QFAI-IMPLITE-001`). Without this the final gate
-    // (`validate --profile verify --fail-on error`) reported DPACK-001 as an
-    // error on exactly the projects the preflight declares ready, so such a
-    // project could never reach DoD. It applies only when no pack of any name
-    // exists, so a misnamed pack still fails on QFAI-DPACK-005 above.
-    if ((await resolveImportLiteEntrypoint(root, config)) !== null) {
+    // On the story tree a discussion pack is optional: SDD may start from an
+    // explicit user requirement, and its own preflight stops when no usable
+    // source exists. A pack of any other name still gets QFAI-DPACK-001 below,
+    // beside DPACK-005 or DPACK-006.
+    if (
+      readiness.dangerousPackNames.length === 0 &&
+      readiness.legacyPackNames.length === 0 &&
+      (await isStoryTreeProject(root, config))
+    ) {
       return issues;
     }
     issues.push(

@@ -25,7 +25,7 @@
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { createServer, type Server } from "node:http";
+import { createServer, get, type Server } from "node:http";
 import { connect, Server as NetServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -34,6 +34,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runPrototypingIterate } from "../../../../src/cli/commands/prototypingIterate.js";
 import { parseArgs } from "../../../../src/cli/lib/args.js";
+import { PROTOTYPE_REL } from "../../../../src/core/prototyping/paths.js";
 
 const tempDirs: string[] = [];
 
@@ -111,6 +112,13 @@ async function seedMinimal(root: string): Promise<void> {
     ].join("\n"),
     "utf-8",
   );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "utf-8",
+  );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
   await mkdir(specDir, { recursive: true });
   await writeFile(
@@ -135,7 +143,7 @@ async function listenOnEphemeralPort(): Promise<{ server: Server; port: number }
 }
 
 describe("iterate --auto-serve: (1) CLI flag parses", () => {
-  // QFAI:SPEC-0012:TC-0012-0485
+  // QFAI:EX-0001-0135-01
   it("parseArgs sets options.prototypingAutoServe=true when --auto-serve is present", () => {
     const parsed = parseArgs(
       ["prototyping", "iterate", "--cycle", "0", "--auto-serve"],
@@ -147,7 +155,7 @@ describe("iterate --auto-serve: (1) CLI flag parses", () => {
     expect(parsed.options.prototypingAutoServe).toBe(true);
   });
 
-  // QFAI:SPEC-0012:TC-0012-0485
+  // QFAI:EX-0001-0135-01
   it("parseArgs leaves prototypingAutoServe undefined when --auto-serve is absent", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], process.cwd());
     expect(parsed.invalid).toBe(false);
@@ -175,7 +183,7 @@ describe("iterate --auto-serve: (2) threading via injected serverRunner reaches 
 });
 
 describe("iterate --auto-serve: (3) default runner fallback when serverRunner omitted", () => {
-  // QFAI:SPEC-0012:TC-0012-0485
+  // QFAI:EX-0001-0135-01
   it("dynamically loads defaultServerRunner; deferred sentinel error is gone", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -262,7 +270,36 @@ describe("iterate --auto-serve: (5) DI priority preserved", () => {
 });
 
 describe("iterate --auto-serve: (6) 2-second teardown bound (NFR-0106)", () => {
-  // QFAI:SPEC-0012:TC-0012-0485
+  it("serves the singular prototype tree when both layouts exist", async () => {
+    const root = await newTempDir();
+    await seedMinimal(root);
+    const currentDir = path.join(root, PROTOTYPE_REL, "iter-00");
+    const retiredDir = path.join(root, ".qfai", "prototypes", "iter-00");
+    await mkdir(currentDir, { recursive: true });
+    await mkdir(retiredDir, { recursive: true });
+    await writeFile(path.join(currentDir, "index.html"), "current", "utf-8");
+    await writeFile(path.join(retiredDir, "index.html"), "retired", "utf-8");
+
+    const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
+    const result = await mod.defaultServerRunner({ root, cycle: 0 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    try {
+      const body = await new Promise<string>((resolve, reject) => {
+        get(`http://127.0.0.1:${mod.DEFAULT_AUTO_SERVE_PORT}/`, (response) => {
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => chunks.push(chunk));
+          response.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+          response.on("error", reject);
+        }).on("error", reject);
+      });
+      expect(body).toBe("current");
+    } finally {
+      await result.teardown();
+    }
+  });
+
+  // QFAI:EX-0001-0135-01
   it("default runner teardown resolves within 2000ms", async () => {
     const root = await newTempDir();
     await seedMinimal(root);
@@ -305,9 +342,9 @@ describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Wind
     await seedMinimal(root);
     const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
     // Pre-create the serve dir so the runner can bind.
-    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await mkdir(path.join(root, PROTOTYPE_REL, "iter-00"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      path.join(root, PROTOTYPE_REL, "iter-00", "index.html"),
       "<html>iter-00</html>",
       "utf-8",
     );
@@ -349,9 +386,9 @@ describe("iterate --auto-serve: (7a) defaultServerRunner path-traversal — Wind
     const root = await newTempDir();
     await seedMinimal(root);
     const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
-    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await mkdir(path.join(root, PROTOTYPE_REL, "iter-00"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      path.join(root, PROTOTYPE_REL, "iter-00", "index.html"),
       "<html>iter-00</html>",
       "utf-8",
     );
@@ -451,9 +488,9 @@ describe("iterate --auto-serve: (7b) SPA fallback must not answer traversal payl
     const root = await newTempDir();
     await seedMinimal(root);
     const mod = await import("../../../../src/core/prototyping/defaultServerRunner.js");
-    await mkdir(path.join(root, ".qfai", "prototypes", "iter-00"), { recursive: true });
+    await mkdir(path.join(root, PROTOTYPE_REL, "iter-00"), { recursive: true });
     await writeFile(
-      path.join(root, ".qfai", "prototypes", "iter-00", "index.html"),
+      path.join(root, PROTOTYPE_REL, "iter-00", "index.html"),
       "<html>iter-00</html>",
       "utf-8",
     );
@@ -589,7 +626,7 @@ describe("iterate --auto-serve: (8) default runner refuses a held port", () => {
     });
   }
 
-  // QFAI:SPEC-0012:TC-0012-0489
+  // QFAI:EX-0001-0135-01
   it("TC-0012-0489 (TDD-0561): refuses the held port, binds no other and iterate exits 2 naming it", async () => {
     const root = await newTempDir();
     await seedMinimal(root);

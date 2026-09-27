@@ -1,4 +1,4 @@
-// QFAI:SPEC-0006:TC-0006-0022
+// QFAI:EX-0003-0009-02
 //
 // Error/boundary: `qfai doctor --autoremediate` is disabled in CI by
 // default (the `isCiEnvironment()` path) and surfaces the
@@ -75,9 +75,10 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
   });
 
   it("--dry-run yields no install / archive / config-write side effects", async () => {
+    // QFAI:EX-0003-0009-05
     const root = await newTempDir("dry");
     // Seed skill manifest declaring a missing dep.
-    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skill", "qfai-prototyping");
     await mkdir(manifestDir, { recursive: true });
     await writeFile(
       path.join(manifestDir, "manifest.json"),
@@ -207,15 +208,19 @@ describe("doctor --autoremediate CI detection follows the convention", () => {
     { label: "CI unset", env: {} },
     { label: "CI=false", env: { CI: "false" } },
     { label: "CI=0", env: { CI: "0" } },
+    // QFAI:EX-0003-0009-07
+    { label: "CI empty", env: { CI: "" } },
   ];
 
   for (const { label, env } of ciCases) {
+    // QFAI:EX-0003-0009-04 (the GITHUB_ACTIONS=true case)
     it(`${label} leaves the root .gitignore untouched`, async () => {
       expect(await runInEnv(label, env)).toBe(false);
     });
   }
 
   for (const { label, env } of localCases) {
+    // QFAI:EX-0003-0009-03 (the CI=false case)
     it(`${label} still remediates (the guard must not swallow local runs)`, async () => {
       expect(await runInEnv(label, env)).toBe(true);
     });

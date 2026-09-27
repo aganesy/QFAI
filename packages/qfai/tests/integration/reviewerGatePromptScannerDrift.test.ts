@@ -14,7 +14,7 @@
  * justification rejection on advisory-failing codes) is exercised
  * via the existing `validateReviewerJustification` validator.
  */
-// QFAI:SPEC-0015:TC-0015-0019
+// QFAI:EX-0001-0174-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,7 +29,7 @@ import { validateReviewerJustification } from "../../src/core/validators/reviewe
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 const SCANNER_SCAFFOLD = `// Scanner stub.
 export type DesignMdViolation = {
@@ -110,6 +110,25 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     expect(f?.message).toMatch(/designMdViolations\.ts/);
     expect(f?.message).toMatch(/generator-prompt\.md/);
     expect(f?.message).toMatch(/clause=/);
+  });
+
+  it("checks the shipped singular skill prompt even when a legacy plural prompt is present", async () => {
+    await seedPair(root, {
+      prompt: "# Generator Iteration Prompt\n\n(no constraint enumeration here)\n",
+    });
+    const legacyPrompt = path.join(
+      root,
+      "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md",
+    );
+    await mkdir(path.dirname(legacyPrompt), { recursive: true });
+    await writeFile(legacyPrompt, PROMPT_SCAFFOLD, "utf-8");
+
+    const issues = await validateReviewerGate(root, await getConfig(root));
+    const findings = issues.filter((i) => i.code === "R-PROMPT-SCANNER-DRIFT");
+    expect(findings.length).toBeGreaterThanOrEqual(1);
+    expect(findings[0]?.severity).toBe("error");
+    expect(findings[0]?.message).toContain(PROMPT_REL);
+    expect(findings[0]?.message).not.toContain("assistant/skills/");
   });
 
   it("emits R-PROMPT-SCANNER-DRIFT when prompt mentions a clause but scanner does not", async () => {

@@ -72,7 +72,6 @@ const LINT_PROFILE: Profile = {
     "node ./scripts/check-changelog-released-sections.mjs",
     "node ./scripts/check-doc-clarity.mjs",
     "node ./scripts/check-simplification-ledger.mjs",
-    "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
     "node ./packages/qfai/scripts/check-pack-locations.mjs",
   ],
   groups: [
@@ -101,7 +100,6 @@ const LINT_PROFILE: Profile = {
       "node ./scripts/check-changelog-released-sections.mjs",
       "node ./scripts/check-doc-clarity.mjs",
       "node ./scripts/check-simplification-ledger.mjs",
-      "node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017",
       "node ./packages/qfai/scripts/check-pack-locations.mjs",
     ],
   ],

@@ -3,7 +3,7 @@
  * validated by nothing.
  *
  * The assistant tree is held together by anchored citations — `SKILL.md`
- * delegates to `references/`, references cite constitution sections, agents
+ * delegates to `references/`, references cite rules, agents
  * cite skill sections. A partial `qfai init` refresh leaves half the tree at an
  * older revision, so a newer rule cites a section the older document in the
  * same tree does not contain. Nothing reported it: the tree looks complete, and
@@ -112,7 +112,7 @@ describe("collectAnchorReferences", () => {
   it("reads the citing line number and skips fenced examples", () => {
     const references = collectAnchorReferences(
       [
-        "See `constitution/drift-protocol.md#drift-classes`.",
+        "See `rule/drift-protocol.md#drift-classes`.",
         "",
         "```md",
         "example/only.md#not-a-citation",
@@ -120,14 +120,14 @@ describe("collectAnchorReferences", () => {
       ].join("\n"),
     );
     expect(references).toEqual([
-      { line: 1, targetPath: "constitution/drift-protocol.md", anchor: "drift-classes" },
+      { line: 1, targetPath: "rule/drift-protocol.md", anchor: "drift-classes" },
     ]);
   });
 
   it("leaves prose/column anchors alone — only GitHub slug shapes are citations", () => {
-    // `06_Test-Cases.md#Level` names a table column, not a heading. An anchor
+    // `tech.md#Test` names a table field, not a heading. An anchor
     // carrying uppercase can never be a GitHub slug, so it is out of scope.
-    expect(collectAnchorReferences("`06_Test-Cases.md#Level` is the column.")).toEqual([]);
+    expect(collectAnchorReferences("`tech.md#Test` is the field.")).toEqual([]);
   });
 
   it("reads the whole fragment, not the slug-shaped prefix of one", () => {
@@ -153,8 +153,8 @@ describe("collectAnchorReferences", () => {
   });
 
   it("keeps a bare-prose citation that trailing sentence punctuation follows", () => {
-    expect(collectAnchorReferences("Classify per constitution/drift.md#core-rule.")).toEqual([
-      { line: 1, targetPath: "constitution/drift.md", anchor: "core-rule" },
+    expect(collectAnchorReferences("Classify per rule/drift.md#core-rule.")).toEqual([
+      { line: 1, targetPath: "rule/drift.md", anchor: "core-rule" },
     ]);
   });
 
@@ -172,13 +172,13 @@ describe("validateAssistantAnchorReferences", () => {
   it("reports a citation whose target document has no such heading", async () => {
     await withAssistantTree(
       {
-        ".qfai/assistant/catalog/test-layers.md": ["# Test layers", "", "## Vocabulary", ""].join(
+        ".qfai/assistant/rule/test-layers.md": ["# Test layers", "", "## Vocabulary", ""].join(
           "\n",
         ),
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
-          "Derive the Layer per `catalog/test-layers.md#layer-derivation-procedure-normative`.",
+          "Derive the Layer per `rule/test-layers.md#layer-derivation-procedure-normative`.",
           "",
         ].join("\n"),
       },
@@ -195,16 +195,16 @@ describe("validateAssistantAnchorReferences", () => {
   it("accepts the citation once the target document carries the heading", async () => {
     await withAssistantTree(
       {
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
           "## Layer derivation procedure (normative)",
           "",
         ].join("\n"),
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
-          "Derive the Layer per `catalog/test-layers.md#layer-derivation-procedure-normative`.",
+          "Derive the Layer per `rule/test-layers.md#layer-derivation-procedure-normative`.",
           "",
         ].join("\n"),
       },
@@ -219,15 +219,15 @@ describe("validateAssistantAnchorReferences", () => {
       {
         // The sibling skill carries the heading; the owning one does not. A
         // basename-only fallback would match this file and pass.
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
           "## Parallelization policy",
           "",
         ].join("\n"),
-        ".qfai/assistant/skills/qfai-implement/SKILL.md": ["# qfai-implement", ""].join("\n"),
-        ".qfai/assistant/skills/qfai-implement/references/final-checklist.md": [
-          "# Final checklist",
+        ".qfai/assistant/skill/qfai-implement/SKILL.md": ["# qfai-implement", ""].join("\n"),
+        ".qfai/assistant/skill/qfai-implement/references/checkpoint-verification.md": [
+          "# Checkpoint verification",
           "",
           "Honor `SKILL.md#parallelization-policy`.",
           "",
@@ -236,7 +236,7 @@ describe("validateAssistantAnchorReferences", () => {
       async (root) => {
         const issues = await run(root);
         expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
-        expect(issues[0]?.file).toContain("final-checklist.md");
+        expect(issues[0]?.file).toContain("checkpoint-verification.md");
       },
     );
   });
@@ -244,17 +244,17 @@ describe("validateAssistantAnchorReferences", () => {
   it("resolves a repo-root-relative citation as well as a file-relative one", async () => {
     await withAssistantTree(
       {
-        ".qfai/assistant/constitution/drift-protocol.md": [
+        ".qfai/assistant/rule/drift-protocol.md": [
           "# Drift protocol",
           "",
           "## Drift classes",
           "",
         ].join("\n"),
-        ".qfai/assistant/skills/qfai-sdd/templates/change-request.md": [
+        ".qfai/assistant/skill/qfai-sdd/templates/change-request.md": [
           "# Change request",
           "",
-          "Classify per `.qfai/assistant/constitution/drift-protocol.md#drift-classes`.",
-          "Then per `constitution/drift-protocol.md#drift-classes`.",
+          "Classify per `.qfai/assistant/rule/drift-protocol.md#drift-classes`.",
+          "Then per `rule/drift-protocol.md#drift-classes`.",
           "And per `drift-protocol.md#drift-classes`.",
           "",
         ].join("\n"),
@@ -266,15 +266,15 @@ describe("validateAssistantAnchorReferences", () => {
   });
 
   it("stays silent when the cited document is not part of the assistant tree", async () => {
-    // `06_Test-Cases.md` and `tdd/test-list.md` live in the consumer's spec
-    // packs. Anchor integrity across the assistant tree is this rule's scope;
+    // Project contracts live outside the assistant tree. Anchor integrity
+    // across the assistant tree is this rule's scope;
     // the existence of a project artifact is not.
     await withAssistantTree(
       {
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "See `tdd/test-list.md#layer-column` for the ledger side.",
+          "See `03_contract/tech.md#standard-commands` for the project commands.",
           "",
         ].join("\n"),
       },
@@ -287,18 +287,13 @@ describe("validateAssistantAnchorReferences", () => {
   it("accepts a citation to the second heading that slugs the same as the first", async () => {
     await withAssistantTree(
       {
-        ".qfai/assistant/constitution/workflow.md": [
-          "# Workflow",
-          "",
-          "## Entry",
-          "",
-          "## Entry",
-          "",
-        ].join("\n"),
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/rule/workflow.md": ["# Workflow", "", "## Entry", "", "## Entry", ""].join(
+          "\n",
+        ),
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "See `constitution/workflow.md#entry-1`.",
+          "See `rule/workflow.md#entry-1`.",
           "",
         ].join("\n"),
       },
@@ -315,13 +310,13 @@ describe("validateAssistantAnchorReferences", () => {
     // never sees, and made template headings govern consumer-owned references.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-discussion/templates/04_Sources.md": [
+        ".qfai/assistant/skill/qfai-discussion/templates/04_Sources.md": [
           "# Sources",
           "",
           "## Evidence table",
           "",
         ].join("\n"),
-        ".qfai/assistant/skills/qfai-discussion/references/ui-bearing-playbook.md": [
+        ".qfai/assistant/skill/qfai-discussion/references/ui-bearing-playbook.md": [
           "# UI-bearing playbook",
           "",
           "Record freshness at `04_Sources.md#trend-scan`.",
@@ -341,10 +336,10 @@ describe("validateAssistantAnchorReferences", () => {
     // instruction nobody can follow pass in every profile.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
-          "Classify per `.qfai/assistant/constitution/missing.md#drift-classes`.",
+          "Classify per `.qfai/assistant/rule/missing.md#drift-classes`.",
           "",
         ].join("\n"),
       },
@@ -366,13 +361,13 @@ describe("validateAssistantAnchorReferences", () => {
     // silence — the one drift this rule exists to catch.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
           "Follow `references/missing.md#rule`.",
           "",
         ].join("\n"),
-        ".qfai/assistant/skills/qfai-sdd/references/present.md": ["# Present", ""].join("\n"),
+        ".qfai/assistant/skill/qfai-sdd/references/present.md": ["# Present", ""].join("\n"),
       },
       async (root) => {
         const issues = await run(root);
@@ -385,15 +380,15 @@ describe("validateAssistantAnchorReferences", () => {
   });
 
   it("stays silent on a relative citation whose directory the tree does not hold", async () => {
-    // `tdd/test-list.md` is the consumer's ledger, written relative the same
-    // way. Nothing under the tree is called `tdd/`, from any resolution base,
+    // `03_contract/tech.md` is the consumer's contract, written relative the
+    // same way. Nothing under the tree is called `03_contract/`, from any resolution base,
     // which is what tells the two apart.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-implement/SKILL.md": [
+        ".qfai/assistant/skill/qfai-implement/SKILL.md": [
           "# qfai-implement",
           "",
-          "Record the row in `tdd/test-list.md#coverage`.",
+          "Read commands in `03_contract/tech.md#standard-commands`.",
           "",
         ].join("\n"),
       },
@@ -406,10 +401,10 @@ describe("validateAssistantAnchorReferences", () => {
   it("stays silent when an absent cited path is the consumer's own artifact", async () => {
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
-          "Record it in `.qfai/specs/spec-0001/spec.md#requirements`.",
+          "Record it in `.qfai/spec/BF-0001/01_flow.md#requirements`.",
           "",
         ].join("\n"),
       },
@@ -425,8 +420,8 @@ describe("validateAssistantAnchorReferences", () => {
     // validated the citation against a document the consumer cannot reach.
     await withAssistantTree(
       {
-        ".qfai/assistant/constitution/workflow.md": ["# Workflow", "", "## Entry", ""].join("\n"),
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/rule/workflow.md": ["# Workflow", "", "## Entry", ""].join("\n"),
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
           "See `Workflow.md#no-such-heading`.",
@@ -458,20 +453,17 @@ describe("validateAssistantAnchorReferences", () => {
     );
   });
 
-  it("reads citations out of a YAML manifest that carries agent bodies", async () => {
-    // `manifest/agent-catalog.yml#developer_instructions` holds whole agent
-    // bodies, `qfai-configure` edits it, and an installed project may let it
-    // drift from the canonical agent document. A citation added or changed on
-    // the manifest side alone existed in no `.md` file and was read by nothing.
+  it("reads citations out of a YAML assistant file", async () => {
+    // A YAML assistant file may carry a citation in block text.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-atdd/SKILL.md": ["# qfai-atdd", "", "## Entry", ""].join("\n"),
-        ".qfai/assistant/manifest/agent-catalog.yml": [
+        ".qfai/assistant/skill/qfai-atdd/SKILL.md": ["# qfai-atdd", "", "## Entry", ""].join("\n"),
+        ".qfai/assistant/agent/custom-card.yml": [
           "agents:",
           "  - id: qa-gatekeeper",
           "    developer_instructions: |",
-          "      Follow `.qfai/assistant/skills/qfai-atdd/SKILL.md#entry`.",
-          "      Then `.qfai/assistant/skills/qfai-atdd/SKILL.md#no-such-heading`.",
+          "      Follow `.qfai/assistant/skill/qfai-atdd/SKILL.md#entry`.",
+          "      Then `.qfai/assistant/skill/qfai-atdd/SKILL.md#no-such-heading`.",
           "",
         ].join("\n"),
       },
@@ -479,23 +471,23 @@ describe("validateAssistantAnchorReferences", () => {
         const issues = await run(root);
         expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
         expect(issues[0]?.rule).toBe("assistantAnchorReferences.dangling");
-        expect(issues[0]?.file).toBe(".qfai/assistant/manifest/agent-catalog.yml");
-        // The line of the manifest the operator opens, not of the extracted body.
+        expect(issues[0]?.file).toBe(".qfai/assistant/agent/custom-card.yml");
+        // The line of the YAML document the operator opens.
         expect(issues[0]?.loc?.line).toBe(5);
       },
     );
   });
 
-  it("does not let a citation resolve to a manifest", async () => {
-    // Only `.md` targets are citable, so a manifest is a citing file and never
+  it("does not let a citation resolve to a YAML file", async () => {
+    // Only `.md` targets are citable, so YAML is a citing file and never
     // a cited one. It stays out of the basename fallback for the same reason.
     await withAssistantTree(
       {
-        ".qfai/assistant/manifest/agent-routing.yml": ["profiles: []", ""].join("\n"),
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/agent/custom-card.yml": ["profiles: []", ""].join("\n"),
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "See `agent-routing.yml#profiles`.",
+          "See `custom-card.yml#profiles`.",
           "",
         ].join("\n"),
       },
@@ -517,12 +509,12 @@ describe("validateAssistantAnchorReferences", () => {
     // that finding down with it.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills": "not a directory\n",
-        ".qfai/assistant/constitution/workflow.md": ["# Workflow", ""].join("\n"),
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/skill": "not a directory\n",
+        ".qfai/assistant/rule/workflow.md": ["# Workflow", ""].join("\n"),
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "See `constitution/workflow.md#concurrency-stage-independent-mandatory`.",
+          "See `rule/workflow.md#concurrency-stage-independent-mandatory`.",
           "",
         ].join("\n"),
       },
@@ -543,11 +535,11 @@ describe("profile wiring", () => {
   it.each(profiles)("reports QFAI-LINK-002 under --profile %s", async (profile) => {
     await withAssistantTree(
       {
-        ".qfai/assistant/constitution/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+        ".qfai/assistant/rule/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": [
           "# qfai-sdd",
           "",
-          "Classify per `constitution/drift-protocol.md#drift-classes`.",
+          "Classify per `rule/drift-protocol.md#drift-classes`.",
           "",
         ].join("\n"),
       },
@@ -566,17 +558,17 @@ describe("profile wiring", () => {
     // "every profile" contract this rule is written to.
     await withAssistantTree(
       {
-        ".qfai/assistant/skills/qfai-sdd/SKILL.md": ["# qfai-sdd", ""].join("\n"),
-        ".qfai/assistant/agents/README.md": "# readme\n",
+        ".qfai/assistant/skill/qfai-sdd/SKILL.md": ["# qfai-sdd", ""].join("\n"),
+        ".qfai/assistant/agent/README.md": "# readme\n",
         // The document the roster names, replaced by a directory.
-        ".qfai/assistant/agents/completion-reviewer.md/.keep": "",
+        ".qfai/assistant/agent/completion-reviewer.md/.keep": "",
         // Enough of a surface that init counts as having run here.
         ".qfai/install-provenance.json": "{}\n",
-        ".qfai/assistant/constitution/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
-        ".qfai/assistant/catalog/test-layers.md": [
+        ".qfai/assistant/rule/drift-protocol.md": ["# Drift protocol", ""].join("\n"),
+        ".qfai/assistant/rule/test-layers.md": [
           "# Test layers",
           "",
-          "Classify per `constitution/drift-protocol.md#drift-classes`.",
+          "Classify per `rule/drift-protocol.md#drift-classes`.",
           "",
         ].join("\n"),
       },

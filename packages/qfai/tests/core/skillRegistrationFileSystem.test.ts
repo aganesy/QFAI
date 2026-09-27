@@ -74,7 +74,7 @@ async function projectWithSkills(
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-skill-fs-"));
   tempDirs.push(root);
   for (const [name, frontMatter] of Object.entries(skills)) {
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", name);
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", name);
     await mkdir(skillDir, { recursive: true });
     await writeFile(
       path.join(skillDir, "SKILL.md"),
@@ -105,7 +105,7 @@ describe("the skill gate on file systems that answer differently", () => {
     // Where the volume folds case, the crawl's `skill.md` and the probe's
     // `SKILL.md` are one file, and the canonical path names them as one.
     const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
-    const skillDir = path.join(root, ".qfai", "assistant", "skills", "qfai-a");
+    const skillDir = path.join(root, ".qfai", "assistant", "skill", "qfai-a");
     await rm(path.join(skillDir, "SKILL.md"));
     const file = path.join(skillDir, "skill.md");
     await writeFile(file, Buffer.concat([Buffer.from("# skill\n"), Buffer.from([0xff])]));
@@ -121,7 +121,7 @@ describe("the skill gate on file systems that answer differently", () => {
     // The host lists no hidden skill directory and still opens a document there
     // that a step names, so that step fails where the directory cannot be entered.
     const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
-    const skills = path.join(root, ".qfai", "assistant", "skills");
+    const skills = path.join(root, ".qfai", "assistant", "skill");
     await writeFile(
       path.join(skills, "qfai-a", "SKILL.md"),
       [
@@ -149,11 +149,11 @@ describe("the skill gate on file systems that answer differently", () => {
     // A directory inside a skill is read like any other, so one this process may
     // not list is a finding rather than the end of the run.
     const root = await projectWithSkills({ "qfai-a": ['description: "Does the thing."'] });
-    const locked = path.join(root, ".qfai", "assistant", "skills", "qfai-a", "notes");
+    const locked = path.join(root, ".qfai", "assistant", "skill", "qfai-a", "notes");
     await mkdir(locked, { recursive: true });
     // An uncited reference beside it stays undecided: the directory may hold the
     // document that cites it.
-    const references = path.join(root, ".qfai", "assistant", "skills", "qfai-a", "references");
+    const references = path.join(root, ".qfai", "assistant", "skill", "qfai-a", "references");
     await mkdir(references, { recursive: true });
     await writeFile(path.join(references, "orphan.md"), "# orphan\n", "utf-8");
     fault.deniedDirectory = locked;

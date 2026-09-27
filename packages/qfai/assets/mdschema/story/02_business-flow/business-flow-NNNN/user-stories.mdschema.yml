@@ -1,0 +1,19 @@
+# Document schema: 02_business-flow/business-flow-NNNN/user-stories.md
+structure:
+  - heading:
+      pattern: "^# User Stories$"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Stories$"
+          regex: true
+        description: Stories section.
+        allow_additional: true
+        tables:
+          - min: 1
+            required_headers:
+              - US-ID
+              - Story
+              - Path

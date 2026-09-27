@@ -46,7 +46,7 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
-const CONSTITUTION_DIR = "assistant/constitution";
+const CONSTITUTION_DIR = "assistant/rule";
 const AGENT_SELECTION = `${CONSTITUTION_DIR}/agent-selection.md`;
 const CONSTITUTION = `${CONSTITUTION_DIR}/constitution.md`;
 const WORKFLOW = `${CONSTITUTION_DIR}/workflow.md`;
@@ -78,7 +78,7 @@ async function collectMarkdown(dir: string, base: string = dir): Promise<string[
   }
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
+    if (entry.isDirectory() || entry.isSymbolicLink()) {
       collected.push(...(await collectMarkdown(full, base)));
     } else if (entry.name.endsWith(".md")) {
       collected.push(path.relative(base, full).replace(/\\/g, "/"));
@@ -101,15 +101,10 @@ describe("output language is stated in one place only", () => {
       expect(fixedLanguageOffenders(AGENT_SELECTION, text)).toEqual([]);
     });
 
-    it(`${tree}: agent-selection.md points at the Absolute Rule instead`, async () => {
-      const text = flat(await read(tree, AGENT_SELECTION));
-
-      expect(text).toContain(
-        "`.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う",
-      );
-      // Naming the removal is what stops it being re-ported as a "missing"
-      // header block the next time the file is synced from `.instruction/`.
-      expect(text).toContain("このファイルは出力言語を固定しない");
+    it(`${tree}: agent selection contains no competing output-language rule`, async () => {
+      const text = await read(tree, AGENT_SELECTION);
+      expect(text).not.toContain("Absolute Rule — Output Language");
+      expect(text).not.toContain("All outputs MUST");
     });
 
     it(`${tree}: the Absolute Rule itself still ships`, async () => {
@@ -190,7 +185,7 @@ describe("output language is stated in one place only", () => {
   it("AGENTS.md sends the question to the Absolute Rule", async () => {
     const text = flat(await readFile(path.join(repoRoot, "AGENTS.md"), "utf-8"));
 
-    expect(text).toContain("`.qfai/assistant/constitution/constitution.md`");
+    expect(text).toContain("`.qfai/assistant/rule/constitution.md`");
     // Naming the absence is what stops the block being re-added as a section
     // someone notices is missing.
     expect(text).toContain("This file pins no language");
@@ -271,7 +266,7 @@ describe("fixed-language directive matcher", () => {
     ],
     [
       "the agent-selection disclaimer",
-      "> **出力言語**: `.qfai/assistant/constitution/constitution.md` の Absolute Rule — Output Language に従う。\n" +
+      "> **出力言語**: `.qfai/assistant/rule/constitution.md` の Absolute Rule — Output Language に従う。\n" +
         "> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、\n" +
         "> エージェントの出力に対する指示ではない）。",
     ],
