@@ -5,7 +5,7 @@ import { parseDocument } from "yaml";
 
 import { isEnoent } from "../../core/fs/errno.js";
 import { escapeTableCell, splitMarkdownRow } from "../../core/specPackParsers.js";
-import { readIdMap } from "./idMap.js";
+import { oldContractIds, readIdMap, type MigrationIdMap } from "./idMap.js";
 import {
   parseLegacyRecords,
   retiredLegacyStatus,
@@ -26,6 +26,24 @@ const RETIRED = ".qfai/evidence/migration-spec-to-story/retired";
 
 function ruleIds(value: string): string[] {
   return [...new Set(value.match(/BR-\d{4}-\d{4}/g) ?? [])];
+}
+
+/** A statement with each old ID it names replaced through the ID map. */
+function rewriteStatement(
+  statement: string,
+  map: MigrationIdMap,
+  contractIds: Readonly<Record<string, string>>,
+): { text: string; unmapped: string[] } {
+  const unmapped: string[] = [];
+  const text = statement.replace(
+    /\b(?:(?:US|AC|EX|BR|TC)-(\d{4})-\d{4}|CON-(?:API|DB|UI)-\d+)\b(?!-\d)/g,
+    (token: string, pack: string | undefined) => {
+      const next = pack === undefined ? contractIds[token] : map.ids[`spec-${pack}`]?.[token];
+      if (next === undefined) unmapped.push(token);
+      return next ?? token;
+    },
+  );
+  return { text, unmapped: [...new Set(unmapped)] };
 }
 
 function ruleFromObject(value: unknown): Rule | null {
@@ -78,7 +96,7 @@ function structuredRules(values: readonly unknown[]): Map<string, Rule | null> {
 
 function sqlRules(original: string): Map<string, Rule | null> {
   const current = new Map<string, Rule | null>();
-  const headers = [...original.matchAll(/^-- Rule (BR-\d{4})(?::([^\r\n]*)|[ \t]*$)/gm)];
+  const headers = [...original.matchAll(/^-- Rule (BR-\d{4}-\d{4})(?::([^\r\n]*)|[ \t]*$)/gm)];
   for (const [index, header] of headers.entries()) {
     const id = header[1] ?? "";
     const block = original.slice(header.index, headers[index + 1]?.index).split(/\r?\n/);
@@ -108,7 +126,7 @@ function sqlRules(original: string): Map<string, Rule | null> {
 function markdownRules(original: string): Map<string, Rule | null> {
   const current = new Map<string, Rule | null>();
   for (const line of original.split(/\r?\n/)) {
-    if (!/^\|\s*BR-\d{4}\s*\|/.test(line)) continue;
+    if (!/^\|\s*BR-\d{4}-\d{4}\s*\|/.test(line)) continue;
     const cells = splitMarkdownRow(line);
     const id = cells[0] ?? "";
     rememberRule(
@@ -152,9 +170,12 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     return String(document);
   }
   if (extension === ".json") {
+    // The contract declares its ID on a comment line above the JSON document.
+    const [first = "", ...rest] = original.split("\n");
+    const declaration = /QFAI-CONTRACT-ID:/.test(first) ? `${first}\n` : "";
     let parsed: unknown;
     try {
-      parsed = JSON.parse(original);
+      parsed = JSON.parse(declaration ? rest.join("\n") : original);
     } catch (error) {
       throw new MigrationInputError(`Cannot parse contract ${file}: ${String(error)}`);
     }
@@ -168,7 +189,7 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
     const additional = pendingRules(structuredRules(current), rules, file);
     if (additional.length === 0) return original;
     object["x-qfai-rules"] = [...current, ...additional];
-    return `${JSON.stringify(object, null, 2)}\n`;
+    return `${declaration}${JSON.stringify(object, null, 2)}\n`;
   }
   if (extension === ".sql") {
     const additional = pendingRules(sqlRules(original), rules, file);
@@ -191,16 +212,16 @@ function writeRuleBlock(original: string, file: string, rules: readonly Rule[]):
         `| ${[rule.id, rule.statement, rule.examples.join(", ")].map(escapeTableCell).join(" | ")} |`,
     );
     const lines = original.split("\n");
-    const header = lines.findIndex((line) => /^## Rules\s*$/.test(line));
+    const header = lines.findIndex((line) => /^## Business rules\s*$/.test(line));
     if (header < 0)
-      return `${original.trimEnd()}\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n${rows.join("\n")}\n`;
+      return `${original.trimEnd()}\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n${rows.join("\n")}\n`;
     let table = header + 1;
     while (table < lines.length && !lines[table]?.startsWith("|")) table += 1;
     if (
       table === lines.length ||
       !/^\|\s*BR-ID\s*\|\s*Statement\s*\|\s*Examples\s*\|/.test(lines[table] ?? "")
     ) {
-      throw new MigrationInputError(`Contract ${file} has an incompatible Rules table`);
+      throw new MigrationInputError(`Contract ${file} has an incompatible Business rules table`);
     }
     let end = table + 2;
     while (lines[end]?.startsWith("|")) end += 1;
@@ -253,7 +274,14 @@ export const step07: MigrationStep = {
     const plan = await readMigrationPlan(context);
     if (!plan) throw new MigrationInputError("Migration plan is missing before step 7");
     assertUnchangedPlacements(plan, map);
-    const placements = new Map(plan.rules.map((entry) => [entry.id, entry.contract]));
+    // The plan names a contract by its path before step 3 renamed it.
+    const placements = new Map(
+      plan.rules.map((entry) => [
+        entry.id,
+        map.contracts?.[entry.contract]?.path ?? entry.contract,
+      ]),
+    );
+    const contractIds = oldContractIds(map.contracts);
     const oldExamples = await readLegacyRows(context, "05_Examples.md");
     const citing = new Map<string, string[]>();
     for (const row of oldExamples) {
@@ -302,7 +330,12 @@ export const step07: MigrationStep = {
           forAPerson.push(`${repositoryRelative(context.root, source)}: ${oldId}: ${reason}`);
           continue;
         }
-        const rule = { id: mapped ?? "", statement: record.cells.Rule ?? "", examples };
+        const statement = rewriteStatement(record.cells.Rule ?? "", map, contractIds);
+        for (const token of statement.unmapped)
+          forAPerson.push(
+            `${repositoryRelative(context.root, source)}: ${oldId}: its statement names ${token}, which has no new ID`,
+          );
+        const rule = { id: mapped ?? "", statement: statement.text, examples };
         if (present.has(oldId)) groups.set(target, [...(groups.get(target) ?? []), rule]);
         moved.add(oldId);
         routedByPack.set(specId, (routedByPack.get(specId) ?? new Set()).add(contract ?? ""));

@@ -1,9 +1,5 @@
 # Contracts
 
-## Boundaries
-
-The order API and order storage keep separate contracts.
-
 ## Contract Index
 
 | Short ID | Entity        | Declared ID  | File            | Depends On | Reconciled With | Purpose          |
