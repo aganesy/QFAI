@@ -372,14 +372,18 @@ QFAI keeps policy, behavior and enforcing contracts in one story tree:
 - `02_business-flow/` holds the flow index, each BF and its user stories. Each
   story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
 - `03_contract/` holds the contract index and API, DB, UI, CLI and design
-  contracts. A BR is defined in the contract that enforces it.
+  contracts. The directory sets a contract's kind, and its ID is
+  `<KIND>-NNNN`, such as `API-0002`, with a number no other contract of any
+  kind uses. The file is named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in
+  the contract that enforces it, as `BR-<contract number>-NNNN`.
 - `decisions.md` and `open-questions.md` record project decisions and open
   questions in append-only four-column tables.
 
 The traceability chain is BF → US → AC → EX, with BR → EX from the contracts.
 Each EX names one AC in its story; every AC has an EX, and every EX is cited by
-a BR. Validation checks this chain and the independent BF, AC and EX test
-obligations.
+a BR. A BR cites only EX, only code and tests cite a BR, and a contract never
+names an implementation file. Validation checks this chain and the independent
+BF, AC and EX test obligations.
 
 ## SSOT boundaries
 
@@ -394,7 +398,7 @@ flowchart LR
 
 - Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
 - Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
-- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands`.
+- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
 ## Minimal tutorial

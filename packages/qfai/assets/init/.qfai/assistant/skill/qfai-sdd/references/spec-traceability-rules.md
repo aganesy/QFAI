@@ -15,15 +15,16 @@ Every story-tree file is based on its paired template under ../templates/spec/. 
 
 ## Identifier scopes
 
-| Kind                 | Format          | Scope                                     |
-| -------------------- | --------------- | ----------------------------------------- |
-| Business flow        | BF-NNNN         | All business flows                        |
-| User story           | US-NNNN-NNNN    | Its BF; first number equals the BF number |
-| Acceptance criterion | AC-NNNN-NNNN-NN | Its US                                    |
-| Example              | EX-NNNN-NNNN-NN | Its US                                    |
-| Business rule        | BR-NNNN         | All contracts                             |
-| Decision             | DEC-NNNN        | decisions.md                              |
-| Open question        | OQ-NNNN         | open-questions.md                         |
+| Kind                 | Format          | Scope                                                 |
+| -------------------- | --------------- | ----------------------------------------------------- |
+| Business flow        | BF-NNNN         | All business flows                                    |
+| User story           | US-NNNN-NNNN    | Its BF; first number equals the BF number             |
+| Acceptance criterion | AC-NNNN-NNNN-NN | Its US                                                |
+| Example              | EX-NNNN-NNNN-NN | Its US                                                |
+| Contract             | KIND-NNNN       | All contracts of every kind; its directory names KIND |
+| Business rule        | BR-NNNN-NNNN    | Its contract; first number equals the contract number |
+| Decision             | DEC-NNNN        | decisions.md                                          |
+| Open question        | OQ-NNNN         | open-questions.md                                     |
 
 Use highest existing number plus one in the scope. Count IDs named in retired-item decisions, so deletion never frees an ID. Empty scopes begin at 0001 or, for AC and EX tails, 01. Directory names match their BF and US IDs. Do not add a CLI allocator.
 
@@ -36,13 +37,14 @@ Moving a story to another flow changes its US ID and every child AC and EX ID. U
 3. 02_Acceptance-Criteria.md states each AC as a Gherkin scenario under that US.
 4. Each EX row in 03_Example.md has exactly one AC-Ref. It names an AC in that story. Every AC has at least one EX.
 5. Each BR lives in an enforcing contract and cites one or more full EX IDs that already exist. Every EX is cited by at least one BR. Several BRs may cite an EX, and one BR may cite several EXs.
-6. The authoritative contract defines a shared BR once. Other contracts cite its ID through file-level rule refs and do not restate the rule.
+6. The authoritative contract defines a shared BR once. Other contracts neither restate nor cite it.
+7. References point one way. A BR cites only EX IDs, and only code and tests cite a BR. A contract never names an implementation file. A flow's contracts are the ones whose BRs cite its examples.
 
 Do not substitute an AC for an EX in a BR citation. The examples are concrete evidence for the rule, and the required order leaves them available before rule authoring.
 
 ## Contract forms and index
 
-YAML and JSON contracts put rules under x-qfai-rules. SQL contracts use -- Rule and -- Examples: lines. Markdown contracts use a ## Rules table. Each rule includes ID, statement, and full example IDs. File-level refs use x-qfai-rule-refs, -- Rule refs:, or Rule refs: as appropriate. Follow contract-artifact-rules.md and the contract's paired template for syntax.
+YAML and JSON contracts put rules under x-qfai-rules. SQL contracts use -- Rule and -- Examples: lines. Markdown contracts use a ## Business rules table. Each rule includes ID, statement, and full example IDs. Follow contract-artifact-rules.md and the contract's paired template for syntax.
 
 Each contract file written has a contracts.md row in the same change. The index cites the file and its ID; it is not another rule definition. Confirm that a contract can realize each persisted attribute in its cited AC and EX directly or through a stated join. Reconcile paired contracts' state and error vocabularies.
 

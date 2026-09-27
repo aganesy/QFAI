@@ -1,8 +1,9 @@
 # QFAI-CONTRACT-ID: API-0001
-# Replace the sample BR and EX IDs with allocated IDs from the story tree.
+# Replace the sample IDs: the contract takes the next contract number, its
+# rules are numbered under it, and its examples come from the story tree.
 x-qfai-depends-on: []
 x-qfai-rules:
-  - id: BR-0001
+  - id: BR-0001-NNNN
     statement: A valid order draft request creates one draft.
     examples: [EX-NNNN-NNNN-NN]
 openapi: "3.1.0"

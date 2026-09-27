@@ -83,9 +83,14 @@ If spec and code conflict:
 
 Maintain the chain from a business flow to its stories, acceptance criteria,
 examples, tests, code, and verification evidence. Business rules live in the
-relevant contract under `.qfai/spec/03_contract/`, and each example cites
-exactly one acceptance criterion. Keep those links intact when moving a story
-or changing a contract.
+contract that enforces them under `.qfai/spec/03_contract/`, and each example
+cites exactly one acceptance criterion. Keep those links intact when moving a
+story or changing a contract.
+
+References point one way. A business rule cites examples and nothing else, and
+only code and tests cite a business rule. A contract never names an
+implementation file. The contracts a flow relies on are the ones whose rules
+cite the flow's examples.
 
 The test obligation is determined by the ID and the test's layer:
 
@@ -99,8 +104,9 @@ test is an uncovered obligation, even if tests in another layer mention it.
 Resolve a valid exception through a row in `.qfai/spec/decisions.md`; do not
 invent a test annotation to suppress a finding.
 
-When practical, cite the BF, US, AC, EX, and relevant contract IDs in the
-work's evidence so a reviewer can follow the changed behavior.
+When practical, cite the BF, US, AC and EX IDs, and the contract and BR IDs
+that enforce them, in the work's evidence so a reviewer can follow the changed
+behavior.
 
 ---
 
