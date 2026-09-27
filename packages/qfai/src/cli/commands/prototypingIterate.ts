@@ -49,7 +49,7 @@ import path from "node:path";
 
 import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../lib/logger.js";
-import { loadConfig, type QfaiConfig } from "../../core/config.js";
+import { loadConfig, readRejectedPrimaryUiContract, type QfaiConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
@@ -584,6 +584,13 @@ export async function runPrototypingIterate(
   }
   // The precheck provides the UI contract set frozen at cycle 0.
   const { earlyConfig, unionSpecs: cycleZeroUnion } = precheck;
+  if (primaryUiContract === undefined) {
+    const rejected = readRejectedPrimaryUiContract(earlyConfig);
+    if (rejected !== undefined) {
+      error(`qfai prototyping iterate: qfai.config.yaml ${rejected}`);
+      return 2;
+    }
+  }
 
   // 1) Read + hash root DESIGN.md FIRST (before any per-cycle plumbing).
   //    A malformed DESIGN.md is a structural project error and must

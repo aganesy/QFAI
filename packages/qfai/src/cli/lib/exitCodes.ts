@@ -154,7 +154,7 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     lines: [
       `${EXIT_CODES.ok} = success,`,
       `${EXIT_CODES.findings} = a runtime error (an I/O exception while reading UI contracts),`,
-      `${EXIT_CODES.inputError} = prototyping.json is missing, legacy, or malformed`,
+      `${EXIT_CODES.inputError} = prototyping.json is missing, legacy, or malformed, or qfai.config.yaml rejected prototyping.primaryUiContract`,
     ],
   },
   {

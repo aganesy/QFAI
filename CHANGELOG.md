@@ -751,6 +751,12 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
+  (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
+  issue, and `qfai prototyping iterate` then took the first UI contract as
+  primary and started cycle 0. Without `--primary-ui-contract`, `iterate` and
+  `show-ui-contract` now exit 2 and name the key and the value received.
+
 - **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
   only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a
   plan's `from` selects. Each new `business-flow.md` now also carries that

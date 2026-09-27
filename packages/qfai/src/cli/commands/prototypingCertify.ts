@@ -35,7 +35,11 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { loadConfig, type ConfigLoadResult } from "../../core/config.js";
+import {
+  loadConfig,
+  readRejectedPrimaryUiContract,
+  type ConfigLoadResult,
+} from "../../core/config.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
 import { isEnoent } from "../../core/fs/errno.js";
@@ -1020,10 +1024,17 @@ export async function runPrototypingCertify(
 
 /**
  * Print the frozen UI contract scope, the current live scope, and the
- * selected primary contract. Missing or legacy state exits 2.
+ * selected primary contract. Missing or legacy state, or a rejected
+ * configured primary contract, exits 2.
  */
 export async function runPrototypingShowUiContract(options: { root: string }): Promise<number> {
-  const { config } = await loadConfig(options.root);
+  const loaded = await loadConfig(options.root);
+  const rejected = readRejectedPrimaryUiContract(loaded);
+  if (rejected !== undefined) {
+    error(`qfai prototyping show-ui-contract: qfai.config.yaml ${rejected}`);
+    return 2;
+  }
+  const { config } = loaded;
   const protoRaw = await loadJson(path.join(options.root, PROTOTYPING_JSON_REL));
   const covered = readUiContractsCovered(protoRaw);
   if (covered.kind !== "ok") {

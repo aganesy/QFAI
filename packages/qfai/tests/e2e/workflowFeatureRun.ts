@@ -30,7 +30,7 @@ const SPEC = ".qfai/spec";
 const FLOW_DIR = `${SPEC}/02_business-flow/business-flow-0001`;
 const STORY_DIR = `${FLOW_DIR}/user-story-0001-0001`;
 export const DECISIONS = `${SPEC}/decisions.md`;
-const CONTRACT = `${SPEC}/03_contract/cli/notification-addresses.md`;
+const CONTRACT = `${SPEC}/03_contract/cli/cli-0001-notification-addresses.md`;
 
 export const E2E_TEST = "tests/e2e/notification-addresses.test.ts";
 export const INTEGRATION_TEST = "tests/integration/notification-addresses.test.ts";
@@ -98,9 +98,9 @@ const CONTRACTS_INDEX = [
   "",
   "## Contract Index",
   "",
-  "| Short ID | Entity | Declared ID | File | Depends On | Reconciled With | Purpose |",
-  "| -------- | ------ | ----------- | ---- | ---------- | --------------- | ------- |",
-  `| CLI-NOTIFY | Notification addresses | - | \`${CONTRACT}\` | - | - | Where notifications go |`,
+  "| ID | Title | File | Depends On | Reconciled With | Purpose |",
+  "| --- | ----- | ---- | ---------- | --------------- | ------- |",
+  `| CLI-0001 | Notification addresses | \`${CONTRACT}\` | - | - | Where notifications go |`,
   "",
 ].join("\n");
 
@@ -180,17 +180,17 @@ const STORY_TREE: Record<string, string> = {
     "",
   ].join("\n"),
   [CONTRACT]: [
-    "# CLI Contract: notification addresses",
+    "# CLI-0001: Notification addresses",
     "",
-    "## Behavior",
+    "## Ownership boundary",
     "",
-    "- A customer registers notification addresses.",
+    "Where a customer's notifications go. Sending them is outside this contract.",
     "",
-    "## Rules",
+    "## Business rules",
     "",
     "| BR-ID | Statement | Examples |",
     "| ----- | --------- | -------- |",
-    "| BR-0001 | A customer holds at most five addresses, each once | EX-0001-0001-01, EX-0001-0001-02 |",
+    "| BR-0001-0001 | A customer holds at most five addresses, each once | EX-0001-0001-01, EX-0001-0001-02 |",
     "",
   ].join("\n"),
   [`${SPEC}/03_contract/contracts.md`]: CONTRACTS_INDEX,
