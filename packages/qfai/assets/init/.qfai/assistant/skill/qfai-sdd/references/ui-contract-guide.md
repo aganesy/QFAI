@@ -1,6 +1,7 @@
 # UI Contract Authoring Guide
 
-Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its exact file and ID to `<paths.contractsDir>/contracts.md` in the same change. A filename is a locator; it does not define the contract ID or its flow coverage.
+Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`, each named `ui-NNNN-<slug>.yaml` after its ID. A UI-bearing contract declares exactly one full `# QFAI-CONTRACT-ID: UI-NNNN` and a nonempty `screens[]` list. Add its row to `<paths.contractsDir>/contracts.md` in the same change.
+The flows a UI contract serves are the flows whose examples its rules cite; the file name does not select them.
 
 ## `screens[].primary_tasks` shape
 
