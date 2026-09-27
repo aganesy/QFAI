@@ -717,8 +717,9 @@ function outputStory(
 
 /**
  * A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps.
- * Every line keeps its indentation relative to the steps, and a whitespace-only line
- * inside a DocString is payload, so it is shifted like the rest rather than emptied.
+ * The steps' own indentation is replaced and every character after it is kept, so a
+ * DocString keeps its relative whitespace, tabs included. A whitespace-only line inside a
+ * DocString is payload, so it is shifted like the rest rather than emptied.
  */
 function indentedScenario(scenario: string): string {
   const lines = scenario.replace(/\r\n/g, "\n").split("\n");
@@ -726,7 +727,7 @@ function indentedScenario(scenario: string): string {
   const step = lines.find((line) => /^\s*(?:Given|When|Then|And|But)\s/.test(line));
   const stepIndent = step === undefined ? 0 : indent(step);
   const shifted = (line: string): string =>
-    `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trimStart()}`;
+    `    ${indent(line) >= stepIndent ? line.slice(stepIndent) : line.trimStart()}`;
   let docString: string | null = null;
   return lines
     .map((line, index) => {

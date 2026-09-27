@@ -468,7 +468,7 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed with\n    """\n    body  \n      \n    """\n  Then the order is accepted\n```\n',
+        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed with\n    """\n    body  \n      \n    \tkey: value\n    """\n  Then the order is accepted\n```\n',
       );
       await run(step04, await context(root));
       const storyDir = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
@@ -478,7 +478,7 @@ describe("migration steps 1 to 4", () => {
       expect(
         await readFile(path.join(root, storyDir, "02_Acceptance-Criteria.md"), "utf8"),
       ).toContain(
-        '    When an order is placed with\n      """\n      body  \n        \n      """\n    Then',
+        '    When an order is placed with\n      """\n      body  \n        \n      \tkey: value\n      """\n    Then',
       );
     });
   });
