@@ -2,15 +2,20 @@
 
 ## Objective
 
-QFAI provides a command-line quality toolkit for AI-assisted software development. It connects discussion, a story tree, enforcing contracts, executable tests, and observed validation evidence.
-
-The need and scope are recorded in `.qfai/spec/01_policy/initiative.md` and the current business flows under `.qfai/spec/02_business-flow/`.
+- Outcome: A change made with AI coding agents is claimed complete only when its
+  written behaviour, enforcing contracts, executable tests and observed
+  validation evidence agree.
+- Evidence: the business flows under `.qfai/spec/02_business-flow/`, each
+  written from a request that `.qfai/spec/decisions.md` records.
 
 ## Users
 
-- AI coding agents use the shipped skills and agent cards to produce and review work.
-- Developers and QA engineers use the CLI findings and evidence to assess coverage and completion.
-- Repository maintainers use CI and contract gates to keep the shipped package consistent.
+- AI coding agent: produces and reviews work with the shipped skills and agent
+  cards.
+- Developer or QA engineer: judges coverage and completion from the CLI's
+  findings and evidence.
+- Repository maintainer: keeps the shipped package consistent through CI and
+  contract gates.
 
 ## Success criteria
 

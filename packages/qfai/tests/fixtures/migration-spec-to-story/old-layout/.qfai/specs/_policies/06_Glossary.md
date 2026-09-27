@@ -1,5 +1,7 @@
 # Glossary
 
-## Order
+## Terms
 
-An accepted request with a receipt.
+| Term  | Definition                          |
+| ----- | ----------------------------------- |
+| Order | An accepted request with a receipt. |
