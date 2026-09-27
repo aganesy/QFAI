@@ -391,6 +391,34 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     ]);
   });
 
+  // QFAI:AC-0001-0054-04
+  it("leaves a db contract without one DB-NNNN declaration out of the apply order", async () => {
+    // QFAI:EX-0001-0054-06
+    const lines = [
+      "-- QFAI-CONTRACT-ID: DB-0004",
+      "-- Depends on: -",
+      "CREATE TABLE lines (o int REFERENCES orders (id), a int REFERENCES archive (id));",
+      "",
+    ].join("\n");
+    const archive =
+      "-- QFAI-CONTRACT-ID: API-0003\n-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE archive (id int);\n";
+    const applyOrder = async (ordersId: string): Promise<string[]> => {
+      const root = await contractTree([], {
+        "db/db-0001-orders.sql": `-- QFAI-CONTRACT-ID: ${ordersId}\nCREATE TABLE orders (id int);\n`,
+        "db/db-0002-archive.sql": archive,
+        "db/db-0004-lines.sql": lines,
+      });
+      return (await validateContracts(root, defaultConfig))
+        .filter((entry) => entry.code === "QFAI-CONTRACT-036")
+        .map((entry) => `${entry.file} ${entry.message}`);
+    };
+
+    expect(await applyOrder("API-0001")).toEqual([]);
+    const findings = await applyOrder("DB-0001");
+    expect(findings).toEqual([expect.stringMatching(/db-0004-lines\.sql .*DB-0001 \(orders\)\.$/)]);
+    expect(findings.join("\n")).not.toContain("archive");
+  });
+
   it("counts API-NNNN and DB-NNNN contracts and annotations in ATDD coverage", async () => {
     const root = await contractTree([], {
       "api/api-0002-orders.yaml": API_CONTRACT,
