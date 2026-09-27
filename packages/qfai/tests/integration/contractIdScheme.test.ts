@@ -339,13 +339,21 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     await put(
       root,
       `${contracts}/contracts.md`,
-      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n| - | `cli/cli-0002-check.md` |\n",
+      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n| CLI-0002 | `cli/cli-0002-check.md` |\n",
     );
     expect(await indexFindings(root)).toEqual([
       expect.stringMatching(
         /^QFAI-CONTRACT-034 Contract number 0002 is declared by more than one contract: /,
       ),
     ]);
+    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
+    expect(await indexFindings(root)).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /^QFAI-CONTRACT-034 Contract API-0003 is not listed with its file in .*api-0003-refunds\.md$/,
+        ),
+      ]),
+    );
   });
 
   it("checks the apply order of a DB-NNNN contract", async () => {
@@ -374,9 +382,14 @@ describe("the new contract IDs in the checks that read the old ones", () => {
       "tests/api/orders.test.ts",
       "// QFAI:API-0002\n// QFAI:DB-0004\n// QFAI:API-0003-copy\n// QFAI:API-0003-0001\n",
     );
+    await put(root, "tests/atdd/malformed.test.ts", "// QFAI:API-0003-copy\n");
+    await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
     expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
     expect([...result.activeDbContractIds]).toEqual(["DB-0004"]);
     expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
+    expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
+      "annotated.test.ts",
+    ]);
   });
 });

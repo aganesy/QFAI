@@ -95,6 +95,21 @@ export async function validateStoryTreeContractReferences(
       }
       continue;
     }
+    const scheme = model.contracts.find((entry) => path.resolve(entry.file) === path.resolve(file));
+    if (scheme) {
+      if (indexedIds.has(scheme.id) && listedPath(file)) continue;
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-034",
+          `Contract ${scheme.id} is not listed with its file in ${indexFile}: ${file}`,
+          "error",
+          file,
+          "contracts.storyTreeIndex",
+          [scheme.id],
+        ),
+      );
+      continue;
+    }
     if (model.additionalContractFiles.includes(file) && !listedPath(file)) {
       issues.push(
         issue(

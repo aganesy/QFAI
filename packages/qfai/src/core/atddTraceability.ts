@@ -1297,10 +1297,12 @@ function unreadableDirectoryOf(root: string, error: unknown): string | null {
 const UNCOUNTED_TEST_DIRS = ["atdd"];
 
 /** Any QFAI test annotation, in any of its forms. */
-const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-|(?:API|DB)-\d{4})/;
+const ANY_QFAI_ANNOTATION =
+  /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
-const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-|(?:API|DB)-\d{4})/;
+const LEVEL_INDEPENDENT_ANNOTATION =
+  /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /**
  * Whether a legacy file's annotations are all ones ATDD no longer owes.
