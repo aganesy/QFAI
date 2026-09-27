@@ -147,6 +147,13 @@ describe("hard-required names with hyphens", () => {
     ).toEqual({ retired: [], unknown: [] });
   });
 
+  it("does not read a longer name that ends in a declared one as that name", () => {
+    // QFAI:EX-0001-0175-05
+    for (const entry of ["a full `CON-UI-NNNN`", "a full CON_UI-NNNN", "a full `UI-NNNN-X`"]) {
+      expect(classifyHardRequiredEntries([entry], "qfai-verify").unknown).toEqual([entry]);
+    }
+  });
+
   it("still checks a separate name after a spaced dash", () => {
     expect(
       classifyHardRequiredEntries(["brand intent - unreviewedSecret"], "qfai-verify").unknown,
