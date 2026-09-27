@@ -51,8 +51,6 @@ async function writeConfigWithBrowserTool(root: string, browserTool: string): Pr
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "prototyping:",
       "  execution:",
       `    browserTool: ${browserTool}`,

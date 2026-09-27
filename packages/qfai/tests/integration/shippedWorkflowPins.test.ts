@@ -525,3 +525,28 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     expect(run.exitCode, `the untouched shipped set must pass the lane:\n${run.output}`).toBe(0);
   });
 });
+
+/**
+ * The docs lane installs the checker's engine itself, and the package depends
+ * on the same engine. Two versions would let the lane and `qfai validate` give
+ * two verdicts about one document, so all three pins are one.
+ */
+describe("the docs lane installs the mdschema version the package depends on", () => {
+  const PACKAGE = /"@jackchuka\/mdschema":\s*"([^"]+)"/;
+
+  it("pins @jackchuka/mdschema to the version both package manifests name", async () => {
+    const lane = await readFile(
+      path.join(shippedGithubDir(), "workflows", "qfai-docs.yml"),
+      "utf-8",
+    );
+    const shipped = /@jackchuka\/mdschema@(\d+\.\d+\.\d+)/.exec(lane)?.[1];
+    const own = PACKAGE.exec(await readFile(path.join(packageRoot, "package.json"), "utf-8"))?.[1];
+    const repository = PACKAGE.exec(
+      await readFile(path.join(packageRoot, "..", "..", "package.json"), "utf-8"),
+    )?.[1];
+
+    expect(shipped).toBeDefined();
+    expect(own).toBe(shipped);
+    expect(repository).toBe(shipped);
+  });
+});

@@ -161,7 +161,6 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
   - The evidence file MUST show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
   - A scan failure is `QFAI-SCAN-002`; the run is not done until the configured selection scans completely. `QFAI-STORY-006` through `QFAI-STORY-009` report uncovered BF, AC, and EX obligations for the testing stages.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
-- Do not use `validation.require.specSections` for the story tree. Its fixed files and sections are defined by the shipped schemas.
 - A validation checklist with evidence (sample matched files) is produced.
 - Project-owned policy and contract files are filled or refreshed from evidence, or marked `TBD` when evidence is missing. Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.
 - Evidence file exists: `.qfai/evidence/configure-<run-id>.md`.
@@ -324,7 +323,7 @@ Every 5 major actions, pause and restate:
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
-- Keep `validation.require.specSections` unchanged; story-tree structure comes from the shipped schemas.
+- Write no `validation.require` key; the sections of a story-tree document come from the shipped schemas.
 
 ## Step 0 - Load Context (always)
 

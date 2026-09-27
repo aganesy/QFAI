@@ -2,25 +2,27 @@
 /**
  * check-mdschema.mjs
  *
- * Validates SDD documents against the declarative Markdown schemas shipped in
- * `packages/qfai/assets/mdschema/`.
+ * Validates the story-tree documents against the declarative Markdown schemas
+ * shipped in `packages/qfai/assets/mdschema/`.
  *
  * markdownlint answers "is this well-formed Markdown". It cannot answer "does
- * this spec have an Acceptance Criteria section, is that section's body a
- * Gherkin block, and does the test-case table still carry an `EX-Ref`
- * column" — those are document-SHAPE questions, and a spec that fails all
- * three is still perfectly well-formed Markdown. `mdschema` answers them from
- * a schema, so the shape of a spec is declared in one reviewable file instead
- * of living in a template nobody diffs against.
+ * this story have a Criteria section, is that section's body one Gherkin
+ * block, and does the example table still carry an `AC-Ref` column" — those
+ * are document-SHAPE questions, and a story that fails all three is still
+ * perfectly well-formed Markdown. `mdschema` answers them from a schema, so the
+ * shape of a document is declared in one reviewable file instead of living in
+ * a template nobody diffs against.
+ *
+ * `qfai validate` runs the same check through `checkDocuments`, below, so the
+ * lane and the validator cannot give two answers about one document.
  *
  * ── Scope, and why it is a flag ───────────────────────────────────────────
  *
- * The schemas state the TEMPLATE's contract. A repository that adopted QFAI
- * before a given convention has documents that predate it, and those cannot be
- * migrated mechanically — a missing story catalogue is a summary somebody has
- * to write, not a heading somebody has to insert. So which documents the
- * contract is enforced over is a policy decision, taken here rather than by
- * weakening the schemas until the current tree happens to pass:
+ * The schemas state the TEMPLATE's contract. A document written before a given
+ * convention cannot always be migrated mechanically — a missing section is
+ * text somebody has to write, not a heading somebody has to insert. So which
+ * documents the contract is enforced over is a policy decision, taken here
+ * rather than by weakening the schemas until the current tree happens to pass:
  *
  *   --scope changed  (default) documents whose text this branch changed, judged
  *                    against their own state at the merge base. A ratchet: a new
@@ -51,11 +53,6 @@
  *   | conforms             | fails       | this branch's — fail             |
  *   | fails                | fails       | pre-existing — report, not fail  |
  *
- * A document checked against a different contract at the base — one the
- * `when:` predicates routed elsewhere, or one that opted out — counts as not
- * there. It has never been held to this schema, so this is the first run that
- * could ask.
- *
  * **The unit is the document, not the violation.** A branch that adds an
  * eleventh violation to a document that already had ten still passes: the
  * document failed before and fails now. Deciding that would mean reading which
@@ -65,25 +62,15 @@
  * a reflowed message would silently report every violation as new. The file
  * ratchet uses only the exit status, which the tool does promise.
  *
- * A pack outlives the thing it specifies: a spec that was deleted or superseded
- * is kept as a record of why it went away, and that record cannot carry a
- * consumer view or an applicable NFR for something that no longer exists.
- * Two things follow from that.
+ * ── No opt-out ────────────────────────────────────────────────────────────
  *
- * A manifest entry may carry a `when:` predicate — a regular expression read
- * against the document's own text. A file whose content matches is checked
- * against that entry and is dropped from every entry on the same path that has
- * no predicate, so one path can carry two document shapes without either
- * document being run against the other's contract.
- *
- * A document can also opt out of its schema entirely, with
+ * Every document the manifest routes is a spec document, and a spec document
+ * conforms to its schema. A document that carries
  *
  *     <!-- mdschema:ignore -->
  *
- * in its leading comment block. This is the answer for a shape no schema
- * describes; where a shape has one, `when:` routes to it instead. The marker
- * has to be at the top, before any content, and every ignored file is counted
- * in the run's own output — an exclusion nobody can see is one nobody reviews.
+ * in its leading comment block is reported for it, whatever the scope and
+ * whatever the merge base held, and is still graded against its schema.
  *
  * Usage:
  *   node scripts/check-mdschema.mjs                      # ratchet against origin/main
@@ -259,16 +246,11 @@ function readConfiguredDir(root, key, fallback) {
  */
 export function parseManifest(text) {
   const entries = [];
-  /** @type {{ id?: string, schema?: string, pattern?: string, when?: string }} */
+  /** @type {{ id?: string, schema?: string, pattern?: string }} */
   let current = {};
   const flush = () => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({
-        id: current.id,
-        schema: current.schema,
-        pattern: current.pattern,
-        ...(current.when !== undefined ? { when: current.when } : {}),
-      });
+      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
     }
     current = {};
   };
@@ -280,7 +262,7 @@ export function parseManifest(text) {
       current = { id: start[1] };
       continue;
     }
-    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
     if (field !== null && current.id !== undefined) {
       current[field[1]] = field[2];
     }
@@ -297,9 +279,9 @@ function expandPattern(pattern, { specsDir, contractsDir }) {
   return pattern.replaceAll("{specsDir}", specsDir).replaceAll("{contractsDir}", contractsDir);
 }
 
-/** Files without exactly one unconditional schema entry, in input order. */
+/** Files without exactly one schema entry, in input order. */
 export function documentsWithoutOneEntry(manifestText, files, paths) {
-  const entries = parseManifest(manifestText).filter((entry) => entry.when === undefined);
+  const entries = parseManifest(manifestText);
   return files.filter(
     (file) =>
       entries.filter((entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file))
@@ -307,18 +289,11 @@ export function documentsWithoutOneEntry(manifestText, files, paths) {
   );
 }
 
-/**
- * Compiles a manifest pattern into an anchored regular expression.
- *
- * `**` crosses path separators, `*` does not — the ordinary glob distinction,
- * and the reason a single star in a `spec-<star>` segment cannot reach into a
- * nested directory.
- *
- * @param {string} pattern Repository-root-relative, forward-slashed.
- * @returns {RegExp}
- */
-/** The opt-out a document carries to be left out of its schema. */
+/** The opt-out marker a spec document may not carry. */
 export const IGNORE_MARKER = "<!-- mdschema:ignore -->";
+
+/** What a refused marker is reported as. */
+export const IGNORE_MARKER_REFUSAL = `${IGNORE_MARKER} is not accepted: a spec document conforms to its schema, and the marker does not exempt it`;
 
 /**
  * Up to three leading spaces, which is the indent Markdown still reads as
@@ -331,17 +306,16 @@ const HTML_BLOCK_INDENT = /^ {0,3}(?![ \t])/;
 const COMMENT_CLOSE = "-->";
 
 /**
- * Whether a document opts out, read from its leading comment block.
+ * Whether a document carries the opt-out marker in its leading comment block.
  *
- * Leading, because a marker further down would cover a document a reader
- * scrolling past the first screen assumes is checked. Blank lines and other
- * HTML comments may precede it — a file may open with a note about itself,
- * over as many lines as it needs — but the first line of content ends the
- * block.
+ * The leading block is where the marker used to exempt a document, so it is
+ * where one is looked for. Blank lines and other HTML comments may precede it,
+ * but the first line of content ends the block. Text that only mentions the
+ * marker, below the content or inside a sentence, is not a marker.
  *
  * @param {string} text the document's contents
  */
-export function optsOutOfSchema(text) {
+export function carriesIgnoreMarker(text) {
   let inComment = false;
   for (const line of text.split(/\r?\n/)) {
     if (inComment) {
@@ -452,6 +426,37 @@ export function firstHeading(text) {
 }
 
 /**
+ * The one statement a root-heading mismatch is worth.
+ *
+ * It names what is there, what is required, and that the document is graded no
+ * further until they agree — because a reader who is not told that will read
+ * the absence of other lines as the rest of the document being sound.
+ *
+ * @param {string} schemaText
+ * @param {string} text
+ * @returns {string}
+ */
+export function rootMismatchMessage(schemaText, text) {
+  const verdict = rootHeadingVerdict(schemaText, text);
+  const expected = verdict?.expected ?? "";
+  const actual = verdict?.actual;
+  const found = actual === null || actual === undefined ? "no heading" : `"${actual.trim()}"`;
+  return `Root heading is ${found}, but the schema requires "${expected}"; every section is graded against the heading above it, so this document is not checked further until the root heading matches`;
+}
+
+/**
+ * {@link rootMismatchMessage} in the lane's own output shape.
+ *
+ * @param {string} schemaText
+ * @param {string} file repository-relative
+ * @param {string} text
+ * @returns {string}
+ */
+export function describeRootMismatch(schemaText, file, text) {
+  return [file, `  ✗ 1:1  [structure] ${rootMismatchMessage(schemaText, text)}`].join("\n");
+}
+
+/**
  * Whether `text` carries the root heading `schemaText` requires.
  *
  * `null` when the question cannot be put — the schema declares no root heading,
@@ -462,31 +467,6 @@ export function firstHeading(text) {
  * @param {string} text
  * @returns {{ ok: boolean, expected: string, actual: string | null } | null}
  */
-/**
- * The one line a root-heading mismatch is worth.
- *
- * It names what is there, what is required, and that the document is graded no
- * further until they agree — because a reader who is not told that will read
- * the absence of other lines as the rest of the document being sound.
- *
- * @param {string} schemaText
- * @param {string} file repository-relative
- * @param {string} text
- * @returns {string}
- */
-export function describeRootMismatch(schemaText, file, text) {
-  const verdict = rootHeadingVerdict(schemaText, text);
-  const expected = verdict?.expected ?? "";
-  const actual = verdict?.actual;
-  const found = actual === null || actual === undefined ? "no heading" : `"${actual.trim()}"`;
-  return [
-    file,
-    `  ✗ 1:1  [structure] Root heading is ${found}, but the schema requires "${expected}"`,
-    "         Every section is graded against the heading above it, so this document",
-    "         is not checked further until the root heading matches.",
-  ].join("\n");
-}
-
 export function rootHeadingVerdict(schemaText, text) {
   const required = rootHeadingPattern(schemaText);
   if (required === null) return null;
@@ -504,6 +484,16 @@ export function rootHeadingVerdict(schemaText, text) {
   return { ok: matches, expected: required.pattern, actual };
 }
 
+/**
+ * Compiles a manifest pattern into an anchored regular expression.
+ *
+ * `**` crosses path separators, `*` does not — the ordinary glob distinction,
+ * and the reason a single star in a `user-story-<star>` segment cannot reach
+ * into a nested directory.
+ *
+ * @param {string} pattern Repository-root-relative, forward-slashed.
+ * @returns {RegExp}
+ */
 export function patternToRegExp(pattern) {
   let out = "";
   for (let i = 0; i < pattern.length; i++) {
@@ -716,37 +706,6 @@ function fileAtRev(rev, file, root) {
 }
 
 /**
- * The manifest entry that would claim this content, or `null` for none.
- *
- * The same partition the run itself applies: a predicated entry claims the
- * documents its `when:` matches, and an unpredicated entry on the same pattern
- * takes what is left. Asked of the BASE text, because content is what routes a
- * document — a spec that was live at the base and is retired at the head is two
- * shapes at one path, and holding the base text to the head's contract would
- * excuse a genuinely broken document as pre-existing.
- *
- * @param {{ id: string, pattern: string, when?: string }[]} entries
- * @param {string} file
- * @param {string} text
- * @param {{ specsDir: string, contractsDir: string }} paths
- * @returns {string | null}
- */
-function routeOf(entries, file, text, paths) {
-  const matches = (entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file);
-  for (const entry of entries) {
-    if (entry.when !== undefined && matches(entry) && new RegExp(entry.when, "mu").test(text)) {
-      return entry.id;
-    }
-  }
-  for (const entry of entries) {
-    if (entry.when === undefined && matches(entry)) {
-      return entry.id;
-    }
-  }
-  return null;
-}
-
-/**
  * Runs the schema over one document's text, held in a scratch directory.
  *
  * `null` when mdschema could not be run at all, which the caller treats as an
@@ -782,14 +741,10 @@ function checkText(mdschema, schemaPath, file, text) {
  *
  * @returns {boolean}
  */
-function ownsViolations(context, entryId, file) {
+function ownsViolations(context, file) {
   const before = fileAtRev(context.baseRev, file, context.root);
-  if (before === null || optsOutOfSchema(before)) {
-    // Added by this branch, or not held to any schema until now. Either way
-    // this is the first run that could have reported it.
-    return true;
-  }
-  if (routeOf(context.entries, file, before, context.paths) !== entryId) {
+  if (before === null) {
+    // Added by this branch, so this is the first run that could report it.
     return true;
   }
   const verdict = checkText(context.mdschema, context.schemaPath, file, before);
@@ -805,7 +760,7 @@ function ownsViolations(context, entryId, file) {
  *
  * @returns {{ owned: {file: string, output: string}[], inherited: {file: string, output: string}[] } | null}
  */
-function splitByOwnership(context, entryId, files) {
+function splitByOwnership(context, files) {
   const owned = [];
   const inherited = [];
   for (const file of files) {
@@ -817,7 +772,7 @@ function splitByOwnership(context, entryId, files) {
       continue;
     }
     const row = { file, output: single.output };
-    if (ownsViolations(context, entryId, file)) {
+    if (ownsViolations(context, file)) {
       owned.push(row);
     } else {
       inherited.push(row);
@@ -826,8 +781,185 @@ function splitByOwnership(context, entryId, files) {
   return { owned, inherited };
 }
 
-export function main() {
-  const argv = process.argv.slice(2);
+/**
+ * The two configured roots the manifest's patterns expand from.
+ *
+ * @param {string} root
+ * @returns {{ specsDir: string, contractsDir: string }}
+ */
+export function configuredPaths(root) {
+  return {
+    specsDir: readConfiguredDir(root, "specsDir", ".qfai/spec"),
+    contractsDir: readConfiguredDir(root, "contractsDir", ".qfai/spec/03_contract"),
+  };
+}
+
+/**
+ * Every file under the two configured roots, tree-relative and forward-slashed.
+ *
+ * Each configured tree is walked once. A contract directory nested in the spec
+ * tree is deduplicated before any document is routed to a schema.
+ *
+ * @param {string} root
+ * @param {{ specsDir: string, contractsDir: string }} paths
+ * @returns {string[]}
+ */
+function documentUniverse(root, paths) {
+  return [
+    ...new Set(
+      [paths.specsDir, paths.contractsDir].flatMap((dir) => {
+        const absolute = path.resolve(root, dir);
+        return existsSync(absolute) && statSync(absolute).isDirectory() ? walk(absolute, root) : [];
+      }),
+    ),
+  ];
+}
+
+/** One violation line of `mdschema check` output: `  ✗ 3:4 [rule] message`. */
+const VIOLATION_LINE = /^\s+✗\s+(\d+):(\d+)\s+\[([^\]]+)\]\s+(.*\S)\s*$/u;
+
+/** The closing tally mdschema prints after the violations. */
+const TALLY_LINE = /^\S+\s+Found \d+ violation/u;
+
+/** How a path is compared: Windows file systems ignore case. */
+function pathKey(file) {
+  const resolved = path.resolve(file);
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+/**
+ * Splits one batch of `mdschema check` output into violations per document.
+ *
+ * mdschema prints each failing document's path on a line of its own, followed
+ * by one indented line per violation. The path is printed resolved, so it is
+ * matched against the resolved form of each document the batch was given.
+ * Text the pattern does not recognise is returned in `unattributed`, so a
+ * change in the tool's wording surfaces as a finding rather than as a pass.
+ *
+ * @param {string} output
+ * @param {string[]} files tree-relative
+ * @param {string} root
+ * @returns {{ perFile: Map<string, {line: number, column: number, rule: string, message: string}[]>, unattributed: string[] }}
+ */
+export function parseViolations(output, files, root) {
+  const byKey = new Map(files.map((file) => [pathKey(path.join(root, file)), file]));
+  const perFile = new Map();
+  const unattributed = [];
+  let current = null;
+  for (const line of output.split(/\r?\n/)) {
+    if (line.trim() === "" || TALLY_LINE.test(line.trim())) continue;
+    const header = /^\S/.test(line) ? byKey.get(pathKey(line.trim())) : undefined;
+    if (header !== undefined) {
+      current = header;
+      continue;
+    }
+    const violation = VIOLATION_LINE.exec(line);
+    if (violation !== null && current !== null) {
+      const list = perFile.get(current) ?? [];
+      list.push({
+        line: Number(violation[1]),
+        column: Number(violation[2]),
+        rule: violation[3],
+        message: violation[4],
+      });
+      perFile.set(current, list);
+      continue;
+    }
+    unattributed.push(line.trim());
+  }
+  return { perFile, unattributed };
+}
+
+/**
+ * Checks one manifest entry's documents and appends what fails to `violations`.
+ *
+ * @returns {string | null} why the check could not run, or `null`
+ */
+function checkEntryDocuments(context, entry, violations) {
+  const { root, paths, universe, mdschema } = context;
+  const schemaPath = path.join(SCHEMA_ROOT, entry.schema);
+  if (!existsSync(schemaPath)) {
+    return `the schema ${entry.schema} is missing from the package`;
+  }
+  const re = patternToRegExp(expandPattern(entry.pattern, paths));
+  const matched = universe.filter((file) => re.test(file)).sort();
+  context.checked += matched.length;
+  const schemaText = matched.length === 0 ? "" : readFileSync(schemaPath, "utf-8");
+  const gradable = [];
+  for (const file of matched) {
+    const text = readFileSync(path.join(root, file), "utf-8");
+    if (carriesIgnoreMarker(text)) {
+      violations.push({ file, line: 1, column: 1, rule: "ignore", message: IGNORE_MARKER_REFUSAL });
+    }
+    const verdict = rootHeadingVerdict(schemaText, text);
+    if (verdict !== null && !verdict.ok) {
+      const message = rootMismatchMessage(schemaText, text);
+      violations.push({ file, line: 1, column: 1, rule: "structure", message });
+      continue;
+    }
+    gradable.push(file);
+  }
+  if (gradable.length === 0) return null;
+  const result = runMdschema(mdschema, schemaPath, gradable, root);
+  if (result.spawnFailed) {
+    return `mdschema did not run: ${result.output}`;
+  }
+  if (result.ok) return null;
+  const parsed = parseViolations(result.output, gradable, root);
+  for (const [file, list] of parsed.perFile) {
+    for (const found of list) violations.push({ file, ...found });
+  }
+  if (parsed.perFile.size === 0 || parsed.unattributed.length > 0) {
+    // Output this parser cannot place still failed the batch, so it is
+    // reported against the entry's first document rather than dropped.
+    const text = parsed.perFile.size === 0 ? [result.output] : parsed.unattributed;
+    const message = text.join(" ").replace(/\s+/g, " ").trim();
+    violations.push({ file: gradable[0], line: 1, column: 1, rule: "mdschema", message });
+  }
+  return null;
+}
+
+/**
+ * Checks every document the manifest routes, for a caller rather than a log.
+ *
+ * `qfai validate` reports what this returns. It applies the same routing, the
+ * same root-heading check and the same marker refusal as `main`, over the whole
+ * tree: a validation run has no merge base to ratchet against.
+ *
+ * @param {string} root
+ * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
+ * @returns {{ ok: true, checked: number, violations: {file: string, line: number, column: number, rule: string, message: string}[] } | { ok: false, reason: string }}
+ */
+export function checkDocuments(root, paths = configuredPaths(root)) {
+  const mdschema = findMdschemaCommand(root);
+  if (mdschema === null) {
+    return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
+  }
+  const context = { root, paths, mdschema, universe: documentUniverse(root, paths), checked: 0 };
+  const violations = [];
+  for (const entry of readManifest()) {
+    const failure = checkEntryDocuments(context, entry, violations);
+    if (failure !== null) return { ok: false, reason: failure };
+  }
+  return { ok: true, checked: context.checked, violations };
+}
+
+/**
+ * The refusal of the opt-out marker in the lane's own output shape.
+ *
+ * @param {string} file tree-relative
+ * @returns {string}
+ */
+function describeRefusedMarker(file) {
+  return [file, `  ✗ 1:1  [ignore] ${IGNORE_MARKER_REFUSAL}`].join("\n");
+}
+
+/**
+ * Parses the command line into options, or returns an exit code.
+ *
+ * @returns {{ scope: string, base: string, summary: boolean, root: string, positional: string[] } | number}
+ */
+function parseArgs(argv) {
   let scope = "changed";
   let base = DEFAULT_BASE;
   let summary = false;
@@ -876,6 +1008,15 @@ export function main() {
     console.error(`check-mdschema: --root is not a directory: ${root}`);
     return 2;
   }
+  return { scope, base, summary, root, positional };
+}
+
+export function main() {
+  const options = parseArgs(process.argv.slice(2));
+  if (typeof options === "number") {
+    return options;
+  }
+  const { scope, base, summary, root, positional } = options;
   if (!existsSync(MANIFEST)) {
     console.error(`check-mdschema: manifest not found at ${MANIFEST}`);
     return 2;
@@ -883,30 +1024,19 @@ export function main() {
   const mdschema = findMdschemaCommand(root);
   if (mdschema === null) {
     console.error(
-      "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema (this repository carries it as a devDependency; an adopter's CI installs it in the lane).",
+      "check-mdschema: no mdschema entry point was found. Install @jackchuka/mdschema, which the qfai package depends on.",
     );
     return 2;
   }
 
-  const specsDir = readConfiguredDir(root, "specsDir", ".qfai/spec");
-  const contractsDir = readConfiguredDir(root, "contractsDir", ".qfai/spec/03_contract");
-  const paths = { specsDir, contractsDir };
+  const paths = configuredPaths(root);
   const entries = readManifest();
   if (entries.length === 0) {
     console.error("check-mdschema: the manifest declares no documents");
     return 2;
   }
 
-  // Each configured tree is walked once. A contract directory nested in the
-  // spec tree is deduplicated before any document is routed to a schema.
-  const universe = [
-    ...new Set(
-      [specsDir, contractsDir].flatMap((dir) => {
-        const absolute = path.resolve(root, dir);
-        return existsSync(absolute) && statSync(absolute).isDirectory() ? walk(absolute, root) : [];
-      }),
-    ),
-  ];
+  const universe = documentUniverse(root, paths);
 
   /** @type {string[] | null} */
   let restrictTo = null;
@@ -932,19 +1062,15 @@ export function main() {
   const restrictSet = restrictTo === null ? null : new Set(restrictTo);
 
   // The ratchet runs only where the scope is what a branch touched. Under
-  // `all` and `files` every violation is the run's subject by definition —
-  // `all` IS the migration view — and a base to measure against would only
-  // hide the thing being asked for.
+  // `all` and `files` every violation is the run's subject by definition, and
+  // a base to measure against would only hide the thing being asked for.
   const baseRev = scope === "changed" && restrictSet !== null ? mergeBaseRev(base, root) : null;
 
   let violations = 0;
   let checked = 0;
-  let ignored = 0;
   let inheritedFiles = 0;
   const perEntry = [];
 
-  // A file is read at most once per run, however many entries consider it: the
-  // opt-out marker and every `when:` predicate ask about the same text.
   /** @type {Map<string, string>} */
   const contents = new Map();
   const contentOf = (file) => {
@@ -955,19 +1081,6 @@ export function main() {
     return text;
   };
 
-  // Files a predicated entry has claimed. A default entry on the same path
-  // drops them, which is what makes the two entries a partition rather than
-  // two contracts over one document.
-  const claimed = new Set();
-  for (const entry of entries) {
-    if (entry.when === undefined) continue;
-    const re = patternToRegExp(expandPattern(entry.pattern, paths));
-    const predicate = new RegExp(entry.when, "mu");
-    for (const file of universe) {
-      if (re.test(file) && predicate.test(contentOf(file))) claimed.add(file);
-    }
-  }
-
   for (const entry of entries) {
     const schemaPath = path.join(SCHEMA_ROOT, entry.schema);
     if (!existsSync(schemaPath)) {
@@ -975,20 +1088,19 @@ export function main() {
       return 2;
     }
     const re = patternToRegExp(expandPattern(entry.pattern, paths));
-    const predicate = entry.when === undefined ? null : new RegExp(entry.when, "mu");
-    const inScope = universe
+    const matched = universe
       .filter((file) => re.test(file))
       .filter((file) => restrictSet === null || restrictSet.has(file))
-      .filter((file) => (predicate === null ? !claimed.has(file) : predicate.test(contentOf(file))))
       .sort();
-    const optedOut = inScope.filter((file) => optsOutOfSchema(contentOf(file)));
-    ignored += optedOut.length;
-    const matched = inScope.filter((file) => !optedOut.includes(file));
     if (matched.length === 0) {
-      perEntry.push({ id: entry.id, files: 0, ignored: optedOut.length, ok: true });
+      perEntry.push({ id: entry.id, files: 0, ok: true });
       continue;
     }
     checked += matched.length;
+
+    // The marker is refused whatever the merge base held: it never made a
+    // document conform, so there is nothing for the ratchet to weigh.
+    const refused = matched.filter((file) => carriesIgnoreMarker(contentOf(file)));
 
     // A document whose root heading is not the one the schema names cannot be
     // graded below that heading: every section under it is compared against the
@@ -998,9 +1110,7 @@ export function main() {
     // and they bury the one line that is.
     //
     // The root heading is checked here, from the schema's own declaration,
-    // rather than by reading what `mdschema` printed. Its message text is not
-    // a contract: the same prose comes back for every `--format`, so a parser
-    // for it would be this file coupled to one release's rendering.
+    // rather than by reading what `mdschema` printed.
     const schemaText = readFileSync(schemaPath, "utf-8");
     const rootMismatch = matched.filter((file) => {
       const verdict = rootHeadingVerdict(schemaText, contentOf(file));
@@ -1008,18 +1118,14 @@ export function main() {
     });
     const gradable = matched.filter((file) => !rootMismatch.includes(file));
 
-    const rootOwed = [];
+    const rootOwed = refused.map((file) => describeRefusedMarker(file));
     const rootHeld = [];
     for (const file of rootMismatch) {
       // The same ownership question the ratchet asks, answered without
       // `mdschema`: a heading already wrong at the merge base is the
       // migration's backlog, not this branch's.
       const before = baseRev === null ? null : fileAtRev(baseRev, file, root);
-      const wasWrong =
-        before !== null &&
-        !optsOutOfSchema(before) &&
-        routeOf(entries, file, before, paths) === entry.id &&
-        rootHeadingVerdict(schemaText, before)?.ok === false;
+      const wasWrong = before !== null && rootHeadingVerdict(schemaText, before)?.ok === false;
       (wasWrong ? rootHeld : rootOwed).push(
         describeRootMismatch(schemaText, path.relative(root, file), contentOf(file)),
       );
@@ -1038,12 +1144,7 @@ export function main() {
       for (const line of rootOwed) console.error(line);
     }
 
-    const row = {
-      id: entry.id,
-      files: matched.length,
-      ignored: optedOut.length,
-      inherited: rootHeld.length,
-    };
+    const row = { id: entry.id, files: matched.length, inherited: rootHeld.length };
     if (gradable.length === 0) {
       perEntry.push({ ...row, ok: rootOwed.length === 0 });
       continue;
@@ -1064,11 +1165,7 @@ export function main() {
       continue;
     }
 
-    const split = splitByOwnership(
-      { mdschema, schemaPath, root, entries, paths, baseRev },
-      entry.id,
-      gradable,
-    );
+    const split = splitByOwnership({ mdschema, schemaPath, root, baseRev }, gradable);
     if (split === null) {
       console.error("check-mdschema: could not run mdschema over a single document");
       return 2;
@@ -1102,9 +1199,8 @@ export function main() {
     console.log("\nPer-document-type result:");
     for (const row of perEntry) {
       const state = row.files === 0 ? "  -  " : row.ok ? " PASS" : " FAIL";
-      const opted = row.ignored > 0 ? `, ${row.ignored} ignored` : "";
       const held = row.inherited > 0 ? `, ${row.inherited} pre-existing` : "";
-      console.log(`  ${state}  ${row.id} (${row.files} file(s)${opted}${held})`);
+      console.log(`  ${state}  ${row.id} (${row.files} file(s)${held})`);
     }
   }
 
@@ -1115,7 +1211,6 @@ export function main() {
         ? "the named documents"
         : `documents changed against ${base}`;
 
-  const opted = ignored > 0 ? `, ${ignored} ignored by \`${IGNORE_MARKER}\`` : "";
   const held =
     inheritedFiles > 0
       ? `, ${inheritedFiles} file(s) already failing at the merge base and left to their own change`
@@ -1123,7 +1218,7 @@ export function main() {
 
   if (violations > 0) {
     console.error(
-      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where})${opted}${held}.`,
+      `\ncheck-mdschema: ${violations} document type(s) failed over ${checked} file(s) in scope (${where})${held}.`,
     );
     return 1;
   }
@@ -1136,16 +1231,16 @@ export function main() {
     inheritedFiles > 0
       ? `${checked} file(s) checked, no new violations`
       : `${checked} file(s) conform`;
-  console.log(`check-mdschema: ${verdict} (${where})${opted}${held}.`);
+  console.log(`check-mdschema: ${verdict} (${where})${held}.`);
   return 0;
 }
 
 /**
  * Run only when invoked as a program.
  *
- * The two pure helpers above are imported by the guard's own tests, and an
- * unguarded top-level `process.exit` turns that import into a process exit
- * during test collection.
+ * The helpers above are imported by the guard's own tests and by `qfai
+ * validate`, and an unguarded top-level `process.exit` turns that import into
+ * a process exit.
  */
 function isEntrypoint() {
   const invoked = process.argv[1];

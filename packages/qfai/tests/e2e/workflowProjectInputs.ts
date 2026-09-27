@@ -82,7 +82,7 @@ function discussionFile(name: (typeof DISCUSSION_FILES)[number]): string {
 
 const RECORDS: Record<string, string> = {
   ".qfai/spec/01_policy/objective.md":
-    "# Objective\n\n## Objective\n\n- Outcome: Customers choose where notifications go.\n- Evidence: Project need recorded by the owner.\n\n## Users\n\n- Primary user: Customer receiving notifications.\n\n## Success criteria\n\n- Measure: No customer holds more than five distinct addresses.\n\n## Non-goals\n\n- Outside this initiative: Sending the notifications.\n",
+    "# Objective\n\n## Objective\n\n- Outcome: Customers choose where notifications go.\n- Evidence: Project need recorded by the owner.\n\n## Users\n\n- Primary user: Customer receiving notifications.\n\n## Success criteria\n\n| Observable result | Measurement |\n| --- | --- |\n| No customer holds more than five distinct addresses | The address count per customer |\n\n## Non-goals\n\n- Outside this initiative: Sending the notifications.\n",
   ".qfai/spec/03_contract/tech.md":
     "# Technology\n\n## Stack\n\n| Component | Choice |\n| --------- | ------ |\n| Runtime | Node.js 20 |\n| Platform | Linux, macOS and Windows |\n| Test runner | vitest |\n\n## Dependencies\n\n- None.\n\n## Standard commands (copy-paste)\n\n- Install: `npm install`\n- Format: `npm run format:check`\n- Test: `npm test`\n- Lint: `npm run lint`\n- Typecheck: `npm run typecheck`\n- Build: `npm run build`\n- Skeleton: `node src/notification-addresses.js`\n- Validate: `npx qfai validate`\n",
 };

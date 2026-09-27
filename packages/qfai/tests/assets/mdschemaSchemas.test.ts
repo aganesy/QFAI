@@ -80,8 +80,6 @@ interface ManifestEntry {
   id: string;
   schema: string;
   pattern: string;
-  /** The content predicate that routes one path to two schemas, if any. */
-  when?: string;
 }
 
 function readManifest(): ManifestEntry[] {
@@ -89,12 +87,7 @@ function readManifest(): ManifestEntry[] {
   let current: Partial<ManifestEntry> = {};
   const flush = (): void => {
     if (current.id !== undefined && current.schema !== undefined && current.pattern !== undefined) {
-      entries.push({
-        id: current.id,
-        schema: current.schema,
-        pattern: current.pattern,
-        ...(current.when !== undefined ? { when: current.when } : {}),
-      });
+      entries.push({ id: current.id, schema: current.schema, pattern: current.pattern });
     }
     current = {};
   };
@@ -110,13 +103,11 @@ function readManifest(): ManifestEntry[] {
       current = { id };
       continue;
     }
-    const field = /^\s+(schema|pattern|when):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
+    const field = /^\s+(schema|pattern):\s*"?([^"\r\n]+?)"?\s*$/.exec(line);
     const value = field?.[2];
     if (value !== undefined && current.id !== undefined) {
       if (field?.[1] === "schema") {
         current.schema = value;
-      } else if (field?.[1] === "when") {
-        current.when = value;
       } else {
         current.pattern = value;
       }
@@ -148,8 +139,8 @@ function schemaFiles(): string[] {
  *
  * The mapping is derived from the schema's own path rather than declared: a
  * declared second mapping is a second thing to keep true, and the file names are
- * already equal by construction (`spec/04_Business-Rules.mdschema.yml` governs
- * `spec/04_Business-Rules.md`).
+ * already equal by construction (`story/decisions.mdschema.yml` governs
+ * `decisions.md`).
  */
 function templateFor(schemaRelative: string): string | undefined {
   if (schemaRelative.startsWith("story/")) {
@@ -195,48 +186,13 @@ describe("shipped Markdown schemas", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("leaves at most one entry per pattern without a `when` predicate", () => {
-    // The invariant is that no document is run against two contracts, with the
-    // loser invisible in the summary. Two entries on one pattern are how a path
-    // that carries two document shapes is expressed, and the predicate is what
-    // partitions them — so a second UNPREDICATED entry is the state that
-    // breaks it, not a repeated pattern.
-    const byPattern = new Map<string, string[]>();
-    for (const entry of manifest.filter((e) => e.when === undefined)) {
-      byPattern.set(entry.pattern, [...(byPattern.get(entry.pattern) ?? []), entry.id]);
-    }
-    const contested = [...byPattern].filter(([, ids]) => ids.length > 1);
-
-    expect(contested.map(([pattern, ids]) => `${pattern}: ${ids.join(", ")}`)).toEqual([]);
-  });
-
-  it("gives every predicated entry a pattern some other entry also carries", () => {
-    // A `when:` on a pattern nothing else claims is a filter, not a route: the
-    // documents it does not match are then checked by nothing at all, and the
-    // gap reads in the summary exactly like a pack nobody has written yet.
+  it("gives every pattern one entry", () => {
+    // A document matched by two entries is held to two contracts, with the
+    // loser invisible in the summary.
     const patterns = manifest.map((entry) => entry.pattern);
-    const stranded = manifest.filter(
-      (entry) =>
-        entry.when !== undefined &&
-        patterns.filter((pattern) => pattern === entry.pattern).length < 2,
-    );
+    const repeated = patterns.filter((pattern, index) => patterns.indexOf(pattern) !== index);
 
-    expect(stranded.map((entry) => `${entry.id}: ${entry.pattern}`)).toEqual([]);
-  });
-
-  it("gives every `when` predicate a valid regular expression", () => {
-    const broken = manifest
-      .filter((entry) => entry.when !== undefined)
-      .filter((entry) => {
-        try {
-          new RegExp(entry.when ?? "", "mu");
-          return false;
-        } catch {
-          return true;
-        }
-      });
-
-    expect(broken.map((entry) => `${entry.id}: ${entry.when ?? ""}`)).toEqual([]);
+    expect(repeated).toEqual([]);
   });
 
   it("roots every pattern at its configured directory", () => {

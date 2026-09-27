@@ -103,8 +103,6 @@ async function seedMinimalProject(
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "  testStrategy:",
       "    requireApiAtdd: false",
       "    requireE2eAtdd: false",

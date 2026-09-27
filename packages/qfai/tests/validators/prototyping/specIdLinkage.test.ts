@@ -38,7 +38,6 @@ function makeConfig(): QfaiConfig {
     },
     validation: {
       failOn: "error",
-      require: { specSections: [] },
       testStrategy: {
         requireApiAtdd: false,
         requireE2eAtdd: false,

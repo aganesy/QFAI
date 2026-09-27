@@ -40,20 +40,16 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * list MUST NOT grow without an issue reference: a new entry means a new knob
  * that lies to the operator.
  *
- * Keyed by the FULL config path, not the bare key name: `specSections` exists
- * under `validation.require` today, and a future `validation.traceability.
- * specSections` must not inherit this exemption just by sharing a name.
+ * Keyed by the FULL config path, not the bare key name: `requireLayerTags`
+ * exists under `validation.testStrategy` today, and a same-named key under
+ * another parent must not inherit this exemption just by sharing a name.
  *
  * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
  *   validator reads them.
- * - `validation.require.specSections` — parsed and shipped but no section
- *   requirement is enforced from it; the same class of shipped-but-inert
- *   config surface as the two keys above, not fixed here.
  */
 const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
   ["validation.testStrategy.requireLayerTags", "#408"],
   ["validation.testStrategy.requireSizeTags", "#408"],
-  ["validation.require.specSections", "#408 (same class: shipped-but-inert config surface)"],
 ]);
 
 type LeafKey = {
@@ -317,26 +313,25 @@ describe("validation config keys are wired", () => {
 
   it("does not let the unwired allowlist grow silently", () => {
     expect(Array.from(KNOWN_UNWIRED.keys()).sort()).toEqual([
-      "validation.require.specSections",
       "validation.testStrategy.requireLayerTags",
       "validation.testStrategy.requireSizeTags",
     ]);
   });
 
   it("exempts an allowlisted key only under the path it was allowlisted for", () => {
-    // `specSections` is exempt under `validation.require`. A same-named key
-    // added under another parent is a NEW inert knob and must still be checked.
+    // `requireLayerTags` is exempt under `validation.testStrategy`. A same-named
+    // key added under another parent is a NEW inert knob and must still be checked.
     const leaves = collectLeafKeys(
-      { require: { specSections: [] }, traceability: { specSections: [] } },
+      { testStrategy: { requireLayerTags: true }, traceability: { requireLayerTags: true } },
       "validation",
     );
 
     expect(leaves.map((leaf) => leaf.path)).toEqual([
-      "validation.require.specSections",
-      "validation.traceability.specSections",
+      "validation.testStrategy.requireLayerTags",
+      "validation.traceability.requireLayerTags",
     ]);
     expect(leaves.filter((leaf) => !KNOWN_UNWIRED.has(leaf.path)).map((leaf) => leaf.path)).toEqual(
-      ["validation.traceability.specSections"],
+      ["validation.traceability.requireLayerTags"],
     );
   });
 
