@@ -113,4 +113,5 @@ project_memory:
 
 - The story tree is BF → US → AC → EX ← BR.
 - Every EX cites one AC; every AC and BR has an EX; every EX has a BR.
+- Every spec document takes its template's shape and nothing more.
 - Gate each touched BF separately with `--flow BF-NNNN`.

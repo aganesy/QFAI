@@ -1170,7 +1170,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each test exception cites a declared BF, AC, or EX ID and a decision row in force.",
   "QFAI-STORY-010":
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
-  "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
+  "QFAI-STORY-011":
+    "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
   "QFAI-DOCSCHEMA-001":
     "Every story-tree document has the sections, order and content its shipped schema declares, and none carries the opt-out marker.",
   "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
@@ -1427,7 +1428,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":
     "Restore the protected row or record an in-force change request for the named file change.",
-  "QFAI-STORY-011": "Add a Mermaid flowchart or sequence diagram to the named business-flow file.",
+  "QFAI-STORY-011":
+    "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
   "QFAI-DOCSCHEMA-001":
     "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it.",
   "QFAI-DOCSCHEMA-002":

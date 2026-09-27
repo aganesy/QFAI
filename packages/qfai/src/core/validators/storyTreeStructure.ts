@@ -347,7 +347,10 @@ export async function validateStoryTreeStructure(
   ];
 }
 
-/** A business flow needs an actual Mermaid flowchart or sequence diagram. */
+/**
+ * A business flow draws its main path as a Mermaid flowchart or sequence diagram.
+ * The document schema holds it to one block under `## Flow`; this reads the diagram type.
+ */
 async function validateFlowMermaid(model: StoryTreeModel): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const flow of model.flows) {
@@ -361,7 +364,7 @@ async function validateFlowMermaid(model: StoryTreeModel): Promise<Issue[]> {
     issues.push(
       finding(
         "QFAI-STORY-011",
-        `${flow.id} needs a Mermaid flowchart or sequenceDiagram in ${flow.file}`,
+        `${flow.id} needs one Mermaid flowchart or sequenceDiagram as the ## Flow section of ${flow.file}`,
         flow.file,
         [flow.id],
       ),

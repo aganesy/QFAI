@@ -123,8 +123,8 @@ At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping
    - `01_policy/objective.md` and `01_policy/initiative.md`
    - `01_policy/principle.md` and `01_policy/constraint.md`
    - `03_contract/tech.md`
-2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts).
-3. If the current stage owns the file, fill verified facts. Otherwise follow the drift protocol and rerun the owning stage.
+2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts). A table with no rows or a `- None.` list is complete where the template allows it.
+3. If the current stage owns the file, fill verified facts into the sections its template has, adding none. Otherwise follow the drift protocol and rerun the owning stage.
 4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
 5. Record new facts discovered during the stage and route an upstream change to its owner.
 
