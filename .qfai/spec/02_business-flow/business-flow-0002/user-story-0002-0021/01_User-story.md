@@ -7,7 +7,6 @@ As a contributor deciding which CI lane a test belongs to, I want the layer-to-l
 ## Non-goals
 
 - A separate mapping file.
-- Extending the built-in token set to legalize CI vocabulary.
 - Adding a layer, a layer token or a layer heading.
 - Placing annotations outside the validator's test scan.
 - Authoring the repository-root link directly.
