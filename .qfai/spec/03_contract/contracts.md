@@ -4,7 +4,7 @@
 
 This index names the current contract artifacts under `paths.contractsDir` (default `.qfai/spec/03_contract/`). The discussion pack supplies provenance; downstream execution reads the story tree and its enforcing contracts. A contract file and its index row are updated together.
 
-QFAI itself has no project API, database, or rendered UI contract. Those families remain available to adopter repositories. Root `DESIGN.md` is an input only when a visual UI contract needs a brand lock.
+QFAI itself has no project API, database, or rendered UI contract. Those families remain available to adopter repositories. Root `DESIGN.md` is an input only when a visual UI contract needs a brand.
 
 ## Contract Index
 

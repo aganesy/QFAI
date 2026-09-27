@@ -105,10 +105,10 @@ digests and reports the mismatch.
 Within a frozen run the only way past a finding is to change the HTML:
 use a token already declared in `DESIGN.md`, or drop the literal. Do
 **not** edit `DESIGN.md` to widen the allowlist mid-loop — every cycle
-≥ 1 compares live `DESIGN.md`, `DESIGN.md.lock.yaml` and the cycle-0
-cached sha256 before anything else, so the next iterate exits 2 with a
-hash mismatch. A genuine brand change is a separate operation:
-refreeze the lock via `/qfai-sdd`, then restart the loop with
+≥ 1 compares the live `DESIGN.md` with the sha256 cycle 0 recorded in
+`prototyping.json#designMd` before anything else, so the next iterate
+exits 2 with a hash mismatch. A genuine brand change is a separate
+operation: edit `DESIGN.md`, then restart the loop with
 `npx qfai prototyping iterate --cycle 0 --target-url <url> --force`.
 `--force` is not optional here — the prior loop's `iter-00` is still on
 disk and cycle 0 refuses to overwrite it without one; with it,
@@ -400,7 +400,7 @@ It is not a certify input; certify never opens the `prototypes/` tree.
 ## Cycle 0 (seed)
 
 Produce one self-contained `iter-00/index.html` that satisfies the spec
-under locked DESIGN.md tokens. Lead with the user's primary task;
+under the DESIGN.md tokens. Lead with the user's primary task;
 respect `audience.do_not_look_like`.
 
 ## Cycles 1..9

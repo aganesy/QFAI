@@ -38,7 +38,6 @@ import path from "node:path";
 import { loadConfig, type ConfigLoadResult } from "../../core/config.js";
 import { readUiContractScreenContracts } from "../../core/contracts/screenContracts.js";
 import { hashDesignMd, parseDesignMd } from "../../core/design/designMd.js";
-import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { resolvePrototypingIterationViews } from "../../core/prototyping/modeRead.js";
 import {
@@ -912,8 +911,7 @@ export async function runPrototypingCertify(
 
   const uiContractsCovered = coveredRead.value;
   // Frozen-loop hash invariant: the certificate must record the sha256
-  // that was frozen at cycle 0 in prototyping.json (and, when the SDD
-  // lock is present, the lock value too). Recording the live re-hash
+  // that was frozen at cycle 0 in prototyping.json. Recording the live re-hash
   // would let a brand-body edit between the final iter and certify
   // silently re-baseline the cert against an SSOT that was not used
   // during the loop.
@@ -934,34 +932,6 @@ export async function runPrototypingCertify(
     );
     return 2;
   }
-  const lockResult = await loadLockGate(options.root, config.paths.contractsDir);
-  if (lockResult.kind === "malformed") {
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml exists but " +
-        "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run the design lock step of /qfai-sdd to regenerate the lock before sealing.",
-    );
-    return 2;
-  }
-  if (lockResult.kind === "unreadable") {
-    const cause =
-      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml exists but could not be read " +
-        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
-        "unreadable; fix file permissions / EIO and rerun.",
-    );
-    return 2;
-  }
-  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
-  if (lockSha !== null && lockSha !== frozenSha) {
-    error(
-      "qfai prototyping certify: DESIGN.md.lock.yaml sha256 (" +
-        `${lockSha}) differs from the loop-frozen value (${frozenSha}). ` +
-        "Refreeze and re-run prototyping from cycle 0.",
-    );
-    return 2;
-  }
   // The completion certificate digests every file under `evidenceRoot`,
   // so a stale `iter-NN` dir from a prior loop (NN >= recorded
   // iterationCount) would otherwise be sealed into `evidenceDigests`
@@ -976,8 +946,7 @@ export async function runPrototypingCertify(
   } catch (err) {
     // findStaleIterDirs propagates non-ENOENT fs errors (EACCES /
     // EPERM / EIO) instead of swallowing them, so a permission flip
-    // cannot silently bypass the stale-iter guard — symmetric with the
-    // lock `unreadable` path. Surface a clear operator-facing message
+    // cannot silently bypass the stale-iter guard. Surface a clear operator-facing message
     // instead of letting the raw error stack escape.
     const cause = err instanceof Error ? err.message : String(err);
     error(
@@ -1047,25 +1016,6 @@ export async function runPrototypingCertify(
   info(`  uiContractsCovered: ${uiContractsCovered.join(", ") || "(none)"}`);
   info(`  designMd: ${designMdRecord.path} sha256=${designMdRecord.sha256.slice(0, 12)}...`);
   return 0;
-}
-
-type LockGateResult =
-  | { kind: "ok"; sha256: string }
-  | { kind: "missing" }
-  | { kind: "malformed" }
-  | { kind: "unreadable"; cause: unknown };
-
-async function loadLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
-  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
-  let text: string;
-  try {
-    text = await readFile(lockAbs, "utf-8");
-  } catch (err) {
-    if (isEnoent(err)) return { kind: "missing" };
-    return { kind: "unreadable", cause: err };
-  }
-  const sha = readDesignMdLockSha(text);
-  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
 }
 
 /**
@@ -1768,10 +1718,8 @@ export async function findStaleIterDirs(
     // operator deleted the dir mid-flight — there's nothing stale to
     // flag in either case.
     //
-    // EACCES / EPERM / EIO: the same fail-closed posture as the
-    // `unreadable` LockGateResult branch above. Returning [] here would
-    // let a permission flip silently bypass the stale-iter guard, the
-    // same vector the lock branch guards against. Symmetric: propagate
+    // EACCES / EPERM / EIO: fail closed. Returning [] here would let a
+    // permission flip silently bypass the stale-iter guard. Propagate
     // so certify's caller surfaces a hard error rather than seal a
     // possibly-stale digest set.
     if (isEnoent(err)) return [];
@@ -1909,8 +1857,7 @@ async function findEvidenceNewerThan(
  * Returns `false` for ANY fs error (including permission flips) — the
  * caller treats "not visible to the certify process" as missing. This
  * is symmetric with `validateUiEvidenceArtifacts`-style presence
- * checks elsewhere; certify's strict gates upstream (lock-unreadable,
- * stale-iter-readdir) catch the broader permission-flip vector.
+ * checks elsewhere; certify's strict gate upstream (stale-iter-readdir) catch the broader permission-flip vector.
  */
 /** One rejected `<screen>.review.json` and why it was rejected. */
 type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly string[] };

@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a delivery lead shipping a SaaS-tenant project, I want `qfai validate --profile saas-package` to PASS when the prototyping-profile validate PASSes, a DCON-005 design-system attestation is present at `<paths.contractsDir>/design/design-system.yaml`, and the CLI-HANDOFF cross-skill handoff schema PASSes — while skipping ATDD / implement-class gates and naming each skip via `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info), so that SaaS-tenant deliveries get a lightweight-but-honest gate that never silently claims work it did not check (REQ-0166).
+As a delivery lead shipping a SaaS-tenant project, I want `qfai validate --profile saas-package` to PASS when the prototyping-profile validate PASSes, the design-system attestation — root `DESIGN.md` — is present and parses, and the CLI-HANDOFF cross-skill handoff schema PASSes — while skipping ATDD / implement-class gates and naming each skip via `D-SAAS-PACKAGE-VERIFY-SKIPPED` (info), so that SaaS-tenant deliveries get a lightweight-but-honest gate that never silently claims work it did not check (REQ-0166).
 
 ## Legacy Source Scope
 

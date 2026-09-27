@@ -31,30 +31,6 @@ Scenario: AC-0001-0042-03 missing design tokens
   When `qfai validate` runs
   Then a missing `DESIGN.md` emits `QFAI-DCON-030` at error severity, and an unparseable one emits `QFAI-DCON-033` at error severity.
 
-# AC-0001-0042-04
-# Parent: US-0001-0042
-Scenario: AC-0001-0042-04 matching design lock
-  Given the design lock and root `DESIGN.md` bytes
-  When `qfai validate` runs
-  Then a `<paths.contractsDir>/design/DESIGN.md.lock.yaml#designMdSha256` equal to `sha256(DESIGN.md bytes)` raises neither `QFAI-DCON-031` nor `QFAI-DCON-032`.
-
-Scenario: AC-0001-0042-04 hash drift
-  Given the design lock is missing, lacks `designMdSha256`, or records a hash that differs from the on-disk hash
-  When `qfai validate` runs
-  Then a missing lock or a missing `designMdSha256` emits `QFAI-DCON-031` at error severity, and a differing hash emits `QFAI-DCON-032` at error severity.
-
-# AC-0001-0042-05
-# Parent: US-0001-0042
-Scenario: AC-0001-0042-05 matching design system
-  Given the design system and root `DESIGN.md` token tables
-  When `qfai validate` runs
-  Then a `<paths.contractsDir>/design/design-system.yaml` whose `visual.*` tokens equal those of root `DESIGN.md` raises no mirror finding.
-
-Scenario: AC-0001-0042-05 diverging design system
-  Given a `design-system.yaml` mirror key whose value differs from root `DESIGN.md`
-  When `qfai validate` runs
-  Then `QFAI-DCON-005` is emitted at error severity, naming the key and both values.
-
 # AC-0001-0042-06
 # Parent: US-0001-0042
 Scenario: AC-0001-0042-06 review schema
@@ -103,4 +79,12 @@ Scenario: AC-0001-0042-09
   When `findDesignMdViolations(html, designMd)` runs
   Then `findDesignMdViolations(html, designMd)` is pure (no I/O, no clock, no global state) and deterministic (same input bytes → same output array).
   And property tests assert: (a) idempotence, (b) order-stability, (c) absence of `Date`, `process`, `fs`, network calls in the call graph.
+
+# AC-0001-0042-10
+# Parent: US-0001-0042
+Scenario: AC-0001-0042-10 prototyping handoff record
+  Given a target whose UI contracts declare screens
+  When `qfai validate --profile prototyping` runs
+  Then `handoff` in a present `.qfai/evidence/prototyping/prototyping.json` is checked: an absent or non-object `handoff` emits `QFAI-DCON-012`, a `finalArtifact` or `implementationNotes` that is not a non-empty string emits `QFAI-DCON-013`, and a `finalArtifact` naming no file emits `QFAI-PROT-009`, each at error severity naming `prototyping.json`
+  And with no `prototyping.json`, none of the three is emitted
 ```

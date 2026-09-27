@@ -2,7 +2,7 @@
 
 ## User Story
 
-As a downstream `/qfai-implement` consumer, I want every image slot to be filled from an allowlisted free stock-photo source and recorded with `{url, license, attribution, source}` in `prototype-handoff.yaml#imageSources[]` so that legal/compliance review can verify provenance without re-reading prototype HTML. (REQ-0006, CHG-002)
+As a downstream `/qfai-implement` consumer, I want every image slot to be filled from an allowlisted free stock-photo source and recorded with `{url, license, attribution, source}` in `prototyping.json#imageSources[]` so that legal/compliance review can verify provenance without re-reading prototype HTML. (REQ-0006, CHG-002)
 
 ## Legacy Source Scope
 

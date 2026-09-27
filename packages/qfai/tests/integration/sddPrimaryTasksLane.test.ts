@@ -82,21 +82,15 @@ async function prototypingPreflight(
   const previousExitCode = process.exitCode;
   try {
     await seedPrototypingPreflightFixture(root, target.url, uiContract);
-    const lock = await readFile(
-      path.join(root, ".qfai/contracts/design/DESIGN.md.lock.yaml"),
-      "utf-8",
-    );
     await rm(path.join(root, ".qfai/specs"), { recursive: true, force: true });
     await rm(path.join(root, ".qfai/contracts"), { recursive: true, force: true });
     const contractRoot = path.join(root, ".qfai/spec/03_contract");
     await mkdir(path.join(contractRoot, "ui"), { recursive: true });
-    await mkdir(path.join(contractRoot, "design"), { recursive: true });
     await writeFile(
       path.join(contractRoot, "ui/ui-0001.yaml"),
       `# QFAI-CONTRACT-ID: UI-0001\n${uiContract}`,
       "utf-8",
     );
-    await writeFile(path.join(contractRoot, "design/DESIGN.md.lock.yaml"), lock, "utf-8");
     await writeFile(
       path.join(root, "qfai.config.yaml"),
       [

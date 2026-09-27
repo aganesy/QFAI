@@ -289,7 +289,7 @@ describe("discussion skill template integration", () => {
     // still demand brand answers from every UI-bearing pack the carve-out is
     // unreachable.
     const skill = await readDiscussionSkill(assistantBase);
-    expect(skill).toMatch(/`common-design-md` step skips the freeze/);
+    expect(skill).toMatch(/`common-design-md` step writes no `DESIGN\.md`/);
     expect(skill).toMatch(/the brand questions do not apply to it/);
     expect(skill).toMatch(/skip for cli-only and non-ui targets/);
 

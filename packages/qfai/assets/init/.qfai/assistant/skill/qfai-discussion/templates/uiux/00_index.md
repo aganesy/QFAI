@@ -27,7 +27,7 @@ Partial generation is not permitted.
 Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `common-design-md` step authors it, and only
 on a visual-prototyping surface (`web`, `mobile`, `desktop`, `mixed`). A
 cli-only pack — `primary_surface: cli` with no visual surface in
-`secondary_surfaces` — never gets one: the `common-design-md` step skips the freeze, and
+`secondary_surfaces` — never gets one: the `common-design-md` step writes none, and
 `/qfai-prototyping` does not run on `cli`. Do not report any pack as
 incomplete for a missing `DESIGN.md`.
 
@@ -37,7 +37,7 @@ The following files are NOT part of the canonical family and must NOT be created
 
 - `10_implementation_strategy.md` — discussion carries directions unranked, so it selects no strategy
 - `11_design_taste_interview.md` — brand signals are recorded in `04_Sources.md`
-- `12_design_system.md` — replaced by root `DESIGN.md` and the design contracts under `<paths.contractsDir>/design/`
+- `12_design_system.md` — replaced by root `DESIGN.md`
 - the `20`–`24` design-evaluation family — the evaluator axes are fixed by the CLI, not authored here
 - `30_option_comparison.md` — replaced by root `DESIGN.md`
 - `31_selected_anchor_screen.md` — replaced by root `DESIGN.md`

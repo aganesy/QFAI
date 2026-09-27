@@ -20,7 +20,7 @@ describe("brand catalog ownership", () => {
     expect(discussion).toContain("root `DESIGN.md` — is authored");
     expect(discussion).toContain("/qfai-sdd");
     expect(authoring).toContain("How `/qfai-sdd` writes the root `DESIGN.md`");
-    expect(sdd).toContain("root `DESIGN.md` and its lock, which `common-design-md`");
+    expect(sdd).toContain("root `DESIGN.md`, which `common-design-md`");
   });
 
   it("uses the adopted discussion direction as the brand input", async () => {
@@ -35,7 +35,7 @@ describe("brand catalog ownership", () => {
     const authoring = await read("qfai-sdd/references/design-md-authoring.md");
     const sdd = await readStep("sdd-contract");
     expect(authoring).toContain("A cli-only target has no root");
-    expect(sdd).toContain("A CLI-only surface does not require a visual brand lock");
+    expect(sdd).toContain("A CLI-only surface does not require one");
   });
 
   it("routes brand archetype and interaction into supported fields", async () => {

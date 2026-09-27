@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an implementation worker, I want to read the current DCON-008 `prototype-handoff.yaml` contract, including its image-source provenance, so that I receive the final artifact and deterministic design-system input without relying on the retired `mustPreserve`/`mayAdapt`/`mustNotCopy` triplets.
+As an implementation worker, I want to read the prototyping handoff from `prototyping.json#handoff`, beside its image-source provenance, so that I receive the final prototype, the procurement record and the implementation notes without relying on the retired `mustPreserve`/`mayAdapt`/`mustNotCopy` triplets.
 
 ## Legacy Source Scope
 
