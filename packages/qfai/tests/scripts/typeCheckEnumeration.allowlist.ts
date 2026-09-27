@@ -110,7 +110,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/issueCodeUniqueness.test.ts",
   "tests/core/l2Evidence.test.ts",
   "tests/core/layerCoverage.test.ts",
-  "tests/core/layerPolicyResolution.test.ts",
   "tests/core/migrateLegacyReviewPacks.test.ts",
   "tests/core/observability/drift.test.ts",
   "tests/core/observability/guidance.test.ts",
