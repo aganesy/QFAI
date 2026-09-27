@@ -22,9 +22,9 @@ import fg from "fast-glob";
 /**
  * Concrete artifact identifiers a consuming project will not have.
  *
- * Contract IDs use the `(?:API|DB|UI)-NNNN` shape defined by
- * `skills/qfai-sdd/references/contract-artifact-rules.md` ("Use prefixes
- * `API-*`, `DB-*`, and `UI-*`").
+ * Contract IDs use the `<KIND>-NNNN` shape defined by
+ * `skills/qfai-sdd/references/contract-artifact-rules.md`; the API, DB and UI
+ * kinds are the ones a prose attribution names.
  *
  * The second number group is optional. `US`, `AC`, `BR` and
  * `TC` items are single-numbered — `skills/qfai-sdd/references/spec-traceability-rules.md`

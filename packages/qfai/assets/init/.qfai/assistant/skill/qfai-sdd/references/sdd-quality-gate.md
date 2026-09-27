@@ -17,7 +17,8 @@ The gate checks the story-tree files against their shipped templates and the app
 - BF → US → AC → EX ← BR edges exist.
 - Every AC is a Gherkin scenario with at least one EX. Every EX has exactly one existing AC-Ref.
 - Every BR lives in its enforcing contract, cites at least one existing full EX ID, and every EX has a BR citation.
-- A shared rule is defined once; other contracts use file-level rule refs.
+- A shared rule is defined once; no other contract restates or cites it.
+- A contract names no implementation file, and each BR cites only EX IDs.
 - Every contract file written has a contracts.md row from the same change.
 - Every persisted attribute and state named by an AC, EX, or BR is realizable by its contract directly or through a stated join.
 - Paired API and DB contracts agree on terminal states and error outcomes.

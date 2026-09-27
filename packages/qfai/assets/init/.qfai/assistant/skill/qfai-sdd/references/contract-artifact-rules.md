@@ -37,8 +37,26 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
   not only where the attribute is written out — a framework that builds the
   attribute from a variable still writes the marker somewhere.
 - **Every entry under `screens` is a screen, once.** Each UI-bearing contract declares one full `UI-NNNN` ID and a nonempty `screens[]` list. Each screen has an ID and route, unique within its contract. The prototyping cycle covers all declared UI-bearing contract IDs; filenames do not select a legacy spec tier. `QFAI-CONTRACT-042` names malformed screen entries.
-- `api/`, `db/`, and `ui/` contracts must declare `QFAI-CONTRACT-ID` at the top.
-- Use prefixes `API-*`, `DB-*`, and `UI-*`.
+- **A contract's ID comes from its directory.** `cli/` holds `CLI`
+  contracts, `api/` `API`, `db/` `DB`, `ui/` `UI` and `design/` `DESIGN`. The
+  ID is `<KIND>-NNNN`. Its number is one more than the highest contract number
+  of any kind, so `API-0002` and `DB-0002` cannot both exist. A number is never
+  reused, even after its contract is removed.
+- **The file is named after the ID**: `<kind>-NNNN-<slug>.<ext>`, such as
+  `api/api-0002-orders.yaml` or `cli/cli-0001-checkout.md`.
+- **The ID is declared once, in the file.** A Markdown contract declares it in
+  its H1: `# CLI-0001: <title>`. A YAML or SQL contract declares it on a
+  `QFAI-CONTRACT-ID: API-0002` comment line at the top.
+- **Rules are numbered after their contract.** A business rule's ID is
+  `BR-<contract number>-NNNN`: `BR-0002-0001` is the first rule of `API-0002`.
+  Only that contract declares it: under `x-qfai-rules` in YAML or JSON, on
+  `-- Rule` and `-- Examples:` lines in SQL, and in the `## Business rules`
+  table (`BR-ID`, `Statement`, `Examples`) of a Markdown contract.
+- **References point one way.** A rule cites examples and nothing else. Only
+  the implementation, its code and tests, cites a rule. A contract never names
+  an implementation file and never cites a rule another contract declares. To
+  find the contracts a flow relies on, read the rules whose `Examples` cite
+  that flow's examples.
 - `design/` files do not require `QFAI-CONTRACT-ID`, but they are execution-time SSOT for UI-bearing work. Having no ID, they are addressed by repo-relative path when an owner rerun targets them: `/qfai-sdd --contract <paths.contractsDir>/design/<file>`. The same path form addresses an `api/` / `db/` / `ui/` contract whose ID is the thing under repair.
 - **Declare apply-order dependencies.** `QFAI-CONTRACT-011` makes a second
   `QFAI-CONTRACT-ID` in one file a hard `error`, so any schema larger than one
@@ -65,32 +83,22 @@ Discussion UI/UX files are **non-normative** discovery / reference artifacts —
     and so is a list holding anything but contract IDs: in `DB-0001, TBD`
     the resolvable half would otherwise make an undetermined order look
     settled, leaving `TBD` unreported by every check.
-  - `QFAI-CONTRACT-032` reports a contract index table that dropped the
-    `Depends On` column, and `QFAI-CONTRACT-033` reports a row
-    whose cell disagrees with the declaration in the file that row names — a
-    blank cell included, for the same reason: it records no claim at all.
-  - `QFAI-CONTRACT-034` reports a contract that appears in no index
-    table. Deleting the row hides the contract and its apply order from every
-    reader of the index, and the row-level checks need a row to compare.
-  - `QFAI-CONTRACT-035` reports a row whose `File` is not a file
-    declaring that row's id. The mirror is checked by id, so a row pointing at
-    another contract's file otherwise passes every check while sending the
-    reader to the wrong contract. A glob or a `<slug>` placeholder names no one
-    file and is left alone.
-  - Only tables whose `Declared ID` column holds contract IDs are held to these
-    rules; a table indexing another artifact kind by slug is left alone, and an
-    empty one qualifies only under a `DB` / `API` / `UI` contract heading.
-    Coverage is read from a `Declared ID` cell that **is** a full contract ID: a
-    `Short ID` — in its own column or written into this one — cannot stand in
-    for a blank or mistyped one. An example table inside a code fence is
-    documentation, not index data, and is not read either.
+- **The index lists every contract.** `<paths.contractsDir>/contracts.md` holds
+  one `## Contract Index` table with the columns `ID`, `Title`, `File`,
+  `Depends On`, `Reconciled With` and `Purpose`, one row per contract in ID
+  order. `Title` is the contract's title, `File` its repository-relative path
+  in backticks, `Depends On` and `Reconciled With` contract IDs or `-`, and
+  `Purpose` one sentence. The index points at contracts; it never states a rule.
+- `QFAI-CONTRACT-034` reports a contract file under a kind directory that
+  declares no ID of that kind, is not named after its ID, or has no row that
+  agrees with its ID and path. It also reports a row that names no contract
+  file, and a number two contracts declare.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not
   hard-code a schema qualifier: a contract that names one cannot be applied into
   a per-test or per-tenant schema, which is what the integration layer needs.
 - Breaking changes require a decision row and affected-flow evidence.
-- `<paths.contractsDir>/contracts.md` is the contract index; it must align with contract files under that directory and must not become behavior SSOT.
 
 ## What validation checks in a `.sql` contract
 

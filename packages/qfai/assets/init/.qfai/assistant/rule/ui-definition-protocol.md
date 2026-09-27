@@ -19,7 +19,9 @@ A downstream skill reads the UI definition in this order.
    - `business-flow-NNNN/user-story-NNNN-NNNN/02_Acceptance-Criteria.md`
    - `business-flow-NNNN/user-story-NNNN-NNNN/03_Example.md`
 
-2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`)
+2. **UI Contracts** (`<paths.contractsDir>/ui/*.yaml`, default `.qfai/spec/03_contract/ui/*.yaml`):
+   the contracts whose rules cite the flow's examples
+   - contract ID (`UI-NNNN`, in a file named `ui-NNNN-<slug>.yaml`)
    - screen ID
    - route
    - primary tasks
