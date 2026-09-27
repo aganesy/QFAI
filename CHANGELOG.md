@@ -595,7 +595,7 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **Every CLI contract is held to the closed CLI contract schema.** The
   document lane and `qfai validate` check each
-  `<paths.contractsDir>/cli/cli-*.md` against the schema of the
+  Markdown file under `<paths.contractsDir>/cli/` against the schema of the
   `cli-NNNN-title.md` template: the `# CLI-NNNN: <title>` heading,
   `## Ownership boundary` and one `## Business rules` table, and nothing else.
   - The contract index is read with any GFM delimiter row, so `| -- |`
