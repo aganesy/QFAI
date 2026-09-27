@@ -15,7 +15,7 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 ## Policy and business flow
 
 - Files in 01_policy/ and 02_business-flow/ were copied from paired templates and retain their required headings.
-- Objective, initiative, principle, tech, and structure state each fact in one place. Gate commands occur only in tech.md Standard commands.
+- Objective, initiative, principle, and tech state each fact in one place. Gate commands occur only in tech.md Standard commands.
 - Every affected business-flow.md has a Mermaid flowchart or sequenceDiagram.
 - business-flows.md and user-stories.md index actual flows and stories with their assigned BF and US IDs.
 

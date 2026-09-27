@@ -1,7 +1,7 @@
 ---
 name: sdd-flow
 owner: qfai-sdd
-purpose: "Write the policy, technology and structure facts and the business flows the triage decided to change."
+purpose: "Write the policy and technology facts and the business flows the triage decided to change."
 requires: [common-grilling-record]
 roles: [requirements-analyst, solution-architect, product-experience-architect, completion-reviewer]
 routing-profile: default
@@ -18,8 +18,7 @@ Stage 2 of the story tree: policy and business flows.
 - The paired templates under
   `.qfai/assistant/skill/qfai-sdd/templates/spec/01_policy/`,
   `.qfai/assistant/skill/qfai-sdd/templates/spec/02_business-flow/` and
-  `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/` (`tech.md`,
-  `structure.md`).
+  `.qfai/assistant/skill/qfai-sdd/templates/spec/03_contract/tech.md`.
 - `.qfai/assistant/skill/qfai-sdd/references/sdd-phase-checklists.md#policy-and-business-flow`
   when editing.
 
@@ -27,7 +26,7 @@ Stage 2 of the story tree: policy and business flows.
 
 - `01_policy/objective.md`, `initiative.md`, `principle.md`, `constraint.md`
   and `glossary.md`.
-- `03_contract/tech.md` and `03_contract/structure.md`.
+- `03_contract/tech.md`.
 - `02_business-flow/business-flows.md` and each affected
   `business-flow-NNNN/business-flow.md`.
 
@@ -42,7 +41,7 @@ states.
    `.qfai/assistant/skill/qfai-sdd/references/sdd-pre-draft-grilling.md` before
    the first write, and record it with `common-grilling-record`.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
-   `principle.md`, and `03_contract/tech.md`, `structure.md`.
+   `principle.md` and `03_contract/tech.md`.
 3. Put the quality-gate commands only in the Standard commands section of
    `tech.md`; other documents point there.
 4. Create or update `02_business-flow/business-flows.md` and each affected

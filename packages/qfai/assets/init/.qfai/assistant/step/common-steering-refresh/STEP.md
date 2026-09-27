@@ -1,7 +1,7 @@
 ---
 name: common-steering-refresh
 owner: common
-purpose: "At a stage's start, find the project facts in policy, technology and structure that are missing or stale, fill the verified ones this stage owns, and record what cannot be verified."
+purpose: "At a stage's start, find the project facts in policy and technology that are missing or stale, fill the verified ones this stage owns, and record what cannot be verified."
 requires: []
 roles: []
 ---
@@ -18,12 +18,11 @@ it runs at every stage start, and no affected work continues on stale steering.
 The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
 (default `.qfai/spec`):
 
-| File                                                | Holds                                                                |
-| --------------------------------------------------- | -------------------------------------------------------------------- |
-| `01_policy/objective.md`, `01_policy/initiative.md` | what is built, for whom, what success is, non-goals, release posture |
-| `01_policy/principle.md`, `01_policy/constraint.md` | the principles and constraints every design keeps                    |
-| `03_contract/tech.md`                               | runtime, package manager, stack, dependencies, the Standard commands |
-| `03_contract/structure.md`                          | repository layout, key packages, entry points, local setup           |
+| File                                                | Holds                                                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `01_policy/objective.md`, `01_policy/initiative.md` | what is built, for whom, what success is, non-goals, release posture                                    |
+| `01_policy/principle.md`, `01_policy/constraint.md` | the principles and constraints every design keeps                                                       |
+| `03_contract/tech.md`                               | runtime, package manager, stack, dependencies, the Standard commands and a Skeleton line per entrypoint |
 
 ## Procedure
 
@@ -36,8 +35,8 @@ The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
    - runtime, tooling and the Standard commands from the task-runner manifest
      (`package.json` scripts, `Makefile`, `justfile`, `pyproject.toml`,
      `Cargo.toml`, …), then the CI configuration, then the lockfiles;
-   - layout and entry points from the file tree and the scripts. Gate commands
-     stay in `tech.md` and are not repeated in `structure.md`.
+   - entry points from the file tree and the scripts, one Skeleton line each in
+     `tech.md`.
 3. **Route what it does not own.** A file another stage owns changes through
    `.qfai/assistant/rule/drift-protocol.md`; the owner reruns.
 4. **Record what cannot be verified.** Write `TBD` with what evidence is

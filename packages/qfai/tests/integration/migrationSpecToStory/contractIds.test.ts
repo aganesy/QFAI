@@ -143,7 +143,7 @@ function forAPerson(report: string): string[] {
 describe("migration contract IDs", () => {
   // QFAI:AC-0004-0006-04
   it("numbers every old contract across kinds, so a colliding old number takes a new one", async () => {
-    // QFAI:EX-0004-0006-11
+    // QFAI:EX-0004-0006-12
     const root = await project();
     expect((await run(step03, root)).code).toBe(3);
     expect(await files(path.join(root, CONTRACTS))).toEqual([
@@ -182,7 +182,7 @@ describe("migration contract IDs", () => {
   });
 
   it("declares each new ID and rewrites the old IDs a dependency names", async () => {
-    // QFAI:EX-0004-0006-12
+    // QFAI:EX-0004-0006-13
     const root = await project();
     await run(step03, root);
     const api = await text(root, `${CONTRACTS}/api/api-0002-orders.yaml`);
@@ -203,7 +203,7 @@ describe("migration contract IDs", () => {
   });
 
   it("writes the contract index in its table shape and lists the old sections for a person", async () => {
-    // QFAI:EX-0004-0006-13
+    // QFAI:EX-0004-0006-14
     const root = await project();
     const result = await run(step03, root);
     expect(result.code).toBe(3);
@@ -231,7 +231,7 @@ describe("migration contract IDs", () => {
   });
 
   it("shows every rename in a dry run and changes nothing on a second run", async () => {
-    // QFAI:EX-0004-0006-14
+    // QFAI:EX-0004-0006-15
     const root = await project();
     const before = await files(root);
     const dry = await run(step03, root, true);
@@ -249,7 +249,7 @@ describe("migration contract IDs", () => {
   });
 
   it("lists every old ID left in a contract body with its file and line", async () => {
-    // QFAI:EX-0004-0006-15
+    // QFAI:EX-0004-0006-16
     const root = await project();
     const result = await run(step03, root);
     const receipt = `${CONTRACTS}/ui/ui-0004-receipt.yaml`;
@@ -262,7 +262,7 @@ describe("migration contract IDs", () => {
     expect(await text(root, receipt)).toContain("CON-UI-0009:total");
   });
 
-  // QFAI:AC-0004-0007-03
+  // QFAI:AC-0004-0007-04
   it("refuses a rule destination outside the contract kinds or naming no contract", async () => {
     // QFAI:EX-0004-0007-24
     const root = await project();

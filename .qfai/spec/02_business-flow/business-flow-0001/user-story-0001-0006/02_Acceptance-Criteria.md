@@ -18,7 +18,7 @@ Scenario: The policy layer holds five files of principles
 Scenario: The contract layer is indexed and states the gate commands once
   Given a project on the story tree
   When the contract layer at `paths.contractsDir` is read
-  Then it holds `contracts.md`, `tech.md`, `structure.md` and the directories `api/`, `db/`, `ui/`, `cli/` and `design/`
+  Then it holds `contracts.md`, `tech.md` and the directories `api/`, `db/`, `ui/`, `cli/` and `design/`
   And `contracts.md` lists every contract file under those directories
   And the quality-gate commands appear only in the `## Standard commands (copy-paste)` section of `tech.md`
 ```

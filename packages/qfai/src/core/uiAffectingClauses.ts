@@ -14,9 +14,10 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
+import { loadConfig } from "./config.js";
 import { collectFiles } from "./fs.js";
 
-/** What `structure.md#ui-surface-paths-ssot` declares. */
+/** What `uiux.surfacePaths` in `qfai.config.yaml` declares. */
 export type DeclaredUiPaths =
   | { readonly kind: "globs"; readonly globs: readonly string[] }
   | { readonly kind: "none" }
@@ -44,41 +45,21 @@ export interface HoldingClause {
 }
 
 /**
- * The declared UI paths, read once per root.
+ * The UI paths `uiux.surfacePaths` in `qfai.config.yaml` declares.
  *
- * Bullets still at the template's `<...>` placeholder declare nothing, and a
- * section with no other bullet leaves clauses 1 and 2 unevaluable rather than
- * answered.
+ * An empty list declares a project with no UI surface. An absent key, or a
+ * configuration that does not load, declares nothing, which leaves clauses 1
+ * and 2 unevaluable rather than answered.
  */
-export async function readDeclaredUiPaths(
-  root: string,
-  contractsDir = ".qfai/spec/03_contract",
-): Promise<DeclaredUiPaths> {
-  let text: string;
-  try {
-    text = await readFile(path.resolve(root, contractsDir, "structure.md"), "utf-8");
-  } catch {
-    return { kind: "undeclared" };
-  }
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const heading = lines.findIndex((line) => /^##\s+UI surface paths\b/i.test(line));
-  if (heading < 0) return { kind: "undeclared" };
-  const end = lines.findIndex((line, index) => index > heading && /^##\s/.test(line));
-  const section = lines.slice(heading + 1, end < 0 ? lines.length : end);
-  const start = section.findIndex((line) => /^\s*ui_paths:\s*$/.test(line));
-  if (start < 0) return { kind: "undeclared" };
-  const bullets = section
-    .slice(start + 1)
-    .map((line) => /^\s*[-*]\s+(.+?)\s*$/.exec(line)?.[1])
-    .filter((value): value is string => value !== undefined)
-    .map((value) => value.replace(/^`([^`]*)`$/, "$1").trim());
-  if (bullets.some((value) => value.toLowerCase() === "none")) return { kind: "none" };
-  const globs = bullets.filter((value) => value.length > 0 && !/^<[^>]*>$/.test(value));
-  return globs.length === 0 ? { kind: "undeclared" } : { kind: "globs", globs };
+export async function readDeclaredUiPaths(root: string): Promise<DeclaredUiPaths> {
+  const { config } = await loadConfig(root);
+  const globs = config.uiux?.surfacePaths;
+  if (globs === undefined) return { kind: "undeclared" };
+  return globs.length === 0 ? { kind: "none" } : { kind: "globs", globs };
 }
 
 /**
- * Whether `candidate` matches `glob` under the rules `structure.md` fixes:
+ * Whether `candidate` matches `glob` under the rules the configuration fixes:
  * `**` is zero or more segments, `*` and `?` stay within one, a leading dot is
  * ordinary, matching is case-sensitive, and every other character is literal.
  */
@@ -235,7 +216,7 @@ export class UiAffectingClauses {
 
   /** The first clause that holds for `row`, or `null` when none the gate can read does. */
   async firstHolding(row: UiAffectingRow): Promise<HoldingClause | null> {
-    const declared = await (this.declared ??= readDeclaredUiPaths(this.root, this.contractsDir));
+    const declared = await (this.declared ??= readDeclaredUiPaths(this.root));
     if (declared.kind === "globs") {
       const owning = row.owningModule.trim();
       if (owning.length > 0 && owning !== "-") {

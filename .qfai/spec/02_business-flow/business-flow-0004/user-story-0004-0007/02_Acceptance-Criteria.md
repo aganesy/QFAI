@@ -28,6 +28,15 @@ Scenario: Step 4 does not guess
 
 # AC-0004-0007-03
 # Parent: US-0004-0007
+Scenario: Criteria and examples take their closed shapes, and what those shapes cannot hold goes to a person
+  Given a placed criterion holding a Background, a second Scenario, a Scenario Outline or a Scenario named only by its ID, or a placed example whose Input or Expected opens with a Gherkin step keyword
+  When step 4 runs
+  Then each criterion holds its first named Scenario, or a placeholder Scenario where it has none
+  And an Input or Expected holding one step is written without its leading Given, When, Then or And, and one holding more steps is written as it stands
+  And each item not written, each placeholder and each cell written as it stands is listed under For a person, and step 4 exits 3
+
+# AC-0004-0007-04
+# Parent: US-0004-0007
 Scenario: A rule destination that is not a contract stops step 4
   Given a plan placing a rule in a path outside the contract kind directories, or in a path that names no contract
   When step 4 runs

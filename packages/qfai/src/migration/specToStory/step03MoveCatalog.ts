@@ -23,6 +23,7 @@ import {
   renderPolicyDocument,
   type PolicyDraft,
 } from "./policyDocuments.js";
+import { entrypointCommands, routeStructureCatalog } from "./structureCatalog.js";
 
 const POLICY_SOURCES = [
   ["01_Objective.md", "objective.md"],
@@ -77,8 +78,6 @@ function titleFor(target: string): string {
       return "Constraints";
     case "tech.md":
       return "Technology";
-    case "structure.md":
-      return "Structure";
     default:
       throw new Error(`Unknown catalog destination: ${target}`);
   }
@@ -156,7 +155,6 @@ function route(source: string, heading: string, context: MigrationContext): stri
     return policy(/^Milestones$/i.test(heading) ? "initiative.md" : "objective.md");
   if (source.endsWith("/manifest.md")) return policy("principle.md");
   if (source.endsWith("/tech.md")) return contract("tech.md");
-  if (source.endsWith("/structure.md")) return contract("structure.md");
   const policyName = path.posix.basename(source);
   const mapped = POLICY_SOURCES.find(([name]) => name === policyName)?.[1];
   if (!mapped) throw new Error(`No destination for ${source}`);
@@ -193,17 +191,23 @@ async function defaultsFile(name: string): Promise<string> {
   return readInput(absolute);
 }
 
-async function planOverrides(root: string): Promise<MigrationOperation | null> {
+async function planOverrides(
+  root: string,
+  surfacePaths: string[] | undefined,
+): Promise<MigrationOperation | null> {
   const routingPath = path.join(root, ".qfai/assistant/manifest/agent-routing.yml");
   const reviewPath = path.join(root, ".qfai/assistant/manifest/review-profiles.yml");
   const hasRouting = await exists(routingPath);
   const hasReview = await exists(reviewPath);
-  if (!hasRouting && !hasReview) return null;
+  if (!hasRouting && !hasReview && surfacePaths === undefined) return null;
   const configPath = path.join(root, "qfai.config.yaml");
   const config = parseDocument(await readInput(configPath), { keepSourceTokens: true });
   if (config.errors.length > 0)
     throw new MigrationInputError(`Cannot parse ${configPath}: ${config.errors[0]?.message}`);
-  let changed = false;
+  // A 1.x configuration has no `uiux.surfacePaths`, so a value already there was set
+  // by the project on purpose and is kept.
+  let changed = surfacePaths !== undefined && !config.hasIn(["uiux", "surfacePaths"]);
+  if (changed) config.setIn(["uiux", "surfacePaths"], surfacePaths);
   if (hasRouting) {
     const project = asRecord(
       parseYamlInput(await readInput(routingPath), routingPath),
@@ -315,6 +319,32 @@ async function writeContractIndex(
   return index.forAPerson;
 }
 
+const STANDARD_COMMANDS = "Standard commands (copy-paste)";
+
+/** Routes an old `catalog/structure.md`, reading the entrypoint commands its `tech.md` gives. */
+async function routeStructure(
+  context: MigrationContext,
+  parts: {
+    source: string;
+    archive: string;
+    preamble: string;
+    sections: { heading: string; body: string }[];
+  },
+  draftFor: (target: string) => PolicyDraft,
+): Promise<ReturnType<typeof routeStructureCatalog>> {
+  const techSource = path.join(context.root, ".qfai/assistant/catalog/tech.md");
+  const constraint = relative(
+    context.root,
+    path.join(context.specsDir, "01_policy", "constraint.md"),
+  );
+  return routeStructureCatalog({
+    ...parts,
+    commands: entrypointCommands((await exists(techSource)) ? await readInput(techSource) : ""),
+    constraints: () => draftFor(constraint),
+    techTarget: relative(context.root, path.join(context.contractsDir, "tech.md")),
+  });
+}
+
 export const step03: MigrationStep = {
   number: 3,
   writeSet: ["qfai", "specs", "contracts", "config"],
@@ -327,6 +357,7 @@ export const step03: MigrationStep = {
     const forAPerson: string[] = [...contracts.forAPerson];
     const reserved = new Set<string>();
     const documents = new Map<string, string>();
+    let surfacePaths: string[] | undefined;
     const policies = relative(context.root, path.join(context.specsDir, "_policies"));
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
     sources.push(...CATALOG_FILES.map((name) => `.qfai/assistant/catalog/${name}`));
@@ -347,6 +378,23 @@ export const step03: MigrationStep = {
         `${RETIRED}/${source.startsWith(".qfai/assistant/") ? source.slice(".qfai/".length) : `_policies/${path.posix.basename(source)}`}`,
         reserved,
       );
+      if (source.endsWith("/structure.md")) {
+        const routed = await routeStructure(
+          context,
+          { source, archive, preamble, sections },
+          draftFor,
+        );
+        forAPerson.push(...routed.forAPerson);
+        surfacePaths = routed.surfacePaths;
+        if (routed.skeletonLines.length > 0) {
+          const tech = relative(context.root, path.join(context.contractsDir, "tech.md"));
+          if (!documents.has(tech)) documents.set(tech, await readDestination(context, tech));
+          const body = routed.skeletonLines.join("\n");
+          documents.set(tech, appendSection(documents.get(tech) ?? "", STANDARD_COMMANDS, body));
+        }
+        operations.push({ kind: "move", source, target: archive });
+        continue;
+      }
       const fallback = route(source, "", context);
       if (path.posix.basename(fallback) === "contracts.md") {
         forAPerson.push(
@@ -422,7 +470,7 @@ export const step03: MigrationStep = {
       operations.push({ kind: "move", source: sliceSource, target: archive });
     }
 
-    const override = await planOverrides(context.root);
+    const override = await planOverrides(context.root, surfacePaths);
     if (override) operations.push(override);
 
     for (const directory of ASSISTANT_DIRS) {

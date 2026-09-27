@@ -206,6 +206,32 @@ describe("migration steps 5 to 8", () => {
     expect((repeated.casesToExamples?.length ?? 0) + (repeated.forAPerson?.length ?? 0)).toBe(4);
   });
 
+  it("writes a case's steps as plain values and lists a cell holding several steps", async () => {
+    // QFAI:EX-0004-0008-12
+    // QFAI:EX-0004-0008-13
+    const context = await fixture();
+    await put(
+      context.root,
+      `.qfai/evidence/migration-spec-to-story/retired/${spec}/06_Test-Cases.md`,
+      "# Cases\n\n| TC-ID | AC-Refs | EX-Ref | Steps | Expected |\n| --- | --- | --- | --- | --- |\n| TC-0001-0001 | AC-0001-0001 | — | When the order is submitted | Then the order is accepted |\n| TC-0001-0006 | AC-0001-0001 | — | Given a cart When it is submitted | Accepted |\n",
+    );
+    const c = capture();
+    expect(await executePlannedStep(step05, context, false, c.io)).toBe(3);
+    const examples = await readFile(path.join(context.specsDir, story), "utf8");
+    expect(examples).toContain(
+      "| EX-0001-0001-02 | AC-0001-0001-01 | the order is submitted | the order is accepted |",
+    );
+    expect(examples).toContain(
+      "| EX-0001-0001-03 | AC-0001-0001-01 | Given a cart When it is submitted | Accepted |",
+    );
+    expect(reportSection(c.output.join(""), "Cases to examples")).toBe(
+      "- TC-0001-0001 → EX-0001-0001-02\n- TC-0001-0006 → EX-0001-0001-03",
+    );
+    expect(reportSection(c.output.join(""), "For a person")).toBe(
+      `- .qfai/spec/${story}: EX-0001-0001-03 Input is Gherkin steps, not one plain value; rewrite it`,
+    );
+  });
+
   it("accounts for five case-only rows as three conversions and two human decisions", async () => {
     // QFAI:EX-0004-0008-05
     const context = await fixture();

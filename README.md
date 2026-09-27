@@ -346,6 +346,9 @@ validation:
       - "tests/**/*.spec.ts"
     testFileExcludeGlobs:
       - "**/fixtures/**"
+uiux:
+  surfacePaths: # the paths that render a user-visible surface; [] for none
+    - "src/components/**"
 ```
 
 Notes.
@@ -636,7 +639,6 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   │   └── business-flows.md
 │   │   └── 03_contract
 │   │       ├── contracts.md
-│   │       ├── structure.md
 │   │       └── tech.md
 │   └── waivers.yml
 └── qfai.config.yaml

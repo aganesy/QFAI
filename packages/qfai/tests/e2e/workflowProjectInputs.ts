@@ -1,6 +1,6 @@
 /**
  * What a project holds before its first feature run: the discussion that led to the feature, the
- * objective it serves, and the technology and structure records `qfai-configure` fills in. A
+ * objective it serves, and the technology record `qfai-configure` fills in. A
  * project past its first flow needs all of them for `validate` to pass, so `finish` can judge the
  * run on what the run changed and nothing else.
  */
@@ -85,8 +85,6 @@ const RECORDS: Record<string, string> = {
     "# Objective\n\n## Objective\n\n- Outcome: Customers choose where notifications go.\n- Evidence: Project need recorded by the owner.\n\n## Users\n\n- Primary user: Customer receiving notifications.\n\n## Success criteria\n\n- Measure: No customer holds more than five distinct addresses.\n\n## Non-goals\n\n- Outside this initiative: Sending the notifications.\n",
   ".qfai/spec/03_contract/tech.md":
     "# Technology\n\n## Runtime / platform\n\n- Runtime: `Node.js 20`\n- Platform: `Linux, macOS and Windows`\n\n## Stack\n\n| Component | Choice |\n| --------- | ------ |\n| Test runner | vitest |\n\n## Dependencies\n\n- Runtime dependency: `none; the address rules use the standard library`\n\n## Standard commands (copy-paste)\n\n- Install: `npm install`\n- Format: `npm run format:check`\n- Test: `npm test`\n- Lint: `npm run lint`\n- Typecheck: `npm run typecheck`\n- Build: `npm run build`\n- Skeleton: `node src/notification-addresses.js`\n- Validate: `npx qfai validate`\n",
-  ".qfai/spec/03_contract/structure.md":
-    "# Structure\n\n## Structure\n\n- Repository layout: `src/ holds the address rules; tests/ holds their tests by layer`\n- Production roots: `src/`\n\n## Entry points\n\n- Entry point: `src/notification-addresses.ts keeps a customer's addresses`\n\n## Key packages / entrypoints\n\n- Package or entrypoint: `src/notification-addresses.ts applies the limit`\n\n## Architecture constraints\n\n- Boundary: `tests import src; src imports nothing from tests`\n\n## UI surface paths (SSOT)\n\n- UI surface: `none`\n",
 };
 
 /** A `qfai init` project holding its discussion and its configured records, published. */

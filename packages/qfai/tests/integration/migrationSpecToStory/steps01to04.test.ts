@@ -50,6 +50,8 @@ async function run(step: typeof step01, project: MigrationContext, dryRun = fals
   return { code, output: output.join(""), errors: errors.join("") };
 }
 
+const STORY_DIR = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
+
 async function putMinimalPack(root: string, status = "active", caseRow = ""): Promise<void> {
   await put(
     root,
@@ -310,7 +312,7 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place one order\n Given an empty cart\n When an item is added\n Then the order is accepted\n\n# AC-0001-0002\n# Parent: US-0001-0001\nScenario Outline: Place <count> items\n Given <count> items\n When the order is placed\n Then the order is accepted\n Examples:\n   | count |\n   | 2     |\n```\n",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Place one order\n Given an empty cart\n When an item is added\n Then the order is accepted\n\n# AC-0001-0002\n# Parent: US-0001-0001\nScenario: Place two items\n Given two items\n When the order is placed\n Then the order is accepted\n```\n",
       );
       await put(
         root,
@@ -432,13 +434,10 @@ describe("migration steps 1 to 4", () => {
           "    Then the order is accepted",
           "",
           "  # AC-0001-0001-02",
-          "  Scenario Outline: Place <count> items",
-          "    Given <count> items",
+          "  Scenario: Place two items",
+          "    Given two items",
           "    When the order is placed",
           "    Then the order is accepted",
-          "    Examples:",
-          "      | count |",
-          "      | 2     |",
           "```",
           "",
         ].join("\n"),
@@ -597,7 +596,7 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n```\n',
+        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n```\n',
       );
       await run(step04, await context(root));
       const criteria = await readFile(
@@ -855,6 +854,149 @@ describe("migration steps 1 to 4", () => {
       expect(rerun.code).toBe(2);
       expect(rerun.errors).toContain("numbering changed for AC-0001-0002");
       expect(await readFile(mapPath, "utf8")).toBe(firstMap);
+    });
+  });
+
+  it("keeps a criterion's first named scenario and lists what it does not write", async () => {
+    // QFAI:AC-0004-0007-03
+    // QFAI:EX-0004-0007-20
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nBackground:\n  Given a signed-in buyer\n\nScenario: Place one order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n\n@later\nScenario: Place two orders\n  Given two carts\n  When both orders are placed\n  Then both are accepted\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect(
+        await readFile(path.join(root, `${STORY_DIR}/02_Acceptance-Criteria.md`), "utf8"),
+      ).toBe(
+        [
+          "# Acceptance Criteria",
+          "",
+          "## Criteria",
+          "",
+          "```gherkin",
+          "Feature: Order",
+          "  # AC-0001-0001-01",
+          "  Scenario: Place one order",
+          "    Given a cart",
+          "    When an order is placed",
+          "    Then the order is accepted",
+          "```",
+          "",
+        ].join("\n"),
+      );
+      const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
+      const reason = "is not written; a criterion holds one named Scenario";
+      expect(result.output).toContain(`- ${source}: AC-0001-0001 Background ${reason}\n`);
+      expect(result.output).toContain(
+        `- ${source}: AC-0001-0001 further Scenario "Place two orders" ${reason}\n`,
+      );
+      expect(result.output).not.toContain("placeholder");
+    });
+  });
+
+  it("writes a placeholder scenario for an outline and an ID-named scenario", async () => {
+    // QFAI:EX-0004-0007-21
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Place <count> items\n  Given <count> items\n  When the order is placed\n  Then the order is accepted\n  Examples:\n    | count |\n    | 2     |\n\n# AC-0001-0002\n# Parent: US-0001-0001\nScenario: AC-0001-0002\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      const placeholder = [
+        "  Scenario: <the outcome this criterion accepts>",
+        "    Given <a starting state>",
+        "    When <the user acts>",
+        "    Then <the expected outcome>",
+      ];
+      const criteriaFile = `${STORY_DIR}/02_Acceptance-Criteria.md`;
+      expect(await readFile(path.join(root, criteriaFile), "utf8")).toBe(
+        [
+          "# Acceptance Criteria",
+          "",
+          "## Criteria",
+          "",
+          "```gherkin",
+          "Feature: Order",
+          "  # AC-0001-0001-01",
+          ...placeholder,
+          "",
+          "  # AC-0001-0001-02",
+          ...placeholder,
+          "```",
+          "",
+        ].join("\n"),
+      );
+      const source = ".qfai/spec/spec-0001/03_Acceptance-Criteria.md";
+      const reason = "is not written; a criterion holds one named Scenario";
+      expect(result.output).toContain(
+        `- ${source}: AC-0001-0001 Scenario Outline "Place <count> items" ${reason}\n`,
+      );
+      expect(result.output).toContain(
+        `- ${source}: AC-0001-0002 Scenario named only by its ID AC-0001-0002 ${reason}\n`,
+      );
+      for (const id of ["AC-0001-0001-01", "AC-0001-0001-02"]) {
+        expect(result.output).toContain(
+          `- ${criteriaFile}: ${id} holds a placeholder Scenario; write it\n`,
+        );
+      }
+    });
+  });
+
+  it("lists a Background that lies outside every criterion", async () => {
+    // QFAI:EX-0004-0007-22
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        "# Criteria\n\n```gherkin\nBackground:\n  Given a signed-in buyer\n\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed\n  Then the order is accepted\n```\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      expect(
+        await readFile(path.join(root, `${STORY_DIR}/02_Acceptance-Criteria.md`), "utf8"),
+      ).not.toContain("Background");
+      expect(result.output).toContain(
+        "- .qfai/spec/spec-0001/03_Acceptance-Criteria.md: a Background outside every criterion is not written\n",
+      );
+    });
+  });
+
+  it("writes an example's single step as a plain value and lists a cell holding several", async () => {
+    // QFAI:EX-0004-0007-23
+    await withProject(async (root) => {
+      await putMinimalPack(
+        root,
+        "active",
+        "| TC-0001-0001 | AC-0001-0001 | EX-0001-0001 | Submit | Accepted |\n| TC-0001-0002 | AC-0001-0001 | EX-0001-0002 | Submit | Accepted |\n",
+      );
+      await put(
+        root,
+        ".qfai/spec/spec-0001/05_Examples.md",
+        "# Examples\n\n| EX-ID | BR-Ref | Input | Expected |\n| --- | --- | --- | --- |\n| EX-0001-0001 | — | Given one item | Then the order is accepted |\n| EX-0001-0002 | — | Given a cart When it is submitted | The order is accepted |\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      const exampleFile = `${STORY_DIR}/03_Example.md`;
+      const examples = await readFile(path.join(root, exampleFile), "utf8");
+      expect(examples).toContain(
+        "| EX-0001-0001-01 | AC-0001-0001-01 | one item | the order is accepted |\n",
+      );
+      expect(examples).toContain(
+        "| EX-0001-0001-02 | AC-0001-0001-01 | Given a cart When it is submitted | The order is accepted |\n",
+      );
+      expect(result.output).toContain(
+        `- ${exampleFile}: EX-0001-0001-02 Input is Gherkin steps, not one plain value; rewrite it\n`,
+      );
+      expect(result.output).not.toContain("EX-0001-0001-01 Input");
+      expect(result.output).not.toContain("Expected is Gherkin steps");
     });
   });
 

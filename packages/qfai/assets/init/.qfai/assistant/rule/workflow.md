@@ -122,7 +122,7 @@ At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping
 1. Check the current story-tree steering files under `<paths.specsDir>`:
    - `01_policy/objective.md` and `01_policy/initiative.md`
    - `01_policy/principle.md` and `01_policy/constraint.md`
-   - `03_contract/structure.md` and `03_contract/tech.md`
+   - `03_contract/tech.md`
 2. Detect incomplete content (empty sections, placeholder-only lines, `<...>`, `TBD`, outdated facts).
 3. If the current stage owns the file, fill verified facts. Otherwise follow the drift protocol and rerun the owning stage.
 4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
