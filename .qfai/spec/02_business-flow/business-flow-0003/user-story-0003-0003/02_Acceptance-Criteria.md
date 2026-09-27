@@ -3,12 +3,10 @@
 ## Criteria
 
 ```gherkin
-Feature: パス解決診断
-
-# AC-0003-0003-01
-# Parent: US-0003-0003
-Scenario: パス解決診断
-  Given qfai.config.yaml の testsDir が存在しないパスを指している
-  When `qfai doctor` を実行する
-  Then パス解決失敗が warning として報告される
+Feature: Path resolution diagnosis
+  # AC-0003-0003-01
+  Scenario: An unresolvable path is reported as a warning
+    Given `testsDir` in `qfai.config.yaml` points to a path that does not exist
+    When `qfai doctor` runs
+    Then the path resolution failure is reported as a warning
 ```

@@ -118,6 +118,7 @@ describe("TC-0004-0056: always-latest validate.json#profile reflects most-recent
     expect(body.profile).toBe("tdd");
   });
 
+  // QFAI:AC-0001-0049-01
   // QFAI:EX-0001-0049-01
   it("records a run with no profile as the full profile", async () => {
     await runValidate({ root, strict: false });
@@ -295,7 +296,7 @@ describe("TC-0004-0064: validate accepts 3-part justification R-PROMPT-SCANNER-D
 // Certify + post-sunset consumer
 // ────────────────────────────────────────────────────────────────────────────
 
-// QFAI:AC-0001-0049-01
+// QFAI:AC-0001-0049-03
 // QFAI:EX-0001-0049-04
 describe("certify reads the prototyping-profile validate report", () => {
   it("rejects the prototyping report's error even when the latest tdd report passed", async () => {

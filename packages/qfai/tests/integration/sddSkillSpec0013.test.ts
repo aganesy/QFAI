@@ -170,6 +170,7 @@ describe("SDD preflight stops only when no usable source exists", () => {
     expect(result.packGaps.length).toBeGreaterThan(0);
   });
 
+  // QFAI:AC-0001-0153-03
   // QFAI:EX-0001-0153-01
   it("continues when the selected pack has no 06_REQ.md and records it as a gap", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
@@ -184,6 +185,8 @@ describe("SDD preflight stops only when no usable source exists", () => {
   });
 
   // QFAI:EX-0001-0156-01
+  // QFAI:AC-0001-0153-01
+  // QFAI:EX-0001-0153-03
   it("stops when no usable discussion or import-lite source exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-preflight-"));
     roots.push(root);

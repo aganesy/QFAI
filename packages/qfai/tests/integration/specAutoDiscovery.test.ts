@@ -167,6 +167,6 @@ describe("TC-0008-0012: Normal-Path-Only Flagged as Incomplete", () => {
   it("the example flags the criterion missing an error path, not the flow", async () => {
     const content = await readFile(path.join(storyDir, "03_Example.md"), "utf-8");
     expect(content).toContain("EX-0001-0074-01");
-    expect(content).toContain("then the AC is flagged incomplete and the BF is not flagged");
+    expect(content).toContain("The AC is flagged incomplete and the BF is not flagged");
   });
 });

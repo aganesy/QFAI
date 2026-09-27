@@ -2,16 +2,8 @@
 
 ## User Story
 
-- Parent: CAP-0005
-- Goal: After the report is generated, `writeSpecPackReports()` also writes a report per spec. On the story tree it writes one report per business flow instead
-- Non-goals: Customising the format of the per-unit reports
+As an operator, I want `qfai report` on the story tree to write one report per business flow beside the main report, so that each flow's result can be read on its own.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: every feature of the report command (`--format md|json`, `--base-url`, `--run-validate`, `--in`, `--out`, `--phase`, validate.json input, report.md/report.json output, spec-pack report generation), and the prototyping observability section (obligations, screenshot/html evidence, review artifact, validate/verify outcome, compatibility wording). On the story tree, the spec-pack reports become one report per business flow, and `--flow BF-NNNN` scopes a run to named business flows
-- Out: validate/init/doctor/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0005
-- Story block: `us-0005-0007` of retired spec-0005
+- Customising the format of the per-unit reports

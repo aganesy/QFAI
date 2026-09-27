@@ -451,6 +451,7 @@ describe("validatePrototypingEvidence", () => {
     expect(issues.some((i) => i.code === "QFAI-PROT-007")).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-13
   it("returns no issues for a valid record", async () => {
     const root = await newTempDir();
     const first = validIter(0);
@@ -649,6 +650,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
     expect(issues.some((i) => i.rule === "prototypingEvidence.review.mirrorMismatch")).toBe(false);
   });
 
+  // QFAI:EX-0001-0042-14
   it("accepts every lap-* code the registry declares", async () => {
     // Read from the registry rather than listing codes here. A hardcoded pair
     // says nothing about an entry added later, and the claim being made is
@@ -897,6 +899,7 @@ describe("validatePrototypingEvidence — iter-NN/review.json", () => {
 
   // Key order is not evidence. A transcription that writes the same record
   // with its two declared keys the other way round mirrors it faithfully.
+  // QFAI:EX-0001-0042-16
   it("accepts a designMdViolations entry whose keys are written in the other order", async () => {
     const root = await newTempDir();
     const iter = validIter(0);

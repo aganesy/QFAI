@@ -2,16 +2,8 @@
 
 ## User Story
 
-- Parent: CAP-0005
-- Goal: On the story tree, `qfai report --flow BF-NNNN` renders the result of a flow-scoped validate run to report files of its own, so parallel workers each render their own flow without overwriting the shared report
-- Non-goals: A scope finer than one business flow
+As an agent running a scoped gate on the story tree, I want `qfai report --flow BF-NNNN` to render the result of a flow-scoped validate run to report files of its own, so that parallel workers each render their own flow without overwriting the shared report.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: every feature of the report command (`--format md|json`, `--base-url`, `--run-validate`, `--in`, `--out`, `--phase`, validate.json input, report.md/report.json output, spec-pack report generation), and the prototyping observability section (obligations, screenshot/html evidence, review artifact, validate/verify outcome, compatibility wording). On the story tree, the spec-pack reports become one report per business flow, and `--flow BF-NNNN` scopes a run to named business flows
-- Out: validate/init/doctor/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0005
-- Story block: `us-0005-0009` of retired spec-0005
+- A scope finer than one business flow

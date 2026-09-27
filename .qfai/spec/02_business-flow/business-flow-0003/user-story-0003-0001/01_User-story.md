@@ -1,17 +1,9 @@
-# US-0003-0001: 設定ファイル診断
+# US-0003-0001: Configuration file diagnosis
 
 ## User Story
 
-- Parent: CAP-0006
-- Goal: `qfai doctor` で qfai.config.yaml の存在と妥当性（必須フィールド、型、値の範囲）をチェックし、結果を表示する
-- Non-goals: 設定ファイルの自動修正
+As an operator, I want `qfai doctor` to check that `qfai.config.yaml` exists and is valid (required fields, types and value ranges) and to show the result, so that a missing or invalid configuration is reported before I rely on it.
 
-## Legacy Source Scope
+## Non-goals
 
-- In: doctor コマンドの全機能（設定チェック、ディレクトリチェック、パス解決チェック、レガシー警告、--format text|json、--fail-on、--out）
-- Out: validate/init/report/guardrails
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0006
-- Story block: `us-0006-0001` of retired spec-0006
+- Repairing the configuration file automatically.

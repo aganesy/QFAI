@@ -312,6 +312,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `And` when they hold one step. A cell holding more steps is written as it
     stands, and the step lists it under `## For a person` and exits 3.
 
+- **The business-flow and story documents have closed schemas.** The document
+  lane now refuses any section, table, list or code block in these six
+  documents that their `qfai-sdd` template does not declare, and the templates
+  follow the same shape.
+  - `business-flow.md` states `## Purpose` in prose, draws the flow as one
+    Mermaid diagram under `## Flow`, and lists branches and failures under the
+    new required `## Alternate and exception paths`.
+  - `01_User-story.md` holds one `As a …, I want …, so that ….` sentence under
+    `## User Story`, and optionally a `## Non-goals` list.
+  - `02_Acceptance-Criteria.md` holds one Gherkin block: `Feature:` with a
+    name, then for each criterion a `# AC-…` comment and one named `Scenario:`,
+    indented two and four spaces. A `# Parent:` line, or a scenario named only
+    by its ID, fails.
+  - `03_Example.md`, `business-flows.md` and `user-stories.md` each hold one
+    table and nothing else. An example's `Input` and `Expected` are plain
+    values, not `Given` or `Then` steps.
+
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
   stories, acceptance criteria and examples in `02_business-flow/`, contracts
