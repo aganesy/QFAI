@@ -404,6 +404,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Step 7 lists a rule it writes into a CLI contract whose statement names
     another rule, which that contract's table does not admit, and exits 3.
 
+- **Migration step 3 retires 1.x files that are not 2.0.0 contracts.**
+  - A Markdown file under `api/`, `db/` or `ui/` gets no contract ID and is
+    not written into the contract tree. It is listed under `## For a person`
+    with the form its directory's contracts take: OpenAPI YAML or JSON, SQL,
+    or YAML.
+  - No file under `design/` is numbered. The directory moves whole, and each
+    file is listed with where its content now belongs: the brand in the root
+    `DESIGN.md`, a screen in a `ui/` contract.
+  - Each original is kept under
+    `.qfai/evidence/migration-spec-to-story/retired/contract/`, and step 3
+    exits 3. A plan that places a rule in one of these files stops step 4.
+
 - **The business-flow and story documents have closed schemas.** The document
   lane now refuses any section, table, list or code block in these six
   documents that their `qfai-sdd` template does not declare, and the templates

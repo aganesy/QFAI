@@ -8,6 +8,10 @@ import {
 import { collectFilesByGlobs } from "../../core/fs.js";
 import { parseHeadings } from "../../core/parse/markdown.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../../core/storyTree/ids.js";
+import {
+  markdownOutsideContractForm,
+  NON_MARKDOWN_CONTRACT_FORMS,
+} from "../../core/storyTree/layout.js";
 import { shapeCliContract } from "./cliContract.js";
 import { MigrationInputError, type MigrationContext, type MigrationOperation } from "./harness.js";
 import {
@@ -39,37 +43,81 @@ export type ContractPlan = {
 
 const KIND_DIRS = Object.keys(CONTRACT_KIND_BY_DIR);
 const EXTENSIONS = /\.(?:md|ya?ml|json|sql)$/i;
-/** The design files a 1.x release generated beside its contracts; none of them is a contract. */
-const NOT_CONTRACTS = new Set([
-  "design/DESIGN.md.lock.yaml",
-  "design/design-system.yaml",
-  "design/prototype-handoff.yaml",
-]);
+/** A 1.x directory under the contracts directory that 2.x does not have. */
+const DESIGN = "design";
 const OLD_CONTRACT_ID = /^CON-(?:API|DB|UI)-(\d+)$/;
 export const OLD_CONTRACT_TOKEN = /\bCON-(?:API|DB|UI)-\d+\b/g;
 const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(.*)$/;
 const DEPENDS_COMMENT = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:/i;
 const DEPENDS_KEY = /^\s*"?x-qfai-depends-on"?\s*:(.*)$/i;
 const FILE_LIMIT = 200_000;
-/** Where the original of a contract step 3 could not reshape whole is kept. */
+/** Where step 3 keeps the original of a contract it reshaped, and of a file that is no contract. */
 const RETIRED = ".qfai/evidence/migration-spec-to-story/retired/contract";
+
+/**
+ * Why step 3 writes no contract from a file under the contracts directory, or
+ * null when the file is a contract. `relative` is posix.
+ */
+export function notAContract(relative: string): string | null {
+  if (relative.split("/")[0] === DESIGN)
+    return `${DESIGN}/ no longer exists: the brand belongs in the root DESIGN.md and a screen in a ui/ contract`;
+  const directory = markdownOutsideContractForm(relative);
+  return directory === null
+    ? null
+    : `Markdown is not a contract: ${directory}/ holds ${NON_MARKDOWN_CONTRACT_FORMS[directory]} contracts`;
+}
 
 function kindOf(relative: string): string {
   const directory = relative.split("/")[0] ?? "";
   return Object.entries(CONTRACT_KIND_BY_DIR).find(([name]) => name === directory)?.[1] ?? "";
 }
 
-async function contractFiles(context: MigrationContext): Promise<string[]> {
+/** Every file under a kind directory or `design/`, relative to the contracts directory. */
+async function contractDirectoryFiles(context: MigrationContext): Promise<string[]> {
   const selected = await collectFilesByGlobs(context.contractsDir, {
-    globs: KIND_DIRS.map((directory) => `${directory}/**/*`),
+    globs: [...new Set([...KIND_DIRS, DESIGN])].map((directory) => `${directory}/**/*`),
     limit: FILE_LIMIT,
   });
   if (selected.truncated)
     throw new MigrationInputError(`Contract selection exceeds ${FILE_LIMIT} files`);
   return selected.files
     .map((file) => path.relative(context.contractsDir, file).split(path.sep).join("/"))
-    .filter((relative) => EXTENSIONS.test(relative) && !NOT_CONTRACTS.has(relative))
     .sort();
+}
+
+async function contractFiles(context: MigrationContext): Promise<string[]> {
+  return (await contractDirectoryFiles(context)).filter(
+    (relative) => EXTENSIONS.test(relative) && notAContract(relative) === null,
+  );
+}
+
+/**
+ * Moves every 1.x file step 3 writes no contract from to `retired/contract/`,
+ * and names each for a person: a Markdown file under `api/`, `db/` or `ui/`,
+ * and every file of `design/`, which moves as one directory.
+ */
+async function retireNonContracts(
+  context: MigrationContext,
+): Promise<{ operations: MigrationOperation[]; forAPerson: string[] }> {
+  const operations: MigrationOperation[] = [];
+  const forAPerson: string[] = [];
+  let design = false;
+  for (const relative of await contractDirectoryFiles(context)) {
+    const reason = notAContract(relative);
+    if (reason === null) continue;
+    const source = contractRepoPath(context, relative);
+    const archive = `${RETIRED}/${relative}`;
+    if (relative.startsWith(`${DESIGN}/`)) design = true;
+    else operations.push({ kind: "move", source, target: archive });
+    forAPerson.push(`${source}: ${reason}; rewrite what it states by hand (kept at ${archive})`);
+  }
+  if (design)
+    operations.unshift({
+      kind: "move",
+      source: contractRepoPath(context, DESIGN),
+      target: `${RETIRED}/${DESIGN}`,
+    });
+  return { operations, forAPerson };
 }
 
 /** `api/api-0001-orders.yaml` for API-0001 at `api/orders.yaml`. */
@@ -89,7 +137,7 @@ type Candidate = { relative: string; kind: string; old: string | null };
 
 /**
  * Numbers every contract that declares no `<KIND>-NNNN` ID: in the kind order
- * cli, api, db, ui, design, then by the number of its old `CON-*` ID, then by
+ * cli, api, db, ui, then by the number of its old `CON-*` ID, then by
  * path. Numbers run on from the highest a contract already declares.
  */
 async function assignContractIds(
@@ -238,15 +286,17 @@ function contractTitle(text: string, relative: string): string {
 
 /**
  * Step 3's contract work: the contract map, read back when an earlier run wrote
- * it, and for each 1.x contract still at its old path the write of its renamed
- * copy and the removal of the old file.
+ * it, for each 1.x contract still at its old path the write of its renamed
+ * copy and the removal of the old file, and the archiving of every file that is
+ * no contract.
  */
 export async function planContracts(context: MigrationContext): Promise<ContractPlan> {
   const existing = await readContractMap(context.root);
   const assigned = existing === null ? await assignContractIds(context) : null;
   const map = existing ?? assigned?.map ?? {};
-  const forAPerson = [...(assigned?.forAPerson ?? [])];
-  const operations: MigrationOperation[] = [];
+  const retired = await retireNonContracts(context);
+  const forAPerson = [...retired.forAPerson, ...(assigned?.forAPerson ?? [])];
+  const operations: MigrationOperation[] = [...retired.operations];
   if (existing === null && Object.keys(map).length > 0)
     operations.push({
       kind: "write",
