@@ -34,8 +34,8 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 ## Stage 4: enforcing contracts
 
 1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. The only quality-gate command definitions are in the Standard commands section of tech.md.
-2. Put each BR inside the contract that enforces it. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition; dependent contracts use file-level rule refs.
-3. Add each contract file to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
+2. Put each BR inside the contract that enforces it, numbered `BR-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
+3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
 4. For a visual UI surface, the root DESIGN.md and its lock are written by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require a visual lock.
 
 ## Concrete-abstract cycle
