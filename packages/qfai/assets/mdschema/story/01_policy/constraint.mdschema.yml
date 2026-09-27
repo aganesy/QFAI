@@ -26,6 +26,10 @@ structure:
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
       - heading:
           pattern: "^## Operational Constraints$"
           regex: true
@@ -40,6 +44,10 @@ structure:
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
       - heading:
           pattern: "^## Business Constraints$"
           regex: true
@@ -53,4 +61,8 @@ structure:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
           - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
             regex: true
