@@ -492,7 +492,10 @@ function replacedIds(text: string, replacements: Record<string, string>): string
 
 const MERMAID_FENCE = /```mermaid\s*\n([\s\S]*?)\n```/m;
 
-/** The old flow section `from` selects: its Mermaid diagram and the prose around it. */
+/**
+ * The old flow section `from` selects: its Mermaid diagram and the prose around it. Headings are
+ * dropped: the prose becomes `## Purpose`, and a flow document has no heading below that level.
+ */
 function flowSource(
   text: string,
   selector: string | undefined,
@@ -502,9 +505,9 @@ function flowSource(
   const prose = selected
     .replace(MERMAID_FENCE, "")
     .split(/\r?\n/)
-    .filter((line) => !/^#\s/.test(line))
-    .map((line) => line.replace(/^#{2}(?=\s)/, "###"))
+    .filter((line) => !/^#{1,6}\s/.test(line))
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
   return { diagram: MERMAID_FENCE.exec(selected)?.[1] ?? null, prose };
 }
@@ -811,9 +814,21 @@ function outputExamples(
   return `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
 }
 
+/** The placeholders of the `qfai-sdd` business flow template. */
+const FLOW_PURPOSE_PLACEHOLDER = "`<Who carries out this flow, and the outcome it reaches.>`";
+const FLOW_PATHS_PLACEHOLDER =
+  "- `<branch, failure, interruption or resumption, and where it leads>`";
+
 function outputFlow(title: string, id: string, diagram: string, prose: string): string {
-  const source = prose ? `\n${prose}\n` : "";
-  return `# ${id}: ${title}\n\n## Purpose\n\n- ${title}\n${source}\n## Flow\n\n\`\`\`mermaid\n${diagram.trim()}\n\`\`\`\n`;
+  return [
+    `# ${id}: ${title}`,
+    "## Purpose",
+    prose || FLOW_PURPOSE_PLACEHOLDER,
+    "## Flow",
+    `\`\`\`mermaid\n${diagram.trim()}\n\`\`\``,
+    "## Alternate and exception paths",
+    `${FLOW_PATHS_PLACEHOLDER}\n`,
+  ].join("\n\n");
 }
 
 function outputFlowIndex(flows: readonly { id: string; title: string }[]): string {
@@ -1114,6 +1129,10 @@ export const step04: MigrationStep = {
       const { diagram, prose } = flowSource(oldFlowText, flow.from);
       if (!flow.from || !diagram)
         forAPerson.push(`${PLAN_PATH}: ${flow.title} has no old flow diagram`);
+      const missing = prose ? "" : "no purpose and ";
+      forAPerson.push(
+        `${flowDir}/business-flow.md: ${flowId} has ${missing}no alternate and exception paths; write them`,
+      );
       operations.push({
         kind: "write",
         target: `${flowDir}/business-flow.md`,
