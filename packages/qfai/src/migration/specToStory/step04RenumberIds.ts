@@ -649,9 +649,9 @@ function storyBlockEntries(body: string): BlockEntry[] {
     } else if (current?.kind === "field" && /^\s/.test(line)) {
       const last = current.items.length - 1;
       if (last >= 0) current.items[last] = `${current.items[last]} ${line.trim()}`;
-      else current.value = `${current.value} ${line.trim()}`;
+      else current.value = `${current.value.trimEnd()} ${line.trim()}`;
     } else if (current?.kind === "paragraph") {
-      current.text = `${current.text} ${line.trim()}`;
+      current.text = `${current.text.trimEnd()} ${line.trim()}`;
     } else {
       current = { kind: "paragraph", text: line.trim() };
       entries.push(current);
@@ -681,7 +681,7 @@ function storyParts(body: string): StoryParts | null {
       return null;
     }
   }
-  const sentence = sentences[0]?.replace(/\s+/g, " ").trim() ?? "";
+  const sentence = sentences[0]?.trim() ?? "";
   return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
 }
 
@@ -699,15 +699,15 @@ function outputStory(
 
 /** A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps. */
 function indentedScenario(scenario: string): string {
-  const lines = scenario.split("\n");
+  const lines = scenario.replace(/\r\n/g, "\n").split("\n");
   const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
   const step = lines.find((line) => /^\s*(?:Given|When|Then|And|But)\s/.test(line));
   const stepIndent = step === undefined ? 0 : indent(step);
   return lines
     .map((line, index) => {
       if (line.trim() === "") return "";
-      if (index === 0) return `  ${line.trim()}`;
-      return `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trim()}`;
+      if (index === 0) return `  ${line.trimStart()}`;
+      return `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trimStart()}`;
     })
     .join("\n");
 }
@@ -1087,6 +1087,13 @@ export const step04: MigrationStep = {
         const criteriaText = outputCriteria(story, mappedCriteria, packMap);
         if (criteriaText === null) {
           forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
+          if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
+            operations.push({
+              kind: "remove",
+              target: criteriaFile,
+              description: "no criterion takes a new ID",
+            });
+          }
         } else {
           operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
         }

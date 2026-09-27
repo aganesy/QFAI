@@ -457,6 +457,30 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("keeps the whitespace inside a story sentence and a scenario line", async () => {
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/02_User-stories.md",
+        "# Stories\n\n## US-0001-0001: Order\n\n- Goal: As a buyer, I want to send `a  b`,  \n  so that the order is exact.\n",
+      );
+      await put(
+        root,
+        ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
+        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario: Order\n  Given a cart\n  When an order is placed with\n    """\n    body  \n    """\n  Then the order is accepted\n```\n',
+      );
+      await run(step04, await context(root));
+      const storyDir = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
+      expect(await readFile(path.join(root, storyDir, "01_User-story.md"), "utf8")).toBe(
+        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want to send `a  b`, so that the order is exact.\n",
+      );
+      expect(
+        await readFile(path.join(root, storyDir, "02_Acceptance-Criteria.md"), "utf8"),
+      ).toContain('    When an order is placed with\n      """\n      body  \n      """\n');
+    });
+  });
+
   it("refuses a plan that places a superseded rule", async () => {
     await withProject(async (root) => {
       await putMinimalPack(root);
@@ -523,6 +547,11 @@ describe("migration steps 1 to 4", () => {
         root,
         ".qfai/evidence/migration-spec-to-story/plan.yaml",
         "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+      );
+      await put(
+        root,
+        ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/02_Acceptance-Criteria.md",
+        "# Acceptance Criteria\n\nstale\n",
       );
       const result = await run(step04, await context(root));
       expect(result.code).toBe(3);
