@@ -165,8 +165,8 @@ async function seedPrototypingDesignYamls(root: string): Promise<void> {
 }
 
 describe("validateSddDesignContractReadiness (TC-3.8.x)", () => {
-  // QFAI:EX-0001-0042-03
-  // QFAI:EX-0001-0042-04
+  // QFAI:EX-0001-0042-10
+  // QFAI:EX-0001-0042-11
   it("TC-3.8.1: new file set passes (no issues)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
@@ -1050,6 +1050,7 @@ procurement:
     ).toBe(true);
   });
 
+  // QFAI:EX-0001-0042-12
   it("design-system.yaml as DESIGN.md mirror passes validation (post-1.8.9 contract)", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);

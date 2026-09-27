@@ -60,7 +60,7 @@ afterEach(async () => {
 });
 
 describe("certify selects the prototyping validation result", () => {
-  // QFAI:AC-0001-0049-01
+  // QFAI:AC-0001-0049-03
   // QFAI:EX-0001-0049-04
   it("uses a passing prototyping report despite a newer failing default pointer", async () => {
     const root = await project();
@@ -82,7 +82,7 @@ describe("certify selects the prototyping validation result", () => {
     expect(result.stderr).not.toContain("reports 1 error");
   });
 
-  // QFAI:AC-0001-0049-01
+  // QFAI:AC-0001-0049-03
   it("requires the dedicated result even when the latest pointer looks passing", async () => {
     const root = await project();
     await put(

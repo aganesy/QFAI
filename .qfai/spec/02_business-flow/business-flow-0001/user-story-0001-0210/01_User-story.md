@@ -2,17 +2,9 @@
 
 ## User Story
 
-- Goal: As an operator whose bug report traces to a broken test that checks an
-  example, I want `/qfai-implement` to fix that test while it keeps checking the
-  same EX, so that the tree still says what the obligation is.
-- Non-goals: fixing a test that checks a BF or an AC, which `/qfai-atdd` does;
-  changing what the test expects.
-- Notes: discussion-20260923171450572#DUS-003 (its example-level half),
-  discussion-20260923171450572#REQ-0048.
+As an operator whose bug report traces to a broken test that checks an example, I want `/qfai-implement` to fix that test while it keeps checking the same example, so that the tree still says what the obligation is.
 
-## Source Provenance
+## Non-goals
 
-- Story block: US-0011-0012, which `main` added to spec-0011 (archived pre-merge
-  pack of spec-0011; main's
-  text at `b5d357c14:.qfai/specs/spec-0011/02_User-stories.md`).
-  `decisions.md#DEC-0745` records the carry.
+- Fixing a test that checks a business flow or a criterion, which `/qfai-atdd` does
+- Changing what the test expects

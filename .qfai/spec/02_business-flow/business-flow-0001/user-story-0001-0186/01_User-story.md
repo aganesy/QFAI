@@ -2,40 +2,9 @@
 
 ## User Story
 
-- Parent: CAP-0016
-- Goal: Security-conscious developer wants automatic sanitization of web content (hidden char removal, control char stripping, untrusted-data labeling)
-- Non-goals: ML-based injection detection, real-time model protection
-- Notes: Maps to REQ-0005. Moderate scope: basic + aria-hidden/display:none removal (OQ-0004 resolution).
+As a security-conscious developer, I want fetched web content sanitized automatically by removing hidden text and control characters and labeling it as untrusted data, so that injected instructions do not reach the model.
 
-## Legacy Source Scope
+## Non-goals
 
-### In
-
-- 標準リサーチパイプライン定義 (search→rank→fetch→extract→sanitize→cache→verify→cite)
-- MCP 統合テンプレート (Brave Search, Firecrawl, Playwright)
-- コンテンツサニタイゼーション層
-- ドメイン/URL 許可リスト設定スキーマ
-- リサーチスキル SKILL.md テンプレート
-- サブエージェントアーキテクチャ定義
-- 構造化リサーチログスキーマ
-- 評価メトリクス定義とゴールデンタスク構造
-- HITL レビューゲート定義
-- レートリミット処理とキャッシュ戦略
-- MCP 障害復旧処理
-- クロスエージェント設定テンプレート
-- サンドボックス設定テンプレート
-
-### Out
-
-- カスタム MCP サーバー開発 (OOS-001)
-- LLM モデル選択・ファインチューニング (OOS-002)
-- GUI/IDE 固有実装 (OOS-003)
-- RAG インフラ (OOS-004)
-- 組織 IAM/SSO 統合 (OOS-005)
-- 外部 API 課金管理 (OOS-006)
-- Apify MCP 深度統合 (OOS-007, deferred to post-v1.8.0)
-
-## Source Provenance
-
-- Spec scope: the Scope section of retired spec-0016
-- Story block: `us-0016-0004` of retired spec-0016
+- ML-based injection detection.
+- Real-time model protection.

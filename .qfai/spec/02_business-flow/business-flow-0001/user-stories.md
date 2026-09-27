@@ -4,10 +4,10 @@
 
 | US-ID        | Story                                                                                  | Path                    |
 | ------------ | -------------------------------------------------------------------------------------- | ----------------------- |
-| US-0001-0001 | トレーサビリティ連鎖定義                                                               | `user-story-0001-0001/` |
-| US-0001-0002 | Drift Protocol 体系化                                                                  | `user-story-0001-0002/` |
-| US-0001-0003 | Skill オーケストレーション設計契約                                                     | `user-story-0001-0003/` |
-| US-0001-0004 | Steering & Governance フレームワーク定義                                               | `user-story-0001-0004/` |
+| US-0001-0001 | Traceability chain definition                                                          | `user-story-0001-0001/` |
+| US-0001-0002 | Drift protocol                                                                         | `user-story-0001-0002/` |
+| US-0001-0003 | Skill orchestration design contract                                                    | `user-story-0001-0003/` |
+| US-0001-0004 | Steering and governance framework                                                      | `user-story-0001-0004/` |
 | US-0001-0005 | Story tree layout                                                                      | `user-story-0001-0005/` |
 | US-0001-0006 | Policy and contract layers                                                             | `user-story-0001-0006/` |
 | US-0001-0007 | Decision and open-question tables                                                      | `user-story-0001-0007/` |
@@ -23,20 +23,20 @@
 | US-0001-0017 | discussion-to-SDD handoff                                                              | `user-story-0001-0017/` |
 | US-0001-0018 | non-UI safe skip                                                                       | `user-story-0001-0018/` |
 | US-0001-0019 | direct-pack validator alignment                                                        | `user-story-0001-0019/` |
-| US-0001-0020 | ワークスペース初期化                                                                   | `user-story-0001-0020/` |
-| US-0001-0021 | 冪等な初期化                                                                           | `user-story-0001-0021/` |
-| US-0001-0022 | 強制更新                                                                               | `user-story-0001-0022/` |
-| US-0001-0023 | ドライラン                                                                             | `user-story-0001-0023/` |
-| US-0001-0024 | symlink ベースのスキル統合                                                             | `user-story-0001-0024/` |
-| US-0001-0025 | Agent symlink 統合                                                                     | `user-story-0001-0025/` |
-| US-0001-0026 | レガシーファイル退避                                                                   | `user-story-0001-0026/` |
-| US-0001-0027 | 旧ラッパー prune                                                                       | `user-story-0001-0027/` |
-| US-0001-0028 | Git symlink 設定 + Windows 対応                                                        | `user-story-0001-0028/` |
-| US-0001-0029 | copilot-instructions.md 生成                                                           | `user-story-0001-0029/` |
-| US-0001-0030 | Copilot review instructions 配布                                                       | `user-story-0001-0030/` |
-| US-0001-0031 | instructions の force 更新                                                             | `user-story-0001-0031/` |
-| US-0001-0032 | instructions アクティベーション案内                                                    | `user-story-0001-0032/` |
-| US-0001-0033 | `.gitignore` 管理ブロック自動追記                                                      | `user-story-0001-0033/` |
+| US-0001-0020 | Workspace initialization                                                               | `user-story-0001-0020/` |
+| US-0001-0021 | Idempotent initialization                                                              | `user-story-0001-0021/` |
+| US-0001-0022 | Forced update                                                                          | `user-story-0001-0022/` |
+| US-0001-0023 | Dry run                                                                                | `user-story-0001-0023/` |
+| US-0001-0024 | Symlink-based skill integration                                                        | `user-story-0001-0024/` |
+| US-0001-0025 | Agent symlink integration                                                              | `user-story-0001-0025/` |
+| US-0001-0026 | Legacy file removal                                                                    | `user-story-0001-0026/` |
+| US-0001-0027 | Prune legacy wrappers                                                                  | `user-story-0001-0027/` |
+| US-0001-0028 | Git symlink setting and Windows support                                                | `user-story-0001-0028/` |
+| US-0001-0029 | Copilot instructions generation                                                        | `user-story-0001-0029/` |
+| US-0001-0030 | Copilot review instructions distribution                                               | `user-story-0001-0030/` |
+| US-0001-0031 | Forced update of instructions files                                                    | `user-story-0001-0031/` |
+| US-0001-0032 | Instructions activation guidance                                                       | `user-story-0001-0032/` |
+| US-0001-0033 | Managed `.gitignore` block                                                             | `user-story-0001-0033/` |
 | US-0001-0034 | 4-layer asset-tree seeding                                                             | `user-story-0001-0034/` |
 | US-0001-0035 | --upgrade-assistant-tree migration helper                                              | `user-story-0001-0035/` |
 | US-0001-0036 | assistantPaths.ts SSOT module                                                          | `user-story-0001-0036/` |
@@ -61,12 +61,12 @@
 | US-0001-0057 | Example, criterion, and rule links                                                     | `user-story-0001-0057/` |
 | US-0001-0058 | Layer-specific test obligations                                                        | `user-story-0001-0058/` |
 | US-0001-0059 | Business-flow scoped validation                                                        | `user-story-0001-0059/` |
-| US-0001-0060 | Markdown レポート生成                                                                  | `user-story-0001-0060/` |
-| US-0001-0061 | JSON レポート生成                                                                      | `user-story-0001-0061/` |
-| US-0001-0062 | リポジトリリンク付与                                                                   | `user-story-0001-0062/` |
-| US-0001-0063 | 内部バリデーション実行                                                                 | `user-story-0001-0063/` |
-| US-0001-0064 | validate.json 入力                                                                     | `user-story-0001-0064/` |
-| US-0001-0065 | 出力パス制御                                                                           | `user-story-0001-0065/` |
+| US-0001-0060 | Markdown report generation                                                             | `user-story-0001-0060/` |
+| US-0001-0061 | JSON report generation                                                                 | `user-story-0001-0061/` |
+| US-0001-0062 | Repository links                                                                       | `user-story-0001-0062/` |
+| US-0001-0063 | Internal validation run                                                                | `user-story-0001-0063/` |
+| US-0001-0064 | validate.json input                                                                    | `user-story-0001-0064/` |
+| US-0001-0065 | Output path control                                                                    | `user-story-0001-0065/` |
 | US-0001-0066 | Per-unit reports                                                                       | `user-story-0001-0066/` |
 | US-0001-0067 | Prototyping Observability Section                                                      | `user-story-0001-0067/` |
 | US-0001-0068 | Flow-scoped report                                                                     | `user-story-0001-0068/` |
