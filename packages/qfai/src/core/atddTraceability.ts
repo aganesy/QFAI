@@ -26,7 +26,6 @@ import {
   parseAllMarkdownTables,
   resolveTestCaseTables,
 } from "./specPackParsers.js";
-import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
@@ -1694,21 +1693,9 @@ function normalizeLevel(level: string): string {
  * one, which is `/qfai-implement`'s gate and the stage that owns Unit and
  * Component.
  *
- * **One vocabulary, not two.** This is `UNIT_COMPONENT_LAYERS` itself, not a
- * second copy of its members. The handoff above is the whole safety argument
- * for dropping the ATDD obligation, and it only holds while the set ATDD stops
- * owing is the set the ledger starts owing: a spelling in one and not the
- * other is a `Level` owed by no gate at all, which is the hole this exclusion
- * was written to avoid opening. Two literals with the same members and two
- * private normalizations is exactly how `resolveAtddHomeKind` came to have
- * three answers, so the vocabulary is imported rather than restated. The two
- * modules still ask different questions of it — "does this owe an ATDD
- * annotation" here, "is this a ledger coverage target" there — and those
- * predicates stay separate; only the word list is shared. Both normalize with
- * `trim().toLowerCase()`, which `tddHelpers` documents as the membership
- * contract of the set.
+ * Members are lower-case: compare a cell only after {@link normalizeLevel}.
  */
-const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
+const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`
