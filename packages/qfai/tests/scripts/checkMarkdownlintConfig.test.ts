@@ -38,7 +38,9 @@ describe("check-markdownlint-config", () => {
   });
 
   it("rejects text that is not JSONC", () => {
-    expect(findConfigProblems('{ "MD013": ')).not.toEqual([]);
+    expect(findConfigProblems('{ "MD013": ')).toContain(
+      "unparsable JSONC at offset 11: ValueExpected",
+    );
   });
 
   it("passes on the repository's own configuration", () => {

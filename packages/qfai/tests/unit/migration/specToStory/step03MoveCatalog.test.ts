@@ -311,6 +311,36 @@ describe("migration catalog move", () => {
     );
   });
 
+  it("sends thematic breaks and HTML blocks to a person and names a section for old headings", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Outcome\n\nOrders can be placed.\n\n## Out of scope\n\n- Refunds.\n\n- - -\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/02_Initiative.md",
+      "# 02 Initiative\n\n## Initiative\n\nShip the order flow.\n\n<!-- hidden -->\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Objective: rewrite "## Outcome" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/initiative.md ## Initiative: rewrite "## Initiative" of ${policies}/02_Initiative.md by hand`,
+    );
+    for (const name of ["objective", "initiative"]) {
+      expect(conformance(context.specsDir, name), name).toContain("No violations");
+    }
+  });
+
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
     // QFAI:EX-0004-0006-03
     // QFAI:EX-0004-0003-21

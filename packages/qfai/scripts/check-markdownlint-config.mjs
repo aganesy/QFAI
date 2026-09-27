@@ -47,7 +47,9 @@ export function findConfigProblems(text) {
   const parseErrors = [];
   const config = jsonc.parse(text, parseErrors, { allowTrailingComma: true });
   if (parseErrors.length > 0) {
-    return parseErrors.map((e) => `unparsable JSONC at offset ${e.offset}`);
+    return parseErrors.map(
+      (e) => `unparsable JSONC at offset ${e.offset}: ${jsonc.printParseErrorCode(e.error)}`,
+    );
   }
   if (validate(config)) return [];
   return (validate.errors ?? []).map((e) => {

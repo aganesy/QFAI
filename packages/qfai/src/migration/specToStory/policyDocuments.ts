@@ -62,6 +62,8 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       "who is the user?": "Users",
       'what is "success"?': "Success criteria",
       "what is success?": "Success criteria",
+      outcome: "Objective",
+      purpose: "Objective",
     },
   },
   "initiative.md": {
@@ -90,6 +92,10 @@ const RULES: Readonly<Record<PolicyDocument, PolicyRules>> = {
       "axioms (non-negotiable)": "Axioms (Non-negotiable)",
       "decision priorities": "Decision priorities",
       "compatibility vs change rubric": "Compatibility vs Change Rubric",
+    },
+    suggestions: {
+      "judgment criteria": "Decision priorities",
+      "decision lens": "Decision priorities",
     },
   },
   "glossary.md": {
@@ -134,6 +140,9 @@ export function newPolicyDraft(target: string): PolicyDraft {
   return { target, lists: new Map(), paragraphs: new Map(), rows: new Map() };
 }
 
+/** A thematic break, which the list and prose sections of the policy schemas reject. */
+const THEMATIC_BREAK = /^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
 const nonBlank = (body: string): string[] =>
   body
     .replace(/\r\n/g, "\n")
@@ -159,7 +168,7 @@ function listItems(body: string, keys: readonly string[] = []): string[] | null 
       blank = true;
       continue;
     }
-    if (/^\s*#/.test(line)) return null;
+    if (/^\s*#/.test(line) || THEMATIC_BREAK.test(line)) return null;
     const marker = /^( {0,3})- \S/.exec(line);
     base ??= marker?.[1]?.length ?? null;
     const markerIndent = marker?.[1]?.length;
@@ -181,9 +190,9 @@ function listItems(body: string, keys: readonly string[] = []): string[] | null 
   return items.length > 0 && keys.every(hasKey) ? items : null;
 }
 
-/** A line that starts a list, a table, a quote, a fence, a heading or a thematic break. */
+/** A line that starts a list, a table, a quote, a fence, a heading, an HTML block or a thematic break. */
 const NOT_PROSE =
-  /^\s*(?:[-*+]|\d+[.)])\s|^\s*\||^\s*(?:>|```|~~~)|^\s*#|^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/m;
+  /^\s*(?:[-*+]|\d+[.)])\s|^\s*\||^\s*(?:>|```|~~~)|^\s*#|^[ \t]{0,3}<[!/?A-Za-z]|^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/m;
 
 /** The paragraphs of a body that holds prose and nothing else, or null. */
 function paragraphsOf(body: string): string[] | null {
