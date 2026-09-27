@@ -6,7 +6,7 @@
  * inside the installed package is surfaced by the `workflows.integrity`
  * check at severity `info`, naming the stale file by its adopter-tree
  * relative path. See `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
- * (`workflows.integrity`) and `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`.
+ * (BR-0008-0018 to BR-0008-0022) and `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`.
  *
  * The primary observation point is `createDoctorData` rather than the reader,
  * so a finding that is produced but never registered fails here instead of

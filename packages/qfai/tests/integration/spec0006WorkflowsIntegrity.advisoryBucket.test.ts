@@ -45,7 +45,7 @@
  * "warnings advisory of drift". `formatDoctorText` renders
  * `== warnings advisory of drift ==`. The two DENOTE the
  * same bucket — BR-0006-0011 declares the group header strings stable
- * identifiers and `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` § "Finding grouping"
+ * identifiers and BR-0008-0011 of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
  * mandates exactly the two buckets — so this file needles the RENDERED literal
  * and never the spec's prose. Neither side is "fixed" here; the mapping is
  * recorded instead, since editing either would be a spec change dressed as a

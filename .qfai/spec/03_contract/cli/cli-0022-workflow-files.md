@@ -247,7 +247,7 @@ internal identifier.
 - `acceptance_obligations_unmet` holds when a BF of the bound flow has no
   annotating test in the E2E layer, or an AC of it has none in the integration
   or API layer. Layers and annotations are read as
-  `cli-0016-qfai-validate.md#what-counts-as-a-test` reads them: an item an exception row
+  BR-0016-0058 of `cli-0016-qfai-validate.md` reads them: an item an exception row
   in force exempts counts as met, and an EX's coverage does not affect the
   predicate.
 - `diagnosis_missing_test` holds whenever the diagnosis is `missing-test`,
@@ -343,4 +343,4 @@ Rule refs: BR-0671, BR-0672, BR-0673
 | BR-0653 | The five shipped schemas and the parser accept and refuse the same payloads, and the parser is the runtime authority.                                                                                                                                                                                                                                                  | EX-0001-0201-19                                                                     |
 | BR-0654 | Runtime state lives only under the git-ignored `.qfai/run/`, and a run never writes `.qfai/state.json`.                                                                                                                                                                                                                                                                | EX-0001-0201-20                                                                     |
 | BR-0744 | The `bugfix` plan runs its implement stage under `diagnosis_missing_test`, which holds whenever the diagnosis is `missing-test`, whether or not an example already states the case, so the case's test is written in either branch; a `regression` or `defective-test` diagnosis does not satisfy it.                                                                  | EX-0001-0193-13, EX-0001-0193-01, EX-0001-0193-03, EX-0001-0193-11, EX-0001-0194-06 |
-| BR-0745 | `acceptance_obligations_unmet` holds when a BF of the bound flow has no annotating test in the E2E layer, or an AC of it has none in the integration or API layer, as `cli-0016-qfai-validate.md#what-counts-as-a-test` reads layers and annotations. An item an exception row in force exempts counts as met, and an EX's coverage does not affect it.                | EX-0001-0192-51, EX-0001-0192-52                                                    |
+| BR-0745 | `acceptance_obligations_unmet` holds when a BF of the bound flow has no annotating test in the E2E layer, or an AC of it has none in the integration or API layer, as `cli-0016-qfai-validate.md`, BR-0016-0058 reads layers and annotations. An item an exception row in force exempts counts as met, and an EX's coverage does not affect it.                        | EX-0001-0192-51, EX-0001-0192-52                                                    |

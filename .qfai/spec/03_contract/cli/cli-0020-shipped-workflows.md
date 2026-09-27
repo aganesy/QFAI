@@ -356,7 +356,7 @@ every SSOT that must move together; see `spec-0015`.
 ## 7. Detection surface
 
 `qfai doctor` owns the adopter-facing report. See
-`.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md` §`workflows.integrity`. The state
+`.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`, BR-0008-0018 to BR-0008-0022. The state
 vocabulary there is exactly §3's enum; doctor introduces no state of its own.
 
 ## 8. Non-goals

@@ -1,3 +1,4 @@
+// QFAI:EX-0001-0039-08
 /**
  * Meta-test: operator-facing CLI strings are written in one language.
  *
@@ -58,6 +59,7 @@ import {
   stripComments,
 } from "../helpers/japaneseMessageScan.js";
 
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 import { SRC_JAPANESE_ALLOWLIST } from "./cliMessageLanguage.allowlist.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -207,10 +209,13 @@ describe("operator-facing CLI message language", () => {
     // prefix, a package script, or a global bin — so a message naming one
     // launcher is wrong for the other two. Shipped docs take the opposite
     // rule and `canonicalQfaiLauncher.test.ts` enforces it there.
-    const contract = await readFile(VALIDATE_CONTRACT_MD, "utf-8");
-    expect(contract).toContain("#### Command spelling in messages");
-    expect(contract).toContain("`npx qfai <subcommand>`");
-    expect(contract).toContain("`qfai <subcommand>`");
+    const spelling = parseContractRules(
+      VALIDATE_CONTRACT_MD,
+      await readFile(VALIDATE_CONTRACT_MD, "utf-8"),
+    ).rules.find((rule) => rule.statement.includes("A runtime message spells a command"));
+    expect(spelling, "the validate contract states the command spelling as a rule").toBeDefined();
+    expect(spelling?.statement).toContain("`npx qfai <subcommand>`");
+    expect(spelling?.statement).toContain("`qfai <subcommand>`");
 
     // Comments explain the implementation and are not read by an operator,
     // so they are removed first — with the same TypeScript scanner the

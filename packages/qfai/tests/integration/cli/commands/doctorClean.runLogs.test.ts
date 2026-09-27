@@ -1,3 +1,8 @@
+// QFAI:AC-0003-0008-04
+// QFAI:EX-0003-0008-06
+// QFAI:EX-0003-0008-07
+// QFAI:EX-0003-0008-08
+//
 // Integration: `qfai doctor --clean` prunes TTL-expired validate run
 // logs under `paths.outDir` in addition to archiving review packs, and
 // `qfai doctor` surfaces the run-log count so the accumulation is

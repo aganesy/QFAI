@@ -1,3 +1,7 @@
+// QFAI:EX-0001-0021-03
+// QFAI:EX-0001-0021-04
+// QFAI:EX-0001-0021-05
+// QFAI:EX-0001-0021-06
 /** Init adds canonical guidance without replacing project text or deleted rule citations. */
 
 import {
