@@ -378,7 +378,7 @@ A gate reported this way has **not passed**. It is a blocker with a named cause,
 
 Reporting the clean run and omitting the red ones satisfies every existing evidence rule — a real command, a real result, freshly obtained — and still misrepresents what happened. Which of N runs is reported is itself part of the evidence, so omitting runs of the same gate is on the same footing as inventing one.
 
-## Context Summary Contract (Mandatory)
+## Context Summary Contract
 
 A long stage does not fit one context window. When earlier context is replaced by a summary, the next window works from that summary alone. Whatever the summary dropped is not marked missing: it is absent, and the work continues over the gap.
 
@@ -393,13 +393,14 @@ Every summary that replaces earlier context keeps these six:
 
 It also keeps the stage state. None of it can be recovered from the code, and a summary that keeps the six and drops it still misleads the next window.
 
-| Stage state                                                                                 | What goes wrong when it is dropped                                                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| The execution ledger (`.qfai/specs/<spec-id>/tdd/test-list.md`) and the row in progress     | Finished rows are worked again, or a row in `red` is taken for untouched                                                  |
-| Every open question, with its owner, status and due date                                    | A question stays open with nobody tracking it, or is answered twice                                                       |
-| The clarification budget spent in this invocation, and the questions it was spent on        | The next window asks what the user already answered, or asks past the cap                                                 |
-| Every assumption recorded under `--auto` or after the budget ran out, with its label        | A labelled assumption is read back as a decision someone took                                                             |
-| Each reviewer verdict, the round it came in, and the rounds spent per reviewer and artifact | A spent budget restarts, and a third round opens (`.qfai/assistant/constitution/review-convergence.md#round-budget-must`) |
+| Stage state                                                                                 | What goes wrong when it is dropped                                                                                   |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| The execution ledger and the row in progress                                                | Finished rows are worked again, or a row in `red` is taken for untouched                                             |
+| Every open question, with its ID and status                                                 | A question stays open with nobody tracking it, or is answered twice                                                  |
+| The clarification budget spent in this invocation, and the questions it was spent on        | The next window asks what the user already answered, or asks past the cap                                            |
+| Every assumption recorded under `--auto` or after the budget ran out, with its label        | A labelled assumption is read back as a decision someone took                                                        |
+| Each reviewer verdict, the round it came in, and the rounds spent per reviewer and artifact | A spent budget restarts, and a third round opens (`.qfai/assistant/rule/review-convergence.md#round-budget-must`)    |
+| A grilling session's decision tree, its current frontier, and the answers already settled   | An answered question is asked again, or a question is put before the one it depends on (`.agents/rules/grilling.md`) |
 
 Keep what the user said close to their own words. Your own reasoning may be condensed to what it concluded, as long as nothing listed above is dropped. Be complete on these items even when that makes the summary longer.
 

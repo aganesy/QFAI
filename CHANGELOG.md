@@ -8,12 +8,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 - **The operating baseline says what a context summary must keep** (#2243). A
   long stage continues from a summary once its context window fills, and
-  whatever the summary drops is gone without a trace. The new section lists six
-  general items and the stage state the code cannot give back: the execution
-  ledger, the open questions, the clarification budget spent, the labelled
-  assumptions, and the reviewer verdicts with their rounds. The user's words are
-  kept close to verbatim; the agent's own reasoning may be condensed to its
-  conclusions.
+  whatever the summary drops is gone without a trace. The new Context Summary
+  Contract section lists six general items and the stage state the code cannot
+  give back: the execution ledger, the open questions, the clarification budget
+  spent, the labelled assumptions, the reviewer verdicts with their rounds, and
+  a grilling session's decision tree, frontier and settled answers, so a
+  summary taken mid-session does not lead to asking an answered question again.
+  The user's words are kept close to verbatim; the agent's own reasoning may be
+  condensed to its conclusions.
 
 - **A change can be asked for in your own words.** The new `qfai-run` skill
   takes a request stated in free text, proposes a route, and runs each stage of
