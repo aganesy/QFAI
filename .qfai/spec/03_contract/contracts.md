@@ -12,6 +12,7 @@ QFAI itself has no project API, database, or rendered UI contract. Those familie
 | ---------------- | ------------------------ | ----------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | CLI-ROUTING      | Assistant routing        | —           | `.qfai/spec/03_contract/cli/assistant-routing.md`        | Agent cards, routing, and review profiles.                                                     |
 | CLI-STEPS        | Assistant steps          | —           | `.qfai/spec/03_contract/cli/assistant-steps.md`          | Step tree, parent step lists, per-step review, and the step-tree check.                        |
+| CLI-CI           | Repository CI            | CLI-0018    | `.qfai/spec/03_contract/cli/cli-0018-repository-ci.md`   | This repository's own CI workflows, hygiene lane, test runner and release gate.                |
 | CLI-CONFIG       | Configuration            | —           | `.qfai/spec/03_contract/cli/configuration.md`            | Project override and path resolution.                                                          |
 | CLI-DELIVERY     | Delivery workflow        | —           | `.qfai/spec/03_contract/cli/delivery-workflow.md`        | ATDD, implementation, and verification handoffs.                                               |
 | CLI-ATDD         | qfai atdd scaffold       | —           | `.qfai/spec/03_contract/cli/qfai-atdd-scaffold.md`       | BF and AC test scaffolds.                                                                      |
@@ -33,6 +34,6 @@ QFAI itself has no project API, database, or rendered UI contract. Those familie
 
 ## Rule ownership
 
-- `tech.md#rules` owns technology and CI rules.
+- `cli/cli-0018-repository-ci.md` owns this repository's CI rules. `tech.md` holds no rules.
 - A CLI contract owns rules for its command or shared subject. Its BR entries cite existing examples from the story tree.
 - Historical contract declarations are in the retired spec-pack `_policies/05_Contracts.md`, which git history keeps; they are not execution inputs.

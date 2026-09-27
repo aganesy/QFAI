@@ -10,8 +10,8 @@ Feature: Move policy and catalog content into the merged files once
 Scenario: Every section lands in one destination, and no fact is stated twice
   Given a project on the spec-pack layout with the policy files and the adopter-owned catalog files
   When step 3 runs
-  Then every section except those in the retired slice policy is in the destination the source map gives it, or, when it does not fit a section of a policy file's template, is listed under For a person
-  And each policy file has its template's sections in the template's order
+  Then every section except those in the retired slice policy is in the destination the source map gives it, or, when it does not fit a section of the template of a policy file or of `tech.md`, is listed under For a person
+  And each policy file and `tech.md` has its template's sections in the template's order
   And the complete original `_policies/11_Slice-Policy.md` is archived without copying a section into `principle.md`
   And no paragraph appears twice in a destination
   And the consumed source files are gone
