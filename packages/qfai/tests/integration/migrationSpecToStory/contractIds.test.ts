@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
 import { loadConfig } from "../../../src/core/config.js";
+import { validateDocumentSchema } from "../../../src/core/validators/documentSchema.js";
 import {
   executePlannedStep,
   type MigrationContext,
@@ -194,8 +195,8 @@ describe("migration contract IDs", () => {
     expect(await text(root, `${CONTRACTS}/db/db-0003-orders.sql`)).toBe(
       "-- QFAI-CONTRACT-ID: DB-0003\n-- Depends on: -\nCREATE TABLE orders (id TEXT PRIMARY KEY);\n",
     );
-    expect(await text(root, `${CONTRACTS}/cli/cli-0001-orders.md`)).toBe(
-      "# CLI-0001: Orders command\n\nThe command lists the orders a buyer placed.\n",
+    expect((await text(root, `${CONTRACTS}/cli/cli-0001-orders.md`)).split("\n")[0]).toBe(
+      "# CLI-0001: Orders command",
     );
     expect(await text(root, `${CONTRACTS}/ui/ui-0004-receipt.yaml`)).toMatch(
       /^# QFAI-CONTRACT-ID: UI-0004\nscreens:\n/,
@@ -364,6 +365,135 @@ describe("migration contract IDs", () => {
     );
     expect(forAPerson(result.output)).toContain(
       `tests/integration/orders.test.ts:2: ${annotation("CON-DB-0009")}: no contract declares CON-DB-0009`,
+    );
+  });
+});
+
+describe("migration CLI contract shape", () => {
+  const OLD = `${CONTRACTS}/cli/orders.md`;
+  const NEW = `${CONTRACTS}/cli/cli-0001-orders.md`;
+  const ARCHIVE = `${EVIDENCE}/retired/contract/cli/orders.md`;
+  const PLACEHOLDER = "`<What this contract decides, and which contract decides the rest.>`";
+  const EMPTY_RULES =
+    "## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n";
+  const OWNERSHIP =
+    "This contract decides what `orders list` prints. The API contract decides how an order is stored.";
+  const WITH_LEFTOVERS = [
+    "# Contract: Orders command",
+    "",
+    "Status: active",
+    "Rule refs: BR-0001-0001",
+    "",
+    "## Ownership boundary",
+    "",
+    OWNERSHIP,
+    "",
+    "## Options",
+    "",
+    "- `--all` lists every order.",
+    "",
+  ].join("\n");
+
+  // QFAI:AC-0004-0006-05
+  it("keeps the H1 and the ownership boundary and lists every other part for a person", async () => {
+    // QFAI:EX-0004-0006-20
+    const root = await project();
+    await put(root, OLD, WITH_LEFTOVERS);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await text(root, NEW)).toBe(
+      `# CLI-0001: Orders command\n\n## Ownership boundary\n\n${OWNERSHIP}\n\n${EMPTY_RULES}`,
+    );
+    const kept = `by hand (kept at ${ARCHIVE})`;
+    expect(forAPerson(result.output).filter((item) => item.startsWith(NEW))).toEqual([
+      `${NEW}: rewrite the text before the first section of ${OLD} ${kept}`,
+      `${NEW}: rewrite "## Options" of ${OLD} ${kept}`,
+    ]);
+    expect(await text(root, ARCHIVE)).toBe(WITH_LEFTOVERS);
+    expect((await run(step03, root)).output).toMatch(/## Operations\r?\nnone/);
+  });
+
+  it("writes the template's placeholder where the old contract has no ownership boundary", async () => {
+    // QFAI:EX-0004-0006-21
+    const root = await project();
+    await put(root, OLD, "# Contract: Orders command\n");
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await text(root, NEW)).toBe(
+      `# CLI-0001: Orders command\n\n## Ownership boundary\n\n${PLACEHOLDER}\n\n${EMPTY_RULES}`,
+    );
+    expect(forAPerson(result.output).filter((item) => item.startsWith(NEW))).toEqual([
+      `${NEW} ## Ownership boundary: write what this contract decides, and which contract decides the rest, in place of the template's placeholder`,
+    ]);
+    await expect(readFile(path.join(root, ARCHIVE))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("names the template section for an ownership boundary or a rules table it cannot keep", async () => {
+    // QFAI:EX-0004-0006-22
+    const root = await project();
+    const old =
+      "# Contract: Orders command\n\n## Ownership boundary\n\n- Orders only.\n\n## Business rules\n\nBR-ID | Statement | Examples\n--- | --- | ---\n\n## Rules\n\n| ID | Rule |\n| --- | --- |\n| R1 | List newest first. |\n";
+    await put(root, OLD, old);
+    const result = await run(step03, root);
+    expect(result.code).toBe(3);
+    expect(await text(root, NEW)).toBe(
+      `# CLI-0001: Orders command\n\n## Ownership boundary\n\n${PLACEHOLDER}\n\n${EMPTY_RULES}`,
+    );
+    const kept = `by hand (kept at ${ARCHIVE})`;
+    expect(forAPerson(result.output).filter((item) => item.startsWith(NEW))).toEqual([
+      `${NEW} ## Ownership boundary: rewrite "## Ownership boundary" of ${OLD} ${kept}`,
+      `${NEW} ## Business rules: rewrite "## Business rules" of ${OLD} ${kept}`,
+      `${NEW} ## Business rules: rewrite "## Rules" of ${OLD} ${kept}`,
+    ]);
+    expect(await text(root, ARCHIVE)).toBe(old);
+  });
+
+  it("leaves a contract that passes the CLI schema once its rules are written", async () => {
+    // QFAI:EX-0004-0006-23
+    const root = await project();
+    await put(root, OLD, WITH_LEFTOVERS);
+    await putPack(
+      root,
+      "As a buyer, I list my orders.",
+      "Orders are listed newest first.",
+      "cli/orders.md",
+    );
+    await run(step03, root);
+    await run(step04, root);
+    expect((await run(step07, root)).code).toBe(0);
+    expect(await text(root, NEW)).toContain(
+      "| BR-0001-0001 | Orders are listed newest first. | EX-0001-0001-01 |",
+    );
+    const { config } = await loadConfig(root);
+    const findings = await validateDocumentSchema(root, config);
+    expect(findings.filter((finding) => finding.code === "QFAI-DOCSCHEMA-002")).toEqual([]);
+    const onContract = (all: typeof findings) =>
+      all.filter((finding) => finding.message.includes("cli-0001-orders.md"));
+    expect(onContract(findings)).toEqual([]);
+
+    await put(root, NEW, `${await text(root, NEW)}\n## Options\n\n- \`--all\`\n`);
+    expect(onContract(await validateDocumentSchema(root, config))).not.toEqual([]);
+  });
+
+  // QFAI:AC-0004-0009-03
+  it("lists a rule whose statement names another rule when it lands in a CLI contract", async () => {
+    // QFAI:EX-0004-0009-15
+    const root = await project();
+    await putPack(
+      root,
+      "As a buyer, I list my orders.",
+      "Orders are listed as BR-0001-0009 orders them.",
+      "cli/orders.md",
+    );
+    await run(step03, root);
+    await run(step04, root);
+    const result = await run(step07, root);
+    expect(result.code).toBe(3);
+    expect(await text(root, NEW)).toContain(
+      "| BR-0001-0001 | Orders are listed as BR-0001-0009 orders them. | EX-0001-0001-01 |",
+    );
+    expect(forAPerson(result.output)).toContain(
+      `${NEW}: BR-0001-0001: its statement names BR-0001-0009; a statement in a CLI contract names no rule, so rewrite it by hand`,
     );
   });
 });

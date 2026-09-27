@@ -119,13 +119,14 @@ template, which is the shape the document schema checks:
 | `decisions.md` and `open-questions.md` rows                                             | 2    |
 | `objective.md`, `initiative.md`, `principle.md`, `glossary.md` and `constraint.md`      | 3    |
 | `contracts.md` and `tech.md`                                                            | 3    |
+| Markdown contracts under `cli/`                                                         | 3    |
 | `business-flows.md`, `business-flow.md`, `user-stories.md` and each story's three files | 4    |
 | Examples turned from test cases                                                         | 5    |
 
 Content that does not fit that shape is listed under `## For a person`, and the
 step exits 3:
 
-- Step 3 leaves it out of the policy file or `tech.md`, and names the source
+- Step 3 leaves it out of the policy file, `tech.md` or CLI contract, and names the source
   file, its archived copy and, where one fits, the template section that takes
   the content once a person rewrites it.
 - Step 3 also leaves as it is a policy file or `tech.md` that already exists
@@ -155,10 +156,24 @@ section by section:
 | The `ui_paths:` globs of `## UI surface paths`       | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
 | Anything else                                        | `## For a person`, with the archived copy             |
 
-A Markdown contract keeps its own body: step 3 changes only its H1, and step 7
-adds the `## Business rules` table. The CLI contract schema requires
-`## Ownership boundary` and that table, and admits nothing else. Rewrite any
-other section of a migrated CLI contract into those two by hand.
+Step 3 writes each Markdown contract under `cli/` in the shape of the CLI
+contract template: its `# CLI-0001: <title>` heading, `## Ownership boundary`
+and a `## Business rules` table, and nothing else.
+
+- An old `## Ownership boundary` of one to three paragraphs that name no rule is
+  kept as it stands.
+- Where the old contract has none, the section holds the template's placeholder,
+  and the contract is listed for a person to write it.
+- The text before the first section, lines such as `Status:` or `Rule refs:`,
+  and every other section are left out. Each is listed with the old file and
+  its copy under `.qfai/evidence/migration-spec-to-story/retired/contract/`.
+
+Step 7 then writes the contract's rules into that table. A rule whose statement
+names another rule is written and listed for a person, because a CLI contract's
+rule cites only examples.
+
+A Markdown contract under `api/`, `db/`, `ui/` or `design/` keeps its own body:
+step 3 changes only its H1, and step 7 adds the `## Business rules` table.
 
 ## Run the bundled steps
 

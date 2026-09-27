@@ -71,9 +71,13 @@ scripts keep in the pack or in the migration archive:
 - a story's `Parent`, `Source` and `Flow` fields;
 - a criterion's `# Parent:` line, since its directory names the story.
 
-A migrated Markdown CLI contract keeps its old body beside the new
-`## Business rules` table. Its schema admits only `## Ownership boundary` and
-that table, so rewrite the rest into them.
+A Markdown CLI contract takes its template's shape too: its heading, an
+`## Ownership boundary` and the `## Business rules` table, which is all its
+schema admits. An old ownership boundary of one to three paragraphs is kept.
+Where there is none, the section holds the template's placeholder for a person
+to replace. Every other part of the old contract is listed for a person, and
+the old file is kept under
+`.qfai/evidence/migration-spec-to-story/retired/contract/`.
 
 The scripts archive old files that have no direct new home. Review the four
 assembled files after step 3: `objective.md`, `initiative.md`,

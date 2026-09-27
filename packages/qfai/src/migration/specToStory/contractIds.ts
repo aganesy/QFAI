@@ -8,6 +8,7 @@ import {
 import { collectFilesByGlobs } from "../../core/fs.js";
 import { parseHeadings } from "../../core/parse/markdown.js";
 import { CONTRACT_KIND_BY_DIR, contractNumber } from "../../core/storyTree/ids.js";
+import { shapeCliContract } from "./cliContract.js";
 import { MigrationInputError, type MigrationContext, type MigrationOperation } from "./harness.js";
 import {
   CONTRACT_MAP_PATH,
@@ -50,6 +51,8 @@ const DECLARATION = /^(\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*)(\S+)(
 const DEPENDS_COMMENT = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:/i;
 const DEPENDS_KEY = /^\s*"?x-qfai-depends-on"?\s*:(.*)$/i;
 const FILE_LIMIT = 200_000;
+/** Where the original of a contract step 3 could not reshape whole is kept. */
+const RETIRED = ".qfai/evidence/migration-spec-to-story/retired/contract";
 
 function kindOf(relative: string): string {
   const directory = relative.split("/")[0] ?? "";
@@ -188,7 +191,9 @@ function rewriteStructured(
 function rewriteMarkdown(text: string, relative: string, id: string): string {
   const heading = parseHeadings(text).find((item) => item.level === 1);
   if (!heading) return `# ${id}: ${defaultTitle(relative)}\n\n${text}`;
-  const old = heading.title.replace(/^(?:Contract|CON-(?:API|DB|UI)-\d+)\s*:\s*/i, "").trim();
+  const old = heading.title
+    .replace(/^(?:Contract|CON-(?:API|DB|UI)-\d+|(?:CLI|API|DB|UI|DESIGN)-\d{4})\s*:\s*/i, "")
+    .trim();
   // A 1.x declaration written as a Markdown comment line reads as an H1, and names no title.
   const title = old === "" || old.startsWith("QFAI-CONTRACT-ID:") ? defaultTitle(relative) : old;
   const lines = text.split("\n");
@@ -255,8 +260,19 @@ export async function planContracts(context: MigrationContext): Promise<Contract
     assertRenameable(context, map, relative, entry);
     const oldText = await readMigrationInput(path.join(context.contractsDir, relative));
     const current = await readMigrationInput(path.join(context.contractsDir, entry.path));
-    const text = oldText === null ? current : rewriteContract(oldText, relative, entry.id, oldIds);
+    let text = oldText === null ? current : rewriteContract(oldText, relative, entry.id, oldIds);
     if (text === null) continue;
+    if (oldText !== null && kindOf(relative) === "CLI" && /\.md$/i.test(relative)) {
+      const archive = `${RETIRED}/${relative}`;
+      const shaped = await shapeCliContract(text, {
+        target: contractRepoPath(context, entry.path),
+        source: contractRepoPath(context, relative),
+        archive,
+      });
+      text = shaped.content;
+      forAPerson.push(...shaped.forAPerson);
+      if (shaped.cut) operations.push({ kind: "write", target: archive, content: oldText });
+    }
     if (oldText !== null)
       operations.push(...renameOperations(context, relative, entry, text, current));
     forAPerson.push(...leftoverIds(text, contractRepoPath(context, entry.path), oldIds));
