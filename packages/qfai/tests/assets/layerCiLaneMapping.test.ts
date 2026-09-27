@@ -39,6 +39,24 @@ describe("the layer to CI lane map is part of the layer rule", () => {
     expect(section).not.toMatch(/^### L\w+/m);
     expect(section).not.toMatch(/layer-[a-z]+/);
     expect(section).not.toMatch(/`QFAI:TC-[^`]+`/);
+
+    const rule = read(path.join(assetRoot, ruleName));
+    const tokens = new Set([...rule.matchAll(/layer-[a-z0-9-]+/g)].map((match) => match[0]));
+    expect([...tokens].sort()).toEqual([
+      "layer-api",
+      "layer-component",
+      "layer-e2e",
+      "layer-integration",
+      "layer-unit",
+    ]);
+    const headings = [...rule.matchAll(/^#{1,6}\s*L\d+\s+(.+)$/gm)].map((match) => match[0]);
+    expect(headings).toEqual([
+      "### L1 Unit",
+      "### L2 Component",
+      "### L3 Integration",
+      "### L4 API",
+      "### L5 E2E",
+    ]);
   });
 
   // QFAI:EX-0002-0021-05
