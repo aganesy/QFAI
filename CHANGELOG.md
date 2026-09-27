@@ -800,6 +800,16 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
+  - A business-flow `traceability-graph.json` names a Markdown, CLI or design
+    contract by the `<KIND>-NNNN` ID it declares, not by its file path.
+  - `## Business rules ##` and `## Contract Index ##` are read as the rules
+    section and the index: a closing run of `#` is part of the heading syntax,
+    not of the title.
+  - `QFAI-CONTRACT-000` no longer reports `api/`, `db/` or `ui/` as empty when
+    its only contracts are Markdown files that declare an ID of that kind in
+    their H1.
+
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
   issue, and `qfai prototyping iterate` then took the first UI contract as

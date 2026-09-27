@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { declaredContractId } from "../../src/core/contractsDecl.js";
+import { writeBusinessFlowReports } from "../../src/core/specPackReport.js";
 import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 import { nextId } from "../../src/core/storyTree/ids.js";
 import {
@@ -217,6 +218,89 @@ describe("contract IDs and contract-scoped business rules", () => {
     const columns =
       "# CLI-0003: Check\n\n## Business rules\n\n| BR-ID | Statement |\n| --- | --- |\n| BR-0003-0001 | Two columns |\n";
     expect(ruleFindings(tree(columns))).toContain(`Invalid Business rules columns in ${check}`);
+  });
+
+  // QFAI:AC-0001-0057-07
+  it("reads a Business rules heading that closes with a run of hashes", () => {
+    // QFAI:EX-0001-0057-12
+    const text =
+      "# CLI-0003: Check\n\n## Business rules ##\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0001 | Check the project | EX-0001-0001-01 |\n";
+    expect(parseContractRules(check, text)).toMatchObject({
+      rules: [{ id: "BR-0003-0001", examples: ["EX-0001-0001-01"] }],
+      errors: [],
+    });
+    expect(ruleFindings(tree(text))).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0054-03
+  it("reads the index under a Contract Index heading that closes with hashes", async () => {
+    // QFAI:EX-0001-0054-06
+    const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      [
+        "# Contracts",
+        "",
+        "## Example",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0009", "api/api-0009-example.yaml"),
+        "",
+        "## Contract Index ##",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        "",
+      ].join("\n"),
+    );
+    expect(await indexFindings(root)).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0054-04
+  it("does not report a kind directory holding only Markdown contracts as empty", async () => {
+    // QFAI:EX-0001-0054-07
+    const root = await contractTree([], { "api/api-0003-refunds.md": "# API-0003: Refunds\n" });
+    const empty = (await validateContracts(root, defaultConfig))
+      .filter((entry) => entry.code === "QFAI-CONTRACT-000")
+      .map((entry) => entry.rule);
+    expect(empty.sort()).toEqual(["contracts.db.files", "contracts.ui.files"]);
+  });
+
+  // QFAI:AC-0001-0066-01
+  it("names each contract node of a flow graph by the contract ID its file declares", async () => {
+    // QFAI:EX-0001-0066-03
+    const root = await contractTree([], {
+      "cli/cli-0003-check.md": contract("CLI-0003: Check", [
+        "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
+      ]),
+      "api/api-0002-orders.yaml": `${API_CONTRACT}x-qfai-rules:\n  - id: BR-0002-0001\n    statement: Accept an order\n    examples: [EX-0001-0001-01]\n`,
+      "tech.md": `# Tech\n\n${rulesTable("Business rules", ["| BR-0009-0001 | Stack | EX-0001-0001-01 |"])}`,
+    });
+    for (const [relative, body] of tree("")) {
+      if (relative !== check) await put(root, relative, body);
+    }
+    await put(
+      root,
+      `${spec}/02_business-flow/business-flow-0001/business-flow.md`,
+      "# BF-0001: Flow\n",
+    );
+    await put(root, `${story}/01_User-story.md`, "# US-0001-0001: Check\n");
+    await writeBusinessFlowReports(root, defaultConfig);
+    const graph = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/report/business-flow-0001/traceability-graph.json"),
+        "utf8",
+      ),
+    ) as { nodes: Array<{ id: string; type: string }>; edges: Array<Record<string, string>> };
+    expect(
+      new Set(graph.nodes.filter((node) => node.type === "CON").map((node) => node.id)),
+    ).toEqual(new Set(["API-0002", "CLI-0003", `${contracts}/tech.md`]));
+    expect(graph.edges.filter((edge) => edge.relation === "BR_TO_CON")).toEqual([
+      { from: "BR-0002-0001", to: "API-0002", relation: "BR_TO_CON" },
+      { from: "BR-0003-0001", to: "CLI-0003", relation: "BR_TO_CON" },
+      { from: "BR-0009-0001", to: `${contracts}/tech.md`, relation: "BR_TO_CON" },
+    ]);
   });
 
   // QFAI:AC-0001-0054-03
