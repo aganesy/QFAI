@@ -10,9 +10,9 @@
   files can disagree about it.
 - Non-goals: carrying a setting that equals the package's built-in default;
   moving shipped catalog content the package writes itself.
-- Notes: the five merged files are `01_policy/objective.md`,
-  `01_policy/initiative.md`, `01_policy/principle.md`,
-  `<paths.contractsDir>/tech.md` and `<paths.contractsDir>/structure.md`
+- Notes: the four merged files are `01_policy/objective.md`,
+  `01_policy/initiative.md`, `01_policy/principle.md` and
+  `<paths.contractsDir>/tech.md`
   (discussion requirement REQ-0023).
 
 ## Legacy Source Scope

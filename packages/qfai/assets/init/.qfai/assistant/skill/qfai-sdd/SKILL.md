@@ -57,7 +57,7 @@ it, then move to the next.
 | Step               | What it does                                                   | Skipped when                                               |
 | ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
 | `sdd-triage`       | Source, preflight, triage rows, approvals and ID allocation    | Never                                                      |
-| `sdd-flow`         | Policy, `tech.md`, `structure.md` and business flows           | Triage changed no policy fact and no flow                  |
+| `sdd-flow`         | Policy, `tech.md` and business flows                           | Triage changed no policy fact and no flow                  |
 | `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
 | `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |

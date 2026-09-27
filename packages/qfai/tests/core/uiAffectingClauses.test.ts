@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { stringify as stringifyYaml } from "yaml";
 
 import {
   declaringEntry,
@@ -16,6 +17,7 @@ import {
   UiAffectingClauses,
   uiPathGlobMatches,
 } from "../../src/core/uiAffectingClauses.js";
+import { loadConfig } from "../../src/core/config.js";
 
 const roots: string[] = [];
 
@@ -37,23 +39,12 @@ async function project(files: Readonly<Record<string, string>>): Promise<string>
   return root;
 }
 
-/** `structure.md` declaring these bullets under `ui_paths:`. */
-function structure(bullets: readonly string[]): string {
-  return [
-    "# Structure",
-    "",
-    "## UI surface paths (SSOT)",
-    "",
-    "ui_paths:",
-    "",
-    ...bullets.map((bullet) => `- \`${bullet}\``),
-    "",
-    "## Quality gates",
-    "",
-  ].join("\n");
+/** `qfai.config.yaml` declaring these globs as `uiux.surfacePaths`. */
+function surfacePaths(globs: readonly string[]): string {
+  return stringifyYaml({ uiux: { surfacePaths: globs } });
 }
 
-const STRUCTURE = ".qfai/spec/03_contract/structure.md";
+const CONFIG = "qfai.config.yaml";
 const TEST_CASES = ".qfai/specs/spec-0001/06_Test-Cases.md";
 const USER_STORIES = ".qfai/specs/spec-0001/02_User-stories.md";
 
@@ -67,6 +58,7 @@ function clauses(root: string): UiAffectingClauses {
 const ROW = { owningModule: "-", testFile: "tests/unit/total.test.ts", obligations: [] };
 
 describe("the declared UI path matching rules", () => {
+  // QFAI:EX-0001-0078-07
   it("reads ** as zero or more segments", () => {
     for (const candidate of [
       "src/components",
@@ -79,6 +71,7 @@ describe("the declared UI path matching rules", () => {
     expect(uiPathGlobMatches("src/**/Button.tsx", "src/Button.tsx")).toBe(true);
   });
 
+  // QFAI:EX-0001-0078-07
   it("keeps * and ? inside one segment", () => {
     expect(uiPathGlobMatches("src/*.tsx", "src/App.tsx")).toBe(true);
     expect(uiPathGlobMatches("src/*.tsx", "src/ui/App.tsx")).toBe(false);
@@ -86,6 +79,7 @@ describe("the declared UI path matching rules", () => {
     expect(uiPathGlobMatches("src/?.tsx", "src/AB.tsx")).toBe(false);
   });
 
+  // QFAI:EX-0001-0078-07
   it("treats a leading dot as ordinary, case as significant, and braces as text", () => {
     expect(uiPathGlobMatches("src/**", "src/.keep")).toBe(true);
     expect(uiPathGlobMatches("src/ui/**", "src/UI/App.tsx")).toBe(false);
@@ -95,23 +89,36 @@ describe("the declared UI path matching rules", () => {
 });
 
 describe("the declared UI paths", () => {
-  it("reads the bullets under ui_paths", async () => {
-    const root = await project({ [STRUCTURE]: structure(["src/ui/**", "tests/e2e/**"]) });
+  // QFAI:EX-0001-0078-05
+  it("reads the globs of uiux.surfacePaths", async () => {
+    const root = await project({ [CONFIG]: surfacePaths(["src/ui/**", "tests/e2e/**"]) });
     expect(await readDeclaredUiPaths(root)).toEqual({
       kind: "globs",
       globs: ["src/ui/**", "tests/e2e/**"],
     });
   });
 
-  it("declares nothing while the bullets are the template's placeholders", async () => {
-    const root = await project({ [STRUCTURE]: structure(["<src/ui/**>"]) });
+  // QFAI:EX-0001-0078-05
+  it("declares nothing when the key is absent", async () => {
+    const root = await project({ [CONFIG]: "paths:\n  specsDir: .qfai/spec\n" });
     expect(await readDeclaredUiPaths(root)).toEqual({ kind: "undeclared" });
     expect(await readDeclaredUiPaths(await project({}))).toEqual({ kind: "undeclared" });
   });
 
-  it("reads none as a project with no UI surface", async () => {
-    const root = await project({ [STRUCTURE]: structure(["none"]) });
+  // QFAI:EX-0001-0078-05
+  it("reads an empty list as a project with no UI surface", async () => {
+    const root = await project({ [CONFIG]: surfacePaths([]) });
     expect(await readDeclaredUiPaths(root)).toEqual({ kind: "none" });
+  });
+
+  // QFAI:EX-0001-0078-06
+  it("reports a value that is not a list of globs and declares nothing", async () => {
+    const root = await project({ [CONFIG]: "uiux:\n  surfacePaths: src/ui/**\n" });
+    const { issues } = await loadConfig(root);
+    expect(issues.map((entry) => entry.message)).toContain(
+      "uiux.surfacePaths must be a list of non-empty glob strings.",
+    );
+    expect(await readDeclaredUiPaths(root)).toEqual({ kind: "undeclared" });
   });
 });
 
@@ -147,7 +154,7 @@ describe("an id occurring verbatim", () => {
 
 describe("the first clause that holds", () => {
   it("clause 2: the Test file matches a declared UI path", async () => {
-    const root = await project({ [STRUCTURE]: structure(["tests/e2e/**"]) });
+    const root = await project({ [CONFIG]: surfacePaths(["tests/e2e/**"]) });
     expect(
       await clauses(root).firstHolding({ ...ROW, testFile: "tests/e2e/home.spec.ts" }),
     ).toEqual({ clause: 2, because: "Test file tests/e2e/home.spec.ts matches tests/e2e/**" });
@@ -156,7 +163,7 @@ describe("the first clause that holds", () => {
 
   it("clause 1: a declared Owning module, read verbatim and as a dotted module", async () => {
     const root = await project({
-      [STRUCTURE]: structure(["src/components/**"]),
+      [CONFIG]: surfacePaths(["src/components/**"]),
       "src/components/Card.tsx": "export {};\n",
       "app.config.ts": "export {};\n",
     });
@@ -167,14 +174,14 @@ describe("the first clause that holds", () => {
       because: "Owning module src.components.Card matches src/components/**",
     });
     // `app/config/ts` names nothing in the tree, so the dotted reading is dropped.
-    const appRoot = await project({ [STRUCTURE]: structure(["app/**"]), "app.config.ts": "" });
+    const appRoot = await project({ [CONFIG]: surfacePaths(["app/**"]), "app.config.ts": "" });
     expect(
       await clauses(appRoot).firstHolding({ ...ROW, owningModule: "app.config.ts" }),
     ).toBeNull();
   });
 
   it("does not evaluate clause 1 on a row that declares no Owning module", async () => {
-    const root = await project({ [STRUCTURE]: structure(["src/components/**"]) });
+    const root = await project({ [CONFIG]: surfacePaths(["src/components/**"]) });
     expect(await clauses(root).firstHolding({ ...ROW, owningModule: "-" })).toBeNull();
   });
 
@@ -213,7 +220,7 @@ describe("the first clause that holds", () => {
 
   it("finds no link where neither side names the other", async () => {
     const root = await project({
-      [STRUCTURE]: structure(["none"]),
+      [CONFIG]: surfacePaths([]),
       ".qfai/spec/03_contract/ui/home.yaml": "screens:\n  - id: home\n    route: /\n",
       [TEST_CASES]: "| TC-ID | Steps |\n| --- | --- |\n| TC-0001 | add totals |\n",
     });

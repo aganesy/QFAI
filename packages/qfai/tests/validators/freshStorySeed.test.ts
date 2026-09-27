@@ -50,7 +50,7 @@ describe("fresh story seed validation", () => {
 
       expect(
         (await validateStorySteeringPlaceholders(root, defaultConfig)).map((x) => x.code),
-      ).toEqual(["QFAI-ASSETS-003", "QFAI-ASSETS-003"]);
+      ).toEqual(["QFAI-ASSETS-003"]);
     });
   });
 

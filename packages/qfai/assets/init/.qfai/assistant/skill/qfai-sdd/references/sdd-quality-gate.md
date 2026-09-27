@@ -4,7 +4,7 @@ The gate checks the story-tree files against their shipped templates and the app
 
 ## Structure and records
 
-- 01_policy/ contains the required policy files, and each fact in objective.md, initiative.md, principle.md, tech.md, and structure.md has one home.
+- 01_policy/ contains the required policy files, and each fact in objective.md, initiative.md, principle.md, and tech.md has one home.
 - Quality-gate commands occur only in the Standard commands section of <paths.contractsDir>/tech.md. Other files point there.
 - 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has a Mermaid flowchart or sequenceDiagram.
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.

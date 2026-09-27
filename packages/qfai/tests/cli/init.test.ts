@@ -3040,7 +3040,6 @@ describe("qfai init", () => {
         "01_policy/initiative.md",
         "01_policy/principle.md",
         "03_contract/tech.md",
-        "03_contract/structure.md",
       ]) {
         await access(path.join(root, ".qfai", "spec", ...relative.split("/")));
       }

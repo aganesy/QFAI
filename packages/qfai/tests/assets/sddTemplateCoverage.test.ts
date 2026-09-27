@@ -27,7 +27,6 @@ describe("qfai-sdd story-tree templates", () => {
         "02_business-flow/business-flow-NNNN/user-stories.md",
         "03_contract/contracts.md",
         "03_contract/tech.md",
-        "03_contract/structure.md",
       ]) {
         expect(await read(root, file), file).not.toBe("");
       }

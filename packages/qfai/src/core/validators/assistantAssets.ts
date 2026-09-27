@@ -839,29 +839,25 @@ export async function validateStorySteeringPlaceholders(
 ): Promise<Issue[]> {
   if (await isPristineStorySeed(root, config)) return [];
   const contractsDir = resolvePath(root, config, "contractsDir");
-  const issues: Issue[] = [];
-  for (const fileName of ["tech.md", "structure.md"]) {
-    const filePath = path.join(contractsDir, fileName);
-    const content = await readSteeringFile(filePath);
-    if (content === null) continue;
-    const sections = collectSteeringPlaceholders(content);
-    if (sections.length === 0) continue;
-    const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
-    issues.push(
-      issue(
-        "QFAI-ASSETS-003",
-        `Steering file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
-        "error",
-        filePath,
-        "assistantAssets.steeringPlaceholder",
-        sections.map((entry) => entry.section),
-        "canonical",
-        "Fill in the contract-layer tech and structure settings, including Standard commands.",
-        { loc: { line: sections[0]?.firstLine ?? 1 } },
-      ),
-    );
-  }
-  return issues;
+  const filePath = path.join(contractsDir, "tech.md");
+  const content = await readSteeringFile(filePath);
+  if (content === null) return [];
+  const sections = collectSteeringPlaceholders(content);
+  if (sections.length === 0) return [];
+  const detail = sections.map((entry) => `${entry.section} (${entry.count})`).join(", ");
+  return [
+    issue(
+      "QFAI-ASSETS-003",
+      `Steering file ${toRepoRelative(root, filePath)} contains unfilled template values: ${detail}`,
+      "error",
+      filePath,
+      "assistantAssets.steeringPlaceholder",
+      sections.map((entry) => entry.section),
+      "canonical",
+      "Fill in the contract-layer tech settings, including Standard commands.",
+      { loc: { line: sections[0]?.firstLine ?? 1 } },
+    ),
+  ];
 }
 
 /**

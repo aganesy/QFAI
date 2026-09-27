@@ -2,8 +2,8 @@
 /**
  * The Skeleton phase's smoke script for the `qfai` entrypoint.
  *
- * `.qfai/assistant/catalog/structure.md` declares one entrypoint and the boot
- * obligation it answers: `qfai` -> `US-0003-0001`, workspace initialization.
+ * The Skeleton line of `.qfai/spec/03_contract/tech.md` declares one entrypoint,
+ * `qfai`, whose startup serves workspace initialization (`US-0003-0001`).
  * This script starts that entrypoint the way a user does — the built CLI over
  * stdio, in a directory it owns — and asserts that the initialization surface
  * was reached.

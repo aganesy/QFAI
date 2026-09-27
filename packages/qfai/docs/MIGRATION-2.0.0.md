@@ -43,9 +43,9 @@ contracts:
 | Contract index, technical rules and API, database, UI, CLI or design contracts | `03_contract/`                         |
 | Decisions and open questions                                                   | `decisions.md` and `open-questions.md` |
 
-The scripts archive old files that have no direct new home. Review the five
+The scripts archive old files that have no direct new home. Review the four
 assembled files after step 3: `objective.md`, `initiative.md`,
-`principle.md`, `tech.md` and `structure.md`. Remove duplicated facts
+`principle.md` and `tech.md`. Remove duplicated facts
 expressed in different words. Keep the complete old slice-policy file in the
 migration archive; do not copy its obsolete rules into `principle.md`.
 
@@ -122,7 +122,10 @@ the applicable layers. The workflows installed by `qfai init` are
 create-only: compare a project's edited copies with the new shipped
 templates and apply changes deliberately. Update `qfai.config.yaml` test
 globs and the Standard commands in `03_contract/tech.md` to match the
-project's test layout.
+project's test layout. Step 3 moves the old structure catalog's entrypoints
+to Skeleton lines in `tech.md`, its technical constraints to
+`constraint.md` and its UI surface paths to `uiux.surfacePaths` in
+`qfai.config.yaml`, and lists the rest for a person.
 
 ## Roll back or resume
 
