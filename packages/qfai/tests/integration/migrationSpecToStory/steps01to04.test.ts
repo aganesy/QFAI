@@ -235,9 +235,57 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("writes the old section's prose as the flow's purpose and lists the flow for a person", async () => {
+    // QFAI:EX-0004-0007-18
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/_policies/04_Business-Flow.md",
+        "# Business Flow\n\n## CHG-0001: Order flow\n\nA buyer turns a cart into an order.\n\n### Actors\n\nThe buyer and the store.\n\n```mermaid\nflowchart LR\n  Cart --> Order\n```\n",
+      );
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/plan.yaml",
+        "flows:\n  - title: Order flow\n    from: 'CHG-0001: Order flow'\n    stories:\n      - id: US-0001-0001\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      expect(result.code).toBe(3);
+      const flowFile = ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md";
+      expect(await readFile(path.join(root, flowFile), "utf8")).toBe(
+        [
+          "# BF-0001: Order flow",
+          "",
+          "## Purpose",
+          "",
+          "A buyer turns a cart into an order.",
+          "",
+          "The buyer and the store.",
+          "",
+          "## Flow",
+          "",
+          "```mermaid",
+          "flowchart LR",
+          "  Cart --> Order",
+          "```",
+          "",
+          "## Alternate and exception paths",
+          "",
+          "- `<branch, failure, interruption or resumption, and where it leads>`",
+          "",
+        ].join("\n"),
+      );
+      expect(result.output).toContain(
+        `- ${flowFile}: BF-0001 has no alternate and exception paths; write them\n`,
+      );
+      expect(result.output).not.toContain("has no old flow diagram");
+    });
+  });
+
   it("writes a stable ID map and story files from the plan", async () => {
     // QFAI:EX-0004-0007-14
     // QFAI:EX-0004-0007-15
+    // QFAI:EX-0004-0007-19
     await withProject(async (root) => {
       await put(
         root,
@@ -285,7 +333,36 @@ describe("migration steps 1 to 4", () => {
         "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
       );
       const first = await run(step04, await context(root));
-      expect(first.code).toBe(0);
+      expect(first.code).toBe(3);
+      expect(first.output).toContain(
+        "## For a person\n- .qfai/spec/02_business-flow/business-flow-0001/business-flow.md: BF-0001 has no purpose and no alternate and exception paths; write them\n",
+      );
+      expect(
+        await readFile(
+          path.join(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
+          "utf8",
+        ),
+      ).toBe(
+        [
+          "# BF-0001: Order flow",
+          "",
+          "## Purpose",
+          "",
+          "`<Who carries out this flow, and the outcome it reaches.>`",
+          "",
+          "## Flow",
+          "",
+          "```mermaid",
+          "flowchart LR",
+          "  A --> B",
+          "```",
+          "",
+          "## Alternate and exception paths",
+          "",
+          "- `<branch, failure, interruption or resumption, and where it leads>`",
+          "",
+        ].join("\n"),
+      );
       const mapPath = path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json");
       const firstMap = await readFile(mapPath, "utf8");
       const map = JSON.parse(firstMap) as { ids: Record<string, Record<string, string>> };
@@ -351,7 +428,7 @@ describe("migration steps 1 to 4", () => {
         ].join("\n"),
       );
       const second = await run(step04, await context(root));
-      expect(second.code).toBe(0);
+      expect(second.code).toBe(3);
       expect(second.output).toContain("## Operations\nnone");
       expect(await readFile(mapPath, "utf8")).toBe(firstMap);
       await put(
