@@ -1632,6 +1632,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
@@ -1992,11 +1993,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body befb43afc6800850d3a14c00df4ffb4d6d3c7a310b2659cf3c3a43b86a0066fb>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body dc64220796b9ca5fa999241442d70074d186b93894b92b6626b3bb4097d884cb>"}',
   ],
   [
     "qfai-docs.yml#checks",

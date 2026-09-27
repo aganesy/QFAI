@@ -15,10 +15,11 @@
     whether the archive move would take it out of version control —
     `--clean` refuses the move when it would, because a rename into a
     git-ignored directory deletes a tracked pack from the repository
-    rather than retaining it — plus two read-only checks that write
+    rather than retaining it — plus read-only checks that write
     nothing:
     `workflowsIntegrity.ts`, which backs the `workflows.integrity`
-    check documented below, `assetLineBudget.ts`, which owns the
+    check documented below, `docsLane.ts`, which backs the
+    `workflows.docsLane` check, `assetLineBudget.ts`, which owns the
     per-file assistant asset line ceiling at runtime so a project
     holding only the published package can still check it, and
     `outDirCollisions.ts`, which backs the `output.outDirCollision`

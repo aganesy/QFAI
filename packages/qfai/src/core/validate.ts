@@ -201,7 +201,11 @@ export async function validateProject(
 
 function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
   if (!scope || finding.code === "QFAI-FLOW-005") return true;
-  if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
+  if (
+    !finding.code.startsWith("QFAI-STORY-") &&
+    finding.code !== "QFAI-CONTRACT-034" &&
+    finding.code !== "QFAI-DOCSCHEMA-001"
+  ) {
     return true;
   }
   if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
