@@ -26,7 +26,6 @@ import {
   parseAllMarkdownTables,
   resolveTestCaseTables,
 } from "./specPackParsers.js";
-import { UNIT_COMPONENT_LAYERS } from "./tddHelpers.js";
 import { isGlobExclusion, namedTestFileMatcher } from "./testGlobExtensions.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "./traceability.js";
 import { maskJsNonCode, type JsMaskOptions } from "./validators/jsSourceMask.js";
@@ -1680,9 +1679,10 @@ function normalizeLevel(level: string): string {
  * each excluded TC at `info`, so the exclusion is visible rather than silent.
  *
  * The members are lower-case, so a `Level` goes through {@link normalizeLevel}
- * before it is looked up.
+ * before it is looked up. Adding a spelling here takes the only test obligation
+ * away from every TC declaring it.
  */
-const NO_ATDD_OBLIGATION_LEVELS = UNIT_COMPONENT_LAYERS;
+const NO_ATDD_OBLIGATION_LEVELS: ReadonlySet<string> = new Set(["unit", "component", "l1", "l2"]);
 
 /**
  * Where a declared `Level` routes its ATDD annotation obligation, or `null`

@@ -157,7 +157,6 @@
     "tests/core/skillRegistrationFileSystem.test.ts",
     "tests/core/sourceEncodingHygiene.test.ts",
     "tests/core/toolProvenance.test.ts",
-    "tests/core/uiAffectingClauses.test.ts",
     "tests/core/uiuxConfigFieldUsage.test.ts",
     "tests/core/validators/uiScreenEntries.test.ts",
     "tests/core/validators/skillDocumentReadability.test.ts",
@@ -585,7 +584,6 @@
     "tests/integration/init/noOpenaiYaml.test.ts",
     "tests/integration/init/upgradeStates.ts",
     "tests/integration/init/windowsParity.test.ts",
-    "tests/integration/workflow/theModeIsValidated.test.ts",
-    "tests/integration/uiAffectingApiObligation.test.ts"
+    "tests/integration/workflow/theModeIsValidated.test.ts"
   ]
 }

@@ -153,7 +153,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/sqlContractStructure.test.ts",
   "tests/core/surfaceShortCircuitScope.test.ts",
   "tests/core/surfaceTypePopulate.test.ts",
-  "tests/core/tddHelpers.test.ts",
   "tests/core/traceability.test.ts",
   "tests/core/traceabilityGraph.test.ts",
   "tests/core/traceabilityMatrix.test.ts",
