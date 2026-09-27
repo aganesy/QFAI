@@ -21,7 +21,7 @@ import { resolveStoryTreeRoots } from "../storyTree/layout.js";
  * merely mention one. Surrounding backticks / emphasis are stripped first
  * because an index author marks up a path or an id freely.
  */
-const CANONICAL_CELL_ID_RE = /^CON-(API|DB|UI)-(\d+)$/i;
+const CANONICAL_CELL_ID_RE = /^(?:CON-(?:API|DB|UI)-\d+|(?:API|DB|UI)-\d{4})$/i;
 const CELL_DECORATION_RE = /^[`*_]+|[`*_]+$/g;
 
 type IndexTableRow = { cells: string[]; line: number };
@@ -245,7 +245,7 @@ function bareCell(cell: string): string {
  * The one canonical id a `Declared ID` / `Contract ID` cell states, if it states
  * one.
  *
- * The cell must **be** a full `CON-(API|DB|UI)-*` id, not merely contain
+ * The cell must **be** a full `API-NNNN`, `DB-NNNN` or `UI-NNNN` id, not merely contain
  * something that normalizes to one. `extractCellContractIds` also reads the
  * short spelling, which is right for `QFAI-CONTRACT-030` — every id written
  * anywhere in an index must resolve — and wrong here: a canonical cell reading
@@ -257,11 +257,8 @@ function bareCell(cell: string): string {
  */
 function canonicalCellContractId(cell: string): string | undefined {
   const bare = cell.trim().replace(CELL_DECORATION_RE, "").trim();
-  if (isContractId(bare.toUpperCase())) return bare.toUpperCase();
-  const match = CANONICAL_CELL_ID_RE.exec(bare);
-  const kind = match?.[1]?.toUpperCase();
-  const number = match?.[2];
-  return kind && number ? `CON-${kind}-${number}` : undefined;
+  const upper = bare.toUpperCase();
+  return isContractId(upper) || CANONICAL_CELL_ID_RE.test(bare) ? upper : undefined;
 }
 
 /**
@@ -293,7 +290,7 @@ function parseIndexTables(text: string): IndexTable[] {
       continue;
     }
     // The enclosing section: a deeper heading stays inside the H2 above it.
-    const headingMatch = /^(#{1,6})[ \t]+(.*)$/.exec(headerLine);
+    const headingMatch = /^ {0,3}(#{1,6})[ \t]+(.*)$/.exec(headerLine);
     if (headingMatch) {
       if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
       continue;

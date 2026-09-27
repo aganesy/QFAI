@@ -733,7 +733,7 @@ describe("parseArgs", () => {
       },
       {
         flag: "--primary-ui-contract",
-        value: "CON-UI-0001",
+        value: "UI-0001",
         wrongCommand: ["validate"],
         probe: (o) => expect(o.validateFormat).toBe("github"),
         untouched: (o) => expect(o.prototypingPrimaryUiContract).toBeUndefined(),
@@ -921,7 +921,7 @@ describe("parseArgs", () => {
           "--license-patch",
           "patch.json",
           "--primary-ui-contract",
-          "CON-UI-0001",
+          "UI-0001",
         ],
         cwd,
       );
@@ -934,7 +934,7 @@ describe("parseArgs", () => {
       expect(iterate.options.prototypingSkeletonMode).toBe("stub");
       expect(iterate.options.prototypingMode).toBe("exploration");
       expect(iterate.options.prototypingLicensePatch).toBe("patch.json");
-      expect(iterate.options.prototypingPrimaryUiContract).toBe("CON-UI-0001");
+      expect(iterate.options.prototypingPrimaryUiContract).toBe("UI-0001");
       expect(iterate.options.prototypingTargetUrl).toBe("https://x/");
 
       const certify = parseArgs(["prototyping", "certify", "--check"], cwd);
@@ -1023,7 +1023,7 @@ describe("parseArgs", () => {
       for (const [flag, value] of [
         ["--cycle", "5"],
         ["--license-patch", "patch.json"],
-        ["--primary-ui-contract", "CON-UI-0003"],
+        ["--primary-ui-contract", "UI-0003"],
         ["--skeleton-mode", "stub"],
         ["--mode", "exploration"],
       ] as const) {

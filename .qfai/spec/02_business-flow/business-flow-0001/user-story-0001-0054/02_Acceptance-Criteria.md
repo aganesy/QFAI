@@ -10,7 +10,7 @@ Feature:
 Scenario: AC-0001-0054-01
   Given the story tree, and a contract file under `paths.contractsDir` that has no row in `contracts.md`
   When `qfai validate --profile sdd` runs
-  Then `QFAI-CONTRACT-034` is raised at error naming the file, keyed by the `CON-*` ID the file declares, or by the file's path for a file under `cli/` or `design/` that declares none
+  Then `QFAI-CONTRACT-034` is raised at error naming the file, keyed by the contract ID the file declares, or by the file's path for a file under `cli/` or `design/` that declares none
   And A contract file that `contracts.md` lists raises no such finding
 
 # AC-0001-0054-02

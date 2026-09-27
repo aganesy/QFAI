@@ -24,6 +24,8 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
       - heading:
           pattern: "^## Operational Constraints$"
           regex: true
@@ -36,6 +38,8 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
       - heading:
           pattern: "^## Business Constraints$"
           regex: true
@@ -47,4 +51,6 @@ structure:
             required_headers: [ID, Constraint, Rationale, Impact]
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
+            regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
             regex: true

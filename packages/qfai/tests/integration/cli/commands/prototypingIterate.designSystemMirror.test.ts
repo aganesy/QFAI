@@ -225,7 +225,7 @@ async function seedProject(designMd: string, options: { lock: boolean }): Promis
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: [{id: home, route: /}]\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens: [{id: home, route: /}]\n",
     "utf-8",
   );
   if (options.lock) {
@@ -278,8 +278,8 @@ async function recordConvergedReview(root: string): Promise<void> {
 async function seedExhaustedLoop(root: string, designMd: string): Promise<void> {
   const record = {
     designMd: { path: "DESIGN.md", sha256: hashDesignMd(designMd) },
-    uiContractsCovered: ["CON-UI-0001"],
-    frozenSurfaceUnion: ["CON-UI-0001"],
+    uiContractsCovered: ["UI-0001"],
+    frozenSurfaceUnion: ["UI-0001"],
     iterations: Array.from({ length: 10 }, (_, index) => ({
       index,
       commitSha: "uncommitted",

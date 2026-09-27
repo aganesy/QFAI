@@ -111,8 +111,21 @@ function step(root: string, number: number, args: string[] = []): Result {
   return run(root, process.execPath, [path.join(scripts, name), ...args]);
 }
 
-function requireComplete(result: Result, stage: string): void {
-  if (result.status !== 0 || forPerson(result.stdout).length > 0) {
+/** Step 4 lists every flow it writes, for a person to write its alternate and exception paths. */
+const FLOW_FOR_A_PERSON =
+  /^- \.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/business-flow\.md: BF-\d{4} has (?:no purpose and )?no alternate and exception paths; write them$/;
+
+/** Exit 0 with nothing for a person, or, where the step lists flows, exit 3 with only flows. */
+function completed(result: Result, listsFlows: boolean): boolean {
+  const items = forPerson(result.stdout);
+  if (!listsFlows) return result.status === 0 && items.length === 0;
+  return (
+    result.status === 3 && items.length > 0 && items.every((item) => FLOW_FOR_A_PERSON.test(item))
+  );
+}
+
+function requireComplete(result: Result, stage: string, listsFlows: boolean): void {
+  if (!completed(result, listsFlows)) {
     throw new Error(`${stage}: exit ${result.status}\n${result.stderr}\n${result.stdout}`);
   }
 }
@@ -218,7 +231,7 @@ async function project(): Promise<string> {
 
 function prepareThrough(root: string, last: number): void {
   for (let number = 1; number <= last; number += 1) {
-    requireComplete(step(root, number), `prepare step ${number}`);
+    requireComplete(step(root, number), `prepare step ${number}`, number === 4);
   }
 }
 
@@ -237,16 +250,16 @@ beforeAll(async () => {
   for (let number = 1; number <= 10; number += 1) {
     const before = await hashTree(root);
     const preview = step(root, number, ["--dry-run"]);
-    requireComplete(preview, `dry step ${number}`);
+    requireComplete(preview, `dry step ${number}`, number === 4);
     dry.push(preview);
     dryUnchanged.push((await hashTree(root)) === before);
     const applied = step(root, number);
-    requireComplete(applied, `real step ${number}`);
+    requireComplete(applied, `real step ${number}`, number === 4);
     real.push(applied);
   }
   const firstHash = await hashTree(root);
   for (let number = 1; number <= 10; number += 1) {
-    requireComplete(step(root, number), `rerun step ${number}`);
+    requireComplete(step(root, number), `rerun step ${number}`, false);
   }
   const rerunUnchanged = (await hashTree(root)) === firstHash;
   const map = JSON.parse(
@@ -345,9 +358,8 @@ describe("BF-0004 migration cutover", () => {
     expect(journey.dry).toHaveLength(10);
     expect(journey.real).toHaveLength(10);
     expect(journey.dryUnchanged).toEqual(Array(10).fill(true));
-    expect(journey.real.every((result) => result.status === 0)).toBe(true);
-    expect(journey.real.map((result) => forPerson(result.stdout))).toEqual(
-      Array.from({ length: 10 }, () => []),
+    expect(journey.real.map((result, index) => completed(result, index === 3))).toEqual(
+      Array(10).fill(true),
     );
     expect(journey.dry.map((result) => operations(result.stdout))).toEqual(
       journey.real.map((result) => operations(result.stdout)),

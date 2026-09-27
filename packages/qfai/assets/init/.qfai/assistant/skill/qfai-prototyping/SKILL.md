@@ -29,10 +29,10 @@ mode: execution-focused
 
 The loop is static-first and file-based by default. Supported surfaces: web,
 mobile, desktop, mixed. cli surface is rejected. Only UI contracts declaring a
-full `CON-UI-NNNN` ID and a non-empty `screens[]` enter the prototyping scope;
+full `UI-NNNN` ID and a non-empty `screens[]` enter the prototyping scope;
 `prototyping-grill` § Scope says which of them one invocation covers. The
 primary contract comes from `qfai.config.yaml#prototyping.primaryUiContract`
-or `--primary-ui-contract <CON-UI-NNNN>`.
+or `--primary-ui-contract <UI-NNNN>`.
 
 ## Inputs Priority
 

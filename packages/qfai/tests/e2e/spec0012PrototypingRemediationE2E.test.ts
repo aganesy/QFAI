@@ -223,7 +223,7 @@ async function seedPhase2Project(root: string, browserTool = "playwright"): Prom
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
 }
@@ -615,13 +615,13 @@ describe("US-0012-0132: [BLOCKED] top-3 exit-64 blockers + first-offender", () =
 
 describe("US-0012-0133: primaryUiContract requires a canonical contract ID", () => {
   it("accepts a full UI contract ID and rejects legacy numeric pins", () => {
-    expect(parsePrimaryUiContract("CON-UI-0001")).toEqual({
+    expect(parsePrimaryUiContract("UI-0001")).toEqual({
       ok: true,
-      uiContractId: "CON-UI-0001",
+      uiContractId: "UI-0001",
     });
     expect(parsePrimaryUiContract("0001")).toEqual({
       ok: false,
-      error: "primaryUiContract must be a full CON-UI-NNNN ID; received 0001",
+      error: "primaryUiContract must be a full UI-NNNN ID; received 0001",
     });
     expect(parsePrimaryUiContract(1).ok).toBe(false);
     expect(parsePrimaryUiContract("abc").ok).toBe(false);

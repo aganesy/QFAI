@@ -972,7 +972,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "  srcDir: src",
       "  testsDir: tests",
       "prototyping:",
-      "  primaryUiContract: CON-UI-0001",
+      "  primaryUiContract: UI-0001",
       "  execution:",
       `    targetUrl: ${targetUrl}`,
       "    browserTool: playwright-cli",
@@ -994,7 +994,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
   await writeFile(
     path.join(uiDir, "home.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: home",
       "    title: Home",

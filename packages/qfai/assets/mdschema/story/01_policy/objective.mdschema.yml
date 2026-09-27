@@ -27,7 +27,9 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
-          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
       - heading:
           pattern: "^## Users$"
@@ -39,7 +41,9 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
-          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true
       - heading:
           pattern: "^## Success criteria$"
@@ -53,6 +57,8 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
+          - pattern: '\S[^\n]*\n[ \t]*\n[ \t]*\|'
+            regex: true
       - heading:
           pattern: "^## Non-goals$"
           regex: true
@@ -63,5 +69,7 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
-          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+          - pattern: '(?:\A|\n[ \t]*\n)\s*(?:[^-\s#]|-\S)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
             regex: true

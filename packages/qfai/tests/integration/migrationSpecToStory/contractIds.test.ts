@@ -264,7 +264,7 @@ describe("migration contract IDs", () => {
 
   // QFAI:AC-0004-0007-03
   it("refuses a rule destination outside the contract kinds or naming no contract", async () => {
-    // QFAI:EX-0004-0007-14
+    // QFAI:EX-0004-0007-24
     const root = await project();
     await run(step03, root);
     for (const [contract, message] of [
@@ -281,8 +281,8 @@ describe("migration contract IDs", () => {
   });
 
   it("numbers a rule under the contract its old path names and records the contract map", async () => {
-    // QFAI:EX-0004-0007-15
-    // QFAI:EX-0004-0007-16
+    // QFAI:EX-0004-0007-25
+    // QFAI:EX-0004-0007-26
     const root = await project();
     await putPack(
       root,

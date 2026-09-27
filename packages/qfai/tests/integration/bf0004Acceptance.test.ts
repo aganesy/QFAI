@@ -147,6 +147,21 @@ function section(report: string, name: string): string[] {
     .filter((line) => line !== "" && line !== "none");
 }
 
+/**
+ * Step 4 lists every flow it writes for a person, who writes its alternate and exception paths,
+ * and exits 3. On the fixture that is the only item any step lists.
+ */
+const FLOW_FOR_A_PERSON =
+  /^- \.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/business-flow\.md: BF-\d{4} has (?:no purpose and )?no alternate and exception paths; write them$/;
+
+function completedAsExpected(number: number, result: Result): boolean {
+  const items = section(result.stdout, "For a person");
+  if (number !== 4) return result.status === 0 && items.length === 0;
+  return (
+    result.status === 3 && items.length > 0 && items.every((item) => FLOW_FOR_A_PERSON.test(item))
+  );
+}
+
 function pathsNamedByOperations(
   report: string,
   before: Map<string, string>,
@@ -394,14 +409,14 @@ beforeAll(async () => {
       ["--dry-run"],
       ["--require", preload, "--require", noWrites],
     );
-    if (preview.status !== 0 || section(preview.stdout, "For a person").length > 0) {
+    if (!completedAsExpected(number, preview)) {
       throw new Error("Dry step " + number + ": " + preview.stderr + preview.stdout);
     }
     dry.push(preview);
     dryUnchanged.push((await fingerprint(root)) === before);
     const beforeFiles = await fileSnapshot(root);
     const real = step(root, number, [], ["--require", preload]);
-    if (real.status !== 0 || section(real.stdout, "For a person").length > 0) {
+    if (!completedAsExpected(number, real)) {
       throw new Error("Step " + number + ": " + real.stderr + real.stdout);
     }
     applied.push(real);
@@ -792,7 +807,7 @@ describe("BF-0004 acceptance criteria", () => {
     expect(journey.changedPaths).toHaveLength(10);
     for (const [index, paths] of journey.changedPaths.entries()) {
       const number = index + 1;
-      expect(journey.applied[index]?.status).toBe(0);
+      expect(journey.applied[index]?.status).toBe(number === 4 ? 3 : 0);
       for (const changed of paths) {
         const allowed = changedPathPatterns[index]?.some((pattern) => pattern.test(changed));
         expect(allowed, "Step " + number + " changed " + changed).toBe(true);
@@ -874,7 +889,7 @@ describe("BF-0004 acceptance criteria", () => {
     for (let number = 1; number <= 10; number += 1) {
       const before = await fileSnapshot(root);
       const result = step(root, number);
-      expect(result.status, `Step ${number}: ${result.stderr}`).toBe(0);
+      expect(result.status, `Step ${number}: ${result.stderr}`).toBe(number === 4 ? 3 : 0);
       const after = await fileSnapshot(root);
       for (const changed of new Set([...before.keys(), ...after.keys()])) {
         if (before.get(changed) === after.get(changed)) continue;
@@ -904,12 +919,11 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0003-06
-  it("prints a Markdown report with no person action on completed steps", () => {
+  it("prints a Markdown report and exits 3 only on the step that lists a person action", () => {
     expect(journey.applied).toHaveLength(10);
-    for (const result of journey.applied) {
-      expect(result.status).toBe(0);
+    for (const [index, result] of journey.applied.entries()) {
       expect(result.stdout).toContain("## Operations");
-      expect(section(result.stdout, "For a person")).toEqual([]);
+      expect(completedAsExpected(index + 1, result), result.stdout).toBe(true);
     }
   });
 
@@ -1006,7 +1020,7 @@ describe("BF-0004 acceptance criteria", () => {
       .split(/\r?\n/)
       .find((line) => line.includes("spec-0002 is superseded by spec-0001"));
     expect(retiredRow).toContain("| DONE |");
-    expect(step(root, 4).status).toBe(0);
+    expect(step(root, 4).status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
@@ -1080,7 +1094,7 @@ describe("BF-0004 acceptance criteria", () => {
       .split(/\r?\n/)
       .find((line) => line.includes("spec-0002") && line.includes("deprecated"));
     expect(retiredRow).toContain("| DONE |");
-    expect(step(root, 4).status).toBe(0);
+    expect(step(root, 4).status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
@@ -1372,7 +1386,7 @@ describe("BF-0004 acceptance criteria", () => {
     const stories = path.join(root, ".qfai/specs/spec-0001/02_User-stories.md");
     await writeFile(
       stories,
-      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I can track it.\n`,
+      `${await readFile(stories, "utf8")}\n## US-0001-0002: Track the receipt\n\nAs a buyer, I want to track the receipt, so that I know where the order is.\n`,
     );
     const criteria = path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md");
     await writeFile(
@@ -1409,7 +1423,13 @@ describe("BF-0004 acceptance criteria", () => {
     await writeFile(planPath, stringifyYaml(plan));
     prepareThrough(root, 3);
     const result = step(root, 4);
-    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.status, result.stdout + result.stderr).toBe(3);
+    const person = section(result.stdout, "For a person");
+    expect(person).toHaveLength(2);
+    expect(
+      person.every((item) => FLOW_FOR_A_PERSON.test(item)),
+      person.join("\n"),
+    ).toBe(true);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
@@ -1518,7 +1538,7 @@ describe("BF-0004 acceptance criteria", () => {
     );
     prepareThrough(root, 3);
     const result = step(root, 4);
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
@@ -1631,7 +1651,7 @@ describe("BF-0004 acceptance criteria", () => {
       );
     }
     prepareThrough(normal, 3);
-    expect(step(normal, 4).status).toBe(0);
+    expect(step(normal, 4).status).toBe(3);
     const complete = path.join(normal, ".qfai/spec/02_business-flow");
     const flow = path.join(complete, "business-flow-0001");
     expect(await readFile(path.join(complete, "business-flows.md"), "utf8")).toContain(
@@ -1778,12 +1798,12 @@ describe("BF-0004 acceptance criteria", () => {
     await writeFile(planPath, stringifyYaml(plan));
     prepareThrough(root, 3);
     const result = step(root, 4);
-    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.status, result.stdout + result.stderr).toBe(3);
     const written = await readFile(
       path.join(root, ".qfai/spec/02_business-flow/business-flow-0001/business-flow.md"),
       "utf8",
     );
-    expect(written).toContain("Orders move from the cart to a receipt.");
+    expect(written).toContain("## Purpose\n\nOrders move from the cart to a receipt.\n\n## Flow");
     expect(written).toContain("Cart --> Receipt");
     expect(written).not.toContain("Change-section prose.");
     expect(written).not.toContain("PlaceOrder");
@@ -1827,7 +1847,7 @@ describe("BF-0004 acceptance criteria", () => {
     plan.rules = plan.rules.slice(0, 1);
     await writeFile(planPath, stringifyYaml(plan));
     prepareThrough(root, 3);
-    expect(step(root, 4).status).toBe(0);
+    expect(step(root, 4).status).toBe(3);
     const map = JSON.parse(
       await readFile(path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json"), "utf8"),
     ) as Journey["map"];
@@ -1982,7 +2002,7 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0009-02
   it("reports a rule whose destination contract is absent and retains its wording", async () => {
     const root = await project();
-    prepareThrough(root, 6);
+    prepareAllowingPerson(root, 6);
     await rm(path.join(root, ".qfai/spec/03_contract/api/api-0001-order.yaml"));
     const source = path.join(root, ".qfai/spec/spec-0001/04_Business-Rules.md");
     const before = await readFile(source, "utf8");

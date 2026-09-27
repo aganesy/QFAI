@@ -548,7 +548,10 @@ async function ruleContractIds(
 
 const MERMAID_FENCE = /```mermaid\s*\n([\s\S]*?)\n```/m;
 
-/** The old flow section `from` selects: its Mermaid diagram and the prose around it. */
+/**
+ * The old flow section `from` selects: its Mermaid diagram and the prose around it. Headings are
+ * dropped: the prose becomes `## Purpose`, and a flow document has no heading below that level.
+ */
 function flowSource(
   text: string,
   selector: string | undefined,
@@ -558,9 +561,9 @@ function flowSource(
   const prose = selected
     .replace(MERMAID_FENCE, "")
     .split(/\r?\n/)
-    .filter((line) => !/^#\s/.test(line))
-    .map((line) => line.replace(/^#{2}(?=\s)/, "###"))
+    .filter((line) => !/^#{1,6}\s/.test(line))
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
   return { diagram: MERMAID_FENCE.exec(selected)?.[1] ?? null, prose };
 }
@@ -675,42 +678,186 @@ function reportUnplaced(
   return forAPerson;
 }
 
-function sourceScope(pack: OldPack): string | null {
-  const text = pack.raw["01_Spec.md"];
-  const headings = parseHeadings(text).filter(
-    (heading) => heading.level === 2 && heading.title === "Scope",
-  );
-  if (headings.length > 1) {
-    throw new MigrationInputError(`${pack.id}/01_Spec.md has several Scope sections`);
+const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
+/** Fields of an old story block that the archive keeps and the story tree does not. */
+const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
+
+type StoryParts = { sentence: string; nonGoals: string[] };
+type BlockEntry =
+  | { kind: "field"; key: string; value: string; items: string[] }
+  | { kind: "paragraph"; text: string }
+  | { kind: "other" };
+
+/** A line that opens a list item, a quote, a table or a fence at the top of a block. */
+const OTHER_BLOCK =
+  /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
+function storyBlockEntries(body: string): BlockEntry[] {
+  const entries: BlockEntry[] = [];
+  let current: BlockEntry | null = null;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
+    const item = /^\s+(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (line.trim() === "") {
+      if (current?.kind === "paragraph") current = null;
+    } else if (field) {
+      current = {
+        kind: "field",
+        key: (field[1] ?? "").toLowerCase(),
+        value: field[2] ?? "",
+        items: [],
+      };
+      entries.push(current);
+    } else if (current?.kind === "field" && item) {
+      current.items.push(item[1] ?? "");
+    } else if (current?.kind === "field" && /^\s/.test(line)) {
+      const last = current.items.length - 1;
+      if (last >= 0) current.items[last] = `${current.items[last]} ${line.trim()}`;
+      else current.value = `${current.value.trimEnd()} ${line.trim()}`;
+    } else if (OTHER_BLOCK.test(line)) {
+      current = { kind: "other" };
+      entries.push(current);
+    } else if (current?.kind === "other") {
+      continue;
+    } else if (current?.kind === "paragraph") {
+      current.text = `${current.text.trimEnd()} ${line.trim()}`;
+    } else {
+      current = { kind: "paragraph", text: line.trim() };
+      entries.push(current);
+    }
   }
-  return headings.length === 1 ? extractH2Sections(text).get("Scope")?.body.trim() || null : null;
+  return entries;
+}
+
+/**
+ * The one `As a …, I want …, so that ….` sentence of an old story block and its
+ * non-goals, or null when the block holds anything else. The sentence is the
+ * block's one paragraph or its `Goal` field.
+ */
+function storyParts(body: string): StoryParts | null {
+  const sentences: string[] = [];
+  const nonGoals: string[] = [];
+  for (const entry of storyBlockEntries(body)) {
+    if (entry.kind === "other") {
+      return null;
+    } else if (entry.kind === "paragraph") {
+      sentences.push(entry.text);
+    } else if (entry.key === "non-goals") {
+      nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
+    } else if (ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      continue;
+    } else if (entry.items.length > 0) {
+      return null;
+    } else if (entry.key === "goal") {
+      sentences.push(entry.value);
+    } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      return null;
+    }
+  }
+  const sentence = sentences[0]?.trim() ?? "";
+  return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
+}
+
+/**
+ * A story block without the top-level fields only the archive keeps, and their
+ * continuation lines. A line inside a fence is content, never a field. Every other
+ * line stays as written, except a blank line a removed field leaves beside another.
+ */
+function withoutArchivedFields(body: string): string {
+  const kept: string[] = [];
+  let skipping = false;
+  let removed = false;
+  let fence: string | null = null;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
+    if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
+    else if (fence === null && line.trim() !== "" && !/^\s+\S/.test(line)) skipping = false;
+    const run = marker?.[1] ?? "";
+    if (marker && fence === null) fence = run;
+    else if (
+      marker &&
+      fence !== null &&
+      run[0] === fence[0] &&
+      run.length >= fence.length &&
+      (marker[2] ?? "").trim() === ""
+    )
+      fence = null;
+    if (skipping) {
+      removed = true;
+      continue;
+    }
+    if (removed && line.trim() === "" && (kept.at(-1) ?? "").trim() === "") continue;
+    removed = false;
+    kept.push(line);
+  }
+  return kept.join("\n");
 }
 
 function outputStory(
   story: OldStory,
   newId: string,
   ids: Record<string, string>,
-  pack: OldPack,
-  scope: string | null,
+  parts: StoryParts | null,
 ): string {
-  const body = replacedIds(story.body, ids).trim();
-  const archive = `.qfai/evidence/migration-spec-to-story/retired/${pack.id}`;
-  const sourceScopeText = scope ?? "The legacy source has no Scope section.";
-  return `# ${newId}: ${story.title}\n\n## User Story\n\n${body}\n\n## Legacy Source Scope\n\n${sourceScopeText}\n\n## Source Provenance\n\n- Spec scope: \`${archive}/01_Spec.md#scope\`\n- Story block: \`${archive}/02_User-stories.md#${story.id.toLowerCase()}\`\n`;
+  const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
+  if (parts === null) {
+    return `${heading}${replacedIds(withoutArchivedFields(story.body), ids).trim()}\n`;
+  }
+  const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
+  return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
+}
+
+/**
+ * A scenario re-indented to the template: two spaces for `Scenario:`, four for each step
+ * and each `Examples:` line. Every other line keeps its place relative to the step above it: that step's
+ * indentation is replaced and every character after it is kept, so a DocString keeps
+ * its relative whitespace, tabs included. A whitespace-only line inside a DocString is
+ * payload, so it is shifted like the rest rather than emptied.
+ */
+function indentedScenario(scenario: string): string {
+  const lines = scenario.replace(/\r\n/g, "\n").split("\n");
+  const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
+  const isStep = (line: string): boolean =>
+    /^\s*(?:(?:Given|When|Then|And|But|\*)\s|(?:Examples|Scenarios):)/.test(line);
+  let stepIndent = indent(lines.find(isStep) ?? "");
+  const shifted = (line: string): string => {
+    if (indent(line) >= stepIndent) return `    ${line.slice(stepIndent)}`;
+    const delta = 4 - stepIndent;
+    return delta >= 0 ? `${" ".repeat(delta)}${line}` : line.slice(Math.min(-delta, indent(line)));
+  };
+  let docString: string | null = null;
+  return lines
+    .map((line, index) => {
+      const delimiter = /^\s*("""|```)/.exec(line)?.[1] ?? null;
+      const inDocString = docString !== null && delimiter !== docString;
+      if (delimiter !== null && (docString === null || delimiter === docString)) {
+        docString = docString === null ? delimiter : null;
+      }
+      if (line === "") return "";
+      if (line.trim() === "") return inDocString ? shifted(line) : "";
+      if (index === 0) return `  ${line.trimStart()}`;
+      if (!inDocString && delimiter === null && isStep(line)) {
+        stepIndent = indent(line);
+        return `    ${line.trimStart()}`;
+      }
+      return shifted(line);
+    })
+    .join("\n");
 }
 
 function outputCriteria(
   story: OldStory,
   criteria: readonly OldCriterion[],
   ids: Record<string, string>,
-): string {
-  if (criteria.length === 0) return `# Acceptance Criteria\n\n## Criteria\n`;
+): string | null {
+  if (criteria.length === 0) return null;
   const blocks = criteria.map((criterion) => {
     const scenario = criterionScenario(criterion);
     if (scenario === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
-    return `# ${ids[criterion.id]}\n# Parent: ${ids[story.id]}\n${replacedIds(scenario, ids)}`;
+    return `  # ${ids[criterion.id]}\n${indentedScenario(replacedIds(scenario, ids))}`;
   });
-  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n\n${blocks.join("\n\n")}\n\`\`\`\n`;
+  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n${blocks.join("\n\n")}\n\`\`\`\n`;
 }
 
 function outputExamples(
@@ -723,9 +870,21 @@ function outputExamples(
   return `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
 }
 
+/** The placeholders of the `qfai-sdd` business flow template. */
+const FLOW_PURPOSE_PLACEHOLDER = "`<Who carries out this flow, and the outcome it reaches.>`";
+const FLOW_PATHS_PLACEHOLDER =
+  "- `<branch, failure, interruption or resumption, and where it leads>`";
+
 function outputFlow(title: string, id: string, diagram: string, prose: string): string {
-  const source = prose ? `\n${prose}\n` : "";
-  return `# ${id}: ${title}\n\n## Purpose\n\n- ${title}\n${source}\n## Flow\n\n\`\`\`mermaid\n${diagram.trim()}\n\`\`\`\n`;
+  return [
+    `# ${id}: ${title}`,
+    "## Purpose",
+    prose || FLOW_PURPOSE_PLACEHOLDER,
+    "## Flow",
+    `\`\`\`mermaid\n${diagram.trim()}\n\`\`\``,
+    "## Alternate and exception paths",
+    `${FLOW_PATHS_PLACEHOLDER}\n`,
+  ].join("\n\n");
 }
 
 function outputFlowIndex(flows: readonly { id: string; title: string }[]): string {
@@ -1017,8 +1176,6 @@ export const step04: MigrationStep = {
       )) ??
       "";
     const fallbackDiagram = await templateDiagram();
-    const scopeByPack = new Map(packs.map((pack) => [pack.id, sourceScope(pack)] as const));
-    const missingScopes = new Set<string>();
     operations.push({
       kind: "write",
       target: `${specsRelative}/02_business-flow/business-flows.md`,
@@ -1033,6 +1190,10 @@ export const step04: MigrationStep = {
       const { diagram, prose } = flowSource(oldFlowText, flow.from);
       if (!flow.from || !diagram)
         forAPerson.push(`${PLAN_PATH}: ${flow.title} has no old flow diagram`);
+      const missing = prose ? "" : "no purpose and ";
+      forAPerson.push(
+        `${flowDir}/business-flow.md: ${flowId} has ${missing}no alternate and exception paths; write them`,
+      );
       operations.push({
         kind: "write",
         target: `${flowDir}/business-flow.md`,
@@ -1055,11 +1216,6 @@ export const step04: MigrationStep = {
         if (!story || !pack || !storyId) continue;
         const locations = storyPaths(specsRelative, flowId, storyId);
         const packMap = { ...(map.ids[pack.id] ?? {}), ...oldContractIds(map.contracts) };
-        const scope = scopeByPack.get(pack.id) ?? null;
-        if (scope === null && !missingScopes.has(pack.id)) {
-          forAPerson.push(`${relative(context.root, pack.dir)}/01_Spec.md: Scope is missing`);
-          missingScopes.add(pack.id);
-        }
         const mappedCriteria = pack.criteria.filter(
           (item) => ownerByCriterion.get(item.id) === story.id && criterionScenario(item) !== null,
         );
@@ -1071,23 +1227,47 @@ export const step04: MigrationStep = {
             input: item.input,
             expected: item.expected,
           }));
+        const [storyFile = "", criteriaFile = ""] = locations.files;
         forAPerson.push(
           ...unmappedContracts(
-            locations.files[0] ?? "",
+            storyFile,
             [story.body, ...mappedCriteria.map((item) => item.text)],
             packMap,
           ),
         );
+        const parts = storyParts(story.body);
+        if (parts === null) {
+          forAPerson.push(
+            `${storyFile}: ${storyId} is not one "As a <actor>, I want <goal>, so that <benefit>." sentence; rewrite its User Story`,
+          );
+        }
         operations.push({
           kind: "write",
-          target: locations.files[0] ?? "",
-          content: outputStory(story, storyId, packMap, pack, scope),
+          target: storyFile,
+          content: outputStory(story, storyId, packMap, parts),
         });
-        operations.push({
-          kind: "write",
-          target: locations.files[1] ?? "",
-          content: outputCriteria(story, mappedCriteria, packMap),
-        });
+        const criteriaText = outputCriteria(story, mappedCriteria, packMap);
+        if (criteriaText === null) {
+          forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
+          // Nothing tells an earlier step 4's output from a file a person wrote, so an
+          // existing criteria file is kept and named for the person resolving the story.
+          if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
+            forAPerson.push(
+              `${criteriaFile}: the existing file is kept; check that it states ${storyId}'s criteria`,
+            );
+          }
+        } else {
+          // A criteria file that differs from what step 4 writes was edited after an
+          // earlier run, so it is kept rather than overwritten.
+          const existing = await readOptional(path.join(context.root, criteriaFile));
+          if (existing === null || existing === criteriaText) {
+            operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
+          } else {
+            forAPerson.push(
+              `${criteriaFile}: the existing file differs from what step 4 writes and is kept; check that it states ${storyId}'s criteria`,
+            );
+          }
+        }
         operations.push({
           kind: "write",
           target: locations.files[2] ?? "",
