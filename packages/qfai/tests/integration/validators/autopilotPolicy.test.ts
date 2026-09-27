@@ -72,6 +72,32 @@ describe("autopilot policy in the story-tree assistant layout", () => {
     );
   });
 
+  it("does not read the retired CON-UI-NNNN form as the UI-NNNN that qfai-verify declares", async () => {
+    // QFAI:EX-0001-0175-05
+    const entry = (id: string): string =>
+      `brand intent\n  - a full \`${id}\` when a prototyping-scoped run cannot resolve its primary UI contract`;
+    await writeSkill(
+      ".qfai/assistant/skill",
+      "qfai-verify",
+      POLICY.replace("brand intent", entry("CON-UI-NNNN")),
+    );
+
+    const retired = await validateAutopilotPolicy(root);
+
+    expect(retired).toEqual([
+      expect.objectContaining({ code: "QFAI-AUTOPILOT-001", severity: "error" }),
+    ]);
+    expect(retired[0]?.message).toContain("does not declare ([a full `CON-UI-NNNN` when");
+
+    await writeSkill(
+      ".qfai/assistant/skill",
+      "qfai-verify",
+      POLICY.replace("brand intent", entry("UI-NNNN")),
+    );
+
+    expect(await validateAutopilotPolicy(root)).toEqual([]);
+  });
+
   it("uses the configured skill directory and ignores the former location", async () => {
     await writeSkill(".qfai/assistant/skills", "qfai-old", "# Skill\n");
     await writeSkill("custom/skill", "qfai-sdd", "# Skill\n");
