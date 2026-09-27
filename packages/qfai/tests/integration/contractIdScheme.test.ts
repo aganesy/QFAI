@@ -335,6 +335,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
         ...INDEX_HEADER.slice(2),
         indexRow("API-0002", "api/api-0002-orders.yaml"),
         "",
+        "### More",
+        "",
         ...INDEX_HEADER.slice(4),
         indexRow("API-0008", "api/api-0008-missing.yaml"),
         "",

@@ -292,9 +292,10 @@ function parseIndexTables(text: string): IndexTable[] {
     if (headerLine === undefined || separatorLine === undefined) {
       continue;
     }
-    const headingMatch = /^#{1,6}[ \t]+(.*)$/.exec(headerLine);
+    // The enclosing section: a deeper heading stays inside the H2 above it.
+    const headingMatch = /^(#{1,6})[ \t]+(.*)$/.exec(headerLine);
     if (headingMatch) {
-      heading = (headingMatch[1] ?? "").trim();
+      if ((headingMatch[1] ?? "").length <= 2) heading = (headingMatch[2] ?? "").trim();
       continue;
     }
     if (!looksLikeTableRow(headerLine) || !isTableSeparator(separatorLine)) {
