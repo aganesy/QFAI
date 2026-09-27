@@ -152,7 +152,51 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     its owner does not list or that nothing uses, and a `requires` list that
     names anything but common steps, or appears on a common step.
 
+- **Contracts can carry their own IDs, and number their rules after them.**
+  `qfai validate` reads the new forms beside the current ones.
+  - A contract under `cli/`, `api/`, `db/`, `ui/` or `design/` declares a
+    contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
+    contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
+    otherwise. The number is unique across kinds.
+  - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
+    another number is a BR-to-EX error (`QFAI-STORY-005`).
+  - A Markdown contract may hold its rules under `## Business rules`, which is
+    read like `## Rules` but refuses a `Rule refs:` line.
+  - A `contracts.md` index with the columns `ID`, `Title`, `File`,
+    `Depends On`, `Reconciled With` and `Purpose` is checked against every
+    contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
+    declares and has a row that agrees with both. A disagreement is
+    `QFAI-CONTRACT-034`.
+
 ### Changed
+
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
+
+- **The policy-layer documents and the two registers have closed schemas.**
+  `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
+  `constraint.md`, `decisions.md` and `open-questions.md` now accept only
+  the sections their templates declare, in order, each holding the one kind of
+  content it is for. A section the schema does not name, or a list where a table
+  belongs, fails `pnpm lint:mdschema`.
+
+  - `principle.md` gains a Decision priorities table; `initiative.md` no
+    longer carries an overview or its own priorities.
+  - `glossary.md` is one Term and Definition table.
+  - `constraint.md` has Technical, Operational and Business sections, each one
+    ID, Constraint, Rationale and Impact table, which may be empty.
+  - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
+    strict schema, so a misspelt rule or option fails instead of being ignored.
+  - Migration step 3 writes these five policy files in their template's shape.
+    An old section of the same kind moves into its section; every other one is
+    listed under `## For a person` with its archived copy, and the step exits 3.
 
 - **Every spec-tree document is checked against its schema, and the check is
   required.** `npx qfai validate` runs the shipped document-schema checker in
@@ -177,6 +221,31 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and `qfai validate` no longer reports it. A migration under way
   continues under the new name from the step it reached: the plan, the ID map
   and the archives stay in `.qfai/evidence/migration-spec-to-story/`.
+
+- **Migration step 4 writes stories and criteria in the template's shape.**
+  - `01_User-story.md` holds the story heading, the one
+    `As a …, I want …, so that ….` sentence under `## User Story`, and the old
+    non-goals under `## Non-goals` when there are any.
+  - The pack's scope and source provenance are no longer copied into the
+    story. They stay in the retained archive under
+    `.qfai/evidence/migration-spec-to-story/retired/`.
+  - `02_Acceptance-Criteria.md` opens `Feature:` with the story title and
+    indents each scenario as the template does. A criterion no longer carries a
+    `# Parent:` line; its directory names the story.
+  - A story block that is not one such sentence is written as it stands, and a
+    story with no criterion that takes a new ID gets no
+    `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
+    exits 3.
+
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
 
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their

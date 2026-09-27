@@ -70,7 +70,7 @@ lock. Do not freeze a sample design.
 
 ## A named contract
 
-With `--contract <CON-ID-or-path>`, select the existing contract by ID or by a
+With `--contract <contract-ID-or-path>`, select the existing contract by ID or by a
 repository-relative path under `<paths.contractsDir>`. An unknown target stops
 the run.
 

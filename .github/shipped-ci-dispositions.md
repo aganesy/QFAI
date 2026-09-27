@@ -41,3 +41,5 @@ the next one against.
   Because: the lane this entry adds holds this repository's own `CHANGELOG.md` against the release pages built from it, and an adopter publishes no release from a changelog QFAI writes.
 - SHIPPED-CI: not-applicable for package.json
   Because: this change removes a scan for the former spec layout from this repository's CI. The shipped workflows never ran that repository-specific scan.
+- SHIPPED-CI: not-applicable for package.json
+  Because: the lane this entry adds checks the markdownlint configuration of this repository's own spec tree, which `qfai init` does not write into an adopter's project.

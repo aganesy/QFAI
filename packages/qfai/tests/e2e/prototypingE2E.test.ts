@@ -103,7 +103,7 @@ async function seedRepo(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   await writeFile(path.join(root, "DESIGN.md"), E2E_DESIGN_MD, "utf-8");
@@ -122,8 +122,8 @@ async function seedIterations(
   await writeFile(
     path.join(dir, "prototyping.json"),
     JSON.stringify({
-      uiContractsCovered: ["CON-UI-0001"],
-      frozenSurfaceUnion: ["CON-UI-0001"],
+      uiContractsCovered: ["UI-0001"],
+      frozenSurfaceUnion: ["UI-0001"],
       runId: "run-e2e",
       frozenLicenseCatalog: {
         allowedSources: ["unsplash", "pexels"],

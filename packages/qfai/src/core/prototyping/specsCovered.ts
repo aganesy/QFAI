@@ -2,7 +2,7 @@
 export type UiContractsCoveredResult =
   { kind: "ok"; value: string[] } | { kind: "legacy" } | { kind: "malformed"; reason: string };
 
-const UI_CONTRACT_ID = /^CON-UI-\d{4}$/u;
+const UI_CONTRACT_ID = /^UI-\d{4}$/u;
 
 export function readUiContractsCovered(value: unknown): UiContractsCoveredResult {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -17,7 +17,7 @@ export function readUiContractsCovered(value: unknown): UiContractsCoveredResult
     return { kind: "malformed", reason: "uiContractsCovered must be a non-empty array" };
   }
   if (covered.some((id: unknown) => typeof id !== "string" || !UI_CONTRACT_ID.test(id))) {
-    return { kind: "malformed", reason: "uiContractsCovered entries must match CON-UI-NNNN" };
+    return { kind: "malformed", reason: "uiContractsCovered entries must match UI-NNNN" };
   }
   if (new Set(covered).size !== covered.length) {
     return { kind: "malformed", reason: "uiContractsCovered contains duplicate IDs" };

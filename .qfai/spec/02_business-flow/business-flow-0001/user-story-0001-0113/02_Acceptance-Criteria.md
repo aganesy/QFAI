@@ -10,7 +10,7 @@ Feature: Review-only default evidence
 Scenario: Default cycle writes only review payloads
   Given `qfai prototyping iterate` runs without `--capture`
   When a reviewer completes a screen assessment
-  Then the required per-screen artifact is `iter-NN/CON-UI-NNNN/<screen>.review.json`
+  Then the required per-screen artifact is `iter-NN/UI-NNNN/<screen>.review.json`
   And no PNG, HTML snapshot, or scripted interaction transcript is required from that cycle
 
 Scenario: Capture remains optional

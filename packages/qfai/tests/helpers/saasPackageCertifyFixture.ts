@@ -87,14 +87,14 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
   await writeText(
     root,
     ".qfai/spec/03_contract/ui/index.yaml",
-    "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
+    "# QFAI-CONTRACT-ID: UI-0012\nscreens: [{id: index, route: /}]\n",
   );
   await writeText(root, "DESIGN.md", DESIGN_MD);
   await writeText(root, ".qfai/evidence/prototyping/iter-00/index.html", FINAL_HTML);
   await writeText(
     root,
-    ".qfai/evidence/prototyping/iter-00/CON-UI-0012/index.review.json",
-    reviewPayload("CON-UI-0012", "index", { cycle: 0 }),
+    ".qfai/evidence/prototyping/iter-00/UI-0012/index.review.json",
+    reviewPayload("UI-0012", "index", { cycle: 0 }),
   );
   const validateBody = JSON.stringify({
     profile: "prototyping",
@@ -114,8 +114,8 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
       surface: "web",
       runId: "run-saas-package",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(DESIGN_MD) },
-      uiContractsCovered: ["CON-UI-0012"],
-      frozenSurfaceUnion: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-05-27T00:00:00Z" },

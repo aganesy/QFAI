@@ -62,8 +62,8 @@ one kind of content each section holds. `qfai validate` reports a violation as
 
 ## Contracts
 
-- API, DB, UI and design contracts retain one appropriate
-  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declaration.
+- API, DB, UI and design contracts declare one
+  `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`.
 - CLI contracts use `CLI-*` short IDs in `03_contract/contracts.md`.
 
 ## Examples and test annotations

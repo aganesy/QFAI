@@ -44,7 +44,7 @@ const VALID_SKILL_CONTENT = [
   "",
   "Supported UI prototyping surfaces are: web, mobile, desktop, mixed.",
   "cli is not a prototyping execution target and is rejected.",
-  "Only UI contracts with a full CON-UI-NNNN ID and non-empty screens[] enter prototyping execution.",
+  "Only UI contracts with a full UI-NNNN ID and non-empty screens[] enter prototyping execution.",
   "",
   "## Required References",
   "Read the reference documents before execution.",
@@ -193,7 +193,7 @@ describe("prototyping skill validator", () => {
 describe("prototyping skill asset — UI contract scope", () => {
   it("requires canonical UI contracts with screens and no spec-pack primary pin", async () => {
     const skillContent = await readPrototypingAsset("SKILL.md");
-    expect(skillContent).toContain("CON-UI-NNNN");
+    expect(skillContent).toContain("UI-NNNN");
     expect(skillContent).toContain("screens[]");
     expect(skillContent).toContain("primaryUiContract");
     expect(skillContent).not.toContain("primarySpecId");
@@ -202,7 +202,7 @@ describe("prototyping skill asset — UI contract scope", () => {
 
   it("places review evidence under full UI contract IDs", async () => {
     const loop = await readPrototypingAsset("references/iteration-loop.md");
-    expect(loop).toContain("CON-UI-NNNN");
+    expect(loop).toContain("UI-NNNN");
     expect(loop).not.toContain("iter-NN/spec-NNNN/");
   });
 });

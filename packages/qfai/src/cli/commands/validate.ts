@@ -1253,7 +1253,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
-    "qfai.config.yaml: prototyping.primaryUiContract names a CON-UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
+    "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":

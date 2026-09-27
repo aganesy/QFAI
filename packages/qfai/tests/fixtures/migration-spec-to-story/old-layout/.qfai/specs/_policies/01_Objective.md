@@ -1,5 +1,5 @@
 # Objective
 
-## Outcome
+## Out of scope
 
-Orders can be placed and retrieved.
+- Order cancellation.

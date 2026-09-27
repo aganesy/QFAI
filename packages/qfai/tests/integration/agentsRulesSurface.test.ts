@@ -1425,7 +1425,10 @@ describe("rule overlays", () => {
         "AC-NNNN-NNNN-NN",
         "EX-NNNN-NNNN-NN",
         "BR-NNNN",
+        "BR-NNNN-NNNN",
+        "DESIGN-NNNN",
         "every four-digit segment",
+        "is not read as `UI-NNNN`",
         // The three exceptions — the sample IDs, the manifest version and the
         // story-tree sample band — and the absence of any file-name exemption.
         "spec-0001",

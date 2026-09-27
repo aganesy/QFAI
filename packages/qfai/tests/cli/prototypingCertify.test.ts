@@ -112,7 +112,7 @@ async function seedMinimalProject(root: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
+    "# QFAI-CONTRACT-ID: UI-0012\nscreens: [{id: index, route: /}]\n",
     "utf-8",
   );
 }
@@ -144,8 +144,8 @@ async function seedAllGatesPass(root: string): Promise<void> {
       surface: "web",
       runId: "run-test-2026",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-      uiContractsCovered: ["CON-UI-0012"],
-      frozenSurfaceUnion: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -159,11 +159,11 @@ async function seedAllGatesPass(root: string): Promise<void> {
     "{}\n",
     "utf-8",
   );
-  const reviewDir = path.join(root, ".qfai/evidence/prototyping/iter-01/CON-UI-0012");
+  const reviewDir = path.join(root, ".qfai/evidence/prototyping/iter-01/UI-0012");
   await mkdir(reviewDir, { recursive: true });
   await writeFile(
     path.join(reviewDir, "index.review.json"),
-    reviewPayload("CON-UI-0012", "index"),
+    reviewPayload("UI-0012", "index"),
     "utf-8",
   );
 }
@@ -187,7 +187,7 @@ describe("qfai prototyping certify (generate)", () => {
       iterationCount: number;
     };
     expect(body.runId).toBe("run-test-2026");
-    expect(body.uiContractsCovered).toEqual(["CON-UI-0012"]);
+    expect(body.uiContractsCovered).toEqual(["UI-0012"]);
     expect(body.reviewerSignoff.reviewerId).toBe("test-reviewer");
     expect(body.iterationCount).toBe(2);
   });
@@ -310,8 +310,8 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-test-2026",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        uiContractsCovered: ["CON-UI-0012"],
-        frozenSurfaceUnion: ["CON-UI-0012"],
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -357,7 +357,7 @@ describe("qfai prototyping certify (generate)", () => {
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/extra.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens:\n  - id: extra\n",
+      "# QFAI-CONTRACT-ID: UI-0007\nscreens:\n  - id: extra\n",
       "utf-8",
     );
 
@@ -426,8 +426,8 @@ describe("qfai prototyping certify (generate)", () => {
         surface: "web",
         runId: "run-x",
         designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-        uiContractsCovered: ["CON-UI-0012"],
-        frozenSurfaceUnion: ["CON-UI-0012"],
+        uiContractsCovered: ["UI-0012"],
+        frozenSurfaceUnion: ["UI-0012"],
         reviewerGate: {
           result: "PASS",
           signoff: { reviewer: "legacy-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -460,7 +460,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
       [
-        "# QFAI-CONTRACT-ID: CON-UI-0012",
+        "# QFAI-CONTRACT-ID: UI-0012",
         "screens:",
         "  - id: home",
         '    route: "/home"',
@@ -484,7 +484,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
 
@@ -533,7 +533,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Plant settings.html in an OLDER iter dir; certify must not
@@ -553,7 +553,7 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      '# QFAI-CONTRACT-ID: CON-UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
+      '# QFAI-CONTRACT-ID: UI-0012\nscreens:\n  - id: home\n    route: "/home"\n  - id: settings\n    route: "/settings"\n',
       "utf-8",
     );
     // Add the two screen HTML files into the accepted iter dir.
@@ -563,20 +563,20 @@ describe("qfai prototyping certify (multi-screen accepted-iter HTML check)", () 
     // AC-0012-0047: certify also requires
     // `iter-NN/spec-NNNN/<screen>.review.json` for every frozen spec ×
     // declared screen pair. The fixture's frozen spec set is
-    // `["CON-UI-0012"]` (seeded by seedAllGatesPass), and the UI contracts
+    // `["UI-0012"]` (seeded by seedAllGatesPass), and the UI contracts
     // above declare home + settings, so seed both review.jsons.
-    const specDir = path.join(acceptedDir, "CON-UI-0012");
+    const specDir = path.join(acceptedDir, "UI-0012");
     await mkdir(specDir, { recursive: true });
     // certify parses each payload against the shipped closed reviewer
     // schema, so the fixtures must be schema-valid, not merely present.
     await writeFile(
       path.join(specDir, "home.review.json"),
-      `${reviewPayload("CON-UI-0012", "home")}\n`,
+      `${reviewPayload("UI-0012", "home")}\n`,
       "utf-8",
     );
     await writeFile(
       path.join(specDir, "settings.review.json"),
-      `${reviewPayload("CON-UI-0012", "settings")}\n`,
+      `${reviewPayload("UI-0012", "settings")}\n`,
       "utf-8",
     );
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
@@ -625,8 +625,8 @@ describe("qfai prototyping show-ui-contract", () => {
     await seedMinimalProject(root);
     await seedShowRecord(root, {
       runId: "test-run-id",
-      uiContractsCovered: ["CON-UI-0012"],
-      frozenSurfaceUnion: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      frozenSurfaceUnion: ["UI-0012"],
     });
     const logger = await import("../../src/cli/lib/logger.js");
     const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
@@ -636,11 +636,11 @@ describe("qfai prototyping show-ui-contract", () => {
         string,
         unknown
       >;
-      expect(payload.uiContractsCovered).toEqual(["CON-UI-0012"]);
-      expect(payload.frozenSurfaceUnion).toEqual(["CON-UI-0012"]);
-      expect(payload.liveUiBearing).toEqual(["CON-UI-0012"]);
+      expect(payload.uiContractsCovered).toEqual(["UI-0012"]);
+      expect(payload.frozenSurfaceUnion).toEqual(["UI-0012"]);
+      expect(payload.liveUiBearing).toEqual(["UI-0012"]);
       expect(payload.primary).toEqual({
-        uiContractId: "CON-UI-0012",
+        uiContractId: "UI-0012",
         contractPath: ".qfai/spec/03_contract/ui/home.yaml",
         source: "contract-scan",
       });
@@ -650,15 +650,15 @@ describe("qfai prototyping show-ui-contract", () => {
   });
 
   it.each([
-    { label: "missing", record: { frozenSurfaceUnion: ["CON-UI-0012"] } },
+    { label: "missing", record: { frozenSurfaceUnion: ["UI-0012"] } },
     { label: "legacy", record: { specsCovered: ["0012"], frozenSpecsCovered: ["0012"] } },
     {
       label: "malformed",
-      record: { uiContractsCovered: null, frozenSurfaceUnion: ["CON-UI-0012"] },
+      record: { uiContractsCovered: null, frozenSurfaceUnion: ["UI-0012"] },
     },
     {
       label: "invalid ID",
-      record: { uiContractsCovered: ["0012"], frozenSurfaceUnion: ["CON-UI-0012"] },
+      record: { uiContractsCovered: ["0012"], frozenSurfaceUnion: ["UI-0012"] },
     },
   ])("rejects $label scope with exit 2", async ({ record }) => {
     const root = await newTempDir();
@@ -670,7 +670,7 @@ describe("qfai prototyping show-ui-contract", () => {
   it("rejects a missing frozen surface union", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedShowRecord(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedShowRecord(root, { uiContractsCovered: ["UI-0012"] });
     expect(await runPrototypingShowUiContract({ root })).toBe(2);
   });
 });

@@ -87,12 +87,12 @@ describe("validateConfigReferenceIntegrity", () => {
     ]);
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/home.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: home}]\n",
+      "# QFAI-CONTRACT-ID: UI-0012\nscreens: [{id: home}]\n",
       "utf-8",
     );
     const issues = await validateConfigReferenceIntegrity(
       root,
-      makeConfig({ primaryUiContract: "CON-UI-0012" }),
+      makeConfig({ primaryUiContract: "UI-0012" }),
     );
     expect(issues).toEqual([]);
   });
@@ -109,7 +109,7 @@ describe("validateConfigReferenceIntegrity", () => {
     ]);
     const issues = await validateConfigReferenceIntegrity(
       root,
-      makeConfig({ primaryUiContract: "CON-UI-9999" }),
+      makeConfig({ primaryUiContract: "UI-9999" }),
     );
     const linkIssue = issues.find((i) => i.code === "QFAI-CFG-LINK-001");
     expect(linkIssue).toBeDefined();

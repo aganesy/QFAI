@@ -135,8 +135,8 @@ describe("validateCompletionCertificateIssues", () => {
       },
       iterationCount: 1,
       polishCycleCount: 0,
-      uiContractsCovered: ["CON-UI-0012"],
-      convergedUiContracts: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      convergedUiContracts: ["UI-0012"],
       laggingUiContracts: [],
     });
     await writeCompletionCertificate(root, cert);
@@ -166,8 +166,8 @@ describe("validateCompletionCertificateIssues", () => {
       },
       iterationCount: 1,
       polishCycleCount: 0,
-      uiContractsCovered: ["CON-UI-0012"],
-      convergedUiContracts: ["CON-UI-0012"],
+      uiContractsCovered: ["UI-0012"],
+      convergedUiContracts: ["UI-0012"],
       laggingUiContracts: [],
     });
     await writeCompletionCertificate(root, cert);
