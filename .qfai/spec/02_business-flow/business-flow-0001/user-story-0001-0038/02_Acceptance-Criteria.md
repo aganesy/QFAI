@@ -8,7 +8,7 @@ Feature: Story-tree seeding
   Scenario: Story-tree seed on a fresh project
     Given an empty project directory, which `qfai init` lays out as the story tree
     When `qfai init` runs
-    Then `.qfai/spec/` holds `decisions.md` and `open-questions.md` with their header rows only, `01_policy/glossary.md`, `01_policy/constraint.md`, `02_business-flow/business-flows.md`, `03_contract/contracts.md` and the directories `03_contract/api/`, `db/`, `ui/`, `cli/` and `design/`
+    Then `.qfai/spec/` holds `decisions.md` and `open-questions.md` with their header rows only, `01_policy/glossary.md`, `01_policy/constraint.md`, `02_business-flow/business-flows.md`, `03_contract/contracts.md` and the directories `03_contract/api/`, `db/`, `ui/` and `cli/`
     And no business-flow or user-story instance is written, nothing is written under `.qfai/specs/` or `.qfai/contracts/`, every seeded Markdown file conforms to the schema the mdschema manifest routes it to, and `qfai validate --fail-on error` on the result exits 0
 
   # AC-0001-0038-02

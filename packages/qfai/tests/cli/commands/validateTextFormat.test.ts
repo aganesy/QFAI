@@ -24,7 +24,7 @@ import { captureStdout } from "../../helpers/stdout.js";
 import { emitText, resolveIssueFix, runValidate } from "../../../src/cli/commands/validate.js";
 import { loadConfig, type FailOn } from "../../../src/core/config.js";
 import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
-import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
+import { validateDesignToken } from "../../../src/core/validators/designToken.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
 const CONTRACT_PATH = path.resolve(
@@ -235,7 +235,7 @@ const SYNTHETIC_ISSUES: Issue[] = [
     severity: "warning",
     category: "canonical",
     message: "location only",
-    file: ".qfai/contracts/design/design-tokens.yaml",
+    file: "tokens/design-tokens.yaml",
     rule: "test.file",
   },
   {
@@ -296,7 +296,7 @@ describe("validate --format text matches the validate contract's text output gra
         // the issue's refs, so the real line for this finding carries a
         // `refs=` slot. Dropping it here would let the example drift.
         message: "Circular reference detected: semantic.color.primary",
-        file: ".qfai/spec/03_contract/design/design-tokens.yaml",
+        file: "tokens/design-tokens.yaml",
         refs: ["semantic.color.primary"],
       },
       {
@@ -467,7 +467,7 @@ describe("validate --format text matches the validate contract's text output gra
   });
 
   /**
-   * `QFAI-BPAP-002` forwards the YAML parser's `error.message` verbatim, and that
+   * `QFAI-DT-002` forwards the YAML parser's `error.message` verbatim, and that
    * message carries position information and a source excerpt across several
    * lines. `emitText` does not normalize it, so one issue prints as several
    * physical lines — the guideline has to say so or a line-oriented parser
@@ -480,17 +480,13 @@ describe("validate --format text matches the validate contract's text output gra
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
     try {
-      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
-      await mkdir(designDir, { recursive: true });
-      await writeFile(
-        path.join(designDir, "anti-patterns.yaml"),
-        "- id: AP-0001\n  title: [unclosed\n",
-        "utf-8",
-      );
+      await writeMalformedDesignTokens(root);
 
       const { config } = await loadConfig(root);
-      const issues = await validateBpApDb(root, config);
-      const parseError = issues.find((item) => item.code === "QFAI-BPAP-002");
+      const issues = await validateDesignToken(root, config);
+      const parseError = issues.find(
+        (item) => item.code === "QFAI-DT-002" && item.message.startsWith("YAML parse error"),
+      );
       expect(parseError, "the fixture must produce a real YAML parse error").toBeDefined();
       if (parseError === undefined) return;
       expect(parseError.message).toContain("\n");
@@ -514,7 +510,7 @@ describe("validate --format text matches the validate contract's text output gra
    * "Anything that does not start with `[<severity>] ` continues the previous
    * message" is only safe once the structural lines are matched first. This
    * runs the documented precedence over one real run that carries all of them
-   * at once: a multi-line `QFAI-BPAP-002` message, an
+   * at once: a multi-line `QFAI-DT-002` message, an
    * error detail block, `counts:` and `run-log:`.
    */
   it("classifies every structural line ahead of the message-continuation fallback", async () => {
@@ -538,14 +534,8 @@ describe("validate --format text matches the validate contract's text output gra
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
     try {
-      const designDir = path.join(root, ".qfai", "spec", "03_contract", "design");
-      await mkdir(designDir, { recursive: true });
       await mkdir(path.join(root, ".qfai", "spec"), { recursive: true });
-      await writeFile(
-        path.join(designDir, "anti-patterns.yaml"),
-        "- id: AP-0001\n  title: [unclosed\n",
-        "utf-8",
-      );
+      await writeMalformedDesignTokens(root);
 
       const output = await captureStdout(() =>
         runValidate({ root, strict: false, format: "text" }).then(() => undefined),
@@ -558,7 +548,8 @@ describe("validate --format text matches the validate contract's text output gra
       expect(classified.filter((entry) => entry.kind === "counts")).toHaveLength(1);
 
       const header = classified.findIndex(
-        (entry) => entry.kind === "header" && entry.line.startsWith("[error] QFAI-BPAP-002 "),
+        (entry) =>
+          entry.kind === "header" && entry.line.startsWith("[error] QFAI-DT-002 YAML parse error"),
       );
       expect(header, "the fixture must produce a real YAML parse error").toBeGreaterThanOrEqual(0);
       // The parser message spans physical lines, and the detail block that
@@ -567,7 +558,7 @@ describe("validate --format text matches the validate contract's text output gra
       const detail = classified.findIndex(
         (entry, index) => index > header && entry.kind === "detail",
       );
-      expect(classified[detail]?.line.startsWith("  error_code: QFAI-BPAP-002")).toBe(true);
+      expect(classified[detail]?.line.startsWith("  error_code: QFAI-DT-002")).toBe(true);
 
       for (const entry of classified.filter((item) => item.kind === "message-continuation")) {
         expect(entry.line.startsWith("counts: "), `structural line absorbed: ${entry.line}`).toBe(
@@ -592,3 +583,18 @@ describe("validate --format text matches the validate contract's text output gra
     }
   });
 });
+
+/** A design token file that does not parse, in the directory `uiux.designTokensDir` names. */
+async function writeMalformedDesignTokens(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    "uiux:\n  designTokensDir: tokens\n",
+    "utf-8",
+  );
+  await mkdir(path.join(root, "tokens"), { recursive: true });
+  await writeFile(
+    path.join(root, "tokens", "design-tokens.yaml"),
+    "primitive:\n  color: [unclosed\n",
+    "utf-8",
+  );
+}

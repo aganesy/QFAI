@@ -366,11 +366,10 @@ async function checkTokenDrift(
   cfg: QfaiConfig,
 ): Promise<DesignFinding[]> {
   const findings: DesignFinding[] = [];
-  // Align with designToken.ts default: contractsDir/design
+  // Design tokens live only where `uiux.designTokensDir` names, as in designToken.ts
   const configuredDir = cfg.uiux?.designTokensDir;
-  const tokensDir = configuredDir
-    ? path.resolve(root, configuredDir)
-    : path.join(root, cfg.paths.contractsDir, "design");
+  if (!configuredDir) return findings;
+  const tokensDir = path.resolve(root, configuredDir);
 
   let hasTokenFiles: boolean;
   try {

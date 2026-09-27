@@ -38,7 +38,7 @@ would create one.
 
 ### `.qfai/spec/03_contract/cli/`
 
-`api/`, `db/`, `ui/` and `design/` hold a project's own contracts, and the
+`api/`, `db/` and `ui/` hold a project's own contracts, and the
 shipped `qfai-sdd` skill governs them
 (`assets/init/.qfai/assistant/skill/qfai-sdd/references/contract-artifact-rules.md`).
 `cli/` is this repository's alone: the contracts for QFAI's own command surface,

@@ -13,7 +13,7 @@ describe.each(trees)("%s ATDD contract ownership", (tree) => {
   it("makes the acceptance test engineer read the flow and applicable contracts", async () => {
     const card = await read(tree, "assistant/agent/acceptance-test-engineer.md");
     expect(card).toContain("<paths.specsDir>/02_business-flow/**");
-    expect(card).toContain("Active API, DB, UI and design contracts");
+    expect(card).toContain("Active API, DB and UI contracts");
     expect(card).toContain("<paths.contractsDir>");
   });
 

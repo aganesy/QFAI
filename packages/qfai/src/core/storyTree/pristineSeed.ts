@@ -25,7 +25,6 @@ const SEED_DIRS = [
   "03_contract/db",
   "03_contract/ui",
   "03_contract/cli",
-  "03_contract/design",
 ] as const;
 
 /** True only while the story tree still has exactly the files written by init. */

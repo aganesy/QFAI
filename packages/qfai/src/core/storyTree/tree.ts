@@ -8,7 +8,11 @@ import { parseAllMarkdownTables } from "../specPackParsers.js";
 import { extractFencedCodeBlocks } from "../validators/mermaidUtils.js";
 import { parseContractRules, type ContractRule } from "./contractRules.js";
 import { nextId, type StoryTreeIdKind } from "./ids.js";
-import { markdownOutsideContractForm, resolveStoryTreeRoots } from "./layout.js";
+import {
+  directoryOutsideContractKinds,
+  markdownOutsideContractForm,
+  resolveStoryTreeRoots,
+} from "./layout.js";
 import { parseRecordTable, type ParsedRecordTable } from "./tables.js";
 
 export type StoryTreeDeclaration = { id: string; file: string };
@@ -195,11 +199,11 @@ export function buildStoryTreeModel(
       relative = /(?:^|\/)03_contract\/(.+)$/.exec(file)?.[1] ?? null;
     }
     if (!relative) continue;
-    if (!/^(?:api|db|ui|cli|design)\//.test(relative) && relative !== "tech.md") continue;
+    if (!relative.includes("/") && relative !== "tech.md") continue;
     model.contractFiles.push(file);
     // Listed for the index check to report, but it declares no ID and no rule.
-    if (markdownOutsideContractForm(relative)) continue;
-    if (/^(?:cli|design)\//.test(relative)) model.additionalContractFiles.push(file);
+    if (markdownOutsideContractForm(relative) || directoryOutsideContractKinds(relative)) continue;
+    if (relative.startsWith("cli/")) model.additionalContractFiles.push(file);
     const contractId = relative.includes("/") ? declaredContractId(file, text) : null;
     if (contractId) model.contracts.push({ id: contractId, file });
     const scan = parseContractRules(file, text);

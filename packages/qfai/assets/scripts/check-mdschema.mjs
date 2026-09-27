@@ -62,6 +62,13 @@
  * a reflowed message would silently report every violation as new. The file
  * ratchet uses only the exit status, which the tool does promise.
  *
+ * ── Coverage ──────────────────────────────────────────────────────────────
+ *
+ * Every Markdown file under the two configured roots has exactly one manifest
+ * entry. A file no entry claims would otherwise never be checked, so it fails
+ * the run, named, under every scope that includes it; so does a file two
+ * entries claim.
+ *
  * ── No opt-out ────────────────────────────────────────────────────────────
  *
  * Every document the manifest routes is a spec document, and a spec document
@@ -281,12 +288,39 @@ function expandPattern(pattern, { specsDir, contractsDir }) {
 
 /** Files without exactly one schema entry, in input order. */
 export function documentsWithoutOneEntry(manifestText, files, paths) {
-  const entries = parseManifest(manifestText);
-  return files.filter(
-    (file) =>
-      entries.filter((entry) => patternToRegExp(expandPattern(entry.pattern, paths)).test(file))
-        .length !== 1,
-  );
+  return coverageViolations(parseManifest(manifestText), files, paths).map(({ file }) => file);
+}
+
+/**
+ * One violation for each Markdown file that does not have exactly one manifest
+ * entry, in input order.
+ *
+ * Every Markdown file of the spec tree conforms to a schema, so a file no entry
+ * claims fails rather than going unchecked, and a file two entries claim would
+ * be held to two contracts.
+ *
+ * @param {{ id: string, pattern: string }[]} entries
+ * @param {string[]} files tree-relative
+ * @param {{ specsDir: string, contractsDir: string }} paths
+ * @returns {{ file: string, line: number, column: number, rule: string, message: string }[]}
+ */
+export function coverageViolations(entries, files, paths) {
+  const patterns = entries.map((entry) => ({
+    id: entry.id,
+    re: patternToRegExp(expandPattern(entry.pattern, paths)),
+  }));
+  const violations = [];
+  for (const file of files) {
+    if (!/\.md$/i.test(file)) continue;
+    const claims = patterns.filter(({ re }) => re.test(file)).map(({ id }) => id);
+    if (claims.length === 1) continue;
+    const message =
+      claims.length === 0
+        ? "no schema covers this document: every Markdown file of the spec tree is one the mdschema manifest names"
+        : `${claims.length} schema entries claim this document (${claims.join(", ")}): a document conforms to exactly one schema`;
+    violations.push({ file, line: 1, column: 1, rule: "coverage", message });
+  }
+  return violations;
 }
 
 /** The opt-out marker a spec document may not carry. */
@@ -923,8 +957,9 @@ function checkEntryDocuments(context, entry, violations) {
  * Checks every document the manifest routes, for a caller rather than a log.
  *
  * `qfai validate` reports what this returns. It applies the same routing, the
- * same root-heading check and the same marker refusal as `main`, over the whole
- * tree: a validation run has no merge base to ratchet against.
+ * same coverage check, the same root-heading check and the same marker refusal
+ * as `main`, over the whole tree: a validation run has no merge base to ratchet
+ * against.
  *
  * @param {string} root
  * @param {{ specsDir: string, contractsDir: string }} [paths] tree-relative roots
@@ -936,8 +971,9 @@ export function checkDocuments(root, paths = configuredPaths(root)) {
     return { ok: false, reason: `no ${MDSCHEMA_PACKAGE} installation was found` };
   }
   const context = { root, paths, mdschema, universe: documentUniverse(root, paths), checked: 0 };
-  const violations = [];
-  for (const entry of readManifest()) {
+  const entries = readManifest();
+  const violations = coverageViolations(entries, context.universe.toSorted(), paths);
+  for (const entry of entries) {
     const failure = checkEntryDocuments(context, entry, violations);
     if (failure !== null) return { ok: false, reason: failure };
   }
@@ -1080,6 +1116,26 @@ export function main() {
     contents.set(file, text);
     return text;
   };
+
+  // A document no entry routes would otherwise go unchecked and pass, so it is
+  // this run's failure under every scope that includes it, whatever the merge
+  // base held: there is no earlier grade to compare against.
+  const inScope = universe.filter((file) => restrictSet === null || restrictSet.has(file)).sort();
+  const uncovered = coverageViolations(entries, inScope, paths);
+  checked += uncovered.length;
+  if (uncovered.length > 0) {
+    violations++;
+    console.error("\n── coverage (manifest.yml) ──");
+    for (const found of uncovered) {
+      console.error([found.file, `  ✗ 1:1  [${found.rule}] ${found.message}`].join("\n"));
+    }
+  }
+  perEntry.push({
+    id: "coverage",
+    files: inScope.filter((file) => /\.md$/i.test(file)).length,
+    ok: uncovered.length === 0,
+    inherited: 0,
+  });
 
   for (const entry of entries) {
     const schemaPath = path.join(SCHEMA_ROOT, entry.schema);

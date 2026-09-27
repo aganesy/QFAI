@@ -169,6 +169,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **Every Markdown file of the spec tree needs a schema.** A Markdown file
+  under `paths.specsDir` or `paths.contractsDir` that no mdschema manifest
+  entry names, or that two entries name, now fails the document lane under
+  every scope that includes it, and `npx qfai validate` reports it as
+  `QFAI-DOCSCHEMA-001` with the `[coverage]` rule. Before, such a file was
+  skipped.
+
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
   - `--primary-ui-contract`, `prototyping.primaryUiContract` and
@@ -687,6 +694,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `DESIGN.md`, present and parsing.
   - `/qfai-sdd` no longer freezes `DESIGN.md`, and the two sample files for
     the lock and the handoff are no longer shipped.
+
+- **Breaking: the `design/` contract directory and the `DESIGN` contract
+  kind.** The brand design is root `DESIGN.md`, and screens are `ui/`
+  contracts.
+  - Contracts live in `api/`, `cli/`, `db/` and `ui/`, and a contract ID is
+    `CLI-`, `API-`, `DB-` or `UI-NNNN`. `qfai init` no longer creates
+    `03_contract/design/`.
+  - A file in any other directory under `paths.contractsDir`, `design/`
+    included, is not a contract. `QFAI-CONTRACT-034` reports it once, and no
+    contract ID or rule is read from it.
+  - The best-practice and anti-pattern rule files are no longer read, and
+    `QFAI-BPAP-001` to `QFAI-BPAP-012` are gone.
+  - Design token files are read only from the directory
+    `uiux.designTokensDir` names. With it unset, none is read.
 
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,

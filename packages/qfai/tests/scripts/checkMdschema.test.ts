@@ -156,6 +156,7 @@ describe("check-mdschema driver", () => {
     ).toEqual(["docs/spec/open-questions.md"]);
   });
 
+  // QFAI:EX-0001-0011-14
   it("finds only files with zero or several manifest entries", () => {
     const manifest = [
       "documents:",
@@ -354,6 +355,48 @@ describe("check-mdschema driver", () => {
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain("at least one path");
+  });
+});
+
+describe("a Markdown file no schema covers", () => {
+  // QFAI:EX-0001-0011-12
+  it("fails the lane under every scope that includes it, naming the file", async () => {
+    const root = await newTempDir();
+    await writeFlow(root, "business-flow-0001", CONFORMING_FLOW);
+    const notes = ".qfai/contracts/design/notes.md";
+    await mkdir(path.dirname(path.join(root, notes)), { recursive: true });
+    await writeFile(path.join(root, notes), "# Notes\n", "utf-8");
+
+    const all = runDriver(["--root", root, "--scope", "all"]);
+    expect(all.status).toBe(1);
+    expect(all.stderr).toContain(notes);
+    expect(all.stderr).toContain("no schema covers this document");
+
+    const named = runDriver(["--root", root, "--scope", "files", notes]);
+    expect(named.status).toBe(1);
+    expect(named.stderr).toContain(notes);
+
+    const other = runDriver([
+      "--root",
+      root,
+      "--scope",
+      "files",
+      ".qfai/specs/02_business-flow/business-flow-0001/business-flow.md",
+    ]);
+    expect(other.status, other.stderr).toBe(0);
+  });
+
+  it("is returned to a caller as a coverage violation", async () => {
+    const root = await newTempDir();
+    const notes = ".qfai/specs/README.md";
+    await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+    await writeFile(path.join(root, notes), "# Readme\n", "utf-8");
+
+    expect(checkDocuments(root)).toEqual({
+      ok: true,
+      checked: 0,
+      violations: [expect.objectContaining({ file: notes, rule: "coverage", line: 1 })],
+    });
   });
 });
 
