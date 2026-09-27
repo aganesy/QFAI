@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { extractH2Sections, parseHeadings } from "../parse/markdown.js";
+import { extractH2Sections, headingText, parseHeadings } from "../parse/markdown.js";
 import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
 export type ContractRule = {
@@ -89,14 +89,15 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
     }
   } else if (extension === ".md") {
     const rendered = maskNonSpecRegions(text);
-    const sections = extractH2Sections(rendered);
     const businessRulesSections = parseHeadings(rendered).filter(
-      (heading) => heading.level === 2 && heading.title === BUSINESS_RULES,
+      (heading) => heading.level === 2 && headingText(heading.title) === BUSINESS_RULES,
     ).length;
     if (businessRulesSections > 1) {
       errors.push(`More than one ## ${BUSINESS_RULES} section in ${file}`);
     }
-    const body = sections.get(BUSINESS_RULES)?.body;
+    const body = [...extractH2Sections(rendered).values()].find(
+      (section) => headingText(section.title) === BUSINESS_RULES,
+    )?.body;
     if (body !== undefined) readMarkdownRules(file, body, rules, errors);
   }
 

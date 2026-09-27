@@ -26,6 +26,13 @@ Feature: Contract index and contract-layer validation
     And it is also raised for a row that names no contract file, and for a contract number that more than one contract declares
 
   # AC-0001-0054-04
+  Scenario: A kind directory holding only Markdown contracts is not reported empty
+    Given the story tree, and `api/`, `db/` or `ui/` under `paths.contractsDir` whose only contract is a Markdown file declaring an ID of that kind in its H1
+    When `qfai validate` runs
+    Then `QFAI-CONTRACT-000` is not raised for that directory
+    And it is still raised for a kind directory that holds no contract of its kind
+
+  # AC-0001-0054-05
   Scenario: Only a db contract that declares one DB ID takes part in the apply-order check
     Given the story tree, and `db/` contracts whose DDL points a foreign key at a table another contract creates
     When `qfai validate --profile sdd` runs
