@@ -10,20 +10,20 @@ const templateQfaiDir = path.join(templateRoot, ".qfai");
 const implementSkillPath = path.join(
   templateQfaiDir,
   "assistant",
-  "skills",
+  "skill",
   "qfai-implement",
   "SKILL.md",
 );
 
 const requiredPhrases = [
-  "watch it fail",
-  "watch it pass",
-  "fresh evidence",
-  "spec review",
-  "code quality review",
-  "one test at a time",
-  "parallel",
-  "independent",
+  "one EX at a time by default",
+  "Record command, selector, failure, test hash",
+  "qa-gatekeeper checks the observed RED and GREEN evidence",
+  "implementation-reviewer checks code and tests",
+  "completion-reviewer checks",
+  "RED, GREEN and Refactor result",
+  "npx qfai validate --profile tdd --fail-on error --flow BF-NNNN",
+  "required user consent",
 ];
 
 const forbiddenPhrases = [
@@ -56,7 +56,7 @@ function checkForbiddenPhrases(content: string): string[] {
   return found;
 }
 
-describe("v1.6.2 required phrase guardrails", () => {
+describe("implementation contract phrase guardrails", () => {
   it("SKILL.md contains all 8 required phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const missing = checkRequiredPhrases(content);
@@ -73,11 +73,11 @@ describe("v1.6.2 required phrase guardrails", () => {
 describe("missing required phrase detection", () => {
   it("detects absence of a required phrase from mutated SKILL.md content", async () => {
     const original = await readFile(implementSkillPath, "utf-8");
-    const mutated = original.replace(/watch it fail/gi, "REDACTED_PHRASE");
+    const mutated = original.replace(/one EX at a time by default/gi, "REDACTED_PHRASE");
     const missingOriginal = checkRequiredPhrases(original);
     const missingMutated = checkRequiredPhrases(mutated);
     expect(missingOriginal).toEqual([]);
-    expect(missingMutated).toContain("watch it fail");
+    expect(missingMutated).toContain("one EX at a time by default");
   });
 
   it("detects presence of a forbidden phrase injected into content", async () => {
@@ -90,7 +90,7 @@ describe("missing required phrase detection", () => {
   });
 });
 
-describe("v1.6.2 forbidden phrase guardrails", () => {
+describe("retired implementation phrase guardrails", () => {
   it("SKILL.md contains no forbidden phrases", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const found = checkForbiddenPhrases(content);
@@ -115,8 +115,8 @@ describe("v1.6.2 forbidden phrase guardrails", () => {
   });
 });
 
-describe("developer fixes missing phrase; asset tests pass", () => {
-  it("all 8 required phrases are present after v1.6.2 changes", async () => {
+describe("shipped implementation skill", () => {
+  it("retains all current cycle and review instructions", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
     const missing = checkRequiredPhrases(content);
     expect(missing).toEqual([]);
@@ -144,7 +144,11 @@ describe("E2E: prototyping wording alignment", () => {
 
   it("SKILL.md contains actionable implementation verbs", async () => {
     const content = await readFile(implementSkillPath, "utf-8");
-    const actionableVerbs = ["watch it fail", "watch it pass", "fresh evidence"];
+    const actionableVerbs = [
+      "Record command, selector, failure, test hash",
+      "Re-run validation before selecting the next unassigned EX",
+      "Record explicit PASS or REVISE",
+    ];
     for (const verb of actionableVerbs) {
       expect(
         content.toLowerCase().includes(verb.toLowerCase()),

@@ -7,7 +7,7 @@
  * Converted from `.skip` test-first skeleton to deterministic
  * temp-fixture exercises of the dual-hash helper + validator.
  */
-// QFAI:SPEC-0012:US-0012-0139
+// QFAI:BF-0001
 
 import { describe, expect, it } from "vitest";
 

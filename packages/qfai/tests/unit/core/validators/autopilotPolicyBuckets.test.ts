@@ -9,13 +9,15 @@
  * The pure-function bucket parser is the unit-level surface; the
  * integration-level Reviewer-Gate emission is tested separately.
  */
-// QFAI:SPEC-0015:TC-0015-0021
+// QFAI:EX-0001-0175-01
 
 import { describe, expect, it } from "vitest";
 
 import {
   AUTO_DECIDE_ALLOWED_TOKENS,
+  classifyHardRequiredEntries,
   parseAutopilotPolicy,
+  splitJoinedEntries,
   type AutopilotPolicyParseResult,
 } from "../../../../src/core/validators/autopilotPolicy.js";
 
@@ -117,5 +119,37 @@ describe("TC-0015-0021: parseAutopilotPolicy bucket detection", () => {
     expect(AUTO_DECIDE_ALLOWED_TOKENS).toContain("ID / sequence numbering");
     expect(AUTO_DECIDE_ALLOWED_TOKENS).toContain("append-vs-create on subject overlap");
     expect(AUTO_DECIDE_ALLOWED_TOKENS).toContain("equivalent-option pick");
+  });
+});
+
+describe("hard-required names with hyphens", () => {
+  it("keeps hyphenated input identifiers together", () => {
+    expect(splitJoinedEntries("business-flow id")).toEqual(["business-flow id"]);
+    expect(splitJoinedEntries("con-ui-nnnn")).toEqual(["con-ui-nnnn"]);
+    expect(classifyHardRequiredEntries(["a business-flow ID"], "qfai-configure")).toEqual({
+      retired: [],
+      unknown: [],
+    });
+    expect(classifyHardRequiredEntries(["a full `CON-UI-NNNN`"], "qfai-verify")).toEqual({
+      retired: [],
+      unknown: [],
+    });
+    expect(
+      classifyHardRequiredEntries(
+        [
+          "brand intent when a prototyping-scoped run consumes an unresolved visual design decision",
+          "a full `CON-UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract",
+          "a usable story source when a flow-scoped run cannot resolve it",
+          "an affected `BF-NNNN` when a flow-scoped run cannot resolve it",
+        ],
+        "qfai-verify",
+      ),
+    ).toEqual({ retired: [], unknown: [] });
+  });
+
+  it("still checks a separate name after a spaced dash", () => {
+    expect(
+      classifyHardRequiredEntries(["brand intent - unreviewedSecret"], "qfai-verify").unknown,
+    ).toEqual(["brand intent - unreviewedSecret"]);
   });
 });

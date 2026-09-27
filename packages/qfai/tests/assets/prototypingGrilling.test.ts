@@ -13,17 +13,15 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { QFAI_GITIGNORE_BLOCK } from "../../src/core/gitignore.js";
-
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skills/qfai-prototyping/SKILL.md";
+const SKILL = "assistant/skill/qfai-prototyping/SKILL.md";
 const RULE = ".agents/rules/grilling.md";
-const GENERATOR_PROMPT = "assistant/skills/qfai-prototyping/references/generator-prompt.md";
-const REVIEWER_PROMPT = "assistant/skills/qfai-prototyping/references/reviewer-prompt.md";
+const GENERATOR_PROMPT = "assistant/skill/qfai-prototyping/references/generator-prompt.md";
+const REVIEWER_PROMPT = "assistant/skill/qfai-prototyping/references/reviewer-prompt.md";
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -251,13 +249,13 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
   });
 
   it("scopes every row to the lineage it applies to", async () => {
-    // One invocation runs a lineage per spec and screen, so a record with no
+    // One invocation runs a lineage per UI contract and screen, so a record with no
     // key applies every answer to each of them. `global` is written rather
     // than inferred from a missing key, because a missing key is also what an
     // unscoped row looks like.
     const skill = await read(SKILL);
     expectPhrase(skill, "**Every row names what it applies to**");
-    expectPhrase(skill, "`<spec-id>/<screen>`");
+    expectPhrase(skill, "`<ui-contract-id>/<screen>`");
     expectPhrase(skill, "`global` is a real answer and not a default");
     expectPhrase(
       skill,
@@ -274,42 +272,15 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     expectPhrase(skill, "a different statement from a file that is not there");
   });
 
-  it("keeps the record across a handoff", async () => {
-    // A run log is regenerable and ignored. These answers are not: nothing
-    // reproduces them, and every later generator and reviewer must read them.
-    //
-    // The distinction is against a log, not against stage evidence: a grilling
-    // session's record is stage evidence, is not reproducible either, and is
-    // committed for that reason. Drawing the line at "stage evidence" made this
-    // paragraph's own argument rest on a premise the constitution contradicts.
+  it("keeps the record for the loop, locally", async () => {
+    // A run log is regenerable. These answers are not: nothing reproduces them,
+    // and every later generator and reviewer must read them. Like all evidence
+    // the record is local, so it stays in place until the loop is certified.
     const skill = await read(SKILL);
     expectPhrase(skill, "**It is a decision record, not a regenerable log.**");
-    expectPhrase(skill, "A run log is reproducible by rerunning its stage and is ignored");
-    expectPhrase(skill, "The managed ignore block negates this path");
-
-    // Asserted against the block the writer emits, not against the source that
-    // builds it: git applies the last matching pattern, so what decides is the
-    // order of the lines as they land in a project's `.gitignore`.
-    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
-    const order = [
-      // Ignore the directory's contents…
-      ".qfai/evidence/prototyping/*",
-      // …re-include the directory, because git never descends into an ignored
-      // one and nothing inside can be re-included until it does…
-      "!.qfai/evidence/prototyping/",
-      // …and re-include the one record. Everything else in there —
-      // `mutation-log.jsonl`, the `iter-NN/` captures, `progress.md` — stays
-      // ignored by the first line, which is why it has to be there at all.
-      "!.qfai/evidence/prototyping/grilling.md",
-    ].map((line) => lines.indexOf(line));
-    expect(
-      order.every((at) => at > -1),
-      "a line of the three is missing from the managed block",
-    ).toBe(true);
-    expect(
-      [...order].sort((a, b) => a - b),
-      "the three are out of order, so the last matching pattern is the wrong one",
-    ).toEqual(order);
+    expectPhrase(skill, "A run log is reproducible by rerunning its stage");
+    expectPhrase(skill, "Keep the file in place until the loop is certified.");
+    expectPhrase(skill, "it stays local and is never committed");
   });
 
   it("hands the record to the delegated roles, not only to this skill", async () => {
@@ -336,14 +307,14 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // and not its procedure, and an agent with the name alone improvises an
     // interview that reads exactly like the method.
     const skill = await read(SKILL);
-    expectPhrase(skill, "Read\n`.qfai/assistant/skills/qfai-grilling/SKILL.md` before starting");
+    expectPhrase(skill, "Read\n`.qfai/assistant/skill/qfai-grilling/SKILL.md` before starting");
     expectPhrase(skill, "It is the single implementation");
     // In the read order too, since that is where an agent looks for what to
     // open before it starts.
     const inputs = /## Inputs Priority[\s\S]*?\n## /.exec(skill);
     expect(inputs, "the read order is gone").not.toBeNull();
     expect(unwrap(inputs?.[0] ?? "")).toContain(
-      "`.qfai/assistant/skills/qfai-grilling/SKILL.md` before either session",
+      "`.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session",
     );
   });
 
@@ -369,7 +340,7 @@ describe.each(TREES)("%s — prototyping and grilling", (tree) => {
     // the loss, and a destructive operation is approved on what it says.
     const skill = await read(SKILL);
     expectPhrase(skill, "naming what it destroys in both trees");
-    expectPhrase(skill, "`.qfai/prototypes/iter-00/index.html` is overwritten");
+    expectPhrase(skill, "`.qfai/prototype/iter-00/index.html` is overwritten");
     expectPhrase(skill, "with no backup taken");
 
     // And a refusal has an outcome of its own. Without one the table maps a

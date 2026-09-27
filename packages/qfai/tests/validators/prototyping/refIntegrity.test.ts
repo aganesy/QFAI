@@ -39,7 +39,10 @@ async function seedPrototypingJson(root: string, screenshot: string, html: strin
       iterations: [
         {
           index: 0,
-          evidenceRefs: { screenshot, html },
+          evidenceRefs: [
+            { kind: "screenshot", path: screenshot },
+            { kind: "html", path: html },
+          ],
         },
       ],
     }),
@@ -92,11 +95,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     await mkdir(iterDir, { recursive: true });
     await writeFile(path.join(iterDir, "home.png"), "png", "utf-8");
     await writeFile(path.join(iterDir, "home.html"), "<html></html>", "utf-8");
-    await seedPrototypingJson(
-      root,
-      ".qfai/evidence/prototyping/iter-00/home.png",
-      ".qfai/evidence/prototyping/iter-00/home.html",
-    );
+    await seedPrototypingJson(root, "iter-00/home.png", "iter-00/home.html");
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues).toEqual([]);
@@ -104,14 +103,42 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("emits QFAI-PROT-009 when iteration evidenceRefs point to missing files", async () => {
     const root = await newTempDir();
-    await seedPrototypingJson(
-      root,
-      ".qfai/evidence/prototyping/iter-00/missing.png",
-      ".qfai/evidence/prototyping/iter-00/missing.html",
-    );
+    await seedPrototypingJson(root, "iter-00/missing.png", "iter-00/missing.html");
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
+  });
+
+  it("accepts an empty evidenceRefs array while an iteration has no captured artifacts", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [{ index: 0, evidenceRefs: [] }]);
+
+    expect(await validatePrototypingArtifactRefIntegrity(root, defaultConfig)).toEqual([]);
+  });
+
+  it("rejects the retired object-shaped iteration reference", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [
+      {
+        index: 0,
+        evidenceRefs: { screenshot: "iter-00/home.png", html: "iter-00/home.html" },
+      },
+    ]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((item) => item.code)).toEqual(["QFAI-PROT-009"]);
+    expect(issues[0]?.message).toContain("must be an array");
+  });
+
+  it("refuses a path that escapes the prototyping evidence directory", async () => {
+    const root = await newTempDir();
+    await seedIterations(root, [
+      { index: 0, evidenceRefs: [{ kind: "screenshot", path: "../outside.png" }] },
+    ]);
+
+    const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
+    expect(issues.map((item) => item.code)).toEqual(["QFAI-PROT-009"]);
+    expect(issues[0]?.message).toContain("evidenceRefs[0].path");
   });
 
   it("emits QFAI-PROT-009 when iteration evidenceRefs are empty", async () => {
@@ -121,14 +148,14 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-009", "QFAI-PROT-009"]);
     expect(issues.map((issue) => issue.message)).toEqual([
-      "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
-      "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
+      "iterations[0].evidenceRefs[0].path must be an iter-NN artifact path under .qfai/evidence/prototyping.",
+      "iterations[0].evidenceRefs[1].path must be an iter-NN artifact path under .qfai/evidence/prototyping.",
     ]);
   });
 
   it("checks prototype-handoff artifact references when present", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -145,7 +172,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("validates designSystemMirror specifically — a missing target surfaces PROT-009", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -169,7 +196,7 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
 
   it("handoff field issues point at prototype-handoff.yaml (not prototyping.json)", async () => {
     const root = await newTempDir();
-    const handoffDir = path.join(root, ".qfai", "contracts", "design");
+    const handoffDir = path.join(root, defaultConfig.paths.contractsDir, "design");
     await mkdir(handoffDir, { recursive: true });
     await writeFile(
       path.join(handoffDir, "prototype-handoff.yaml"),
@@ -186,7 +213,31 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     // Issue#path tells the operator WHICH file to edit. For handoff
     // field violations, that file is prototype-handoff.yaml — not
     // prototyping.json (which is the generic refIntegrity owner).
-    expect(handoffIssue?.file).toBe(".qfai/contracts/design/prototype-handoff.yaml");
+    expect(handoffIssue?.file).toBe(".qfai/spec/03_contract/design/prototype-handoff.yaml");
+  });
+
+  // The handoff lives in `paths.contractsDir`. A copy left at the retired
+  // `.qfai/contracts/design/` is not the one this gate reads.
+  it("reads the handoff from paths.contractsDir", async () => {
+    const root = await newTempDir();
+    const handoff = ['finalArtifact: ""', 'designSystemMirror: "missing.yaml"'].join("\n");
+    await mkdir(path.join(root, ".qfai", "contracts", "design"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "contracts", "design", "prototype-handoff.yaml"),
+      handoff,
+      "utf-8",
+    );
+    expect(await validatePrototypingArtifactRefIntegrity(root, defaultConfig)).toEqual([]);
+
+    const config = { ...defaultConfig, paths: { ...defaultConfig.paths, contractsDir: "custom" } };
+    await mkdir(path.join(root, "custom", "design"), { recursive: true });
+    await writeFile(
+      path.join(root, "custom", "design", "prototype-handoff.yaml"),
+      handoff,
+      "utf-8",
+    );
+    const files = (await validatePrototypingArtifactRefIntegrity(root, config)).map((i) => i.file);
+    expect(files).toContain("custom/design/prototype-handoff.yaml");
   });
 
   // The cycle-0 seed is written BEFORE capture runs, so any ref it carried
@@ -200,36 +251,33 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     expect(issues).toEqual([]);
   });
 
-  // The exemption is keyed on the seed's positive claim, not on the refs being
-  // absent — otherwise dropping the field would waive the gate for every
-  // iteration, which is the opposite of what it is for.
-  it("still requires both refs from an iteration that names no reviewer", async () => {
+  // Reviewed iterations must carry the canonical array, even when capture was omitted.
+  it("requires an evidenceRefs array from an iteration that names no reviewer", async () => {
     const root = await newTempDir();
     await seedIterations(root, [{ index: 0 }]);
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
     expect(issues.map((i) => i.message)).toEqual([
-      "iterations[0].evidenceRefs.screenshot must be a non-empty repository-relative artifact path.",
-      "iterations[0].evidenceRefs.html must be a non-empty repository-relative artifact path.",
+      "iterations[0].evidenceRefs must be an array of {kind, path} entries.",
     ]);
   });
 
-  it("still requires both refs from a reviewed record that kept the seed stamp", async () => {
+  it("still requires the array from a reviewed record that kept the seed stamp", async () => {
     const root = await newTempDir();
     await seedIterations(root, [
       { ...untouchedSeed(), commitSha: "a".repeat(40), proseCritique: "a real critique" },
     ]);
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
-    expect(issues.filter((i) => i.severity === "error")).toHaveLength(2);
+    expect(issues.filter((i) => i.severity === "error")).toHaveLength(1);
   });
 
-  it("still requires both refs from an iteration naming a real reviewer", async () => {
+  it("still requires the array from an iteration naming a real reviewer", async () => {
     const root = await newTempDir();
     await seedIterations(root, [{ index: 0, reviewerId: "product-surface-reviewer" }]);
 
     const issues = await validatePrototypingArtifactRefIntegrity(root, defaultConfig);
-    expect(issues.filter((i) => i.severity === "error")).toHaveLength(2);
+    expect(issues.filter((i) => i.severity === "error")).toHaveLength(1);
   });
 
   // The pre-fix seed shape, kept as a case rather than a memory: it pointed at
@@ -241,10 +289,10 @@ describe("validatePrototypingArtifactRefIntegrity", () => {
     const root = await newTempDir();
     const preFix = {
       ...untouchedSeed(),
-      evidenceRefs: {
-        screenshot: ".qfai/evidence/prototyping/iter-00/index.png",
-        html: ".qfai/evidence/prototyping/iter-00/index.html",
-      },
+      evidenceRefs: [
+        { kind: "screenshot", path: "iter-00/index.png" },
+        { kind: "html", path: "iter-00/index.html" },
+      ],
     };
     // Same refs, no reviewerId: the gate still resolves them and still fails.
     await seedIterations(root, [{ index: 0, evidenceRefs: preFix.evidenceRefs }]);

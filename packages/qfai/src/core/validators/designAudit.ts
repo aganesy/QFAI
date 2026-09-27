@@ -390,7 +390,7 @@ async function checkTokenDrift(
     return findings;
   }
 
-  // Count total occurrences (not unique) - AC-0025-0005 is occurrence-based
+  // Count total occurrences, including duplicates.
   let rawCount = 0;
   const sampleLiterals: string[] = [];
   for (const htmlFile of htmlFiles) {

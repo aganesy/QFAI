@@ -5,16 +5,13 @@
  * a ratchet.
  *
  * The dogfooding lanes exist so QFAI meets its own gates before shipping them.
- * That was checked as `--fail-on error`, which worked while the ledger rules
- * reported `warning`. They report `error` now, and the repository carries a
- * backlog of rows written before those rules existed: prose in an `Evidence`
- * cell that owes a pointer, a cell past the length cap, a coverage row for a
- * test case the ledger does not own.
+ * The story-tree migration makes test obligations explicit at the BF, AC and
+ * EX layers. Historical artifacts have gaps that predate these checks, and a
+ * few existing tests are intentionally skipped. The first story-tree pin
+ * records those findings by file without inventing test annotations or proof.
  *
- * Fixing those means re-running the work and recording what it produced, spec
- * by spec. Writing a pointer to evidence nobody captured would be worse than
- * the backlog. Until the backfill lands, two contracts keep each lane
- * meaningful:
+ * Fixing them means adding the required tests and recording what they prove.
+ * Until that backfill lands, two contracts keep each lane meaningful:
  *
  * | Contract     | Holds                                                           |
  * | ------------ | --------------------------------------------------------------- |

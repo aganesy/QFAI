@@ -26,7 +26,7 @@ const DISCUSSION_PACK_FILES = [
 ] as const;
 
 describe("SDD preflight optional discussion side artifact", () => {
-  // QFAI:SPEC-0013:TC-0013-0036
+  // QFAI:EX-0001-0156-02
   it("does not block when a usable discussion pack is missing prototyping.yaml", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -41,7 +41,7 @@ describe("SDD preflight optional discussion side artifact", () => {
     }
   });
 
-  // QFAI:SPEC-0013:TC-0013-0037
+  // QFAI:EX-0001-0156-03
   it("does not block when prototyping.yaml exists but namespaced schema is invalid", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {
@@ -61,7 +61,7 @@ describe("SDD preflight optional discussion side artifact", () => {
     }
   });
 
-  // QFAI:SPEC-0013:TC-0013-0037
+  // QFAI:EX-0001-0156-03
   it("does not block when prototyping.yaml uses legacy-only schema (no prototyping namespace)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

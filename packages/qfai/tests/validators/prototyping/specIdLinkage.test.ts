@@ -27,12 +27,12 @@ afterEach(async () => {
 function makeConfig(): QfaiConfig {
   return {
     paths: {
-      contractsDir: ".qfai/contracts",
-      specsDir: ".qfai/specs",
+      contractsDir: ".qfai/spec/03_contract",
+      specsDir: ".qfai/spec",
       discussionDir: ".qfai/discussion",
       outDir: ".qfai/out",
-      skillsDir: ".qfai/assistant/skills",
-      promptsDir: ".qfai/assistant/skills",
+      skillsDir: ".qfai/assistant/skill",
+      promptsDir: ".qfai/assistant/skill",
       srcDir: "src",
       testsDir: "tests",
     },
@@ -54,18 +54,22 @@ function makeConfig(): QfaiConfig {
   };
 }
 
-async function seedSpec(root: string, specId: string): Promise<void> {
-  const dir = path.join(root, ".qfai", "specs", `spec-${specId}`);
+async function seedUiContract(root: string, contractId: string): Promise<void> {
+  const dir = path.join(root, ".qfai", "spec", "03_contract", "ui");
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, "01_Spec.md"), `# Spec ${specId}\n`, "utf-8");
+  await writeFile(
+    path.join(dir, `ui-${contractId}.yaml`),
+    `# QFAI-CONTRACT-ID: CON-UI-${contractId}\nscreens:\n  - id: home\n`,
+    "utf-8",
+  );
 }
 
-async function seedPrototypingJson(root: string, specsCovered: unknown[]): Promise<void> {
+async function seedPrototypingJson(root: string, uiContractsCovered: unknown[]): Promise<void> {
   const dir = path.join(root, ".qfai", "evidence", "prototyping");
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "prototyping.json"),
-    JSON.stringify({ specsCovered, iterations: [] }),
+    JSON.stringify({ uiContractsCovered, iterations: [] }),
     "utf-8",
   );
 }
@@ -73,39 +77,54 @@ async function seedPrototypingJson(root: string, specsCovered: unknown[]): Promi
 describe("validateSpecIdLinkage", () => {
   it("returns no issues when prototyping.json is missing", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0001");
+    await seedUiContract(root, "0001");
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toEqual([]);
   });
 
-  it("accepts specsCovered entries that reference existing specs", async () => {
+  it("accepts UI contract IDs that declare screens", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0001");
-    await seedPrototypingJson(root, ["0001", "spec-0001"]);
+    await seedUiContract(root, "0001");
+    await seedPrototypingJson(root, ["CON-UI-0001"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toEqual([]);
   });
 
-  it("emits QFAI-PROT-008 when specsCovered references a missing spec", async () => {
+  it("emits QFAI-PROT-008 when the frozen UI contract is missing", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0001");
-    await seedPrototypingJson(root, ["9999"]);
+    await seedUiContract(root, "0001");
+    await seedPrototypingJson(root, ["CON-UI-9999"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-008");
-    expect(issues[0]?.message).toContain("spec-9999");
+    expect(issues[0]?.message).toContain("CON-UI-9999");
   });
 
-  it("emits QFAI-PROT-008 when specsCovered has a malformed spec id", async () => {
+  it("emits QFAI-PROT-008 when a UI contract ID is malformed", async () => {
     const root = await newTempDir();
-    await seedSpec(root, "0001");
+    await seedUiContract(root, "0001");
     await seedPrototypingJson(root, ["abc"]);
 
     const issues = await validateSpecIdLinkage(root, makeConfig());
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-PROT-008");
+  });
+
+  it("rejects the retired specsCovered field", async () => {
+    const root = await newTempDir();
+    await seedUiContract(root, "0001");
+    const dir = path.join(root, ".qfai", "evidence", "prototyping");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "prototyping.json"),
+      JSON.stringify({ specsCovered: ["0001"], iterations: [] }),
+      "utf-8",
+    );
+
+    const issues = await validateSpecIdLinkage(root, makeConfig());
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-PROT-008"]);
   });
 });

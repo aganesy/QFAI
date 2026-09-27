@@ -1,0 +1,85 @@
+# Review Request
+
+## Scope
+
+- Producer: `discussion`
+- scope: `discussion-YYYYMMDDhhmmssSSS`
+- layer: `discussion`
+- review-pack: `review-YYYYMMDDhhmmssSSS`
+
+## Target Files
+
+- `<path/to/target-file-1>`
+- `<path/to/target-file-2>`
+
+## Answered demands
+
+Carry prior answers and newly answered demands before reviewer dispatch, under
+`.qfai/assistant/rule/review-convergence.md#answered-demands-must`.
+Replace the example row with actual answers; if there are none, write `None`.
+Record reviewer acceptance or user adjudication in Response and its proof in
+Evidence. An unaccepted reply does not resolve a blocking demand.
+
+| Finding source            | Demand         | Response                                       | Evidence                                            |
+| ------------------------- | -------------- | ---------------------------------------------- | --------------------------------------------------- |
+| `<reviewer-file#finding>` | `<the demand>` | `<accepted answer, authority and disposition>` | `<acceptance proof, artifact, anchor and revision>` |
+
+## Review Focus
+
+- Verify repository-fact lookup evidence under
+  `.qfai/assistant/skill/qfai-discussion/SKILL.md#reviewer-gate-must`.
+- Judge planning-stage decisions under
+  `.qfai/assistant/rule/review-convergence.md#discussion-review-precision`.
+- Correctness against source requirements
+- Consistency with upstream/downstream artifacts
+- Testability and acceptance clarity
+- Operational and security risks
+- Mermaid diagrams are sufficient for decision-making quality (not only presence)
+  - Scope boundary (in/out) is consistent across text/diagram/table
+  - Acceptance criteria are consistent with flows/state transitions
+  - Security/operations risks are reflected in diagrams where relevant
+- Mermaid diagrams use ` ```mermaid ` fences only (no ` ```text ` or language-less fences)
+- Design direction completeness — `04_Sources.md` carries both reference registries, each entry naming its adopted points, rejected points and local translation, with competitor references framed as **deviate-from** inputs (visual-prototyping surfaces only — `web`/`mobile`/`desktop`/`mixed`, primary or secondary; skip on a cli-only pack)
+- Reference pool freshness and translation quality — into the `04_Sources.md` registries when a visual-prototyping surface is classified, otherwise into `uiux/40_screen_contracts.md` — and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
+- Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
+- Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed by the review validation the QFAI CLI applies (restated in `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`) (when UI-bearing)
+- Evaluator critique skepticism and blandness rejection quality applied against the four axes (when UI-bearing)
+- Planner-first discipline — exploration directions stay unranked, no single visual winner was selected (`qfai-discussion/SKILL.md`), and latest-iteration handling matches the one-lineage / no-best-of-history rule in `qfai-prototyping/SKILL.md` (when UI-bearing)
+- Screen contract sufficiency and strong schema completeness (when UI-bearing)
+- Generic fallback risk — ensure no unreviewed generic/placeholder UI remains (when UI-bearing)
+- OQ register exit condition (open count = 0)
+- Deferred items have full metadata in `13_Deferred.md`
+- Validate hard gate evidence exists (`.qfai/report/validate.log`).
+- Coverage hard gates are clear.
+
+## Grilling Session
+
+> Copy the `## Grilling Session` row from this stage's evidence. The reviewer
+> rules on whether the session ended before authoring began, and a row it has to
+> go looking for is one it can pass without reading.
+>
+> Both times, because they are what that ruling compares. A row carrying the
+> final state alone reads the same whether the session ran first, ran after, or
+> never ran, so a reviewer handed that row can only take the claim.
+
+| Ended | Ended at | Authoring began | Frontier | Lookups | Decisions | Escalated |
+| ----- | -------- | --------------- | -------- | ------- | --------- | --------- |
+|       |          |                 |          |         |           |           |
+
+## Required Reviewers
+
+- Resolve reviewers from `.qfai/assistant/rule/agent-selection.md`.
+- Always run reviewers listed in `profiles.<routing_profile>.always_required` in the resolved review profile.
+- Add conditional reviewers according to `conditional_required` and related routing rules defined in the resolved routing entry and the resolved review profile (do not introduce additional ad-hoc conditions in this template).
+- Allowed in-flight verdicts: `PASS`, `REVISE`. `REVISE` is what starts the fix-and-rerun cycle; it serializes to `status: "FAIL"` when the pack's `summary.json` is written (see `.qfai/assistant/rule/shared-skill-delegation-baseline.md#verdict-vocabulary`).
+
+## RCP Rules (Mandatory)
+
+- Blocking feedback triggers immediate return (`changes_requested`). Reports
+  alone do not reopen an answered demand, and advice a reviewer marks
+  non-normative under
+  `.qfai/assistant/rule/review-convergence.md#discussion-review-precision`
+  is recorded and carried to the stage that implements the change rather than
+  returning the pack.
+- After fixes, rerun only failed reviewers and reviewers whose scope changed because of the fix.
+- Set `overall_status: PASS` only when all routed blocking reviewers are `PASS`, and no unresolved `FAIL` remains.

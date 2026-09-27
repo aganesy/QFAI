@@ -20,13 +20,11 @@ export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
 // downstream gate; `tdd` and `sdd` are allowed because QFAI's own ci.yml
 // dogfoods them as paired steps:
 //
-//   - `--profile tdd` covers test-side gates (validateTddList,
-//     validateTestTodoStubs, validateTraceability, validateTraceabilityIntegrity).
-//   - `--profile sdd` covers the structural / append-first gates
-//     (validateSpecPacks → QFAI-STATUS-001..006, QFAI-TRIAGE-001..006,
-//     plus validateStatusInSpecs). Without an `sdd`-allowed CI profile,
-//     a future regression in sddTriage / specPack validators could ship
-//     green because `tdd` does not exercise those code paths.
+//   - `--profile tdd` covers story test obligations, drift, test stubs,
+//     and contracts.
+//   - `--profile sdd` covers story tree structure, contract references,
+//     steering, and review artifacts. Without an `sdd`-allowed CI profile,
+//     these validators would not run in the paired narrow-profile lanes.
 //
 // The narrow-profile guard exists to stop CI from *accidentally* skipping
 // unrelated gates. When two narrow profiles are deliberately paired

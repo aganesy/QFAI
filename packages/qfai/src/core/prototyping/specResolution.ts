@@ -1,445 +1,114 @@
-/**
- * Resolve the prototyping spec(s) at runtime.
- *
- * Two entry points are exported:
- *
- *  - `resolvePrimaryPrototypingSpec(root, config)` — legacy single-spec
- *    resolver retained for callers that still expect "one spec drives the
- *    invocation". Slated for removal once the multi-spec rewrite lands
- *    across `prototypingIterate` / `prototypingCertify`. Do not extend.
- *  - `resolveAllUiBearingSpecs(root, config)` — new multi-spec resolver.
- *    Returns every spec ID whose `01_Spec.md` carries a UI-bearing
- *    marker (or, as a fallback, has a matching `.qfai/contracts/ui/*.yaml`
- *    contract). Deterministic, no prompts, sorted lexicographically.
- *
- * Both helpers read from the consumer project filesystem only; neither
- * performs interactive selection.
- */
+/** Resolve prototyping units from declared UI contracts. */
 
-import type { Dirent } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
+
 import type { QfaiConfig } from "../config.js";
+import { extractDeclaredContractIds } from "../contractsDecl.js";
 import { isEnoent } from "../fs/errno.js";
-import { collectSpecEntries } from "../specLayout.js";
 
-/**
- * Title-marker regex: matches `# … prototyping …` headings (anywhere)
- * inside an `01_Spec.md`. Shared SSOT between the legacy composite
- * `PROTOTYPING_MARKER_RE` (which OR's frontmatter + title) and the
- * multi-spec `resolveTitleMarkerSpecs` helper that the iterate
- * command's section-0 no-op gate consults.
- *
- * Exported so callers re-use the same source — DO NOT inline-redefine
- * this elsewhere; the two arms of `PROTOTYPING_MARKER_RE` are built
- * from `UI_BEARING_MARKER_RE.source` and `TITLE_MARKER_RE.source` so a
- * single edit propagates everywhere.
- */
-export const TITLE_MARKER_RE = /^#\s+.*prototyping/im;
+export type ResolvedUiContract = {
+  uiContractId: string;
+  /** Project-root-relative POSIX path to the declaring contract. */
+  contractPath: string;
+  source: "config" | "contract-scan";
+};
 
-export type ResolvedSpec = {
-  /** Four-digit spec ID, e.g. "0001". */
-  specId: string;
-  /** Absolute path to the spec directory. */
-  specDir: string;
-  /** Absolute path to 01_Spec.md inside the spec directory. */
-  specMdPath: string;
-  /**
-   * How the spec was located.
-   *
-   * - `"config"`            — explicit `qfai.config.yaml#prototyping.primarySpecId` pin.
-   * - `"marker-scan"`       — `surface_type: ui-bearing` frontmatter OR legacy
-   *                           `# … prototyping …` title heading hit in `01_Spec.md`.
-   * - `"contract-fallback"` — neither config nor marker matched; the spec was
-   *                           located via a matching `.qfai/contracts/ui/<spec-id>*.yaml`
-   *                           contract file (extends the multi-spec
-   *                           `resolveAllUiBearingSpecs` fallback to the single-spec
-   *                           primary resolver).
-   */
-  source: "config" | "marker-scan" | "contract-fallback";
+export type UiContractInventoryEntry = {
+  uiContractId: string;
+  contractPath: string;
+  hasScreens: boolean;
+  screenIds: string[];
 };
 
 /**
- * Multi-spec strict UI-bearing marker: matches ONLY the canonical
- * frontmatter signal `surface_type: ui-bearing`. Intentionally more
- * restrictive than `PROTOTYPING_MARKER_RE`, which OR's in the legacy
- * `# … prototyping …` heading arm via `TITLE_MARKER_RE`.
- *
- * Why the asymmetry: title-marker scans must occur explicitly (via
- * the exported `resolveTitleMarkerSpecs` helper) so the
- * spec-set-membership semantics are visible at the call site. Folding
- * the title arm into `UI_BEARING_MARKER_RE` would silently widen the
- * frozen multi-spec set with heading-only matches, masking the
- * configuration shape from operators.
+ * Read the same YAML extensions that the UI screen reader accepts. A file
+ * contributes one unit only when it declares exactly one canonical UI ID.
+ * Contract validation reports malformed and duplicate declarations separately.
  */
-const UI_BEARING_MARKER_RE = /surface_type:\s*ui-bearing/im;
-// Legacy composite: frontmatter marker OR legacy title heading. Built
-// from the two single-purpose sources so the title arm cannot drift.
-const PROTOTYPING_MARKER_RE = new RegExp(
-  `${UI_BEARING_MARKER_RE.source}|${TITLE_MARKER_RE.source}`,
-  "im",
-);
-
-export async function resolvePrimaryPrototypingSpec(
+export async function readUiContractInventory(
   root: string,
   config: QfaiConfig,
-): Promise<ResolvedSpec | undefined> {
-  const specsRoot = path.resolve(root, config.paths.specsDir);
-
-  // 1. Explicit config override
-  const explicit = config.prototyping?.primarySpecId;
-  if (explicit) {
-    const entries = await collectSpecEntries(specsRoot);
-    const hit = entries.find((entry) => entry.specNumber === explicit);
-    if (hit) {
-      return {
-        specId: explicit,
-        specDir: hit.dir,
-        specMdPath: path.join(hit.dir, "01_Spec.md"),
-        source: "config",
-      };
-    }
-    return undefined;
-  }
-
-  // 2. Marker-based scan: smallest spec ID first
-  const entries = await collectSpecEntries(specsRoot);
-  const sorted = [...entries].sort((a, b) => a.specNumber.localeCompare(b.specNumber));
-  for (const entry of sorted) {
-    const specMdPath = path.join(entry.dir, "01_Spec.md");
-    let body: string;
+): Promise<UiContractInventoryEntry[]> {
+  const uiRoot = path.resolve(root, config.paths.contractsDir, "ui");
+  const files = (
+    await fg("**/*.{yaml,yml}", { cwd: uiRoot, absolute: true, onlyFiles: true })
+  ).sort();
+  const entries: UiContractInventoryEntry[] = [];
+  for (const file of files) {
+    let text: string;
     try {
-      body = await readFile(specMdPath, "utf-8");
+      text = await readFile(file, "utf-8");
+    } catch (error) {
+      if (isEnoent(error)) continue;
+      throw error;
+    }
+    const declared = extractDeclaredContractIds(text).filter((id) => /^CON-UI-\d{4}$/.test(id));
+    if (declared.length !== 1) continue;
+    let parsed: unknown;
+    try {
+      parsed = parseYaml(text);
     } catch {
       continue;
     }
-    if (PROTOTYPING_MARKER_RE.test(body)) {
-      return {
-        specId: entry.specNumber,
-        specDir: entry.dir,
-        specMdPath,
-        source: "marker-scan",
-      };
-    }
+    const screens =
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "screens" in parsed &&
+      Array.isArray(parsed.screens)
+        ? parsed.screens
+        : [];
+    const screenIds = screens.flatMap((screen: unknown) =>
+      screen !== null &&
+      typeof screen === "object" &&
+      "id" in screen &&
+      typeof screen.id === "string"
+        ? [screen.id]
+        : [],
+    );
+    entries.push({
+      uiContractId: declared[0] ?? "",
+      contractPath: path.relative(root, file).replace(/\\/g, "/"),
+      hasScreens: screens.length > 0,
+      screenIds,
+    });
   }
-
-  // 3. UI-contract fallback: a project may declare its UI surface
-  //    purely via `.qfai/contracts/ui/<spec-id>.yaml` without any
-  //    spec-side marker and without `prototyping.primarySpecId`. Mirror
-  //    the same fallback `resolveAllUiBearingSpecs` honours so the
-  //    iterate command can drive a contract-only project; the cycle-0
-  //    no-op precheck already short-circuits when no surface exists at
-  //    all, so reaching here with a contract-only surface should not be
-  //    re-rejected by the primary resolver. Pick the lexicographically
-  //    smallest spec id that has a matching contract for determinism.
-  const contractsRoot = path.resolve(root, config.paths.contractsDir);
-  for (const entry of sorted) {
-    if (await hasMatchingUiContract(contractsRoot, entry.specNumber)) {
-      return {
-        specId: entry.specNumber,
-        specDir: entry.dir,
-        specMdPath: path.join(entry.dir, "01_Spec.md"),
-        // This branch locates the spec via UI contract
-        // scan, not via spec-side marker scan; the label keeps the
-        // discriminant honest.
-        source: "contract-fallback",
-      };
-    }
-  }
-
-  // 4. Fallback: caller decides what to do
-  return undefined;
+  return entries;
 }
 
-/**
- * Resolve every UI-bearing spec in the consumer project in one call.
- *
- * A spec is considered UI-bearing when either:
- *   1. its `01_Spec.md` contains a `surface_type: ui-bearing` marker
- *      (matches the existing `resolvePrimaryPrototypingSpec` convention),
- *      OR
- *   2. a UI contract YAML exists at
- *      `<contractsDir>/ui/<spec-id>.yaml` whose basename matches the
- *      spec id (fallback signal — covers consumer projects that author
- *      contracts without a frontmatter marker).
- *
- * Returns spec IDs sorted lexicographically and deduplicated. The function
- * never prompts; deterministic file-system query only. Zero UI-bearing
- * specs returns an empty array (caller decides the no-op exit).
- *
- * @param root absolute path to the consumer project root
- * @param config resolved `QfaiConfig` (paths.specsDir / paths.contractsDir
- *   are honoured)
- */
+/** A primary pin selects one of the UI-bearing contracts; the flag wins upstream. */
+export async function resolvePrimaryPrototypingSpec(
+  root: string,
+  config: QfaiConfig,
+): Promise<ResolvedUiContract | undefined> {
+  const candidates = (await readUiContractInventory(root, config))
+    .filter((entry) => entry.hasScreens)
+    .sort((a, b) => a.uiContractId.localeCompare(b.uiContractId));
+  const pin = config.prototyping?.primaryUiContract;
+  const selected = pin ? candidates.find((entry) => entry.uiContractId === pin) : candidates[0];
+  if (!selected) return undefined;
+  return {
+    uiContractId: selected.uiContractId,
+    contractPath: selected.contractPath,
+    source: pin ? "config" : "contract-scan",
+  };
+}
+
+/** Return every declared UI contract that has at least one screen. */
 export async function resolveAllUiBearingSpecs(
   root: string,
   config: QfaiConfig,
 ): Promise<string[]> {
-  const specsRoot = path.resolve(root, config.paths.specsDir);
-  const contractsRoot = path.resolve(root, config.paths.contractsDir);
-
-  const entries = await collectSpecEntries(specsRoot);
-  const uiBearing = new Set<string>();
-
-  for (const entry of entries) {
-    const specId = entry.specNumber;
-    if (!specId) continue;
-
-    let markerHit = false;
-    const specMdPath = path.join(entry.dir, "01_Spec.md");
-    try {
-      const body = await readFile(specMdPath, "utf-8");
-      if (UI_BEARING_MARKER_RE.test(body)) {
-        markerHit = true;
-      }
-    } catch (error) {
-      if (!isEnoent(error)) {
-        // Re-throw unexpected filesystem errors so callers fail fast
-        // rather than silently classify the spec as non-UI.
-        throw error;
-      }
-    }
-
-    if (markerHit) {
-      uiBearing.add(specId);
-      continue;
-    }
-
-    // Fallback: matching UI contract file
-    if (await hasMatchingUiContract(contractsRoot, specId)) {
-      uiBearing.add(specId);
-    }
-  }
-
-  return [...uiBearing].sort((a, b) => a.localeCompare(b));
+  const ids = (await readUiContractInventory(root, config))
+    .filter((entry) => entry.hasScreens)
+    .map((entry) => entry.uiContractId);
+  return [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 }
 
-/**
- * Cheap title-marker probe. Returns spec IDs (four-digit form) whose
- * `01_Spec.md` carries a `# … prototyping …` heading. Mirrors the
- * legacy `PROTOTYPING_MARKER_RE` title arm in
- * `resolvePrimaryPrototypingSpec` so the section-0 no-op gate honours
- * the same surface the legacy resolver does.
- *
- * Lex-sorted; deduped by spec id. Read failures other than ENOENT
- * propagate so a permission-denied scan does not silently no-op the
- * run.
- *
- * @param root absolute path to the consumer project root
- * @param specsDir relative path to the specs directory (e.g.
- *   `.qfai/specs`). Pass `config.paths.specsDir` for parity with
- *   `resolveAllUiBearingSpecs`.
- */
-export async function resolveTitleMarkerSpecs(root: string, specsDir: string): Promise<string[]> {
-  const specsRoot = path.resolve(root, specsDir);
-  let entries: Awaited<ReturnType<typeof collectSpecEntries>>;
-  try {
-    entries = await collectSpecEntries(specsRoot);
-  } catch (err) {
-    if (isEnoent(err)) return [];
-    throw err;
-  }
-  const out: string[] = [];
-  for (const entry of entries) {
-    const specMdPath = path.join(entry.dir, "01_Spec.md");
-    let body: string;
-    try {
-      body = await readFile(specMdPath, "utf-8");
-    } catch (err) {
-      if (isEnoent(err)) continue;
-      throw err;
-    }
-    if (TITLE_MARKER_RE.test(body)) {
-      out.push(entry.specNumber);
-    }
-  }
-  return out.sort((a, b) => a.localeCompare(b));
-}
-
-async function hasMatchingUiContract(contractsRoot: string, specId: string): Promise<boolean> {
-  const uiDir = path.join(contractsRoot, "ui");
-  const direct = path.join(uiDir, `${specId}.yaml`);
-  // Use `stat().isFile()` instead of
-  // `access()` so a directory (or symlink to non-file) named like
-  // `<specId>.yaml` does NOT falsely classify the spec as UI-bearing:
-  // `access()` alone only checks existence, so a misauthored project
-  // with `<contractsDir>/ui/0007.yaml/` (directory) would make
-  // `resolveSurfaceUnion` / `resolvePrimaryPrototypingSpec` report a
-  // phantom UI surface and drive `prototyping iterate` / drift gates
-  // against it instead of the expected no-op path. The downstream
-  // entries-walk branch already filters with `entry.isFile()`; this
-  // check brings the direct-match arm to the same discipline.
-  try {
-    const s = await stat(direct);
-    if (s.isFile()) return true;
-  } catch (error) {
-    if (!isEnoent(error)) {
-      throw error;
-    }
-  }
-
-  // Also accept `spec-NNNN.yaml` / `ui-NNNN-*.yaml`. Consumer projects prefix
-  // with `spec-`, or follow the `ui-XXXX-<slug>.yaml` convention the shipped
-  // guide documents (`skills/qfai-sdd/references/ui-contract-guide.md`).
-  //
-  // Anchored to exactly the documented set:
-  //
-  //   - `<specId>.yaml`
-  //   - `spec-<specId>.yaml`
-  //   - `ui-<specId>.yaml`
-  //   - `ui-<specId>-<slug>.yaml`, slug non-empty
-  //
-  // Any other basename is rejected, including one that merely contains the id
-  // token: `unrelated-text-0001.yaml` is not spec 0001's UI contract. The slug
-  // arm attaches to the `ui-` prefix only, and requires at least one character,
-  // so neither `<id>-<slug>.yaml` nor `ui-<id>-.yaml` matches. This is
-  // deliberately narrower than the contract's direct-match arm: a false
-  // positive here silently attributes one spec's screens to another.
-  let entries: Dirent[];
-  try {
-    entries = await readdir(uiDir, { withFileTypes: true });
-  } catch (error) {
-    if (isEnoent(error)) {
-      return false;
-    }
-    throw error;
-  }
-  const anchoredRe = new RegExp(`^(?:${specId}|spec-${specId}|ui-${specId}(?:-[^.]+)?)\\.yaml$`);
-  if (entries.some((entry) => entry.isFile() && anchoredRe.test(entry.name))) {
-    return true;
-  }
-  // The per-spec subdirectory layout, `<contractsDir>/ui/spec-<specId>/<sub>.yaml`
-  // — the last candidate in the guide's resolution table. Without it a project
-  // that authored its UI contracts that way, and put no `surface_type:
-  // ui-bearing` marker on the spec, read as non-UI-bearing: the resolver
-  // returned nothing, the precheck did nothing, and the iterate command exited
-  // without producing a single directory, silently.
-  //
-  // The walk descends recursively, because the documented `<subpath>` may have
-  // more than one component (`screens/home.yaml`).
-  //
-  // Basenames under the subdirectory are unconstrained apart from the
-  // extension: the subdirectory is itself the spec-scope signal, so the
-  // basename need not encode the id again. `.yml` is rejected, matching the
-  // top-level regex above, which accepts only `.yaml`.
-  const subdir = entries.find((entry) => entry.isDirectory() && entry.name === `spec-${specId}`);
-  if (subdir) {
-    const subdirAbs = path.join(uiDir, subdir.name);
-    const stack: string[] = [subdirAbs];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (current === undefined) break;
-      let subEntries: Dirent[];
-      try {
-        subEntries = await readdir(current, { withFileTypes: true });
-      } catch (subErr) {
-        if (isEnoent(subErr)) continue;
-        throw subErr;
-      }
-      for (const sub of subEntries) {
-        if (sub.isFile() && sub.name.endsWith(".yaml")) {
-          return true;
-        }
-        if (sub.isDirectory()) {
-          stack.push(path.join(current, sub.name));
-        }
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * Cheap existence probe for `<specsDir>/spec-NNNN`. Used by
- * {@link resolveSurfaceUnion} to honour the
- * `prototyping.primarySpecId` config escape hatch: if the marker /
- * contract scan returns zero UI-bearing specs but the operator has
- * explicitly pinned a primary spec that exists on disk, the no-op
- * short-circuit is skipped so the legacy `resolvePrimaryPrototypingSpec`
- * path can drive the loop.
- *
- * A bare `catch {}` would swallow EACCES / EIO / ENOTDIR alike as
- * "doesn't exist", letting a permission-denied spec dir silently no-op
- * the run. The discriminated ENOENT branch preserves the genuine-absence
- * semantic instead, and propagates
- * every other errno.
- *
- * Lives here, alongside
- * {@link resolveSurfaceUnion}, so both CLI commands import the union
- * resolver from a single core module rather than `prototypingCertify.ts`
- * taking a CLI → CLI sideways import to align with iterate's drift
- * gate. The dependency DAG (CLI → core) stays one-directional.
- */
-async function specDirExists(root: string, specsDir: string, specId: string): Promise<boolean> {
-  const dirName = `spec-${specId}`;
-  // Use `path.resolve`
-  // instead of `path.join` so an absolute `paths.specsDir` override in
-  // `qfai.config.yaml` (e.g. `/tmp/specs`) resolves to the absolute
-  // path directly: `path.join(root, "/tmp/specs", "spec-0001")` alone
-  // produces `<root>/tmp/specs/spec-0001` (string concatenation, no
-  // absolute-segment reset), so the probe would miss the real spec dir
-  // and `resolveSurfaceUnion` would fail to include a valid
-  // `prototyping.primarySpecId` pin — `prototyping iterate --cycle 0`
-  // would then hit the zero-UI short-circuit (exit 0) for explicit-primary
-  // workflows relying on absolute path overrides. `path.resolve`
-  // correctly resets to the latter absolute segment when one is
-  // supplied (relative `specsDir` still composes against `root` the
-  // same way `path.join` did).
-  const abs = path.resolve(root, specsDir, dirName);
-  try {
-    const s = await stat(abs);
-    return s.isDirectory();
-  } catch (err) {
-    if (isEnoent(err)) return false;
-    throw err;
-  }
-}
-
-/**
- * Compose the deterministic UNION of every UI-bearing surface signal
- * the project carries:
- *
- *   1. strict frontmatter marker `surface_type: ui-bearing` in
- *      `01_Spec.md` (the canonical multi-spec signal) OR a matching
- *      `.qfai/contracts/ui/<spec-id>*.yaml` contract — both via
- *      {@link resolveAllUiBearingSpecs}.
- *   2. legacy `# … prototyping …` heading in `01_Spec.md` — via
- *      {@link resolveTitleMarkerSpecs}.
- *   3. operator escape hatch `qfai.config.yaml#prototyping.primarySpecId`
- *      when the pinned spec id resolves to a directory on disk.
- *
- * Returns the union sorted lexicographically and deduplicated. Empty
- * result signals "no UI surface declared anywhere" — the caller
- * decides whether to short-circuit (the no-op gate uses this signal).
- *
- * SSOT for the live UI-bearing scope: `prototypingIterate.ts` uses
- * this resolver for the cycle ≥ 1 drift gate, and
- * `prototypingCertify.ts#runPrototypingShowSpec` uses it for
- * `liveUiBearing` so the live scope reported by show-spec is
- * apples-to-apples with what iterate actually enforces.
- *
- * Lives in the core layer so both CLI
- * commands import this resolver from there instead of
- * `prototypingCertify.ts` taking a sideways import on
- * `prototypingIterate.ts`.
- *
- * @internal Exported for direct unit-testing of the union composition
- * rule and so consumers across the CLI layer can re-resolve the live
- * multi-spec union. Not part of the package's public surface.
- */
+/** Live scope used by cycle drift, show and certification. */
 export async function resolveSurfaceUnion(root: string, config: QfaiConfig): Promise<string[]> {
-  const strictUiBearing = await resolveAllUiBearingSpecs(root, config);
-  const titleMarkerSpecs = await resolveTitleMarkerSpecs(root, config.paths.specsDir);
-  const configuredPrimarySpecId = config.prototyping?.primarySpecId;
-  const configuredSpecOnDisk =
-    configuredPrimarySpecId !== undefined
-      ? await specDirExists(root, config.paths.specsDir, configuredPrimarySpecId)
-      : false;
-  const union = new Set<string>(strictUiBearing);
-  if (configuredSpecOnDisk && configuredPrimarySpecId !== undefined) {
-    union.add(configuredPrimarySpecId);
-  }
-  for (const id of titleMarkerSpecs) union.add(id);
-  return [...union].sort((a, b) => a.localeCompare(b));
+  return resolveAllUiBearingSpecs(root, config);
 }

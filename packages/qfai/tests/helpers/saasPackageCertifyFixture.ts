@@ -8,6 +8,7 @@ import path from "node:path";
 
 import { hashDesignMd } from "../../src/core/design/designMd.js";
 import { SAAS_PACKAGE_SKIPPED_GATES } from "../../src/core/saasPackage/skippedGates.js";
+import { reviewPayload } from "./reviewPayload.js";
 
 /** Where certify writes the certificate, relative to the project root. */
 export const CERTIFICATE_REL = ".qfai/evidence/prototyping/completion-certificate.json";
@@ -73,12 +74,11 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
     "qfai.config.yaml",
     [
       "paths:",
-      "  contractsDir: .qfai/contracts",
-      "  specsDir: .qfai/specs",
+      "  contractsDir: .qfai/spec/03_contract",
+      "  specsDir: .qfai/spec",
       "  discussionDir: .qfai/discussion",
-      "  outDir: .qfai/output",
-      "  skillsDir: .qfai/assistant/skills",
-      "  promptsDir: .qfai/assistant/skills",
+      "  outDir: .qfai/report",
+      "  skillsDir: .qfai/assistant/skill",
       "  srcDir: src",
       "  testsDir: tests",
       "",
@@ -86,20 +86,24 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
   );
   await writeText(
     root,
-    ".qfai/specs/spec-0014/01_Spec.md",
-    "---\nsurface_type: ui-bearing\n---\n\n# spec-0014\n",
+    ".qfai/spec/03_contract/ui/index.yaml",
+    "# QFAI-CONTRACT-ID: CON-UI-0012\nscreens: [{id: index, route: /}]\n",
   );
   await writeText(root, "DESIGN.md", DESIGN_MD);
   await writeText(root, ".qfai/evidence/prototyping/iter-00/index.html", FINAL_HTML);
+  await writeText(
+    root,
+    ".qfai/evidence/prototyping/iter-00/CON-UI-0012/index.review.json",
+    reviewPayload("CON-UI-0012", "index", { cycle: 0 }),
+  );
   const validateBody = JSON.stringify({
     profile: "prototyping",
     counts: { error: 0, warning: 0, info: 0 },
   });
-  await writeText(root, ".qfai/report/validate.json", validateBody);
-  await writeText(root, ".qfai/output/validate.json", validateBody);
+  await writeText(root, ".qfai/report/validate-prototyping.json", validateBody);
   await writeText(
     root,
-    ".qfai/output/verify.json",
+    ".qfai/report/verify.json",
     JSON.stringify({ status: "PASS", scope: "prototyping" }),
   );
   await writeText(
@@ -110,7 +114,8 @@ export async function seedSaasPackageCertifyProject(root: string): Promise<void>
       surface: "web",
       runId: "run-saas-package",
       designMd: { path: "DESIGN.md", sha256: hashDesignMd(DESIGN_MD) },
-      specsCovered: ["0014"],
+      uiContractsCovered: ["CON-UI-0012"],
+      frozenSurfaceUnion: ["CON-UI-0012"],
       reviewerGate: {
         result: "PASS",
         signoff: { reviewerId: "test-reviewer", timestamp: "2026-05-27T00:00:00Z" },

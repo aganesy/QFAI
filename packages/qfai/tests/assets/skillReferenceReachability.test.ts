@@ -29,10 +29,10 @@ const ASSISTANT_ROOT = ["packages", "qfai", "assets", "init", ".qfai", "assistan
  * assertion is a subset check, so removing an entry's defect elsewhere does
  * not break this test — but adding a newly unrouted file does.
  */
-const KNOWN_UNROUTED = new Set(["skills/qfai-sdd/references/ui-contract-guide.md"]);
+const KNOWN_UNROUTED = new Set(["skill/qfai-sdd/references/ui-contract-guide.md"]);
 
-const SKILL_ENTRYPOINT = /^skills\/[^/]+\/SKILL\.md$/;
-const SKILL_REFERENCE = /^skills\/[^/]+\/references\//;
+const SKILL_ENTRYPOINT = /^skill\/[^/]+\/SKILL\.md$/;
+const SKILL_REFERENCE = /^skill\/[^/]+\/references\//;
 
 /** How the shipped tree is addressed from a consuming project's root. */
 const INSTALL_ROOT_PREFIX = ".qfai/assistant/";
@@ -50,16 +50,16 @@ async function readAssistantTree(root: string): Promise<Map<string, string>> {
   return entries;
 }
 
-/** `skills/<name>` for a file inside a skill, `undefined` for anything else. */
+/** `skill/<name>` for a file inside a skill, `undefined` for anything else. */
 function owningSkill(rel: string): string | undefined {
-  const match = /^(skills\/[^/]+)\//.exec(rel);
+  const match = /^(skill\/[^/]+)\//.exec(rel);
   return match?.[1];
 }
 
 /**
  * Tree paths a written `.md` token can denote when it appears inside `from`.
  * Mentions in this tree use three conventions: install-root
- * (`.qfai/assistant/skills/…`), relative to the mentioning file (`rcp_footer.md`,
+ * (`.qfai/assistant/skill/…`), relative to the mentioning file (`rcp_footer.md`,
  * `../../qfai-implement/references/evidence-revision.md`), and relative to the
  * owning skill root (`references/sdd-triage.md` inside a `SKILL.md`). Each one
  * resolves to a single path, so a same-named file in another skill is never a
@@ -131,7 +131,7 @@ describe("shipped skill reference reachability", () => {
     // the only written surface mapping lives in the playbook. Losing the
     // naming line makes the predicate depend on the agent happening to list
     // `references/`.
-    const skillMd = path.join(assistantRoot, "skills", "qfai-discussion", "SKILL.md");
+    const skillMd = path.join(assistantRoot, "skill", "qfai-discussion", "SKILL.md");
     const text = await readFile(skillMd, "utf-8");
     expect(text).toContain("references/ui-bearing-playbook.md");
   });
@@ -143,21 +143,21 @@ describe("shipped skill reference reachability", () => {
     // `qfai-discussion/SKILL.md` never named them.
     const tree = await readAssistantTree(assistantRoot);
     const reached = reachableFrom(tree);
-    expect(reached.has("skills/qfai-discussion/references/review-cycle-playbook.md")).toBe(true);
-    expect(reached.has("skills/qfai-discussion/references/rcp_footer.md")).toBe(true);
+    expect(reached.has("skill/qfai-discussion/references/review-cycle-playbook.md")).toBe(true);
+    expect(reached.has("skill/qfai-discussion/references/rcp_footer.md")).toBe(true);
   });
 
   it("a same-named reference in another skill is not counted as reached", () => {
     const tree = new Map([
-      ["skills/alpha/SKILL.md", "Follow `references/shared.md`."],
-      ["skills/alpha/references/shared.md", "alpha detail"],
-      ["skills/beta/SKILL.md", "Beta names no reference."],
-      ["skills/beta/references/shared.md", "beta detail, different content"],
+      ["skill/alpha/SKILL.md", "Follow `references/shared.md`."],
+      ["skill/alpha/references/shared.md", "alpha detail"],
+      ["skill/beta/SKILL.md", "Beta names no reference."],
+      ["skill/beta/references/shared.md", "beta detail, different content"],
     ]);
 
     const reached = reachableFrom(tree);
-    expect(reached.has("skills/alpha/references/shared.md")).toBe(true);
-    expect(reached.has("skills/beta/references/shared.md")).toBe(false);
+    expect(reached.has("skill/alpha/references/shared.md")).toBe(true);
+    expect(reached.has("skill/beta/references/shared.md")).toBe(false);
   });
 
   it("install-root, sibling and cross-skill relative mentions still resolve", () => {
@@ -165,25 +165,25 @@ describe("shipped skill reference reachability", () => {
     // three conventions the shipped tree actually uses.
     const tree = new Map([
       [
-        "skills/alpha/SKILL.md",
-        "See `.qfai/assistant/skills/beta/references/cross.md` and `references/local.md`.",
+        "skill/alpha/SKILL.md",
+        "See `.qfai/assistant/skill/beta/references/cross.md` and `references/local.md`.",
       ],
       [
-        "skills/alpha/references/local.md",
+        "skill/alpha/references/local.md",
         "Sibling `sibling.md`; upward `../../beta/references/deep.md`.",
       ],
-      ["skills/alpha/references/sibling.md", "sibling detail"],
-      ["skills/beta/SKILL.md", "Beta names no reference."],
-      ["skills/beta/references/cross.md", "cross detail"],
-      ["skills/beta/references/deep.md", "deep detail"],
+      ["skill/alpha/references/sibling.md", "sibling detail"],
+      ["skill/beta/SKILL.md", "Beta names no reference."],
+      ["skill/beta/references/cross.md", "cross detail"],
+      ["skill/beta/references/deep.md", "deep detail"],
     ]);
 
     const reached = reachableFrom(tree);
     for (const rel of [
-      "skills/alpha/references/local.md",
-      "skills/alpha/references/sibling.md",
-      "skills/beta/references/cross.md",
-      "skills/beta/references/deep.md",
+      "skill/alpha/references/local.md",
+      "skill/alpha/references/sibling.md",
+      "skill/beta/references/cross.md",
+      "skill/beta/references/deep.md",
     ]) {
       expect(reached.has(rel)).toBe(true);
     }

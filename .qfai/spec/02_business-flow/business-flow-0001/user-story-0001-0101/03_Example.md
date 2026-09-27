@@ -1,0 +1,9 @@
+# Examples
+
+## Examples
+
+| EX-ID           | AC-Ref          | Input                                                                                                                                                                     | Expected                                                                                                                                                               |
+| --------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EX-0001-0101-01 | AC-0001-0101-01 | Given prototyping evidence exists When completion is evaluated                                                                                                            | Then `qfai validate --fail-on error` is required before the run can be accepted                                                                                        |
+| EX-0001-0101-02 | AC-0001-0101-02 | Given `/qfai-verify` leaves a `REVISE` review artifact                                                                                                                    | Then prototyping completion remains blocked                                                                                                                            |
+| EX-0001-0101-03 | AC-0001-0101-03 | Given the review session for `(CON-UI-0007, orders-dashboard)` in cycle 4 takes 420 seconds. When the reviewer writes `iter-04/CON-UI-0007/orders-dashboard.review.json`. | Then the payload carries `wallTimeSec: 420` and `softWarnings.timeBudget: true`; a flat `timeBudgetSoftWarning` key is rejected; the run does not fail on the overrun. |

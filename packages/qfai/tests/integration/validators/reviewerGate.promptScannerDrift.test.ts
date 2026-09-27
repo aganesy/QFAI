@@ -11,7 +11,7 @@
  * fixture matrix. Any future widening of the SSOT-sync ruleset MUST
  * be exercised by both anchors so the cross-link remains tight.
  */
-// QFAI:SPEC-0012:TC-0012-0458
+// QFAI:EX-0001-0128-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -24,7 +24,7 @@ import { validateReviewerGate } from "../../../src/core/validators/reviewerGate.
 
 const SCANNER_REL = "packages/qfai/src/core/prototyping/designMdViolations.ts";
 const PROMPT_REL =
-  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/generator-prompt.md";
+  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-prototyping/references/generator-prompt.md";
 
 const SCANNER_SCAFFOLD = `// Scanner stub.
 export type DesignMdViolation = {

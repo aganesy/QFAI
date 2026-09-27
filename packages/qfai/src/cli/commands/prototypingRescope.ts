@@ -1,33 +1,6 @@
 /**
- * `qfai prototyping rescope` — retire a frozen surface without discarding the loop.
- *
- * Cycle 0 freezes the screen set into `prototyping.json#frozenSurfaceUnion` and
- * every later edit to it is lock drift, exit 2. Correct as a drift rule. But it
- * was the ONLY rule, and it also caught the legitimate case: a product decision
- * retired a screen while the loop was open. The only route the skill offered
- * was `iterate --cycle 0 --force`, which moves `iter-00` aside and discards
- * every cycle of review already paid for.
- *
- * This is the narrow operation that applies such a decision:
- *
- *     qfai prototyping rescope --remove 0011 --reason DELTA-022
- *
- * Three properties make it a scope reduction rather than a hole in the drift
- * rule:
- *
- * - **It can only remove what is already unreachable.** The removable set is
- *   `frozenScope.missing` — the same set `QFAI-PROT-011` reports — so a surface
- *   whose spec still declares a UI marker is refused. Widening is not
- *   expressible: there is no `--add`.
- * - **It requires a `--reason`.** A recorded delta or decision id is what
- *   separates an applied decision from the silent widening the exit-2 rule
- *   exists to stop, and it is what the audit entry preserves.
- * - **It never rewrites a critique.** What a reviewer saw at cycle N is a
- *   historical fact. Affected `review.json` entries are ANNOTATED as
- *   superseded; the prose is left exactly as written.
- *
- * The loop stays at its current cycle and `stopReason` is untouched: this
- * changes what the loop is about, not where it is.
+ * Retire an unreachable UI contract from the frozen prototyping scope.
+ * The decision is recorded while prior reviewer evidence is preserved.
  */
 import path from "node:path";
 import { readFile, writeFile, readdir } from "node:fs/promises";
@@ -35,6 +8,7 @@ import { readFile, writeFile, readdir } from "node:fs/promises";
 import { loadConfig } from "../../core/config.js";
 import { readFrozenScopeState } from "../../core/prototyping/frozenScope.js";
 import { PROTOTYPING_JSON_REL } from "../../core/prototyping/paths.js";
+import { readUiContractsCovered } from "../../core/prototyping/specsCovered.js";
 import { info, warn } from "../lib/logger.js";
 
 /** What the caller asked for. */
@@ -63,30 +37,32 @@ export type RescopeAuditEntry = {
  */
 export async function runPrototypingRescope(options: RescopeOptions): Promise<number> {
   if (options.remove.length === 0) {
-    warn("qfai prototyping rescope: --remove <surface-id> is required (repeatable).");
+    warn("qfai prototyping rescope: --remove <CON-UI-NNNN> is required (repeatable).");
+    return 2;
+  }
+  const invalid = options.remove.filter((id) => !/^CON-UI-\d{4}$/u.test(id));
+  if (invalid.length > 0) {
+    warn(
+      `qfai prototyping rescope: --remove requires CON-UI-NNNN; received ${invalid.join(", ")}.`,
+    );
     return 2;
   }
   if (options.reason.trim().length === 0) {
     warn(
-      "qfai prototyping rescope: --reason <delta-id> is required. A recorded decision id is " +
+      "qfai prototyping rescope: --reason <decision-id> is required. A recorded decision id is " +
         "what separates an applied scope reduction from the lock drift the frozen union exists " +
         "to detect, and it is what the audit entry preserves.",
     );
     return 2;
   }
 
-  // Warned, not refused. Resolving the id would need every place a delta or
-  // decision can live — `.qfai/decisions/`, a spec's `09_delta.md`,
-  // `_policies/10_delta.md`, and whatever a consuming project uses — and a
-  // resolver that misses one refuses a LEGITIMATE reduction, which is worse
-  // than a weak field: it blocks the operation this exists to provide. A shape
-  // check has the same failure against a project whose id convention is its
-  // own. The audit entry is the real control; this just means the operator
-  // hears about a thin reason now rather than a reviewer reading the log later.
+  // The story tree records decisions in `<paths.specsDir>/decisions.md`.
+  // Keep this hint non-blocking: a project can cite an external decision id,
+  // and the audit entry must preserve the supplied reason verbatim.
   if (!looksLikeDecisionId(options.reason)) {
     warn(
       `qfai prototyping rescope: --reason "${options.reason}" does not read as a recorded ` +
-        "delta or decision id (e.g. DELTA-022, CR-20260904-0001). Proceeding — it is written " +
+        "decision id (e.g. DEC-0001). Proceeding — it is written " +
         "to rescopeLog as given — but an entry nobody can trace back is the audit trail this " +
         "operation exists to leave.",
     );
@@ -119,6 +95,14 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   const record = await readJsonObject(protoAbs);
   if (record === null) {
     warn(`qfai prototyping rescope: cannot read ${PROTOTYPING_JSON_REL} as a JSON object.`);
+    return 2;
+  }
+  const covered = readUiContractsCovered(record);
+  if (covered.kind !== "ok" || !sameIds(covered.value, state.frozen)) {
+    warn(
+      "qfai prototyping rescope: uiContractsCovered is missing or differs from " +
+        "frozenSurfaceUnion. Re-seed cycle 0 before reducing the scope.",
+    );
     return 2;
   }
 
@@ -162,6 +146,7 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   const remaining = state.frozen.filter((id) => !options.remove.includes(id));
   const nextRecord: Record<string, unknown> = {
     ...record,
+    uiContractsCovered: remaining,
     frozenSurfaceUnion: remaining,
     rescopeLog: [...readAuditLog(record.rescopeLog), ...entries],
   };
@@ -174,19 +159,16 @@ export async function runPrototypingRescope(options: RescopeOptions): Promise<nu
   return 0;
 }
 
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 /**
  * Whether `reason` reads as an id rather than as prose.
  *
  * Deliberately loose and deliberately non-blocking: it looks for an
- * uppercase-prefixed token with a digit somewhere, which every id convention
- * in reach happens to satisfy (`DELTA-022`, `CR-20260904-0001`, and the
- * decision-record form). A project spelling its ids differently gets a warning
- * it can ignore, which is the failure mode a shape CHECK would not have had —
- * it would have refused them.
- *
- * The third example is described rather than spelled: `.agents/rules/
- * distributed-surface.md` forbids an internal design-rationale ID in `src/`
- * JSDoc, because tsup keeps JSDoc in `dist/*.d.ts` and it would ship.
+ * uppercase-prefixed token with a digit somewhere, including `DEC-0001`.
+ * A project spelling its ids differently gets a warning it can ignore.
  */
 function looksLikeDecisionId(reason: string): boolean {
   return /[A-Z][A-Z0-9]*[-_]?\d/.test(reason.trim());
@@ -225,8 +207,7 @@ export function refuseUnremovable(
   if (stillResolves.length > 0) {
     return (
       `qfai prototyping rescope: ${stillResolves.join(", ")} still resolves as a UI-bearing ` +
-      "spec, so it has not been retired anywhere but here. Remove the surface upstream first " +
-      "(the spec, its UI contract and its route), then run this to bring the frozen union " +
+      "contract. Retire its screens[] upstream first, then run this to bring the frozen union " +
       "into line. Dropping a surface that still exists is the lock drift the frozen union " +
       "exists to detect, and this operation will not do it."
     );
@@ -255,8 +236,11 @@ async function rescopeIteratePlans(options: RescopeOptions): Promise<string[]> {
     const abs = path.join(options.root, rel);
     const plan = await readJsonObject(abs);
     if (plan === null || !Array.isArray(plan.screens)) continue;
-    const kept = plan.screens.filter((screen) => !namesRemovedSurface(screen, options.remove));
-    if (kept.length === plan.screens.length) continue;
+    const kept = plan.screens.flatMap((screen) => {
+      const reduced = reducePlanScreen(screen, options.remove);
+      return reduced === null ? [] : [reduced];
+    });
+    if (JSON.stringify(kept) === JSON.stringify(plan.screens)) continue;
     touched.push(rel);
     if (!options.dryRun) {
       await writeFile(abs, `${JSON.stringify({ ...plan, screens: kept }, null, 2)}\n`, "utf-8");
@@ -265,11 +249,23 @@ async function rescopeIteratePlans(options: RescopeOptions): Promise<string[]> {
   return touched;
 }
 
-/** Whether a plan `screens` entry belongs to one of the removed surfaces. */
-function namesRemovedSurface(screen: unknown, remove: readonly string[]): boolean {
-  if (typeof screen !== "object" || screen === null) return false;
-  const spec = (screen as { specId?: unknown }).specId;
-  return typeof spec === "string" && remove.includes(spec);
+/** Keep shared captures while any declaring UI contract remains in scope. */
+function reducePlanScreen(screen: unknown, remove: readonly string[]): unknown {
+  if (typeof screen !== "object" || screen === null || Array.isArray(screen)) return screen;
+  const entry = screen as Record<string, unknown>;
+  if (
+    Array.isArray(entry.uiContractIds) &&
+    entry.uiContractIds.every((id) => typeof id === "string")
+  ) {
+    const remaining = entry.uiContractIds.filter((id: string) => !remove.includes(id));
+    if (remaining.length === 0) return null;
+    return remaining.length === entry.uiContractIds.length
+      ? screen
+      : { ...entry, uiContractIds: remaining };
+  }
+  return typeof entry.uiContractId === "string" && remove.includes(entry.uiContractId)
+    ? null
+    : screen;
 }
 
 /**

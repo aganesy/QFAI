@@ -1,0 +1,23 @@
+# Document schema: `<specsDir>/01_policy/principle.md`
+structure:
+  - heading:
+      pattern: "^# Principles$"
+      regex: true
+    description: Project mission, axioms, and decision criteria.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Product / Mission$"
+          regex: true
+        description: The product's mission and value.
+        allow_additional: true
+      - heading:
+          pattern: "^## Axioms \\(Non-negotiable\\)$"
+          regex: true
+        description: Principles that decisions must preserve.
+        allow_additional: true
+      - heading:
+          pattern: "^## Compatibility vs Change Rubric$"
+          regex: true
+        description: Criteria for compatibility and change.
+        allow_additional: true

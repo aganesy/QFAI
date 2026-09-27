@@ -1,10 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
+import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import {
   emptySkillRouting,
@@ -24,24 +25,6 @@ const REQUIRED_AGENT_SECTIONS = [
   "## Stop conditions",
   "## Sign-off",
 ];
-
-type CatalogAgent = {
-  id: string;
-  kind: "worker" | "reviewer";
-  /**
-   * The catalog's copy of the agent body. Optional on this type only because
-   * the entry may be missing or malformed on disk — QFAI-AGENT-014 reports
-   * either. Kept rather than discarded at parse time so that rule can compare
-   * it against the source.
-   */
-  developerInstructions?: string;
-  /**
-   * Whether the entry carried the key at all, whatever its type. A key that is
-   * present but not a string is already reported as a catalog shape error, so
-   * QFAI-AGENT-014 must not name it a second time as a missing block.
-   */
-  hasDeveloperInstructionsKey: boolean;
-};
 
 type RoutingPhase = {
   mandatory_agents?: unknown;
@@ -82,173 +65,20 @@ const ROUTING_ITERATIONS = new Set(["per-invocation", "per-ledger-item"]);
  */
 const RERUN_POLICIES = new Set(["failed-agents-only", "changed-scope-dependents"]);
 
-/**
- * Resolve a manifest YAML file by checking the new canonical layer first
- * (.qfai/assistant/manifest/) and falling back to the legacy
- * steering/ path during the compatibility window. Returns the
- * absolute path of the first location that exists, or the canonical
- * (manifest/) path if neither exists so the error message points at
- * the post-recut SSOT location.
- */
-async function resolveManifestFile(root: string, fileName: string): Promise<string> {
-  const canonical = path.join(root, ".qfai", "assistant", "manifest", fileName);
-  if (await exists(canonical)) return canonical;
-  const legacy = path.join(root, ".qfai", "assistant", "steering", fileName);
-  if (await exists(legacy)) return legacy;
-  return canonical;
-}
-
-function manifestRelativePath(absolute: string, root: string): string {
-  return path.relative(root, absolute).replace(/\\/g, "/");
-}
-
-/**
- * The canonical agent body: `## Mission` onward, i.e. everything after the
- * frontmatter and the title heading. Returns undefined when the section is
- * absent — QFAI-AGENT-005 already reports that, and a second finding for the
- * same missing heading would only add noise.
- */
-function canonicalAgentBody(markdown: string): string | undefined {
-  const content = markdown.replace(/\r\n/g, "\n");
-  let offset = 0;
-  if (content.startsWith("---\n")) {
-    // Anchor the search past the frontmatter: a description that merely
-    // mentions `## Mission` must not become the start of the body.
-    const close = content.indexOf("\n---", "---\n".length - 1);
-    if (close >= 0) offset = close + 1;
-  }
-  const match = /^## Mission[ \t]*$/m.exec(content.slice(offset));
-  if (match === null) return undefined;
-  return content.slice(offset + match.index);
-}
-
-function normalizeBody(body: string): string {
-  return body.replace(/\r\n/g, "\n").trim();
-}
-
-/**
- * `agent-catalog.yml` embeds a verbatim copy of each agent body under
- * `developer_instructions`. The markdown file is the source; the catalog block
- * is derived. Nothing compared them, so a project that customised an agent
- * silently shipped two disagreeing copies of the same instructions and
- * `qfai validate` reported nothing.
- *
- * The rule necessarily lands on catalogs written before the comparison
- * existed: every repository that customised an agent already carries the
- * divergence. The derived copy is regenerable, so what the finding asks for is
- * a regeneration rather than a decision.
- */
-function checkDeveloperInstructions(
-  agent: CatalogAgent,
-  markdown: string,
-  agentRel: string,
-  catalogRel: string,
-  issues: Issue[],
-): void {
-  const developerInstructionsSeverity = "error";
-  const declared = agent.developerInstructions;
-  if (declared === undefined) {
-    // Present but not a string: QFAI-AGENT-006 already named it at parse time,
-    // and a second finding for the same broken block would only add noise.
-    if (agent.hasDeveloperInstructionsKey) return;
-    // A deleted block is not "this catalog does not duplicate" — it is the
-    // cheapest way to defeat the drift comparison, and it silently starves the
-    // downstream loaders the field exists for, which read the catalog and
-    // nothing else. Warning, like the drift case: the block is derived, so the
-    // repair is mechanical.
-    issues.push(
-      issue(
-        "QFAI-AGENT-014",
-        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim.`,
-        developerInstructionsSeverity,
-        catalogRel,
-        "agentDefinition.developerInstructionsMissing",
-        undefined,
-        "canonical",
-        undefined,
-        { relatedFiles: [agentRel] },
-      ),
-    );
-    return;
-  }
-  const canonical = canonicalAgentBody(markdown);
-  if (canonical === undefined) return;
-  if (normalizeBody(declared) === normalizeBody(canonical)) return;
-  issues.push(
-    issue(
-      "QFAI-AGENT-014",
-      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim.`,
-      developerInstructionsSeverity,
-      catalogRel,
-      "agentDefinition.developerInstructionsDrift",
-      undefined,
-      "canonical",
-      undefined,
-      { relatedFiles: [agentRel] },
-    ),
-  );
-}
-
 export async function validateAgentDefinition(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const agentsDir = path.join(root, ".qfai", "assistant", "agents");
-  const catalogPath = await resolveManifestFile(root, "agent-catalog.yml");
-  const routingPath = await resolveManifestFile(root, "agent-routing.yml");
-  const profilesPath = await resolveManifestFile(root, "review-profiles.yml");
-
-  if (!(await exists(agentsDir)) && !(await exists(catalogPath))) {
+  const agentsDir = path.join(root, ".qfai", "assistant", "agent");
+  if (!(await exists(agentsDir))) {
     return [];
   }
-
-  for (const [fileName, code, resolved] of [
-    ["agent-catalog.yml", "QFAI-AGENT-001", catalogPath],
-    ["agent-routing.yml", "QFAI-AGENT-002", routingPath],
-    ["review-profiles.yml", "QFAI-AGENT-003", profilesPath],
-  ] as const) {
-    if (!(await exists(resolved))) {
-      const rel = manifestRelativePath(resolved, root);
-      issues.push(
-        issue(
-          code,
-          `Required agent manifest file missing: ${rel} (legacy fallback: .qfai/assistant/steering/${fileName})`,
-          "error",
-          rel,
-          "agentDefinition.missingManifestFile",
-        ),
-      );
-    }
-  }
-
-  if (issues.some((entry) => entry.severity === "error")) {
-    return issues;
-  }
-
-  const catalog = await readCatalog(catalogPath, issues, root);
-  if (catalog.length === 0) {
-    return issues;
-  }
-
-  const catalogRel = manifestRelativePath(catalogPath, root);
-  const catalogIds = new Set(catalog.map((agent) => agent.id));
-  const reviewerIds = new Set(
-    catalog.filter((agent) => agent.kind === "reviewer").map((agent) => agent.id),
-  );
-
-  for (const agent of catalog) {
-    const filePath = path.join(agentsDir, `${agent.id}.md`);
-    const rel = `.qfai/assistant/agents/${agent.id}.md`;
-    if (!(await exists(filePath))) {
-      issues.push(
-        issue(
-          "QFAI-AGENT-004",
-          `Agent catalog entry "${agent.id}" has no canonical markdown file: ${rel}`,
-          "error",
-          rel,
-          "agentDefinition.missingAgentMarkdown",
-        ),
-      );
-      continue;
-    }
+  const agentIds = new Set<string>();
+  const reviewerIds = new Set<string>();
+  for (const name of await readdir(agentsDir)) {
+    if (!name.endsWith(".md")) continue;
+    const id = name.slice(0, -3);
+    const filePath = path.join(agentsDir, name);
+    const rel = `.qfai/assistant/agent/${name}`;
+    agentIds.add(id);
 
     const content = await readFile(filePath, "utf-8");
     const frontmatter = parseAgentFrontmatter(content);
@@ -264,18 +94,19 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
       );
       continue;
     }
-    if (frontmatter.frontmatter.name !== agent.id) {
+    if (frontmatter.frontmatter.name !== id) {
       issues.push(
         issue(
           "QFAI-AGENT-012",
-          `Frontmatter name mismatch in ${rel}: expected "${agent.id}", got "${frontmatter.frontmatter.name}"`,
+          `Frontmatter name mismatch in ${rel}: expected "${id}", got "${frontmatter.frontmatter.name}"`,
           "error",
           rel,
           "agentDefinition.frontmatterNameMismatch",
         ),
       );
+      continue;
     }
-    checkDeveloperInstructions(agent, content, rel, catalogRel, issues);
+    if (frontmatter.frontmatter.kind === "reviewer") reviewerIds.add(id);
     for (const heading of REQUIRED_AGENT_SECTIONS) {
       if (!content.includes(heading)) {
         issues.push(
@@ -291,14 +122,16 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
     }
   }
 
-  const routing = await validateRouting(routingPath, catalogIds, issues, root);
-  const profiles = await validateProfiles(profilesPath, reviewerIds, issues, root);
-  // `undefined` means the manifest could not be parsed or has the wrong shape,
-  // which `QFAI-AGENT-007` / `QFAI-AGENT-009` already report. Cross-checking
-  // `roles:` against the empty result of that failure is not a weaker check but
-  // a wrong one: every skill would be told its routes are missing and every
-  // declared role called unreachable, sending the operator to seven `SKILL.md`
-  // files for one broken manifest.
+  const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
+  const routingPath = path.join(defaultsDir, "agent-routing.yml");
+  const profilesPath = path.join(defaultsDir, "review-profiles.yml");
+  const routing = await validateRouting(routingPath, config.routing ?? [], agentIds, issues);
+  const profiles = await validateProfiles(
+    profilesPath,
+    config.reviewProfiles ?? {},
+    reviewerIds,
+    issues,
+  );
   if (routing !== undefined && profiles !== undefined) {
     await validateSkillRoles(root, config, routing, profiles, issues);
   }
@@ -306,128 +139,63 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
   return issues;
 }
 
-async function readCatalog(
-  catalogPath: string,
-  issues: Issue[],
-  root: string,
-): Promise<CatalogAgent[]> {
-  // Use the actual resolved catalogPath in finding `file:` arguments so
-  // errors point at the location that was actually read (canonical
-  // manifest/ first, legacy steering/ as fallback) — not a hard-coded
-  // legacy literal.
-  const rel = manifestRelativePath(catalogPath, root);
-  try {
-    const parsed: unknown = parseYaml(await readFile(catalogPath, "utf-8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      issues.push(
-        issue(
-          "QFAI-AGENT-006",
-          "agent-catalog.yml must parse to an object",
-          "error",
-          rel,
-          "agentDefinition.invalidCatalogShape",
-        ),
-      );
-      return [];
-    }
-
-    const catalogRoot = parsed as Record<string, unknown>;
-    if (!Array.isArray(catalogRoot.agents)) {
-      issues.push(
-        issue(
-          "QFAI-AGENT-006",
-          "agent-catalog.yml must contain agents array",
-          "error",
-          rel,
-          "agentDefinition.invalidCatalogShape",
-        ),
-      );
-      return [];
-    }
-
-    const agents: CatalogAgent[] = [];
-    for (const [index, entry] of catalogRoot.agents.entries()) {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-006",
-            `agent-catalog.yml agents[${index}] must be an object`,
-            "error",
-            rel,
-            "agentDefinition.invalidCatalogEntry",
-          ),
-        );
-        continue;
-      }
-
-      const agent = entry as Record<string, unknown>;
-      if (typeof agent.id !== "string" || (agent.kind !== "worker" && agent.kind !== "reviewer")) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-006",
-            `agent-catalog.yml agents[${index}] must include string id and kind worker|reviewer`,
-            "error",
-            rel,
-            "agentDefinition.invalidCatalogEntry",
-          ),
-        );
-        continue;
-      }
-
-      // A present-but-non-string block (`null`, a list, a number) is a broken
-      // derived copy, not an absent one. Dropping it silently would make the
-      // drift rule return as if the catalog simply carried no copy, so the
-      // shape error is reported here and the entry keeps its identity for the
-      // remaining per-agent rules.
-      const declared: unknown = agent.developer_instructions;
-      const declaredIsString = typeof declared === "string";
-      if (declared !== undefined && !declaredIsString) {
-        issues.push(
-          issue(
-            "QFAI-AGENT-006",
-            `agent-catalog.yml agents[${index}] developer_instructions must be a string when present`,
-            "error",
-            rel,
-            "agentDefinition.invalidCatalogEntry",
-          ),
-        );
-      }
-
-      agents.push({
-        id: agent.id,
-        kind: agent.kind,
-        hasDeveloperInstructionsKey: declared !== undefined,
-        ...(declaredIsString ? { developerInstructions: declared } : {}),
-      });
-    }
-    return agents;
-  } catch {
-    issues.push(
-      issue(
-        "QFAI-AGENT-006",
-        "agent-catalog.yml could not be parsed",
-        "error",
-        rel,
-        "agentDefinition.catalogParse",
-      ),
-    );
-    return [];
+/** The agents and reviewers the package's agent catalog declares, by frontmatter `kind`. */
+async function packageAgentCatalog(): Promise<{ agents: Set<string>; reviewers: Set<string> }> {
+  const agentsDir = path.join(getInitAssetsDir(), ".qfai", "assistant", "agent");
+  const agents = new Set<string>();
+  const reviewers = new Set<string>();
+  for (const name of await readdir(agentsDir)) {
+    if (!name.endsWith(".md")) continue;
+    const parsed = parseAgentFrontmatter(await readFile(path.join(agentsDir, name), "utf-8"));
+    if (!parsed.ok) continue;
+    agents.add(parsed.frontmatter.name);
+    if (parsed.frontmatter.kind === "reviewer") reviewers.add(parsed.frontmatter.name);
   }
+  return { agents, reviewers };
+}
+
+/**
+ * The routing and review profiles a reader other than validate works from: the package
+ * defaults, each entry replaced whole by the `qfai.config.yaml` override with the same key.
+ * `routing` is the effective set; `defaultRouting` the package's own, with no override.
+ */
+export async function readEffectiveRouting(
+  config: Pick<QfaiConfig, "routing" | "reviewProfiles">,
+): Promise<{
+  routing: Map<string, SkillRouting> | undefined;
+  defaultRouting: Map<string, SkillRouting> | undefined;
+  profiles: Map<string, ProfileSelection> | undefined;
+}> {
+  const defaultsDir = path.resolve(getInitAssetsDir(), "..", "defaults");
+  const routingPath = path.join(defaultsDir, "agent-routing.yml");
+  const catalog = await packageAgentCatalog();
+  const ignored: Issue[] = [];
+  const [routing, defaultRouting, profiles] = await Promise.all([
+    validateRouting(routingPath, config.routing ?? [], catalog.agents, ignored),
+    validateRouting(routingPath, [], catalog.agents, ignored),
+    validateProfiles(
+      path.join(defaultsDir, "review-profiles.yml"),
+      config.reviewProfiles ?? {},
+      catalog.reviewers,
+      ignored,
+    ),
+  ]);
+  return { routing, defaultRouting, profiles };
 }
 
 async function validateRouting(
   routingPath: string,
-  catalogIds: Set<string>,
+  overrides: NonNullable<QfaiConfig["routing"]>,
+  agentIds: Set<string>,
   issues: Issue[],
-  root: string,
 ): Promise<Map<string, SkillRouting> | undefined> {
-  const rel = manifestRelativePath(routingPath, root);
+  const rel = "packages/qfai/assets/defaults/agent-routing.yml";
   // Collected during this walk rather than re-parsed by `validateSkillRoles`:
   // the per-skill routed set is exactly what the walk already resolves, and a
   // second parse could disagree with the one these findings came from.
   const routed = new Map<string, SkillRouting>();
+  const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
   try {
-    const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       issues.push(
         issue(
@@ -454,16 +222,27 @@ async function validateRouting(
       return undefined;
     }
 
-    for (const [routeIndex, route] of routingRoot.routing.entries()) {
+    const effective = new Map<string, unknown>();
+    for (const route of routingRoot.routing) {
+      if (route && typeof route === "object" && !Array.isArray(route)) {
+        const skill: unknown = Reflect.get(route, "skill");
+        if (typeof skill === "string") effective.set(skill, route);
+      }
+    }
+    for (const route of overrides) effective.set(route.skill, route);
+    for (const [routeIndex, route] of [...effective.values()].entries()) {
       if (!route || typeof route !== "object" || Array.isArray(route)) {
         continue;
       }
       const routeObj = route as Record<string, unknown>;
+      const source = overrides.some((entry) => entry.skill === routeObj.skill)
+        ? "qfai.config.yaml"
+        : rel;
       const routedEntry = collectRouteHeader(
         routeObj,
         routed,
         issues,
-        rel,
+        source,
         formatSkillLabel(routeObj.skill, routeIndex),
       );
       if (!Array.isArray(routeObj.phases)) {
@@ -482,7 +261,7 @@ async function validateRouting(
                 "QFAI-AGENT-013",
                 `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares iteration ${JSON.stringify(declared)}; allowed: ${[...ROUTING_ITERATIONS].sort().join(", ")}`,
                 "error",
-                rel,
+                source,
                 "agentDefinition.routingIteration",
               ),
             );
@@ -496,16 +275,16 @@ async function validateRouting(
                 "QFAI-AGENT-013",
                 `${formatSkillLabel(routeObj.skill, routeIndex)} phase[${phaseIndex}] declares rerun_policy ${JSON.stringify(declared)}; allowed: ${[...RERUN_POLICIES].sort().join(", ")}`,
                 "error",
-                rel,
+                source,
                 "agentDefinition.rerunPolicy",
               ),
             );
           }
         }
         validateAgentRefs(
-          rel,
+          source,
           phaseObj.mandatory_agents,
-          catalogIds,
+          agentIds,
           issues,
           formatSkillLabel(routeObj.skill, routeIndex),
           routeIndex,
@@ -513,9 +292,9 @@ async function validateRouting(
           "mandatory_agents",
         );
         validateAgentRefs(
-          rel,
+          source,
           phaseObj.conditional_agents,
-          catalogIds,
+          agentIds,
           issues,
           formatSkillLabel(routeObj.skill, routeIndex),
           routeIndex,
@@ -523,9 +302,9 @@ async function validateRouting(
           "conditional_agents",
         );
         validateAgentRefs(
-          rel,
+          source,
           phaseObj.blocking_agents,
-          catalogIds,
+          agentIds,
           issues,
           formatSkillLabel(routeObj.skill, routeIndex),
           routeIndex,
@@ -535,9 +314,9 @@ async function validateRouting(
         if (Array.isArray(phaseObj.parallel_groups)) {
           for (const group of phaseObj.parallel_groups) {
             validateAgentRefs(
-              rel,
+              source,
               group,
-              catalogIds,
+              agentIds,
               issues,
               formatSkillLabel(routeObj.skill, routeIndex),
               routeIndex,
@@ -550,14 +329,14 @@ async function validateRouting(
         // `validateAgentRefs` and `recordRoutedAgents`, so `mandatory_agents:
         // completion-reviewer` used to route nobody and say nothing.
         validateAgentFieldShapes(
-          rel,
+          source,
           phaseObj,
           issues,
           formatSkillLabel(routeObj.skill, routeIndex),
           phaseIndex,
         );
         if (routedEntry) {
-          collectPhaseAgents(routedEntry, phaseObj, catalogIds);
+          collectPhaseAgents(routedEntry, phaseObj, agentIds);
         }
       }
     }
@@ -747,18 +526,18 @@ function validateAgentRefs(
 
 async function validateProfiles(
   profilesPath: string,
+  overrides: NonNullable<QfaiConfig["reviewProfiles"]>,
   reviewerIds: Set<string>,
   issues: Issue[],
-  root: string,
 ): Promise<Map<string, ProfileSelection> | undefined> {
-  const rel = manifestRelativePath(profilesPath, root);
+  const rel = "packages/qfai/assets/defaults/review-profiles.yml";
   // A profile selects reviewers a phase list never names, so `QFAI-AGENT-019`
   // and `QFAI-AGENT-015` need this side of the manifest too — the first before
   // it can call a profile-selected reviewer undeclared, the second before it
   // can call a declared role unreachable.
   const selections = new Map<string, ProfileSelection>();
+  const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
   try {
-    const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       issues.push(
         issue(
@@ -788,19 +567,20 @@ async function validateProfiles(
       );
       return undefined;
     }
-    const profiles = profilesRoot.profiles as Record<string, unknown>;
+    const profiles = { ...(profilesRoot.profiles as Record<string, unknown>), ...overrides };
     for (const [profileName, profile] of Object.entries(profiles)) {
       if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
         continue;
       }
       const profileObj = profile as Record<string, unknown>;
+      const source = Object.hasOwn(overrides, profileName) ? "qfai.config.yaml" : rel;
       // Before collecting: both readers below guard on `Array.isArray`, so
       // `always_required: completion-reviewer` produced an empty selection set
       // and no finding — a broken mandatory review gate that passed silently.
       // The result is carried on the selection because a truncated reviewer
       // list is not a short one: the roles cross-check has to know it is
       // reading a floor before it tells a skill to drop a declared reviewer.
-      const shapesUsable = validateReviewerFieldShapes(profileObj, issues, profileName, rel);
+      const shapesUsable = validateReviewerFieldShapes(profileObj, issues, profileName, source);
       selections.set(profileName, {
         reviewers: collectProfileReviewers(
           profileObj.always_required,
@@ -815,7 +595,7 @@ async function validateProfiles(
         issues,
         profileName,
         "always",
-        rel,
+        source,
       );
       validateReviewerRefs(
         profileObj.conditional_required,
@@ -823,7 +603,7 @@ async function validateProfiles(
         issues,
         profileName,
         "conditional",
-        rel,
+        source,
       );
     }
   } catch {

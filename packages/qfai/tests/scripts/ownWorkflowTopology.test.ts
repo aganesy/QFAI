@@ -37,31 +37,6 @@
  * a developer machine without jq, and an unverifiable gate is what the derived
  * verdict exists to replace.
  */
-// QFAI:SPEC-0017:TC-0017-0001
-// QFAI:SPEC-0017:TC-0017-0002
-// QFAI:SPEC-0017:TC-0017-0003
-// QFAI:SPEC-0017:TC-0017-0004
-// QFAI:SPEC-0017:TC-0017-0005
-// QFAI:SPEC-0017:TC-0017-0027
-// QFAI:SPEC-0017:TC-0017-0028
-// QFAI:SPEC-0017:TC-0017-0029
-// QFAI:SPEC-0017:TC-0017-0031
-// QFAI:SPEC-0017:TC-0017-0071
-// QFAI:SPEC-0017:TC-0017-0072
-// QFAI:SPEC-0017:TC-0017-0073
-// QFAI:SPEC-0017:TC-0017-0006
-// QFAI:SPEC-0017:TC-0017-0008
-// QFAI:SPEC-0017:TC-0017-0009
-// QFAI:SPEC-0017:TC-0017-0010
-// QFAI:SPEC-0017:TC-0017-0011
-// QFAI:SPEC-0017:TC-0017-0012
-// QFAI:SPEC-0017:TC-0017-0041
-// QFAI:SPEC-0017:TC-0017-0042
-// QFAI:SPEC-0017:TC-0017-0036
-// QFAI:SPEC-0017:TC-0017-0038
-// QFAI:SPEC-0017:TC-0017-0039
-// QFAI:SPEC-0017:TC-0017-0040
-
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -263,6 +238,7 @@ function allNeeds(result: string): Record<string, { result: string }> {
   return Object.fromEntries(verdictNeeds().map((name) => [name, { result }]));
 }
 
+// QFAI:EX-0002-0013-01
 describe("TC-0017-0001 (TDD-0001): the verdict derives its result from the serialized needs map", () => {
   it("reads the serialized map and evaluates a need name that appears nowhere in its body", () => {
     const step = verdictStep();
@@ -311,6 +287,7 @@ describe("TC-0017-0001 (TDD-0001): the verdict derives its result from the seria
   });
 });
 
+// QFAI:EX-0002-0013-03
 describe("TC-0017-0002 (TDD-0002): a failed need and a cancelled need each drive the verdict to 1", () => {
   it("rejects a failure and a cancellation, naming the need in both", () => {
     for (const state of ["failure", "cancelled"]) {
@@ -347,6 +324,7 @@ describe("TC-0017-0003 (TDD-0003): no need is outside the verdict derivation and
   });
 });
 
+// QFAI:EX-0002-0013-02
 describe("TC-0017-0004 (TDD-0004): all-succeeded and all-skipped are both accepting", () => {
   it("returns 0 for an all-success map and for an all-skipped one", () => {
     // Two accepting states and not one: an all-skipped run is what change
@@ -367,6 +345,7 @@ describe("TC-0017-0004 (TDD-0004): all-succeeded and all-skipped are both accept
   });
 });
 
+// QFAI:EX-0002-0013-04
 describe("TC-0017-0005 (TDD-0005): an unrecognized need state fails closed", () => {
   it("rejects every token outside the accepting set, including ones that look benign", () => {
     // The rule is that the ACCEPTING set is closed, not that a known-bad list is
@@ -476,6 +455,7 @@ function ciWorkflowText(): string {
   return readFileSync(CI_WORKFLOW, "utf-8");
 }
 
+// QFAI:EX-0002-0015-01
 describe("TC-0017-0027 (TDD-0027): the frozen-lockfile literal appears once, in one definition", () => {
   it("holds zero occurrences in ci.yml and exactly one in the shared definition", () => {
     // Counted over the RAW TEXT rather than the parsed document, because the
@@ -492,6 +472,7 @@ describe("TC-0017-0027 (TDD-0027): the frozen-lockfile literal appears once, in 
   });
 });
 
+// QFAI:EX-0002-0015-02
 describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inline", () => {
   it("consumes the shared definition from every toolchain job and inlines none of its steps", () => {
     const jobs = toolchainJobs();
@@ -530,6 +511,7 @@ describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inl
   });
 });
 
+// QFAI:EX-0002-0015-03
 describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step order and the re-shim", () => {
   it("runs shim, Node setup with cache and dependency path, re-shim, frozen install — in that order", () => {
     const steps = setupActionSteps();
@@ -759,6 +741,7 @@ const stepName = (step: Record<string, unknown>): string =>
 const stepRun = (step: Record<string, unknown>): string =>
   typeof step["run"] === "string" ? step["run"] : "";
 
+// QFAI:EX-0002-0020-01
 describe("TC-0017-0071 (TDD-0071): exactly one workflow is triggered by a pull request", () => {
   it("has removed the duplicate and leaves a single pull-request-triggered workflow", () => {
     const files = ownWorkflowFiles();
@@ -779,6 +762,7 @@ describe("TC-0017-0071 (TDD-0071): exactly one workflow is triggered by a pull r
   });
 });
 
+// QFAI:EX-0002-0020-02
 describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the published one", () => {
   it("runs the full profile from the build job against the repository root, via the built binary", () => {
     const steps = buildJobSteps();
@@ -849,6 +833,7 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
   });
 });
 
+// QFAI:EX-0002-0020-03
 describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verification set", () => {
   it("enumerates the build job's verifications and requires each of them, the folded run included", () => {
     // THE enumeration. Keeping it here, as literals, is what makes removing any member a
@@ -1093,6 +1078,7 @@ function runClassifier(input: {
   }
 }
 
+// QFAI:EX-0002-0013-07
 describe("TC-0017-0006 (TDD-0006): the executing set and its declared timeout sum match the pin", () => {
   it("agrees with the committed pin and derives every other job's condition from detection", () => {
     const jobs = ciJobs();
@@ -1199,6 +1185,7 @@ function runsCommand(body: string, command: string): boolean {
   return new RegExp(`(^|[\\s;&|])${escaped}($|[\\s;&|])`, "m").test(body);
 }
 
+// QFAI:EX-0002-0013-11
 describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditioned or listed", () => {
   it("resolves each exempt lane to one host that carries no condition and is listed nowhere", () => {
     const jobs = ciJobs();
@@ -1282,6 +1269,7 @@ describe("TC-0017-0012 (TDD-0012): no lint-aggregate lane's host job is conditio
   });
 });
 
+// QFAI:EX-0002-0013-08
 describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set with no annotation", () => {
   it("selects the narrow set for a documentation-only list and annotates nothing", () => {
     const result = runClassifier({ paths: ["REVIEW.md", "packages/qfai/docs/anything.md"] });
@@ -1332,6 +1320,7 @@ describe("TC-0017-0008 (TDD-0008): a resolvable base ref narrows the lane set wi
   });
 });
 
+// QFAI:EX-0002-0013-08
 describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref both fail open", () => {
   it("selects the full set and names the reason when the diff produced nothing", () => {
     // Two shapes of one failure. A shallow clone makes git refuse; an unreachable base
@@ -1356,6 +1345,7 @@ describe("TC-0017-0009 (TDD-0009): a shallow clone and an unreachable base ref b
   });
 });
 
+// QFAI:EX-0002-0013-10
 describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-only", () => {
   it("selects everything for the assistant tree and narrows for the agent mirrors", () => {
     // The assistant tree is excluded from the documentation-only set by name
@@ -1471,6 +1461,7 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
   });
 });
 
+// QFAI:EX-0002-0013-09
 describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects everything", () => {
   it("selects the full set and says the path was unrecognized, not that it was source", () => {
     const result = runClassifier({ paths: ["some/directory/nobody/declared.txt"] });
@@ -1485,6 +1476,18 @@ describe("TC-0017-0011 (TDD-0011): a path in no recognized directory selects eve
         "the reason must identify the path as outside every recognized directory",
       )
       .toMatch(/unrecognized|not in any recognized/i);
+  });
+
+  // QFAI:EX-0002-0013-09
+  it("selects the full set when an unrecognized path is paired with a documentation-only path", () => {
+    const docsOnly = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
+    expect.soft(docsOnly.full, "the documentation path alone selects the narrow set").toBe(false);
+
+    const result = runClassifier({
+      paths: ["packages/qfai/docs/anything.md", "some/directory/nobody/declared.txt"],
+    });
+    expect.soft(result.status, `the classifier must exit 0:\n${result.raw}`).toBe(0);
+    expect.soft(result.full, "a documentation path must not mask an unrecognized one").toBe(true);
   });
 });
 
@@ -1549,7 +1552,7 @@ function codePathCost(jobs: Record<string, Record<string, unknown>>): {
   return { instances, timeoutMinutesSum, installInstances, buildJobs };
 }
 
-// QFAI:SPEC-0017:TC-0017-0087
+// QFAI:EX-0002-0017-04
 describe("TC-0017-0087 (TDD-0096): the code path's cost agrees with the committed pin", () => {
   it("matches every pinned figure against this file's own reading of the workflow", () => {
     const cost = codePathCost(ciJobs());
@@ -1680,6 +1683,7 @@ const OWN_WORKFLOW_FILES = [
   "tag-release.yml",
 ] as const;
 
+// QFAI:EX-0002-0017-03
 describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no check name", () => {
   it("keeps the layer split inside the existing file as matrix legs of one job", () => {
     // CLAIM 1 — this exact set, and no member of it is a per-layer workflow. A per-layer
@@ -2002,6 +2006,7 @@ describe("one lane runs on the floor `engines.node` declares", () => {
   });
 });
 
+// QFAI:EX-0002-0017-01
 describe("TC-0017-0042 (TDD-0042): the aggregate verdict check name is immutable", () => {
   it("keeps the verdict's key and declares no name that could rename it", () => {
     const jobs = ciJobs();
@@ -2141,6 +2146,7 @@ function reachableSteps(jobId: string): { jobId: string; step: Record<string, un
 const named = (step: Record<string, unknown>): string =>
   typeof step["name"] === "string" ? step["name"] : "(unnamed)";
 
+// QFAI:EX-0002-0016-04
 describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and unconditionality", () => {
   it("keeps the exact name, no condition, and every verification item within reach", () => {
     const jobs = ciJobs();
@@ -2230,6 +2236,7 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
   });
 });
 
+// QFAI:EX-0002-0016-05
 describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by continue-on-error", () => {
   it("leaves no verification item able to fail without failing the job", () => {
     const weakened = reachableSteps(REQUIRED_CONTEXT_NAME)
@@ -2251,6 +2258,7 @@ describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by conti
   });
 });
 
+// QFAI:EX-0002-0016-06
 describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and ages out sooner", () => {
   it("declines to run on a cancelled run, tolerates a missing file, and expires within a week", () => {
     const uploads = stepsOf(BUILD_JOB_NAME).filter(
@@ -2286,6 +2294,7 @@ describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and a
   });
 });
 
+// QFAI:EX-0002-0016-06
 describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an unconditional run fail", () => {
   it("holds the retention boundary at seven days", () => {
     const uploads = stepsOf(BUILD_JOB_NAME).filter(
@@ -3575,7 +3584,7 @@ describe("release automation performs decisions rather than making them", () => 
  * last row re-derives them from the tags wherever the tags are reachable.
  */
 describe("the release gate runs what the tag's tree declares, and runs the suite once", () => {
-  // QFAI:SPEC-0017:TC-0017-0092
+  // QFAI:EX-0002-0017-06
   it("TC-0017-0092 (TDD-0101): runs independent checks in isolated verified workspaces", () => {
     for (const id of ["gate", ...operationJobs]) {
       const job = gateJobs()[id];
@@ -3867,7 +3876,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0088
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0088 (TDD-0097): release prerequisites accept complete gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -3895,7 +3904,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 (TDD-0098): release prerequisites reject invalid gate paths", () => {
     for (const id of ["github-release", "publish"]) {
       const condition = releaseJobs()[id]?.["if"];
@@ -3955,7 +3964,7 @@ describe("the release gate runs what the tag's tree declares, and runs the suite
     }
   });
 
-  // QFAI:SPEC-0017:TC-0017-0089
+  // QFAI:EX-0002-0017-05
   it("TC-0017-0089 release prerequisites evaluator refuses unsupported expressions", () => {
     for (const expression of [
       "always()",

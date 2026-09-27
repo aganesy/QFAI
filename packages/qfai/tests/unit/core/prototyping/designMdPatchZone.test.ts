@@ -1,11 +1,11 @@
 /**
  * Unit: DESIGN.md front-matter `patch_zone:` semantic.
  *
- * - TC-0012-0473 (normal): an edit fully contained in the `patch_zone:`
+ * - An edit fully contained in the `patch_zone:`
  *   block updates ONLY `patchHash`. `majorHash` (the existing
  *   sha256-of-bytes) is byte-stable and prototyping evidence remains
  *   valid.
- * - TC-0012-0474 (error): an out-of-zone edit (or removal of the
+ * - An out-of-zone edit (or removal of the
  *   `patch_zone:` block) invalidates evidence (majorHash changes) AND
  *   emits Reviewer Gate finding `R-DESIGN-MD-PATCH-OUT-OF-ZONE`
  *   (severity warning) with non-empty justification (file, zone bounds,
@@ -23,8 +23,6 @@
  * `majorHash`. Edits to any other token (or removal of the patch_zone
  * block itself) bump `majorHash` and surface the reviewer finding.
  */
-// QFAI:SPEC-0012:TC-0012-0473
-// QFAI:SPEC-0012:TC-0012-0474
 
 import { describe, expect, it } from "vitest";
 
@@ -85,11 +83,15 @@ function withSecondary(text: string, hex: string): string {
   return text.replace(/(secondary:\s*)"#[0-9a-fA-F]{6}"/u, `$1"${hex}"`);
 }
 
+function withFontSans(text: string, family: string): string {
+  return text.replace(/(family_sans:\s*)"Inter"/u, `$1"${family}"`);
+}
+
 function stripPatchZone(text: string): string {
   return text.replace(/\npatch_zone:[\s\S]*?(?=---)/u, "\n");
 }
 
-describe("TC-0012-0473: in-zone edit updates patchHash only (majorHash stable)", () => {
+describe("in-zone edit updates patchHash only (majorHash stable)", () => {
   it("parses the patch_zone block from front-matter", () => {
     const parsed = parseDesignMdPatchZone(BASE_FRONT_MATTER);
     expect(parsed.ok).toBe(true);
@@ -107,12 +109,19 @@ describe("TC-0012-0473: in-zone edit updates patchHash only (majorHash stable)",
     expect(after.patchHash).not.toBe(before.patchHash);
   });
 
-  it("in-zone radius edit also keeps majorHash byte-stable", () => {
+  // QFAI:EX-0001-0148-01
+  it("in-zone radius edit keeps majorHash stable without a reviewer finding", () => {
     const before = computeDesignMdHashes(BASE_FRONT_MATTER);
     const edited = withRadiusMd(BASE_FRONT_MATTER, "10px");
     const after = computeDesignMdHashes(edited);
     expect(after.majorHash).toBe(before.majorHash);
     expect(after.patchHash).not.toBe(before.patchHash);
+    const issues = detectDesignMdPatchOutOfZone({
+      filePath: "DESIGN.md",
+      before: BASE_FRONT_MATTER,
+      after: edited,
+    });
+    expect(issues.filter((i) => i.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE")).toEqual([]);
   });
 
   // Pin the first-child placeholder-replacement fix. The
@@ -146,7 +155,24 @@ describe("TC-0012-0473: in-zone edit updates patchHash only (majorHash stable)",
   });
 });
 
-describe("TC-0012-0474: out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
+describe("out-of-zone edit invalidates evidence and surfaces R-DESIGN-MD-PATCH-OUT-OF-ZONE", () => {
+  // QFAI:EX-0001-0148-02
+  it("a font change outside the zone changes majorHash and emits a warning", () => {
+    const edited = withFontSans(BASE_FRONT_MATTER, "Arial");
+    const before = computeDesignMdHashes(BASE_FRONT_MATTER);
+    const after = computeDesignMdHashes(edited);
+    expect(after.majorHash).not.toBe(before.majorHash);
+    const findings = detectDesignMdPatchOutOfZone({
+      filePath: "DESIGN.md",
+      before: BASE_FRONT_MATTER,
+      after: edited,
+    });
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE", severity: "warning" }),
+      ]),
+    );
+  });
   it("majorHash changes when an out-of-zone token is edited", () => {
     const before = computeDesignMdHashes(BASE_FRONT_MATTER);
     const edited = withSecondary(BASE_FRONT_MATTER, "#123456");

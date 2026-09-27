@@ -1,0 +1,21 @@
+# Document schema: 02_business-flow/business-flow-NNNN/business-flow.md
+structure:
+  - heading:
+      pattern: "^# BF-[0-9]{4}: .+"
+      regex: true
+    description: Required document heading.
+    allow_additional: true
+    children:
+      - heading:
+          pattern: "^## Purpose$"
+          regex: true
+        description: Purpose section.
+        allow_additional: true
+      - heading:
+          pattern: "^## Flow$"
+          regex: true
+        description: Flow section.
+        allow_additional: true
+        code_blocks:
+          - lang: mermaid
+            min: 1

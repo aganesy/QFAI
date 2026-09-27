@@ -5,7 +5,7 @@
  *   field set plus extra per-skill keys passes (`additionalProperties: true`).
  *
  *   The minimum field set per AC-0015-0017 is:
- *     companyName?, primarySpecId?, startDate?, signature?,
+ *     companyName?, primaryUiContract?, startDate?, signature?,
  *     entryPattern?, productScope?
  *   All are optional and additional properties are permitted.
  *
@@ -13,7 +13,7 @@
  *   warning code (not validated here; emitted by readers when a legacy
  *   ad-hoc file is encountered).
  */
-// QFAI:SPEC-0015:TC-0015-0025
+// QFAI:EX-0001-0177-01
 
 import { describe, expect, it } from "vitest";
 
@@ -34,7 +34,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   it("accepts the canonical minimum field set", () => {
     const issues = validateHandoff({
       companyName: "Acme",
-      primarySpecId: "spec-0012",
+      primaryUiContract: "CON-UI-0012",
       startDate: "2026-05-27",
       signature: "abc123",
       entryPattern: "qfai-sdd",
@@ -59,7 +59,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   });
 
   it("flags type-mismatched well-known fields", () => {
-    const issues = validateHandoff({ companyName: 42, primarySpecId: ["nope"] });
+    const issues = validateHandoff({ companyName: 42, primaryUiContract: ["nope"] });
     const codes = new Set(issues.map((i) => i.code));
     expect(codes.has("HANDOFF-SCHEMA-FIELD-TYPE")).toBe(true);
   });
@@ -67,7 +67,7 @@ describe("TC-0015-0025: validateHandoff accepts canonical + extra keys", () => {
   it("exports the canonical field list and the legacy format code", () => {
     expect(HANDOFF_MINIMUM_FIELDS).toEqual([
       "companyName",
-      "primarySpecId",
+      "primaryUiContract",
       "startDate",
       "signature",
       "entryPattern",
@@ -86,7 +86,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("parses a canonical YAML handoff into a record", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primarySpecId: "0001"',
+      'primaryUiContract: "CON-UI-0001"',
       'startDate: "2026-05-27"',
       'signature: "abc123"',
       'entryPattern: "qfai-sdd"',
@@ -96,19 +96,19 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
     const parsed = parseHandoff(yaml);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primarySpecId).toBe("0001");
+    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
     expect(parsed?.productScope).toBe("saas");
   });
 
   it("parses a JSON handoff into a record (YAML is a strict superset)", () => {
     const json = JSON.stringify({
       companyName: "Acme",
-      primarySpecId: "0001",
+      primaryUiContract: "CON-UI-0001",
     });
     const parsed = parseHandoff(json);
     expect(parsed).not.toBeNull();
     expect(parsed?.companyName).toBe("Acme");
-    expect(parsed?.primarySpecId).toBe("0001");
+    expect(parsed?.primaryUiContract).toBe("CON-UI-0001");
   });
 
   it("returns null for empty input (YAML `null` document)", () => {
@@ -146,7 +146,7 @@ describe("parseHandoff accepts YAML and JSON handoff payloads", () => {
   it("preserves nested YAML object graphs (no data loss for non-flat payloads)", () => {
     const yaml = [
       'companyName: "Acme"',
-      'primarySpecId: "0001"',
+      'primaryUiContract: "CON-UI-0001"',
       "signature:",
       '  by: "alice"',
       '  on: "2026-05-27"',

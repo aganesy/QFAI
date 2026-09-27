@@ -123,7 +123,7 @@ async function gateIssues(): Promise<Issue[]> {
   return validateReviewerJustification(root, config);
 }
 
-// QFAI:SPEC-0015:US-0015-0016
+// QFAI:BF-0001
 describe(
   "E2E: a hygiene regression the lane emits reaches a reviewer with its site intact (US-0015-0016)",
   { timeout: 120000 },

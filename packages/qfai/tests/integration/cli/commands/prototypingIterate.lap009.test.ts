@@ -8,7 +8,7 @@
  * finding. Reviewer override requires a non-empty `justification:`.
  */
 
-// QFAI:SPEC-0012:TC-0012-0453
+// QFAI:EX-0001-0143-01
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -91,6 +91,13 @@ async function seedProject(root: string): Promise<void> {
       "validation:",
       "  failOn: error",
     ].join("\n"),
+    "utf-8",
+  );
+  const uiDir = path.join(root, ".qfai/contracts/ui");
+  await mkdir(uiDir, { recursive: true });
+  await writeFile(
+    path.join(uiDir, "spec-0001.yaml"),
+    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
