@@ -21,6 +21,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { parseContractRules } from "../../../src/core/storyTree/contractRules.js";
+
 const FLAG_REFERENCE = path.resolve(
   process.cwd(),
   "assets/init/.qfai/assistant/skill/qfai-prototyping/references/iterate-flags.md",
@@ -205,14 +207,15 @@ describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () 
     expect(missing).toEqual([]);
   });
 
-  it("the CLI contract synopsis lists every flag", async () => {
-    const contract = await readFile(CONTRACT_MD, "utf-8");
-    const synopsisStart = contract.indexOf("qfai prototyping iterate --cycle");
-    expect(synopsisStart).toBeGreaterThan(-1);
-    const synopsis = contract.slice(synopsisStart, contract.indexOf("```", synopsisStart));
-    const missing = ITERATE_FLAGS.filter(({ flag }) => !synopsis.includes(flag)).map(
-      ({ flag }) => flag,
+  it("the CLI contract's flag rule names every flag", async () => {
+    const { rules } = parseContractRules(CONTRACT_MD, await readFile(CONTRACT_MD, "utf-8"));
+    const flagRule = rules.find(({ statement }) =>
+      statement.startsWith("`qfai prototyping iterate` takes `--cycle"),
     );
+    expect(flagRule).toBeDefined();
+    const missing = ITERATE_FLAGS.filter(
+      ({ flag }) => !flagRule?.statement.includes(`\`${flag}`),
+    ).map(({ flag }) => flag);
     expect(missing).toEqual([]);
   });
 });

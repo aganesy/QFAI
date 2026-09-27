@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const trees = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const read = (tree: string, file: string): Promise<string> =>
@@ -39,13 +41,11 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
   }
 
   it("the CLI contract rejects a bare primary UI contract ID", async () => {
-    const contract = await readFile(
-      path.join(root, ".qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md"),
-      "utf-8",
-    );
-    expect(contract).toContain("`--primary-ui-contract` flag");
-    expect(contract).toContain("Both MUST accept only the full `UI-NNNN` form");
-    expect(contract).toContain("a bare `NNNN` included");
-    expect(contract).toContain("No input is normalised");
+    const file = path.join(root, ".qfai/spec/03_contract/cli/cli-0013-qfai-prototyping.md");
+    const { rules } = parseContractRules(file, await readFile(file, "utf-8"));
+    const pin = rules.find(({ statement }) => statement.includes("`--primary-ui-contract` flag"));
+    expect(pin?.statement).toContain("Both accept only the full `UI-NNNN` form");
+    expect(pin?.statement).toContain("a bare `NNNN` included");
+    expect(pin?.statement).toContain("no input is normalised");
   });
 });

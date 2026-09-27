@@ -296,6 +296,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   obligation its other sections stated is now a rule citing the examples
   that show it. The rules are numbered by contract, as `BR-0012-0001`.
 
+- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
+  contracts are written as business rules.** This repository's contracts for
+  those commands now hold an ownership boundary and one business-rules table,
+  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
+  exit codes, payload fields, state transitions and operator screens are rules
+  in that table. No command behaves differently.
+
 - **The `qfai doctor`, `qfai init` and `qfai validate` contracts are one
   business-rule table each.** Every obligation their synopsis, option,
   side-effect, exit-code, finding and output-grammar sections stated is now a
