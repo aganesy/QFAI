@@ -269,7 +269,9 @@ describe("cli root discovery", () => {
 });
 
 describe("cli usage errors", () => {
-  async function captureRun(argv: string[]): Promise<{ stdout: string; stderr: string }> {
+  async function captureRun(
+    argv: string[],
+  ): Promise<{ stdout: string; stderr: string; exitCode: typeof process.exitCode }> {
     const stdoutSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const previousExitCode = process.exitCode;
@@ -279,6 +281,7 @@ describe("cli usage errors", () => {
       return {
         stdout: stdoutSpy.mock.calls.map((call) => String(call[0])).join(""),
         stderr: stderrSpy.mock.calls.map((call) => String(call[0])).join(""),
+        exitCode: process.exitCode,
       };
     } finally {
       stdoutSpy.mockRestore();
@@ -286,6 +289,16 @@ describe("cli usage errors", () => {
       process.exitCode = previousExitCode;
     }
   }
+
+  // QFAI:EX-0001-0179-03
+  it("exits 2 on an audit argument error and names the reason on stderr", async () => {
+    const missing = await captureRun(["audit"]);
+    expect(missing.exitCode).toBe(2);
+    expect(missing.stderr).toContain("qfai audit: unknown or missing subcommand. Expected: log");
+    const format = await captureRun(["audit", "log", "--format", "csv"]);
+    expect(format.exitCode).toBe(2);
+    expect(format.stderr).toContain("--format");
+  });
 
   it("writes the rejection reason to stderr, not only usage to stdout", async () => {
     const { stdout, stderr } = await captureRun(["validate", "--profile", "bogus"]);

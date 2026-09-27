@@ -1,24 +1,16 @@
 # CLI-0010: `qfai handoff upgrade`
 
-- Contract scope: the public legacy-handoff conversion command
-- Migration origin: `spec-0015`
-- Used-by: operators migrating a legacy handoff
-- SSOT modules: `packages/qfai/src/cli/commands/handoffUpgrade.ts` and `packages/qfai/src/core/handoff/`
+## Ownership boundary
 
-## Command surface
+This contract decides how `qfai handoff upgrade <legacy-file>` turns a legacy handoff file into the canonical `.qfai/handoff.yaml`, when it may replace an existing canonical handoff, and what it does on a dry run.
 
-`qfai handoff upgrade <legacy-file>` converts a legacy handoff to the
-canonical `.qfai/handoff.yaml`. The original fields are preserved under a
-`legacy:` key so conversion does not discard information. `--dry-run` reports
-the intended operation without writing. `--force` may replace an existing
-canonical handoff only after saving its previous contents to a timestamped
-backup. An unreadable or empty input is refused before the output changes.
-A nonempty legacy body that does not parse as an object retains its raw text
-under `legacy.__legacy_raw__`. The canonical handoff schema, rather than this
-adapter, owns the fields read by downstream skills.
+The fields of the canonical handoff, and which of them downstream skills read, are decided by the canonical handoff schema the package ships, not by this adapter.
 
-## Rules
+## Business rules
 
-| BR-ID   | Statement                                                                                                                                                                                                                                                                                                                                                                                                  | Examples        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| BR-0356 | `qfai handoff upgrade` lossless legacy adapter - `qfai handoff upgrade <legacy-file>` (SHOULD) accepts a legacy handoff file and emits a conforming `handoff.yaml` (CLI-HANDOFF) at the canonical path. - The helper MUST preserve all original fields under a `legacy:` key to avoid data loss. - SHOULD-level per the v1.9.1 `qfai prototyping upgrade-{config,json}` precedent (closed OQ-0120 / 0121). | EX-0001-0180-01 |
+| BR-ID        | Statement                                                                                                                                                                                                                                                                                                                                                                                                           | Examples        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| BR-0010-0001 | `qfai handoff upgrade <legacy-file>` accepts a legacy handoff file and writes a conforming `handoff.yaml` at the canonical path. It keeps every original field under a `legacy:` key, so the conversion loses nothing, and a nonempty legacy body that does not parse as an object is kept as text under `legacy.__legacy_raw__`. The command is a convenience for migrating a legacy handoff, not a required step. | EX-0001-0180-01 |
+| BR-0010-0002 | An existing canonical handoff is replaced only under `--force`, and only after its previous contents are saved to a timestamped backup beside it. Without `--force` the command refuses, exits 1 and leaves the existing file unchanged.                                                                                                                                                                            | EX-0001-0180-02 |
+| BR-0010-0003 | `--dry-run` reports the operation the command would perform, or the refusal it would meet, and writes nothing, with or without `--force`.                                                                                                                                                                                                                                                                           | EX-0001-0180-03 |
+| BR-0010-0004 | A legacy file that cannot be read, or is empty, is refused before any output changes, and an existing canonical handoff stays as it was.                                                                                                                                                                                                                                                                            | EX-0001-0180-04 |

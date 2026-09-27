@@ -5,7 +5,7 @@
  *
  * Scope is the own tree ONLY. The shipped set under
  * `packages/qfai/assets/init/root/.github/workflows/**` is governed by
- * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` §5/§6 and by a different spec; the
+ * `.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md` (BR-0020-0023, BR-0020-0043) and by a different spec; the
  * rules that reach it arrive with the shipped-file half of this lane, not here.
  * A lane that quietly scanned both would enforce this repository's conventions on
  * every adopter's tree.

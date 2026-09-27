@@ -276,6 +276,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The `prototype` stage of a `qfai-run` route no longer names
     `<paths.contractsDir>/design/**` as a write area. Nothing is written there.
 
+- **The contracts for `qfai atdd scaffold`, `qfai audit log`,
+  `qfai discussion`, `qfai handoff upgrade`, `qfai report`, the migration
+  scripts and the shipped workflow set are in the CLI contract form.** Each
+  holds an ownership boundary and one business-rules table, and every
+  obligation its other sections stated is now a rule citing the examples
+  that show it. The rules are numbered by contract, as `BR-0012-0001`.
+
 - **The shipped guidance states what each story-tree document may hold.** The
   `qfai-sdd` skill, its steps and the shared rules now say that a document
   under `.qfai/spec/` holds its template's headings and nothing else, with one
