@@ -103,7 +103,7 @@ describe("validate.ts QFAI-DCON-* known codes (TC-3.9.x)", () => {
     await mkdir(path.join(root, ".qfai/spec/02_business-flow"), { recursive: true });
     await writeFile(
       path.join(root, ".qfai/contracts/ui/ui.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
       "utf-8",
     );
     await writeFile(path.join(root, ".qfai/spec/decisions.md"), "# Decisions\n", "utf-8");

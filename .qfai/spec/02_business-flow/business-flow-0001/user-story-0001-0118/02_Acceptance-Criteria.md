@@ -6,16 +6,16 @@
 Feature: Project-wide UI-contract resolution
   # AC-0001-0118-01
   Scenario: A contract without an ID or screens is not UI-bearing
-    Given a story-tree project contains non-UI work and a UI contract file without a `CON-UI-NNNN` ID or a `screens[]` entry
+    Given a story-tree project contains non-UI work and a UI contract file without a `UI-NNNN` ID or a `screens[]` entry
     When prototyping scope is resolved
     Then the file is excluded from the UI-bearing contract set and no spec-level marker is read
     And missing screen contracts do not trigger UI-only requirements for the non-UI work
 
   # AC-0001-0118-02
   Scenario: One invocation resolves every UI-bearing UI contract
-    Given a consumer project whose `<paths.contractsDir>/ui/` holds one or more files that each declare a `CON-UI-NNNN` ID and at least one `screens[]` entry
+    Given a consumer project whose `<paths.contractsDir>/ui/` holds one or more files that each declare a `UI-NNNN` ID and at least one `screens[]` entry
     When `/qfai-prototyping` is invoked exactly once
-    Then the resolver returns every UI-bearing `CON-UI-NNNN` ID, no primary-contract selection prompt is emitted, and cycle-0 evidence records the resolved set in `uiContractsCovered[]`
+    Then the resolver returns every UI-bearing `UI-NNNN` ID, no primary-contract selection prompt is emitted, and cycle-0 evidence records the resolved set in `uiContractsCovered[]`
     And nothing read from `01_Spec.md` or from a contract file named after a spec counts toward the set
 
   # AC-0001-0118-03

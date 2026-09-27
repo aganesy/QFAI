@@ -120,7 +120,7 @@ next action:
   - scope expansions outside the active envelope
 - hard-required:
   - brand intent when a prototyping-scoped run consumes an unresolved visual design decision
-  - a full `CON-UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract from the invocation or current evidence
+  - a full `UI-NNNN` when a prototyping-scoped run cannot resolve its primary UI contract from the invocation or current evidence
   - a usable story source when a flow-scoped run cannot resolve it from the configured story tree or invocation
   - an affected `BF-NNNN` when a flow-scoped run cannot resolve it from the configured story tree or invocation
 

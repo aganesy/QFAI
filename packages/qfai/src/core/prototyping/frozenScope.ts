@@ -52,7 +52,7 @@ export async function readFrozenScopeState(
   if (frozen.length === 0) return null;
 
   const resolvable = new Set(await resolveAllUiBearingSpecs(root, config));
-  // Both sides use full CON-UI-NNNN IDs. No name conversion is allowed.
+  // Both sides use full UI-NNNN IDs. No name conversion is allowed.
   return {
     frozen,
     resolvable,

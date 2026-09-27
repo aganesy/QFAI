@@ -57,8 +57,8 @@ directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 
 ## Contracts
 
-- API, DB, UI and design contracts retain one appropriate
-  `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declaration.
+- API, DB, UI and design contracts declare one
+  `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`.
 - CLI contracts use `CLI-*` short IDs in `03_contract/contracts.md`.
 
 ## Examples and test annotations

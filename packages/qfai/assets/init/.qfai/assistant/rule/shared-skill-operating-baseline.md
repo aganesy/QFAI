@@ -356,7 +356,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 
-The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on CON-DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a
+The counts are not decoration. Restating the ownership rule does not change the incentive that breaks it: an agent facing "repair five upstream defects or report most of the batch as blocked" reaches for the repair because the alternative reads as failure. `26 items: 21 complete, 5 blocked on DB-0007` is a report of work done, and it is what makes STOP a credible answer rather than a
 surrender. Blocked is a status, not a verdict on the run.
 
 ### Nondeterministic gates

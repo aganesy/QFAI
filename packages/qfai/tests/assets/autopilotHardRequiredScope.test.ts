@@ -24,14 +24,14 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
 
     it(tree + ": prototyping selects a full UI contract identity", async () => {
       const skill = await read(tree, "assistant/skill/qfai-prototyping/SKILL.md");
-      expect(skill).toContain("--primary-ui-contract <CON-UI-NNNN>");
-      expect(skill).toContain("CON-UI-NNNN");
+      expect(skill).toContain("--primary-ui-contract <UI-NNNN>");
+      expect(skill).toContain("UI-NNNN");
       expect(skill).not.toContain("primarySpecId");
     });
 
     it(tree + ": verify asks only for the scope inputs it consumes", async () => {
       const skill = await read(tree, "assistant/skill/qfai-verify/SKILL.md");
-      expect(skill).toContain("a full `CON-UI-NNNN` when a prototyping-scoped run");
+      expect(skill).toContain("a full `UI-NNNN` when a prototyping-scoped run");
       expect(skill).toContain("a usable story source when a flow-scoped run");
       expect(skill).toContain("an affected `BF-NNNN` when a flow-scoped run");
       expect(skill).not.toContain("primarySpecId");
@@ -44,7 +44,7 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
       "utf-8",
     );
     expect(contract).toContain("`--primary-ui-contract` flag");
-    expect(contract).toContain("Both MUST accept only the full `CON-UI-NNNN` form");
+    expect(contract).toContain("Both MUST accept only the full `UI-NNNN` form");
     expect(contract).toContain("a bare `NNNN` included");
     expect(contract).toContain("No input is normalised");
   });

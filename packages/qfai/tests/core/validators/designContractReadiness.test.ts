@@ -118,7 +118,7 @@ async function seedUiBearingProject(root: string): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/design"), { recursive: true });
   await writeFile(
     path.join(root, ".qfai/spec/03_contract/ui/ui-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    title: Home\n    route: /\n",
     "utf-8",
   );
 }
@@ -434,7 +434,7 @@ procurement:
       await writeFile(
         path.join(root, ".qfai/spec/03_contract/ui/ui-0002.yaml"),
         [
-          "# QFAI-CONTRACT-ID: CON-UI-0002",
+          "# QFAI-CONTRACT-ID: UI-0002",
           "screens:",
           "  - id: dashboard",
           "    title: Dashboard",
@@ -1808,7 +1808,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: []\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       "utf-8",
     );
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
@@ -1850,7 +1850,7 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
 });
 
 /**
- * The story tree has no spec-level UI marker. A declared CON-UI contract with
+ * The story tree has no spec-level UI marker. A declared UI contract with
  * screens is the design-readiness signal. A discussion pack still guides SDD,
  * but it cannot override a live UI contract when validation runs.
  */
@@ -1923,7 +1923,7 @@ describe("story-tree visual design readiness", () => {
     await mkdir(uiDir, { recursive: true });
     await writeFile(
       path.join(uiDir, "ui-0001.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: []\n",
+      "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n",
       "utf-8",
     );
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);

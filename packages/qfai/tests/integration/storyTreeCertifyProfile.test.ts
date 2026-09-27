@@ -26,15 +26,15 @@ async function project(configuredLatest = ".qfai/report/validate.json"): Promise
   await put(
     root,
     ".qfai/spec/03_contract/ui/home.yaml",
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: [{id: home}]\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens: [{id: home}]\n",
   );
   await put(
     root,
     ".qfai/evidence/prototyping/prototyping.json",
     JSON.stringify({
       runId: "run-profile-gate",
-      uiContractsCovered: ["CON-UI-0001"],
-      frozenSurfaceUnion: ["CON-UI-0001"],
+      uiContractsCovered: ["UI-0001"],
+      frozenSurfaceUnion: ["UI-0001"],
       iterations: [],
     }),
   );

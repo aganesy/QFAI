@@ -10,5 +10,5 @@ Feature: UI-contract terminology in prototyping
     When the public skill surface is read (SKILL.md + the public references list),
     Then `resolveSurfaceUnion()` MUST NOT appear on the public skill surface (kept internal-only for the cycle ≥ 1 drift gate) AND SKILL.md language MUST be single-spec.
     And the doc-vs-impl drift identified across SKILL.md / certify / iterate MUST resolve to zero remaining multi-spec public surface mentions at HEAD.
-    And on the story tree the unit SKILL.md names is the UI contract (`CON-UI-NNNN`) rather than the spec.
+    And on the story tree the unit SKILL.md names is the UI contract (`UI-NNNN`) rather than the spec.
 ```

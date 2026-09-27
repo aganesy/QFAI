@@ -21,7 +21,7 @@ import { PROTOTYPING_EVIDENCE_REL } from "./paths.js";
 
 const STALE_ITER_DIR_RE = /^iter-\d{2,}$/;
 const PARSE_PATH_RE =
-  /^\.qfai\/evidence\/prototyping\/iter-(\d{2,})\/(CON-UI-\d{4})\/([^/]+)\.review\.json$/;
+  /^\.qfai\/evidence\/prototyping\/iter-(\d{2,})\/(UI-\d{4})\/([^/]+)\.review\.json$/;
 
 function padIndex(index: number): string {
   return String(index).padStart(2, "0");
@@ -73,7 +73,7 @@ export function iterationReviewPathPerUiContract(
 export async function findIterationReviewFiles(root: string, index: number): Promise<string[]> {
   const padded = padIndex(index);
   const baseDir = path.join(root, PROTOTYPING_EVIDENCE_REL, `iter-${padded}`).replace(/\\/g, "/");
-  const pattern = `${baseDir}/CON-UI-*/*.review.json`;
+  const pattern = `${baseDir}/UI-*/*.review.json`;
 
   let matches: string[];
   try {

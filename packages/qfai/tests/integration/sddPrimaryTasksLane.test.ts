@@ -93,7 +93,7 @@ async function prototypingPreflight(
     await mkdir(path.join(contractRoot, "design"), { recursive: true });
     await writeFile(
       path.join(contractRoot, "ui/ui-0001.yaml"),
-      `# QFAI-CONTRACT-ID: CON-UI-0001\n${uiContract}`,
+      `# QFAI-CONTRACT-ID: UI-0001\n${uiContract}`,
       "utf-8",
     );
     await writeFile(path.join(contractRoot, "design/DESIGN.md.lock.yaml"), lock, "utf-8");
@@ -109,7 +109,7 @@ async function prototypingPreflight(
         "  srcDir: src",
         "  testsDir: tests",
         "prototyping:",
-        "  primaryUiContract: CON-UI-0001",
+        "  primaryUiContract: UI-0001",
         "  execution:",
         `    targetUrl: ${target.url}`,
         "    browserTool: playwright",
