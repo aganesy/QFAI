@@ -132,6 +132,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The policy-layer documents and the two registers have closed schemas.**
+  `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
+  `constraint.md`, `decisions.md` and `open-questions.md` now accept only
+  the sections their templates declare, in order, each holding the one kind of
+  content it is for. A section the schema does not name, or a list where a table
+  belongs, fails `pnpm lint:mdschema`.
+
+  - `principle.md` gains a Decision priorities table; `initiative.md` no
+    longer carries an overview or its own priorities.
+  - `glossary.md` is one Term and Definition table.
+  - `constraint.md` has Technical, Operational and Business sections, each one
+    ID, Constraint, Rationale and Impact table, which may be empty.
+  - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
+    strict schema, so a misspelt rule or option fails instead of being ignored.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

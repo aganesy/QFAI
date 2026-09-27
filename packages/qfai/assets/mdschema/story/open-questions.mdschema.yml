@@ -1,20 +1,26 @@
-# Document schema: open-questions.md
+# Document schema: <specsDir>/open-questions.md
+heading_rules:
+  no_skip_levels: true
+  max_depth: 2
 structure:
   - heading:
       pattern: "^# Open Questions$"
       regex: true
-    description: Required document heading.
-    allow_additional: true
+    description: An append-only register; only a row's Status changes after it is added.
+    allow_additional: false
+    forbidden_text:
+      - pattern: '\A\s*[^#\s]'
+        regex: true
     children:
       - heading:
           pattern: "^## Open Questions$"
           regex: true
-        description: Open Questions section.
-        allow_additional: true
+        description: Exactly one table; the table may have no rows.
+        allow_additional: false
         tables:
           - min: 1
-            required_headers:
-              - ID
-              - Content
-              - Approach
-              - Status
+            max: 1
+            required_headers: [ID, Content, Approach, Status]
+        forbidden_text:
+          - pattern: '(?m)^[^|\s#]'
+            regex: true
