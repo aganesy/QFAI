@@ -43,3 +43,7 @@ structure:
             regex: true
           - pattern: '(?m)^\|[^|\n]*\|[^\n]*BR-[0-9]{4}-[0-9]{4}'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){3}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true

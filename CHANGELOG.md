@@ -202,6 +202,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     A table written without its leading and trailing pipes moves too, and is
     written with them.
 
+- **Every table-only section of the story tree holds exactly its template's
+  columns.** The rule the policy documents and the two registers follow now
+  covers `business-flows.md`, `user-stories.md`, `03_Example.md`,
+  `contracts.md`, the Stack table of `tech.md` and the Business rules table
+  of a CLI contract. An added column fails `pnpm lint:mdschema`, and so does a
+  line starting with a pipe directly above the header row.
+
 - **`qfai-sdd` writes contracts in the contract ID scheme, and references
   point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
   constitution, the drift protocol and the agent cards now say:

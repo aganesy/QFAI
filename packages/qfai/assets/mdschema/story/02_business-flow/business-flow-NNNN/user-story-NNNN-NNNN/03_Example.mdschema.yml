@@ -24,6 +24,10 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[^|\s#]'
             regex: true
+          - pattern: '(?m)^[ \t]*\|(?:[ \t]*:?-+:?[ \t]*\|){4}[ \t]*:?-'
+            regex: true
+          - pattern: '\A\s*\|[^\n]*\n[ \t]*\|[^\n]*[^|:\s-]'
+            regex: true
           # Input and Expected are plain values, not Gherkin steps.
           - pattern: '(?m)^\|[^|\n]*\|[^|\n]*\|\s*(Given|When)\s'
             regex: true
