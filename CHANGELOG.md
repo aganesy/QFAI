@@ -221,6 +221,20 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 - **`qfai --help` no longer names an internal contract beside
   `handoff upgrade`.**
 
+- **The story tree has no `structure.md`.** `qfai init` no longer writes
+  `03_contract/structure.md`, and nothing reads it. Its facts have other
+  homes:
+  - Each entrypoint is a Skeleton line in the Standard commands section of
+    `03_contract/tech.md`: `` - Skeleton: `<entry>` -> `<command>` ``.
+  - An architecture boundary is a Technical Constraints row of
+    `01_policy/constraint.md`.
+  - The paths that render a user-visible surface are `uiux.surfacePaths` in
+    `qfai.config.yaml`: a list of globs, or `[]` for a project that renders
+    none. `/qfai-configure` writes it, and the UI-affecting check reads it.
+  - `QFAI-ASSETS-003` checks `tech.md` alone for unfilled placeholders.
+  - Migration step 3 moves the old structure catalog into those three places
+    and lists the rest under `## For a person`.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves
@@ -254,6 +268,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     placeholder.
   - Every flow is listed under `## For a person`, so that a person writes its
     alternate and exception paths, and step 4 exits 3.
+
+- **Migration steps 4 and 5 write criteria and examples in their closed
+  shapes.**
+  - Each criterion holds one named `Scenario:`, the first one it had. A
+    `Background:`, a further scenario, a scenario named only by an ID and a
+    `Scenario Outline:` are not written. Step 4 lists each under
+    `## For a person` with its old file and exits 3.
+  - A criterion left with no named scenario holds a placeholder scenario, and
+    step 4 lists its new file.
+  - An example's Input and Expected lose a leading `Given`, `When`, `Then` or
+    `And` when they hold one step. A cell holding more steps is written as it
+    stands, and the step lists it under `## For a person` and exits 3.
 
 - **The business-flow and story documents have closed schemas.** The document
   lane now refuses any section, table, list or code block in these six

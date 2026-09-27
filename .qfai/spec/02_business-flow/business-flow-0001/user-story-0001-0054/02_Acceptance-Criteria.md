@@ -13,10 +13,10 @@ Feature: Contract index and contract-layer validation
 
   # AC-0001-0054-02
   Scenario: Placeholders are read from the contract-layer steering files
-    Given the story tree, and `tech.md` or `structure.md` under `paths.contractsDir` with a section still holding a shipped placeholder, the Standard commands section of `tech.md` included
+    Given the story tree, and `tech.md` under `paths.contractsDir` with a section still holding a shipped placeholder, its Standard commands section included
     When `qfai validate` runs with a profile that runs `QFAI-ASSETS-*`
     Then `QFAI-ASSETS-003` names that file under `paths.contractsDir` and each section still holding a placeholder
-    And the catalog copies of `tech.md` and `structure.md` are not read for this finding on the story tree
+    And the catalog copy of `tech.md` is not read for this finding on the story tree
 
   # AC-0001-0054-03
   Scenario: A contract file declares its ID, is named after it and has a matching index row

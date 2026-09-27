@@ -22,4 +22,12 @@ Feature: Build the flows and stories from the plan
     Then a story or criterion stays in its source, a flow with no `from` receives the template `business-flow.md` with the plan title, and each is listed under For a person with its file and the reason
     And a story block that is not one such sentence is written as it stands, and a story left with no criterion gets no `02_Acceptance-Criteria.md`
     And step 4 exits 3
+
+  # AC-0004-0007-03
+  Scenario: Criteria and examples take their closed shapes, and what those shapes cannot hold goes to a person
+    Given a placed criterion holding a Background, a second Scenario, a Scenario Outline or a Scenario named only by its ID, or a placed example whose Input or Expected opens with a Gherkin step keyword
+    When step 4 runs
+    Then each criterion holds its first named Scenario, or a placeholder Scenario where it has none
+    And an Input or Expected holding one step is written without its leading Given, When, Then or And, and one holding more steps is written as it stands
+    And each item not written, each placeholder and each cell written as it stands is listed under For a person, and step 4 exits 3
 ```

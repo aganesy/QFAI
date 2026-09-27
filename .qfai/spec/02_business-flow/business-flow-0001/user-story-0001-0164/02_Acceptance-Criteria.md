@@ -15,7 +15,7 @@ Feature: Contract-first verification gates
   Scenario: Verify Loads the Story-Tree Directories
     Given a project on the story tree,
     When `/qfai-verify` loads context through `references/context-load.md`,
-    Then it reads the spec tree from `<paths.specsDir>`, contracts from `<paths.contractsDir>`, `tech.md` and `structure.md` from `<paths.contractsDir>`, and the product facts from the policy files `objective.md`, `initiative.md` and `principle.md` under `<paths.specsDir>/01_policy/`.
+    Then it reads the spec tree from `<paths.specsDir>`, contracts from `<paths.contractsDir>`, `tech.md` from `<paths.contractsDir>`, and the product facts from the policy files `objective.md`, `initiative.md` and `principle.md` under `<paths.specsDir>/01_policy/`.
 
   # AC-0001-0164-03
   Scenario: Verify Reads Decisions From decisions.md

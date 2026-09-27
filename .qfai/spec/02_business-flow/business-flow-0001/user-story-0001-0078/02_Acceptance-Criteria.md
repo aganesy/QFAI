@@ -27,6 +27,13 @@ Feature: Config Glob Tuning
     Then it writes `paths.specsDir: .qfai/spec`
 
   # AC-0001-0078-04
+  Scenario: UI Surface Paths In The Configuration
+    Given a project on the story tree
+    When `/qfai-configure` updates its configuration
+    Then it writes `uiux.surfacePaths` with the globs of the paths observed to render a user-visible surface, or an empty list when the repository renders none
+    And the UI-affecting check reads the declared paths from that key alone, matching a path by the key's glob rules
+
+  # AC-0001-0078-05
   Scenario: Existing specs directory remains configured
     Given a project on the story tree whose `qfai.config.yaml` already sets `paths.specsDir`
     When `/qfai-configure` updates the config

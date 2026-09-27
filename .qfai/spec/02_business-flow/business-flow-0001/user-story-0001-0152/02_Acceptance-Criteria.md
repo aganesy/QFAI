@@ -23,10 +23,10 @@ Feature: Unified SDD Workflow
     Then each of the first four is a row of `decisions.md` and the open question is a row of `open-questions.md`. Every row carries exactly the cells ID, Content, Approach and Status, with a Status from its table's vocabulary. Nothing is written under `.qfai/decisions/`, no `01_Spec-retired` file is written, and a row already in a table changes only its Status.
 
   # AC-0001-0152-04
-  Scenario: The Five Merged Files State Each Fact Once
+  Scenario: The Four Merged Files State Each Fact Once
     Given the story tree,
-    When `/qfai-sdd` writes `objective.md`, `initiative.md` or `principle.md` under `<paths.specsDir>/01_policy/`, or `tech.md` or `structure.md` under `<paths.contractsDir>`,
-    Then each fact is stated in one of the five files only, and the quality-gate commands appear only in the Standard commands section of `tech.md`.
+    When `/qfai-sdd` writes `objective.md`, `initiative.md` or `principle.md` under `<paths.specsDir>/01_policy/`, or `tech.md` under `<paths.contractsDir>`,
+    Then each fact is stated in one of the four files only, and the quality-gate commands appear only in the Standard commands section of `tech.md`.
 
   # AC-0001-0152-05
   Scenario: IDs Are The Highest In Their Scope Plus One

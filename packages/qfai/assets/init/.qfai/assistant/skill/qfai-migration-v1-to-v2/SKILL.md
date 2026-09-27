@@ -50,9 +50,9 @@ keep authors separate from reviewers.
    step completed with items in `## For a person`; keep them for resolution.
 3. After step 3, confirm the complete old `_policies/11_Slice-Policy.md` is
    archived and none of its sections was copied into `principle.md`. Current
-   triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the five files assembled from multiple
-   sources: `objective.md`, `initiative.md`, `principle.md`, `tech.md` and
-   `structure.md`. Remove facts duplicated in different words. Keep the
+   triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the four files assembled from multiple
+   sources: `objective.md`, `initiative.md`, `principle.md` and `tech.md`.
+   Remove facts duplicated in different words. Keep the
    source files archived by the scripts.
 4. Run steps 4 to 10 in order, each with `--dry-run` followed by the real run.
    Inspect and keep every report and exit code as in step 2.

@@ -4,7 +4,6 @@
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`
-   - `.qfai/spec/03_contract/structure.md`
    - `.qfai/assistant/rule/agent-selection.md`. From
      `.qfai/assistant/rule/agent-selection.md` read the acting role's entry
      when a role needs one, not the whole file

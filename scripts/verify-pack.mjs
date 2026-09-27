@@ -708,11 +708,9 @@ if (hasEntry(skillsLocalDir)) {
 }
 
 // Stand in for the `/qfai-configure` run a project makes before it gates.
-// Contract steering files ship as placeholders, and gating without filling
-// them measures the fixture rather than the package.
-const steeringFiles = ["structure.md", "tech.md"].map((name) =>
-  path.join(outputDir, ".qfai", "spec", "03_contract", name),
-);
+// The contract steering file ships as placeholders, and gating without filling
+// it measures the fixture rather than the package.
+const steeringFiles = [path.join(outputDir, ".qfai", "spec", "03_contract", "tech.md")];
 for (const steeringFile of steeringFiles) {
   if (!existsSync(steeringFile)) {
     // An `ENOENT` here names the path and nothing else, and the reader's next

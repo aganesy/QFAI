@@ -17,7 +17,7 @@ and reporting.
 - `.qfai/spec/02_business-flow/`: business-flow index, BF directories, and
   their US, AC and EX files. This repository has four flows: development,
   pull request CI, workspace diagnosis, and spec-pack migration.
-- `.qfai/spec/03_contract/`: contract index, technology and structure rules,
+- `.qfai/spec/03_contract/`: contract index, technology rules,
   and contracts grouped by kind. API, DB, UI and design contracts declare
   `QFAI-CONTRACT-ID: <KIND>-NNNN`, such as `API-0002`. CLI contracts use
   `CLI-*` short IDs in `contracts.md`.
