@@ -8,8 +8,12 @@ import { parse as parseYaml } from "yaml";
 import type { QfaiConfig } from "./config.js";
 import { parseTestFlowRefs, scanBusinessFlows, storiesByFlow } from "./businessFlow.js";
 import { resolvePath } from "./config.js";
-import { declaredContractId, extractDeclaredContractIds } from "./contractsDecl.js";
-import { collectApiContractFiles, collectDbContractFiles } from "./discovery.js";
+import { extractDeclaredContractIds } from "./contractsDecl.js";
+import {
+  collectApiContractFiles,
+  collectDbContractFiles,
+  collectMarkdownContractIds,
+} from "./discovery.js";
 import {
   collectFilesByGlobs,
   DEFAULT_GLOB_FILE_LIMIT,
@@ -2032,17 +2036,6 @@ type CollectedContractIds = {
   deferred: Set<string>;
 };
 
-/** The IDs Markdown contracts under a kind directory declare in their H1, as the story-tree model reads them. */
-async function markdownContractIds(root: string, pattern: RegExp): Promise<string[]> {
-  const files = await fg("**/*.md", { cwd: root, absolute: true, onlyFiles: true });
-  const ids: string[] = [];
-  for (const file of files.sort()) {
-    const id = declaredContractId(file, await readSafe(file));
-    if (id !== null && pattern.test(id)) ids.push(id);
-  }
-  return ids;
-}
-
 async function collectApiContractIds(apiRoot: string): Promise<CollectedContractIds> {
   const files = await collectApiContractFiles(apiRoot);
   const active = new Set<string>();
@@ -2059,7 +2052,7 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
       }
     }
   }
-  for (const id of await markdownContractIds(apiRoot, API_CONTRACT_ID_RE)) active.add(id);
+  for (const id of await collectMarkdownContractIds(apiRoot, API_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
@@ -2461,7 +2454,7 @@ async function collectDbContractIds(dbRoot: string): Promise<CollectedContractId
       }
     }
   }
-  for (const id of await markdownContractIds(dbRoot, DB_CONTRACT_ID_RE)) active.add(id);
+  for (const id of await collectMarkdownContractIds(dbRoot, DB_CONTRACT_ID_RE)) active.add(id);
 
   return { active, deferred };
 }
