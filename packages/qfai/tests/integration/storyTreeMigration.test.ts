@@ -169,7 +169,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
     await put(
       root,
       ".qfai/spec/spec-0001/02_User-stories.md",
-      "# Stories\n\n## US-0001-0001: Place an order\n\n- Goal: Place an order.\n",
+      "# Stories\n\n## US-0001-0001: Place an order\n\n- Goal: As a buyer, I want to place an order, so that the cart is bought.\n",
     );
     await put(
       root,

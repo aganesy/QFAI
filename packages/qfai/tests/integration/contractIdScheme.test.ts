@@ -4,7 +4,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
+import { declaredContractId } from "../../src/core/contractsDecl.js";
 import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 import { nextId } from "../../src/core/storyTree/ids.js";
 import {
@@ -14,6 +16,7 @@ import {
 } from "../../src/core/storyTree/tree.js";
 import { validateStoryTreeContractReferences } from "../../src/core/validators/contractReferences.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
+import { validateDbContractApplyOrder } from "../../src/core/validators/dbContractApplyOrder.js";
 import { validateStoryTreeStructureModel } from "../../src/core/validators/storyTreeStructure.js";
 
 const roots: string[] = [];
@@ -126,6 +129,13 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(nextStoryTreeId(model, "BR", "API-0007")).toBe("BR-0007-0001");
     expect(nextId("BR", ["BR-0003-0001", "BR-0007"])).toBe("BR-0008");
     expect(() => nextId("BR", [], "CON-UI-0001")).toThrow(TypeError);
+    const suffixed = buildStoryTreeModel(
+      tree(
+        contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"]),
+        "| DEC-0001 | Notes on BR-0003-0009copy | None | DONE |",
+      ),
+    );
+    expect(nextStoryTreeId(suffixed, "BR", "CLI-0003")).toBe("BR-0003-0002");
   });
 
   // QFAI:AC-0001-0008-04
@@ -186,6 +196,14 @@ describe("contract IDs and contract-scoped business rules", () => {
     );
     expect(parseContractRules(check, text).refs).toEqual([]);
     expect(ruleFindings(tree(text))).toEqual([
+      `A Rule refs line is not allowed under ## Business rules in ${check}`,
+    ]);
+    const indented = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "   Rule refs: BR-0003-0001",
+    );
+    expect(parseContractRules(check, indented).errors).toEqual([
       `A Rule refs line is not allowed under ## Business rules in ${check}`,
     ]);
     const columns =
@@ -263,5 +281,160 @@ describe("contract IDs and contract-scoped business rules", () => {
       ]),
     );
     expect(findings).toHaveLength(5);
+  });
+});
+
+describe("the new contract IDs in the checks that read the old ones", () => {
+  // QFAI:AC-0001-0057-07
+  it("reads the one rendered Business rules table", () => {
+    const fenced = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "```md\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0009 | Example | EX-0001-0001-01 |\n```\n",
+    );
+    expect(parseContractRules(check, fenced)).toMatchObject({
+      rules: [{ id: "BR-0003-0001" }],
+      errors: [],
+    });
+    const twoTables = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0002 | Second | EX-0001-0001-01 |\n`;
+    expect(parseContractRules(check, twoTables).errors).toEqual([
+      `More than one Business rules table in ${check}`,
+    ]);
+    const commentedSection = `${contract("CLI-0003: Check", ["| BR-0003-0001 | Real | EX-0001-0001-01 |"])}\n<!--\n${rulesTable("Business rules", ["| BR-0003-0009 | Hidden | EX-0001-0001-01 |"])}-->\n`;
+    expect(parseContractRules(check, commentedSection)).toMatchObject({
+      rules: [{ id: "BR-0003-0001" }],
+      errors: [],
+    });
+    const commentedRefs = contract(
+      "CLI-0003: Check",
+      ["| BR-0003-0001 | Check the project | EX-0001-0001-01 |"],
+      "```md\nRule refs: BR-0001\n```\n",
+    );
+    expect(parseContractRules(check, commentedRefs).errors).toEqual([]);
+    const twoSections = `${contract("CLI-0003: Check", ["| BR-0003-0001 | First | EX-0001-0001-01 |"])}\n${rulesTable("Business rules", ["| BR-0003-0002 | Second | EX-0001-0001-01 |"])}`;
+    expect(parseContractRules(check, twoSections).errors).toContain(
+      `More than one ## Business rules section in ${check}`,
+    );
+  });
+
+  it("reads a Markdown contract's ID from its first rendered H1", () => {
+    expect(
+      declaredContractId(
+        "api/api-0002-orders.md",
+        "<!--\n# API-0003: Old title\n-->\n\n# API-0002: Orders\n",
+      ),
+    ).toBe("API-0002");
+  });
+
+  it("declares nothing when a file mixes a new and an old declaration", () => {
+    expect(declaredContractId("cli/cli-0001-check.yaml", "# QFAI-CONTRACT-ID: CLI-0001\n")).toBe(
+      "CLI-0001",
+    );
+    expect(
+      declaredContractId(
+        "cli/cli-0001-check.yaml",
+        "# QFAI-CONTRACT-ID: CLI-0001\n# QFAI-CONTRACT-ID: CON-API-0002\n",
+      ),
+    ).toBeNull();
+  });
+
+  // QFAI:AC-0001-0054-03
+  it("reads the table under Contract Index, not an earlier one with the same columns", async () => {
+    const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      [
+        "# Contracts",
+        "",
+        "## Example",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0009", "api/api-0009-example.yaml"),
+        "",
+        "  ## Contract Index",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        "",
+        "### More",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0008", "api/api-0008-missing.yaml"),
+        "",
+      ].join("\n"),
+    );
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /lists API-0008 with api\/api-0008-missing\.yaml, which is not a contract file$/,
+      ),
+    ]);
+  });
+
+  it("reads a new ID in an index with the old columns", async () => {
+    const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n",
+    );
+    expect(await indexFindings(root)).toEqual([]);
+    await put(root, `${contracts}/cli/cli-0002-check.md`, "# CLI-0002: Check\n");
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      "# Contracts\n\n| Declared ID | File |\n| --- | --- |\n| API-0002 | `api/api-0002-orders.yaml` |\n| CLI-0002 | `cli/cli-0002-check.md` |\n",
+    );
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 Contract number 0002 is declared by more than one contract: /,
+      ),
+    ]);
+    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
+    expect(await indexFindings(root)).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          /^QFAI-CONTRACT-034 Contract API-0003 is not listed with its file in .*api-0003-refunds\.md$/,
+        ),
+      ]),
+    );
+  });
+
+  it("checks the apply order of a DB-NNNN contract", async () => {
+    const root = await contractTree([], {
+      "db/db-0004-orders.sql": DB_CONTRACT,
+      "db/db-0005-lines.sql":
+        "-- Depends on: -\n-- See DB-0004 for orders.\n-- QFAI-CONTRACT-ID: DB-0005\nCREATE TABLE lines (o int REFERENCES orders (id));\n",
+    });
+    const files = ["db/db-0004-orders.sql", "db/db-0005-lines.sql"].map((file) =>
+      path.join(root, contracts, file),
+    );
+    const issues = await validateDbContractApplyOrder(root, files);
+    expect(issues.map((entry) => `${entry.code} ${entry.refs?.join(",") ?? ""}`)).toEqual([
+      expect.stringMatching(/^QFAI-CONTRACT-036 .*DB-0004/),
+    ]);
+  });
+
+  it("counts API-NNNN and DB-NNNN contracts and annotations in ATDD coverage", async () => {
+    const root = await contractTree([], {
+      "api/api-0002-orders.yaml": API_CONTRACT,
+      "db/db-0004-orders.sql": DB_CONTRACT,
+    });
+    await put(root, `${contracts}/api/api-0003-refunds.md`, "# API-0003: Refunds\n");
+    await put(root, `${contracts}/db/db-0005-lines.md`, "# DB-0005: Lines\n");
+    await put(
+      root,
+      "tests/api/orders.test.ts",
+      "// QFAI:API-0002\n// QFAI:DB-0004\n// QFAI:API-0003-copy\n// QFAI:API-0003-0001\n",
+    );
+    await put(root, "tests/atdd/malformed.test.ts", "// QFAI:API-0003-copy\n");
+    await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
+    const result = await evaluateAtddCodeTraceability(root, defaultConfig);
+    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
+    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004", "DB-0005"]);
+    expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
+    expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
+      "annotated.test.ts",
+    ]);
   });
 });

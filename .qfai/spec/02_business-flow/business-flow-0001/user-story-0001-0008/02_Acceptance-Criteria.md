@@ -10,7 +10,7 @@ Feature: ID grammar
 Scenario: Each ID has one of seven shapes and is declared once
   Given a project on the story tree
   When every declared ID is collected
-  Then each has one of the shapes `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN`, `DEC-NNNN` or `OQ-NNNN`
+  Then each has one of the shapes `BF-NNNN`, `US-NNNN-NNNN`, `AC-NNNN-NNNN-NN`, `EX-NNNN-NNNN-NN`, `BR-NNNN` (or `BR-<contract number>-NNNN` in a contract that declares a contract ID), `DEC-NNNN` or `OQ-NNNN`
   And no ID is declared twice in the tree
 
 # AC-0001-0008-02
