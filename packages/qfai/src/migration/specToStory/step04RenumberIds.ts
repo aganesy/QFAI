@@ -630,7 +630,7 @@ type BlockEntry =
   | { kind: "other" };
 
 /** A line that opens a list item, a quote, a table or a fence at the top of a block. */
-const OTHER_BLOCK = /^(?:[-*+]|\d+[.)])\s|^\s*(?:>|\||```|~~~)/;
+const OTHER_BLOCK = /^ {0,3}(?:[-*+]|\d+[.)])\s|^\s*(?:>|\||```|~~~)/;
 
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
@@ -710,7 +710,7 @@ function withoutArchivedFields(body: string): string {
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
     if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
-    else if (fence !== null || !/^\s+\S/.test(line)) skipping = false;
+    else if (fence === null && !/^\s+\S/.test(line)) skipping = false;
     const run = marker?.[1] ?? "";
     if (marker && fence === null) fence = run;
     else if (
@@ -757,7 +757,7 @@ function indentedScenario(scenario: string): string {
   const lines = scenario.replace(/\r\n/g, "\n").split("\n");
   const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
   const isStep = (line: string): boolean =>
-    /^\s*(?:(?:Given|When|Then|And|But)\s|(?:Examples|Scenarios):)/.test(line);
+    /^\s*(?:(?:Given|When|Then|And|But|\*)\s|(?:Examples|Scenarios):)/.test(line);
   let stepIndent = indent(lines.find(isStep) ?? "");
   const shifted = (line: string): string => {
     if (indent(line) >= stepIndent) return `    ${line.slice(stepIndent)}`;
@@ -1159,7 +1159,12 @@ export const step04: MigrationStep = {
         const criteriaText = outputCriteria(story, mappedCriteria, packMap);
         if (criteriaText === null) {
           forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
-          if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
+          // A criteria file naming only IDs the map gave is step 4's own output and is
+          // stale; one naming any other AC was written by a person and stays.
+          const existing = await readOptional(path.join(context.root, criteriaFile));
+          const mappedIds = new Set(Object.values(packMap));
+          const named = existing?.match(/\bAC-\d{4}-\d{4}-\d{2}\b/g) ?? [];
+          if (existing !== null && named.every((id) => mappedIds.has(id))) {
             operations.push({
               kind: "remove",
               target: criteriaFile,

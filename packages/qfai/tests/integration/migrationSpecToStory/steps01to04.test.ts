@@ -458,6 +458,8 @@ describe("migration steps 1 to 4", () => {
   });
 
   it("keeps the whitespace inside a story sentence and a scenario line", async () => {
+    // QFAI:EX-0004-0007-14
+    // QFAI:EX-0004-0007-15
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
@@ -484,12 +486,13 @@ describe("migration steps 1 to 4", () => {
   });
 
   it("indents each step and Examples line to the template and shifts what sits under it", async () => {
+    // QFAI:EX-0004-0007-15
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
         root,
         ".qfai/spec/spec-0001/03_Acceptance-Criteria.md",
-        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   Examples:\n     | n |\n     | 2 |\n```\n',
+        '# Criteria\n\n```gherkin\n# AC-0001-0001\n# Parent: US-0001-0001\nScenario Outline: Order <n>\n Given <n> items\n  When an order is placed with\n  """\n payload\n  """\n Then the order is accepted\n   * a receipt is sent\n   Examples:\n     | n |\n     | 2 |\n```\n',
       );
       await run(step04, await context(root));
       const criteria = await readFile(
@@ -500,18 +503,19 @@ describe("migration steps 1 to 4", () => {
         "utf8",
       );
       expect(criteria).toContain(
-        '    Given <n> items\n    When an order is placed with\n    """\n   payload\n    """\n    Then the order is accepted\n    Examples:\n      | n |\n      | 2 |\n',
+        '    Given <n> items\n    When an order is placed with\n    """\n   payload\n    """\n    Then the order is accepted\n    * a receipt is sent\n    Examples:\n      | n |\n      | 2 |\n',
       );
     });
   });
 
   it("sends a story block with more than its sentence to a person, as written", async () => {
+    // QFAI:EX-0004-0007-16
     await withProject(async (root) => {
       await putMinimalPack(root);
       await put(
         root,
         ".qfai/spec/spec-0001/02_User-stories.md",
-        "# Stories\n\n## US-0001-0001: Order\n\n- Source: discussion-20260101000000000#DUS-001\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
+        "# Stories\n\n## US-0001-0001: Order\n\n- Source: discussion-20260101000000000#DUS-001\n  ```text\n  archived payload\n  ```\n\nAs a buyer, I want an order, so that I get a receipt.\n  - Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
       );
       const result = await run(step04, await context(root));
       expect(result.code).toBe(3);
@@ -519,7 +523,7 @@ describe("migration steps 1 to 4", () => {
         ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001/01_User-story.md";
       expect(result.output).toContain(`${file}: US-0001-0001 is not one`);
       expect(await readFile(path.join(root, file), "utf8")).toBe(
-        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want an order, so that I get a receipt.\n- Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
+        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want an order, so that I get a receipt.\n  - Requires approval.\n\n\n\n````text\n```\n- Source: example\n````\n",
       );
     });
   });
@@ -616,6 +620,13 @@ describe("migration steps 1 to 4", () => {
       ]);
       expect(result.output).toContain(
         `${storyDir}/02_Acceptance-Criteria.md: US-0001-0001 has no criterion that takes a new ID`,
+      );
+      const authored =
+        "# Acceptance Criteria\n\n## Criteria\n\n```gherkin\nFeature: Order\n  # AC-0001-0001-01\n  Scenario: Accept\n    Given a cart\n    When an order is placed\n    Then the order is accepted\n```\n";
+      await put(root, `${storyDir}/02_Acceptance-Criteria.md`, authored);
+      await run(step04, await context(root));
+      expect(await readFile(path.join(root, storyDir, "02_Acceptance-Criteria.md"), "utf8")).toBe(
+        authored,
       );
     });
   });
