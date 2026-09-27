@@ -630,14 +630,14 @@ type BlockEntry =
   | { kind: "other" };
 
 /** A line that opens a list item, a quote, a table or a fence at the top of a block. */
-const OTHER_BLOCK = /^ {0,3}(?:[-*+]|\d+[.)])\s|^\s*(?:>|\||```|~~~)/;
+const OTHER_BLOCK = /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)/;
 
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
   let current: BlockEntry | null = null;
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
     const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
-    const item = /^\s+[-*]\s+(.*)$/.exec(line);
+    const item = /^\s+[-*+]\s+(.*)$/.exec(line);
     if (line.trim() === "") {
       if (current?.kind === "paragraph") current = null;
     } else if (field) {
@@ -1159,17 +1159,12 @@ export const step04: MigrationStep = {
         const criteriaText = outputCriteria(story, mappedCriteria, packMap);
         if (criteriaText === null) {
           forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
-          // A criteria file naming only IDs the map gave is step 4's own output and is
-          // stale; one naming any other AC was written by a person and stays.
-          const existing = await readOptional(path.join(context.root, criteriaFile));
-          const mappedIds = new Set(Object.values(packMap));
-          const named = existing?.match(/\bAC-\d{4}-\d{4}-\d{2}\b/g) ?? [];
-          if (existing !== null && named.every((id) => mappedIds.has(id))) {
-            operations.push({
-              kind: "remove",
-              target: criteriaFile,
-              description: "no criterion takes a new ID",
-            });
+          // Nothing tells an earlier step 4's output from a file a person wrote, so an
+          // existing criteria file is kept and named for the person resolving the story.
+          if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
+            forAPerson.push(
+              `${criteriaFile}: the existing file is kept; check that it states ${storyId}'s criteria`,
+            );
           }
         } else {
           operations.push({ kind: "write", target: criteriaFile, content: criteriaText });

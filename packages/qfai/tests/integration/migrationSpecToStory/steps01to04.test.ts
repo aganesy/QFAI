@@ -528,6 +528,34 @@ describe("migration steps 1 to 4", () => {
     });
   });
 
+  it("keeps plus-marked non-goals apart and sends a story with a subheading to a person", async () => {
+    // QFAI:EX-0004-0007-14
+    // QFAI:EX-0004-0007-16
+    await withProject(async (root) => {
+      await putMinimalPack(root);
+      await put(
+        root,
+        ".qfai/spec/spec-0001/02_User-stories.md",
+        "# Stories\n\n## US-0001-0001: Order\n\n- Goal: As a buyer, I want an order, so that I get a receipt.\n- Non-goals:\n  + Shipping.\n  + Billing.\n\n## US-0001-0002: Review\n\nAs a buyer, I want a review, so that I see the order.\n### Constraints\nOnly the buyer sees it.\n",
+      );
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/plan.yaml",
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\n      - id: US-0001-0002\nrules: []\n",
+      );
+      const result = await run(step04, await context(root));
+      const flow = ".qfai/spec/02_business-flow/business-flow-0001";
+      expect(
+        await readFile(path.join(root, flow, "user-story-0001-0001/01_User-story.md"), "utf8"),
+      ).toBe(
+        "# US-0001-0001: Order\n\n## User Story\n\nAs a buyer, I want an order, so that I get a receipt.\n\n## Non-goals\n\n- Shipping.\n- Billing.\n",
+      );
+      expect(result.output).toContain(
+        `${flow}/user-story-0001-0002/01_User-story.md: US-0001-0002 is not one`,
+      );
+    });
+  });
+
   it("refuses a plan that places a superseded rule", async () => {
     await withProject(async (root) => {
       await putMinimalPack(root);
@@ -616,8 +644,15 @@ describe("migration steps 1 to 4", () => {
       const storyDir = ".qfai/spec/02_business-flow/business-flow-0001/user-story-0001-0001";
       expect((await readdir(path.join(root, storyDir))).sort()).toEqual([
         "01_User-story.md",
+        "02_Acceptance-Criteria.md",
         "03_Example.md",
       ]);
+      expect(await readFile(path.join(root, storyDir, "02_Acceptance-Criteria.md"), "utf8")).toBe(
+        "# Acceptance Criteria\n\nstale\n",
+      );
+      expect(result.output).toContain(
+        `${storyDir}/02_Acceptance-Criteria.md: the existing file is kept; check that it states US-0001-0001's criteria`,
+      );
       expect(result.output).toContain(
         `${storyDir}/02_Acceptance-Criteria.md: US-0001-0001 has no criterion that takes a new ID`,
       );
