@@ -1,8 +1,9 @@
 # QFAI-CONTRACT-ID: UI-0003
-# Replace the sample BR and EX IDs with allocated IDs from the story tree.
+# Replace the sample IDs: the contract takes the next contract number, its
+# rules are numbered under it, and its examples come from the story tree.
 x-qfai-depends-on: []
 x-qfai-rules:
-  - id: BR-0003
+  - id: BR-0003-NNNN
     statement: Submitting an invalid order displays a field-level error.
     examples: [EX-NNNN-NNNN-NN]
 prototype:
