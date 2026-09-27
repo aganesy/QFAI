@@ -411,7 +411,7 @@ describe("delegation failure taxonomy is actionable", () => {
         "cli-0001-assistant-routing.md",
       ),
     );
-    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0344 |"));
+    const rule = contract.split(/\r?\n/).find((line) => line.includes("| BR-0001-0004 |"));
     expect(rule).toBeDefined();
     expect(rule).toContain("`unavailable`");
     expect(rule).toContain("`saturated`");

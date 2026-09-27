@@ -170,13 +170,6 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
-  contracts are written as business rules.** This repository's contracts for
-  those commands now hold an ownership boundary and one business-rules table,
-  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
-  exit codes, payload fields, state transitions and operator screens are rules
-  in that table. No command behaves differently.
-
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
   - `--primary-ui-contract`, `prototyping.primaryUiContract` and
@@ -282,6 +275,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     `## Business rules` table. A closed schema for that shape ships beside it.
   - The `prototype` stage of a `qfai-run` route no longer names
     `<paths.contractsDir>/design/**` as a write area. Nothing is written there.
+
+- **Seven of QFAI's own CLI contracts are in the template's shape.** The
+  contracts for assistant routing, assistant steps, configuration, the delivery
+  workflow, the research protocol, story-tree authoring and the workflow files
+  hold only their heading, `## Ownership boundary` and one `## Business rules`
+  table.
+  - Their metadata lists and prose sections are gone. Each obligation those
+    sections stated is now a business rule that cites the examples showing it.
+  - Their rules are numbered within each contract, from `BR-0001-0001` to
+    `BR-0022-0024`, and every reference to an old rule number names the new
+    one.
+  - The two repository CI constraints on where a gate runs and on evidence for
+    a parallelism change are now rules of the repository CI contract.
+
+- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
+  contracts are written as business rules.** This repository's contracts for
+  those commands now hold an ownership boundary and one business-rules table,
+  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
+  exit codes, payload fields, state transitions and operator screens are rules
+  in that table. No command behaves differently.
 
 - **The shipped guidance states what each story-tree document may hold.** The
   `qfai-sdd` skill, its steps and the shared rules now say that a document
