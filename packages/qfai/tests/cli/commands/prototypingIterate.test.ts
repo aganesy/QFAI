@@ -1826,6 +1826,35 @@ describe("runPrototypingIterate UI contract scope", () => {
     }
   });
 
+  // QFAI:EX-0001-0142-02
+  it("refuses a configured primary UI contract the config loader rejected", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await addUiContract(root, "UI-0002", "settings");
+    const configPath = path.join(root, "qfai.config.yaml");
+    const config = await readFile(configPath, "utf-8");
+    await writeFile(
+      configPath,
+      `${config}\nprototyping:\n  primaryUiContract: CON-UI-0002\n`,
+      "utf-8",
+    );
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const stderr = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(
+        await runPrototypingIterate({ root, cycle: 0, targetUrl: "http://localhost:3000" }),
+      ).toBe(2);
+      const text = stderr.mock.calls.flat().join(" ");
+      expect(text).toContain("prototyping.primaryUiContract");
+      expect(text).toContain('"CON-UI-0002"');
+      await expect(
+        readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
+      ).rejects.toThrow();
+    } finally {
+      stderr.mockRestore();
+    }
+  });
+
   // QFAI:EX-0001-0125-04
   it("rejects a newly declared UI contract before honoring convergence", async () => {
     const root = await newTempDir();

@@ -746,25 +746,28 @@ function normalizePrimaryUiContract(
   if (raw === undefined || raw === null) {
     return undefined;
   }
-  if (typeof raw !== "string") {
-    issues.push(
-      configIssue(
-        configPath,
-        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
-      ),
-    );
-    return undefined;
-  }
-  if (!/^UI-\d{4}$/.test(raw)) {
-    issues.push(
-      configIssue(
-        configPath,
-        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
-      ),
-    );
+  if (typeof raw !== "string" || !/^UI-\d{4}$/.test(raw)) {
+    issues.push(configIssue(configPath, primaryUiContractMessage(raw)));
     return undefined;
   }
   return raw;
+}
+
+function primaryUiContractMessage(raw: unknown): string {
+  return `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`;
+}
+
+/**
+ * Why the file's `prototyping.primaryUiContract` was rejected, or `undefined` when the file sets
+ * none or the value was accepted. A command that selects the primary UI contract refuses on it,
+ * because the loaded config would otherwise fall back to the first UI contract.
+ */
+export function readRejectedPrimaryUiContract(loaded: ConfigLoadResult): string | undefined {
+  const prototyping = isRecord(loaded.document) ? loaded.document.prototyping : undefined;
+  const raw = isRecord(prototyping) ? prototyping.primaryUiContract : undefined;
+  if (raw === undefined || raw === null) return undefined;
+  if (loaded.config.prototyping?.primaryUiContract !== undefined) return undefined;
+  return primaryUiContractMessage(raw);
 }
 
 function normalizePrototypingCalibration(
