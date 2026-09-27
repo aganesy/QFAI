@@ -2,7 +2,7 @@
 name: qfai-sdd
 title: QFAI SDD (Story Tree)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is the story tree: policy, business flows, stories, examples and the contracts that enforce them."
-argument-hint: "[<BF-ID-or-name>] [--contract <CON-ID-or-path>] [--auto]"
+argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
 roles:
@@ -41,7 +41,7 @@ states.
 
 - A BF ID or name limits the work to that flow and its shared dependencies. With
   no argument, every incoming requirement is triaged.
-- `--contract <CON-ID-or-path>` repairs one existing contract and the flows that
+- `--contract <contract-ID-or-path>` repairs one existing contract and the flows that
   depend on it.
 - `--auto` asks nothing, as
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`

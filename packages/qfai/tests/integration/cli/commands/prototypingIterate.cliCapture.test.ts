@@ -112,7 +112,7 @@ async function seedMinimal(root: string): Promise<void> {
   await mkdir(uiDir, { recursive: true });
   await writeFile(
     path.join(uiDir, "spec-0001.yaml"),
-    "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens:\n  - id: home\n    route: /\n",
+    "# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: home\n    route: /\n",
     "utf-8",
   );
   const specDir = path.join(root, ".qfai/specs/spec-0001");
@@ -397,7 +397,7 @@ async function seedUiContract(
   const uiDir = path.join(root, ".qfai/contracts/ui");
   await mkdir(uiDir, { recursive: true });
   const yamlBody = [
-    "# QFAI-CONTRACT-ID: CON-UI-0001",
+    "# QFAI-CONTRACT-ID: UI-0001",
     "screens:",
     ...screens.flatMap((screen) => {
       const lines = [`  - id: ${screen.id}`, `    route: ${screen.route}`];

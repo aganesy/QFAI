@@ -630,7 +630,7 @@ describe("migration harness", () => {
     await put(
       ctx.root,
       ".qfai/spec/spec-0001/02_User-stories.md",
-      "# Stories\n\n## US-0001-0001: Order\n\nOrder.\n",
+      "# Stories\n\n## US-0001-0001: Order\n\nAs a buyer, I want to order, so that the cart is bought.\n",
     );
     await put(
       ctx.root,

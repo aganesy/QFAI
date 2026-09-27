@@ -1608,7 +1608,7 @@ async function buildPrototypingPrimarySpecCheck(
       id: "prototyping.primaryUiContract",
       severity: "error",
       title: "Primary UI contract",
-      message: "no UI contract with CON-UI-NNNN and screens[] resolved under contractsDir/ui",
+      message: "no UI contract with UI-NNNN and screens[] resolved under contractsDir/ui",
     };
   }
 

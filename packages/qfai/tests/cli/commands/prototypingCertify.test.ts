@@ -127,8 +127,8 @@ async function seedAllGatesPass(
     surface: "web",
     runId: "run-cert-test",
     designMd: { path: "DESIGN.md", sha256: hashDesignMd(CERT_DESIGN_MD) },
-    uiContractsCovered: options.uiContractsCovered ?? ["CON-UI-0012"],
-    frozenSurfaceUnion: options.uiContractsCovered ?? ["CON-UI-0012"],
+    uiContractsCovered: options.uiContractsCovered ?? ["UI-0012"],
+    frozenSurfaceUnion: options.uiContractsCovered ?? ["UI-0012"],
     reviewerGate: {
       result: "PASS",
       signoff: { reviewerId: "test-reviewer", timestamp: "2026-04-27T00:00:00Z" },
@@ -144,7 +144,7 @@ async function seedAllGatesPass(
 
 async function seedUiScreens(root: string, screenIds: string[]): Promise<void> {
   await mkdir(path.join(root, ".qfai/spec/03_contract/ui"), { recursive: true });
-  const screensYaml = ["# QFAI-CONTRACT-ID: CON-UI-0012", "screens:"]
+  const screensYaml = ["# QFAI-CONTRACT-ID: UI-0012", "screens:"]
     .concat(screenIds.map((id) => `  - id: ${id}\n    route: "/${id}"`))
     .join("\n");
   await writeFile(
@@ -222,11 +222,11 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
   it("exits 64 and names the missing UI contract and screen when a frozen screen lacks review.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
     // Seed only `home.review.json`; `settings.review.json` is the
     // missing pair we expect certify to name.
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -243,7 +243,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
       // missing. Match on both tokens jointly to lock the diagnostic
       // shape — a refactor that drops either half loses operator
       // pinpointability.
-      const namesPair = messages.some((m) => m.includes("CON-UI-0012") && m.includes("settings"));
+      const namesPair = messages.some((m) => m.includes("UI-0012") && m.includes("settings"));
       expect(namesPair).toBe(true);
       // Defensive: the present (home) pair must NOT appear in the
       // missing-list section. If the diagnostic is grouped, the same
@@ -258,10 +258,10 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
   it("exits 0 when every frozen UI contract screen has review.json at the accepted iteration", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
 
     const exit = await runPrototypingCertify({ root, check: false });
     expect(exit).toBe(0);
@@ -274,12 +274,12 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
   it("exits 64 and names the schema violations when a present review.json does not parse against the closed payload schema", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     // `settings` exists but carries an empty object — every required
     // field is missing.
-    await seedReviewJson(root, "CON-UI-0012", "settings", 1, "{}\n");
+    await seedReviewJson(root, "UI-0012", "settings", 1, "{}\n");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -287,7 +287,7 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("CON-UI-0012/settings.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-0012/settings.review.json"))).toBe(true);
       expect(messages.some((m) => m.includes("missing field: uiContractId"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
@@ -297,10 +297,10 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
   it("exits 64 when a present review.json is not valid JSON at all", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings", 1, "{ truncated");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings", 1, "{ truncated");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -318,16 +318,16 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Both contracts declare the same screen IDs. Each requires its own reviews.
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012", "CON-UI-0007"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012", "UI-0007"] });
     await seedUiScreens(root, ["home", "settings"]);
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/secondary.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: [{id: home, route: /home}, {id: settings, route: /settings}]\n",
+      "# QFAI-CONTRACT-ID: UI-0007\nscreens: [{id: home, route: /home}, {id: settings, route: /settings}]\n",
       "utf-8",
     );
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
-    // CON-UI-0007 has no review payloads.
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
+    // UI-0007 has no review payloads.
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -335,10 +335,8 @@ describe("qfai prototyping certify UI contract screen review coverage", () => {
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).not.toBe(0);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      const namesHome = messages.some((m) => m.includes("CON-UI-0007") && m.includes("home"));
-      const namesSettings = messages.some(
-        (m) => m.includes("CON-UI-0007") && m.includes("settings"),
-      );
+      const namesHome = messages.some((m) => m.includes("UI-0007") && m.includes("home"));
+      const namesSettings = messages.some((m) => m.includes("UI-0007") && m.includes("settings"));
       expect(namesHome).toBe(true);
       expect(namesSettings).toBe(true);
     } finally {
@@ -355,12 +353,12 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when a schema-valid payload was copied from another screen", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     // `settings.review.json` holds a valid payload for `home` — the
     // settings surface was never reviewed.
-    await seedReviewJson(root, "CON-UI-0012", "settings", 1, reviewPayload("CON-UI-0012", "home"));
+    await seedReviewJson(root, "UI-0012", "settings", 1, reviewPayload("UI-0012", "home"));
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -368,7 +366,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("CON-UI-0012/settings.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-0012/settings.review.json"))).toBe(true);
       expect(messages.some((m) => m.includes('screenId "home"'))).toBe(true);
     } finally {
       errorSpy.mockRestore();
@@ -378,10 +376,10 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when a payload was copied from another spec", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home", 1, reviewPayload("CON-UI-0007", "home"));
-    await seedReviewJson(root, "CON-UI-0012", "settings");
+    await seedReviewJson(root, "UI-0012", "home", 1, reviewPayload("UI-0007", "home"));
+    await seedReviewJson(root, "UI-0012", "settings");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -389,7 +387,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes('uiContractId "CON-UI-0007"'))).toBe(true);
+      expect(messages.some((m) => m.includes('uiContractId "UI-0007"'))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
@@ -398,17 +396,17 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when a payload reviews an earlier cycle than the accepted iteration", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     // Stored under iter-01 (the accepted iteration) but recorded at
     // cycle 0 — stale evidence carried forward.
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "settings",
       1,
-      reviewPayload("CON-UI-0012", "settings", { cycle: 0 }),
+      reviewPayload("UI-0012", "settings", { cycle: 0 }),
     );
 
     const logger = await import("../../../src/cli/lib/logger.js");
@@ -428,15 +426,15 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when reviewerGate says PASS but a payload has a finding open", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "settings",
       1,
-      reviewPayload("CON-UI-0012", "settings", {
+      reviewPayload("UI-0012", "settings", {
         blockingFindings: ["settings: the empty state is not represented"],
       }),
     );
@@ -465,15 +463,15 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       // certificate.
       const root = await newTempDir();
       await seedMinimalProject(root);
-      await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+      await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
       await seedUiScreens(root, ["home", "settings"]);
-      await seedReviewJson(root, "CON-UI-0012", "home");
+      await seedReviewJson(root, "UI-0012", "home");
       await seedReviewJson(
         root,
-        "CON-UI-0012",
+        "UI-0012",
         "settings",
         1,
-        reviewPayload("CON-UI-0012", "settings", { sessionStatus: status }),
+        reviewPayload("UI-0012", "settings", { sessionStatus: status }),
       );
 
       const logger = await import("../../../src/cli/lib/logger.js");
@@ -498,12 +496,12 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     // directory itself.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
     // `old` is not a declared screen any more; the file is corrupt.
-    await seedReviewJson(root, "CON-UI-0012", "old", 1, "{ truncated");
+    await seedReviewJson(root, "UI-0012", "old", 1, "{ truncated");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -511,7 +509,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("CON-UI-0012/old.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-0012/old.review.json"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
@@ -520,16 +518,16 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when an undeclared screen's payload contradicts convergence", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "old",
       1,
-      reviewPayload("CON-UI-0012", "old", {
+      reviewPayload("UI-0012", "old", {
         blockingFindings: ["settings: the empty state is not represented"],
       }),
     );
@@ -541,22 +539,22 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
       expect(messages.some((m) => m.includes("contradict convergence"))).toBe(true);
-      expect(messages.some((m) => m.includes("CON-UI-0012/old.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-0012/old.review.json"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
   });
 
   it("exits 64 when a corrupt payload sits under a UI contract directory outside the frozen set", async () => {
-    // The frozen-set loop does not require CON-UI-9999, but the
+    // The frozen-set loop does not require UI-9999, but the
     // certificate audits canonical UI contract evidence found on disk.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
-    await seedReviewJson(root, "CON-UI-9999", "old", 1, "{ truncated");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
+    await seedReviewJson(root, "UI-9999", "old", 1, "{ truncated");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -564,7 +562,7 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("CON-UI-9999/old.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-9999/old.review.json"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
@@ -576,11 +574,11 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     // converged payload for an extra screen is not an evidence gap.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0012", "settings");
-    await seedReviewJson(root, "CON-UI-0012", "extra");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "settings");
+    await seedReviewJson(root, "UI-0012", "extra");
 
     const exit = await runPrototypingCertify({ root, check: false });
     expect(exit).toBe(0);
@@ -589,23 +587,23 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   it("exits 64 when a payload still carries layout anti-patterns or DESIGN.md violations", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home", "settings"]);
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "home",
       1,
-      reviewPayload("CON-UI-0012", "home", {
+      reviewPayload("UI-0012", "home", {
         layoutAntiPatternsDetected: ["lap-008-no-back-affordance"],
       }),
     );
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "settings",
       1,
-      reviewPayload("CON-UI-0012", "settings", {
+      reviewPayload("UI-0012", "settings", {
         designMdViolations: [{ kind: "color", found: "#FF00FF" }],
       }),
     );
@@ -627,15 +625,15 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
 describe("qfai prototyping certify (recursive payload sweep + --check re-audit)", () => {
   it("exits 64 when a NESTED payload under the per-spec directory is unparsable", async () => {
     // The certificate's evidence walk is recursive, so
-    // `CON-UI-0012/archive/old.review.json` is digested and sealed. A
+    // `UI-0012/archive/old.review.json` is digested and sealed. A
     // shallow `readdir` in the audit sweep left it unread — a corrupt
     // Reviewer artifact shipped inside a certificate at exit 0.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedPayloadAt(root, "CON-UI-0012/archive/old.review.json", "{ truncated");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedPayloadAt(root, "UI-0012/archive/old.review.json", "{ truncated");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
@@ -643,7 +641,7 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
       const exit = await runPrototypingCertify({ root, check: false });
       expect(exit).toBe(64);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("CON-UI-0012/archive/old.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("UI-0012/archive/old.review.json"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
@@ -656,13 +654,13 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     // schema and convergence.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     await seedPayloadAt(
       root,
       "misc/old.review.json",
-      reviewPayload("CON-UI-0012", "old", {
+      reviewPayload("UI-0012", "old", {
         blockingFindings: ["settings: the empty state is not represented"],
       }),
     );
@@ -684,14 +682,10 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
   it("still seals the certificate when the nested payload is valid and converged", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedPayloadAt(
-      root,
-      "CON-UI-0012/archive/old.review.json",
-      reviewPayload("CON-UI-0012", "old"),
-    );
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedPayloadAt(root, "UI-0012/archive/old.review.json", reviewPayload("UI-0012", "old"));
 
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
@@ -703,18 +697,18 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
     // `--check` exit 0 as DONE.
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
-    await reseal(root, "iter-01/CON-UI-0012/home.review.json", "{}\n");
+    await reseal(root, "iter-01/UI-0012/home.review.json", "{}\n");
 
     const logger = await import("../../../src/cli/lib/logger.js");
     const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       expect(await runPrototypingCertify({ root, check: true })).toBe(2);
       const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("iter-01/CON-UI-0012/home.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("iter-01/UI-0012/home.review.json"))).toBe(true);
     } finally {
       errorSpy.mockRestore();
     }
@@ -723,14 +717,14 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
   it("--check exits 2 when a sealed payload was re-stamped with another pair's review", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     await reseal(
       root,
-      "iter-01/CON-UI-0012/home.review.json",
-      `${reviewPayload("CON-UI-0012", "settings")}\n`,
+      "iter-01/UI-0012/home.review.json",
+      `${reviewPayload("UI-0012", "settings")}\n`,
     );
 
     expect(await runPrototypingCertify({ root, check: true })).toBe(2);
@@ -743,15 +737,15 @@ describe("qfai prototyping certify (recursive payload sweep + --check re-audit)"
   it("--check still exits 0 on an untampered certificate whose earlier cycle was not converged", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0012"] });
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     await seedReviewJson(
       root,
-      "CON-UI-0012",
+      "UI-0012",
       "home",
       0,
-      reviewPayload("CON-UI-0012", "home", {
+      reviewPayload("UI-0012", "home", {
         cycle: 0,
         blockingFindings: ["home: the empty state is not represented"],
       }),
@@ -766,7 +760,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
   async function addSecondContract(root: string): Promise<void> {
     await writeFile(
       path.join(root, ".qfai/spec/03_contract/ui/secondary.yaml"),
-      "# QFAI-CONTRACT-ID: CON-UI-0007\nscreens: [{id: settings, route: /settings}]\n",
+      "# QFAI-CONTRACT-ID: UI-0007\nscreens: [{id: settings, route: /settings}]\n",
       "utf-8",
     );
     await writeFile(
@@ -779,11 +773,11 @@ describe("qfai prototyping certify UI contract coverage", () => {
   it("seals only after every contract and declared screen has a converged review", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0007", "CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0007", "UI-0012"] });
     await seedUiScreens(root, ["home"]);
     await addSecondContract(root);
-    await seedReviewJson(root, "CON-UI-0012", "home");
-    await seedReviewJson(root, "CON-UI-0007", "settings");
+    await seedReviewJson(root, "UI-0012", "home");
+    await seedReviewJson(root, "UI-0007", "settings");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     const cert = JSON.parse(
       await readFile(
@@ -795,7 +789,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
       convergedUiContracts: string[];
       laggingUiContracts: string[];
     };
-    expect(cert.uiContractsCovered).toEqual(["CON-UI-0007", "CON-UI-0012"]);
+    expect(cert.uiContractsCovered).toEqual(["UI-0007", "UI-0012"]);
     expect(cert.convergedUiContracts).toEqual(cert.uiContractsCovered);
     expect(cert.laggingUiContracts).toEqual([]);
   });
@@ -803,10 +797,10 @@ describe("qfai prototyping certify UI contract coverage", () => {
   it("returns coverage exit 64 when the second contract lacks a review", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
-    await seedAllGatesPass(root, { uiContractsCovered: ["CON-UI-0007", "CON-UI-0012"] });
+    await seedAllGatesPass(root, { uiContractsCovered: ["UI-0007", "UI-0012"] });
     await seedUiScreens(root, ["home"]);
     await addSecondContract(root);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     expect(await runPrototypingCertify({ root, check: false })).toBe(64);
   });
 
@@ -821,7 +815,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
     for (const variant of [
       { ...original, specsCovered: ["0012"] },
       { ...original, uiContractsCovered: ["0012"] },
-      { ...original, uiContractsCovered: ["CON-UI-0012", "CON-UI-0012"] },
+      { ...original, uiContractsCovered: ["UI-0012", "UI-0012"] },
     ]) {
       await writeFile(file, JSON.stringify(variant), "utf-8");
       expect(await runPrototypingCertify({ root, check: false })).toBe(2);
@@ -842,7 +836,7 @@ describe("qfai prototyping certify UI contract coverage", () => {
     await seedMinimalProject(root);
     await seedAllGatesPass(root);
     await seedUiScreens(root, ["home"]);
-    await seedReviewJson(root, "CON-UI-0012", "home");
+    await seedReviewJson(root, "UI-0012", "home");
     await seedPayloadAt(root, "spec-0012/home.review.json", "historical payload");
     expect(await runPrototypingCertify({ root, check: false })).toBe(0);
     expect(
