@@ -39,10 +39,10 @@ coverage depth before a stage claims completion.
 ## Domain Responsibilities
 
 - During SDD, review BF → US → AC → EX links and BR → EX links. Read the
-  current story tree and its contract bindings under configured
-  `paths.specsDir` and `paths.contractsDir`. Report missing, ambiguous or
-  contradictory obligations to the owning SDD stage. The tests are not yet
-  authored.
+  current story tree under configured `paths.specsDir`, and the contracts
+  under `paths.contractsDir` whose business rules cite its examples. Report
+  missing, ambiguous or contradictory obligations to the owning SDD stage. The
+  tests are not yet authored.
 - During SDD, an instance that wrote none of the BRs it reads is the finder of
   the concrete-abstract cycle, under
   `skill/qfai-sdd/references/concrete-abstract-cycle.md`. It reads each BR whose
@@ -94,9 +94,10 @@ before a dependent stage proceeds.
 
 - `rule/agent-selection.md`, `rule/test-layers.md` and
   `rule/shared-skill-delegation-baseline.md`.
-- The selected BF, its US, AC, EX and BR records and the contracts they cite.
-- `<paths.contractsDir>/tech.md#standard-commands` for the project's Test,
-  Lint, Typecheck and Build commands.
+- The selected BF, its US, AC and EX records, and the contracts whose BRs cite
+  those examples.
+- `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for the
+  project's Test, Lint, Typecheck and Build commands.
 - Current ATDD evidence when reviewing acceptance or implementation work.
 - Current validation findings, test paths, selectors and observed results.
 

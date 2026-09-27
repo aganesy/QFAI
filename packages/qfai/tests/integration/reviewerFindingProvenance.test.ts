@@ -52,7 +52,7 @@ describe("reviewer finding provenance", () => {
   it("requires precise provenance and full contract IDs", async () => {
     const drift = await readFile(driftPath, "utf-8");
     expect(drift).toMatch(
-      /Every reviewer finding names either the governing AC, BR, or full CON ID, a shared rule, a concrete deliverable defect,/,
+      /Every reviewer finding names either the governing AC, BR, or full contract ID, a shared rule, a concrete deliverable defect,/,
     );
     expect(drift).toMatch(/Use full contract IDs, including every numeric segment/);
     expect(drift).toMatch(/Do not shorten API, DB,\s+or UI references/);

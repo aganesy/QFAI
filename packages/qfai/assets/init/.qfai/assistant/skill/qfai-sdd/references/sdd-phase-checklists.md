@@ -31,9 +31,11 @@ The one example a diagnosed missing test needs is appended as `.qfai/assistant/s
 
 ## Contracts and business rules
 
-- Every BR lives in the contract that enforces it and cites at least one existing full EX ID.
-- Every EX is cited by at least one BR. Shared rules are defined once and referenced by other contracts.
-- Every written contract file has a contracts.md index row in the same change.
+- Every BR lives in the contract that enforces it, is numbered `BR-<contract number>-NNNN`, and cites at least one existing full EX ID and nothing else.
+- Every EX is cited by at least one BR. Shared rules are defined once, and no other contract cites them.
+- Every contract declares a `<KIND>-NNNN` ID of its directory's kind, with a number no other contract uses, in a file named `<kind>-NNNN-<slug>.<ext>`.
+- No contract names an implementation file.
+- Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
 - Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the flow evidence.
 - UI design contracts use the product's frozen DESIGN.md; the sample design was not frozen.
