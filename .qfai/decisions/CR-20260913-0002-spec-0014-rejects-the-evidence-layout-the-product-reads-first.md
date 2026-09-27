@@ -5,10 +5,10 @@
 - Raised by: `qfai-implement`
 - Raised at: `2026-09-12T20:29:34Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (Codex interactive decision)`
+- Approved at: `2026-09-24T21:12:39Z`
+- Approved option: `1`
 - Applied at: `-`
 - Superseded by: `-`
 
@@ -228,66 +228,55 @@ produced it.
 
 ## Impact scope
 
-- Specs: `spec-0014`; and `spec-0012`, `spec-0004` and `_policies` under
-  option 1
-- Plans: `spec-0012/10_Plan.md` under option 1. Its current state says the loop
+- Specs: `spec-0014`, `spec-0012`, `spec-0004` and `_policies`
+- Plans: `spec-0012/10_Plan.md`. Its current state says the loop
   captures no PNG or HTML, that the flat image layout was purged, and that
   `TDD-0384` is a deferred per-spec migration, each of which the re-derived
   layout contradicts, so the rerun's Phase 3 rewrites those passages
 - Tests: `spec-0014/TDD-0033` — `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`;
-  and under option 1 `spec-0012/TDD-0384`, whose test case the `spec-0012`
+  `spec-0012/TDD-0384`, whose test case the `spec-0012`
   rerun re-derives, and the `done` rows of other specs that action 3
   re-verifies, `spec-0004/TDD-0003`, `TDD-0004` and `TDD-0005` among them
-- Contracts: `none` under options 2 and 3; under option 1 the iterate command's
-  contract, `.qfai/contracts/cli/qfai-prototyping-iterate.md`
+- Contracts: the iterate command's contract,
+  `.qfai/contracts/cli/qfai-prototyping-iterate.md`
 - Schema: `none`
-- Upstream paths edited under this CR, by outcome:
+- Upstream paths edited under approved option 1:
 
-  | Path                                              | Kept under      |
-  | ------------------------------------------------- | --------------- |
-  | `.qfai/specs/spec-0014/03_Acceptance-Criteria.md` | options 2 and 3 |
-  | `.qfai/specs/spec-0014/04_Business-Rules.md`      | option 3        |
-  | `.qfai/specs/spec-0014/05_Examples.md`            | option 3        |
-  | `.qfai/specs/spec-0014/06_Test-Cases.md`          | options 2 and 3 |
-  | `.qfai/specs/spec-0014/07_Decisions.md`           | option 2        |
-  | `.qfai/specs/spec-0014/09_delta.md`               | every option    |
-  | `.qfai/specs/spec-0014/tdd/test-list.md`          | every option    |
-  | `.qfai/contracts/cli/qfai-prototyping-iterate.md` | option 1        |
-  | `.qfai/specs/spec-0012/01_Spec.md`                | option 1        |
-  | `.qfai/specs/spec-0012/02_User-stories.md`        | option 1        |
-  | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md` | option 1        |
-  | `.qfai/specs/spec-0012/04_Business-Rules.md`      | option 1        |
-  | `.qfai/specs/spec-0012/05_Examples.md`            | option 1        |
-  | `.qfai/specs/spec-0012/06_Test-Cases.md`          | option 1        |
-  | `.qfai/specs/spec-0012/09_delta.md`               | option 1        |
-  | `.qfai/specs/spec-0012/tdd/test-list.md`          | option 1        |
-  | `.qfai/specs/spec-0012/16_Traceability-ledger.md` | option 1        |
-  | `.qfai/specs/spec-0012/10_Plan.md`                | option 1        |
-  | `.qfai/specs/spec-0004/tdd/test-list.md`          | option 1        |
-  | `.qfai/specs/spec-0004/09_delta.md`               | option 1        |
-  | `.qfai/specs/_policies/06_Glossary.md`            | option 1        |
-  | `.qfai/specs/_policies/07_Constraints.md`         | option 1        |
-  | `.qfai/specs/_policies/05_Contracts.md`           | option 1        |
-  | `.qfai/specs/_policies/10_delta.md`               | option 1        |
+  | Path                                              | Purpose                                      |
+  | ------------------------------------------------- | -------------------------------------------- |
+  | `.qfai/specs/spec-0014/09_delta.md`               | Record the applied decision                  |
+  | `.qfai/specs/spec-0014/tdd/test-list.md`          | Reset and re-point TDD-0033                  |
+  | `.qfai/contracts/cli/qfai-prototyping-iterate.md` | Re-scope aggregate mirrors as handoff copies |
+  | `.qfai/specs/spec-0012/01_Spec.md`                | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/02_User-stories.md`        | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/03_Acceptance-Criteria.md` | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/04_Business-Rules.md`      | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/05_Examples.md`            | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/06_Test-Cases.md`          | Re-derive the evidence layout                |
+  | `.qfai/specs/spec-0012/09_delta.md`               | Record the applied decision                  |
+  | `.qfai/specs/spec-0012/tdd/test-list.md`          | Reset affected rows                          |
+  | `.qfai/specs/spec-0012/16_Traceability-ledger.md` | Reconcile traceability                       |
+  | `.qfai/specs/spec-0012/10_Plan.md`                | Re-plan the affected tests                   |
+  | `.qfai/specs/spec-0004/tdd/test-list.md`          | Re-verify shared tests                       |
+  | `.qfai/specs/spec-0004/09_delta.md`               | Record the shared impact                     |
+  | `.qfai/specs/_policies/06_Glossary.md`            | Re-scope mandatory UI evidence               |
+  | `.qfai/specs/_policies/07_Constraints.md`         | Re-scope the evidence gate                   |
+  | `.qfai/specs/_policies/05_Contracts.md`           | Admit the iteration image pair               |
+  | `.qfai/specs/_policies/10_delta.md`               | Record the policy change                     |
 
-  **This section is reduced to the approved outcome before `Status: approved` is
-  written**: `QFAI-DRIFT-001` reads the spec and contract paths here and not
-  the outcome beside them.
-
-  `spec-0012/09_delta.md` takes two rows under option 1: one for that pack's
+  `spec-0012/09_delta.md` takes two rows: one for that pack's
   own rerun, and one for the contract rerun, because the iterate contract is
   indexed to `spec-0012`, the one spec that references it, and a contract rerun
   records its Change Request in the delta of every referencing spec.
 
-  **Product paths**, listed so an approval says what it covers, under option 1
-  only: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
+  **Product paths**: `packages/qfai/src/core/validators/uiEvidenceArtifacts.ts`,
   `packages/qfai/src/cli/commands/validate.ts`,
   `packages/qfai/tests/validators/uiEvidenceArtifacts.test.ts`,
   **`packages/qfai/src/core/validators/skill/prototypingSkill.ts` and its
   test**. Options 2 and 3 edit no product path.
 
   The skill-text check accepts the `iter-NN/` pair **or** the aggregate pair, so
-  under option 1 it would keep passing a skill whose text tells an operator to
+  it would keep passing a skill whose text tells an operator to
   write the files the required-path gate has just started rejecting — an older
   skill, or one edited locally. Option 1 drops that branch, and the test gains a
   case proving aggregate-only guidance fails. **Under options 2 and 3 it

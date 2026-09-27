@@ -7,12 +7,12 @@
 
 ## Rule Table (required)
 
-| BR-ID        | Title                         | AC-Refs      | Rule                                                                                        | Notes                            | NFR-Refs |
-| ------------ | ----------------------------- | ------------ | ------------------------------------------------------------------------------------------- | -------------------------------- | -------- |
-| BR-0002-0001 | 15 ファイル必須構成           | AC-0002-0001 | discussion-pack は 01_Context.md ~ 99_delta.md の 15 ファイルを必須とする                   | QFAI-DPACK-002                   |          |
-| BR-0002-0008 | planner-first no winner       | AC-0002-0008 | discussion は selected direction / winning direction / finalized design system を確定しない | prototyping が direction を選ぶ  | NFR-0004 |
-| BR-0002-0009 | non-UI safe skip              | AC-0002-0009 | non-UI pack は UI sidecar 不在だけでは fail しない                                          | nonUiOverfire safety             | NFR-0003 |
-| BR-0002-0010 | prototyping.yaml requiredness | AC-0002-0010 | latest discussion pack が UI-bearing の場合のみ `prototyping.yaml` requiredness を明示する  | README / SKILL canonical wording |          |
+| BR-ID        | Title                                | AC-Refs      | Rule                                                                                                                                                                 | Notes                                     | NFR-Refs |
+| ------------ | ------------------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------- |
+| BR-0002-0001 | 15 ファイル必須構成                  | AC-0002-0001 | discussion-pack は 01_Context.md ~ 99_delta.md の 15 ファイルを必須とする                                                                                            | QFAI-DPACK-002                            |          |
+| BR-0002-0008 | planner-first, explorations unranked | AC-0002-0008 | discussion selects no screen exploration and finalizes no design system; the brand direction it records is the user's choice                                         | prototyping ranks the screen explorations | NFR-0004 |
+| BR-0002-0009 | non-UI safe skip                     | AC-0002-0009 | non-UI pack は UI sidecar 不在だけでは fail しない                                                                                                                   | nonUiOverfire safety                      | NFR-0003 |
+| BR-0002-0010 | prototyping.yaml optionality         | AC-0002-0010 | README and SKILL state `prototyping.yaml` as optional for a pack with a visual prototyping surface and absent from a cli-only pack; readiness requires it of no pack | README / SKILL canonical wording          |          |
 
 > v1.8.9: BR-0002-0002..0007 (the legacy exploration-sidecar / OQ-blocker rules
 > proven by the now-retired `discussionDesignHardening` validator) were

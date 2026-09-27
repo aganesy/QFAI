@@ -11,6 +11,7 @@
 - US-0001-0007: Drift Protocol 体系化
 - US-0001-0008: Skill オーケストレーション設計契約
 - US-0001-0009: Steering & Governance フレームワーク定義
+- US-0001-0010: A stage skill picked up by free text hands over
 
 ## US-0001-0001: v1421 Layered Spec 必須ファイルセット定義
 
@@ -74,3 +75,16 @@
 - Goal: Steering 文書（5 ファイル）、Instructions 文書（5 ファイル）、Review Roster（10 reviewers）、Constitution（Article I~~X）、Canonical Workflow Stages（Stage 0~~6）の設計仕様を定義する
 - Non-goals: 各文書の逐語的複製（SSOT は steering/_.md, instructions/_.md）
 - Notes: REQ-0009 準拠。統合元由来
+
+## US-0001-0010: A stage skill picked up by free text hands over
+
+- Parent: CAP-0001
+- Source: discussion-20260923171450572#DUS-008
+- Goal: As an operator, I want a stage skill that the host picks for a free-text
+  request to pass the request to `qfai-run` instead of starting work, while a
+  stage I invoke by name still runs as it does today, so that nothing is edited
+  outside a run and the direct `/qfai-*` path keeps working.
+- Non-goals: the entry skill `qfai-run` and the workflow control core
+  (spec-0018); what `qfai init` installs (spec-0003); each skill's own
+  orchestrated-mode content (its own spec).
+- Notes: its E2E row is `Blocked-By` spec-0018, whose run drives the stage.

@@ -2479,6 +2479,18 @@ packages/qfai/tests/integration/cli/commands/prototypingIterate.autoServeTeardow
 - Checkpoint verification revision: 0413184a06c29c1fae13cbf4ebaaee08440a4448
 - Checkpoint verification seal: 93b2f31b78b3abbd921babc281dfb84dd7c1d001f2e2a362309863edc4052abe
 
+### TDD-0582
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: E2E. Discharged by the spec-0018 US-0018-0001 journey, prototype variant: the `prototype` stage runs between SDD and acceptance as `qfai-prototyping` `existing-runtime-contract` for the bound spec, an operation the installed skill declares; the test carries `QFAI:SPEC-0012:US-0012-0144`. The feature route issues every stage, so the variant does not yet select the stage by `prototype_decision_needed` (`decide.ts` marks that SIMPLIFIED).
+- Test file: `packages/qfai/tests/e2e/spec0018DeliverAFeatureE2E.test.ts`
+- Selector: `US-0018-0001, prototype variant (spec-0012 TDD-0582)`
+- RED command: `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/e2e/spec0018DeliverAFeatureE2E.test.ts --testNamePattern='US-0018-0001, prototype variant \(spec-0012 TDD-0582\)' --reporter=verbose` (cwd `packages/qfai`)
+- RED result: exit 1, shared with spec-0018 TDD-0455: the journey stopped at the seam round trip, since `next` issued no seam-only work order after an acceptance result asking for a seam (the journal fold kept no seam request)
+- GREEN result: exit 0; `✓ |e2e| tests/e2e/spec0018DeliverAFeatureE2E.test.ts > US-0018-0001, prototype variant (spec-0012 TDD-0582): the prototype stage runs between SDD and acceptance for the bound spec`
+- Production files: `packages/qfai/src/core/workflow/persistence.ts` (`foldSeam`), under spec-0018 TDD-0455
+
+
 ## Coverage Depth Matrix
 
 | Obligation | Layer | Implemented in | Depth | Rationale |
@@ -2896,3 +2908,85 @@ node scripts/pin-stage-evidence-counts.mjs                               -> alre
   - required Integration `TC-*` coverage: complete
   - required API `CON-API-*` coverage: not applicable
   - no forbidden references introduced
+
+## Ledger rows advanced
+
+### TDD-0579
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
+- Selector: `TC-0012-0492 (TDD-0579): The Operations table lists exactly existing-runtime-contract`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingOperationsSpec0012.test.ts --testNamePattern='TC-0012-0492 \(TDD-0579\): The Operations table lists exactly existing-runtime-contract' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the Operations table landed with the plan skills' orchestrated-mode references before this test was written
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/prototypingOperationsSpec0012.test.ts`
+
+### TDD-0580
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+- Selector: `TC-0012-0493 (TDD-0580): A work order confines the stage to its target spec`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0493 \(TDD-0580\): A work order confines the stage to its target spec' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+
+### TDD-0581
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+- Selector: `TC-0012-0494 (TDD-0581): A target that is not UI-bearing is returned blocked`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingWorkOrderScopeSpec0012.test.ts --testNamePattern='TC-0012-0494 \(TDD-0581\): A target that is not UI-bearing is returned blocked' --reporter=verbose`
+- RED result: exit 1; `AssertionError: the ## Work order scope section exists: expected '' not to be '' // Object.is equality`
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/assets/init/.qfai/assistant/skills/qfai-prototyping/references/orchestrated-mode.md`, `packages/qfai/tests/integration/prototypingWorkOrderScopeSpec0012.test.ts`
+
+### TDD-0578
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Test file: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+- Selector: `TC-0012-0491 (TDD-0578): SKILL.md cites the orchestrated-mode reference once, and it cites the entry check`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/integration/prototypingEntryCheckSpec0012.test.ts --testNamePattern='TC-0012-0491 \(TDD-0578\)' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (Tests 1 passed); the citation line and the reference landed with the plan skills' orchestrated-mode references
+- GREEN result: exit 0; 1 passed (1)
+- Changed files: `packages/qfai/tests/integration/prototypingEntryCheckSpec0012.test.ts`
+
+### TDD-0337
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: integration
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0323).
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `returns 2 when --target-url is missing at cycle 0`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/cli/commands/prototypingIterate.test.ts --testNamePattern='TC-0012-0326|returns 2 when --target-url is missing at cycle 0|returns 64 when the latest iter has nothing open and no anti-patterns' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run for this case
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: none
+
+### TDD-0338
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: integration
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0326). The case-ID selector named no case in its file, so the case was written with the id at the head of its title.
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `TC-0012-0326` (matches `TC-0012-0326: cycle 0 records the DESIGN.md digest that the lock carries`)
+- RED command (cwd `packages/qfai`): as TDD-0337
+- RED result: already satisfied: exit 0 on the first run; cycle 0 already writes `prototyping.json#designMd.sha256` equal to the SHA-256 of `DESIGN.md` and to the lock's `designMdSha256`
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+
+### TDD-0583
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: Integration
+- Seeded by: `CR-20260925-0019` (option 1; TC-0012-0324).
+- Test file: `packages/qfai/tests/cli/commands/prototypingIterate.test.ts`
+- Selector: `returns 64 when the latest iter has nothing open and no anti-patterns`
+- RED command (cwd `packages/qfai`): as TDD-0337
+- RED result: already satisfied: exit 0 on the first run for this case
+- GREEN result: exit 0; 3 passed | 105 skipped (108)
+- Changed files: none

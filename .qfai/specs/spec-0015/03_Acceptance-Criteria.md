@@ -96,14 +96,14 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - US-Refs: US-0015-0008
 - Given the upstream SSOT-sync-pair CI lane (owned by spec-0004) flags drift between `findDesignMdViolations.ts` and `generator-prompt.md` on a PR,
 - When the Reviewer Gate processes that signal,
-- Then it emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` text naming (a) the modified file path, (b) the un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. Empty / whitespace-only / missing `justification:` MUST be treated by spec-0004's validate ingestion as an advisory-failing error (mirror of the R-WORKLOG-DRIFT family pattern).
+- Then it emits `R-PROMPT-SCANNER-DRIFT` at severity error with a non-empty `justification:` text naming (a) the modified file path, (b) the un-paired counterpart path, (c) the specific contract clause whose match cannot be confirmed. Empty / whitespace-only / missing `justification:` MUST be treated by spec-0004's validate ingestion as an advisory-failing error (the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`).
 
 ## AC-0015-0015: SKILL.md `## Default Autopilot Policy` present with 3 named buckets
 
 - US-Refs: US-0015-0009
 - Given a SKILL.md,
 - When the Reviewer Gate checks it,
-- Then a `## Default Autopilot Policy` section MUST be present listing three named buckets per DR-0269: (a) auto-decide (named defaults — output formatting, ID / sequence numbering, append-vs-create on subject overlap, equivalent-option pick), (b) ask-user (approval-required governance operations, destructive operations, version-pin changes, scope expansions — each with its prompt template; the first is a category each skill instantiates with the operations its own run cannot authorize for itself, per DR-0269 Amendment 2), (c) hard-required (brand intent, `primarySpecId` when absent). When the section is absent OR is present but missing one or more required buckets (heading-only / partial population — the "populated with three named buckets" requirement is not satisfied), the gate emits `R-AUTOPILOT-POLICY-MISSING` at severity error with a non-empty `justification:` naming the missing bucket(s). The three enumerations are the prototype: a SKILL.md MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry with its own operations, but MUST NOT introduce an entry outside the prototype's categories.
+- Then a `## Default Autopilot Policy` section MUST be present listing three named buckets per DR-0269: (a) auto-decide (named defaults — output formatting, ID / sequence numbering, append-vs-create on subject overlap, equivalent-option pick), (b) ask-user (approval-required governance operations, destructive operations, version-pin changes, scope expansions — each with its prompt template; the first is a category each skill instantiates with the operations its own run cannot authorize for itself, per DR-0269 Amendment 2), (c) hard-required (brand intent, `primarySpecId` when absent and no workflow run's binding supplies it). When the section is absent OR is present but missing one or more required buckets (heading-only / partial population — the "populated with three named buckets" requirement is not satisfied), the gate emits `R-AUTOPILOT-POLICY-MISSING` at severity error with a non-empty `justification:` naming the missing bucket(s). The three enumerations are the prototype: a SKILL.md MAY narrow any of the three buckets (drop an entry the skill cannot reach), and MAY instantiate a category entry with its own operations, but MUST NOT introduce an entry outside the prototype's categories.
   The ask-user categories are the four above plus, for a skill whose own operation is the interview, a decision a declared grilling session puts to the user.
 
 ## AC-0015-0016: Envelope-deviation `AskUserQuestion` writes a decision record
@@ -157,3 +157,63 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - And membership of the closed `JUSTIFICATION_CATALOG` set is decided by **severity class**, never by which component emits the code: the catalog is the closed error-class mandatory-justification set and already holds script- and probe-driven members (`R-PACK-LOCATION-DRIFT`, emitted only by a repository lint script; `R-SKILL-MANIFEST-DRIFT`), while what sits outside it is warning-class advisory-only auxiliary signal such as `R-AUTOPILOT-POLICY-WIDENED` — whose own sibling `R-AUTOPILOT-POLICY-MISSING`, same emitter, is a member.
 - And both new codes are declared lint-failure codes, i.e. error class, so by that test they **belong in** the catalog on the `R-PACK-LOCATION-DRIFT` precedent. Registering them extends a closed set and MUST move in lockstep with the reviewer SSOTs, so registration is deliberately deferred rather than denied (DR-0015-0006 / OQ-0015-0001).
 - And until that lockstep change lands, the gate MUST ingest both codes without demanding a `justification:`. That handling is a recorded **temporary divergence** from the membership test, scoped to exactly these two codes; it is NOT a principle, and no further code may be exempted by appealing to it.
+
+## AC-0015-0023: The shipped manifests route the two entry skills
+
+- US-Refs: US-0015-0001
+
+```gherkin
+# AC-0015-0023
+# Source: discussion-20260923171450572#REQ-0049
+Scenario: qfai-run and qfai-maintain are routed like every other skill
+  Given the shipped agent-routing.yml and review-profiles.yml
+  When they are read
+  Then qfai-run has a routing entry with the orchestrator role and no authoring or reviewing phase
+  And qfai-maintain has a routing entry with an authoring phase and an independent reviewer on the existing default profile
+  And review-profiles.yml gains no profile
+  And the routing validators pass
+```
+
+## AC-0015-0024: Inside a run each bucket is satisfied by its authorization kind
+
+- US-Refs: US-0015-0009
+
+```gherkin
+# AC-0015-0024
+# Source: discussion-20260923171450572#REQ-0057
+Scenario: The Default Autopilot buckets under a workflow run
+  Given a skill's Default Autopilot Policy and a workflow run
+  When an item of each bucket comes up
+  Then each is satisfied only by the authorization kind the workflow contract assigns its bucket
+  And --auto satisfies nothing
+```
+
+## AC-0015-0025: The actor history travels with the run
+
+- US-Refs: US-0015-0003
+
+```gherkin
+# AC-0015-0025
+# Source: discussion-20260923171450572#REQ-0040
+Scenario: No agent reviews its own authoring anywhere in a run
+  Given a run that has recorded authors, recommenders and reviewers
+  When a later work order names a required reviewer
+  Then the work order carries that history
+  And an agent that authored or recommended an artifact never counts as its independent reviewer
+  And no required reviewer is dropped to save tokens
+```
+
+## AC-0015-0026: Grilling inside a run works only the remaining frontier
+
+- US-Refs: US-0015-0003
+
+```gherkin
+# AC-0015-0026
+# Source: discussion-20260923171450572#REQ-0055
+Scenario: A grilling session inside a run does not reopen settled inputs
+  Given a grilling session held inside a run
+  When it builds its frontier
+  Then it takes what the work order's settled field records as settled and works only the remaining frontier
+  And it keeps the split between user and delegated sessions
+  And the run never invokes qfai-grill
+```

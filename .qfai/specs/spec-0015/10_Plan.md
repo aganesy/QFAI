@@ -13,6 +13,26 @@
 
 Use existing `review-profiles.yml` and `review-gate.rules.yml` data only; add no runtime reader, validator, role or framework. Empty and abstract-only artifacts return N/A, but missing mandatory pairings, independently required gates and product obligations, and the whole safety floor in `.agents/rules/minimal-implementation.md` § 2 remain required.
 
+### Intent-driven entry (CAP-0018)
+
+This change introduces no architectural element: the manifest entries are data,
+and the baseline text is prose.
+
+Units and work. The order across the batch is spec-0018 `10_Plan.md` `### Implementation order`. Everything here is **U3**:
+
+- `manifest/agent-routing.yml` gains the `qfai-run` and `qfai-maintain`
+  entries on the existing `default` profile, and `review-profiles.yml` gains
+  none (BR-0015-0018).
+- The operating baseline gains the autopilot bucket mapping and the binding
+  exception (BR-0015-0010, 0019). This lands after spec-0001's Stage 0 section in
+  the same file.
+- The delegation baseline gains the actor history and grilling inside a run
+  (BR-0015-0020, 0021).
+
+Left out: a new review profile; the operating baseline's Stage 0 section
+(spec-0001); how an upgraded project's manifest gains the entries (spec-0003,
+J2).
+
 ## Test approach
 
 - Unit tests: agent contract structure validation, routing/profile integrity, gate rule parsing
@@ -20,10 +40,69 @@ Use existing `review-profiles.yml` and `review-gate.rules.yml` data only; add no
 - Concrete-pattern integration: reuse `packages/qfai/tests/integration/agentDelegationSpec0015.test.ts` for rationale, concrete scope, N/A and catalog authority; real init must preserve legacy profile bytes without force and with force
 - Asset tests: required/forbidden phrase guardrails across docs, wrappers, and skill files
 
+### Intent-driven entry (CAP-0018)
+
+Every case this change adds reads a shipped file, so it is `L3`, under
+`packages/qfai/tests/integration/`. One module holds the cases of one business
+rule. Each is a new module, because editing an existing one would make its
+completed rows stale.
+
+| Layer | What it proves                                                                                                    | Module                                          | Cases        |
+| ----- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------ |
+| `L3`  | A `primarySpecId` that a run's binding supplies counts as supplied, and without a binding it stays hard-required  | `autopilotBindingExceptionSpec0015.test.ts`     | TC-0015-0037 |
+| `L3`  | The shipped manifests route `qfai-run` and `qfai-maintain`, and `review-profiles.yml` keeps its six profiles      | `routingManifestEntrySkillsSpec0015.test.ts`    | TC-0015-0038 |
+| `L3`  | Each Default Autopilot bucket maps to its authorization kind, and `--auto` satisfies nothing                      | `autopilotAuthorizationBucketsSpec0015.test.ts` | TC-0015-0039 |
+| `L3`  | The actor history travels with the run, and an author or recommender never counts as its own independent reviewer | `actorHistoryRunSpec0015.test.ts`               | TC-0015-0040 |
+| `L3`  | Grilling inside a run takes the work order's `settled` field as settled and works only the remaining frontier     | `grillingInRunSpec0015.test.ts`                 | TC-0015-0041 |
+
+This change adds no story, so it adds no E2E row.
+
+**Cases that stand alone, and kept failures.** No case is matrix-shaped, and
+none is a kept failure. The stop on an unavailable required delegation keeps
+BR-0015-0003's existing cases. Refusing a reviewer that is not independent is
+spec-0018's.
+
+**Held by an existing guard, so no case is written for it.**
+
+- Manifest well-formedness: the agent-definition and skill-role validators.
+- The Default Autopilot section and its buckets: the existing `autopilotPolicy`
+  tests and TC-0015-0020, 0021 and 0034, all unchanged.
+- That no plan names `qfai-grill`: the plan vocabulary, checked when spec-0018
+  loads the plans.
+
+**Order.** The five `L3` rows are tier 2 of spec-0018 `10_Plan.md`
+`### Order in which the rows go green`.
+
+- The operating-baseline passages land after spec-0001's in the same file.
+- TC-0015-0038 reads `qfai-run` and `qfai-maintain`, so it goes green once
+  spec-0018 ships them.
+- An upgraded project gains the two routing entries through `qfai init --force`.
+  The upgrade report that names it is tested by spec-0003, and the `start`
+  refusal that names it by spec-0018.
+
+**Findings carried on purpose.** Pushes follow spec-0018 `10_Plan.md`
+`### Findings carried on purpose`.
+
+| Finding                                                | Why it is expected                       | Until                                                                                                               |
+| ------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `QFAI-ATDD-112` for TC-0015-0037..0041                 | Their integration tests do not exist yet | ATDD writes them                                                                                                    |
+| `QFAI-ATDD-131` on this spec, pinned at 1 under `full` | The spec has no Coverage Depth Matrix    | ATDD writes the first one, and that push re-pins with `node scripts/check-dogfood-backlog.mjs --profile full --pin` |
+
 ## Dependencies
 
 - Requires: QFAI skill framework (SKILL.md structure)
 - Consumed by: all QFAI skills reference this framework
+
+## NFR approach
+
+- NFR-0001 and NFR-0002 are unchanged by this entry.
+
+### Intent-driven entry (CAP-0018)
+
+- `discussion-20260923171450572#NFR-0002` (asset ceiling): the routing entries and the operating- and delegation-baseline passages stay within 800 lines and 400 characters per line. A breach shows in the `assets.lineBudget` doctor check and `packages/qfai/src/core/doctor/assetLineBudget.ts`.
+- `discussion-20260923171450572#NFR-0015` (distributed surface): the manifest entries and baseline passages carry no internal identifier. A breach shows in the pre-build shipping lint, the post-build leakage guard or the init smoke test (`.agents/rules/distributed-surface.local.md` `## Four guards`).
+- NFR-0003 (the first delegation failure hard-stops the stage): BR-0015-0003 stands. A breach shows as a run that continues past an unavailable required delegation in the existing delegation hard-stop tests.
+- Owned elsewhere, cited here: whether a release claims a host as supported is spec-0018's. No routing entry claims a host.
 
 ## Risk mitigation
 
@@ -31,6 +110,13 @@ Use existing `review-profiles.yml` and `review-gate.rules.yml` data only; add no
 - Mitigation: central routing files become the only dispatch SSOT; tests validate Codex/init parity
 - Adoption: preserved numeric targets are ineffective once the current catalog is adopted. Init's manifest-preservation behavior is unchanged; a project retaining an older catalog still needs the current catalog to receive this bound.
 - Execution: reset only the two approved changed ledger rows and preserve their old evidence as history. Newly seeded rows remain todo until the executing owner supplies actual test identities and evidence; package regression success is not whole-workflow completion.
+
+### Intent-driven entry (CAP-0018)
+
+| Risk                                                                                                                                                                                                            | Likelihood / impact | Mitigation                                                                         | Trigger to act                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| A plain upgrade leaves out the `qfai-run` and `qfai-maintain` routing entries, so `active` fails closed at `start` until `qfai init --force` runs, short of the active-by-default decision as the user accepted | high / med          | The upgrade report and the `start` refusal name `qfai init --force` (DR-0015-0010) | An upgraded fixture whose `start` refusal does not name the command, or an adopter report that chaining never starts after an upgrade |
+| A new review profile is added for `qfai-maintain`, which the add-only merge never delivers to an upgraded manifest                                                                                              | low / high          | `qfai-maintain` uses the existing `default` profile (BR-0015-0018)                 | A diff that adds a profile to `manifest/review-profiles.yml`                                                                          |
 
 ## CHG-005 (2026-05-24) — qfai-prototyping defect remediation
 

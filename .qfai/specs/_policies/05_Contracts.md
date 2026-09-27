@@ -51,20 +51,30 @@ QFAI 自体は外部公開 API を持たない。
 
 ### CLI Contracts
 
-| Short ID  | Entity                 | File                                          | Purpose                                                                                                                                                                                                                                                                                                                         |
-| --------- | ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI-PROT  | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`     | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                                                                                                                                               |
-| CLI-INIT  | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`            | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)                                                                                                                                                                          |
-| CLI-VAL   | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`        | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003)                                                                                                                               |
-| CLI-WLOG  | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                                                                                                                                                                               |
-| CLI-WFSET | shipped workflow set   | `.qfai/contracts/cli/shipped-workflows.md`    | spec-0003 の distributed `.github/workflows/**` surface — `qfai-` prefix reservation (**notice, not selector**), in-binary write/prune name lists, `.qfai/install-provenance.json`, closed 5-state file enum, 宣言的 structural shape の dimension 集合, gate は `pnpm ci:lint` (CHG-007。本行が Contract Index 上の唯一の登録) |
+| Short ID   | Entity                 | File                                           | Purpose                                                                                                                                                                                                                                                                                                                         |
+| ---------- | ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-PROT   | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`      | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                                                                                                                                               |
+| CLI-INIT   | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`             | CLI surface of spec-0003 — assistant-tree seed, `--upgrade-assistant-tree`, deprecation window, path SSOT enforcement (CHG-003)                                                                                                                                                                                                 |
+| CLI-VAL    | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`         | CLI surface delta of spec-0004 — assistant-tree finding codes, `R-REJECTED-READOPT`, Reviewer-Gate input bundle (CHG-003)                                                                                                                                                                                                       |
+| CLI-WFSET  | shipped workflow set   | `.qfai/contracts/cli/shipped-workflows.md`     | spec-0003 の distributed `.github/workflows/**` surface — `qfai-` prefix reservation (**notice, not selector**), in-binary write/prune name lists, `.qfai/install-provenance.json`, closed 5-state file enum, 宣言的 structural shape の dimension 集合, gate は `pnpm ci:lint` (CHG-007。本行が Contract Index 上の唯一の登録) |
+| CLI-WF     | qfai workflow (CLI)    | `.qfai/contracts/cli/qfai-workflow.md`         | The spec-0018 CLI surface: seven operations (`start` / `next` / `accept` / `decision` / `status` / `resume` / `finish`), JSON envelope and closed refusal registry, exit codes, modes, fail-closed causes, run state machine, journal and lock, `finish` final gates, and the operator-facing screens of the free-text entry    |
+| CLI-WFFILE | workflow files schema  | `.qfai/contracts/cli/workflow-files.schema.md` | The spec-0018 files: the `.qfai/runs/` runtime tree, tracked `.qfai/evidence/workflow/<runId>/` evidence, authorization record and slot binding, built-in plan files (not an extension point), the five shipped JSON Schemas                                                                                                    |
+
+Reconciled CLI pairings:
+
+| Contract   | Reconciled With      | Shared contract surface                                                    |
+| ---------- | -------------------- | -------------------------------------------------------------------------- |
+| CLI-WF     | CLI-WFFILE, CLI-INIT | Run states, authorization kinds and `debts`; fail-closed triggers (b), (c) |
+| CLI-WFFILE | CLI-WF, CLI-VAL      | Run states, authorization kinds and `debts`; authorization references      |
+| CLI-VAL    | CLI-WFFILE           | Reference form, `authorizationId` grammar and `Approved By` copy           |
+| CLI-INIT   | CLI-WF               | Fail-closed triggers (b), (c)                                              |
 
 ## Mapping Rules
 
 - (UX-loop redesign / spec-0012 09_delta CHG-001) discussion sidecars `uiux/30_exploration_brief.md`, `uiux/31_reference_pool.md`, `uiux/32_design_anti_goals.md` は廃止。`/qfai-discussion` はこれらを生成しない。
-- discussion の `uiux/40_screen_contracts.md` は `/qfai-sdd` により `UICON-001` に正規化される。
+- `uiux/40_screen_contracts.md` is normalized by `/qfai-sdd` into `.qfai/contracts/ui/*.yaml` (`UICON-001`) when the target spec is UI-bearing. `spec-0018` is not UI-bearing (decided 2026-09-24); its pack's screens are the `## Operator-facing screens` section of CLI-WF (`.qfai/contracts/cli/qfai-workflow.md`).
 - v2.0: `uiux/33_exploration_rubric.md` と `uiux/34_evaluator_calibration.md` は廃止（`/qfai-discussion` で生成しない）。`DCON-002`, `DCON-003` は P4 で物理削除。
-- (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-030` (root `DESIGN.md`) は `/qfai-discussion` の brand 出力。`/qfai-sdd` Phase 0 で sha256 凍結 (`DCON-031`) を行う。
+- (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-030` (root `DESIGN.md`) is authored by `/qfai-sdd` Phase 0 from the brand direction the discussion pack records in `01_Context.md#Design Direction`. The same phase freezes its sha256 (`DCON-031`). Discussion writes no `DESIGN.md`.
 - (UX-loop redesign / spec-0012 09_delta CHG-001) `DCON-005` (design-system) は `/qfai-prototyping` の post-loop で `DESIGN.md` token の deterministic mirror として生成される。`DCON-032` validator が byte-equivalent を検証。
 - v2.0+UX-loop: `DCON-008` (prototype-handoff) は最終 iter HTML を `finalArtifact` として参照し、`extractedDesignSystem` は `DCON-005` (= DESIGN.md mirror) を指す。
 - v2.0: `DCON-004` (selected-direction) は P4 で物理削除（winner 選定の概念がないため）。
@@ -90,9 +100,8 @@ QFAI 自体は外部公開 API を持たない。
 
 ## CHG-003 — Assistant-layer Recut + Work-log Surface (2026-05-22)
 
-- CLI-INIT / CLI-VAL / CLI-WLOG を新設。CHG-003 が導入する surface delta はこの 3 contract に集約される。
+- CLI-INIT and CLI-VAL hold the CHG-003 surface delta.
 - `packages/qfai/src/core/paths/assistantPaths.ts` は TS module 形式の SSOT であり、別途 yaml/md contract は不要。`assistantPaths.ts` をハードコード文字列で迂回することは NFR-0001 違反となる。
-- `.qfai/steering/` (work-log surface, project-root) は配布物 (`packages/qfai/package.json#files`) に含まれない。seed される `README.md` / `.gitkeep` / `_templates/entry.md` は静的アセットではなく `packages/qfai/src/cli/commands/init.ts` が生成するため、`assets/` 配下のファイルとしてではなく `dist/` 内の文字列リテラルとしてのみ配布される (`.gitkeep` の body は空文字列リテラル)。詳細は `.qfai/contracts/cli/qfai-init.md#distributed-surface-obligations`。
 - 旧 path layout は 1 minor release の deprecation window 中は受理されるが `D-DEPRECATED-PATH` warning を発する。sunset version は migration memo に明記される。
 
 ## CHG-005 — qfai-prototyping defect remediation (2026-05-24)

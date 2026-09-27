@@ -97,6 +97,7 @@ const CLI_SUBCOMMANDS = [
   "handoff",
   "discussion",
   "prototyping",
+  "workflow",
 ] as const;
 
 /**
@@ -200,6 +201,8 @@ const COMMAND_TOKENS: RegExp[] = [
   // WHICH IS WHAT THE CONSTRAINT COSTS — one argument with the above, not a bound
   // plus an exception: the message may not use those three as BARE WORDS. It says
   // "reports", which the trailing `\b` rejects (measured), one inflection off (2).
+  // `workflow` is held the same way: the message says "workflows", never the
+  // bare "workflow(s)", whose `(` is a boundary.
   new RegExp(`(?<![\\\\/@.\\w-])(?:${CLI_SUBCOMMANDS.join("|")})\\b(?![\\\\/@])`, "i"),
 ];
 
@@ -307,7 +310,7 @@ describe("TC-0006-0030 (TDD-0032): the drift message names the manual repair and
     //     branch ALONE (`-> fe1ac218`) leaves drift, this row and the closure GREEN,
     //     and no `toEqual` over keys can see a value.
     const expectedMessage =
-      `installed shipped workflow(s) differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
+      `installed shipped workflows differ from the packaged copy: ${ADOPTER_STALE_PATH}. ` +
       `Manual repair: replace each listed file with the copy of the same name in ${shippedWorkflowsDir()}. ` +
       `The installed file is never overwritten by QFAI: this finding reports the difference and writes nothing.`;
 

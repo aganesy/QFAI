@@ -145,3 +145,210 @@ Given an invocation with no argument, when capabilities are assigned spec identi
 - Given a discussion pack with usable markdown and an optional `prototyping.yaml` side artifact,
 - When SDD preflight runs with the side artifact absent, malformed, or in a legacy format,
 - Then side artifact state alone does not change preflight readiness.
+
+## AC-0013-0043: Stage 1 checks a matching routing-time approval and asks nothing
+
+- US-Refs: US-0013-0015
+
+```gherkin
+# AC-0013-0043
+# Source: discussion-20260923171450572#DAC-001-02
+Scenario: A fresh, matching human decision approves the CREATE row
+  Given an SDD work order that cites a human_decision approving a new capability
+  And the decision matches the triage row's operation and capability and is not stale
+  When Stage 1 triages the row
+  Then Stage 1 asks no question
+  And the CREATE row is persisted with Authorization-Ref naming the record
+  And Approved By copies answeredBy@YYYY-MM-DD from the record
+```
+
+## AC-0013-0044: A missing, mismatched or stale approval stops Stage 1
+
+- US-Refs: US-0013-0015
+
+```gherkin
+# AC-0013-0044
+# Source: discussion-20260923171450572#REQ-0042
+Scenario: Stage 1 persists nothing when the approval does not hold
+  Given a CREATE row whose cited human_decision is missing, does not match the row, or is stale
+  When Stage 1 triages the row
+  Then no triage row is persisted
+  And the stage returns awaiting_input naming the row and the reason
+  And Stage 1 asks the operator nothing itself
+```
+
+## AC-0013-0045: The other approval-required operations keep the Stage 1 question
+
+- US-Refs: US-0013-0015
+
+```gherkin
+# AC-0013-0045
+# Source: discussion-20260923171450572#REQ-0042
+Scenario: A routing-time approval answers only a CREATE
+  Given a DELETE, SPLIT, MERGE, SUPERSEDE or UPDATE:REMOVE row
+  When Stage 1 triages the row
+  Then the row goes through today's Stage 1 approval question
+  And no routing-time authorization approves it
+  And inside a run the question reaches the operator as a decision question the stage result opens
+  And the approved row copies the answerer into Approved By and carries no Authorization-Ref
+```
+
+## AC-0013-0031: `--auto` stays a no-question mode inside and outside a run
+
+- US-Refs: US-0013-0015
+
+```gherkin
+# AC-0013-0031
+# Source: discussion-20260923171450572#DAC-004-04
+Scenario: --auto neither asks nor approves
+  Given an approval-required row with no satisfying human_decision
+  When Stage 1 runs under --auto, inside a run or outside one
+  Then Stage 1 stops with a consultation-needed entry naming the row
+  And Approved By is left -
+  And the regression test keeps the in-run case and the legacy --auto case as separate tests
+```
+
+## AC-0013-0032: The triage row format carries `Authorization-Ref`
+
+- US-Refs: US-0013-0015
+
+```gherkin
+# AC-0013-0032
+# Source: discussion-20260923171450572#REQ-0043
+Scenario: The column is optional and a legacy row stays valid
+  Given the triage table format in references/sdd-triage.md
+  When a CREATE row approved inside a run is written
+  Then it carries Authorization-Ref in the value form CLI-VAL states, found by its header name
+  And a row for any other operation carries no reference
+  And a row without the column remains a valid row
+```
+
+## AC-0013-0033: Phase 2b seeds the diagnosed missing test without a Change Request
+
+- US-Refs: US-0013-0016
+
+```gherkin
+# AC-0013-0033
+# Source: discussion-20260923171450572#DAC-002-02
+Scenario: A missing-test diagnosis becomes one test case and one ledger row
+  Given an sdd_append work order for a diagnosed missing test
+  When Phase 2b defect row seeding runs
+  Then exactly one test case and one ledger row are appended
+  And the test case records the diagnosed defect and the run as its reason
+  And no Change Request is filed
+```
+
+## AC-0013-0034: Seeding changes no AC, no BR and no existing row's status or evidence
+
+- US-Refs: US-0013-0016
+
+```gherkin
+# AC-0013-0034
+# Source: discussion-20260923171450572#DAC-002-03
+Scenario: The appended row starts the cycle and the done row stays done
+  Given a spec whose existing ledger row for the behaviour is done
+  When Phase 2b defect row seeding appends the new row
+  Then no US, AC, BR or EX is added or changed
+  And the new row starts at todo
+  And the existing done row keeps its Status and Evidence
+  And where the existing row carries the same obligation, the new row names a Boundary and the existing row gains its slug if it had none
+```
+
+## AC-0013-0035: The seeded row's layer decides who writes its test
+
+- US-Refs: US-0013-0016
+
+```gherkin
+# AC-0013-0035
+# Source: discussion-20260923171450572#DAC-002-04
+Scenario: An acceptance-layer row is left for ATDD and a unit-layer row for implement
+  Given a diagnosed missing test
+  When Phase 2b defect row seeding derives the row's level and layer from the test's oracle
+  Then an acceptance-layer row is left for ATDD to author its test
+  And a unit-layer row is left for implement
+  And seeding writes no test itself
+```
+
+## AC-0013-0036: The appended test case is recorded as an approval-free delta row
+
+- US-Refs: US-0013-0016
+
+```gherkin
+# AC-0013-0036
+# Source: discussion-20260923171450572#REQ-0047
+Scenario: The seeding run leaves a triage record
+  Given Phase 2b appended a test case for a diagnosed missing test
+  When the run records the change
+  Then the spec's 09_delta.md gains one UPDATE / APPEND triage row for it
+  And the row's Approved By is -
+```
+
+## AC-0013-0037: An orchestrated work order always names its target
+
+- US-Refs: US-0013-0017
+
+```gherkin
+# AC-0013-0037
+# Source: discussion-20260923171450572#REQ-0013
+Scenario: No target never means every capability
+  Given an orchestrated /qfai-sdd work order
+  When the work order names no target
+  Then /qfai-sdd refuses it and does not run the no-argument batch
+  And when the target is a new_capability slot, the result reports the binding of each capability it created
+```
+
+## AC-0013-0038: A direct `/qfai-sdd` ends at SDD
+
+- US-Refs: US-0013-0017
+
+```gherkin
+# AC-0013-0038
+# Source: discussion-20260923171450572#DAC-008-03
+Scenario: Invoked by name, /qfai-sdd runs standalone
+  Given the operator invokes /qfai-sdd by name
+  When SDD completes
+  Then the skill stops and creates no run
+  And a request to go to the end is handed to a whole run
+```
+
+## AC-0013-0039: The entry check and the worker follow the handover
+
+- US-Refs: US-0013-0017
+
+```gherkin
+# AC-0013-0039
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: /qfai-sdd checks how it was invoked before it edits anything
+  Given /qfai-sdd is selected in active mode
+  When it holds no work order and was not invoked by name, or holds one that matches no issued work order
+  Then it edits nothing
+  And a worker holding a valid work order does only that work
+  And the rule is stated in references/orchestrated-mode.md, cited by one SKILL.md line
+```
+
+## AC-0013-0040: The Operations table lists what the vocabulary assigns
+
+- US-Refs: US-0013-0017
+
+```gherkin
+# AC-0013-0040
+# Source: discussion-20260923171450572#REQ-0052
+Scenario: /qfai-sdd declares the operations it serves
+  Given references/orchestrated-mode.md of /qfai-sdd
+  When the Operations table is read
+  Then it lists exactly the operations CLI-WFFILE assigns to qfai-sdd, and no other
+```
+
+## AC-0013-0041: Stage 0 reuses the shared snapshot but not SDD's own check
+
+- US-Refs: US-0013-0017
+
+```gherkin
+# AC-0013-0041
+# Source: discussion-20260923171450572#REQ-0056
+Scenario: A later stage reuses what is unchanged and re-runs what is SDD's
+  Given a run whose Stage 0 shared snapshot is recorded
+  When /qfai-sdd starts a work order in that run
+  Then it reuses the snapshot once its key still matches, and refreshes only what changed
+  And the sdd preflight readiness check of the selected source runs again and is never served from the snapshot
+```

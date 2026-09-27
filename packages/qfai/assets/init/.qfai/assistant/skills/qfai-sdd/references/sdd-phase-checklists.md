@@ -93,6 +93,30 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - Keep the ledger table the first markdown table in the file, and keep the `US-Refs` / `CON-API-Refs` columns in its header — a row of that layer with no column to hold its obligation is unverifiable.
 - An empty table is a valid outcome only when the spec declares no coverage-target TC, no integration-level TC **and** no active `US-*` / `CON-API-*`.
 
+### Defect row seeding (`defect-row-seeding`)
+
+Under a workflow work order of operation `defect-row-seeding`, Phase 2b adds
+the one row a diagnosed missing test needs, for behaviour the spec already
+states:
+
+- Append exactly one test case to `06_Test-Cases.md` and one ledger row to
+  `tdd/test-list.md`. File no Change Request.
+- The test case's `Notes` give the diagnosed defect and the run ID, and no path
+  under `.qfai/runs/`.
+- The test case cites an existing AC in `AC-Refs`, and an existing EX, or `—`,
+  in `EX-Ref`.
+- Add or change no US, AC, BR or EX.
+- The new row starts at `todo`. Every existing row keeps its `Status` and
+  `Evidence`.
+- Where the new row carries an obligation an existing row already carries, name
+  a `Boundary` on the new row, and give the existing row its slug if it has
+  none. That is the only cell written on an existing row.
+- Derive `Level` and `Layer` from the missing test's oracle by
+  `.qfai/assistant/catalog/test-layers.md`. An acceptance-layer row is left to
+  ATDD and a unit-layer row to implement. This phase writes no test itself.
+- Record the appended test case as one `UPDATE` / `APPEND` row in the spec's
+  `09_delta.md` triage table, with `Approved By` `-`.
+
 ## Phase 2c: Obligation reconciliation
 
 - Pre-draft grilling run and its escalations settled before this phase writes (`sdd-pre-draft-grilling.md`).

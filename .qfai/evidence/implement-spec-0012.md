@@ -182,6 +182,18 @@ Land the foundation of CHG-002 Wave 3 (core loop destructive changes) on `featur
 - **Test only**: `packages/qfai/tests/core/prototyping/iteration.test.ts` lines 167-171 — new `it("shouldStop boundary at index === 9 (TC-0012-0357, TDD-0372)")` block inside the existing `describe("shouldStop — convergence")` block. Uses the file's existing `baseIter({index})` fixture. Asserts `shouldStop([baseIter({index:9})])==="max-iterations"` AND `shouldStop([baseIter({index:8})])===null`.
 - **No production change**. `shouldStop` already reads `MAX_ITERATION_INDEX` symbolically (line 59 of iteration.ts), so the TDD-0371 constant flip deterministically satisfied this new assertion.
 
+### TDD-0336
+
+- Closed: `exception` under DR-0298 on 2026-09-25. Per-row review waived.
+- Layer: unit
+- Reset by: `CR-20260925-0019` (option 1; re-scoped to TC-0012-0329).
+- Test file: `packages/qfai/tests/core/prototyping/iteration.test.ts`
+- Selector: `returns null when designMdViolations is non-empty (other conditions met)`
+- RED command (cwd `packages/qfai`): `NO_COLOR=1 node node_modules/vitest/vitest.mjs run tests/core/prototyping/iteration.test.ts --testNamePattern='returns null when designMdViolations is non-empty' --reporter=verbose`
+- RED result: already satisfied: exit 0 on the first run (1 passed); the re-scoped row names one existing case that carries the TC annotation
+- GREEN result: exit 0; 1 passed | 32 skipped (33)
+- Changed files: none
+
 ## Commands executed + key outputs
 
 - TDD-0371 RED: `cd packages/qfai && pnpm vitest run tests/core/prototyping/iteration.test.ts -t "TC-0012-0359"` → exit 1, `AssertionError: expected 15 to be 10` at line 277.
@@ -344,3 +356,85 @@ Open entries from the reviews of the `/qfai-implement` run started
 is declared.
 
 - `record:unchecked`, `TDD-0577`, Round 1: the row-level `qa-gatekeeper: PASS` line does not name the attempt, round and trees its one attempt covered — the RED gate on the rebuilt mutated tree and the build-phase GREEN at 79af8ad63. That is written only in the `qa-gatekeeper attempts` line. The gate ran after the ledger had already moved to `green` and `refactor`.
+
+---
+
+# CR-20260925-0019 preflight and TDD-0364 test fix (2026-09-24 UTC)
+
+## CR-20260925-0019 preflight
+
+The approved Option 1 of `CR-20260925-0019` names exactly three rows for reset:
+`TDD-0336`, `TDD-0337` and `TDD-0338`. The owner rerun re-scoped each row to one
+case. Each row moved `done -> todo`, with `CR-20260925-0019` appended to its
+`DR-ID`. No other row was reset.
+
+### Withdrawn history
+
+The completed cycles below were recorded against the multi-case rows before the
+re-scope. They no longer describe the rows' obligations. No per-row RED/GREEN
+entry for these rows exists in this file; the ledger cells were the whole
+record.
+
+| Row        | Former TC-Refs                                                 | Former selector                                                                                                                                                                                 | Former Status and DR-ID | Former Evidence (verbatim)                                                            | Re-scoped to   |
+| ---------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `TDD-0336` | `TC-0012-0319`, `TC-0012-0320`, `TC-0012-0321`, `TC-0012-0329` | `["returns converged when all three arrays are empty","returns null when layoutAntiPatternsDetected is non-empty (other conditions met)","returns null when designMdViolations is non-empty (other conditions met)"]` | `done`, `DR-0012-0014`  | `shouldStop axes-exceptional / lap-cap / max-iterations / designMdViolations-blocked` | `TC-0012-0329` |
+| `TDD-0337` | `TC-0012-0322`, `TC-0012-0323`, `TC-0012-0324`, `TC-0012-0325` | `TC-0012-0322`                                                                                                                                                                                  | `done`, `DR-0012-0016`  | `iterate --cycle exit codes (0 / 2 / 64 / 65)`                                        | `TC-0012-0323` |
+| `TDD-0338` | `TC-0012-0326`, `TC-0012-0327`                                 | `exits 2 with stderr matching`                                                                                                                                                                  | `done`, `DR-0012-0024`  | `designMdSha256 record / hash mismatch exit 2`                                        | `TC-0012-0326` |
+
+The former cells are descriptive and carry no evidence anchor, so they neither
+prove nor disprove the old runs. The "Cascade ledger entries" note under the
+cycle-budget session above records that `TDD-0336` to `TDD-0338` kept their
+old evidence strings after an in-place literal update. None of this history
+counts toward the re-scoped obligations; each row owes a fresh cycle.
+
+## TDD-0364
+
+### test_fix — 2026-09-24
+
+- Kind: D14 `test_fix` under approved action 4 of `CR-20260925-0019`. The row
+  keeps `Status = done`, its `TC-Refs` and its obligation.
+- Change: in `packages/qfai/tests/core/prototyping/iteration.test.ts`, the
+  `TC-0012-0320` test's `layoutAntiPatternsDetected` fixture changed from
+  `["lap-008-no-back-affordance"]` to `["lap-007-state-not-represented"]`, the
+  value `TC-0012-0320` declares. No other test in the file changed.
+- File SHA-256 before:
+  `b2bb44a2d271037f3e4ba9ddfb836e179e8c753c814ea1d65cb9f69ec07b1c5d`
+  (as committed at `7a4e9aa5666b54c1be037f03f3b38e023a0cf640`).
+- File SHA-256 after:
+  `c8b878e8976c0029e67afb737f57e652571c64b9f4aa605b3a641c28bf97cc23`.
+- Tree: base commit `981189c90fe49606bd10743548eebb0927baa9f4` plus uncommitted
+  edits. A formal revision is taken when the change is committed.
+- Command, as the ledger writes the selector:
+  `cd packages/qfai && npx vitest run tests/core/prototyping/iteration.test.ts -t "returns null when layoutAntiPatternsDetected is non-empty (other conditions met)"`
+  — `Tests 33 skipped (33)`. The `-t` value is a regular expression, so the
+  unescaped parentheses form a group and match no test name.
+- Command, parentheses escaped:
+  `cd packages/qfai && npx vitest run tests/core/prototyping/iteration.test.ts -t "returns null when layoutAntiPatternsDetected is non-empty \(other conditions met\)"`
+  — `Tests 1 passed | 32 skipped (33)`.
+- Owed: independent review of this change. Whether the changed fixture value
+  owes fresh falsifiability evidence is for that review to decide.
+
+## Shared-artifact re-verify
+
+The test fix above changed `iteration.test.ts`. Each line below is a `done`
+row naming that file, with its selector re-run once against the changed file
+(SHA-256 `c8b878e8…cc23`). Only the selector was re-run. Each row still owes the
+`Oracle proof` re-take and fresh verdicts from its required reviewers. The whole
+per-spec set was not re-run.
+
+- `spec-0012/TDD-0364` — the selector re-run above: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0348` — `-t "TC-0012-0339"`: `Tests 33 skipped (33)`. The selector names no test; the case is annotated only in the integration annotation carrier.
+- `spec-0012/TDD-0349` — `-t "TC-0012-0340"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0350` — `-t "isPivotDirective accepts the 3 levels"`: `Tests 1 passed | 32 skipped (33)`; `-t "isPivotDirective rejects other values"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0351` — `-t "TC-0012-0342"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0359` — `-t "TC-0012-0350"`: `Tests 33 skipped (33)`. Same as `TDD-0348`.
+- `spec-0012/TDD-0363` — `-t "returns converged when all three arrays are empty"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0371` — `-t "TC-0012-0359"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0372` — `-t "TC-0012-0357"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0375` — `-t "TC-0012-0369"`: `Tests 1 passed | 32 skipped (33)`.
+- `spec-0012/TDD-0376` — `-t "TC-0012-0367"`: `Tests 2 passed | 31 skipped (33)`.
+- `spec-0012/TDD-0377` — `-t "TC-0012-0368"`: `Tests 1 passed | 32 skipped (33)`.
+
+Rows outside this block: `TDD-0336` is `todo` after the reset and `TDD-0347` is
+`exception`, so neither owes a re-verify. `TDD-0339`, `TDD-0366`, `TDD-0367` and
+`TDD-0373` name other test files, which this change did not edit.

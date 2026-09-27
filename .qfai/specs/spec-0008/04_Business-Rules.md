@@ -87,3 +87,77 @@
 - A credential-free lane and a credentialed lane MUST be reachable by different script names, so a lane that structurally cannot touch the network stays distinguishable from one that must. This is recorded as adopter guidance; QFAI keeps its own script names and adopts no renaming.
 - The guidance MUST state that QFAI's own suite has zero credentials and that none of this is dogfooded here, rather than implying the rules were verified by execution in this repository.
 - The guidance obliges the E2E / API / Integration layers only. It MUST NOT introduce a unit or component obligation — unit and component tests belong to `/qfai-implement` (RJ-0008-0001).
+
+## BR-0008-0013: The Stage-Skill Handover
+
+- AC-Refs: AC-0008-0015
+
+- In mode `active`, `/qfai-atdd` makes the stage-skill entry check, does only the work of a work order it is handed, and its `SKILL.md` cites `references/orchestrated-mode.md` with one line.
+
+## BR-0008-0014: The Operations Table
+
+- AC-Refs: AC-0008-0016
+
+- The `## Operations` table of `qfai-atdd/references/orchestrated-mode.md` lists exactly the operations the plan vocabulary assigns to `qfai-atdd`.
+
+## BR-0008-0015: RED Only at the Intended Assertion
+
+- AC-Refs: AC-0008-0017
+
+- The stage result reports `expected_red` only for a failure at the intended assertion, and reports a failure of any other kind as `unrun` or `blocked`.
+
+## BR-0008-0016: Cross-Spec Obligations Are Debts
+
+- AC-Refs: AC-0008-0018
+
+- A stage that reaches `PASS with cross-spec obligations` returns `accepted_with_debt` with one debt per obligation, and never hands on a finding that has no named owner.
+
+## BR-0008-0017: The Seam Round Trip
+
+- AC-Refs: AC-0008-0019
+
+- An acceptance test that cannot reach its assertion is returned as `needs_repair` with a seam request naming it, and after the seam-only result is accepted the same stage instance takes RED at the assertion before the full work is handed on.
+
+## BR-0008-0018: The Layer Decision Is Never Cached
+
+- AC-Refs: AC-0008-0020
+
+- Inside an active run, the ATDD stage may reuse the shared preflight snapshot only for the inputs the snapshot covers.
+- It decides which acceptance layer each obligation needs from the current spec and ledger at every stage start, and never takes that decision from the snapshot.
+
+## BR-0008-0019: What a Test Fix Leaves on the Ledger Row
+
+- AC-Refs: AC-0008-0021
+
+- A test fix returns the AC or BR the expectation cites before and after the fix, with an independent review and a re-run of the test (DR-0008-0004).
+- It edits none of the row's `Status`, `TC-Refs`, `Layer` and `Boundary`. `Test file` and `Selector` may change, since a wrong selector is one of the defects a test fix repairs.
+- The re-run is appended to the row's evidence section as a re-verify record, in a form the ledger validator already reads. The changed test file would otherwise leave the row reported as stale, and the run's final validate would fail.
+
+## BR-0008-0020: A Change of Meaning Goes to SDD
+
+- AC-Refs: AC-0008-0022
+
+- A test fix after which the expectation would cite a different AC or BR is returned as `needs_repair`, listing that finding with `qfai-sdd` as its resolving owner.
+
+## BR-0008-0021: The Acceptance Layers of a Test Fix
+
+- AC-Refs: AC-0008-0023
+
+- `/qfai-atdd` serves a `test_fix` work order for an `E2E`, `API` or `Integration` row, and none for an `Integration` row whose `TC-Refs` name only `L1` or `L2` test cases.
+
+## Contract Realization
+
+The CLI contracts declare no `CON-*` ID, so this table names the contract section
+that realizes each rule added on 2026-09-24.
+
+| Contract   | Section                                      | Realized by                                            |
+| ---------- | -------------------------------------------- | ------------------------------------------------------ |
+| CLI-WF     | `### host:stage-skill-handover`              | BR-0008-0013                                           |
+| CLI-WFFILE | `### The Operations table`, `### Vocabulary` | BR-0008-0014                                           |
+| CLI-WF     | `### Stage result`                           | BR-0008-0015, BR-0008-0016, BR-0008-0017, BR-0008-0020 |
+| CLI-WF     | `## Completion`                              | BR-0008-0016                                           |
+| CLI-WF     | `### Stage result` (`testFix`)               | BR-0008-0019, the returned field only                  |
+| CLI-WFFILE | `### Vocabulary`                             | BR-0008-0021                                           |
+
+BR-0008-0018 has no row: no contract states which checks a stage re-runs inside a
+run.

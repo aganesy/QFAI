@@ -128,14 +128,37 @@ the standard library has one is not a simplification; it is rung 3.
 
 ## 4. What a change leaves out
 
-- **Work the request did not ask for.** A pre-existing bug, a performance
-  concern, or behaviour the request does not mention is reported as a
-  follow-up, not fixed in this change. The exception is a fix the requested
-  behaviour cannot work without.
-- **Readings the request did not settle.** Where the work goes ahead on an
-  assumption about ambiguous wording, implement the reading the wording and the
-  surrounding code most directly support. State that assumption, and do not
-  build for the other readings as well.
+A shortcut is one way a change departs from what was asked. An addition is the
+other. An addition can clear every rung of the ladder, because each one is
+minimal on its own terms. Additions take four shapes, and each stays out.
+
+| Shape            | What stays out                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Scope            | Cleanup of the code around a bug fix. Configurability on a simple feature.                                     |
+| Documentation    | Doc comments, comments and type annotations on code the change did not touch.                                  |
+| Defensive coding | Error handling, a fallback or validation for a case that cannot happen.                                        |
+| Abstraction      | A helper for an operation done once, or one extracted for length alone. A design for a requirement nobody has. |
+
+A comment in the change goes where the logic is not self-evident.
+
+- **A fix nobody asked for**, such as a pre-existing bug or a performance
+  concern, is reported as a follow-up. A fix the requested behaviour cannot work
+  without stays in. The change's report names it, and it needs no expansion
+  declared under Article VII.
+- **An ambiguous request**, where the work goes ahead on an assumption, is built
+  for the reading the wording and the surrounding code most directly support.
+  State the assumption. Whether to ask instead is `grilling.md`'s to decide.
+
+§ 2 puts validation at the trust boundary. Past it, a parsed value needs no
+second check. § 2 also says which failures are caught; every other one
+propagates.
+
+Nothing here removes what § 2 keeps. A traceability annotation the chain
+requires is not an added comment, and a failure the specification names is not
+a case that cannot happen.
+
+An addition someone does want is its own change, or an expansion declared under
+Article VII of `.qfai/assistant/constitution/constitution.md`.
 
 ## 5. What this rule is not
 

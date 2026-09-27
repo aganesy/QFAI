@@ -1,7 +1,7 @@
 ---
 name: qfai-verify
 title: QFAI Verify (Quality Gates + Evidence)
-description: "Run and document quality gates (repo + qfai validate/report), fix until PASS."
+description: "Use when invoked by name or handed a QFAI work order. Run and document quality gates (repo + qfai validate/report), fix until PASS."
 argument-hint: "[--auto]"
 allowed-tools: [Read, Glob, Bash, Write, Edit, TodoWrite, Task, Agent]
 roles:
@@ -27,6 +27,8 @@ QFAI Skill Body (SSOT)
 ## /qfai-verify — Quality Gates and Evidence
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 ## User Questions (AskUserQuestion Protocol)
 

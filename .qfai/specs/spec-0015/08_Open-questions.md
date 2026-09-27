@@ -1,6 +1,6 @@
 # 08 Open Questions
 
-5 items.
+6 items.
 
 ## Open Questions
 
@@ -11,6 +11,13 @@
 - OQ-0160 — Default Autopilot Policy template structure (which categories belong to auto-decide / ask-user / hard-required). RESOLVED by `_policies/08_Decisions.md` DR-0269 (3-bucket template, option C). Realized as AC-0015-0015 / BR-0015-0010.
 - OQ-0162 — envelope-deviation `AskUserQuestion` audit trigger taxonomy. RESOLVED by DR-0270 (fixed four-context declared taxonomy, option C pinned). Realized as AC-0015-0016 / BR-0015-0011.
 - OQ-0163 — `qfai audit log` CLI shape. RESOLVED by DR-0271 (filtered query + `--format table|json`, table default). Realized as AC-0015-0019 / BR-0015-0014.
+
+## Resolved by cited decisions (2026-09-24 intent-driven entry)
+
+- `discussion-20260923171450572#OQ-0008` — how route authority relates to the
+  Default Autopilot Policy buckets. RESOLVED by CLI-WF `## Authorizations`: the
+  authorization kinds map onto the existing buckets, with no fourth concept.
+  Realized as AC-0015-0024 / BR-0015-0019.
 
 ## Carry-forward deferred (not resolved here)
 

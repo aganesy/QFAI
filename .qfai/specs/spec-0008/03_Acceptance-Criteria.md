@@ -55,3 +55,134 @@ Given the credential-reuse guidance artifact, when it is scanned, then it names 
 ## AC-0008-0014: Script-Naming Rule Is Adopter Guidance, Scoped to ATDD Layers
 
 Given the credential-reuse guidance artifact, when its scope statement is read, then the credential-class script-naming rule — a credential-free lane and a credentialed lane MUST be reachable by different script names — appears as adopter guidance only, the artifact states that QFAI keeps its own script names and that QFAI's own suite has zero credentials so none of this is dogfooded here, and the guidance obliges the E2E / API / Integration layers only, introducing no unit or component obligation (RJ-0008-0001).
+
+## AC-0008-0015: The ATDD stage follows the stage-skill handover
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0015
+# Source: discussion-20260923171450572#REQ-0051
+Scenario: The ATDD stage follows the stage-skill handover
+  Given workflow mode active
+  When /qfai-atdd is selected with no work order and not by name
+  Then it edits nothing and passes the request to qfai-run
+  And a worker handed a work order checks the run, stage and work-order IDs and does only that work
+  And SKILL.md cites references/orchestrated-mode.md with one line
+```
+
+## AC-0008-0016: The Operations table lists what the plan vocabulary assigns to qfai-atdd
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0016
+# Source: discussion-20260923171450572#REQ-0052
+Scenario: The Operations table lists what the plan vocabulary assigns to qfai-atdd
+  Given the qfai-atdd reference references/orchestrated-mode.md
+  When its Operations table is read
+  Then it lists exactly the operations the plan vocabulary assigns to qfai-atdd
+```
+
+## AC-0008-0017: Only a failure at the intended assertion is reported as RED
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0017
+# Source: discussion-20260923171450572#REQ-0035
+Scenario: Only a failure at the intended assertion is reported as RED
+  Given an acceptance test written for the work order
+  When the test fails at its intended assertion
+  Then the stage result is accepted with the test observation expected_red and the failure kind assertion
+  And a collection, import, start-up or timeout failure is reported unrun or blocked, never expected_red
+```
+
+## AC-0008-0018: A pass with cross-spec obligations is reported as accepted with debt
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0018
+# Source: discussion-20260923171450572#REQ-0037
+Scenario: A pass with cross-spec obligations is reported as accepted with debt
+  Given the ATDD gate reached PASS with cross-spec obligations
+  When the stage returns its result
+  Then the outcome is accepted_with_debt
+  And each cross-spec obligation is one debt naming its owning spec and its resolving owner
+  And a residual finding with no named owner is never handed on as a debt
+```
+
+## AC-0008-0019: A test that cannot reach its assertion takes the seam round trip first
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0019
+# Source: discussion-20260923171450572#REQ-0038
+Scenario: A test that cannot reach its assertion takes the seam round trip first
+  Given an acceptance test that cannot reach its assertion because a route, export or module is missing
+  When the ATDD stage returns
+  Then the result is needs_repair with a seam request naming that test
+  And once the seam-only result is accepted, the same acceptance stage instance takes RED at the assertion
+  And only then is the full implementation handed on
+  And the round trip starts no other run and uses the existing red-provenance branch
+```
+
+## AC-0008-0020: The layer decision is never served from the shared snapshot
+
+- US-Refs: US-0008-0009
+
+```gherkin
+# AC-0008-0020
+# Source: discussion-20260923171450572#REQ-0056
+Scenario: The layer decision is never served from the shared snapshot
+  Given an active run whose shared preflight snapshot is valid
+  When the ATDD stage starts
+  Then it may reuse the snapshot for the inputs the snapshot covers
+  And it decides which acceptance layer each obligation needs from the current spec and ledger
+```
+
+## AC-0008-0021: A test fix leaves the ledger row's status alone
+
+- US-Refs: US-0008-0010
+
+```gherkin
+# AC-0008-0021
+# Source: discussion-20260923171450572#DAC-003-02
+Scenario: A test fix leaves the ledger row's status alone
+  Given diagnosis found a defective existing test on an ATDD-owned ledger row
+  When /qfai-atdd fixes the test in a test_fix stage
+  Then the result names the AC or BR the expectation cites before and after the fix
+  And it carries an independent review and a re-run of the test
+  And the row's status, TC references, layer and boundary are unchanged
+  And the re-run is appended to the row's evidence section as a re-verify record
+```
+
+## AC-0008-0022: A fix that changes the expectation's meaning goes back to SDD
+
+- US-Refs: US-0008-0010
+
+```gherkin
+# AC-0008-0022
+# Source: discussion-20260923171450572#DAC-003-03
+Scenario: A fix that changes the expectation's meaning goes back to SDD
+  Given a test fix after which the expectation would cite a different AC or BR
+  When the ATDD stage returns
+  Then the result is needs_repair listing that finding with qfai-sdd as its resolving owner
+  And no accepted test fix is returned
+```
+
+## AC-0008-0023: ATDD takes a test fix only for an acceptance-layer row
+
+- US-Refs: US-0008-0010
+
+```gherkin
+# AC-0008-0023
+# Source: discussion-20260923171450572#DAC-003-01
+Scenario: ATDD takes a test fix only for an acceptance-layer row
+  Given a defective test's ledger row
+  When the row's layer is E2E or API, or Integration with a TC at a level other than L1 or L2
+  Then /qfai-atdd serves the test_fix work order
+  And it serves none for a Unit, Component or all-L1-or-L2 Integration row
+```

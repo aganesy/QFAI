@@ -6,16 +6,17 @@
 
 - Date: 2026-04-22
 - Status: Adopted
+- Related: CR-20260912-0003
 
-Decision: `spec-0010` は discussion における探索入力の authoring 仕様を扱い、visual winner の選定や final design system の確定は扱わない。
+Decision: `spec-0010` specifies the exploration inputs discussion authors. Discussion ranks no screen exploration and finalizes no design system. The brand direction is outside this rule: the user chooses it during discussion, the pack records it in `01_Context.md#Design Direction`, and `/qfai-sdd` Phase 0 authors root `DESIGN.md` from it.
 
-Rationale: 現行実装では discussion は exploration inputs を準備し、`/qfai-prototyping` が direction funnel と winner selection を担当するため。
+Rationale: `/qfai-prototyping` ranks the screen explorations by iterating them. No stage after discussion asks the user for the brand, so if discussion does not ask, an assistant invents one.
 
 Rejected:
 
-- DO NOT: discussion で visual direction を 1 本に確定しない。
-  - Temptation: downstream ambiguity を早く消したい。
-  - Reason: exploration-first prototyping と衝突し、breakthrough を阻害する。
+- DO NOT: select one screen exploration, or finalize the design system, in discussion.
+  - Temptation: remove downstream ambiguity early.
+  - Reason: it collides with exploration-first prototyping and blocks breakthrough.
 
 ### DR-0010-0002: Canonical discussion-side UI family is exploration-first
 

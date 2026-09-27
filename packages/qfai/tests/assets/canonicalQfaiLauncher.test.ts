@@ -39,7 +39,7 @@ const BASELINE_PATHS = [
  * guard untouched.
  */
 const SUBCOMMANDS =
-  "(?:validate|init|report|doctor|prototyping|discussion|guardrails|audit|handoff|atdd)";
+  "(?:validate|init|report|doctor|prototyping|discussion|guardrails|audit|handoff|atdd|workflow)";
 
 const INLINE_BARE = new RegExp("`qfai " + SUBCOMMANDS + "\\b");
 const FENCED_BARE = new RegExp("^\\s*qfai " + SUBCOMMANDS + "\\b");

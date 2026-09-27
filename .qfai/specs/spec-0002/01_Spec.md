@@ -24,7 +24,7 @@
   - review input bundle and review request semantics
   - `/qfai-sdd` への upstream handoff
 - Out:
-  - visual winner selection in discussion
+  - selecting a screen exploration in discussion
   - discussion 時点での design system 固定
   - old 3-layer evaluation sidecar family
   - legacy single-winner / comparison canonical path
@@ -42,7 +42,8 @@
 ## Applicable Policy
 
 - Discussion is planner-first.
-- Discussion does not choose a single visual winner.
+- Discussion carries the screen explorations unranked. The one direction it records is the brand
+  direction the user chooses.
 - Discussion does not finalize the design system.
 - Downstream skills consume normalized specs/contracts, not the discussion pack directly.
 
@@ -64,8 +65,11 @@
 - REQ-0002: 命名規則は `discussion-YYYYMMDDhhmmssSSS`
 - REQ-0003: Blocking OQ は 0 件でなければ完了できない
 - REQ-0004: `03_Story-Workshop.md` は Mermaid diagram を含む
-- REQ-0005: UI-bearing discussion packs require `prototyping.yaml`; non-ui discussion packs do not
-- REQ-0012: discussion は single winner / selected direction / design system finalization を行わない
+- REQ-0005: `prototyping.yaml` is optional: a discussion pack with a visual prototyping surface
+  (`web`, `mobile`, `desktop` or `mixed`) may carry it as a recommendation, a cli-only pack carries
+  none, and readiness requires it of no pack, UI-bearing or non-ui
+- REQ-0012: discussion selects no screen exploration and finalizes no design system; the brand
+  direction it records is the user's choice
 - REQ-0013: discussion sidecar は upstream authoring artifact であり downstream execution truth ではない
 
 > v1.8.9: REQ-0006..0011 (the legacy exploration-first sidecar

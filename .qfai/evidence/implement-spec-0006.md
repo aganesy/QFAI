@@ -4849,8 +4849,7 @@ state.
 | `pnpm format:check` | exit 1 at measurement time — pre-existing, **exit 0 at HEAD** since `353e2acc` |
 
 `format:check` fails on exactly two files, both tracked, both unmodified by this round:
-`.qfai/steering/2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` and
-`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md`. Verified by stashing this round's five
+the tier-escalation decision and upstream handoff entries preserved below. Verified by stashing this round's five
 modified files and re-running `prettier -c .qfai/steering/` — both still fail with the working tree at
 `74c09dc0`. This round's two files were reformatted and pass. Left for the steering artifacts' owner
 rather than fixed here, to keep an unrelated edit out of this row's commit.
@@ -5140,8 +5139,8 @@ coverage map recorded `T1←R42, T4←R42` for the title mutation, but ` - run q
 #### `format:check` was red on this branch for three commits, and it was mine
 
 The engineer found it and **proved it pre-dated its own work** by stashing the five row files and
-re-running — the right method, and it kept the fix out of the row's commit. Both failing files are mine:
-`2026-08-08-chg-007-spec-0006-g5-tier-escalation.md` and the upstream handoff. I confirmed attribution
+re-running — the right method, and it kept the fix out of the row's commit. Both failing entries were mine:
+the tier-escalation decision and upstream handoff preserved below. I confirmed attribution
 precisely: the handoff **passes** at `e21bba16~1` and fails at `HEAD`, so I broke it by appending items
 10 and 11 without running the formatter, and the tier file was unformatted from creation. Three commits
 went out red, which means `ci:lint` was red on this branch the whole time.
@@ -7660,8 +7659,8 @@ reproduced `F1` and `F2` from their recorded bases and confirmed the trio is com
 REVISE on record grounds, and its round-3 findings are applied in this section and the blocks below.
 
 So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
-exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
-found the ledger has no column for. Recording it here is the only place a reader can learn it. Do
+exactly the distinction recorded under `#review-closure-observations-from-spec-0006` below. The
+ledger has no column for it. Recording it here is the only place a reader can learn it. Do
 not read that `refactor` as "waiting on an external gate"; read it as "reviews not run".
 
 
@@ -8278,8 +8277,8 @@ row's own selector, and the hard guard above them unaffected so the claims genui
 `TDD-0037` remains blocked on the granularity of its own falsifiability results, addressed below.
 
 So these two rows are **implemented, not review-closed**, and their `Status` is `refactor` — which is
-exactly the distinction `.qfai/steering/2026-08-17-chg-007-spec-0006-review-closure-scope.md` §1
-found the ledger has no column for. Recording it here is the only place a reader can learn it. Do
+exactly the distinction recorded under `#review-closure-observations-from-spec-0006` below. The
+ledger has no column for it. Recording it here is the only place a reader can learn it. Do
 not read that `refactor` as "waiting on an external gate"; read it as "reviews not run".
 
 ## Two conditions spec-0006 cannot satisfy from inside its own rows
@@ -8383,3 +8382,158 @@ uncommitted work other than the mutant — the general prohibition on `git check
 
 And the crashed agent's instinct was right: the call-site probe is the one the note needed, and it is
 the measurement above.
+
+## Tier recheck and retained execution evidence
+
+The observations below were recorded during the spec-0006 slice. Their dates
+and revision scopes matter: later row evidence in this file records what
+changed after each observation.
+
+### Tier ruling recheck at round 7
+
+At revision `152dc587`, the TDD-0039 tier decision and its cross-row
+precondition were checked again after seven rework rounds:
+
+- Both TDD-0032 guards survived. Guard 1 required a registered check; guard 2
+  rejected severity `ok`. The round removed a rendered-surface sweep, not
+  these guards.
+- Before TDD-0039 landed, an unresolvable packaged directory produced no
+  check and reached guard 1. TDD-0039's new `info` skip finding would remove
+  that attribution. Inverting TDD-0032's own `modified.length > 0` gate
+  would still produce absence and keep guard 1 meaningful.
+- Guard 2 could not distinguish the new `info` skip finding from the
+  `info` drift finding. The message equality pin would make that distinction.
+- Removing the `title` and `details` sweep narrowed the asserted surface
+  to the exact message, severity other than `ok`, and registration count.
+  It reduced the number of assertions the new branch could perturb, but did
+  not remove the cross-row precondition.
+
+The precondition remained: correct both TDD-0032 guard comments from the
+post-TDD-0039 code and rerun that file. The recorded prediction was that its
+modified-file fixture would stay green. The later TDD-0032 evidence above
+records the actual correction and measurement.
+
+### Upstream findings and open questions from spec-0006
+
+The handoff identified these issues for the spec or contract owner. They
+were not new implementation-row obligations:
+
+| Subject | Measurement and required owner decision |
+| ------- | --------------------------------------- |
+| Newline normalization | Replacing `normalizeNewlines` with `return text` did not fail the measured drift closure. The test case's revert setup made both files byte-identical, so it could not distinguish normalized from raw comparison. A line-endings-only fixture and a revised test case were needed from the spec and ATDD owners. A later section of this file narrows the measured scope to that closure. |
+| Digest basis in contracts | The business rule required newline-normalized comparison, while the shipped-workflows state table used `bytes == packaged` and `bytes != packaged`; the doctor contract also said bytes differ. Neither contract stated a normalization rule. The code followed the business rule. Separately, the provenance comment classified a recorded name with no packaged digest as modified while the business rule excluded the `extra` bucket; the code and its test followed the rule. Resolving either contradiction belonged to the spec and contract owner, and reversing the extra-bucket rule would change that test. |
+| Test case exit-code clause | The third Assert clause of TC-0006-0031 required an unchanged exit code, but its sole parent AC-0006-0024 did not. A finding at `info` could not change `shouldFailDoctor` under the provenance-gate mutant, making an assertion there equivalent. Other rows covered exit-code invariance. The later reviewer ruling in this file settled this as a coverage attribution, not a new assertion. |
+| Validate silence | AC-0006-0022 required `qfai validate` to emit no finding for workflow drift, but its only test case omitted that clause. The observed implementation had no workflow reader under validators, so the clause was vacuous in this slice. A test-case decision belonged to the spec owner. |
+| Declined-only tree registration | The handoff asked the TDD-0037 work order to kill a mutant that replaced `comparedCount: recordedNames.length` with a count of names still present on disk. That mutant emitted zero checks on a declined-only tree while the old drift file stayed green. It also flagged the successor `else` versus `else if` mutation: dropping the status test while retaining the count was equivalent only while `skipped_unresolved` implied a zero comparison count. TDD-0039 owned that boundary. |
+| Rendered title | The contract forbade a refresh command in the finding's `message`, while the hazard also reached `title` and `details`. A `details.nextActions` command and a command suffix in `title` passed the measured closure before the extra sweep. The sweep was later deleted because it made a reviewer-originated obligation hard. TDD-0036's four-key `details` equality closed that half; the `title` value, including a tab hidden by JSON escaping, remained without a hard contractual oracle. The spec or contract owner had to decide whether to widen the clause. |
+| Zero-check case | A landed test asserted that an empty provenance record registers no `workflows.integrity` check, but no test case's Verify text said so. The proposed home was a bullet on TC-0006-0028. |
+| Repository-wide Change Request | CR-20260814-0001 was approved but unapplied when the handoff was written. Whether a repository-wide request raised from this row blocked spec completion was left for the completion reviewer. |
+
+The declined-only-tree wording was also flagged: it said installed workflows
+matched the packaged copy when no installed file existed. TC-0006-0035
+required severity `ok` but did not constrain that message, so this was an
+honesty question for the spec owner rather than a defect against that test.
+
+### Execution safeguards observed in spec-0006
+
+The TDD-0032 work showed why an absolute reach claim needs a scope and a
+witness. Four consecutive rework rounds corrected one such claim while
+introducing another. A claim also has to be checked against neighboring text:
+one assertion of impossibility was contradicted twelve lines later in the
+same docblock. The final round caught the same error in the work order before
+it reached the artifact.
+
+Mutation evidence was reproducible only when it recorded the literal needle,
+replacement, mutant blob, and base blob. The mutant hashes in this slice were
+computed without writing Git objects, so a hash alone cannot restore one.
+The harness checked that the needle occurred once and that the mutant blob
+differed. These checks caught different failures. For multiple edits, restore
+in reverse order and compare with the HEAD blob: a forward restore once
+printed success for each edit while leaving the first mutation in the tree.
+Whitespace, including a trailing newline or literal tab, is part of a
+mutation's identity. A `try/finally` verification catches a driver crash,
+but not an agent crash; an external `git status --short` and source diff
+remain necessary after an interrupted run.
+
+Three shell calls changed a regex or needle before the program received it.
+One expanded a backtick as command substitution; others collapsed backslashes.
+Author such probes in a file or a raw string, then inspect their bytes.
+
+The slice also measured these environment constraints:
+
+- An `npx` call for a package absent from the lockfile twice removed root
+  `node_modules/.bin`. A lockfile-backed package call was a different case.
+- Before recursive worktree removal, inspect junctions resolving outside the
+  target. Deleting through one destroyed the real dependency store; internal
+  tracked skill symlinks were legitimate and did not justify a blanket refusal.
+  A missing `.bin` needed `pnpm install --force` for repair.
+- `pnpm check-types` emitted `packages/qfai/dist` because the project used
+  `composite: true`; deleting that directory also removed the CLI barrel
+  used by the checkpoint.
+- Worktree test runs required both root and package-level dependency links,
+  because Vitest was installed at package level.
+
+Comment share near 60 percent was a target, not a hard cap. One test file had
+an explicit absolute cap after reaching 75 percent and requiring two review
+rounds to reduce it. A measured explanation could legitimately increase the
+count; removing it to meet a ratio would weaken the evidence. The recorded
+basis was comment lines divided by nonblank content lines, with an absolute
+cap binding only where one was declared. One POSIX character-window
+measurement was retained beside its rule because the Windows CI run could
+not witness that behaviour.
+
+The record discipline from these rounds was:
+
+- Correct a false statement where it appears. A later correction does not
+  protect a reader who stops at the first claim.
+- Advance a revision or line citation when the referenced artifact moves.
+  Prefer a symbol anchor; a line number is a currency claim.
+- Scope a supersession note to the rows it actually supersedes. An unbounded
+  note once invalidated later measurements too.
+- Record a closure as a literal command with full paths. A selector count or
+  a bare file stem did not reproduce the same run. A `vitest -t` selector is
+  a regular expression; a title containing unescaped parentheses once
+  selected zero tests and still exited successfully.
+- Keep a ledger Evidence cell as a pointer. Derived counts in six cells went
+  stale while their per-item evidence changed.
+
+Completion review must be rerouted when the artifact changes materially;
+one PASS had gone six rounds stale. Review starts from `refactor`, the
+status with an outbound `review-fix` edge. A stronger assertion than the
+contract requires an upstream decision instead of a reviewer-authored hard
+obligation.
+
+### Review-closure observations from spec-0006
+
+The ledger's `refactor` status meant that implementation had reached that
+phase; it did not mean the reviews were closed. Six rows were initially
+estimated as four remaining rows because the checkpoint failed first for an
+external baseline error. Releasing that gate exposed seventeen record defects.
+A gate failing for an external reason can hide all later gates, so the
+remaining work must be remeasured after it is released.
+
+Two Change Request applications missed prose outside their action lists.
+One changed a ledger carve-out but left the old rule in shipped skill text.
+Another changed a test case while four test docblocks still quoted the old
+obligation. Applying a request requires a search for both restatements and
+quotations across the affected trees.
+
+Additional failures changed how the records were edited and checked:
+
+- A delegated agent crashed mid-mutation and never ran its `finally`
+  restore. Inspect `git status --short` and the source diff even when the
+  attempted run has no output.
+- A rendered file concealed an `ESC` byte from the reader while an edit
+  still matched around it. Build needles from a JSON byte dump.
+- `String.replace` interprets `$` in a string replacement. A replacement
+  containing a regex anchor spliced preceding file content into a paragraph.
+  A replacement function preserves the text literally. A redundant
+  one-occurrence check on the front-matter date caught the duplication.
+- The evidence file had CRLF in the working tree. A multiline LF-only needle
+  matched zero times without proving that the text was absent. Detect the
+  file's line endings before constructing a needle.
+
+The six rows sharing a test file were closed together after measuring their
+records at one revision. Incremental commits would have made each sibling's
+citation stale. The approved shared-file rule and its arithmetic are in
+CR-20260817-0002.

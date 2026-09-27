@@ -455,8 +455,8 @@ async function validateIterationReviewArtifacts(
       // Windows editors defaulting to "UTF-8 with signature", all emit a
       // leading U+FEFF that `JSON.parse` rejects. The payload is valid;
       // reporting it unparseable sends the operator to re-run a reviewer
-      // over a file that is already correct. `designMd.ts` and
-      // `worklogSurface.ts` strip it for the same reason.
+      // over a file that is already correct. `designMd.ts` strips it for the
+      // same reason.
       review = JSON.parse(raw.replace(/^\uFEFF/u, ""));
     } catch {
       issues.push(

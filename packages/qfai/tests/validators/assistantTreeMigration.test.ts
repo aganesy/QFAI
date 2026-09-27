@@ -44,7 +44,7 @@ describe("assistantTreeMigration validator", () => {
   });
 
   // TC-0004-0015: 4-layer enum guard
-  it("TC-0004-0015: emits W-WORKLOG-SCHEMA for a non-canonical layer dir", async () => {
+  it("TC-0004-0015: emits W-ASSISTANT-LAYOUT for a non-canonical layer dir", async () => {
     const root = await newRoot("treemig-enum");
     try {
       await seed4LayerTree(root);

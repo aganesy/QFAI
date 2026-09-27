@@ -1,0 +1,25 @@
+route: bounded-change
+stages:
+  - id: sdd-delta
+    kind: sdd_delta
+    skill: qfai-sdd
+    operation: delta-or-applicability-check
+    when: always
+  - id: acceptance
+    kind: acceptance
+    skill: qfai-atdd
+    operation: author-acceptance-tests
+    when: acceptance_obligations_unmet
+    after: [sdd-delta]
+  - id: implement
+    kind: implement
+    skill: qfai-implement
+    operation: implement
+    when: always
+    after: [acceptance]
+  - id: verify
+    kind: verify
+    skill: qfai-verify
+    operation: verify-full
+    when: always
+    after: [implement]

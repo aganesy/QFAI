@@ -38,3 +38,64 @@
 - The SaaS-package certificate MUST NOT claim full DONE; any field that would assert full completion MUST be withheld or set to the `saas-package` scope value.
 - `--upgrade-scope full` MUST be rejected while any gate named in `notes:` is still missing, and MUST be permitted to upgrade the sealed certificate to full scope only after every previously-skipped gate PASSes.
 - This `--scope saas-package` delivery mode MUST be documented in `/qfai-prototyping` SKILL.md as a SaaS-tenant delivery mode (DCON-005 design-system attestation reference; one-minor deprecation window per OC-63).
+
+## BR-0014-0026
+
+- AC-Refs: AC-0014-0023
+- The verify stage result names the `verify.json` the stage wrote in its artifact references and the qa-gatekeeper verdict as a review result, and reports its own gate results as information only.
+
+## BR-0014-0027
+
+- AC-Refs: AC-0014-0024
+- The verify stage never names a `verify.json` from another run, another spec or a shared location as its own report.
+
+## BR-0014-0028
+
+- AC-Refs: AC-0014-0025
+- The verify stage result reports its outcome and its test observation apart, and reports a gate that did not run as `unrun`, never as a pass.
+
+## BR-0014-0029
+
+- AC-Refs: AC-0014-0026
+- `verify.json` gains no field inside a run, and its `status` and `scope` keep the closed value sets `qfai-verify/references/verify-output-contract.md` states.
+- No `outcome` or `testObservation` value is written into it. The run's values belong to the stage result, which names the file instead. The file already has two readers, `certify` and the reviewer-gate check, and a run gives neither of them a new value to handle.
+
+## BR-0014-0030
+
+- AC-Refs: AC-0014-0027
+- Verify repairs no artifact another owner holds. For a finding it did not cause, it returns `needs_repair` and lists the finding in `debts` with its `resolvingOwner`, so the run sends the repair there.
+- The owner follows from the kind of finding, and the repair kinds are a closed set of three: a spec gap goes to `qfai-sdd`, an acceptance-test defect to `qfai-atdd`, and an implementation defect to `qfai-implement`. A missing environment is not a repair kind (BR-0014-0033).
+
+## BR-0014-0031
+
+- AC-Refs: AC-0014-0028
+- In mode `active`, `/qfai-verify` makes the stage-skill entry check, does only the work of a work order it is handed, and its `SKILL.md` cites `references/orchestrated-mode.md` with one line.
+
+## BR-0014-0032
+
+- AC-Refs: AC-0014-0029
+- The `## Operations` table of `qfai-verify/references/orchestrated-mode.md` lists exactly the operation the plan vocabulary assigns to `qfai-verify`.
+
+## BR-0014-0033
+
+- AC-Refs: AC-0014-0027
+- When a gate cannot run because its environment is missing, the verify stage returns `blocked` with the blocker `stage-blocked` and `operator` as the one who clears it, and lists no debt for it.
+
+## Contract Realization
+
+The CLI contracts declare no `CON-*` ID, so this table names the contract section
+that realizes each rule added on 2026-09-24.
+
+| Contract   | Section                                            | Realized by                              |
+| ---------- | -------------------------------------------------- | ---------------------------------------- |
+| CLI-WF     | `## Completion`                                    | BR-0014-0026                             |
+| CLI-WF     | `## Fingerprints and receipts`                     | BR-0014-0026, BR-0014-0027               |
+| CLI-WF     | `### Stage result`                                 | BR-0014-0028, BR-0014-0030, BR-0014-0033 |
+| CLI-WF     | `## State machine` (the blocker and who clears it) | BR-0014-0033                             |
+| CLI-WF     | `### host:stage-skill-handover`                    | BR-0014-0031                             |
+| CLI-WFFILE | `### The Operations table`, `### Vocabulary`       | BR-0014-0032                             |
+
+BR-0014-0029 has no row here: the shape of `verify.json` is
+`qfai-verify/references/verify-output-contract.md`'s. In BR-0014-0030 the
+contract carries the field, its domain and the routing; the three repair kinds and their
+owners are a spec rule.

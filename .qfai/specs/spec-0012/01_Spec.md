@@ -67,6 +67,31 @@
   - `qfai prototyping` as a public orchestration command surface — only `iterate` / `certify` / `show-spec` are public sub-commands
   - visual-aesthetic anti-slop tokens (`slop-001-shadcn-zinc`, `slop-003-linear-stripe`, `slop-008-glass-card`, `slop-009-mono-emoji`, `slop-010-rounded-2xl-shadow-lg`) as active anti-pattern set — purged
 
+- In (2026-09-24, intent-driven entry):
+  - `/qfai-prototyping` as a stage of a workflow run: under a work order it works
+    on the spec the work order's target names, and settles the one visual decision
+    the plan needs within the existing `DESIGN.md` and contracts;
+  - its entry check and worker behaviour, and the operation its
+    `references/orchestrated-mode.md` declares;
+  - what the skill does when that target is not UI-bearing.
+- Out (2026-09-24, intent-driven entry):
+  - when a run dispatches the prototype stage, which the plan decides through
+    its predicate (spec-0018);
+  - the workflow control core, the built-in plans and the `qfai-run` skill
+    (spec-0018);
+  - the shared stage-skill rules: descriptions, the one-line citation and
+    standalone invocation (spec-0001);
+  - `qfai prototyping iterate` and `qfai prototyping certify`, which a run does
+    not change.
+
+## Applicable Contracts
+
+- `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF): `### Work order` (`target`
+  and the write areas), `### Stage result` (the `blocked` outcome) and
+  `### host:stage-skill-handover` (the entry check and the worker).
+- `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE): `### Vocabulary`
+  and `### The Operations table` (what the skill declares).
+
 ## Applicable NFR
 
 - NFR-0001: routing policy remains centralized (orchestrator owns delegation)
@@ -132,6 +157,13 @@
 - REQ-0012-0053: 5 min/spec の per-spec time-budget cap を soft-warning として運用する（`<screen>.review.json#softWarnings.timeBudget` 出力。run 単位 hard-fail には昇格しない）
 - REQ-0012-0054: Reviewer Playwright action は N=3 retries（指数 backoff）で transient failure を吸収し、retry count と最終結果を `<screen>.review.json` に記録する
 
+### discussion-20260923171450572 (2026-09-24)
+
+| Requirement                             | Home                       |
+| --------------------------------------- | -------------------------- |
+| `discussion-20260923171450572#REQ-0051` | BR-0012-0136, BR-0012-0138 |
+| `discussion-20260923171450572#REQ-0052` | BR-0012-0136, BR-0012-0137 |
+
 ## v1.9.1 Defect Remediation (REQ-0012-NNNN)
 
 Absorbed from `.qfai/discussion/discussion-20260523221141355/06_REQ.md` (CHG-005, 2026-05-24). All entries are UPDATE:APPEND under pinned-branch authorization. The 9 deferred OQ decisions cited below are pinned by the orchestrator; AC / BR / EX / TC rows below MUST reflect them.
@@ -182,4 +214,7 @@ Absorbed from `.qfai/discussion/discussion-20260523221141355/06_REQ.md` (CHG-005
 - EX range: EX-0012-0001..0121; baseline EX retained, the v2.0 active block lives at EX-0012-0110..0121, and the intermediate legacy v1.x examples were purged — see `09_delta.md` CHG-001.
 - TC range: TC-0012-0001..0353; baseline TC retained, the v2.0 active block lives at TC-0012-0319..0353, and legacy v1.x test cases (executionPlan / Lighthouse / designSystemCompliance / calibration overrides / fullHarness / scoringTrace / iterationBudget / perfect-100 / hard-floor) were purged — see `09_delta.md` CHG-001 OP-PURGE-040..042.
 - TDD range: TDD-0001..0370; the v2.0 active block lives at TDD-0336..0370. Legacy ledger rows that referenced purged TCs were removed in the same 2026-05-06 cleanup.
+- 2026-09-24 intent-driven entry: US-0012-0144, AC-0012-0176..0178 and
+  BR-0012-0136..0138. The IDs skip those an approved Change Request reserves and
+  those the pack's history has used.
 - Primary actors: orchestrator, product-experience-architect (generator), product-surface-reviewer (evaluator with Reviewer-driven Playwright session). The former dedicated capture role (`devops-ci-engineer`) is no longer an active prototyping participant — capture pipeline is purged.

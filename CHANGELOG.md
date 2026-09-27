@@ -6,20 +6,74 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **BREAKING: the AI work-log surface `.qfai/steering/` is removed** (#2221).
+  QFAI no longer creates, reads or checks the directory.
+
+  - `qfai init` no longer seeds `.qfai/steering/`, and the
+    `.github/copilot-instructions.md` it writes no longer names it. An
+    existing instructions file keeps the line until `qfai init --force`
+    rewrites it.
+  - `qfai validate` no longer checks the directory. These codes are no longer
+    reported: `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`, `W-WORKLOG-STALE`,
+    `W-PENDING-PROMOTION`, `R-HANDOFF-INCOMPLETE`, `QFAI-TDDLIST-015` and
+    `QFAI-TDDLIST-016`. A reviewer finding coded `R-WORKLOG-DRIFT` no longer
+    needs a `justification`.
+  - The shipped `.qfai/assistant/catalog/worklog-entry.schema.md` is withdrawn.
+  - The skills no longer describe work-log entries.
+
+  Records go where the skills now send them:
+
+  - A decision goes to the spec's `07_Decisions.md` or a Change Request.
+  - A consultation or an out-of-scope discovery goes to `08_Open-questions.md`
+    or a Change Request.
+  - A stop during `/qfai-implement` goes in the ledger row's `Blocked-By`,
+    naming what the row waits on and the status it left.
+
+  What to do in an existing project:
+
+  - Files under `.qfai/steering/` are left untouched. Nothing reads them or
+    reacts to them, so they can be deleted.
+  - A remaining `worklog-entry.schema.md` is reported as `QFAI-ASSETS-006`
+    until it is removed, like any file the release no longer ships.
+    `qfai init --force` removes it when it still matches its
+    `.assets.lock.json` record. An edited copy is left in place and reported
+    as a manual merge; delete it by hand.
+
 - The repository's `pr-fix` and `pr-merge` skills, their scripts, and their
   dedicated test suites. CI and release checks now run seven test slices. An
   older tag with the retired slices uses the whole-suite release gate.
 
 ### Changed
 
-- **The shipped guidance now bounds what a change adds beyond its request**
+- **The minimal-implementation rule names four additions a change leaves
+  out** (#2234). A change can clear every rung of the ladder and still add work
+  nobody asked for. A new section names the four shapes that takes: wider
+  scope, comments on untouched code, handling for a case that cannot happen,
+  and an abstraction for a one-time need. A function's length alone is not a
+  reason to extract a helper. The section keeps what § 2 of the rule already
+  requires, such as traceability annotations. The section after it moves from
+  § 4 to § 5.
+
+- **The shipped guidance now bounds test-suite size and unrequested fixes**
   (#2242). The layers catalog gains a sizing section: a new test file is sized
   like its neighbours, a process-per-case suite is a choice rather than an
   inherited shape, and a scratch check does not become a permanent test file.
-  The minimal-implementation rule gains a section on what a change leaves out:
-  unrequested fixes are reported as follow-ups, and ambiguous wording is built
-  for one reading, stated as an assumption. Test coverage for every source
-  change is still required.
+  The minimal-implementation rule's section on what a change leaves out gains
+  two lines. A fix nobody asked for is reported as a follow-up, unless the
+  requested behaviour cannot work without it; the change's report then names
+  it. Where work goes ahead on an assumption about an ambiguous request, it is
+  built for one reading and the assumption is stated. The implementation and QA
+  reviewer cards, and the review checks the implement and ATDD skills give,
+  each gain one check for these. Test coverage for every source change is still
+  required.
+
+- **The READMEs put the free-text entry first.** The introduction, the quick
+  start, the operating model and the minimal tutorial now start from describing
+  the change to the agent in your own words; typing a stage skill such as
+  `/qfai-sdd` is the expert path. The sequence diagram follows one change from
+  the first prompt to the completion report. `## Agent integrations` states when
+  a host is declared supported for quality-gated automation, and declares none
+  in this release, since no routing eval has been recorded.
 
 - **The dogfooding backlog guard names the findings behind a count it
   refuses.** When a file held at zero reports errors, or a pinned file reports
@@ -182,6 +236,15 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   inside a `## AC-0001` section still counts as part of that criterion, not as
   a second copy of it. Only a spec whose rules or criteria changed on the
   branch is affected. No count in `scripts/dogfood-backlog.json` moves.
+- **`prototyping.yaml` is offered only to a pack that can use it.** The README
+  and the discussion skill offered the file to every UI-bearing discussion
+  pack, a cli-only pack included, while the skill forbids the file for one:
+  `cli` is not a prototyping surface. They now offer it to a pack with a
+  `web`, `mobile`, `desktop` or `mixed` surface and say a cli-only pack omits
+  it. Readiness still requires the file of no pack. spec-0002 and spec-0010
+  now state the product's rules for the discussion stage: it records the brand
+  direction the user chooses and ranks none of the screen explorations, and
+  `/qfai-sdd` Phase 0 authors root `DESIGN.md` from that direction.
 
 ## [1.12.3] - 2026-09-24
 

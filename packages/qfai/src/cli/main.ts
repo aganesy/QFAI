@@ -12,6 +12,7 @@ import { runPrototypingRescope } from "./commands/prototypingRescope.js";
 import { runReport } from "./commands/report.js";
 import { runSddPreflightCommand } from "./commands/sddPreflight.js";
 import { runValidate } from "./commands/validate.js";
+import { refuse, runWorkflow, WORKFLOW_HELP } from "./commands/workflow.js";
 import type { ParsedArgs } from "./lib/args.js";
 import { parseArgs } from "./lib/args.js";
 import { EXIT_CODES, formatExitCodesSection } from "./lib/exitCodes.js";
@@ -57,6 +58,7 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "handoff",
   "discussion",
   "prototyping",
+  "workflow",
 ]);
 
 export async function run(argv: string[], cwd: string): Promise<void> {
@@ -82,6 +84,13 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     error(`Unknown command: ${command}`);
     info(usage());
     process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
+    return;
+  }
+
+  // `workflow` answers every outcome but its help with one JSON document on stdout, a refused
+  // argument included, so it leaves before the usage branch.
+  if (command === "workflow" && (invalid || options.help)) {
+    process.exitCode = await workflowEntry(invalid, invalidReason, options);
     return;
   }
 
@@ -417,6 +426,10 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       }
       return;
 
+    case "workflow":
+      process.exitCode = await workflowEntry(false, undefined, options);
+      return;
+
     default:
       // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
       // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
@@ -426,6 +439,33 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
       process.exitCode = UNKNOWN_COMMAND_EXIT_CODE;
       return;
   }
+}
+
+async function workflowEntry(
+  invalid: boolean,
+  invalidReason: string | undefined,
+  options: ParsedArgs["options"],
+): Promise<number> {
+  if (invalid || (!options.help && !options.workflowAction)) {
+    error(invalidReason ?? "qfai workflow: name one of the seven operations.");
+    const subjects = options.unknownFlags.length > 0 ? options.unknownFlags : ["operation"];
+    return refuse(null, {
+      code: "invalid-input",
+      message:
+        "The command line names no operation or flag the workflow command takes. Run it with --help.",
+      reasons: subjects.map((subject) => ({ reason: "argument", subject })),
+    });
+  }
+  if (options.help || !options.workflowAction) {
+    info(WORKFLOW_HELP);
+    return EXIT_CODES.ok;
+  }
+  return runWorkflow({
+    root: await resolveRoot(options, true),
+    operation: options.workflowAction,
+    ...(options.workflowRun ? { runId: options.workflowRun } : {}),
+    ...(options.workflowIn ? { inPath: options.workflowIn } : {}),
+  });
 }
 
 function usage(): string {
@@ -445,6 +485,7 @@ Commands:
   handoff upgrade <legacy>     Convert a legacy handoff file into the canonical .qfai/handoff.yaml (CLI-HANDOFF)
   sdd preflight                Run the /qfai-sdd Stage 0 gate (active discussion-pack selection / REQ count / blocker verdict) and write .qfai/report/preflight_summary.md
   atdd scaffold --spec <id>    Generate per-TC test skeletons from a spec's Test-Cases (idempotent + N-cycle escalation)
+  workflow <operation>         Drive a free-text change through its stages (start|next|accept|decision|status|resume|finish)
   prototyping preflight        Diagnose prototyping preconditions (spec/ui/design contracts/roles/browser/targetUrl)
   prototyping iterate          Commit one cycle of the single-thread evolution loop
   prototyping certify [--check]         Generate / verify completion-certificate.json
@@ -459,7 +500,7 @@ Options:
   --root <path>   Target directory (for init, the output directory when --dir is absent)
   --dir <path>    init: output directory (init only; --dir wins when both are given)
   --force         init: overwrite .qfai/assistant/{skills,agents}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
-                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts/steering and assistant/manifest/** are never overwritten)
+                  (that output includes the qfai-provided .github/copilot-instructions.md and .github/instructions/**; specs/contracts and assistant/manifest/** are never overwritten)
                   It deletes as well as overwrites: the wrappers a past qfai placed in
                   .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
                   that are no longer shipped (including the real directories from before they

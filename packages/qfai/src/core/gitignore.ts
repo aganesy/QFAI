@@ -44,6 +44,14 @@ export const QFAI_STATE_SCRATCH_IGNORE = `*${QFAI_STATE_SCRATCH_SUFFIX}`;
  * {@link missingRecommendedGitignoreEntries} decides it, and those two spellings
  * drifting is how the entry would be advertised and never checked.
  */
+/**
+ * The run state `qfai workflow` keeps under `.qfai/runs/`: the journal, the lock
+ * and each run's snapshot. It is per-checkout and rebuilt from the journal, so it
+ * never belongs in a commit. Unlike the other ignores, init adds it to an
+ * existing block that lacks it: run state is never a record a project tracks.
+ */
+export const QFAI_RUN_STATE_IGNORE = ".qfai/runs/";
+
 export const ARTICLE_XI_TMP_ENTRY = "tmp/";
 
 /**
@@ -82,6 +90,7 @@ export const QFAI_GITIGNORE_RECOMMENDED_ENTRIES: readonly string[] = [
   // The staging directories that file's atomic write uses; see
   // QFAI_STATE_SCRATCH_IGNORE.
   QFAI_STATE_SCRATCH_IGNORE,
+  QFAI_RUN_STATE_IGNORE,
   // Constitution Article XI rule 3: `tmp/` MUST be listed in `.gitignore`.
   // Rule 2 sends every agent's scratch work there, so without the entry the
   // first `git add .` commits exactly what rule 3 exists to prevent.
@@ -136,6 +145,10 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // a later checkout grades against none of the user's decisions.
   "!.qfai/evidence/prototyping/",
   "!.qfai/evidence/prototyping/grilling.md",
+  // A workflow run's tracked evidence: its summary and the authorization
+  // records a triage row cites. The whole directory is re-included, because
+  // `qfai validate` reads those files from a fresh clone.
+  "!.qfai/evidence/workflow/",
   "!.qfai/evidence/change-request-*.md",
   "!.qfai/evidence/decision-*.md",
   // The per-item RED/GREEN record the completion gate resolves every
@@ -317,6 +330,7 @@ export const QFAI_GITIGNORE_BLOCK = [
   // whose `.gitignore` predates this line must not start failing validation
   // over it.
   ".qfai/state.json.lock",
+  QFAI_RUN_STATE_IGNORE,
   // Re-ignores the contents of the one evidence directory the negations below
   // re-include. `.qfai/evidence/*` does not reach inside it — a single `*` does
   // not cross a `/` — so without this line, un-ignoring the directory exposes

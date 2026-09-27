@@ -18,6 +18,36 @@
   トレーサビリティ連鎖（discussion → specs → tests → code → verification）、参照方向ルール（upper-to-lower 禁止）、
   Escalation Hook メカニズム、Drift Protocol、Skill オーケストレーション設計契約、Steering & Governance フレームワーク
 - Out: 個別 spec-XXXX の実装詳細、discussion-pack 構造（spec-0002）、CLI コマンド仕様、テストランナー実装
+- In (2026-09-24, intent-driven entry):
+  - the shared stage-skill rules for a workflow run: descriptions as trigger
+    conditions, the entry check that hands a request over to `qfai-run`, one
+    `references/orchestrated-mode.md` per skill cited by one `SKILL.md` line,
+    standalone invocation, and no `disable-model-invocation` on a stage skill;
+  - the skill catalog and stage order, with `qfai-run` above the order;
+  - Stage 0 reuse of a validated shared snapshot inside an active run;
+  - request authority and orchestrated binding in the constitution, and routes
+    orthogonal to change types in `workflow.md`;
+  - the drift-protocol carve-out for a spec-unchanged bugfix.
+- Out (2026-09-24, intent-driven entry):
+  - the workflow control core, the built-in plans, the shipped schemas, and the
+    `qfai-run` and `qfai-maintain` skills (spec-0018);
+  - what `qfai init` installs, including that it writes no `agents/openai.yaml`
+    (spec-0003);
+  - each skill's own `orchestrated-mode.md` content and Operations table (the
+    skill's own spec);
+  - the routing manifests, the Default Autopilot bucket passage, the
+    `primarySpecId` binding exception and the delegation baseline (spec-0015);
+  - the implement and SDD halves of the missing-test carve-out (spec-0011,
+    spec-0013).
+
+## Applicable Contracts
+
+- `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF): `### host:stage-skill-handover`
+  governs the entry check, the worker and standalone invocation.
+- `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE): `## Plan files`
+  and `### Vocabulary` govern the plans the stage order is read against and the
+  skill set of the stage-skill rules; `### The Operations table` governs what
+  `orchestrated-mode.md` must declare.
 
 ## Applicable NFR
 
@@ -29,6 +59,9 @@
 ## Applicable Policy
 
 - Policy: \_policies/01_Objective.md, \_policies/07_Constraints.md
+- DR-0297 (`_policies/08_Decisions.md`): a missing-test row that diagnosis finds
+  is appended without a Change Request. BR-0001-0019 carries its drift-protocol
+  exception.
 
 ## Evidence Summary
 
@@ -46,9 +79,25 @@
 - REQ-0008: Skill オーケストレーション設計契約 — 9 Skill カタログ、依存関係、完了契約
 - REQ-0009: Steering & Governance — Steering/Instructions 文書構造、Review Roster、Constitution、Canonical Workflow Stages
 
+### discussion-20260923171450572 (2026-09-24)
+
+| Requirement                             | Home                       |
+| --------------------------------------- | -------------------------- |
+| `discussion-20260923171450572#REQ-0001` | BR-0001-0020               |
+| `discussion-20260923171450572#REQ-0049` | BR-0001-0020               |
+| `discussion-20260923171450572#REQ-0006` | BR-0001-0021               |
+| `discussion-20260923171450572#REQ-0050` | BR-0001-0026               |
+| `discussion-20260923171450572#REQ-0051` | BR-0001-0025, BR-0001-0029 |
+| `discussion-20260923171450572#REQ-0052` | BR-0001-0028               |
+| `discussion-20260923171450572#REQ-0053` | BR-0001-0027               |
+| `discussion-20260923171450572#REQ-0056` | BR-0001-0023               |
+| `discussion-20260923171450572#REQ-0057` | BR-0001-0030, BR-0001-0031 |
+| `discussion-20260923171450572#REQ-0046` | BR-0001-0019               |
+| `discussion-20260923171450572#REQ-0047` | BR-0001-0019               |
+
 ## Entry points
 
-- US range in this spec: US-0001-0001..US-0001-0009
+- US range in this spec: US-0001-0001..US-0001-0010
 - Primary actors: フレームワーク設計者、spec 作成スキル、`qfai validate` 検証スキル
 - Notes: 旧 spec-0007（Skill Orchestration）、spec-0009（Traceability & Spec Architecture）、spec-0010（Steering & Governance）を統合
 

@@ -49,8 +49,8 @@ and for the files QFAI writes into a consuming project.
 - Indexed in `_policies/05_Contracts.md` under **CLI Contracts**, with `CLI-*`
   short ids.
 - Named `qfai-<command>.md` for one command's surface. A subject name instead —
-  `worklog-entry.schema.md`, `shipped-workflows.md` — means the file holds a
-  schema or an ownership boundary that more than one command shares.
+  `shipped-workflows.md` — means the file holds an ownership boundary that
+  more than one command shares.
 
 No check enforces the naming or the index entry. A new file that skips either is
 caught in review or not at all.

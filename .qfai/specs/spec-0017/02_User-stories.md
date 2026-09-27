@@ -11,6 +11,7 @@
 - US-0017-0007: Runner parallelism derived from QFAI's own workload
 - US-0017-0008: Retire the duplicate validate workflow without weakening the required check
 - US-0017-0009: Layer-to-CI-lane mapping in a home the layer parser cannot see
+- US-0017-0016: Run the control-core and init suites on Windows
 
 ## US-0017-0001: Change-derived lane selection behind a drift-proof aggregate verdict
 
@@ -193,3 +194,18 @@
   script and fails the tracked-tree diff in the gate aggregate (DTC-20). Verified by probe: a
   hyphenated phrase beginning with the layer prefix extracts as a token, while a filename or a
   spaced phrase does not (DTC-8).
+
+## US-0017-0016: Run the control-core and init suites on Windows
+
+- Parent: CAP-0017
+- Source: discussion-20260923171450572#NFR-0011
+- Goal: As a QFAI maintainer I want the control-core suites and the init and migration suites
+  to run on a Windows runner on every code-path pull request, so that a Windows regression in the
+  journal, the lock, path handling, init or upgrade is caught on the pull request that causes it
+- Non-goals: the whole test suite on Windows; a manual Windows run before release; making the
+  job named `build` depend on the new job; changing which status check a merge requires, which
+  is a repository setting (OQ-0017-0002)
+- Notes: the user chose this job over a recorded manual run (DR-0017-0024). It fails the
+  aggregate verdict on the pull request that breaks Windows parity, and it gates a merge only
+  once the required status context moves to that verdict. `US-0017-0010..0015` are skipped,
+  because a retired spec that once held this number cites them.

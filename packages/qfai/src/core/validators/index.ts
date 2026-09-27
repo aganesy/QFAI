@@ -83,7 +83,6 @@ export {
   stubSourceFilePattern,
   validateTestTodoStubs,
 } from "./testTodoStubs.js";
-export { validateWorklogSurface } from "./worklogSurface.js";
 export { validateAssistantTreeMigration } from "./assistantTreeMigration.js";
 export { validateAssistantAnchorReferences } from "./assistantAnchorReferences.js";
 export { validateSkillDocReferences } from "./skillDocReferences.js";

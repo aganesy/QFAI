@@ -34,11 +34,15 @@ import {
   GOVERNED_ASSISTANT_LAYERS,
   aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
+  governedLayerOf,
   hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
 } from "../../core/assistantAssetProvenance.js";
+import type { AssistantAssetConflict } from "../../core/assistantAssetProvenance.js";
+import { loadConfig, readWorkflowMode } from "../../core/config.js";
+import { findWorkflowConflicts, workflowConflictLines } from "./initWorkflowConflicts.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info, warn } from "../lib/logger.js";
 import type { Issue } from "../../core/types.js";
@@ -61,6 +65,7 @@ import {
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_RUN_STATE_IGNORE,
   QFAI_GITIGNORE_LEGACY_LINES,
   RETIRED_LINE_SUCCESSORS,
   negationsOutrankLaterIgnores,
@@ -71,6 +76,8 @@ import {
   QFAI_AGENT_RULES_END,
   addRuleCitations,
   addRuleCitationsToList,
+  addEntryDirective,
+  addEntryPointDirectives,
   addReviewPointer,
   citedRuleMasters,
   citedRuleMastersOutsideCode,
@@ -90,15 +97,12 @@ import {
 import {
   ASSISTANT_DIR,
   ASSISTANT_LAYERS,
-  HANDOFF_REQUIRED_SECTIONS,
-  WORKLOG_ENTRY_STATUSES,
   joinAssistantAssetLayer,
   joinAssistantLayer,
   joinAssistantReadme,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
   joinMigrationMemo,
-  joinProjectSteering,
   legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
@@ -175,7 +179,7 @@ const execAsync = promisify(execCb);
  * skills and phases into `manifest/agent-routing.yml` — see
  * `core/manifest/routingPhaseMerge.ts` for why it adds and never edits.
  *
- * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
+ * `specs/`, `contracts/` and everything else stay create-only for
  * the same reason: they hold project content.
  */
 const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skills", "assistant/agents"];
@@ -270,7 +274,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers. It also regenerates the qfai-provided plain files .github/copilot-instructions.md and .github/instructions/** (the code-review / principles review instructions) from the shipped templates, so local edits to those are lost. assistant/constitution/** and assistant/catalog/** are refreshed to the installed release only where the file still matches its .assets.lock.json record (a file this release no longer ships is likewise removed only when it matches the record); a diverged file is left untouched and reported as a manual merge (specs/contracts and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`). Only agent-routing.yml is merged additively, filling in the skills / phases it is missing (existing phases are not rewritten).",
     );
   }
 
@@ -522,6 +526,9 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+  const differingSkills = options.force
+    ? 0
+    : await countDifferingSkills(qfaiAssets, destRoot, skillsResult.skipped);
   // The copy above is create-only and this release ships no README to copy, so
   // the one an earlier release left behind is removed here rather than
   // overwritten.
@@ -531,6 +538,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     rootAssets,
     plannedSafetyFloor,
+    packageVersion: toolVersion,
   });
 
   // The routing manifest is user configuration, so it is never overwritten —
@@ -540,6 +548,11 @@ export async function runInit(options: InitOptions): Promise<void> {
   const routingMergeNotes = options.force
     ? await mergeRequiredRoutingPhases(assistantAssets, destRoot, options.dryRun)
     : [];
+
+  // The correspondence check `start` enforces, over the tree this run left. A dry run changed
+  // nothing, so it has nothing of its own to check.
+  const workflowConflicts = options.dryRun ? [] : await findWorkflowConflicts(destRoot);
+  await governedResult.writeLock(workflowConflicts);
 
   // git config core.symlinks true（symlink 生成の前提条件）
   // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
@@ -639,12 +652,11 @@ export async function runInit(options: InitOptions): Promise<void> {
     ...governedResult.removed,
   ];
 
-  // 4-layer assistant-tree seed + project-root steering surface seed.
+  // 4-layer assistant-tree seed.
   // These run AFTER copyTemplateTree so they can detect when the
   // asset templates already populated a layer (they fill in only
   // missing .gitkeep / README placeholders).
   const assistantTreeResult = await seedAssistantLayers(destRoot, assistantAssets, options.dryRun);
-  const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
 
   // Activation guidance for newly created instructions files
   const expectedInstructionsDir = path.join(destRoot, ".github", "instructions");
@@ -683,7 +695,6 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...ruleMasterResult.copied,
       ...claudeHooksResult.copied,
       ...assistantTreeResult.copied,
-      ...projectSteeringResult.copied,
       ...upgradeResult.copied,
       ...governedResult.copied,
     ],
@@ -698,7 +709,6 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...ruleMasterResult.skipped,
       ...claudeHooksResult.skipped,
       ...assistantTreeResult.skipped,
-      ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
       ...governedResult.skipped,
     ],
@@ -708,12 +718,15 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
     options.verbose ?? false,
   );
-
-  for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
-    info(note);
+  for (const line of await workflowModeLines(destRoot, workflowConflicts)) {
+    info(line);
   }
 
-  for (const note of projectSteeringResult.staleNotes) {
+  for (const note of [
+    ...upgradeResult.preservedNotes,
+    ...routingMergeNotes,
+    ...differingSkillsNote(differingSkills),
+  ]) {
     info(note);
   }
 
@@ -732,9 +745,72 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 }
 
+/**
+ * The summary line naming the workflow mode the project's config puts in force. Init writes no
+ * mode, so an absent key reads as `active`; a value that is none of the three is named as invalid.
+ * Under `active` with conflicts, the conflict block stands in for that line.
+ */
+async function workflowModeLines(
+  destRoot: string,
+  conflicts: readonly AssistantAssetConflict[],
+): Promise<string[]> {
+  const { document } = await loadConfig(destRoot);
+  const mode = readWorkflowMode(document);
+  if (mode === "active" && conflicts.length > 0) return workflowConflictLines(conflicts);
+  if (mode !== null) return [`Workflow mode: ${mode}`];
+  const configured = JSON.stringify(configuredWorkflowMode(document));
+  return [`Workflow mode: ${configured} is invalid; expected active, shadow or off`];
+}
+
+/** The value the config holds where the mode belongs: `workflow.mode`, or `workflow` itself. */
+function configuredWorkflowMode(document: unknown): unknown {
+  const workflow =
+    typeof document === "object" && document !== null && "workflow" in document
+      ? document.workflow
+      : undefined;
+  return typeof workflow === "object" && workflow !== null && "mode" in workflow
+    ? workflow.mode
+    : workflow;
+}
+
 // ---------------------------------------------------------------------------
 // Governed assistant assets: provenance record + upgrade path
 // ---------------------------------------------------------------------------
+
+/**
+ * How many shipped skills a plain run left alone because the project's copy
+ * differs from the template. Line endings are ignored, so a CRLF checkout of an
+ * unedited skill is not counted.
+ */
+async function countDifferingSkills(
+  qfaiAssets: string,
+  destRoot: string,
+  skipped: readonly string[],
+): Promise<number> {
+  const destQfai = path.join(destRoot, ".qfai");
+  const skillsDir = path.join(destRoot, ...ASSISTANT_DIR.split("/"), "skills");
+  const differing = new Set<string>();
+  for (const dest of skipped) {
+    const relative = path.relative(skillsDir, dest);
+    const skill = relative.split(path.sep)[0] ?? "";
+    if (relative.startsWith("..") || skill === "" || differing.has(skill)) continue;
+    const source = path.join(qfaiAssets, path.relative(destQfai, dest));
+    const shipped = await hashAssistantAssetFile(source, { allowSymlink: true });
+    if ((await hashAssistantAssetFile(dest)) !== shipped) differing.add(skill);
+  }
+  return differing.size;
+}
+
+function differingSkillsNote(count: number): string[] {
+  if (count === 0) return [];
+  return count === 1
+    ? [
+        "  1 shipped skill differs from this release and was left as it is. `qfai init --force` updates it: it replaces it with the shipped version, overwriting local edits.",
+      ]
+    : [
+        `  ${String(count)} shipped skills differ from this release and were left as they are. \`qfai init --force\` updates them: it replaces them with the shipped versions, overwriting local edits.`,
+      ];
+}
 
 function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
   return paths.filter((candidate) => !excluded.has(candidate));
@@ -909,6 +985,8 @@ type GovernedAssetsResult = {
   skipped: string[];
   removed: string[];
   manualMergeNotes: string[];
+  // Writes the provenance lock with the run's conflicts; a no-op where the lock is not written.
+  writeLock: (conflicts: readonly AssistantAssetConflict[]) => Promise<void>;
 };
 
 /**
@@ -929,7 +1007,13 @@ type GovernedAssetsResult = {
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
   destRoot: string,
-  options: { force: boolean; dryRun: boolean; rootAssets: string; plannedSafetyFloor: boolean },
+  options: {
+    force: boolean;
+    dryRun: boolean;
+    rootAssets: string;
+    plannedSafetyFloor: boolean;
+    packageVersion: string;
+  },
 ): Promise<GovernedAssetsResult> {
   // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
   // come from `assistantPaths.ts` in init and in validate alike, so a future
@@ -952,9 +1036,9 @@ async function syncGovernedAssistantAssets(
     // sync is abandoned whole: nothing refreshed, nothing removed, and the
     // existing record left exactly as it was.
     manualMergeNotes.push(
-      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
+      "NOTE: qfai's shipped assets (assistant/constitution/**, assistant/catalog/**, assistant/process/workflows/**) could not be read, so those layers were not synced and .assets.lock.json was left unchanged (the installation may be incomplete).",
     );
-    return { copied, skipped, removed, manualMergeNotes };
+    return { copied, skipped, removed, manualMergeNotes, writeLock: async () => {} };
   }
 
   const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
@@ -1021,9 +1105,17 @@ async function syncGovernedAssistantAssets(
     // the same comparison then says "refreshable" about content that only
     // exists here. Declined rather than merged: this command does not overwrite
     // what it did not write.
+    //
+    // A plan is refreshed on a plain run too. The workflow engine refuses a
+    // plan that differs from the release, so an unmodified plan left behind
+    // would stop the next run for an edit nobody made.
     const adopterOwned = ADOPTER_OWNED_ASSETS.has(relative);
+    const refreshOnUpgrade = options.force || governedLayerOf(relative) === "process/workflows";
     const refreshable =
-      options.force && !adopterOwned && previousHash !== undefined && currentHash === previousHash;
+      refreshOnUpgrade &&
+      !adopterOwned &&
+      previousHash !== undefined &&
+      currentHash === previousHash;
     if (refreshable) {
       // `currentHash` was read above; the refresh is only legitimate while the
       // file still holds it. Passing it down makes the replacement decline a
@@ -1068,13 +1160,20 @@ async function syncGovernedAssistantAssets(
 
   // The record itself is a governed write: an assistant root that is a symlink
   // out of the project would take the lock — and every later decision made from
-  // it — with it.
+  // it — with it. The caller writes it once the run's conflicts are known.
+  let writeLock: GovernedAssetsResult["writeLock"] = async () => {};
   if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
-    await mkdir(destAssistant, { recursive: true });
-    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+    writeLock = async (conflicts) => {
+      await mkdir(destAssistant, { recursive: true });
+      await writeAssistantAssetsLock(destAssistant, {
+        packageVersion: options.packageVersion,
+        files: recorded,
+        conflicts,
+      });
+    };
   }
 
-  return { copied, skipped, removed, manualMergeNotes };
+  return { copied, skipped, removed, manualMergeNotes, writeLock };
 }
 
 /**
@@ -1729,7 +1828,7 @@ function decodeForDetection(bytes: Buffer): string {
 }
 
 // ---------------------------------------------------------------------------
-// 4-layer assistant-tree seed + project-root steering surface seed
+// 4-layer assistant-tree seed
 // ---------------------------------------------------------------------------
 
 /**
@@ -1962,227 +2061,6 @@ async function hasEntries(dir: string): Promise<boolean> {
     }
     throw err;
   }
-}
-
-function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS and the status
-  // enum from WORKLOG_ENTRY_STATUSES (both SSOT in assistantPaths.ts) so
-  // neither can drift from the validator at seed time. An already-seeded
-  // template is create-only; later heading or enum changes are reported by the
-  // drift notice in seedProjectSteering rather than written over the user's
-  // copy.
-  const statusEnum = WORKLOG_ENTRY_STATUSES.join(" | ");
-  const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
-    heading,
-    "",
-    "(Mandatory for kind: handoff. See contract for guidance.)",
-    "",
-  ]);
-  return [
-    "---",
-    // ONE space before each `#`, not a padded column. The alignment reads better in
-    // this source and does not survive contact with a formatter: Prettier collapses a
-    // run of spaces before a YAML trailing comment, so the first `prettier --write`
-    // over an adopter's tree rewrites a file the adopter never touched. The seed is
-    // create-only and re-init compares it byte for byte, so from then on every run
-    // reports `_templates/entry.md differs from the seed this qfai release generates`
-    // — a drift notice about the formatter, printed forever, on a file nobody edited.
-    "id: 2026-MM-DD-kebab-case-id # required; kebab-case ASCII; matches filename stem",
-    `status: active # required; enum: ${statusEnum}`,
-    "kind: decision # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
-    "created: YYYY-MM-DD # required; ISO-8601 date",
-    "updated: YYYY-MM-DD # required; ISO-8601 date; >= created",
-    'scope: global # required; "global" or "spec-NNNN"',
-    "blocking: false # required; boolean",
-    'promote-to: null # required; "spec-NNNN/07_Decisions.md" or null',
-    "links: [] # required; array (may be empty)",
-    "---",
-    "",
-    "# Title of the entry",
-    "",
-    "## Context",
-    "",
-    "What triggered this entry? Reference any spec, contract, or external",
-    "input that informs the entry.",
-    "",
-    "<!-- For `kind: handoff` entries, the 5 sections below are MANDATORY -->",
-    "<!-- (Reviewer Gate emits R-HANDOFF-INCOMPLETE on missing sections). -->",
-    "",
-    ...handoffBodyLines,
-  ].join("\n");
-}
-
-/**
- * Locates the first line at which an on-disk seed file stopped matching the
- * body this release generates, plus both line counts. A full unified diff is
- * deliberately not produced: the notice is printed next to a skipped-paths
- * list that routinely runs to several hundred entries, and the operator's
- * question is only "is my copy current?".
- */
-function summarizeSeedDrift(onDisk: string, generated: string): string {
-  const current = normalizeNewlines(onDisk).split("\n");
-  const latest = normalizeNewlines(generated).split("\n");
-  const span = Math.max(current.length, latest.length);
-  let firstDiffLine = span;
-  for (let i = 0; i < span; i += 1) {
-    if (current[i] !== latest[i]) {
-      firstDiffLine = i + 1;
-      break;
-    }
-  }
-  return `first differing line ${firstDiffLine}; on disk ${current.length} lines, latest seed ${latest.length} lines`;
-}
-
-/**
- * A seed file large enough to be a hand-grown work-log README and still
- * bounded. Past it the comparison is declined rather than paid for: the answer
- * the notice carries is one line long, and no size of file changes it.
- */
-const SEED_DRIFT_MAX_BYTES = 256 * 1024;
-
-/**
- * CRLF-insensitive comparison text.
- *
- * `core.autocrlf=true`, or any editor that saves the seed with CRLF, leaves a
- * byte-for-byte unedited file unequal to the LF body this release generates —
- * and the drift notice then fired on every reinit, naming line 1, for a file
- * nobody had touched. `diffProjectSkillsAgainstInitAssets` in
- * `core/skillsIntegrity.ts` normalises for the same reason.
- */
-function normalizeNewlines(text: string): string {
-  return text.replace(/\r\n/g, "\n");
-}
-
-/**
- * Either the body to compare, or why no comparison was possible.
- *
- * "Could not read it" and "it matches" are different answers, and collapsing
- * them made a silent `skipped` mean either "already current" or "never
- * checked" — the exact ambiguity the drift notice exists to remove.
- */
-type SeedComparison =
-  | { readonly kind: "body"; readonly body: string }
-  | { readonly kind: "uncomparable"; readonly reason: string };
-
-/**
- * Reads an existing seed file for the drift comparison: one `open`, `fstat` on
- * that handle, a bounded read from it.
- *
- * The path is whatever the project already had there, because the seed is
- * create-only — so it is not necessarily a regular file. A FIFO stalls a plain
- * `readFile` until some writer appears, which hung `qfai init` outright, and a
- * multi-gigabyte file at that name loaded whole into memory. `O_NONBLOCK`
- * answers the first (`ENXIO` for a FIFO with no writer) and the `fstat`-then-
- * bounded-read answers the second. Nothing here fails the run: an unreadable
- * path is reported as uncomparable and init carries on.
- */
-async function readSeedBodyForDrift(fullPath: string): Promise<SeedComparison> {
-  const tooLarge: SeedComparison = {
-    kind: "uncomparable",
-    reason: `larger than the ${SEED_DRIFT_MAX_BYTES}-byte comparison ceiling`,
-  };
-  let handle: FileHandle | undefined;
-  try {
-    handle = await open(fullPath, OPEN_READ_FLAGS);
-    const pinned = await handle.stat();
-    if (!pinned.isFile()) {
-      return { kind: "uncomparable", reason: "not a regular file" };
-    }
-    if (pinned.size > SEED_DRIFT_MAX_BYTES) {
-      return tooLarge;
-    }
-    // Read to the end, and one byte past the ceiling: `read` may return fewer
-    // bytes than asked for, and a writer holding this inode can append after
-    // the `fstat`, so stopping at the size just measured would compare a
-    // prefix and report drift the file does not have.
-    const buffer = Buffer.alloc(SEED_DRIFT_MAX_BYTES + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled);
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
-    if (filled > SEED_DRIFT_MAX_BYTES) {
-      return tooLarge;
-    }
-    return { kind: "body", body: buffer.subarray(0, filled).toString("utf-8") };
-  } catch (err: unknown) {
-    const code = hasErrnoCode(err) ? err.code : undefined;
-    if (code === "ENXIO" || code === "EISDIR" || code === "ENOTDIR" || code === "ELOOP") {
-      return { kind: "uncomparable", reason: `not a regular file (${code})` };
-    }
-    if (code !== undefined) {
-      return { kind: "uncomparable", reason: `could not be read (${code})` };
-    }
-    return { kind: "uncomparable", reason: `could not be read (${describeError(err)})` };
-  } finally {
-    try {
-      await handle?.close();
-    } catch {
-      // Closing a handle whose entry vanished under us is not a drift signal
-      // and must not fail the run either; the comparison already has its answer.
-    }
-  }
-}
-
-async function seedProjectSteering(
-  destRoot: string,
-  dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[]; staleNotes: string[] }> {
-  const copied: string[] = [];
-  const skipped: string[] = [];
-  const staleNotes: string[] = [];
-
-  // `derived` marks the bodies built from the SSOT constants. Those are the
-  // ones that go stale when a release extends HANDOFF_REQUIRED_SECTIONS;
-  // `.gitkeep` carries no content to compare.
-  const targets: Array<{ rel: string[]; body: string; derived: boolean }> = [
-    { rel: [".gitkeep"], body: "", derived: false },
-    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate(), derived: true },
-  ];
-
-  for (const target of targets) {
-    const fullPath = joinProjectSteering(destRoot, ...target.rel);
-    if (await pathExists(fullPath)) {
-      skipped.push(fullPath);
-      // The steering seed is create-only and stays that way — see the note on
-      // STANDARD_ASSET_PATHS: this surface holds project content, so not even
-      // --force rewrites it. What the skipped-paths list cannot express is the
-      // difference between "skipped because it is already current" and
-      // "skipped because it no longer matches this release's seed", so the
-      // second case is reported explicitly instead of refreshing silently.
-      if (target.derived) {
-        const rel = path.relative(destRoot, fullPath).replace(/\\/g, "/");
-        const existing = await readSeedBodyForDrift(fullPath);
-        if (existing.kind === "uncomparable") {
-          // Silence has to keep meaning "already current", so a path that could
-          // not be compared says so rather than passing as an ordinary skip.
-          staleNotes.push(
-            `  NOTE: ${rel} could not be compared against the seed this qfai release generates (${existing.reason}); whether it is current is unknown.`,
-          );
-        } else if (normalizeNewlines(existing.body) !== normalizeNewlines(target.body)) {
-          staleNotes.push(
-            `  NOTE: ${rel} differs from the seed this qfai release generates (${summarizeSeedDrift(existing.body, target.body)}).`,
-          );
-        }
-      }
-      continue;
-    }
-    copied.push(fullPath);
-    if (!dryRun) {
-      await mkdir(path.dirname(fullPath), { recursive: true });
-      await writeFile(fullPath, target.body, "utf-8");
-    }
-  }
-
-  if (staleNotes.length > 0) {
-    staleNotes.push(
-      "  The .qfai/steering/ seed is create-only, so the file(s) above were left unchanged.",
-      "  To compare against the current bodies: qfai init --dir <scratch-dir>, then diff <scratch-dir>/.qfai/steering/ against your own.",
-    );
-  }
-
-  return { copied, skipped, staleNotes };
 }
 
 // ---------------------------------------------------------------------------
@@ -2926,6 +2804,7 @@ export async function ensureRootGitignoreEntries(
   const existingLines = existing.split("\n").map((line) => line.trimEnd());
   if (
     existing.includes(QFAI_GITIGNORE_MARKER) &&
+    gitignoreLines(managedBlock).includes(QFAI_RUN_STATE_IGNORE) &&
     QFAI_GITIGNORE_GOVERNANCE_NEGATIONS.every((entry) => managedBlock.includes(entry)) &&
     negationsOutrankLaterIgnores(existingLines, QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) &&
     QFAI_GITIGNORE_LEGACY_LINES.every((entry) => !existing.includes(entry))
@@ -3163,12 +3042,14 @@ function rebuildManagedBlock(existingBlock: string): string {
     !ignores.includes(PROTOTYPING_CONTENTS_IGNORE)
       ? [PROTOTYPING_CONTENTS_IGNORE]
       : [];
+  const runState = present.has(QFAI_RUN_STATE_IGNORE) ? [] : [QFAI_RUN_STATE_IGNORE];
 
   return [
     QFAI_GITIGNORE_MARKER,
     ...kept,
     ...renamed,
     ...reIgnore,
+    ...runState,
     ...QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   ]
     .filter((line, index, all) => line.length > 0 || all[index - 1]?.length !== 0)
@@ -3228,6 +3109,10 @@ const LEGACY_EVIDENCE_IGNORE_NEGATIONS: readonly string[] = [
   // descends into an ignored one, so the leaf alone is inert.
   "!prototyping/",
   "!prototyping/grilling.md",
+  // A workflow run's tracked evidence. The nested `*` matches at every depth,
+  // so the directory and everything under it each need a line.
+  "!workflow/",
+  "!workflow/**",
   "!import-lite.md",
   `!import-lite-${CANONICAL_TIMESTAMP_GLOB}.md`,
 ];
@@ -3469,6 +3354,9 @@ async function ensureAgentEntryPointRules(
     );
   }
 
+  // The review directive points at a policy file init never creates, so it is
+  // owed only where the project keeps one.
+  const hasReviewPolicy = await pathExists(path.join(destRoot, "REVIEW.md"));
   for (const name of AGENT_ENTRY_POINT_FILES) {
     const target = path.join(destRoot, name);
     const toCite = await owed(name);
@@ -3522,7 +3410,8 @@ async function ensureAgentEntryPointRules(
       // The review directive goes in beside the citations; the project's own
       // text and the bullets it deleted are left as they are.
       const cited = addRuleCitations(refreshed.text, section, toCite);
-      const merged = addReviewPointer(cited, template);
+      const reviewed = hasReviewPolicy ? addReviewPointer(cited, template) : cited;
+      const merged = addEntryDirective(reviewed, template);
       const shown = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = toCite.filter((master) => !shown.has(master));
       if (merged === existing) {
@@ -3535,7 +3424,11 @@ async function ensureAgentEntryPointRules(
       // reported citing masters it had not cited, and told an operator whose
       // rewrite was refused to add citations that were already there.
       const update = {
-        ...describeRuleListUpdate(cited !== refreshed.text, merged !== cited, refreshed.refreshed),
+        ...describeRuleListUpdate(
+          cited !== refreshed.text,
+          { review: reviewed !== cited, entry: merged !== reviewed },
+          refreshed.refreshed,
+        ),
         pending: uncited,
       };
       const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -3558,7 +3451,7 @@ async function ensureAgentEntryPointRules(
       const cited = new Set(citedRuleMastersOutsideCode(existing));
       const uncited = citedRuleMasters(section).filter((master) => !cited.has(master));
       const rulesAdded = addRuleCitationsToList(existing, section, uncited);
-      const merged = addReviewPointer(rulesAdded, template);
+      const merged = addEntryPointDirectives(rulesAdded, template, hasReviewPolicy);
       if (rulesAdded === existing && uncited.length > 0) {
         // The file cites rules somewhere this run cannot extend — in prose, a
         // numbered list, an indented bullet. Name the missing masters instead
@@ -3622,7 +3515,7 @@ async function ensureAgentEntryPointRules(
           : `${end}${end}`;
     const wrote = await replaceEntryPointFile(
       target,
-      addReviewPointer(`${existing}${separator}${section}${end}`, template),
+      addEntryPointDirectives(`${existing}${separator}${section}${end}`, template, hasReviewPolicy),
       destRoot,
       existing,
     );
@@ -3743,7 +3636,11 @@ async function updateCopilotRuleList(
     return;
   }
   const update = {
-    ...describeRuleListUpdate(merged !== refreshed.text, false, refreshed.refreshed),
+    ...describeRuleListUpdate(
+      merged !== refreshed.text,
+      { review: false, entry: false },
+      refreshed.refreshed,
+    ),
     pending: uncited,
   };
   const outcome = await writeRuleListUpdate(target, existing, merged, update, destRoot, dryRun);
@@ -3820,7 +3717,7 @@ type RuleListUpdate = {
  */
 function describeRuleListUpdate(
   cited: boolean,
-  pointed: boolean,
+  directives: { review: boolean; entry: boolean },
   refreshed: readonly string[],
 ): RuleListUpdate {
   const planned: string[] = [];
@@ -3831,10 +3728,14 @@ function describeRuleListUpdate(
     done.push("cited the newly shipped rule masters");
     byHand.push("add the rule citations");
   }
-  if (pointed) {
-    planned.push("add the review directive");
-    done.push("added the review directive");
-    byHand.push("add the review directive");
+  for (const [added, name] of [
+    [directives.entry, "entry"],
+    [directives.review, "review"],
+  ] as const) {
+    if (!added) continue;
+    planned.push(`add the ${name} directive`);
+    done.push(`added the ${name} directive`);
+    byHand.push(`add the ${name} directive`);
   }
   if (refreshed.length > 0) {
     const summaries = `${refreshed.length === 1 ? "summary" : "summaries"} of ${quoteList(refreshed)}`;
@@ -4301,7 +4202,8 @@ function managedBlockEnd(
     if (line.trim() === "" || line.trimStart().startsWith("#")) {
       break;
     }
-    if (knownLines.has(line)) {
+    // A CRLF checkout ends every line with a carriage return, which the known set lacks.
+    if (knownLines.has(line.trimEnd())) {
       lastKnown = index;
     }
   }
@@ -8144,7 +8046,6 @@ function buildCopilotInstructions(): string {
     "  - Declarative manifests: `.qfai/assistant/manifest/`",
     "  - Reference catalogs: `.qfai/assistant/catalog/`",
     "  - Process / migration memos: `.qfai/assistant/process/`",
-    "  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/assistant/catalog/worklog-entry.schema.md`)",
     "- The legacy `.qfai/assistant/steering/` and `.qfai/assistant/instructions/` layout is past its compatibility window.",
     "  `qfai init` reports it on stderr as a `D-DEPRECATED-PATH` error.",
     "  Run `qfai init --upgrade-assistant-tree` to migrate it.",

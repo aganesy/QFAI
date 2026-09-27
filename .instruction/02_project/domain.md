@@ -19,8 +19,7 @@ QFAI は「要件 → 仕様 → 契約 → 検証/レポート」の流れを�
 - `.qfai/assistant/`: the assistant tree — `constitution/`, `manifest/`,
   `catalog/`, `skills/`, `agents/`, `process/`.
 - `.qfai/evidence/`: the per-run evidence a skill is required to write.
-- `.qfai/decisions/`, `.qfai/steering/`, `.qfai/review/`: decision records,
-  steering input, and review packs.
+- `.qfai/decisions/` and `.qfai/review/`: decision records and review packs.
 - `.qfai/report/`: where `validate` and `report` write.
 - `qfai.config.yaml`: パス/検証ルール/出力設定
 

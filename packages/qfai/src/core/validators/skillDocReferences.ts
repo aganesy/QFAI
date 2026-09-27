@@ -184,13 +184,10 @@ export async function validateSkillDocReferences(
         return true;
       })();
       if (!isTrailing) {
-        // Distinct code — `W-WORKLOG-SCHEMA` is reserved by contract
-        // for worklog-entry frontmatter shape problems. The
-        // SKILL.md project_memory enforcement is a separate concern.
         issues.push(
           issue(
             "W-SKILL-PROJECT-MEMORY",
-            `${skillId}/SKILL.md is missing a trailing project_memory: block. Skills that participate in the work-log surface MUST declare project_memory to enumerate their remembered context.`,
+            `${skillId}/SKILL.md is missing a trailing project_memory: block for its remembered context.`,
             "warning",
             skillDocRelPath,
             "skillDocReferences.projectMemory",

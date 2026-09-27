@@ -13,6 +13,15 @@
 | CR-20260923-0014 | `spec-0012/tdd/test-list.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-23T20:55:46Z |
 | CR-20260924-0001 | `spec-0012/01_Spec.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `tdd/test-list.md`                                                    | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T01:45:17Z |
 | CR-20260924-0002 | `spec-0012/06_Test-Cases.md`                                                                                                                                                             | re-derive | claude-code (the user's standing instruction for this session) | 2026-09-24T02:19:00Z |
+| CR-20260924-0008 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-24T18:26:35Z |
+| CR-20260925-0018 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-24T19:00:08Z |
+| CR-20260925-0019 | `.qfai/specs/spec-0012/06_Test-Cases.md`; `tdd/test-list.md`; `16_Traceability-ledger.md`                                                                                                | re-derive | user                                                           | 2026-09-24T23:35:15Z |
+| CR-20260925-0020 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T02:36:35Z |
+| CR-20260925-0022 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T03:00:14Z |
+| CR-20260925-0009 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-25T03:23:20Z |
+| CR-20260925-0012 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T06:04:36Z |
+| CR-20260925-0013 | `.qfai/contracts/cli/qfai-workflow.md`                                                                                                                                                   | re-derive | user                                                           | 2026-09-25T07:34:27Z |
+| CR-20260925-0023 | `.qfai/contracts/cli/qfai-workflow.md`; `.qfai/contracts/cli/workflow-files.schema.md`                                                                                                   | re-derive | user                                                           | 2026-09-25T10:20:50Z |
 
 ## 2026-09-04
 
@@ -446,3 +455,90 @@ Second-Wave Defect Remediation per `_policies/05_Contracts.md` § CHG-006 and `_
 | REQ-0012-0063 | The stop condition is three empty arrays, not an axis score                       | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | `iterationConverged` reads `blockingFindings`, `layoutAntiPatternsDetected` and `designMdViolations`; no axis is consulted |
 | REQ-0012-0068 | The third blocked-cause category is `blockingFindings`                            | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | The summary prints it; `axes-below-exceptional` sends an operator after a cause nothing checked                            |
 | REQ-0012-0063 | The hash-mismatch path records `input-error`, and the terminator is `index === 9` | spec-0012     | UPDATE    | MODIFY | CR-20260912-0002 | A fifth `stopReason` value nothing declares, and a cycle budget retired with the 15-cycle loop                             |
+
+## Triage (2026-09-24 intent-driven entry)
+
+Source IDs are `discussion-20260923171450572#<ID>`. The `CREATE` of `spec-0018` and the policy rows are in `_policies/10_delta.md` under the same heading. None of the rows below needs approval. `REQ-0033` in `Depends-On` stands for the `CREATE` row: the row cites items `spec-0018` defines, so it waits until that spec has them.
+
+D4 named seven specs for Change Requests, and this spec is not one of them. The user added it on 2026-09-24 by answering `OQ-0020` with A, because this skill's contract changes.
+
+| Source             | Subject                                                                                     | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                              | Depends-On |
+| ------------------ | ------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| REQ-0051, REQ-0052 | Orchestrated mode for `/qfai-prototyping`, dispatched only when a visual decision is needed | spec-0012     | UPDATE    | APPEND | -           | `qfai-prototyping` is a skill a built-in plan dispatches (OQ-0015 = A). Size signal: AC 73 and TC 179 are far over both thresholds. spec-0012 owns only CAP-0012, so there is no split | REQ-0033   |
+
+## 2026-09-24 — Intent-driven entry: change summary
+
+- Appended: US-0012-0144; AC-0012-0176..0178; BR-0012-0136..0138; the
+  `## Contract Realization` table in `04_Business-Rules.md`.
+- No existing item changes. The Scope bullet that resolves every UI-bearing spec
+  in one invocation still holds for a standalone call; the new rule covers a
+  work order.
+- No decision record and no open question are added.
+- Reserved IDs: `CR-20260923-0001`, approved and not yet applied, names
+  US-0012-0143, AC-0012-0083, BR-0012-0066..0067, EX-0012-0187..0189 and
+  TC-0012-0484..0488. This pack's history has used AC IDs up to AC-0012-0175,
+  BR IDs up to BR-0012-0135, EX IDs up to EX-0012-0191 and DR IDs up to
+  DR-0012-0058. New IDs start above both: US-0012-0144, AC-0012-0176,
+  BR-0012-0136, EX-0012-0192 and TC-0012-0491.
+- Size signal: AC 73 → 76 and TC 179 and above, both over the thresholds. No
+  split, because spec-0012 owns only CAP-0012.
+- Obligation reconciliation: BR-0012-0138 and AC-0012-0178 list the non-UI cause of a
+  `blocked` prototype result in its `debts`, owned by `operator`, as CLI-WF `### Stage result`
+  states. The ledger rows are unchanged.
+
+## 2026-09-25 — Ledger boundary reconciliation
+
+The user approved Option 1 of `CR-20260925-0019`. The case and ledger identities
+were re-derived without changing the separate design-direction and evidence-layout
+requests. The former `TC-0012-0334` declared `EX-0012-0110` and
+`AC-0012-0033`: “Verify completion certificate v2.0 round-trip: parse →
+serialize yields byte-equivalent output for the v2.0 schema.” Its criterion and
+example are superseded, so the case is removed from active coverage. The
+certificate save/load test was deleted; every other certificate test is kept.
+
+The former `TC-0012-0321` was already marked `Status: superseded — replaced
+by TC-0012-0357` for the index-9 terminator. It cited `EX-0012-0110`,
+`AC-0012-0029`, `Level: L1`, and
+`packages/qfai/tests/core/prototyping/iteration.test.ts`; its old oracle was
+“Verify `shouldStop([iter])` returns `"max-iterations"` when the latest iter
+has `index === 14`.” The case heading is now removed because the validator
+continues to count any declared L1 heading as a coverage target despite the
+`Status: superseded` line. `TC-0012-0357` and `TDD-0372` remain the active
+index-9 chain. An independent review confirmed this representation correction
+implements the approved retirement of `TDD-0365` without restoring the
+superseded index-14 obligation.
+
+| Operation | Sub-op | Subject                            | Result                                                                                                                                                                       |
+| --------- | ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UPDATE    | REMOVE | `TC-0012-0334`; `TDD-0343`, `0369` | Removed the orphaned byte-round-trip case and both duplicate Unit rows. Historical row Evidence and selector disposition are preserved in the CR and ledger ID reservations. |
+| UPDATE    | MODIFY | `TC-0012-0335`; `TDD-0344`, `0370` | Moved the generated token-mirror oracle to L3 Integration over actual post-handoff output. Retired both false Unit rows.                                                     |
+| UPDATE    | MODIFY | `TDD-0336`, `0337`, `0338`         | Re-scoped to `TC-0012-0329`, `0323`, `0326` respectively. Their prior `done` cycles require `/qfai-implement` Change-Request preflight reset; SDD changed row identity only. |
+| UPDATE    | REMOVE | `TDD-0365`, `0368`                 | Retired the superseded index-14 row and the duplicate purity row. Surviving selectors remain with `TDD-0372` and `TDD-0339`.                                                 |
+| UPDATE    | APPEND | `TDD-0583`, `0568`                 | Seeded Integration coverage for `TC-0012-0324` and `0335` at `todo`. The handoff writer or faithful workflow harness remains required before `0568` can complete.            |
+
+All six retired rows had `Status = done` and descriptive, unanchored Evidence
+cells. Their exact strings are recorded in the CR and the `## TDD-ID reservations`
+tombstones. The records do not establish whether the old cycles executed.
+`TDD-0364` retains its obligation and `done` state; the `lap-008` fixture is a
+downstream test fix against its existing `lap-007-state-not-represented` case.
+`TDD-0545` remains the independent E2E story. No allocation in `10_Plan.md`
+named the reconciled case or row IDs, so that plan required no edit.
+
+## Merge reconciliation (2026-09-25)
+
+Bringing `origin/main` into the intent-driven work found IDs that both lines of work had
+assigned to different items. `origin/main` had already published its IDs, so the
+intent-driven IDs moved to the next free ones. Meaning is unchanged, and no Change
+Request applies.
+
+- `TC-0012-0489`..`TC-0012-0492` became `TC-0012-0491`..`TC-0012-0494`.
+- `TDD-0562`..`TDD-0568` became `TDD-0578`..`TDD-0584`.
+- Change Request records `CR-20260924-0001`, `CR-20260924-0002` and `CR-20260925-0008` became `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010`; every reference here follows them.
+
+A later `origin/main` took more of these IDs, and the intent-driven ones moved again to
+the next free ones:
+
+- `CR-20260924-0005`, `CR-20260924-0006` and `CR-20260925-0010` became `CR-20260924-0007`,
+  `CR-20260924-0008` and `CR-20260925-0022`. `CR-20260925-0003`..`CR-20260925-0007` and
+  `CR-20260925-0015` became `CR-20260925-0017`..`CR-20260925-0021` and `CR-20260925-0023`.
+  Every reference here follows them.

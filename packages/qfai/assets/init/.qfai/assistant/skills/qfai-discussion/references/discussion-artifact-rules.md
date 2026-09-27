@@ -24,7 +24,7 @@ Required files:
 - `14_Review-Request.md`
 - `99_delta.md`
 
-UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
+Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`) may include `prototyping.yaml` as an optional recommendation artifact; cli-only packs omit it, and non-ui discussion packs typically omit it. For `ui_bearing: false`, typically omit `prototyping.yaml`. Current discussion-pack readiness does not block on missing `prototyping.yaml`.
 
 ## Rules
 

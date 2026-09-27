@@ -1,0 +1,170 @@
+[
+  {
+    "id": "FAULT-001",
+    "synthetic": true,
+    "trigger": "event_publish_before_snapshot_crash",
+    "expected": "The published event stands; the snapshot is rebuilt and no effect is applied twice.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-002",
+    "synthetic": true,
+    "trigger": "partial_event_file",
+    "expected": "A parse or hash failure stops the run; nothing is filled in as a successful event.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-003",
+    "synthetic": true,
+    "trigger": "result_replay",
+    "expected": "Resending the same result ID is idempotent; no second CREATE or repair.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-004",
+    "synthetic": true,
+    "trigger": "wrong_expected_sequence",
+    "expected": "A compare-and-set conflict is refused, and the caller reads the latest state.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-005",
+    "synthetic": true,
+    "trigger": "same_worktree_two_writers",
+    "expected": "The later writer fails to take the lock; shared files are never changed at the same time.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-006",
+    "synthetic": true,
+    "trigger": "clock_expired_but_owner_alive",
+    "expected": "A lease is never taken on the clock alone.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-007",
+    "synthetic": true,
+    "trigger": "stale_approval_scope",
+    "expected": "An approval whose scope digest differs is not reused.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-008",
+    "synthetic": true,
+    "trigger": "forged_host_receipt",
+    "expected": "A host_observed claim in arbitrary JSON is not treated as an observed host event.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-009",
+    "synthetic": true,
+    "trigger": "wrong_run_verify_report",
+    "expected": "Another run's verify.json is never used as final evidence.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-010",
+    "synthetic": true,
+    "trigger": "scoped_atdd_with_other_spec_debt",
+    "expected": "A stage handover is kept apart from a command's success; final completion stays unmet.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-011",
+    "synthetic": true,
+    "trigger": "unknown_contract_owner",
+    "expected": "accepted_with_debt is not allowed; the run is blocked.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-012",
+    "synthetic": true,
+    "trigger": "expected_assertion_red",
+    "expected": "A legitimate RED is accepted and the run moves on to implementation.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-013",
+    "synthetic": true,
+    "trigger": "test_collection_error",
+    "expected": "Not counted as RED but as UNRUN; the run goes to a seam or environment repair.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-014",
+    "synthetic": true,
+    "trigger": "atdd_seam_only_detour",
+    "expected": "The run returns to the parent stage and implements only after a real RED.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-015",
+    "synthetic": true,
+    "trigger": "same_obligation_done_repair",
+    "expected": "SDD appends the missing-test row. The done row stays done and keeps its prior evidence, and no row moves from done back to todo.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-016",
+    "synthetic": true,
+    "trigger": "changed_obligation_claimed_as_repair",
+    "expected": "A claimed test-defect fix that changes what the expectation means is refused and returned to SDD.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-017",
+    "synthetic": true,
+    "trigger": "historical_red_after_legitimate_green",
+    "expected": "The RED of the old tree is kept; a legitimate GREEN change alone never makes RED be taken again.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-018",
+    "synthetic": true,
+    "trigger": "normative_ac_changed_mid_run",
+    "expected": "The test and implementation receipts that depend on it are invalidated.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-019",
+    "synthetic": true,
+    "trigger": "glob_member_added",
+    "expected": "A change in a glob's member set is found even when every existing file's hash is unchanged.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-020",
+    "synthetic": true,
+    "trigger": "delegation_depth_unavailable",
+    "expected": "The run does not wait as if saturated; it stops as unavailable.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-021",
+    "synthetic": true,
+    "trigger": "stop_during_stage",
+    "expected": "New dispatches and writes stop; a review that never ran is not reported as PASS.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-022",
+    "synthetic": true,
+    "trigger": "windows_case_and_symlink_alias",
+    "expected": "The lock and paths of one file are never mistaken for another, and writes outside the root are prevented.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-023",
+    "synthetic": true,
+    "trigger": "legacy_manifest_customization",
+    "expected": "The user's settings are not overwritten, and the semantic conflict is reported.",
+    "actualResult": null
+  },
+  {
+    "id": "FAULT-024",
+    "synthetic": true,
+    "trigger": "gate_modified_by_same_run",
+    "expected": "The baseline tool's gate is kept apart from the candidate test, and a self-weakened gate never passes.",
+    "actualResult": null
+  }
+]

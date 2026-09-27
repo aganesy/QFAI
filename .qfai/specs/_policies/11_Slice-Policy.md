@@ -29,7 +29,7 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 | Category   | Slice Rule                        | ID Range                   |
 | ---------- | --------------------------------- | -------------------------- |
 | structural | 1 pack-type = 1 spec              | spec-0001..0002            |
-| cli        | 1 command = 1 spec                | spec-0003..0007            |
+| cli        | 1 command = 1 spec                | spec-0003..0007, spec-0018 |
 | skill      | 1 skill = 1 spec                  | spec-0008..0014, spec-0016 |
 | agent      | all agents = 1 collective spec    | spec-0015                  |
 | toolchain  | all repository toolchain = 1 spec | spec-0017                  |
@@ -39,6 +39,8 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 - **structural**: QFAI フレームワーク自体の構造定義（spec-pack, discussion-pack）。
 - **cli**: `packages/qfai/src/cli/commands/` に実装される CLI コマンド。1 コマンド = 1 spec。
 - **skill**: `packages/qfai/assets/init/.qfai/assistant/skills/` に定義される SKILL.md。1 skill = 1 spec。
+  - Exception: `qfai-run` and `qfai-maintain` belong to `spec-0018`, together with the
+    `npx qfai workflow` command they drive (D4). No other skill follows this exception.
 - **agent**: `packages/qfai/assets/init/.qfai/assistant/agents/` に定義されるサブエージェント。全エージェントで 1 spec。
 - **toolchain**: リポジトリ自身のツールチェーン。`.github/workflows/`、リポジトリ内部の
   composite action (`.github/actions/**`)、リポジトリ root `scripts/`、
@@ -66,16 +68,16 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 UPDATE は APPEND / MODIFY / REMOVE に細分化する。SPLIT / MERGE / SUPERSEDE
 は構造変更の 1st-class オペレーション。
 
-| Operation | Sub-op | トリガー                                                              | AskUserQuestion |
-| --------- | ------ | --------------------------------------------------------------------- | --------------- |
-| CREATE    | -      | 新 subject、active spec が capability を保持していない                | 必須            |
-| UPDATE    | APPEND | 既存 active spec に新 US/AC/BR/EX/TC を追加（既存項目の意味変更なし） | 不要            |
-| UPDATE    | MODIFY | 既存 US/AC/BR/EX/TC の意味を変更                                      | 不要            |
-| UPDATE    | REMOVE | 既存 US/AC/BR/EX/TC を削除（downstream 参照を切断）                   | 必須            |
-| DELETE    | -      | spec の subject ごとリポジトリから消失                                | 必須            |
-| SPLIT     | -      | 1 spec が複数 capability を保持しており責務分離が必要                 | 必須            |
-| MERGE     | -      | 複数 spec が同一 capability に収斂                                    | 必須            |
-| SUPERSEDE | -      | spec の責務が新 spec に置換、履歴は status: superseded で保持         | 必須            |
+| Operation | Sub-op | トリガー                                                              | AskUserQuestion                                             |
+| --------- | ------ | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| CREATE    | -      | 新 subject、active spec が capability を保持していない                | 必須 — or a matching routing-time `human_decision` (step 3) |
+| UPDATE    | APPEND | 既存 active spec に新 US/AC/BR/EX/TC を追加（既存項目の意味変更なし） | 不要                                                        |
+| UPDATE    | MODIFY | 既存 US/AC/BR/EX/TC の意味を変更                                      | 不要                                                        |
+| UPDATE    | REMOVE | 既存 US/AC/BR/EX/TC を削除（downstream 参照を切断）                   | 必須                                                        |
+| DELETE    | -      | spec の subject ごとリポジトリから消失                                | 必須                                                        |
+| SPLIT     | -      | 1 spec が複数 capability を保持しており責務分離が必要                 | 必須                                                        |
+| MERGE     | -      | 複数 spec が同一 capability に収斂                                    | 必須                                                        |
+| SUPERSEDE | -      | spec の責務が新 spec に置換、履歴は status: superseded で保持         | 必須                                                        |
 
 ## APPEND vs CREATE 判定アルゴリズム (append-first)
 
@@ -111,9 +113,21 @@ primary spec の判定後、他の active spec を全走査し、ノックオン
    `--auto` では質問せず自己承認もしない: 該当行は未承認のまま残し、その行のための
    `CAP-NNNN` を `_policies/03_Capabilities.md` に追加せず、バッチ全体を step 5 の前で
    停止して当該行を blocker として報告する。
+   - Inside a run, a `CREATE` row is approved by the operator's recorded answer when the
+     `human_decision` cited in `Authorization-Ref` resolves, matches the operation and
+     capability of the row, and is not stale. Stage 1 checks this before persisting any
+     Triage row. A failed check stops Stage 1 with nothing persisted, and the run waits
+     for a new question. The checks are in `.qfai/contracts/cli/qfai-workflow.md`
+     `## Authorizations` and `.qfai/contracts/cli/workflow-files.schema.md`
+     `## Authorization record`, and are not restated here.
+   - `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE` keep the Stage 1 question.
+   - `--auto` neither asks nor approves, so a `CREATE` with no such record still stops as
+     this step says.
 4. Triage table を以下に永続化:
    - 単一 spec を触る行 → `<spec>/09_delta.md`
    - 複数 spec をまたぐ行（SPLIT / MERGE / SUPERSEDE）または policy のみの変更 → `_policies/10_delta.md`
+   - A `CREATE` row approved inside a run carries `Authorization-Ref`, and `Approved By`
+     copies `answeredBy@YYYY-MM-DD` from the cited record.
 5. 承認確定後に Phase 0 (Contracts-first) へ進む。
 
 ## Status field
@@ -201,5 +215,11 @@ ${operation} を実行します。
 - `spec-0017` は 2026-08-05 に **CAP-0017 = Repository Toolchain** として再採番された
   (toolchain カテゴリの初 spec)。過去の `spec-0017` = Prototyping v2.0 という
   参照は歴史記録であり、現行 ID Range とは一致しない。
-- 現行の active range は `spec-0001..spec-0017` の連番（gap なし）。
-  positional validator (`QFAI-SPLIT-102..105`) が要求する連番条件を満たす。
+- `spec-0018` owns the `npx qfai workflow` command and the two skills that drive it,
+  `qfai-run` and `qfai-maintain`. D4 in `discussion-20260923171450572` made the
+  free-text entry and the control core one capability (`CAP-0018`) with one spec.
+- `spec-0018` is a `cli` spec numbered after the skill and toolchain ranges. The gap
+  policy puts contiguous numbering first and makes the range table follow it, so the
+  new spec took the next number, as `spec-0016` did for skills.
+- The active range is `spec-0001..spec-0018`, contiguous with no gap, as the positional
+  validator (`QFAI-SPLIT-102..105`) requires.

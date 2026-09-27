@@ -2,7 +2,8 @@
 
 - Contract scope: public CLI surface for project initialization and assistant-tree upgrade
 - Owning spec: `spec-0003`
-- Used-by: `spec-0003`, `spec-0004` (path SSOT consumer), `spec-0011`, `spec-0014`
+- Used-by: `spec-0003`, `spec-0004` (path SSOT consumer), `spec-0011`, `spec-0014`,
+  `spec-0018` (the workflow core recomputes the upgrade check)
 - SSOT modules:
   - `packages/qfai/src/cli/commands/init.ts`
   - `packages/qfai/src/core/paths/assistantPaths.ts` (canonical relative paths SSOT)
@@ -11,11 +12,13 @@
     `--force` overwrite policy. Note: `core/validators/assistantAssets.ts` is a
     validator, not the copier)
 - Companion contracts:
-  - `.qfai/contracts/cli/worklog-entry.schema.md` — the work-log entry schema
-    this command seeds
   - `.qfai/contracts/cli/shipped-workflows.md` — the ownership boundary,
     provenance record and file-state enum for the GitHub Actions workflows this
     command writes into an adopter's `.github/workflows/`
+  - `.qfai/contracts/cli/qfai-workflow.md` (CLI-WF) and
+    `.qfai/contracts/cli/workflow-files.schema.md` (CLI-WFFILE) — the command
+    and the files this command installs for it, see
+    [Workflow entry](#workflow-entry)
 
 ## Public sub-commands
 
@@ -32,18 +35,14 @@ Required outputs (created if absent; merged or refreshed if present per the exis
 - `.qfai/assistant/constitution/**` — global invariants and protocols (drift-protocol, constitution, quality, distributed-surface, workflow, agent-selection, change-classification, requirements-decomposition, communication, thinking, shared-skill-{delegation,operating}-baseline)
 - `.qfai/assistant/manifest/**` — machine-loaded routing/policy YAML configs (`agent-catalog.yml`, `agent-routing.yml`, `review-profiles.yml`)
 - `.qfai/assistant/catalog/**` — reference materials, rule lists, and registry artifacts that humans read (`test-layers.md`, `review-gate.rules.yml`, `spec_required_files.json`, `manifest.md` template, `product.md`, `structure.md`, `tech.md`, `cli-ux-guidelines.md`, `ui-definition-protocol.md`)
-- `.qfai/assistant/process/**` — workflow, methodology, `migrations/`
+- `.qfai/assistant/process/**` — workflow, methodology, `migrations/`, and
+  `workflows/`, the built-in plans ([Workflow entry](#workflow-entry))
 - `.qfai/assistant/agents/**`, `.qfai/assistant/skills/**` — unchanged from prior layouts
-- `.qfai/steering/` (project-root work-log surface, NOT under `assistant/`) seeded with:
-  - `.gitkeep`
-  - `_templates/entry.md` (work-log entry template with frontmatter)
 
-No output is a `README.md`. Guidance about an artifact belongs with the skill that writes it, under `references/` and `templates/` in `.qfai/assistant/skills/**`; the work-log surface's own contract is `.qfai/assistant/catalog/worklog-entry.schema.md`. A run removes `.qfai/assistant/README.md` when it still carries the signature earlier releases wrote there, because that file described how `qfai validate` decided whether init had run and `QFAI-LINK-001` now reads a record instead. A file at that path that does not carry the signature, or that holds a project's own text below the heading an earlier repair filed it under, is left alone.
+No output is a `README.md`. Guidance about an artifact belongs with the skill that writes it, under `references/` and `templates/` in `.qfai/assistant/skills/**`. A run removes `.qfai/assistant/README.md` when it still carries the signature earlier releases wrote there, because that file described how `qfai validate` decided whether init had run and `QFAI-LINK-001` now reads a record instead. A file at that path that does not carry the signature, or that holds a project's own text below the heading an earlier repair filed it under, is left alone.
 
 Reinit behavior (existing `.qfai/` present):
 
-- The `.qfai/steering/` seed is create-only: an existing `_templates/entry.md` is never rewritten, not even under `--force` (that surface holds project content). When it differs from the body the running release would seed, init prints a notice naming the file, the first differing line and both line counts, and tells the operator how to obtain a fresh copy (`qfai init --dir <scratch-dir>`, then diff). The comparison is line-ending-insensitive, so a CRLF checkout of an unedited seed is not reported as drift. When the existing path cannot be compared at all (not a regular file, or unreadable, or past the comparison size ceiling), init prints a notice saying so instead of failing the run. An unchanged file produces no notice, so a silent `skipped` entry means "already current".
-- User-authored work-log entries (`.qfai/steering/*.md` that match the entry frontmatter schema with `id` matching filename stem) MUST NOT be overwritten.
 - Collisions where the user-edited file lives at an old (pre-recut) path surface a `W-USER-EDIT-PRESERVED` finding via the validate gate (REQ-0013).
 
 #### Reminder hooks
@@ -114,7 +113,7 @@ Behavior:
 
 - For each file in the relocation table, copy the existing user-edited content to the new path. The original is left in place on purpose — see the deprecation-window bullet below and NFR-0002.
 - If a destination already exists with user edits, preserve the user-edited content and surface `W-USER-EDIT-PRESERVED` (REQ-0013).
-- After the copy, run `qfai init` default flow, which seeds a missing template and reports drift on an existing one (create-only, as above).
+- After the copy, run `qfai init` default flow.
 - Old paths are not deleted within the deprecation window (NFR-0002); they remain readable but emit `D-DEPRECATED-PATH` warnings during validate.
 
 Required preconditions:
@@ -254,8 +253,8 @@ The obligations that are specific to this command:
   `pruneStaleQfaiWrappers` cover generated wrapper directories QFAI owns
   entirely; `.github/workflows/` is adopter-authored and is not one of them.
 - Running init twice into the same tree writes nothing and changes no
-  provenance entry, except for the missing rule citations or review directive
-  described below.
+  provenance entry, except for the missing rule citations, review directive or
+  entry directive described below.
 
 ### Rule citations in an existing entry point
 
@@ -398,6 +397,120 @@ command's job — it belongs to `qfai doctor`
 (`.qfai/contracts/cli/qfai-doctor.md` §`workflows.integrity`). `qfai init`
 stays silent about a `modified` file; it skips it like any other existing file.
 
+## Workflow entry
+
+`qfai init` installs what `npx qfai workflow` and the free-text entry need, on a
+fresh install and on an upgrade alike. The command is CLI-WF, and the files it
+reads are CLI-WFFILE.
+
+### What it installs
+
+- `qfai-run` and `qfai-maintain` under `.qfai/assistant/skills/`, the stage
+  skills with their `references/orchestrated-mode.md`, and the built-in plans
+  under `.qfai/assistant/process/workflows/`.
+- Host wrappers for `qfai-run` and `qfai-maintain`, generated from the one skill
+  source by the same wrapper sync as every other skill. A wrapper carries no
+  policy of its own. No stage skill sets `disable-model-invocation`, and init
+  writes no `agents/openai.yaml`.
+
+Realizes: `discussion-20260923171450572#REQ-0051`,
+`discussion-20260923171450572#REQ-0064`.
+
+### Ignore entries
+
+The managed `.gitignore` block gains two lines: `.qfai/runs/`, and after the
+`.qfai/evidence/*` ignore line, the negation `!.qfai/evidence/workflow/`. After
+init, `git check-ignore` reports `.qfai/runs/x` ignored and
+`.qfai/evidence/workflow/x/summary.json` not ignored.
+
+Realizes: `discussion-20260923171450572#REQ-0024`.
+
+### Mode line
+
+Init writes no `workflow.mode` key and asks no mode question. The summary gains
+one line naming the mode in force, which is `active` when the key is absent. A
+value other than `active`, `shadow` or `off` is named as invalid on that line, and
+`qfai validate` reports it (CLI-VAL). The line keeps its form on a rerun, a fresh
+install and an unmodified upgrade.
+
+Realizes: `discussion-20260923171450572#REQ-0059`.
+
+### Plan provenance and the upgrade record
+
+- `process/workflows` joins `constitution` and `catalog` as a governed layer of
+  `.assets.lock.json`. An unmodified installed plan is refreshed on upgrade once
+  its provenance matches, and an edited one is never overwritten. The rest of
+  `process/` stays ungoverned, because `process/migrations/` holds one memo per
+  release.
+- The lock also records the package version that wrote it, which is the
+  migration's identity, and the conflict list this run computed. The list is
+  overwritten on every run. `npx qfai workflow start` recomputes it and never
+  reads it.
+- A rerun duplicates nothing.
+
+Realizes: `discussion-20260923171450572#REQ-0057`,
+`discussion-20260923171450572#REQ-0065`.
+
+### Upgrade conflicts
+
+An upgrade treats three states apart: a fresh install gets the latest templates;
+an unmodified shipped asset is updated once its provenance matches; a
+user-modified asset or manifest is never overwritten. `--force` still leaves
+`manifest/` alone apart from the add-only routing-phase merge above.
+
+After the copy, init runs the correspondence check that `start` enforces:
+triggers (b) and (c) of CLI-WF `## Fail-closed`, from the same module. A
+conflict is a file whose difference trips one of them.
+
+- When the mode in force is `active` and the list is not empty, the summary names
+  each conflicting file once, with its difference and the trigger it trips. One
+  line follows, saying `active` is configured and will not start until they are
+  resolved. It replaces the plain mode line.
+- A plain upgrade does not merge `agent-routing.yml`. When a routing entry the
+  shipped manifest carries is absent from the project's copy, as for a skill the
+  release adds, the entry trips trigger (c). The summary names each absent entry
+  and gives `qfai init --force` as the command that adds it. Until the operator
+  runs it, `start` refuses and automatic chaining does not begin.
+- The same summary counts the shipped skills the plain run skipped because the
+  project's copy differs from the template's, compared ignoring line endings. It
+  names `qfai init --force` as the command that updates them, and says that it
+  replaces those skills with the shipped versions, overwriting any local edits.
+  The plain run itself changes none of them.
+- Otherwise the plain mode line is printed.
+- The exit code is 0, as the exit-code table above gives for a successful run. The
+  conflict is enforced where it matters: `start` refuses `fail-closed` on
+  trigger (b) or (c).
+
+Realizes: `discussion-20260923171450572#REQ-0059`,
+`discussion-20260923171450572#REQ-0065`.
+
+### Entry directive
+
+The mechanism that adds the review directive, under
+[Rule citations in an existing entry point](#rule-citations-in-an-existing-entry-point),
+adds a second directive the same way. Init prepends the entry directive to
+`AGENTS.md` and `CLAUDE.md` when no operative copy exists. It tells the agent to
+send a first free-text change request to `qfai-run`.
+
+- Unlike the review directive, it does not depend on `REVIEW.md`.
+- It is not written into `.github/copilot-instructions.md`. Copilot keeps
+  receiving the skills with no support claim, and the directive would send it to
+  a skill that fails closed there.
+- Existing text and line endings are preserved, and the refusals of that section
+  apply.
+
+Realizes: `discussion-20260923171450572#REQ-0058`,
+`discussion-20260923171450572#REQ-0064`.
+
+### Windows parity
+
+Init and upgrade behave the same on Windows as on Linux, including CRLF checkouts
+and paths with spaces. Provenance compares text after CRLF normalization
+(`hashAssistantAssetText`), and lock keys are project-relative paths with `/`.
+The `windows-latest` job runs the init and migration suites.
+
+Realizes: `discussion-20260923171450572#NFR-0011`.
+
 ## Path SSOT enforcement
 
 Both `init` and `validate` MUST read assistant-tree paths from `packages/qfai/src/core/paths/assistantPaths.ts` only. Hard-coded path string literals matching `assistant/(steering|manifest|instructions|catalog|constitution|process)/` outside the SSOT module are rejected by the lint lane (NFR-0001).
@@ -407,12 +520,3 @@ Both `init` and `validate` MUST read assistant-tree paths from `packages/qfai/sr
 Old-layout file paths (under `.qfai/assistant/instructions/` and `.qfai/assistant/steering/`) remain readable for **exactly one minor release** after the recut ships (NFR-0002). `.qfai/assistant/manifest/` is not in that list: the recut keeps its path, so it is canonical rather than deprecated and no sunset applies to it. The migration memo at `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` names both the introducing version and the sunset version.
 
 The sunset is `SUNSETS.legacyAssistantSteering` in `packages/qfai/src/core/sunset.ts`, and every surface that reports the layout computes its severity from it: `qfai validate` escalates `D-DEPRECATED-PATH` to error, `qfai init` reports the same finding on stderr at the same severity, and `W-SKILL-DOC-BROKEN-REF` escalates alongside them. The readers keep accepting the old paths — per `qfai-validate.md`, the old-layout reader is removed in the minor _after_ the sunset, not at it — so `--upgrade-assistant-tree` still works and `init` still exits 0.
-
-## Distributed-surface obligations
-
-The seeded `.qfai/steering/_templates/entry.md` MUST pass `packages/qfai/scripts/check-no-internal-version-leakage.sh` (no `spec-NNNN` for N ≥ 10, no `vN.M[.P]`, no `CAP-0010+`, no `DEC-NNNN-NNNN`, no `DR-NNNN`, no `OQ-NNNN-NNNN`, no `QFAI-PROT2-NNN`, no `schemaVersion`). The work-log surface itself (`.qfai/steering/`) is NOT shipped in `packages/qfai/package.json#files`.
-
-The seeded body is not a static asset. `buildProjectSteeringEntryTemplate` in `packages/qfai/src/cli/commands/init.ts` builds it in TypeScript, taking the `status` enum from `WORKLOG_ENTRY_STATUSES` and the mandatory handoff headings from `HANDOFF_REQUIRED_SECTIONS` (`packages/qfai/src/core/paths/assistantPaths.ts`), so neither list can drift from the validator; the remaining frontmatter prose is illustrative and is not derived. It therefore ships as a string literal inside `dist/` rather than as a file under `assets/`. Two consequences when auditing the obligation above:
-
-- The leakage guard reaches the body only through `dist/`, so it is covered on the post-build guard run. The lint-only run skips `dist/` by design and says so (`WARN: ... skipped ... that are not on disk yet`), so a green lint-only run is not evidence that the seed was scanned.
-- `packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts` runs `qfai init` into a temp directory and scans the emitted tree with the same forbidden-class set, regardless of build state. It belongs to the `integration` vitest project (`packages/qfai/vitest.workspace.ts`), so it covers the seeded bodies only when that project — or the full suite — runs; a green `test:assets` or `e2e` slice alone does not scan the seed.

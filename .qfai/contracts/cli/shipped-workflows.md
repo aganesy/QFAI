@@ -26,9 +26,7 @@ surfaces read it. `qfai init` writes the set, `qfai doctor` reports on it, and
 the refresh verb deferred on `OQ-0021` will write **and** prune it. The five
 file states and the reserved-prefix rule are one enum shared by all three, so
 folding it into the init contract would make the doctor contract and the future
-refresh contract depend on a section of a sibling command's contract. This
-follows the `worklog-entry.schema.md` precedent, where a schema that `init`
-seeds and `validate` reads was split out of `qfai-init.md` for the same reason.
+refresh contract depend on a section of a sibling command's contract.
 
 ## 1. Reserved filename prefix
 

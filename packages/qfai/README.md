@@ -12,8 +12,9 @@ QFAI addresses these failure modes by standardizing an end-to-end delivery loop 
 - Traceability validation enforces that SDD → ATDD → TDD → implementation stays aligned, reducing hallucination-driven drift.
 - Result: higher output quality, fewer review cycles, and lower human supervision cost.
 
-QFAI is designed for a skills-driven operating model: engineers select a prepared custom skill and provide only the task intent.
-The agent reads the repository, produces the required artifacts, and iterates until the hard gates pass.
+You describe the change to your AI coding agent in your own words.
+QFAI works out which stages the change needs, runs them one after another, and stops only to ask what it cannot decide for you.
+Invoking a stage skill such as `/qfai-sdd` yourself remains available as the expert path.
 
 ## Release status
 
@@ -91,6 +92,13 @@ npx qfai validate
 npx qfai report
 ```
 
+Then open your AI coding agent in the repository and describe the change in your own words:
+
+> Let each customer register up to five notification addresses, with no duplicates.
+
+The agent announces the stages it will run, then runs them.
+It asks you only what it cannot decide for you, such as whether to create a new capability.
+
 ## What you can do (CLI commands)
 
 - `npx qfai --version` (alias `-V`)
@@ -102,17 +110,17 @@ npx qfai report
     (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.
   - Options:
 
-    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-    | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-    | `--force`                  | Re-generate `.qfai/assistant/{skills,agents}/**` and the published skill/agent wrappers under `.agents/`, `.claude/`, `.codex/` and `.github/`, and prune the legacy wrappers they replace. It also rewrites one plain (non-wrapper) generated file without asking: `.github/copilot-instructions.md` — local edits to it are overwritten, so back it up first. `.github/instructions/*.instructions.md` is create-only even under `--force`. The template trees `--force` does not own — `assistant/manifest/**`, `specs/`, `contracts/`, `steering/` and the rest of `.qfai/` — stay create-only. The flag does not narrow what plain `init` always does: the managed `.gitignore` block, the legacy `.qfai/evidence/.gitignore` negations and `git config core.symlinks` are re-applied (and repaired when stale) on every non-dry-run, with or without `--force`. |
-    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-    | `--upgrade-assistant-tree` | Migrate a pre-recut project to the 4-layer tree. Only the two pre-recut surfaces `.qfai/assistant/instructions/` and `.qfai/assistant/steering/` are scanned; `assistant/manifest/` is already the canonical layer, so it is kept in place and never re-copied. This is what the `D-DEPRECATED-PATH` finding is asking for. Files are copied, never deleted: the legacy paths stay until you remove them, and an existing file at a scanned surface's migration target is kept (reported as `W-USER-EDIT-PRESERVED`) — that warning only ever covers those scanned targets. A project left with nothing but `manifest/` has nothing to migrate and is reported as "no pre-recut surfaces ... found".                                                                                                                                                                  |
-    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+    | Flag                       | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+    | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+    | `--dir <path>`             | Output directory (default: the current directory). Wins over `--root` when both are given.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+    | `--root <path>`            | Every other command reads this as the target directory; `init` reads it as the output directory too, but only when `--dir` is omitted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+    | `--force`                  | Re-generate `.qfai/assistant/{skills,agents}/**` and the published skill/agent wrappers under `.agents/`, `.claude/`, `.codex/` and `.github/`, and prune the legacy wrappers they replace. It also rewrites one plain (non-wrapper) generated file without asking: `.github/copilot-instructions.md` — local edits to it are overwritten, so back it up first. `.github/instructions/*.instructions.md` is create-only even under `--force`. The template trees `--force` does not own — `assistant/manifest/**`, `specs/`, `contracts/` and the rest of `.qfai/` — stay create-only. The flag does not narrow what plain `init` always does: the managed `.gitignore` block, the legacy `.qfai/evidence/.gitignore` negations and `git config core.symlinks` are re-applied (and repaired when stale) on every non-dry-run, with or without `--force`. |
+    | `--dry-run`                | Report what would change and write nothing. Use it to rehearse `--upgrade-assistant-tree`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+    | `--upgrade-assistant-tree` | Migrate a pre-recut project to the 4-layer tree. Only the two pre-recut surfaces `.qfai/assistant/instructions/` and `.qfai/assistant/steering/` are scanned; `assistant/manifest/` is already the canonical layer, so it is kept in place and never re-copied. This is what the `D-DEPRECATED-PATH` finding is asking for. Files are copied, never deleted: the legacy paths stay until you remove them, and an existing file at a scanned surface's migration target is kept (reported as `W-USER-EDIT-PRESERVED`) — that warning only ever covers those scanned targets. A project left with nothing but `manifest/` has nothing to migrate and is reported as "no pre-recut surfaces ... found".                                                                                                                                                     |
+    | `--yes`                    | Reserved for a future interactive mode; no behavioural difference today.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+    | `--verbose`                | Expand the run report's `skipped` list to the full path listing. Off by default, so a no-op re-run prints the skip count and a pointer to this flag instead of every shipped asset path. It does not gate the written or removed listings: those are printed whenever they have entries, with or without this flag.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+    | `--help`, `-h`             | Print the CLI usage banner and exit without writing anything. Accepted by every command, `init` included, and handled before the command runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+    | `--version`, `-V`          | Print the installed QFAI version to stdout and exit 0. Accepted by every command, `init` included, and handled before the command runs, so it works outside a project too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 - `npx qfai validate`
   - Validates specs/contracts/scenarios/traceability and review artifacts
@@ -199,9 +207,32 @@ a `TC` obligation is routed by the `Level` its spec declares for it.
 - `AC` annotations are not required in code; AC coverage is treated as indirect through full `TC` coverage.
 - These directories follow `paths.testsDir` from `qfai.config.yaml`; `tests/` above is the default.
 
-## Operating model (skills-driven workflow)
+## Operating model (free-text entry)
 
-QFAI assumes you operate the project primarily via prepared custom skills.
+You state the change once, in your own words.
+The `qfai-run` skill takes it from there: it proposes a route, `npx qfai workflow` checks it,
+and each stage runs through its own skill until `finish` confirms the completion target.
+You type no stage name.
+
+- Say `continue` to resume an interrupted run where it stopped.
+- Say `stop` to cancel the run.
+- The run asks you only for a decision it cannot take: creating a new capability, an approval a stage requires, or a fact only you hold.
+
+`workflow.mode` in `qfai.config.yaml` sets how far the entry goes:
+
+| Mode     | What the entry does                                    |
+| -------- | ------------------------------------------------------ |
+| `active` | The default. Runs the stages one after another         |
+| `shadow` | Proposes the stages and the reason, and writes nothing |
+| `off`    | Starts no run. You invoke the stage skills by name     |
+
+`active` chains stages only on a host whose capability report and first delegation pass.
+See [Supported hosts](#supported-hosts).
+
+### Invoking a stage directly (expert path)
+
+You can still run one stage yourself by typing its skill, for example `/qfai-sdd`.
+You then choose the stages and their order, and each stage checks its inputs as it does inside a run.
 A custom skill is a reusable task instruction set for your AI coding agent.
 The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD/ATDD/TDD artifacts and code.
 
@@ -214,12 +245,16 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills/`) designed to keep the workflow opinionated and repeatable.
 
+- **qfai-run**: The free-text entry. Takes a change stated in your own words through the stages it needs,
+  hands each stage to the skill below that owns it, and reports when `finish` confirms the result.
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
   and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
-  UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact; non-ui discussion packs typically omit it.
+  Discussion packs with a visual prototyping surface (`web`, `mobile`, `desktop`, `mixed`)
+  may include `prototyping.yaml` as an optional recommendation artifact;
+  cli-only packs omit it, and non-ui discussion packs typically omit it.
 - **qfai-sdd**: Unified SDD entrypoint with discussion-pack preflight guard
   (missing/incomplete/blocking OQ causes stop + next action guidance).
   After preflight, the skill runs a mandatory **Stage 1 Triage** that classifies
@@ -252,57 +287,38 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
 
 ### Workflow sequence (example)
 
-This sequence shows which skill to run, in what order, and what artifacts to expect.
+This sequence follows one change from the first prompt to the completion report.
 
 ```mermaid
 sequenceDiagram
-participant U as User
+participant O as Operator
 participant AG as AI Agent
-participant Q as QFAI Kit (.qfai)
+participant W as npx qfai workflow
 participant R as Repo (codebase)
 
-U->>R: Create a repo (or open an existing one)
-U->>R: Run npx qfai init
-R-->>U: .qfai kit installed (4-layer assistant tree + skills + agents)
+O->>R: Run npx qfai init
+R-->>O: .qfai kit installed (assistant tree, skills and agents)
 
-U->>AG: Run /qfai-configure
-AG->>Q: Read .qfai/assistant/skills/qfai-configure/SKILL.md
-AG->>R: Update qfai.config.yaml (testFileGlobs, etc.)
-AG-->>U: Config tuned to this repo
+O->>AG: Describe the change in your own words
+AG->>W: start, then propose the route
+W-->>AG: Checked plan
+AG-->>O: The goal, the stages in order and the write scope
 
-opt If you only have an idea
-U->>AG: Run /qfai-discussion
-AG-->>U: Structured discussion package (.qfai/discussion/discussion-<ts>/)
+opt The change needs a new capability
+AG-->>O: Ask whether to create it
+O->>AG: Answer
 end
 
-U->>AG: Run /qfai-sdd
-AG->>Q: Read .qfai/assistant/skills/qfai-sdd/SKILL.md
-AG->>R: Preflight + create/refine layered specs + finalize 10_Plan + 09_delta
-AG-->>U: SDD artifacts ready
+loop Each stage of the plan
+AG->>W: next
+W-->>AG: Work order for the stage
+AG->>R: Run the stage skill: specification, acceptance tests, implementation or verification
+AG->>W: accept the stage result
+end
 
-U->>AG: Run /qfai-prototyping
-AG->>Q: Read .qfai/assistant/skills/qfai-prototyping/SKILL.md
-AG->>R: Build contract-aligned implementation skeleton
-AG-->>U: Prototype ready
-
-U->>AG: Run /qfai-atdd
-AG->>Q: Read .qfai/assistant/skills/qfai-atdd/SKILL.md
-AG->>R: Implement acceptance tests
-AG-->>U: ATDD tests ready
-
-U->>AG: Run /qfai-implement
-AG->>Q: Read .qfai/assistant/skills/qfai-implement/SKILL.md
-AG->>R: Execute TDD micro-cycle (Red/Green/Refactor) per test-list.md
-AG-->>U: Implementation complete
-
-U->>AG: Run /qfai-verify
-AG->>Q: Read .qfai/assistant/skills/qfai-verify/SKILL.md
-AG->>R: Run quality gates and summarize evidence
-AG-->>U: Verification summary ready
-
-U->>R: Run npx qfai validate
-U->>R: Run npx qfai report
-R-->>U: Traceability checks and report artifacts
+AG->>W: finish
+W-->>AG: Completion target confirmed by validate
+AG-->>O: Completion report
 ```
 
 Operational notes.
@@ -393,10 +409,13 @@ flowchart LR
 ## Minimal tutorial
 
 1. `npx qfai init`
-2. Run `/qfai-discussion` to structure scope, open questions, and produce a discussion pack under `.qfai/discussion/discussion-<ts>/`.
-3. Run `/qfai-sdd` to build layered specs and finalized plans.
+2. Open your AI coding agent in the repository and describe the change in your own words.
+   If you only have an idea, say so: the run starts with a discussion that structures scope and open questions.
+3. Answer the questions the run puts to you. Say `continue` to resume after an interruption, or `stop` to cancel.
 4. For each completed review cycle, append artifacts under `.qfai/review/review-<timestamp>/`.
 5. Run `npx qfai validate` then `npx qfai report`.
+
+To choose each stage yourself, see [Invoking a stage directly](#invoking-a-stage-directly-expert-path).
 
 Release gate behavior:
 
@@ -692,8 +711,7 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │       ├── tech.md
 │   │       ├── test-layers-ci-lanes.md
 │   │       ├── test-layers.md
-│   │       ├── ui-definition-protocol.md
-│   │       └── worklog-entry.schema.md
+│   │       └── ui-definition-protocol.md
 │   └── waivers.yml
 └── qfai.config.yaml
 ```
@@ -709,21 +727,6 @@ where it stays current across upgrades. A README beside the artifacts is a
 second copy that nothing refreshes. A release that finds the one earlier
 versions wrote at the root of the assistant tree removes it, and leaves a README
 a project wrote for itself alone.
-
-### AI work-log surface (`.qfai/steering/`)
-
-`qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
-AI coding agents, with an `entry.md` template under `_templates/`. Each entry is a
-markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
-the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
-`W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
-
-The frontmatter contract and the **per-kind write trigger** — which `kind` an
-agent writes when — are in the seeded
-`.qfai/assistant/catalog/worklog-entry.schema.md`.
-
-Note that `.qfai/steering/` (the work-log surface) is a different directory from
-the legacy `.qfai/assistant/steering/` (the pre-recut assistant path).
 
 Integration wrappers are also generated for immediate use:
 
@@ -753,6 +756,11 @@ it carries the delegation line to the canonical document of the same name, or is
 `.qfai/assistant/skills/`. One consequence of that: a symlink has no content to prove who wrote it, so
 if you publish a canonical skill of your own under a name QFAI itself once shipped, `--force` removes
 that link. Your `.qfai/assistant/skills/` entry is untouched; re-create the link to publish it again.
+
+### Supported hosts
+
+A host is declared supported for quality-gated automation once its adapter test passes and its routing eval is recorded for this release.
+No host is declared supported in this release.
 
 ### Cross-AI rules and the writing reminder
 

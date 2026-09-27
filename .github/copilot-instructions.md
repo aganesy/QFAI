@@ -16,7 +16,6 @@ This repository uses QFAI (Quality-First AI) to improve the quality and consiste
   - Declarative manifests: `.qfai/assistant/manifest/`
   - Reference catalogs: `.qfai/assistant/catalog/`
   - Process / migration memos: `.qfai/assistant/process/`
-  - AI work-log surface (per-project): `.qfai/steering/` (entry frontmatter schema: `.qfai/contracts/cli/worklog-entry.schema.md`)
 - The legacy `.qfai/assistant/steering/` and `.qfai/assistant/instructions/`
   layout is past its compatibility window. `qfai init` reports it on stderr as
   a `D-DEPRECATED-PATH` error. Run `qfai init --upgrade-assistant-tree` to

@@ -24,10 +24,26 @@
   - Stage gates (P0-P8) enforcement
   - Reviewer Gate with independent non-edit reviewer
   - Credential-reuse guidance for acceptance-test harnesses (worker-scoped session reuse; backend-agnostic prose, no validator and no new vocabulary)
+  - Orchestrated mode of `/qfai-atdd` as a stage of a workflow run: its entry check, its Operations table and its stage result, in `references/orchestrated-mode.md`
+  - The ATDD side of the seam-only round trip
+  - `test_fix` for a defective `E2E`, `API` or `Integration` test, except an `Integration` row whose TCs are all `L1` or `L2`
 - Out:
   - Unit / Component test implementation (belongs to `/qfai-implement`)
   - Product feature changes beyond ATDD execution needs
   - Spec artifact authoring (belongs to `/qfai-sdd`)
+  - The workflow core, the built-in plans, the shipped schemas and the entry skills (spec-0018)
+  - The rules every stage skill shares: descriptions as trigger conditions, one orchestrated-mode reference per skill, Stage 0 shared-snapshot reuse (spec-0001)
+  - The seam-only work order itself, and `test_fix` for `Unit`, `Component` and all-`L1`/`L2` `Integration` rows (spec-0011)
+
+## Applicable Contracts
+
+| Contract   | File                                           | Governs here                                                                           |
+| ---------- | ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| CLI-WF     | `.qfai/contracts/cli/qfai-workflow.md`         | `### Work order`, `### Stage result`, `## Completion`, `### host:stage-skill-handover` |
+| CLI-WFFILE | `.qfai/contracts/cli/workflow-files.schema.md` | `### Vocabulary` and `### The Operations table`                                        |
+
+The CLI contracts declare no `CON-*` ID. `04_Business-Rules.md` names the contract
+section each rule is realized by in `## Contract Realization`.
 
 ## Applicable NFR
 
@@ -35,11 +51,13 @@
 - NFR-0002: Annotation consistency -- every generated ATDD test includes correct QFAI annotations per layer
 - NFR-0003: Forbidden reference enforcement -- zero TC annotations in E2E/API test files
 - NFR-0004: Evidence completeness -- evidence file includes work orders, coverage checklist, execution logs, and reviewer notes
+- `discussion-20260923171450572#NFR-0003`: `qfai-atdd/SKILL.md` grows by at most the one line citing `references/orchestrated-mode.md`, from 797 to 798 of its 800 lines. Measured, not tested: the 800-line asset budget guard holds the ceiling, and review of the diff holds the one line. No rule states it.
 
 ## Applicable Policy
 
 - Policy: Drift Protocol mandatory, test-layer policy from `catalog/test-layers.md`
 - Volume floors/ratios are planning signals, not gates
+- A defective acceptance-layer test is fixed with ledger status untouched (DR-0008-0004)
 
 ## Evidence Summary
 
@@ -66,9 +84,26 @@
   - Backend-agnostic: it names no browser backend, and any worked example is presented as one illustration among possible backends with nothing named, installed or pinned.
   - QFAI's own suite has zero credentials, so nothing here is dogfooded; the guidance states that rather than hiding it.
 
+### discussion-20260923171450572 (2026-09-24)
+
+The requirements of this spec's rows in `## Triage (2026-09-24 intent-driven entry)`
+of `09_delta.md`. The IDs are the pack's, so they are written with the pack
+half; the local list above keeps its own numbering.
+
+| Requirement                             | Home                                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `discussion-20260923171450572#REQ-0035` | CLI-WF `### Stage result`; BR-0008-0015                                                          |
+| `discussion-20260923171450572#REQ-0037` | CLI-WF `### Stage result`, `## Completion`; BR-0008-0016                                         |
+| `discussion-20260923171450572#REQ-0038` | CLI-WF `### Stage result`; BR-0008-0017                                                          |
+| `discussion-20260923171450572#REQ-0048` | CLI-WF `### Stage result`; CLI-WFFILE `### Vocabulary`; BR-0008-0019, BR-0008-0020, BR-0008-0021 |
+| `discussion-20260923171450572#REQ-0051` | CLI-WF `### host:stage-skill-handover`; BR-0008-0013                                             |
+| `discussion-20260923171450572#REQ-0052` | CLI-WFFILE `### The Operations table`; BR-0008-0014                                              |
+| `discussion-20260923171450572#REQ-0056` | BR-0008-0018                                                                                     |
+| `discussion-20260923171450572#NFR-0003` | `## Applicable NFR` above; measured, no rule                                                     |
+
 ## Entry points
 
-- US range in this spec: US-0008-0001..US-0008-0008
+- US range in this spec: US-0008-0001..US-0008-0010
 - Primary actors: QA Engineer, AI Agent (Orchestrator), CI/CD pipeline
 - Notes: ATDD skill produces acceptance tests only; unit/component tests belong to `/qfai-implement`
 - v1.9.2 Second-Wave (copy-down for execution): `qfai atdd scaffold --spec spec-NNNN` は spec の test*cases から `tests/atdd/spec-NNNN/<TC-ID>.test.*`skeleton (TODO marker + US-*/CON-API-\_ comment 参照) を idempotent に生成する。TODO 残存は`D-SCAFFOLD-PLACEHOLDER` (warning) で、3 validate cycle 後に error へエスカレート (`atdd.scaffoldEscalateCycles` 既定 3 / DR-0272)。

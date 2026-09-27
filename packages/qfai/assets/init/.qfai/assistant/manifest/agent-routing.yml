@@ -410,6 +410,34 @@ routing:
         rerun_policy: changed-scope-dependents
     review_profile: runtime-heavy
 
+  # The entry skill only orchestrates: it drafts and reviews nothing, so it
+  # routes no author and no reviewer, and names no review profile. Each stage
+  # it hands work to brings its own.
+  - skill: qfai-run
+    phases:
+      - id: route
+        mandatory_agents: [orchestrator]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+
+  - skill: qfai-maintain
+    phases:
+      - id: edit
+        mandatory_agents: [doc-steward]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: review
+        mandatory_agents: [completion-reviewer]
+        conditional_agents: []
+        parallel_groups: []
+        blocking_agents: [completion-reviewer]
+        rerun_policy: changed-scope-dependents
+    review_profile: default
+
 # `rerun_policy` vocabulary (validated by `QFAI-AGENT-013`):
 #
 # - `failed-agents-only`        re-run only the agents that did not return PASS

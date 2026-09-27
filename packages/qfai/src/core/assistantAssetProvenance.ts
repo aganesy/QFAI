@@ -33,10 +33,24 @@ export const ASSISTANT_ASSETS_LOCK_BASENAME = ".assets.lock.json";
 
 /**
  * Assistant layers qfai owns end to end and can therefore vouch for.
+ *
+ * A layer may sit one directory inside another. `process/workflows` holds the
+ * workflow plans, which an upgrade refreshes and the workflow engine checks
+ * against the release; the rest of `process/` is the project's, because
+ * `process/migrations/` gains one memo per upgrade. Read a path's layer with
+ * {@link governedLayerOf}, never as its first segment.
  */
-export const GOVERNED_ASSISTANT_LAYERS = ["constitution", "catalog"] as const;
+export const GOVERNED_ASSISTANT_LAYERS = ["constitution", "catalog", "process/workflows"] as const;
 
 export type GovernedAssistantLayer = (typeof GOVERNED_ASSISTANT_LAYERS)[number];
+
+/**
+ * The governed layer a POSIX path relative to `.qfai/assistant/` sits in, or
+ * `null` when it sits in none.
+ */
+export function governedLayerOf(relativePath: string): GovernedAssistantLayer | null {
+  return GOVERNED_ASSISTANT_LAYERS.find((layer) => relativePath.startsWith(`${layer}/`)) ?? null;
+}
 
 /**
  * The Stage 0 catalog documents a project fills in and owns from then on.
@@ -90,10 +104,25 @@ export type RegeneratedAssistantLayer = (typeof REGENERATED_ASSISTANT_LAYERS)[nu
 
 /**
  * Maps a POSIX path relative to `.qfai/assistant/` to the sha256 of the
- * content qfai wrote at that path.
+ * content qfai wrote at that path, beside the package version that wrote it and
+ * the conflicts that run found. Nothing reads the conflicts back: every run
+ * recomputes them.
  */
 export type AssistantAssetsLock = {
+  packageVersion?: string;
   files: Record<string, string>;
+  conflicts?: readonly AssistantAssetConflict[];
+};
+
+/**
+ * A file an upgrade left in conflict with the workflow's correspondence check:
+ * its POSIX path relative to `.qfai/assistant/`, the cause it trips, and what
+ * differs.
+ */
+export type AssistantAssetConflict = {
+  path: string;
+  trigger: "contract-undeclared" | "reviewer-missing";
+  difference: string;
 };
 
 /**
@@ -191,14 +220,11 @@ function isUngovernedManagementFile(basename: string): boolean {
  * outside the record — and outside `QFAI-ASSETS-006` with it.
  */
 export function isGovernedAssistantLockKey(key: string): boolean {
-  const [layer, ...rest] = key.split("/");
-  if (layer === undefined || rest.length === 0) {
+  const layer = governedLayerOf(key);
+  if (layer === null) {
     return false;
   }
-  const layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS;
-  if (!layers.includes(layer)) {
-    return false;
-  }
+  const rest = key.slice(layer.length + 1).split("/");
   if (!rest.every(isGovernedPathSegment)) {
     return false;
   }
@@ -533,13 +559,12 @@ async function collectGovernedFilesUnder(
 ): Promise<void> {
   // Nested entries were classified by `readdir` itself, which does not resolve
   // links — only a scan root arrives here unexamined.
-  // `projectRoot` is two levels above a layer: `<root>/.qfai/assistant/<layer>`.
+  // The project root is two levels above the assistant root, which is one level
+  // above a layer per segment of its name: `<root>/.qfai/assistant/<layer>`.
   // A link that stays inside it is a vendored tree; one that leaves is what
   // this refusal is for.
-  if (
-    isLayerRoot &&
-    !(await isRealDirectoryOrAbsent(directory, path.resolve(directory, "../../..")))
-  ) {
+  const projectRoot = path.resolve(directory, ...prefix.split("/").map(() => ".."), "..", "..");
+  if (isLayerRoot && !(await isRealDirectoryOrAbsent(directory, projectRoot))) {
     throw new Error(
       `${directory} cannot be walked as a governed layer: it is not a directory, or it is a link that leaves the project.`,
     );
@@ -748,7 +773,12 @@ export async function writeAssistantAssetsLock(
   const target = assistantAssetsLockPath(assistantRoot);
   const staging = `${target}.${randomUUID()}.tmp`;
   try {
-    await writeFile(staging, `${JSON.stringify({ files: ordered }, null, 2)}\n`, {
+    const body = {
+      packageVersion: lock.packageVersion,
+      files: ordered,
+      conflicts: lock.conflicts ?? [],
+    };
+    await writeFile(staging, `${JSON.stringify(body, null, 2)}\n`, {
       encoding: "utf-8",
       flag: "wx",
     });

@@ -1,6 +1,6 @@
 # 07 Decisions
 
-6 items.
+10 items.
 
 ## Decisions
 
@@ -39,3 +39,66 @@
 - Rejected — keep the emitter-identity rationale: falsified by two catalog members, and worse than merely wrong. It would license exempting any future script-emitted error-class code by construction, which is how a convenient exemption becomes permanent. DO NOT reintroduce "a deterministic script cannot author a justification" in **any artifact of any spec, policy file or contract** — the round-3 and round-4 reviews both found it surviving in consumers after the owning artifact was corrected, so a spec-scoped DO NOT is demonstrably too narrow. Temptation: it reads as a clean principle and needs no follow-up item.
 - Rejected — register the two codes in the catalog inside this pack: correct in substance but inflates the pack past its atomic slice, editing two reviewer SSOTs and a closed-set acceptance criterion that this cascade does not own. Temptation: it is only two array entries. It is not — it is a closed-set extension with a count assertion, a contract file and four spec-local records behind it.
 - Rejected — leave the divergence unrecorded and simply ingest the codes: keeps the gate green while erasing the reason, so the next reader re-derives an emitter-based rule from the observed behaviour. Temptation: no new open question to carry.
+
+### DR-0015-0007: Cite the justification rule by its contract section (2026-09-23)
+
+- Status: accepted
+- Context: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 name "the R-WORKLOG-DRIFT family pattern" as the rule they follow. `R-WORKLOG-DRIFT` leaves the reviewer justification set, so the name no longer points at a live rule.
+- Decision: Cite the rule's home, the Reviewer-Gate justification contract in `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`.
+- Consequences: The four items point at the section that states the rule. Citing `BR-0004-0017` instead would be a foreign-namespace reference, which raises `QFAI-SPACK-101` and `TRACE_DOWNSTREAM_REF`. Naming `R-REJECTED-READOPT` instead would replace one code with another as the pattern's name.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027
+
+### DR-0015-0008: Replace only the citation in the four items (2026-09-23)
+
+- Status: accepted
+- Context: The four items keep their obligation. Only the name of the rule they follow changes.
+- Decision: Replace the "R-WORKLOG-DRIFT family pattern" phrase in each item with the Reviewer-Gate justification contract citation, and leave the rest of each text unchanged.
+- Consequences: The obligation is the same, so TDD-0029, which holds TC-0015-0027 at `done`, is not reset and no ledger row changes.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027, TDD-0029
+
+### DR-0015-0009: The justification citation resolves to the rejection sentence (2026-09-23)
+
+- Status: accepted
+- Context: AC-0015-0014, BR-0015-0009, BR-0015-0013 and TC-0015-0027 cite `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`. The anchor resolves. That section's content clause asks for a Decisions row ID, which neither `R-PROMPT-SCANNER-DRIFT` nor the eight catalog codes have.
+- Decision: Record the citation as pointing at the section's rejection sentence: "`qfai validate` rejects Reviewer reports in which such a finding lacks `justification:` content", where such a finding is one in `R-REJECTED-READOPT`, another code the contract declares with a required `justification:`, or a code the justification catalog registers. The contract was narrowed to that sentence under the user's decision of 2026-09-23, recorded in spec-0004 DR-0004-0038 and DR-0004-0039. BR-0015-0009's three-part content resolves to the `R-PROMPT-SCANNER-DRIFT` row of the contract's prototyping finding-code table. No item is re-pointed, and the section's content clause is not widened.
+- Consequences: The four items keep their text. Widening the contract's content clause would contradict a recorded contract decision, which is the user's decision.
+- Related: AC-0015-0014, BR-0015-0009, BR-0015-0013, TC-0015-0027, CLI-VAL
+
+### DR-0015-0010: An upgraded project gains the new routing entries through `qfai init --force`
+
+- Status: accepted
+- Date: 2026-09-24
+- Decided by: the user, on 2026-09-24, relayed by the batch coordinator.
+- Context: a plain `qfai init` upgrade copies manifests create-only, so it leaves
+  an existing `agent-routing.yml` untouched. Only `--force` runs the add-only
+  routing merge. An upgraded project's manifest therefore lacks the
+  `qfai-maintain` routing entry, and a run's `start` refuses as fail-closed
+  because a reviewer the shipped manifest requires is missing. The user decision
+  that `active` is the default mode applies on install and on upgrade.
+- Evidence: `.qfai/contracts/cli/qfai-init.md` (CLI-INIT) `#### --force (asset
+regeneration)` and `### Upgrade conflicts`; `.qfai/contracts/cli/qfai-workflow.md`
+  (CLI-WF) `## Fail-closed`; `discussion-20260923171450572#REQ-0059` and
+  `#REQ-0065`.
+- Decision:
+  - `qfai init` keeps its released behaviour: only `--force` merges routing
+    entries.
+  - The upgrade report names each shipped routing entry missing from the
+    project's manifest, with `qfai init --force` as the fix.
+  - The `start` refusal for a missing reviewer names the same command.
+  - Until the adopter runs it, a plain upgrade does not chain stages
+    automatically.
+- Rejected: merge routing entries on every `qfai init`
+  - DO NOT: run the add-only merge without `--force`. Temptation: it only adds,
+    but it changes the released `--force` behaviour CLI-INIT states.
+- Rejected: make `manifest/` a provenance-governed layer
+  - DO NOT: put the manifests under the provenance lock. Temptation: the lock
+    already refreshes unmodified copies, but the layer is `qfai-configure`'s.
+- Consequences: this falls short of the `active`-by-default decision for a plain
+  upgrade, which the user accepted. The fix is named where the run stops. A
+  plain upgrade also skips each shipped stage skill whose project copy differs
+  from the shipped one; the upgrade report counts those skills and names
+  `qfai init --force`, which replaces them with the shipped versions and so
+  overwrites local edits. This
+  spec's test cases do not change; the tests that do are the upgrade-report test
+  under spec-0003 and the refusal-message test under spec-0018.
+- Related: BR-0015-0018; DL-0002 in `09_delta.md`.

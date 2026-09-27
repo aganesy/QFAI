@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
 title: QFAI Prototyping (DESIGN.md-driven UX Loop)
-description: "Iterate one prototype through up to 10 cycles of generate-capture-review against a frozen DESIGN.md, focusing on information architecture, navigation flow, usability, and functionality."
+description: "Use when invoked by name or handed a QFAI work order. Iterates one prototype against a frozen DESIGN.md, for information architecture, navigation flow, usability and functionality."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -19,6 +19,8 @@ mode: execution-focused
 ## /qfai-prototyping
 
 [DRIFT-PROTOCOL:MANDATORY]
+
+Inside an `npx qfai workflow` run, follow `references/orchestrated-mode.md`.
 
 This skill is static-first and file-based by default: it runs every
 UI-bearing spec resolved at cycle 0 through up to 10 iterations against

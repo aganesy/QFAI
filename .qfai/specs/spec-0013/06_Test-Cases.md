@@ -276,3 +276,129 @@ Tracked for separate implementation as OQ-0016
 - Type: error
 - Level: integration
 - Verify SDD preflight reports ready for a pack with usable markdown when its optional `prototyping.yaml` has an invalid schema or a legacy format without a `prototyping` namespace.
+
+## TC-0013-0052: Stage 1 checks a matching routing-time approval
+
+- EX-Ref: EX-0013-0036
+- AC-Refs: AC-0013-0043
+- Type: normal
+- Level: L3
+- Verify that `qfai-sdd/references/orchestrated-mode.md` and `references/sdd-triage.md` state that, inside a run, Stage 1 checks the cited `human_decision` instead of asking, state that the check passes only when the record exists, matches the row's operation and capability, and is not stale, and persist the passing row with `Authorization-Ref` and with `Approved By` copied as `answeredBy@YYYY-MM-DD`.
+- Notes: `packages/qfai/tests/integration/sdd/stage1ApprovalCheck.test.ts`.
+
+## TC-0013-0053: A failed approval check persists nothing
+
+- EX-Ref: EX-0013-0037
+- AC-Refs: AC-0013-0044
+- Type: error
+- Level: L3
+- Verify that the Stage 1 text names the three failures (missing, mismatched, stale), states that none of them persists a triage row or asks the operator, and that each returns `awaiting_input` naming the row and the reason. Verify also that the text states when an approval is stale: the scope digest it was given under changed, the approved capability text changed, or a replan widened the scope, and that the clock alone never makes it stale.
+- Notes: `packages/qfai/tests/integration/sdd/stage1ApprovalStop.test.ts`.
+
+## TC-0013-0040: The other approval-required operations keep the question
+
+- EX-Ref: EX-0013-0024
+- AC-Refs: AC-0013-0045
+- Type: boundary
+- Level: L3
+- Verify that the Stage 1 text keeps the approval question for exactly `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE` and `UPDATE:REMOVE`, the set held in the test, inside and outside a run, and says a routing-time authorization approves none of them. Inside a run the text states that Stage 1 asks the operator nothing itself: its stage result opens the question as a `decision` question with outcome `awaiting_input`, the answer arrives through the work order's `authorizationRefs`, and the row copies the answerer into `Approved By` as `answeredBy@YYYY-MM-DD` and carries no `Authorization-Ref`.
+- Notes: `packages/qfai/tests/integration/sdd/stage1OtherApprovals.test.ts`.
+
+## TC-0013-0041: `--auto` inside a run approves nothing
+
+- EX-Ref: EX-0013-0025
+- AC-Refs: AC-0013-0031
+- Type: error
+- Level: L3
+- Verify that the orchestrated-mode reference states that under `--auto` inside a run an approval-required row with no satisfying `human_decision` stops Stage 1 with a `consultation-needed` entry and `Approved By` `-`.
+- Notes: `packages/qfai/tests/integration/sdd/stage1AutoMode.test.ts`. The legacy `--auto` case stays in `packages/qfai/tests/assets/autoModeApprovalDegrade.test.ts`, unchanged, so the two cases are separate tests.
+
+## TC-0013-0042: The triage format carries `Authorization-Ref`
+
+- EX-Ref: EX-0013-0026
+- AC-Refs: AC-0013-0032
+- Type: normal
+- Level: L3
+- Verify that `references/sdd-triage.md` documents `Authorization-Ref` as optional, found by its header name and filled on a `CREATE` row only, with no reference on a row of any other operation, states its value form `run-<17 digits>/<authorizationId>`, naming the run and the cited record, states the `Approved By` copy rule, and keeps a row without the column valid.
+- Notes: `packages/qfai/tests/integration/sdd/triageAuthorizationRefColumn.test.ts`.
+
+## TC-0013-0043: Defect row seeding appends one case and one row
+
+- EX-Ref: EX-0013-0027
+- AC-Refs: AC-0013-0033
+- Type: normal
+- Level: L3
+- Verify that the Phase 2b defect row seeding text in `qfai-sdd` states that an `sdd_append` work order appends exactly one test case and one ledger row for behaviour the spec already states and files no Change Request, and that the test case's `Notes` give the diagnosed defect and the run ID and no path under `.qfai/runs/`.
+- Notes: `packages/qfai/tests/integration/sdd/defectRowSeeding.test.ts`.
+
+## TC-0013-0044: Seeding changes no upstream item and no existing row's status or evidence
+
+- EX-Ref: EX-0013-0028
+- AC-Refs: AC-0013-0034
+- Type: normal
+- Level: L3
+- Verify that the seeding text requires the appended test case to cite an existing AC in `AC-Refs` and an existing EX, or `—`, in `EX-Ref`; forbids adding or changing a US, AC, BR or EX; starts the new row at `todo`; keeps every existing row's `Status` and `Evidence`; and, where the new row carries an obligation an existing row already carries, names a `Boundary` on the new row and gives the existing row its slug if it has none, as the only cell written on that row.
+- Notes: `packages/qfai/tests/integration/sdd/defectRowSeedingExistingRows.test.ts`.
+
+## TC-0013-0045: The seeded row's layer comes from the oracle
+
+- EX-Ref: EX-0013-0029
+- AC-Refs: AC-0013-0035
+- Type: normal
+- Level: L3
+- Verify that the seeding text derives `Level` and `Layer` from the missing test's oracle by `test-layers.md`, leaves an acceptance-layer row to ATDD and a unit-layer row to implement, and writes no test itself.
+- Notes: `packages/qfai/tests/integration/sdd/defectRowSeedingLayer.test.ts`.
+
+## TC-0013-0046: The append is recorded as an approval-free delta row
+
+- EX-Ref: EX-0013-0030
+- AC-Refs: AC-0013-0036
+- Type: normal
+- Level: L3
+- Verify that the seeding text records the appended test case as one `UPDATE` / `APPEND` row in the spec's `09_delta.md` triage table with `Approved By` `-`.
+- Notes: `packages/qfai/tests/integration/sdd/defectRowSeedingDelta.test.ts`.
+
+## TC-0013-0047: A work order without a target is refused
+
+- EX-Ref: EX-0013-0031
+- AC-Refs: AC-0013-0037
+- Type: error
+- Level: L3
+- Verify that the orchestrated-mode reference refuses a work order with no target instead of running the no-argument batch, and that a `new_capability` target's result reports `bindings` for each capability created.
+- Notes: `packages/qfai/tests/integration/sdd/workOrderTarget.test.ts`.
+
+## TC-0013-0048: A direct `/qfai-sdd` ends at SDD
+
+- EX-Ref: EX-0013-0032
+- AC-Refs: AC-0013-0038
+- Type: normal
+- Level: L3
+- Verify that the skill text states that `/qfai-sdd` invoked by name runs standalone, ends at SDD and creates no run, and that a request to go to the end is handed to a whole run.
+- Notes: `packages/qfai/tests/integration/sdd/standaloneEnd.test.ts`.
+
+## TC-0013-0049: The entry check follows the handover
+
+- EX-Ref: EX-0013-0033
+- AC-Refs: AC-0013-0039
+- Type: error
+- Level: L3
+- Verify that `qfai-sdd/SKILL.md` has exactly one line citing `references/orchestrated-mode.md`, and that the reference states the three entry outcomes: no name and no work order passes to `qfai-run` and edits nothing; a work order matching no issued one edits nothing and returns the refusal; a valid work order is worked and nothing else.
+- Notes: `packages/qfai/tests/integration/sdd/entryCheck.test.ts`.
+
+## TC-0013-0050: The Operations table lists the vocabulary's operations
+
+- EX-Ref: EX-0013-0034
+- AC-Refs: AC-0013-0040
+- Type: normal
+- Level: L3
+- Verify that the first table under `## Operations` in `qfai-sdd/references/orchestrated-mode.md` has a first column headed `Operation` whose backticked IDs are exactly `new-capability`, `delta-or-applicability-check` and `defect-row-seeding`, the set held in the test.
+- Notes: `packages/qfai/tests/integration/sdd/operationsTable.test.ts`.
+
+## TC-0013-0051: Stage 0 reuse keeps SDD's own check live
+
+- EX-Ref: EX-0013-0035
+- AC-Refs: AC-0013-0041
+- Type: normal
+- Level: L3
+- Verify that the orchestrated-mode reference reuses the shared Stage 0 snapshot only after recomputing its key, as the operating baseline states, refreshes only the entries whose inputs changed, and runs the `npx qfai sdd preflight` readiness check in every attempt.
+- Notes: `packages/qfai/tests/integration/sdd/stage0Reuse.test.ts`.

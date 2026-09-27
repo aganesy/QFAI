@@ -2,7 +2,7 @@
 
 ## Decisions
 
-5 items.
+8 items.
 
 ### DR-0006-0001: --fail-on 未指定時は常に exit 0
 
@@ -49,3 +49,35 @@
   - Temptation: diff helper が `missing` / `extra` / `changed` の 3 bucket を返すので、3 つとも報告するのが「網羅的」に見える。しかし `missing` は `declined` — adopter の意思表示であり、`CLI-WFSET` §3 は二度と報告しないことを要求する
 - Note: `declined` は報告しないが、drift finding が出るときの `details.declined` には列挙する (BR-0006-0022 / AC-0006-0026)。無報告と不可視は別で、operator は「QFAI が不在を認識した上で放置している」ことを観測できる必要がある。これは severity にも exit code にも寄与しない
 - Source: `.qfai/contracts/cli/shipped-workflows.md` §1 / §3 / §8; `.qfai/contracts/cli/qfai-doctor.md` §`workflows.integrity`; CHG-007 review round 2 finding R7 / R8
+
+### DR-0006-0006: The two work-log pointers name targets that already exist
+
+- Status: accepted
+- Context: Two prose lines point into `.qfai/steering/` entries that the work-log removal deletes. The content they point at is already recorded elsewhere.
+- Decision: The Tiers note in `tdd/test-list.md` names the ruling "`TDD-0039` escalates to T2" in `.qfai/evidence/implement-spec-0006.md`. The carry-over bullet in `09_delta.md` names `CR-20260818-0002`, which restates the carried-over finding. The Triage row's rationale is a dated record and stays as written.
+- Consequences: Neither rewrite waits on content being moved first.
+- Related: TDD-0039, CR-20260818-0002
+
+### DR-0006-0007: /qfai-sdd rewrites both pointers, each in its own phase
+
+- Status: accepted
+- Context: The drift protocol lets a downstream stage edit only the ledger cells it names. Prose in the ledger and in the delta is upstream.
+- Decision: `/qfai-sdd` rewrites the ledger note at Phase 2b and the delta bullet at Phase 4.
+- Consequences: The `Evidence` cell of TDD-0037 is `/qfai-implement`'s and stays as written.
+- Related: TDD-0037, TDD-0039
+
+### DR-0006-0008: Only the changed line of the carry-over bullet is rewritten
+
+- Status: accepted
+- Context: The carry-over bullet's first line holds the pointer. Its continuation is unchanged and written in Japanese.
+- Decision: Rewrite the first line in English and leave the continuation as written.
+- Consequences: The bullet mixes two languages until the continuation is next changed for its own reason.
+- Related: CR-20260818-0002
+
+### DR-0006-0009: TDD-0037's `Evidence` cell keeps its work-log phrase
+
+- Status: accepted
+- Context: The `Evidence` cell of TDD-0037 cites "per steering 2026-08-17 §5", a `.qfai/steering/` entry the change deletes. The cell is `/qfai-implement`'s, and REQ-0014's list of pointers to rewrite does not include it.
+- Decision: Confirm DR-0006-0007: the cell stays as written, and no rewrite is assigned to `/qfai-implement`. The same cell ends with `record at .qfai/evidence/implement-spec-0006.md#tdd-0037`, and the disposition table moves that entry's §5 into `implement-spec-0006.md`, so a reader following the cell's own anchor reaches the file that holds the content.
+- Consequences: The phrase stays as a dated note. No ledger row or case changes.
+- Related: TDD-0037, DR-0006-0007. `09_delta.md` DL-0004.

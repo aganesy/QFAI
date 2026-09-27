@@ -88,47 +88,12 @@
 - When `qfai validate` runs in v1.9.x
 - Then a warning surface fires naming the offending dir + the canonical 4-layer enum
 
-## EX-0004-0014
-
-- BR-Ref: BR-0004-0015
-- Given `.qfai/steering/entry-001.md` with frontmatter `{id: "entry-001", kind: "unknown-kind"}` (invalid `kind`)
-- When `qfai validate` runs
-- Then `W-WORKLOG-SCHEMA` fires naming `entry-001.md` and the offending `kind` value
-
-## EX-0004-0015
-
-- BR-Ref: BR-0004-0016
-- Given a work-log entry whose `links:` array contains 2 entries that point at a non-existent spec id (4-digit numeric like `9999`) and a non-existent discussion timestamp (illustrative ids — actual numerals omitted to avoid validator id-shape detection in this example)
-- When `qfai validate` runs against a repo without those resources
-- Then `W-WORKLOG-BROKEN-LINK` fires twice (once per unresolved link)
-
 ## EX-0004-0016
 
 - BR-Ref: BR-0004-0017
-- Given a reviewer report JSON containing `{"code": "R-WORKLOG-DRIFT", "justification": ""}`
+- Given a reviewer report JSON containing `{"code": "R-REJECTED-READOPT", "justification": ""}`
 - When `qfai validate` ingests it
 - Then validate exits with error severity (advisory-failing)
-
-## EX-0004-0017
-
-- BR-Ref: BR-0004-0018
-- Given `.qfai/steering/handoff-001.md` with `kind: handoff` and body containing only `## State` and `## Next action` (missing Constraints/OQs/References)
-- When `qfai validate` runs
-- Then `R-HANDOFF-INCOMPLETE` fires naming the 3 missing sections
-
-## EX-0004-0018
-
-- BR-Ref: BR-0004-0019
-- Given an entry with `promote-to: 07_Decisions.md` AND `07_Decisions.md` lacks a row referencing the entry
-- When `qfai validate` runs
-- Then `W-PENDING-PROMOTION` fires AND the validate report carries a "Pending Promotions" section listing the entry
-
-## EX-0004-0019
-
-- BR-Ref: BR-0004-0020
-- Given an entry with `status: active` and `updated: 2025-12-01T00:00:00Z` evaluated on `2026-05-23`
-- When `qfai validate` runs (now − updated = 173 days > 90)
-- Then `W-WORKLOG-STALE` fires naming the entry and age "173d"
 
 ## EX-0004-0020
 
@@ -162,45 +127,10 @@
 
 ## EX-0004-0026
 
-- BR-Ref: BR-0004-0015 (frontmatter schema; meta-validation of the SSOT pipeline)
+- BR-Ref: BR-0004-0001
 - Given the `agent-catalog.yml` row for `acceptance-test-engineer` carries `developer_instructions: "## Mission\n- old body"` while the canonical `.qfai/assistant/agents/acceptance-test-engineer.md` body has changed to `"## Mission\n- new body"`
 - When the SSOT-guard test in `packages/qfai/tests/codex/agents.test.ts` runs
 - Then the test FAILS with `agent-catalog.yml developer_instructions diverges from canonical MD` so the 3-way SSOT cannot drift
-
-## EX-0004-0027
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `created: 2026/05/23` and `updated: May 23 2026` (both non-ISO-8601)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.createdFormat` AND `worklogSurface.schema.updatedFormat` fire as separate `W-WORKLOG-SCHEMA` warnings
-
-## EX-0004-0028
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given an entry with `created: 2026-05-23` and `updated: 2026-05-22` (reversed order, both valid ISO-8601)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.updatedOrder` fires naming both dates; the validator does NOT also report a format warning since dates are syntactically valid
-
-## EX-0004-0029
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given an entry whose `links` YAML is a mixed-type list: `- 123` (numeric), `- true` (boolean)
-- When `qfai validate` runs
-- Then 2 separate `worklogSurface.schema.linksElementType` warnings fire (one per non-string element); broken-link integrity check is skipped for those elements
-
-## EX-0004-0030
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `id: Foo Bar` (uppercase + space; not kebab-case ASCII)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.idFormat` fires as a `W-WORKLOG-SCHEMA` warning naming the bad id; date-style kebab ids like `2026-05-22-recut-design-call` still pass since they match the contract regex
-
-## EX-0004-0031
-
-- BR-Ref: BR-0004-0015 (frontmatter schema)
-- Given a `.qfai/steering/foo.md` entry with `created: 2026-02-30` (syntactically valid `YYYY-MM-DD` but non-existent — Feb has 28 days in 2026)
-- When `qfai validate` runs
-- Then `worklogSurface.schema.createdFormat` fires; message contains "calendar date" so reviewers can distinguish syntax errors from calendar-validity errors. Internally enforced via `setUTCFullYear()` round-trip in `isValidCalendarDate()`.
 
 ## EX-0004-0032
 
@@ -274,3 +204,107 @@
 - Given a PR that adds `.qfai/discussion/discussion-20260527075558258/` (under an allowed root) and edits an unrelated README
 - When `check-pack-locations.mjs` runs
 - Then the lane passes silently with no `R-PACK-LOCATION-DRIFT`, and a pre-existing legacy `review-old/` directory untouched by the PR is not re-flagged
+
+## EX-0004-0056
+
+- BR-Ref: BR-0004-0039
+- Given a triage table with one row each for `CREATE`, `DELETE`, `SPLIT`, `MERGE`, `SUPERSEDE`, `UPDATE` / `REMOVE`, `UPDATE` / `APPEND` and `UPDATE` / `MODIFY`, every row with `Approved By` `-` and no `Authorization-Ref` column
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-005` is raised on the six rows `requiresApproval()` is true for, and on neither `UPDATE` / `APPEND` nor `UPDATE` / `MODIFY`
+
+## EX-0004-0057
+
+- BR-Ref: BR-0004-0040
+- Given a `CREATE` row whose Rationale cites `CAP-0018` and `CAP-0019`, with `Approved By` `yusuke_senaga@2026-09-24` and `Authorization-Ref` `run-20260924045712999/create-0001`
+- And `.qfai/evidence/workflow/run-20260924045712999/authorizations/create-0001.json` holds a `human_decision` with `operation: CREATE`, `answeredBy: yusuke_senaga` and slot `slot-1`
+- And the run's `summary.json` `targetBindings` binds `slot-1` to `CAP-0019` only
+- When `qfai validate --profile sdd` runs, once with the column before `Depends-On` and once after it
+- Then neither run raises `QFAI-TRIAGE-011` or `QFAI-TRIAGE-005`: one bound CAP among those the Rationale cites is enough
+
+## EX-0004-0058
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, changed one way at a time
+- When `Authorization-Ref` is `run-2026092404571299/create-0001` (16 digits), `run-20260924045712999/create.0001` (a character outside the grammar), `run-20260924045712999/../../x` or `run-20260924045712999/a/b` (not two segments)
+- Or the run directory is a link whose real path lies outside `.qfai/evidence/workflow/`
+- Or the value is well formed and no file is at `authorizations/create-0001.json`
+- Or that file is not valid JSON
+- Then each case raises `QFAI-TRIAGE-011` naming the row and the `Resolves` check, and no file outside `.qfai/evidence/workflow/` is read
+
+## EX-0004-0045
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, whose cited record has `kind: request_scope`
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Kind` check
+
+## EX-0004-0046
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, whose cited `human_decision` answers a question other than a `create` question, so its `operation` is `null`
+- Or a `DELETE` row with `Approved By` `yusuke_senaga@2026-09-24` whose `Authorization-Ref` cites the resolving `CREATE` record of EX-0004-0057, a reference only a `CREATE` row may carry
+- When `qfai validate --profile sdd` runs
+- Then each case raises `QFAI-TRIAGE-011` naming the row and the `Operation` check
+
+## EX-0004-0047
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, whose run binds `slot-1` to `CAP-0020`, a CAP the Rationale does not cite
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Binding` check
+
+## EX-0004-0048
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, whose record has `answeredBy: Yusuke_Senaga`
+- When `qfai validate --profile sdd` runs
+- Then `QFAI-TRIAGE-011` names the row and the `Answerer` check: the part of `Approved By` before `@` is compared by exact match, so a difference in case is a mismatch
+
+## EX-0004-0049
+
+- BR-Ref: BR-0004-0040
+- Given the passing row of EX-0004-0057, whose record's `target.capability.goal` differs from the statement `_policies/03_Capabilities.md` now gives `CAP-0019`, and whose `recordedAt` is a year old
+- When `qfai validate --profile sdd` runs
+- Then no `QFAI-TRIAGE-011` is raised: staleness is not judged by the validator
+
+## EX-0004-0050
+
+- BR-Ref: BR-0004-0036
+- Given a `DELETE` row with `Approved By` `-` and `-` in its `Authorization-Ref` column
+- When `qfai validate --profile sdd` runs
+- Then the row raises `QFAI-TRIAGE-005` exactly as the same row with no `Authorization-Ref` column does, and no `QFAI-TRIAGE-011`
+
+## EX-0004-0051
+
+- BR-Ref: BR-0004-0037
+- Given an `UPDATE` / `APPEND` row with `Approved By` `-` and `Authorization-Ref` `run-20260924045712999/missing-0001`, which resolves to no file
+- When `qfai validate --profile sdd` runs
+- Then the row raises no `QFAI-TRIAGE-*` finding
+
+## EX-0004-0052
+
+- BR-Ref: BR-0004-0038
+- Given a project made by `qfai init`, whose provenance lock records `.qfai/assistant/process/workflows/bugfix.yml`, and in which that file has been edited so it matches neither the shipped plan nor the lock record
+- When `qfai validate` runs
+- Then one `QFAI-ASSETS-*` finding names `process/workflows/bugfix.yml` as a governed file that differs from the shipped one, at the provenance severity (`error`)
+
+## EX-0004-0053
+
+- BR-Ref: BR-0004-0038
+- Given the same project with the whole `.qfai/assistant/process/workflows/` directory deleted, while the lock still records the layer
+- When `qfai validate` runs
+- Then exactly one `QFAI-ASSETS-007` finding names the `process/workflows/` layer, and no finding names the five plan files one by one
+
+## EX-0004-0054
+
+- BR-Ref: BR-0004-0038
+- Given the same project with a file under `.qfai/assistant/process/migrations/` edited, and a new file added there
+- When `qfai validate` runs
+- Then no `QFAI-ASSETS-*` finding names anything under `process/migrations/`
+
+## EX-0004-0055
+
+- BR-Ref: BR-0004-0038
+- Given a fresh project made by the built `qfai init`, with no edit
+- When `qfai validate` runs
+- Then no `QFAI-ASSETS-*` finding names anything under `process/workflows/`

@@ -184,6 +184,12 @@ export type ParsedArgs = {
     validateSpecIds: string[];
     /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
     reportSpecIds: string[];
+    /** The operation of `qfai workflow <operation>`. */
+    workflowAction?: WorkflowOperation;
+    /** `--run <runId>` for `qfai workflow`. */
+    workflowRun?: string;
+    /** `--in <path>` for `qfai workflow`: the payload file under `.qfai/runs/`. */
+    workflowIn?: string;
     help: boolean;
     /**
      * `--version` / `-V`: print the resolved tool version to stdout and
@@ -203,6 +209,19 @@ export type ParsedArgs = {
     invalidExitCode: number;
   };
 };
+
+/** The seven operations of `qfai workflow`, and no other. */
+export const WORKFLOW_OPERATIONS = [
+  "start",
+  "next",
+  "accept",
+  "decision",
+  "status",
+  "resume",
+  "finish",
+] as const;
+
+export type WorkflowOperation = (typeof WORKFLOW_OPERATIONS)[number];
 
 /** Every spelling of the help flag the parser accepts. */
 const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
@@ -424,6 +443,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.sddAction = candidate;
       } else {
         markInvalid(subcommandReason("sdd", candidate));
+      }
+      args.shift();
+    }
+  }
+
+  if (command === "workflow") {
+    const candidate = args[0];
+    if (isSubcommandToken(candidate)) {
+      const operation = WORKFLOW_OPERATIONS.find((known) => known === candidate);
+      if (operation) {
+        options.workflowAction = operation;
+      } else {
+        markInvalid(subcommandReason("workflow", candidate));
       }
       args.shift();
     }
@@ -731,8 +763,23 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "report") {
           options.reportIn = next;
+        } else if (command === "workflow") {
+          options.workflowIn = next;
         } else {
           markInvalid(notValidHere("--in"));
+        }
+        break;
+      }
+      case "--run": {
+        const next = consumeOptionValue();
+        if (next === null) {
+          markInvalid(missingValue("--run"));
+          break;
+        }
+        if (command === "workflow") {
+          options.workflowRun = next;
+        } else {
+          markInvalid(notValidHere("--run"));
         }
         break;
       }
@@ -1178,6 +1225,7 @@ const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
   ["handoff", "upgrade"],
   ["atdd", "scaffold"],
   ["sdd", "preflight"],
+  ["workflow", WORKFLOW_OPERATIONS.join("|")],
 ]);
 
 /**

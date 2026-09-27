@@ -53,6 +53,11 @@ The rows this covers are ordinary: a post-RED scope gap is raised from a row at
 row is re-selected ahead of every `todo` row by the loop head, so without this
 it would be picked up again on every run for as long as the approval takes.
 
+A diagnosed missing test on behaviour the spec already states is the one scope
+gap that raises no Change Request and adds no ledger row from this skill:
+`/qfai-sdd` appends the row, so there is no CR here to read or to wait on.
+Every other scope gap still goes through a Change Request.
+
 ## Releasing a row takes every unresolved CR into account
 
 A row can sit in more than one blocked set, and an approved CR releases only its

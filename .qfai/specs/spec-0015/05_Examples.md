@@ -138,3 +138,38 @@
 - When the workflow-hygiene lane runs and reports the violation with its file, job and rule name,
 - Then the Reviewer Gate surfaces `R-WORKFLOW-HYGIENE-DRIFT` carrying those three fields unchanged, and does not fail the finding for a missing `justification:`.
 - Contrast: `R-PACK-LOCATION-DRIFT` is emitted only by a repository lint script too, is error class, and **is** a catalog member — so it is rejected outright when its `justification:` is empty. The two codes differ today only because this one's catalog registration is deferred (OQ-0015-0001), not because a script emits it.
+
+## EX-0015-0019: A run binding supplies `primarySpecId`
+
+- BR-Ref: BR-0015-0010
+- Given a `/qfai-implement` work order whose `target` binds a spec, and a direct `/qfai-implement` invocation that names no spec,
+- When each reaches the hard-required `primarySpecId`,
+- Then the work order's binding counts as the supplied value and nothing is asked, while the direct invocation still stops for `primarySpecId`.
+
+## EX-0015-0020: The shipped manifests route `qfai-run` and `qfai-maintain`
+
+- BR-Ref: BR-0015-0018
+- Given the shipped `manifest/agent-routing.yml` and `manifest/review-profiles.yml`,
+- When the routing entries of `qfai-run` and `qfai-maintain` are read,
+- Then `qfai-run` has the orchestrator role and no authoring or reviewing phase, `qfai-maintain` has an authoring phase and an independent reviewer with `review_profile: default`, and `review-profiles.yml` still defines exactly `default`, `requirements-heavy`, `architecture-heavy`, `ui-bearing`, `runtime-heavy` and `implementation-heavy`.
+
+## EX-0015-0021: Each Default Autopilot bucket under a run
+
+- BR-Ref: BR-0015-0019
+- Given a run in which a skill meets an `ask-user` item (a destructive operation), a `hard-required` input (`primarySpecId`) and an `auto-decide` item (ID numbering), with `--auto` set,
+- When each item comes up,
+- Then the destructive operation waits for a `human_decision` answering it, `primarySpecId` is satisfied by `request_scope` or the run's binding, the ID numbering needs no authorization, and `--auto` satisfies none of them.
+
+## EX-0015-0022: An author is not its own reviewer later in the run
+
+- BR-Ref: BR-0015-0020
+- Given a run whose actor history records agent instance `sa-1` as the author of a contract section at the SDD stage,
+- When a later work order requires an independent review of that section,
+- Then the work order carries the history, `sa-1` does not count as the independent reviewer, and the required reviewer is dispatched rather than dropped to save tokens.
+
+## EX-0015-0023: A grilling session inside a run
+
+- BR-Ref: BR-0015-0021
+- Given a delegated grilling session inside a run whose work order's `settled` field records the checked proposal's routing result, which fixes the target spec, and one answered question that fixes a design decision,
+- When the session builds its frontier,
+- Then neither settled item is on it, only the remaining decisions are worked, the session stays delegated, and no stage invokes `qfai-grill`.

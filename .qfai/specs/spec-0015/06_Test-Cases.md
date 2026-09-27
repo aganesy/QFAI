@@ -194,7 +194,7 @@
 - AC-Refs: AC-0015-0018
 - Type: error
 - Level: integration
-- Verify that a Reviewer report emitting a catalog code with empty / whitespace-only `justification:` is rejected by `qfai validate` ingestion (advisory-failing, R-WORKLOG-DRIFT family pattern), and the same code with a non-empty justification is accepted. The OQ-0119 prompt-augmentation-timing deferral is not exercised.
+- Verify that a Reviewer report emitting a catalog code with empty / whitespace-only `justification:` is rejected by `qfai validate` ingestion (advisory-failing, per the Reviewer-Gate justification contract, `.qfai/contracts/cli/qfai-validate.md#reviewer-gate-input-bundle`), and the same code with a non-empty justification is accepted. The OQ-0119 prompt-augmentation-timing deferral is not exercised.
 
 ## TC-0015-0028: `qfai audit log --scope/--operator/--clause` filters records
 
@@ -259,3 +259,43 @@
 - Type: error
 - Level: integration
 - Verify that a fixture report carrying `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` with an empty `justification:` is still surfaced rather than rejected. Negative control: `R-PACK-LOCATION-DRIFT` — an error-class, script-emitted catalog member — with an empty `justification:` MUST still be rejected in the same run, so the assertion proves the exemption is an enumerated per-code deferral rather than an emitter-derived rule or a blanket weakening of the justification contract.
+
+## TC-0015-0037: The operating baseline states the `primarySpecId` binding exception
+
+- EX-Ref: EX-0015-0019
+- AC-Refs: AC-0015-0015
+- Type: boundary
+- Level: L3
+- Verify that the shipped `constitution/shared-skill-operating-baseline.md` states both sides of the condition: a `primarySpecId` that a run's valid binding supplies counts as supplied, and with no binding it stays hard-required. TC-0015-0020, TC-0015-0021 and TC-0015-0034 are unchanged.
+
+## TC-0015-0038: The shipped manifests route the two entry skills
+
+- EX-Ref: EX-0015-0020
+- AC-Refs: AC-0015-0023
+- Type: normal
+- Level: L3
+- Verify that the shipped `manifest/agent-routing.yml` has a `qfai-run` entry with the orchestrator role and no authoring or reviewing phase, and a `qfai-maintain` entry with an authoring phase and an independent reviewer on `review_profile: default`. Verify that `manifest/review-profiles.yml` defines exactly the six profiles the test holds. Well-formedness is the existing routing validators'. Waits on spec-0018 for the two skills (its `10_Plan.md` tiers).
+
+## TC-0015-0039: The operating baseline maps each bucket to its authorization kind
+
+- EX-Ref: EX-0015-0021
+- AC-Refs: AC-0015-0024
+- Type: normal
+- Level: L3
+- Verify that the shipped operating baseline's autopilot passage states that an `ask-user` item is satisfied only by a `human_decision` answering it, a `hard-required` input by `request_scope` or the run's binding, and an `auto-decide` item by none, and that `--auto` satisfies nothing. The existing `autopilotPolicy` tests pass unchanged.
+
+## TC-0015-0040: The delegation baseline carries the actor history across a run
+
+- EX-Ref: EX-0015-0022
+- AC-Refs: AC-0015-0025
+- Type: normal
+- Level: L3
+- Verify that the shipped `constitution/shared-skill-delegation-baseline.md` states that the run's history of authors, recommenders and reviewers travels with every work order, that an instance recorded as an artifact's author or recommender never counts as its independent reviewer, and that no required reviewer is dropped to save tokens. Refusing a non-independent reviewer is the workflow core's; BR-0015-0003's stop keeps its own test cases.
+
+## TC-0015-0041: The delegation baseline limits grilling in a run to the remaining frontier
+
+- EX-Ref: EX-0015-0023
+- AC-Refs: AC-0015-0026
+- Type: normal
+- Level: L3
+- Verify that the shipped delegation baseline states that, inside a run, a grilling session takes what the work order's `settled` field records as settled, works only the remaining frontier, and keeps the split between user and delegated sessions. That no plan names `qfai-grill` is held by the plan vocabulary and the workflow core's plan-load check.

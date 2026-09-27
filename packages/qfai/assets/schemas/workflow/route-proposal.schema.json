@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:qfai:workflow:route-proposal",
+  "title": "Route proposal",
+  "description": "The proposal a routing result carries: the request kind, the route and what the route needs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requestKind",
+    "candidateRoute",
+    "goal",
+    "expectedBehaviorRefs",
+    "observedRefs",
+    "affectedSpecIds",
+    "riskSignals",
+    "unresolvedQuestions",
+    "newCapabilities",
+    "proposedWriteScope",
+    "protectedTargets",
+    "requiredStages",
+    "rationale"
+  ],
+  "properties": {
+    "requestKind": {
+      "enum": [
+        "change",
+        "read_only",
+        "plan_only",
+        "verify_only",
+        "resume",
+        "cancel",
+        "explicit_stage"
+      ]
+    },
+    "candidateRoute": {
+      "description": "The route, or null for a request kind other than change.",
+      "enum": ["direct", "bugfix", "bounded-change", "feature", "discovery", null]
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expectedBehaviorRefs": {
+      "description": "Normative references.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/normativeReference"
+      }
+    },
+    "observedRefs": {
+      "description": "Observed references, kept apart from the normative ones.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/observedReference"
+      }
+    },
+    "affectedSpecIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "riskSignals": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "data-loss",
+          "breaking-public-contract",
+          "authorization-loosened",
+          "authorization-restored",
+          "secret-egress",
+          "production-effect",
+          "requirement-dropped",
+          "out-of-scope-work"
+        ]
+      }
+    },
+    "unresolvedQuestions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/question"
+      }
+    },
+    "newCapabilities": {
+      "description": "Each capability the plan needs and no spec owns.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["goal", "covers", "excludes", "evidence"],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "covers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "proposedWriteScope": {
+      "description": "Project-relative paths or globs.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "protectedTargets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "requiredStages": {
+      "description": "Stage kinds, in plan order.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confidence": {
+      "description": "Advisory only.",
+      "type": "number"
+    }
+  },
+  "$defs": {
+    "normativeReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "enum": ["request", "spec-id", "contract-id", "path"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "observedReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "enum": ["path", "evidence"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionId", "label", "description", "effect"],
+      "properties": {
+        "optionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "$ref": "#/$defs/effect"
+        }
+      }
+    },
+    "effect": {
+      "enum": ["proceed", "replan", "stop"]
+    },
+    "question": {
+      "description": "A question input. A fact question carries no recommendation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": {
+          "enum": ["decision", "fact", "create"]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        },
+        "selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "$ref": "#/$defs/effect"
+        },
+        "capability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["goal", "covers", "excludes"],
+          "properties": {
+            "goal": {
+              "type": "string",
+              "minLength": 1
+            },
+            "covers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excludes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "fact"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": ["recommendation"],
+          "properties": {
+            "recommendation": true
+          }
+        }
+      }
+    }
+  }
+}

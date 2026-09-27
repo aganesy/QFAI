@@ -1,11 +1,148 @@
 # 09 Delta
 
+## Triage (2026-09-23)
+
+Two prose pointers into deleted work-log entries name where the content moved.
+
+| Source                                | Subject                                                                                                                | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                       | Depends-On |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| discussion-20260923060900824#REQ-0014 | Rewrite the `.qfai/steering/` entry paths in the `tdd/test-list.md` notes and in this file's CHG-007 carry-over bullet | spec-0006     | UPDATE    | MODIFY | -           | Prose only. No US, AC, BR, EX, TC or ledger row changes. The content moves first; the one-change constraint of REQ-0015 holds that order, since the migration has no triage row | -          |
+
+- The `Evidence` cell of TDD-0037 reads "per steering 2026-08-17 §5". It is a
+  dated record owned by `/qfai-implement`, and stays as written.
+
+## Update History
+
+| Date       | DL      | Summary                                                           |
+| ---------- | ------- | ----------------------------------------------------------------- |
+| 2026-09-23 | DL-0001 | The two pointers name the implement evidence and CR-20260818-0002 |
+| 2026-09-23 | DL-0002 | Both rewrites are `/qfai-sdd`'s, each in its own phase            |
+| 2026-09-23 | DL-0003 | Only the changed first line of the carry-over bullet is rewritten |
+| 2026-09-23 | DL-0004 | TDD-0037's `Evidence` cell keeps its work-log phrase              |
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+```yaml
+id: DL-0001
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0006/tdd/test-list.md (Tiers note)
+  - spec-0006/09_delta.md (CR-20260810-0001 carry-over bullet)
+notes: The two work-log pointers name a ruling in the implement evidence and CR-20260818-0002, both of which already exist (DR-0006-0006).
+```
+
+#### Migration / Follow-ups
+
+- No migration required. Neither target has to be written first.
+
+#### Rejected
+
+- option: Amend the Triage row's "content moves first" rationale
+  reason: The Triage row is a dated record of what was approved.
+  do_not: Rewrite an approved Triage row after the fact.
+  temptation: Its rationale describes an ordering the existing targets made unnecessary.
+
+### DL-0002
+
+#### Meta
+
+```yaml
+id: DL-0002
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0006/tdd/test-list.md (Tiers note)
+  - spec-0006/09_delta.md (CR-20260810-0001 carry-over bullet)
+notes: The ledger note is rewritten in the ledger phase and the delta bullet in the delta phase, both by /qfai-sdd (DR-0006-0007).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Leave the prose rewrites to /qfai-implement
+  reason: The drift protocol lets a downstream stage edit only the ledger cells it names, and this prose is upstream.
+  do_not: Route upstream prose to a downstream stage.
+  temptation: The ledger file is one /qfai-implement edits every run.
+
+### DL-0003
+
+#### Meta
+
+```yaml
+id: DL-0003
+date: 2026-09-23
+primary: Ops
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - spec-0006/09_delta.md (CR-20260810-0001 carry-over bullet)
+notes: Only the changed first line of the carry-over bullet is rewritten, in English; its unchanged continuation stays as written (DR-0006-0008).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Translate the whole bullet
+  reason: The continuation does not change, and translating it rewrites a dated record beyond what the change needs.
+  do_not: Rewrite unchanged lines of a dated record.
+  temptation: New and changed text in this repository is written in English.
+
+### DL-0004
+
+#### Meta
+
+```yaml
+id: DL-0004
+date: 2026-09-23
+primary: Ops
+tags: ["@test"]
+compat: Improvement
+scope:
+  - spec-0006/tdd/test-list.md (TDD-0037 Evidence, unchanged)
+notes: The work-log phrase in TDD-0037's Evidence cell stays, and no follow-up is assigned (DR-0006-0009).
+```
+
+#### Migration / Follow-ups
+
+- No migration required.
+
+#### Rejected
+
+- option: Have /qfai-implement rewrite the phrase when the entry is deleted
+  reason: REQ-0014 lists the pointers to rewrite and this cell is not one of them; the cell's own anchor already reaches the file the entry's content moves to.
+  do_not: Add a rewrite the requirement does not list.
+  temptation: After the deletion the phrase names a file nobody can open.
+
 ## Change Summary
 
 - Change ID: DELTA-0001
 - Date: 2026-04-01
 - Primary: spec-0006 新規作成（旧 spec-0004 の統合）
 - Tags: doctor, diagnostics, consolidation
+
+- Change ID: DELTA-0002
+- Date: 2026-09-23
+- Primary: Ops
+- Tags: @docs
+- Summary: Two prose pointers into deleted work-log entries now name where the
+  content is: the Tiers note in `tdd/test-list.md` names the implement
+  evidence, and the CR-20260810-0001 carry-over bullet names
+  CR-20260818-0002. No US, AC, BR, EX, TC or ledger row changes.
 
 ## Migration Record
 
@@ -195,7 +332,7 @@ Rows owned by this spec. `Approved By` is `-` throughout: every row is append-fi
   ケースの owner と書いた誤った cross-reference (所有ではなく除外として書き直した)、`declined` 節が
   `AC-0006-0026` の payload 義務を再記述して 2 つ目の SSOT を作っていた点、その括弧内が自己矛盾かつ
   コードに対して偽だった点。適用後の最長行は 90 / 88 字。
-- **持ち越し (本 CR の anchor 外、`.qfai/steering/2026-08-08-chg-007-spec-0006-upstream-handoff.md` に記録)**:
+- **Carried over (outside this CR's anchor, and restated in `CR-20260818-0002`)**:
   `AC-0006-0026` と `BR-0006-0022` はいずれも declined だけの tree で「finding 自体が emit されない」と
   述べるが、これはコードに対して偽である (`ok` の check が 1 件出る)。`TC-0006-0035` は正しく `ok` と
   書いているので、TC が正で親の AC / BR が誤っている。`TDD-0037` はこの AC / BR に対して実装される。

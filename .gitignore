@@ -66,12 +66,14 @@ coverage/
 .qfai/state.json
 *.qfai-state.tmp
 .qfai/state.json.lock
+.qfai/runs/
 !.qfai/
 !.qfai/evidence/
 !.qfai/decisions/
 !.qfai/decisions/**
 !.qfai/evidence/decisions/
 !.qfai/evidence/decisions/**
+!.qfai/evidence/workflow/
 !.qfai/evidence/change-request-*.md
 !.qfai/evidence/decision-*.md
 !.qfai/evidence/implement-*.md

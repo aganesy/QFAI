@@ -407,48 +407,82 @@ Scenario: Release checks run independently without abandoning older tags
   And a whole-suite tag never enters the operation path
   And an older tag with additional slice scripts uses its complete whole-suite aggregate
   And an unknown checks shape or an unsuccessful required operation refuses upload
+
+# AC-0017-0037: A Windows job runs exactly the control-core and init suites
+# Parent: US-0017-0016
+# Source: discussion-20260923171450572#NFR-0011
+Scenario: The Windows job runs the declared suite list under a temp root with a space
+  Given the own-CI workflow and the package's test:windows-parity script
+  When the workflow tree is read
+  Then a job on windows-latest runs that script and no other test command
+  And the script's suite list is exactly the control-core suites and the init and migration suites
+  And every entry of the list resolves to at least one test file
+  And before the tests the job points TEMP and TMP at a directory whose name contains a space
+
+# AC-0017-0038: The Windows job is selected like the test lanes and fails the verdict
+# Parent: US-0017-0016
+# Source: discussion-20260923171450572#NFR-0011
+Scenario: The Windows job follows change detection and joins the aggregate verdict
+  Given the Windows job in the own-CI workflow
+  When a pull request changes only documentation
+  Then the job reports skipped under its declared name and the aggregate verdict passes
+  And when a code-path pull request makes the job fail, the aggregate verdict fails
+  And the job needs detect and carries the test job's detection condition verbatim
+  And it appears in the aggregate verdict's needs
+
+# AC-0017-0039: The Windows job builds the package itself before its suites run
+# Parent: US-0017-0016
+# Source: discussion-20260923171450572#NFR-0011
+Scenario: The Windows job produces dist on the Windows runner
+  Given the Windows job in the own-CI workflow
+  When its steps are read
+  Then a build of the package precedes the first test step
+  And the job neither needs the build job nor downloads its artifact
 ```
 
 ## AC Catalog (optional)
 
-| AC-ID        | Title                                                              | Notes                                                                           | Priority |
-| ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- | -------- |
-| AC-0017-0001 | Verdict fails on a failed need and on a cancelled need             | Negative path, US-0017-0001, REQ-0006                                           | Must     |
-| AC-0017-0002 | Verdict succeeds on all-succeeded and on all-skipped needs         | Happy path plus boundary (all-skipped), US-0017-0001, REQ-0006                  | Must     |
-| AC-0017-0003 | Documentation-only pull request runs the pinned unconditional set  | Happy path, US-0017-0001, REQ-0007                                              | Should   |
-| AC-0017-0004 | Detection fails open with a warning annotation                     | Error path (fail-open), US-0017-0001, REQ-0007                                  | Should   |
-| AC-0017-0005 | Unrecognized path and assistant-tree Markdown run everything       | Edge / boundary (exclusion set), US-0017-0001, REQ-0007                         | Should   |
-| AC-0017-0006 | A lane whose gate selection would empty is exempt                  | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                      | Should   |
-| AC-0017-0007 | Every own-CI job has a reachable permission block                  | Happy path, US-0017-0002, REQ-0001                                              | Must     |
-| AC-0017-0008 | Removing both permission blocks fails the hygiene run              | Negative path (planted removal), US-0017-0002, REQ-0001                         | Must     |
-| AC-0017-0009 | Every checkout refuses to persist credentials                      | Happy path plus boundary (job-scoped full history), US-0017-0002, REQ-0002      | Must     |
-| AC-0017-0010 | Every action reference is a full-SHA pin                           | Happy path plus negative (planted floating tag), US-0017-0002, REQ-0003         | Must     |
-| AC-0017-0011 | The pin bump owner is named in a durable repository artifact       | Boundary (unsatisfied without it), US-0017-0002, REQ-0003                       | Must     |
-| AC-0017-0012 | The setup preamble has one definition every job consumes           | Happy path, US-0017-0003, REQ-0004                                              | Must     |
-| AC-0017-0013 | No workflow-level Node literal; definition stays unshipped         | Edge / boundary (shipped-surface exclusion), US-0017-0003, REQ-0004             | Must     |
-| AC-0017-0014 | The build is produced once and downloaded by the legs that need it | Happy path, measurement-gated, US-0017-0004, REQ-0005                           | Should   |
-| AC-0017-0015 | A measured wall-clock regression keeps the rebuilds                | Negative path as a legitimate outcome, US-0017-0004, REQ-0005                   | Should   |
-| AC-0017-0016 | The required-context job keeps name, unconditionality and set      | Edge / boundary, release blocker, US-0017-0004, REQ-0005                        | Must     |
-| AC-0017-0017 | The report upload skips on cancellation and ages out sooner        | Happy path, US-0017-0004, REQ-0009                                              | Should   |
-| AC-0017-0018 | Layer separation adds no workflow file and no check name           | Happy path plus boundary, US-0017-0005, REQ-0008                                | Should   |
-| AC-0017-0019 | The hygiene lane exits 0 over a clean own-workflow tree            | Happy path, US-0017-0006, REQ-0012                                              | Should   |
-| AC-0017-0020 | The hygiene lane names its rule set in its output                  | Happy path (output contract), US-0017-0006, REQ-0012                            | Should   |
-| AC-0017-0021 | A planted violation exits 1 naming file, job and rule              | Negative path, per-rule fixtures, US-0017-0006, REQ-0012                        | Should   |
-| AC-0017-0022 | The lane covers the shipped tree and lands with its hardening      | Happy path plus sequencing boundary, US-0017-0006, REQ-0013                     | Should   |
-| AC-0017-0023 | The shipped third-party rule is an allow-list, not a count         | Edge / boundary (instantly-red failure mode), US-0017-0006, REQ-0013            | Should   |
-| AC-0017-0024 | The lane runs from the aggregate a pull request executes           | Edge / boundary (gate placement), US-0017-0006, REQ-0012                        | Should   |
-| AC-0017-0025 | The lane checks the expected-required-context declaration          | Edge / boundary, US-0017-0006, REQ-0012                                         | Must     |
-| AC-0017-0026 | Every project declares the knob set with the decided value         | Happy path, US-0017-0007, REQ-0010                                              | Must     |
-| AC-0017-0027 | Every slice surface holds the same seven names                     | Happy path plus boundary (three surfaces, one name set), US-0017-0007, REQ-0011 | Must     |
-| AC-0017-0028 | A worker value is adopted only against a recorded measurement      | Happy path plus negative measurement, US-0017-0007, REQ-0010                    | Must     |
-| AC-0017-0029 | No retry setting, and one tuning change per pull request           | Edge / boundary (flake budget), US-0017-0007, REQ-0010                          | Must     |
-| AC-0017-0030 | Exactly one pull-request-triggered workflow, full profile folded   | Happy path, US-0017-0008, REQ-0015                                              | Must     |
-| AC-0017-0031 | Deleting the copy before the shipped-set gate exists is rejected   | Negative path (sequencing), US-0017-0008, REQ-0015                              | Must     |
-| AC-0017-0032 | The mapping file exists, is cross-linked, disclaims the loader     | Happy path, US-0017-0009, REQ-0014                                              | Should   |
-| AC-0017-0033 | The layer vocabulary is unchanged after the mapping file lands     | Edge / boundary, US-0017-0009, REQ-0014                                         | Should   |
-| AC-0017-0034 | The mapping file has one copy, reached from either path            | Negative path (an unlinked root path is rejected), US-0017-0009, REQ-0014       | Should   |
-| AC-0017-0035 | Release uploads require successful gates on the selected path      | Normal and rejection paths, US-0017-0005                                        | Must     |
-| AC-0017-0036 | Independent release checks preserve complete old-tag gates         | Normal, error and isolation boundaries, US-0017-0005                            | Must     |
+| AC-ID        | Title                                                                 | Notes                                                                              | Priority |
+| ------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------- |
+| AC-0017-0001 | Verdict fails on a failed need and on a cancelled need                | Negative path, US-0017-0001, REQ-0006                                              | Must     |
+| AC-0017-0002 | Verdict succeeds on all-succeeded and on all-skipped needs            | Happy path plus boundary (all-skipped), US-0017-0001, REQ-0006                     | Must     |
+| AC-0017-0003 | Documentation-only pull request runs the pinned unconditional set     | Happy path, US-0017-0001, REQ-0007                                                 | Should   |
+| AC-0017-0004 | Detection fails open with a warning annotation                        | Error path (fail-open), US-0017-0001, REQ-0007                                     | Should   |
+| AC-0017-0005 | Unrecognized path and assistant-tree Markdown run everything          | Edge / boundary (exclusion set), US-0017-0001, REQ-0007                            | Should   |
+| AC-0017-0006 | A lane whose gate selection would empty is exempt                     | Edge / boundary (non-skippability), US-0017-0001, REQ-0007                         | Should   |
+| AC-0017-0007 | Every own-CI job has a reachable permission block                     | Happy path, US-0017-0002, REQ-0001                                                 | Must     |
+| AC-0017-0008 | Removing both permission blocks fails the hygiene run                 | Negative path (planted removal), US-0017-0002, REQ-0001                            | Must     |
+| AC-0017-0009 | Every checkout refuses to persist credentials                         | Happy path plus boundary (job-scoped full history), US-0017-0002, REQ-0002         | Must     |
+| AC-0017-0010 | Every action reference is a full-SHA pin                              | Happy path plus negative (planted floating tag), US-0017-0002, REQ-0003            | Must     |
+| AC-0017-0011 | The pin bump owner is named in a durable repository artifact          | Boundary (unsatisfied without it), US-0017-0002, REQ-0003                          | Must     |
+| AC-0017-0012 | The setup preamble has one definition every job consumes              | Happy path, US-0017-0003, REQ-0004                                                 | Must     |
+| AC-0017-0013 | No workflow-level Node literal; definition stays unshipped            | Edge / boundary (shipped-surface exclusion), US-0017-0003, REQ-0004                | Must     |
+| AC-0017-0014 | The build is produced once and downloaded by the legs that need it    | Happy path, measurement-gated, US-0017-0004, REQ-0005                              | Should   |
+| AC-0017-0015 | A measured wall-clock regression keeps the rebuilds                   | Negative path as a legitimate outcome, US-0017-0004, REQ-0005                      | Should   |
+| AC-0017-0016 | The required-context job keeps name, unconditionality and set         | Edge / boundary, release blocker, US-0017-0004, REQ-0005                           | Must     |
+| AC-0017-0017 | The report upload skips on cancellation and ages out sooner           | Happy path, US-0017-0004, REQ-0009                                                 | Should   |
+| AC-0017-0018 | Layer separation adds no workflow file and no check name              | Happy path plus boundary, US-0017-0005, REQ-0008                                   | Should   |
+| AC-0017-0019 | The hygiene lane exits 0 over a clean own-workflow tree               | Happy path, US-0017-0006, REQ-0012                                                 | Should   |
+| AC-0017-0020 | The hygiene lane names its rule set in its output                     | Happy path (output contract), US-0017-0006, REQ-0012                               | Should   |
+| AC-0017-0021 | A planted violation exits 1 naming file, job and rule                 | Negative path, per-rule fixtures, US-0017-0006, REQ-0012                           | Should   |
+| AC-0017-0022 | The lane covers the shipped tree and lands with its hardening         | Happy path plus sequencing boundary, US-0017-0006, REQ-0013                        | Should   |
+| AC-0017-0023 | The shipped third-party rule is an allow-list, not a count            | Edge / boundary (instantly-red failure mode), US-0017-0006, REQ-0013               | Should   |
+| AC-0017-0024 | The lane runs from the aggregate a pull request executes              | Edge / boundary (gate placement), US-0017-0006, REQ-0012                           | Should   |
+| AC-0017-0025 | The lane checks the expected-required-context declaration             | Edge / boundary, US-0017-0006, REQ-0012                                            | Must     |
+| AC-0017-0026 | Every project declares the knob set with the decided value            | Happy path, US-0017-0007, REQ-0010                                                 | Must     |
+| AC-0017-0027 | Every slice surface holds the same seven names                        | Happy path plus boundary (three surfaces, one name set), US-0017-0007, REQ-0011    | Must     |
+| AC-0017-0028 | A worker value is adopted only against a recorded measurement         | Happy path plus negative measurement, US-0017-0007, REQ-0010                       | Must     |
+| AC-0017-0029 | No retry setting, and one tuning change per pull request              | Edge / boundary (flake budget), US-0017-0007, REQ-0010                             | Must     |
+| AC-0017-0030 | Exactly one pull-request-triggered workflow, full profile folded      | Happy path, US-0017-0008, REQ-0015                                                 | Must     |
+| AC-0017-0031 | Deleting the copy before the shipped-set gate exists is rejected      | Negative path (sequencing), US-0017-0008, REQ-0015                                 | Must     |
+| AC-0017-0032 | The mapping file exists, is cross-linked, disclaims the loader        | Happy path, US-0017-0009, REQ-0014                                                 | Should   |
+| AC-0017-0033 | The layer vocabulary is unchanged after the mapping file lands        | Edge / boundary, US-0017-0009, REQ-0014                                            | Should   |
+| AC-0017-0034 | The mapping file has one copy, reached from either path               | Negative path (an unlinked root path is rejected), US-0017-0009, REQ-0014          | Should   |
+| AC-0017-0035 | Release uploads require successful gates on the selected path         | Normal and rejection paths, US-0017-0005                                           | Must     |
+| AC-0017-0036 | Independent release checks preserve complete old-tag gates            | Normal, error and isolation boundaries, US-0017-0005                               | Must     |
+| AC-0017-0037 | A Windows job runs exactly the control-core and init suites           | Happy path plus boundary (the list closed, a space in the temp root), US-0017-0016 | Must     |
+| AC-0017-0038 | The Windows job is selected like the test lanes and fails the verdict | Happy path plus negative path, US-0017-0016                                        | Must     |
+| AC-0017-0039 | The Windows job builds the package itself before its suites run       | Happy path plus boundary (no artifact reuse), US-0017-0016                         | Must     |
 
 > This catalog is a human-facing index. It deliberately carries no `Source` column: provenance
 > has exactly one home, the `# Source:` comment in the required Gherkin block above, so the two
