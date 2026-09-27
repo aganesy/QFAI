@@ -13,7 +13,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { getChangedFilesAgainstBase, withoutPathsGoneAtHead } from "../../src/core/gitChanges.js";
+import { getChangedFilesAgainstBase } from "../../src/core/gitChanges.js";
 
 const tempDirs: string[] = [];
 
@@ -71,11 +71,6 @@ function changedFilesOrThrow(root: string, baseBranch: string): Set<string> {
   return changed;
 }
 
-/** What a caller asking "was this row's implementation modified?" reads. */
-function stillPresentOrThrow(root: string, baseBranch: string): Set<string> {
-  return withoutPathsGoneAtHead(root, baseBranch, changedFilesOrThrow(root, baseBranch));
-}
-
 describe("getChangedFilesAgainstBase", () => {
   it("reports both endpoints of a rename by default", async () => {
     const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
@@ -87,60 +82,6 @@ describe("getChangedFilesAgainstBase", () => {
     const changed = changedFilesOrThrow(root, "base");
     expect(changed.has("src/core/old.ts")).toBe(true);
     expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops the source of a rename when asked to", async () => {
-    const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
-    git(root, "mv", "src/core/old.ts", "src/core/new.ts");
-    git(root, "commit", "-m", "move");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/old.ts")).toBe(false);
-    expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops a move git scores as a delete plus an add, not as a rename", async () => {
-    // Rename detection is a similarity score, so a file moved and rewritten in
-    // one commit falls under the threshold. Subtracting only detected renames
-    // left this source in the set, and a ledger row still naming it read as
-    // "implementation modified" — the false negative the option exists to stop.
-    const root = await newRepo({ "src/core/old.ts": MODULE_BODY });
-    git(root, "rm", "src/core/old.ts");
-    await write(root, "src/core/new.ts", "export const rewrittenBeyondRecognition = 42;\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "move and rewrite");
-
-    // The premise: git really does not call this a rename.
-    const renames = execFileSync(
-      "git",
-      ["diff", "-M", "--diff-filter=R", "--name-only", "base...HEAD"],
-      { cwd: root, encoding: "utf-8" },
-    );
-    expect(renames.trim()).toBe("");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/old.ts")).toBe(false);
-    expect(changed.has("src/core/new.ts")).toBe(true);
-  });
-
-  it("drops an ordinary deletion and keeps the edit beside it", async () => {
-    const root = await newRepo({
-      "src/core/gone.ts": MODULE_BODY,
-      "src/core/kept.ts": "export const kept = 1;\n",
-    });
-    git(root, "rm", "src/core/gone.ts");
-    // Edited in the same commit, so it is in the diff and the subtraction has
-    // something to get wrong. Left untouched it is absent from the set either
-    // way, and the pin below would hold for a function that dropped
-    // everything.
-    await write(root, "src/core/kept.ts", "export const kept = 2;\n");
-    git(root, "add", "-A");
-    git(root, "commit", "-m", "delete one, edit the other");
-
-    const changed = stillPresentOrThrow(root, "base");
-    expect(changed.has("src/core/gone.ts")).toBe(false);
-    // The over-correction pin: only the removed path goes.
-    expect(changed.has("src/core/kept.ts")).toBe(true);
   });
 
   it("reports a path git would quote, by the name it actually has", async () => {
@@ -174,7 +115,7 @@ describe("getChangedFilesAgainstBase", () => {
     expect(changedFilesOrThrow(root, "base").has(".qfai/contracts/db/\u7a7a.sql")).toBe(true);
   });
 
-  it("keeps every removed path for the caller that did not ask", async () => {
+  it("keeps a removed path", async () => {
     const root = await newRepo({ "src/core/gone.ts": MODULE_BODY });
     git(root, "rm", "src/core/gone.ts");
     git(root, "commit", "-m", "delete");
