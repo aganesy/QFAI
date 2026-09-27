@@ -408,7 +408,7 @@ paths with spaces included:
   duplicated.
 
 The own-CI job that runs the init suites on `windows-latest` is stated in
-`.qfai/spec/03_contract/tech.md#rules`.
+`.qfai/spec/03_contract/cli/cli-0018-repository-ci.md`.
 
 ## Path SSOT enforcement
 

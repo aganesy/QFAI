@@ -1527,7 +1527,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // Re-pinned for the removal of `validation.require.specSections`, which nothing read: the
   // sections of a story-tree document come from the shipped schemas. Restoring the two lines
   // `require:` and `specSections: []` reproduces `41b0a60e…` byte for byte.
-  ["qfai.config.yaml", "3c3c1be32c09c953ab9ef9d590fb29bcd74723117abbbefe6d05f5971f8b248e"],
+  //
+  // Re-pinned for the commented `uiux.registries` block, which now names the
+  // `Component catalogue` row of the Stack table in `tech.md` as the place that
+  // says which registry is primary. The whole delta is those two comment lines:
+  // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
+  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
 ]);
 
 /**

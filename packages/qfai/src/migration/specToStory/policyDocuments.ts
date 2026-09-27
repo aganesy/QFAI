@@ -157,7 +157,7 @@ const nonBlank = (body: string): string[] =>
  * The items of a body that holds one list and nothing else, as the list sections of
  * the policy schemas accept it, or null. A line under an item continues that item.
  */
-function listItems(body: string, keys: readonly string[] = []): string[] | null {
+export function listItems(body: string, keys: readonly string[] = []): string[] | null {
   const lines = body
     .replace(/\r\n/g, "\n")
     .replace(/^(?:[ \t]*\n)+/, "")
@@ -216,7 +216,7 @@ function paragraphsOf(body: string): string[] | null {
  * The rows of a body that holds one table and nothing else, in the given columns, or
  * null. The second value names every other column that holds text.
  */
-function tableRows(
+export function tableRows(
   body: string,
   columns: readonly string[],
   aliases: Readonly<Record<string, string[]>> = {},
@@ -244,7 +244,7 @@ function tableRows(
   return { rows, dropped };
 }
 
-function addUnique<T>(
+export function addUnique<T>(
   map: Map<string, T[]>,
   key: string,
   values: T[],
@@ -255,10 +255,14 @@ function addUnique<T>(
   map.set(key, current);
 }
 
-const sameRow = (a: string[], b: string[]): boolean => a.join("\u0000") === b.join("\u0000");
-const sameText = (a: string, b: string): boolean => a === b;
+export const sameRow = (a: string[], b: string[]): boolean => a.join("\u0000") === b.join("\u0000");
+export const sameText = (a: string, b: string): boolean => a === b;
 
-function rewrite(draft: PolicyDraft, section: PolicySection, into: string | undefined): string {
+export function rewrite(
+  draft: PolicyDraft,
+  section: PolicySection,
+  into: string | undefined,
+): string {
   const where = into === undefined ? draft.target : `${draft.target} ## ${into}`;
   return `${where}: rewrite "## ${section.heading}" of ${section.source} by hand (kept at ${section.archive})`;
 }
@@ -342,23 +346,45 @@ export function moveTechnicalConstraints(draft: PolicyDraft, section: PolicySect
   return person;
 }
 
-async function templateText(name: PolicyDocument): Promise<string> {
+/** A `qfai-sdd` spec template, named by its path under `templates/spec/`. */
+async function templateText(relative: string): Promise<string> {
   const root = getInitAssetsDir();
   for (const dir of ["skill", "skills"]) {
-    const file = path.join(root, ".qfai/assistant", dir, "qfai-sdd/templates/spec/01_policy", name);
+    const file = path.join(root, ".qfai/assistant", dir, "qfai-sdd/templates/spec", relative);
     try {
       return await readFile(file, "utf8");
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
   }
-  throw new MigrationInputError(`The qfai-sdd template for 01_policy/${name} is missing`);
+  throw new MigrationInputError(`The qfai-sdd template for ${relative} is missing`);
 }
 
-function tableText(columns: readonly string[], rows: string[][]): string {
+export function tableText(columns: readonly string[], rows: string[][]): string {
   const line = (cells: readonly string[]): string =>
     `| ${cells.map(escapeTableCell).join(" | ")} |`;
   return [line(columns), line(columns.map(() => "---")), ...rows.map(line)].join("\n");
+}
+
+/**
+ * The template's title and sections, each section's body given by `bodyFor` from the
+ * section's title and the template's own body.
+ */
+export async function renderTemplate(
+  relative: string,
+  bodyFor: (title: string, templateBody: string) => string,
+): Promise<string> {
+  const template = (await templateText(relative)).replace(/\r\n/g, "\n");
+  const lines = template.split("\n");
+  const headings = parseHeadings(template).filter((item) => item.level === 2);
+  const title = lines[(parseHeadings(template).find((item) => item.level === 1)?.line ?? 1) - 1];
+  const parts = [title ?? ""];
+  headings.forEach((heading, index) => {
+    const end = (headings[index + 1]?.line ?? lines.length + 1) - 1;
+    const templateBody = lines.slice(heading.line, end).join("\n").trim();
+    parts.push(`## ${heading.title}\n\n${bodyFor(heading.title, templateBody)}`);
+  });
+  return `${parts.join("\n\n")}\n`;
 }
 
 /**
@@ -367,24 +393,14 @@ function tableText(columns: readonly string[], rows: string[][]): string {
  */
 export async function renderPolicyDocument(draft: PolicyDraft): Promise<string> {
   const name = policyName(draft.target);
-  const template = (await templateText(name)).replace(/\r\n/g, "\n");
-  const lines = template.split("\n");
-  const headings = parseHeadings(template).filter((item) => item.level === 2);
-  const title = lines[(parseHeadings(template).find((item) => item.level === 1)?.line ?? 1) - 1];
-  const parts = [title ?? ""];
-  headings.forEach((heading, index) => {
-    const end = (headings[index + 1]?.line ?? lines.length + 1) - 1;
-    const templateBody = lines.slice(heading.line, end).join("\n").trim();
-    const shape = RULES[name].shapes[heading.title];
-    const lists = draft.lists.get(heading.title);
-    const paragraphs = draft.paragraphs.get(heading.title);
-    const rows = draft.rows.get(heading.title);
-    let body = templateBody;
-    if (lists && lists.length > 0) body = lists.join("\n");
-    else if (paragraphs && paragraphs.length > 0) body = paragraphs.join("\n\n");
-    else if (rows && rows.length > 0 && shape?.kind === "table")
-      body = tableText(shape.columns, rows);
-    parts.push(`## ${heading.title}\n\n${body}`);
+  return renderTemplate(`01_policy/${name}`, (title, templateBody) => {
+    const shape = RULES[name].shapes[title];
+    const lists = draft.lists.get(title);
+    const paragraphs = draft.paragraphs.get(title);
+    const rows = draft.rows.get(title);
+    if (lists && lists.length > 0) return lists.join("\n");
+    if (paragraphs && paragraphs.length > 0) return paragraphs.join("\n\n");
+    if (rows && rows.length > 0 && shape?.kind === "table") return tableText(shape.columns, rows);
+    return templateBody;
   });
-  return `${parts.join("\n\n")}\n`;
 }
