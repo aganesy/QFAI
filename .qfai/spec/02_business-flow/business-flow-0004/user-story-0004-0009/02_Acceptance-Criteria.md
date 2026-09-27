@@ -12,6 +12,7 @@ Scenario: Rules land in YAML, SQL and Markdown contracts with their examples
   When step 7 runs
   Then each contract carries its rule in the form its file type allows
   And each rule's examples are the new IDs of every example with a new ID whose old BR-Ref named it
+  And each old ID in a rule's statement is its new ID
 
 # AC-0004-0009-02
 # Parent: US-0004-0009

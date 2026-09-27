@@ -57,9 +57,8 @@ Scenario: The skill ends by handing over to `qfai-run`
 
 # AC-0004-0041-07
 # Parent: US-0004-0041
-Scenario: The old skill name is retired without breaking a migration under way
+Scenario: The old skill name is retired
   Given a project that installed the skill as `qfai-migration-spec-to-story`
-  When it upgrades and runs `qfai init --force`, or continues its migration with `qfai-migration-v1-to-v2`
+  When it upgrades and runs `qfai init --force`
   Then no host link and no `qfai validate` finding names the old skill
-  And the new skill reads the plan and ID map the old one wrote under `.qfai/evidence/migration-spec-to-story/`
 ```

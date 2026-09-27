@@ -42,7 +42,10 @@ keep authors separate from reviewers.
    migrate, and continue at item 6. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
-   each old business rule's destination contract. Use the format in the guide.
+   each old business rule's destination contract. Name that contract by its
+   current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
+   contracts directory: step 3 gives every contract a new ID and file name,
+   and later steps find it from that path. Use the format in the guide.
 2. Run steps 1 to 3 in order. For **each** step, run `--dry-run` first, inspect
    its operations and write targets, then run it without `--dry-run`. Keep the
    complete Markdown report and exit code from **every** invocation as

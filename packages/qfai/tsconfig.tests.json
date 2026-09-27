@@ -367,6 +367,7 @@
     "tests/integration/cli/commands/flowScope.test.ts",
     "tests/integration/initStoryTree.test.ts",
     "tests/integration/migration/step09MissingWrapper.test.ts",
+    "tests/integration/migrationSpecToStory/contractIds.test.ts",
     "tests/integration/migrationSpecToStory/steps01to04.test.ts",
     "tests/integration/migrationSpecToStory/steps10to12.test.ts",
     "tests/integration/storyTreeContractIndex.test.ts",
