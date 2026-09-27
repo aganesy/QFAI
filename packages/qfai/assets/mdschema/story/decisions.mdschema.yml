@@ -22,5 +22,5 @@ structure:
             max: 1
             required_headers: [ID, Content, Approach, Status]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true

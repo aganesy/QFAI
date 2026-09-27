@@ -33,7 +33,7 @@ structure:
         lists:
           - min: 1
         forbidden_text:
-          - pattern: '(?m)^[^-\s#]'
+          - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Dependencies$"
@@ -44,7 +44,7 @@ structure:
         lists:
           - min: 1
         forbidden_text:
-          - pattern: '(?m)^[^-\s#]'
+          - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Milestones$"
@@ -57,5 +57,5 @@ structure:
             max: 1
             required_headers: [Milestone, Description]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true

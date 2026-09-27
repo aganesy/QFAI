@@ -22,7 +22,7 @@ structure:
             max: 1
             required_headers: [ID, Constraint, Rationale, Impact]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
       - heading:
           pattern: "^## Operational Constraints$"
@@ -34,7 +34,7 @@ structure:
             max: 1
             required_headers: [ID, Constraint, Rationale, Impact]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
       - heading:
           pattern: "^## Business Constraints$"
@@ -46,5 +46,5 @@ structure:
             max: 1
             required_headers: [ID, Constraint, Rationale, Impact]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true

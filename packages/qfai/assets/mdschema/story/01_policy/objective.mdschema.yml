@@ -25,7 +25,7 @@ structure:
           - pattern: "(?m)^- Evidence: "
             regex: true
         forbidden_text:
-          - pattern: '(?m)^[^-\s#]'
+          - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Users$"
@@ -35,7 +35,7 @@ structure:
         lists:
           - min: 1
         forbidden_text:
-          - pattern: '(?m)^[^-\s#]'
+          - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Success criteria$"
@@ -47,7 +47,7 @@ structure:
             max: 1
             required_headers: [Observable result, Measurement]
         forbidden_text:
-          - pattern: '(?m)^[^|\s#]'
+          - pattern: '(?m)^[ \t]*[^|\s#]'
             regex: true
       - heading:
           pattern: "^## Non-goals$"
@@ -57,5 +57,5 @@ structure:
         lists:
           - min: 1
         forbidden_text:
-          - pattern: '(?m)^[^-\s#]'
+          - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true

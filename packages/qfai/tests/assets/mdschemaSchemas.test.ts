@@ -13,8 +13,9 @@
  * rather than a second, independent opinion about how a spec should look.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -305,4 +306,35 @@ describe("shipped schemas agree with the SDD templates", () => {
       expect(result.status).toBe(0);
     });
   }
+});
+
+describe("a closed section rejects an element indented past its first column", () => {
+  const schema = path.join(SCHEMA_ROOT, "story/01_policy/objective.mdschema.yml");
+  const template = readFileSync(path.join(TEMPLATE_ROOT, "01_policy/objective.md"), "utf-8");
+  const variants: ReadonlyArray<readonly [string, string, string]> = [
+    ["a list item in a table section", "## Success criteria\n\n", " - extra item\n\n"],
+    ["a table in a list section", "## Non-goals\n\n", " | a | b |\n | - | - |\n\n"],
+  ];
+
+  it.each(variants)("reports %s", (_label, heading, inserted) => {
+    expect(template).toContain(heading);
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-indent-"));
+    try {
+      const file = path.join(dir, "objective.md");
+      writeFileSync(file, template.replace(heading, `${heading}${inserted}`), "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", schema, file],
+        {
+          cwd: REPO_ROOT,
+          encoding: "utf-8",
+        },
+      );
+
+      expect(`${result.stdout ?? ""}${result.stderr ?? ""}`).toContain("[forbidden-text]");
+      expect(result.status).not.toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
