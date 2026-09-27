@@ -272,11 +272,7 @@ const BLANK_TERMINATED_HTML_START = new RegExp(
  * the named section and its example IDs are handed to the validators and the
  * report — and for a heading-less legacy document it flips a previously correct
  * resolution into a wrong one, because the hidden sample outranks the real
- * table. In `tdd/test-list.md` the same hole was worse: a schema-complete sample
- * ledger row in an indented block was collected as a real row, so a spec with no
- * ledger at all could satisfy `TDDLIST_TC_NOT_COVERED` — and owe no `Test file`
- * or `Evidence`, because a `todo` row owes neither — and pass
- * `validate --profile full --fail-on error` with no test behind it.
+ * table.
  *
  * Fence state wins over comment state: `<!--` inside a fenced sample is sample
  * text, not a comment opener, so an unclosed one cannot swallow the rest of the
@@ -401,8 +397,10 @@ const TC_ID_HEADER = "TC-ID";
 
 /**
  * Case-**sensitive**, on purpose: a `TC-Id` / `tc-id` header is a mistyped
- * column. `QFAI-ATDD-112` then sees no declared `Level` and keeps the default
- * obligation, so fixing the header is what clears it.
+ * column. `atddTraceability.ts#collectTableTcLevels` reads through
+ * `resolveTestCaseTables`, so a mistyped header leaves the TC with no declared
+ * `Level` there, and `QFAI-ATDD-112` keeps the default obligation until the
+ * header is fixed.
  */
 function hasTcIdColumn(table: MarkdownTable): boolean {
   return table.headers.some((header) => header.trim() === TC_ID_HEADER);
@@ -435,9 +433,9 @@ export function extractTestCaseTableSection(text: string): string | null {
 /**
  * Every `TC-ID`-bearing table the spec declares, not only the first.
  *
- * Only the `## Test Case Table` section is searched when the document has one,
- * so an explanatory table elsewhere cannot declare a level. A document without
- * the heading is searched whole.
+ * A spec may split `06_Test-Cases.md` into several tables — per BR, per AC, or
+ * a migration table beside the authoritative one. A reader that stopped at the
+ * first would miss the level every `TC-*` in the later tables declares.
  */
 export function resolveTestCaseTables(rawText: string): MarkdownTable[] {
   const text = maskNonSpecRegions(rawText);

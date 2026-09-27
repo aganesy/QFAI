@@ -120,10 +120,16 @@ export function hasCliSurfaceDocumentation(content: string): boolean {
   );
 }
 
+/**
+ * `UI-NNNN` standing on its own. A letter, digit, `_` or `-` on either side makes
+ * it part of a longer token, such as the retired `CON-UI-NNNN`.
+ */
+const UI_CONTRACT_ID_PLACEHOLDER = /(?<![\w-])ui-nnnn(?![\w-])/;
+
 export function hasUiContractScope(content: string): boolean {
   const lower = content.toLowerCase();
   return (
-    lower.includes("ui-nnnn") &&
+    UI_CONTRACT_ID_PLACEHOLDER.test(lower) &&
     lower.includes("screens[]") &&
     (lower.includes("only") || lower.includes("excluded"))
   );

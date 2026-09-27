@@ -845,11 +845,40 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   `API-NNNN` ID from the API contract whose `QFAI-CONTRACT-ID` line declares
   it, and a `CON-API-*` value has no entry.
 
+- **Contract ID follow-ups in `qfai validate` and `qfai report`** (#2579).
+  - A business-flow `traceability-graph.json` names a Markdown, CLI or design
+    contract by the `<KIND>-NNNN` ID it declares, not by its file path.
+  - `## Business rules ##` and `## Contract Index ##` are read as the rules
+    section and the index: a closing run of `#` is part of the heading syntax,
+    not of the title.
+
+- **A Markdown file under `api/`, `db/` or `ui/` is not a contract.** An API
+  contract is OpenAPI YAML or JSON, a DB contract SQL and a UI contract YAML;
+  Markdown is a contract form under `cli/`. The contract index and ATDD
+  coverage counted a Markdown file there whose H1 declared an ID of that kind,
+  although no document schema covers it. Now no check counts it or reads its
+  ID or rules, and `QFAI-CONTRACT-034` reports it once, naming the form its
+  directory takes.
+
 - **A rejected `prototyping.primaryUiContract` stops the prototyping commands**
   (#2580). A value such as the retired `CON-UI-0001` was dropped with a config
   issue, and `qfai prototyping iterate` then took the first UI contract as
   primary and started cycle 0. Without `--primary-ui-contract`, `iterate` and
   `show-ui-contract` now exit 2 and name the key and the value received.
+
+- **The prototyping skill check no longer reads `CON-UI-NNNN` as the UI
+  contract scope** (#2580). It looked for the text `ui-nnnn` anywhere, which
+  the retired form also contains, so a skill still written with that form
+  passed. It now needs `UI-NNNN` standing on its own, and otherwise raises
+  `UIX-VAL-SKILL-UI-BEARING-FALSE`.
+
+- **A misdeclared `db/` contract no longer gets a correct one blamed**
+  (#2580). `QFAI-CONTRACT-036` took the first ID a `db/` file declared, of any
+  kind, as the owner of the tables the file creates. A file declaring an
+  `API-` ID, or an `API-` ID before its `DB-` ID, then sent a correct file to
+  declare a dependency on it. Only a file declaring exactly one `DB-` ID now
+  owns tables or receives the finding; the declaration checks already report
+  the others.
 
 - **Migration step 4 keeps the old flow's prose.** `04-renumber-ids.mjs` wrote
   only the Mermaid diagram of the old `_policies/04_Business-Flow.md` section a

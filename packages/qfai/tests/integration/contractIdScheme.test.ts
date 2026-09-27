@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { declaredContractId } from "../../src/core/contractsDecl.js";
+import { writeBusinessFlowReports } from "../../src/core/specPackReport.js";
 import { parseContractRules } from "../../src/core/storyTree/contractRules.js";
 import { nextId } from "../../src/core/storyTree/ids.js";
 import {
@@ -219,6 +220,104 @@ describe("contract IDs and contract-scoped business rules", () => {
     expect(ruleFindings(tree(columns))).toContain(`Invalid Business rules columns in ${check}`);
   });
 
+  // QFAI:AC-0001-0057-07
+  it("reads a Business rules heading that closes with a run of hashes", () => {
+    // QFAI:EX-0001-0057-12
+    const text =
+      "# CLI-0003: Check\n\n## Business rules ##\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0003-0001 | Check the project | EX-0001-0001-01 |\n";
+    expect(parseContractRules(check, text)).toMatchObject({
+      rules: [{ id: "BR-0003-0001", examples: ["EX-0001-0001-01"] }],
+      errors: [],
+    });
+    expect(ruleFindings(tree(text))).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0054-03
+  it("reads the index under a Contract Index heading that closes with hashes", async () => {
+    // QFAI:EX-0001-0054-06
+    const root = await contractTree([], { "api/api-0002-orders.yaml": API_CONTRACT });
+    await put(
+      root,
+      `${contracts}/contracts.md`,
+      [
+        "# Contracts",
+        "",
+        "## Example",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0009", "api/api-0009-example.yaml"),
+        "",
+        "## Contract Index ##",
+        "",
+        ...INDEX_HEADER.slice(4),
+        indexRow("API-0002", "api/api-0002-orders.yaml"),
+        "",
+      ].join("\n"),
+    );
+    expect(await indexFindings(root)).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0054-04
+  it("reports a Markdown file under api/ once and counts it as no contract", async () => {
+    // QFAI:EX-0001-0054-07
+    const refunds = "api/api-0003-refunds.md";
+    const root = await contractTree([indexRow("API-0003", refunds)], {
+      [refunds]: contract("API-0003: Refunds", ["| BR-0003-0001 | Refund | EX-0001-0001-01 |"]),
+    });
+    const empty = (await validateContracts(root, defaultConfig))
+      .filter((entry) => entry.code === "QFAI-CONTRACT-000")
+      .map((entry) => entry.rule);
+    expect(empty.sort()).toEqual([
+      "contracts.api.files",
+      "contracts.db.files",
+      "contracts.ui.files",
+    ]);
+    expect(await indexFindings(root)).toEqual([
+      expect.stringMatching(
+        /^QFAI-CONTRACT-034 .*api-0003-refunds\.md is Markdown, which is not a contract: api\/ holds OpenAPI YAML or JSON contracts$/,
+      ),
+    ]);
+    const model = await readStoryTreeModel(root, defaultConfig);
+    expect(model.contracts).toEqual([]);
+    expect(model.rules).toEqual([]);
+  });
+
+  // QFAI:AC-0001-0066-01
+  it("names each contract node of a flow graph by the contract ID its file declares", async () => {
+    // QFAI:EX-0001-0066-03
+    const root = await contractTree([], {
+      "cli/cli-0003-check.md": contract("CLI-0003: Check", [
+        "| BR-0003-0001 | Check the project | EX-0001-0001-01 |",
+      ]),
+      "api/api-0002-orders.yaml": `${API_CONTRACT}x-qfai-rules:\n  - id: BR-0002-0001\n    statement: Accept an order\n    examples: [EX-0001-0001-01]\n`,
+      "tech.md": `# Tech\n\n${rulesTable("Business rules", ["| BR-0009-0001 | Stack | EX-0001-0001-01 |"])}`,
+    });
+    for (const [relative, body] of tree("")) {
+      if (relative !== check) await put(root, relative, body);
+    }
+    await put(
+      root,
+      `${spec}/02_business-flow/business-flow-0001/business-flow.md`,
+      "# BF-0001: Flow\n",
+    );
+    await put(root, `${story}/01_User-story.md`, "# US-0001-0001: Check\n");
+    await writeBusinessFlowReports(root, defaultConfig);
+    const graph = JSON.parse(
+      await readFile(
+        path.join(root, ".qfai/report/business-flow-0001/traceability-graph.json"),
+        "utf8",
+      ),
+    ) as { nodes: Array<{ id: string; type: string }>; edges: Array<Record<string, string>> };
+    expect(
+      new Set(graph.nodes.filter((node) => node.type === "CON").map((node) => node.id)),
+    ).toEqual(new Set(["API-0002", "CLI-0003", `${contracts}/tech.md`]));
+    expect(graph.edges.filter((edge) => edge.relation === "BR_TO_CON")).toEqual([
+      { from: "BR-0002-0001", to: "API-0002", relation: "BR_TO_CON" },
+      { from: "BR-0003-0001", to: "CLI-0003", relation: "BR_TO_CON" },
+      { from: "BR-0009-0001", to: `${contracts}/tech.md`, relation: "BR_TO_CON" },
+    ]);
+  });
+
   // QFAI:AC-0001-0054-03
   it("accepts an index whose rows agree with each contract's file and declaration", async () => {
     // QFAI:EX-0001-0054-03
@@ -391,7 +490,37 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     ]);
   });
 
-  it("counts API-NNNN and DB-NNNN contracts and annotations in ATDD coverage", async () => {
+  // QFAI:AC-0001-0054-05
+  it("leaves a db contract without one DB-NNNN declaration out of the apply order", async () => {
+    // QFAI:EX-0001-0054-08
+    const lines = [
+      "-- QFAI-CONTRACT-ID: DB-0004",
+      "-- Depends on: -",
+      "CREATE TABLE lines (o int REFERENCES orders (id), a int REFERENCES archive (id));",
+      "",
+    ].join("\n");
+    const archive =
+      "-- QFAI-CONTRACT-ID: API-0003\n-- QFAI-CONTRACT-ID: DB-0002\nCREATE TABLE archive (id int);\n";
+    const applyOrder = async (ordersId: string): Promise<string[]> => {
+      const root = await contractTree([], {
+        "db/db-0001-orders.sql": `-- QFAI-CONTRACT-ID: ${ordersId}\nCREATE TABLE orders (id int);\n`,
+        "db/db-0002-archive.sql": archive,
+        "db/db-0004-lines.sql": lines,
+      });
+      return (await validateContracts(root, defaultConfig))
+        .filter((entry) => entry.code === "QFAI-CONTRACT-036")
+        .map((entry) => `${entry.file} ${entry.message}`);
+    };
+
+    expect(await applyOrder("API-0001")).toEqual([]);
+    const findings = await applyOrder("DB-0001");
+    expect(findings).toEqual([expect.stringMatching(/db-0004-lines\.sql .*DB-0001 \(orders\)\.$/)]);
+    expect(findings.join("\n")).not.toContain("archive");
+  });
+
+  // QFAI:AC-0001-0054-04
+  it("counts API-NNNN and DB-NNNN contracts, not Markdown files, in ATDD coverage", async () => {
+    // QFAI:EX-0001-0054-09
     const root = await contractTree([], {
       "api/api-0002-orders.yaml": API_CONTRACT,
       "db/db-0004-orders.sql": DB_CONTRACT,
@@ -406,8 +535,8 @@ describe("the new contract IDs in the checks that read the old ones", () => {
     await put(root, "tests/atdd/malformed.test.ts", "// QFAI:API-0003-copy\n");
     await put(root, "tests/atdd/annotated.test.ts", "// QFAI:API-0003\n");
     const result = await evaluateAtddCodeTraceability(root, defaultConfig);
-    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002", "API-0003"]);
-    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004", "DB-0005"]);
+    expect([...result.activeApiContractIds].sort()).toEqual(["API-0002"]);
+    expect([...result.activeDbContractIds].sort()).toEqual(["DB-0004"]);
     expect([...result.refs.api.keys()]).toEqual(["API-0002"]);
     expect(result.skippedTestFiles.map((file) => path.basename(file))).toEqual([
       "annotated.test.ts",

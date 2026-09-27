@@ -33,7 +33,7 @@ const stated: FactOverlay = async () => {};
 const SPEC = ".qfai/spec";
 const FLOW = `${SPEC}/02_business-flow/business-flow-0001`;
 const STORY = `${FLOW}/user-story-0001-0001`;
-const CONTRACT = `${SPEC}/03_contract/api/orders.md`;
+const CONTRACT = `${SPEC}/03_contract/cli/cli-0001-orders.md`;
 
 // The one business flow a fact about existing behaviour needs: a story with one criterion, its
 // example, and the contract rule that cites it.
@@ -51,7 +51,7 @@ const FIXTURE_FLOW: Record<string, string> = {
   [`${STORY}/03_Example.md`]:
     "# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| ----- | ------ | ----- | -------- |\n| EX-0001-0001-01 | AC-0001-0001-01 | A valid order | Accepted |\n",
   [CONTRACT]:
-    "# API-0001: Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001-0001 | An order is validated | EX-0001-0001-01 |\n",
+    "# CLI-0001: Orders\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| ----- | --------- | -------- |\n| BR-0001-0001 | An order is validated | EX-0001-0001-01 |\n",
 };
 
 // Writes the fixture flow once; a later fact adds to it.
