@@ -528,29 +528,22 @@ describe("assets guardrails", () => {
     expect(content).toMatch(/qfai prototyping iterate/);
     expect(content).toMatch(/10 iterations|10 cycles|up to 10/);
     expect(content).toContain("<contractsDir>/ui/*.yaml");
-    // Post-rewrite: brand SSOT is root DESIGN.md + lock yaml; legacy
-    // per-aspect brand yaml references are dropped from this skill.
+    // The brand SSOT is root DESIGN.md, whose hash cycle 0 records in
+    // prototyping.json.
     expect(content).toContain("DESIGN.md");
-    expect(content).toContain("<contractsDir>/design/DESIGN.md.lock.yaml");
+    expect(content).toContain("prototyping.json#designMd");
     expect(content).toContain(".qfai/prototype/iter-00/index.html");
     expect(content).toContain("certify --check");
   });
 
-  it("ensures qfai-prototyping v2.0 references and handoff sample exist", async () => {
+  it("ensures qfai-prototyping v2.0 references exist", async () => {
     const skillDir = path.join(templateQfaiDir, "assistant", "skill", "qfai-prototyping");
-    const handoffTemplatePath = path.join(
-      skillDir,
-      "templates",
-      "contracts",
-      "prototype-handoff.sample.yaml",
-    );
 
-    const [iterRef, generatorRef, reviewerRef, handoffRef, handoffTemplate] = await Promise.all([
+    const [iterRef, generatorRef, reviewerRef, handoffRef] = await Promise.all([
       readFile(path.join(skillDir, "references", "iteration-loop.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "generator-prompt.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "reviewer-prompt.md"), "utf-8"),
       readFile(path.join(skillDir, "references", "handoff.md"), "utf-8"),
-      readFile(handoffTemplatePath, "utf-8"),
     ]);
 
     // iteration-loop.md describes the deterministic stop conditions.
@@ -564,15 +557,11 @@ describe("assets guardrails", () => {
     expect(reviewerRef).toMatch(/lap-\d{3}/);
     expect(reviewerRef).toMatch(/cap/i);
 
-    // handoff.md describes design-system extraction.
-    expect(handoffRef).toMatch(/design-system\.yaml/);
-
-    // handoff sample carries the canonical fields and no legacy preserve/copy concepts.
-    expect(handoffTemplate).toContain("finalIterIndex");
-    expect(handoffTemplate).toContain("designSystemMirror");
-    expect(handoffTemplate).not.toContain("extractedDesignSystem");
-    expect(handoffTemplate).not.toContain("mustPreserve");
-    expect(handoffTemplate).not.toContain("mustNotCopy");
+    // handoff.md records the handoff in prototyping.json with its three keys.
+    expect(handoffRef).toContain("prototyping.json#handoff");
+    expect(handoffRef).toContain('"finalArtifact": ".qfai/prototype/final/index.html"');
+    expect(handoffRef).toContain('"procurement": {');
+    expect(handoffRef).toContain('"implementationNotes":');
   });
 
   it("keeps the per-screen skeleton shape from breaking handoff", async () => {
@@ -684,15 +673,15 @@ describe("assets guardrails", () => {
       expect(reviewerRef).toContain("readable HTML is re-scanned on convergence and certification");
 
       // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
-      // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
-      // on any mismatch, so "widen DESIGN.md" is not a mid-loop escape
-      // hatch. The prompt must route a brand change through a refreeze +
+      // compares the live DESIGN.md with the cycle-0 recorded sha256 and
+      // exits 2 on a mismatch, so "widen DESIGN.md" is not a mid-loop escape
+      // hatch. The prompt must route a brand change through an edit +
       // cycle-0 restart instead.
       expect(generatorRef).toMatch(
         /Do\s+\*\*not\*\* edit `DESIGN\.md` to widen the allowlist mid-loop/,
       );
       expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
-      expect(generatorRef).toMatch(/refreeze the lock via `\/qfai-sdd`/);
+      expect(generatorRef).toMatch(/operation: edit `DESIGN\.md`, then restart the loop/);
       // The restart must be a runnable command: the prior loop always left
       // an `iter-00` behind, and the cycle-0 destructive-rerun gate in
       // `prototypingIterate` exits 2 without `--force`. A bare `--cycle 0`
@@ -1831,15 +1820,9 @@ describe("assets guardrails", () => {
       absolute: false,
     });
 
-    // Per-aspect brand yaml contracts were removed; root DESIGN.md +
-    // DESIGN.md.lock.yaml are the brand SSOT.
+    // Root DESIGN.md is the brand SSOT; no brand contract template ships here.
     expect(templates.sort()).toEqual(
-      [
-        "api-contract.sample.yaml",
-        "db-contract.sample.sql",
-        "design-md-lock.sample.yaml",
-        "ui-contract.sample.yaml",
-      ].sort(),
+      ["api-contract.sample.yaml", "db-contract.sample.sql", "ui-contract.sample.yaml"].sort(),
     );
 
     const stepPath = path.join(templateQfaiDir, "assistant", "step", "sdd-contract", "STEP.md");

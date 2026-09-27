@@ -27,8 +27,8 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 ## Sidecar Family SSOT
 
 For UI-bearing packs on a visual-prototyping surface the brand SSOT is root
-`DESIGN.md`, which `/qfai-sdd`'s `common-design-md` step authors from this pack and freezes into
-`<paths.contractsDir>/design/DESIGN.md.lock.yaml`. Discussion records the direction
+`DESIGN.md`, which `/qfai-sdd`'s `common-design-md` step authors from this pack.
+Discussion records the direction
 behind it and writes the screen-level UX inputs:
 
 - `uiux/00_index.md`
@@ -56,7 +56,7 @@ inventing brand colors, font stacks, a type scale, spacing tokens, radii or
 shadows:
 
 - Do not interview for brand direction on a cli-only pack. `/qfai-sdd`'s `common-design-md` step
-  skips the DESIGN.md freeze for it, and nothing on the `cli` path reads a
+  writes no `DESIGN.md` for it, and nothing on the `cli` path reads a
   token value.
 - Screen contracts stay mandatory, including their `route:` field, which on
   `cli` names the command invocation (e.g. `route: myapp deploy --dry-run`)
@@ -66,10 +66,9 @@ shadows:
   so a recommendation naming it cannot be executed downstream.
 - `templates/uiux/00_index.md` carries the same carve-out: the three sidecars
   are the whole family for a cli-only pack, and no root `DESIGN.md` follows.
-- Downstream, `/qfai-implement`'s Visual Review Guard drops the four
-  design-contract inputs (root `DESIGN.md`, its lock, `design-system.yaml`,
-  `prototype-handoff.yaml`) and both prototype-evidence inputs for a cli-only
-  target, leaving `<paths.contractsDir>/ui/*.yaml` as its UI contract input.
+- Downstream, `/qfai-implement` has no root `DESIGN.md` and no prototype
+  handoff to read for a cli-only target, leaving
+  `<paths.contractsDir>/ui/*.yaml` as its UI contract input.
 
 ### Trend Scan SSOT
 

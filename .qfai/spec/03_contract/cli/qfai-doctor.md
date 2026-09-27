@@ -510,8 +510,8 @@ opt-out: doctor reports its findings and returns 0.
 
 Directory checks read `paths.specsDir` and `paths.contractsDir` from
 `qfai.config.yaml`. Their defaults are `.qfai/spec` and
-`.qfai/spec/03_contract`. The design lock is read at
-`<contractsDir>/design/DESIGN.md.lock.yaml`. Skill integrity and the asset
+`.qfai/spec/03_contract`. Root `DESIGN.md` is read at the project root.
+Skill integrity and the asset
 line budget inspect the singular `.qfai/assistant/skill/` tree. The
 test-glob diagnostic counts declared business flows in the story tree.
 An absent configured `paths.testsDir` produces a `paths.testsDir` warning

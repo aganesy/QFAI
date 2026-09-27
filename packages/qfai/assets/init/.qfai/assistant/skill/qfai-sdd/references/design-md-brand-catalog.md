@@ -83,10 +83,10 @@ required `brand.archetype` field of the root `DESIGN.md`; each archetype supplie
 
 ## Selection Guide
 
-Use this catalog when `qfai-sdd` authors and locks the root `DESIGN.md` for a UI-bearing flow.
+Use this catalog when `qfai-sdd` authors the root `DESIGN.md` for a UI-bearing flow.
 Picking an archetype fills a required `DESIGN.md` field. It does not settle screen structure,
 which the UI contracts own, and it does not settle the prototype's layout, which
-`/qfai-prototyping` explores under the frozen tokens.
+`/qfai-prototyping` explores under its tokens.
 
 1. Score each archetype against the brand intent the discussion pack recorded (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`). The score is the fit between that intent and the archetype's `representative_brand` and `aesthetic_properties` above — the only archetype facts this catalog publishes.
 2. Break a tie with the inputs step 1 already read, in this order: (a) the archetype whose `aesthetic_properties` contradict fewer entries of `audience.do_not_look_like`, since that field is an explicit exclusion rather than a preference; (b) alphabetical archetype name. Both are decidable from what the intake captured, so the same discussion yields the same archetype for any agent. Do not weigh a "visual-theme weight": the catalog publishes no such number for an archetype, and a tie-break that needs one is not executable here.

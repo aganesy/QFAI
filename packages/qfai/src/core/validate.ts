@@ -601,7 +601,7 @@ async function runSaasPackage(
     timings,
     platformOption,
   );
-  return runSaasPackageProfile(root, config, prototypingIssues);
+  return runSaasPackageProfile(root, prototypingIssues);
 }
 
 async function runDiscussionValidators(
@@ -617,9 +617,7 @@ async function runDiscussionValidators(
     // from `npx qfai init`, from a hand-edit, or from an earlier pass of the
     // pipeline — and this is the earliest gate that can see whether it parses.
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
-    // Phase 0 authors or freezes anything. Only the parse half — the lock
-    // comparison is
-    // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
+    // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
@@ -696,7 +694,7 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDesignContractReadiness(root, config)),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validatePrototypingArtifactRefIntegrity(root)),
     ...(await validateSpecIdLinkage(root, config)),
     ...(await validateFrozenSurfaceReachability(root, config)),
     // `QFAI-PROT-311` — delegationMap entries must name a role from the
@@ -711,7 +709,7 @@ async function runPrototypingValidators(
  * reports it.
  *
  * Prototyping-mode relaxation: under `mode: exploration` the
- * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030) downgrade
  * error → warning. Schema / path / license gates stay hard error.
  * The mode is read from `prototyping.json#mode` written by iterate
  * at cycle 0 (absent → legacy "convergence" interpretation).

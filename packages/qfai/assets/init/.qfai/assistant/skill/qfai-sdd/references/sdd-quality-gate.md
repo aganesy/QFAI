@@ -22,7 +22,7 @@ The gate checks the story-tree files against their shipped templates and the app
 - Every persisted attribute and state named by an AC, EX, or BR is realizable by its contract directly or through a stated join.
 - Paired API and DB contracts agree on terminal states and error outcomes.
 - Each changed DB contract was applied to a scratch database and its declared write paths were exercised as contract-artifact-rules.md requires. The result appears under Contract executability in the affected flow evidence.
-- UI work uses a product-owned DESIGN.md and matching lock; a sample design is not frozen.
+- UI work uses a product-owned DESIGN.md that parses and validates; a sample design is not adopted.
 
 ## Flow validation
 

@@ -195,9 +195,9 @@ the new fields, seed a fresh cycle 0 with `npx qfai prototyping iterate --cycle 
 
 A malformed UI contract or an empty screen list is an authoring failure. Fix the declared contract and its index row, then refresh the affected flow's SDD validation and downstream evidence. Discussion UI/UX sidecars are source material; the contract is the execution authority.
 
-## Design lock
+## Root DESIGN.md
 
-For a UI-bearing visual flow, the root `DESIGN.md` and its lock are `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with `ui-design-contract-normalization.md`. A CLI-only flow without a visual secondary surface does not need a brand lock.
+For a UI-bearing visual flow, the root `DESIGN.md` is authored and validated by `.qfai/assistant/step/common-design-md/STEP.md`. Normalize approved screen decisions with `ui-design-contract-normalization.md`. A CLI-only flow without a visual secondary surface does not need one.
 
 ## Review checklist
 

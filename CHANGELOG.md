@@ -371,6 +371,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Removed
 
+- **Breaking: the design lock, the token mirror and the handoff YAML.**
+  Nothing writes or reads `DESIGN.md.lock.yaml`, `design-system.yaml` or
+  `prototype-handoff.yaml` under `<paths.contractsDir>/design/` any more.
+
+  - `qfai prototyping iterate` and `certify` compare root `DESIGN.md` only
+    with `prototyping.json#designMd.sha256`, the hash cycle 0 records. To
+    change `DESIGN.md` during a loop, edit it and restart from cycle 0.
+  - `iterate` writes no token copy when the loop stops. `/qfai-implement`
+    reads the tokens from root `DESIGN.md`.
+  - The handoff is `handoff` in `.qfai/evidence/prototyping/prototyping.json`:
+    `finalArtifact`, `procurement` and `implementationNotes`. The
+    prototyping profile of `qfai validate` checks it with `QFAI-DCON-012`
+    and `QFAI-DCON-013`, and checks that `finalArtifact` exists with
+    `QFAI-PROT-009`.
+  - `qfai validate` no longer emits `QFAI-DCON-001`, `QFAI-DCON-005`,
+    `QFAI-DCON-009`, `QFAI-DCON-031` or `QFAI-DCON-032`, and
+    `qfai doctor --profile prototyping` no longer reports
+    `prototyping.designMdLock` or `prototyping.designMdSha`.
+  - The saas-package profile's design-system attestation is root
+    `DESIGN.md`, present and parsing.
+  - `/qfai-sdd` no longer freezes `DESIGN.md`, and the two sample files for
+    the lock and the handoff are no longer shipped.
+
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,
   `--max` and `--keyword` options. `qfai doctor` no longer runs the

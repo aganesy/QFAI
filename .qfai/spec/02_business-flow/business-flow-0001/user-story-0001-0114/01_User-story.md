@@ -1,8 +1,8 @@
-# US-0001-0114: Cycle-zero design lock recording
+# US-0001-0114: Cycle-zero design hash recording
 
 ## User Story
 
-As an AI generator, I want `qfai prototyping iterate --cycle 0` to record `sha256(DESIGN.md)` into `prototyping.json#designMdSha256` and verify it matches `<paths.contractsDir>/design/DESIGN.md.lock.yaml#sha256`.
+As an AI generator, I want `qfai prototyping iterate --cycle 0` to record `sha256(DESIGN.md)` into `prototyping.json#designMd.sha256`, so that every later cycle and `certify` can tell whether `DESIGN.md` changed during the loop.
 
 ## Legacy Source Scope
 

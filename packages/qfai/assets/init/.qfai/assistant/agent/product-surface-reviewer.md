@@ -39,8 +39,8 @@ specialization_tags:
 - Audit visual design, token alignment, and service-level UX coherence.
 - Reconcile sidecar artifacts (screen contracts), design tokens, mermaid flows, and rendered output consistency.
   HTML mock is optional fallback evidence only. Design tokens are supporting input.
-- For UI implementation, compare rendered output against `<contractsDir>/design/prototype-handoff.yaml`, canonical prototype screenshots, HTML snapshots, and `.qfai/prototypes/winner/index.html`.
-- Check the implementation against `prototype-handoff.yaml` `procurement` before judging
+- For UI implementation, compare rendered output against the prototype handoff, canonical prototype screenshots, HTML snapshots, and the final prototype the handoff's `finalArtifact` names (`.qfai/prototype/final/index.html`).
+- Check the implementation against the handoff's `procurement` before judging
   resemblance: a region the manifest says was procured and the code rebuilt is a finding
   with a name, and an authored region the manifest does not list is one too.
 - Reject prototype parity when implementation loses CTA hierarchy, spacing rhythm, information density,
@@ -74,7 +74,8 @@ specialization_tags:
 - UI contract files: every `.yaml` / `.yml` under `<paths.contractsDir>/ui/**`, walked recursively.
   `paths.contractsDir` comes from `qfai.config.yaml` (default `.qfai/spec/03_contract`).
   Read the same contracts that routed the review here (`skill/qfai-implement/references/ui-affecting.md`).
-- Prototype handoff contract at `<paths.contractsDir>/design/prototype-handoff.yaml` when available. Read it from the same configured contract directory as the UI contracts.
+- Prototype handoff at `.qfai/evidence/prototyping/prototyping.json#handoff` when a prototyping loop ran: the final prototype, `procurement` and implementation notes. The evidence tree is local to the checkout, so read it in the checkout that ran the loop.
+- Root `DESIGN.md` for the brand tokens.
 - Runtime screenshots / HTML evidence / relevant diffs
 
 ## Deliverables

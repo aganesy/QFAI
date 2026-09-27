@@ -114,10 +114,9 @@
 | US-0001-0111 | Declared layout anti-pattern review                                                    | `user-story-0001-0111/` |
 | US-0001-0112 | Deterministic iteration stop codes                                                     | `user-story-0001-0112/` |
 | US-0001-0113 | Low-cost per-iteration evidence                                                        | `user-story-0001-0113/` |
-| US-0001-0114 | Cycle-zero design lock recording                                                       | `user-story-0001-0114/` |
+| US-0001-0114 | Cycle-zero design hash recording                                                       | `user-story-0001-0114/` |
 | US-0001-0115 | Design lock drift rejection                                                            | `user-story-0001-0115/` |
 | US-0001-0116 | Deterministic design-token violation scan                                              | `user-story-0001-0116/` |
-| US-0001-0117 | Design-system token mirror                                                             | `user-story-0001-0117/` |
 | US-0001-0118 | Project-wide UI-contract resolution                                                    | `user-story-0001-0118/` |
 | US-0001-0119 | Reviewer-operated prototype navigation                                                 | `user-story-0001-0119/` |
 | US-0001-0120 | Qualitative screen impressions                                                         | `user-story-0001-0120/` |
@@ -157,7 +156,6 @@
 | US-0001-0154 | Required Edge Enforcement                                                              | `user-story-0001-0154/` |
 | US-0001-0155 | Validate Gate Integration                                                              | `user-story-0001-0155/` |
 | US-0001-0156 | Optional Side Artifact Neutrality                                                      | `user-story-0001-0156/` |
-| US-0001-0157 | DESIGN.md sha256 Lock at Phase 0                                                       | `user-story-0001-0157/` |
 | US-0001-0158 | Active Design Contract Surface Reduction                                               | `user-story-0001-0158/` |
 | US-0001-0159 | UI contract `primary_tasks` slot per screen                                            | `user-story-0001-0159/` |
 | US-0001-0160 | Resolve active discussion pack via single helper                                       | `user-story-0001-0160/` |

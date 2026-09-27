@@ -1,7 +1,7 @@
 ---
 name: qfai-prototyping
 title: QFAI Prototyping (DESIGN.md-driven UX Loop)
-description: "Use when invoked by name or handed a QFAI work order to settle a visual or interaction decision by prototyping UI contracts under the locked DESIGN.md."
+description: "Use when invoked by name or handed a QFAI work order to settle a visual or interaction decision by prototyping UI contracts under the root DESIGN.md."
 argument-hint: ""
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
@@ -40,7 +40,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/rule/*`, and `.qfai/assistant/skill/qfai-grilling/SKILL.md` before either session — the one before the loop and the one the acceptance session resumes
 - P2: `.qfai/assistant/rule/agent-selection.md`, the routed cards under `.qfai/assistant/agent/`, and project context in the story tree
-- P3: root `DESIGN.md` + `<contractsDir>/design/DESIGN.md.lock.yaml` — the locked brand identity, which the loop refuses to run against a mismatched hash
+- P3: root `DESIGN.md` — the brand identity; the loop records its hash at cycle 0 and refuses a later cycle against a changed file
 - P4: the UI contracts under `<contractsDir>/ui/**/*.{yaml,yml}` and the references each step lists
 - P5: evidence from earlier cycles under `.qfai/evidence/prototyping/`
 
@@ -49,7 +49,7 @@ When unsure, read inputs in this order:
 | Step                    | Runs                                                                                      |
 | ----------------------- | ----------------------------------------------------------------------------------------- |
 | `prototyping-grill`     | Always, first: fixes the scope and settles by talking what the prototype is for           |
-| `prototyping-preflight` | Always: checks the UI contracts, the `DESIGN.md` lock and the Playwright environment      |
+| `prototyping-preflight` | Always: checks the UI contracts, root `DESIGN.md` and the Playwright environment          |
 | `prototyping-loop`      | Always: the C0..C9 generate, review and transcribe loop, then the user acceptance session |
 | `prototyping-recover`   | On demand only, when the loop calls for it                                                |
 | `prototyping-handoff`   | Only after the loop ends with the prototype accepted: handoff, validate, verify, certify  |
@@ -73,7 +73,8 @@ Select roles by `.qfai/assistant/rule/shared-skill-delegation-baseline.md`.
 Questions to the user follow
 `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 This skill's own are the choice at the acceptance session, the cycle-0 reset,
-which side of a `DESIGN.md` lock drift wins, and a missing brand intent.
+which side wins when `DESIGN.md` drifts from the hash cycle 0 recorded, and a
+missing brand intent.
 
 ### Reviewer Gate
 
@@ -122,5 +123,5 @@ step says.
 project_memory:
 
 - The loop runs at most 10 cycles, and the count spans cycle-0 resets.
-- `DESIGN.md` is locked by sha256; a mismatch at any cycle exits 2 and stops the loop.
+- Cycle 0 records the sha256 of `DESIGN.md` in `prototyping.json#designMd`; a mismatch at any later cycle exits 2 and stops the loop.
 - `prototyping.json#iterations[]` transcribes the reviewer's `iter-NN/review.json`; on a disagreement the reviewer's file wins.

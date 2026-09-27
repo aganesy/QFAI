@@ -60,7 +60,7 @@ it, then move to the next.
 | `sdd-flow`         | Policy, `tech.md`, `structure.md` and business flows           | Triage changed no policy fact and no flow                  |
 | `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
-| `common-design-md` | Root `DESIGN.md` and its lock                                  | The flow is not UI-bearing, or its surface is CLI-only     |
+| `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |
 | `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                | `sdd-contract` wrote or changed no BR Statement or Example |
 | `sdd-gate`         | Per-flow `validate --profile sdd` and the flow evidence        | Never                                                      |
 
@@ -107,7 +107,7 @@ may pass through `/qfai-prototyping` first.
   In `--auto`, leave these pending without asking or self-approving.
 - hard-required: a usable requirement source,
   an identifiable affected flow or an explicit decision to create one,
-  and product brand intent when a visual design lock is required.
+  and product brand intent when a root `DESIGN.md` is required.
 
 project_memory:
 

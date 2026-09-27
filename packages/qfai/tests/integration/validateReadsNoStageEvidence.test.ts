@@ -63,13 +63,8 @@ describe("validate reads no stage evidence", () => {
         ".qfai/spec/03_contract/ui/main.yaml",
         '# QFAI-CONTRACT-ID: UI-0001\nscreens:\n  - id: SCR-001\n    route: "/"\n',
       );
-      // The prototyping outputs stand in the tree with no local record of the run that made them.
-      await put(root, ".qfai/spec/03_contract/design/design-system.yaml", "source: DESIGN.md\n");
-      await put(
-        root,
-        ".qfai/spec/03_contract/design/prototype-handoff.yaml",
-        "finalIterIndex: 0\n",
-      );
+      // The final prototype stands in the tree with no local record of the run that made it.
+      await put(root, ".qfai/prototype/final/index.html", "<html></html>\n");
       const aboutTheMissingFile = (await issuesOf(root))
         .flat()
         .filter(

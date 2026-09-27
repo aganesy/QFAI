@@ -2,7 +2,9 @@
 
 ## Inputs
 
-Resolve paths.contractsDir from qfai.config.yaml. Read the optional UI surface paths section of its structure.md, every UI contract under its ui/ directory, the root DESIGN.md if present, and the design files under its design/ directory. Read the flow, story, acceptance criterion, and example that the implementation changes.
+Resolve paths.contractsDir from qfai.config.yaml. Read the optional UI surface paths section of its structure.md, every UI contract under its ui/ directory, the root DESIGN.md if present for the brand tokens, and the design files under its design/ directory.
+When a prototyping loop ran in this checkout, read its handoff at .qfai/evidence/prototyping/prototyping.json#handoff: the final prototype, its procurement and the implementation notes.
+Read the flow, story, acceptance criterion, and example that the implementation changes.
 
 ## Routing
 

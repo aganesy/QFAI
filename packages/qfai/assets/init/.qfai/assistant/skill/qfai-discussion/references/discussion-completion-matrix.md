@@ -81,8 +81,8 @@ so conditions 1 and 5 above do not apply to it:
 
 - No brand registries required, and no root `DESIGN.md` downstream. `/qfai-prototyping`
   rejects `cli`, so nothing ever reads a `visual.*` token value. `/qfai-sdd`'s `common-design-md` step
-  skips the DESIGN.md freeze for a cli-only project, and
-  `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-031` for it.
+  writes no `DESIGN.md` for a cli-only project, and
+  `validators/designContractReadiness.ts` skips `QFAI-DCON-030`/`-033`/`-034` for it.
 - No design direction either: nothing downstream reads a theme for a surface that renders
   no tokens.
 - Conditions 2, 3, 4, 6 and 7 apply unchanged: all three canonical `uiux/` sidecars, the
