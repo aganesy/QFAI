@@ -341,6 +341,30 @@ describe("migration catalog move", () => {
     }
   });
 
+  it("sends tab-indented lists and tables with a short delimiter row to a person", async () => {
+    // QFAI:EX-0004-0006-10
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/spec/_policies/01_Objective.md",
+      "# 01 Objective\n\n## Out of scope\n\n- Parent\n\t- Child\n\t\t- Grandchild\n",
+    );
+    await put(
+      context.root,
+      ".qfai/spec/_policies/06_Glossary.md",
+      "# 06 Glossary\n\n## Terms\n\n| Term | Definition |\n| --- |\n| Order | A request |\n",
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const policies = ".qfai/spec/_policies";
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/objective.md ## Non-goals: rewrite "## Out of scope" of ${policies}/01_Objective.md by hand`,
+    );
+    expect(result.output).toContain(
+      `.qfai/spec/01_policy/glossary.md ## Terms: rewrite "## Terms" of ${policies}/06_Glossary.md by hand`,
+    );
+  });
+
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {
     // QFAI:EX-0004-0006-03
     // QFAI:EX-0004-0003-21

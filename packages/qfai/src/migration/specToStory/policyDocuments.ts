@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseHeadings } from "../../core/parse/markdown.js";
-import { escapeTableCell, parseAllMarkdownTables } from "../../core/specPackParsers.js";
+import {
+  escapeTableCell,
+  parseAllMarkdownTables,
+  splitMarkdownRow,
+} from "../../core/specPackParsers.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import { MigrationInputError } from "./harness.js";
 
@@ -168,6 +172,8 @@ function listItems(body: string, keys: readonly string[] = []): string[] | null 
       blank = true;
       continue;
     }
+    // A tab in the indentation has no fixed width here, so nesting cannot be kept safely.
+    if (/^[ ]*\t/.test(line)) return null;
     if (/^\s*#/.test(line) || THEMATIC_BREAK.test(line)) return null;
     const marker = /^( {0,3})- \S/.exec(line);
     base ??= marker?.[1]?.length ?? null;
@@ -223,6 +229,8 @@ function tableRows(
     return null;
   }
   if (table.rows.some((row) => row.length !== table.headers.length)) return null;
+  // GFM reads a block as a table only when its delimiter row has as many cells as its header.
+  if (splitMarkdownRow(lines[1] ?? "").length !== table.headers.length) return null;
   const headers = table.headers.map((header) => header.trim().toLowerCase());
   const indexes = columns.map((column) =>
     [column, ...(aliases[column] ?? [])]
