@@ -685,6 +685,22 @@ function storyParts(body: string): StoryParts | null {
   return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
 }
 
+/**
+ * A story block without the fields only the archive keeps, and their continuation
+ * lines. What remains is left for a person to rewrite.
+ */
+function withoutArchivedFields(body: string): string {
+  const kept: string[] = [];
+  let skipping = false;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const field = /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line);
+    if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
+    else if (!/^\s+\S/.test(line)) skipping = false;
+    if (!skipping) kept.push(line);
+  }
+  return kept.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
 function outputStory(
   story: OldStory,
   newId: string,
@@ -692,22 +708,37 @@ function outputStory(
   parts: StoryParts | null,
 ): string {
   const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
-  if (parts === null) return `${heading}${replacedIds(story.body, ids).trim()}\n`;
+  if (parts === null) {
+    return `${heading}${replacedIds(withoutArchivedFields(story.body), ids).trim()}\n`;
+  }
   const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
   return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
 }
 
-/** A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps. */
+/**
+ * A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps.
+ * Every line keeps its indentation relative to the steps, and a whitespace-only line
+ * inside a DocString is payload, so it is shifted like the rest rather than emptied.
+ */
 function indentedScenario(scenario: string): string {
   const lines = scenario.replace(/\r\n/g, "\n").split("\n");
   const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
   const step = lines.find((line) => /^\s*(?:Given|When|Then|And|But)\s/.test(line));
   const stepIndent = step === undefined ? 0 : indent(step);
+  const shifted = (line: string): string =>
+    `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trimStart()}`;
+  let docString: string | null = null;
   return lines
     .map((line, index) => {
-      if (line.trim() === "") return "";
+      const delimiter = /^\s*("""|```)/.exec(line)?.[1] ?? null;
+      const inDocString = docString !== null && delimiter !== docString;
+      if (delimiter !== null && (docString === null || delimiter === docString)) {
+        docString = docString === null ? delimiter : null;
+      }
+      if (line === "") return "";
+      if (line.trim() === "") return inDocString ? shifted(line) : "";
       if (index === 0) return `  ${line.trimStart()}`;
-      return `${" ".repeat(4 + Math.max(0, indent(line) - stepIndent))}${line.trimStart()}`;
+      return shifted(line);
     })
     .join("\n");
 }
