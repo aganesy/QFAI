@@ -479,15 +479,9 @@ export const GATE_GROUP_FAMILIES = {
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
   "contract-parse": ["QFAI-CONTRACT-021"],
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
-  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
+  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-prototyping": [
-    "QFAI-DCON-001",
-    "QFAI-DCON-005",
-    "QFAI-DCON-009",
-    "QFAI-DCON-012",
-    "QFAI-DCON-013",
-  ],
+  "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
@@ -1265,20 +1259,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
-  "QFAI-DCON-001":
-    "UI-bearing execution requires the canonical design contracts for the current phase when UI contracts exist.",
-  "QFAI-DCON-005":
-    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, and motion_rules, plus component guidance via checklist.component_tone or richer component guidance blocks.",
-  "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
+    "prototyping.json#handoff must carry `finalArtifact` and `implementationNotes`, each as a non-empty string — the first the path of the final prototype, the second the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
-  "QFAI-DCON-031":
-    "DESIGN.md.lock.yaml must exist under contracts/design/ and contain a designMdSha256 string.",
-  "QFAI-DCON-032":
-    "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
   "QFAI-DCON-033":
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
@@ -1499,13 +1484,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
-  // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
-  // component guidance, a mirror value that diverges from DESIGN.md, and a
-  // mirror key DESIGN.md never authored — all fall through to this entry, so it
-  // has to name every repair, not just the additive one.
-  "QFAI-DCON-005":
-    "design-system.yaml is a verbatim copy of DESIGN.md, so repair the entry the message names in whichever direction it is off: add it when it is missing (the `visual.*` block or key, the legacy `checklist.*` key, or the component-guidance block), copy DESIGN.md's value over it when the two diverge, and delete it when DESIGN.md does not author it. Then refreeze the lock and rerun validate.",
   // The browser-QA bundle checks are schema assertions raised by a local
   // `makeIssue` helper that has no `suggested_action` parameter, so every one of
   // their call sites depends on this catalog for its `fix:` line.

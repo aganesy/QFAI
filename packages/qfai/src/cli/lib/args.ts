@@ -143,8 +143,8 @@ export type ParsedArgs = {
      * loop posture:
      *   - `convergence` (default): all gates apply at error severity.
      *   - `exploration`: medium gate relaxation — soft-rubric gates
-     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030..032 design
-     *     compliance) downgrade error → warning. Schema / path /
+     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030 root
+     *     DESIGN.md presence) downgrade error → warning. Schema / path /
      *     license (exit 66) gates stay hard error.
      * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
      * are rejected via markInvalid(reason).

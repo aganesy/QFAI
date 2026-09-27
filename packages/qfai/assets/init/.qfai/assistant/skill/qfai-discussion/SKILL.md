@@ -78,7 +78,7 @@ UI-bearing surface including `cli`.
 A **cli-only** pack (`primary_surface: cli`, no visual `secondary_surfaces`
 entry) keeps all three sidecars, but the brand questions do not apply to it:
 `/qfai-prototyping` rejects `cli`, so nothing downstream reads a `visual.*`
-token tree, and `/qfai-sdd`'s `common-design-md` step skips the freeze. The test is
+token tree, and `/qfai-sdd`'s `common-design-md` step writes no `DESIGN.md`. The test is
 the whole classified surface set — `primary_surface` **and** every
 `secondary_surfaces` entry.
 

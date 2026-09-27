@@ -22,14 +22,13 @@
  * DEFERRED follow-up (a future minor): the iterate / certify freeze gates in
  * `cli/commands/prototypingIterate.ts` and
  * `cli/commands/prototypingCertify.ts` still compare the full-byte
- * `hashDesignMd(text)` value against the lock's `designMdSha256` field.
- * To realize the "in-zone edits update only patchHash" UX end-to-end
- * the lock schema needs a second field (e.g. `designMdMajorSha256`)
- * written by `/qfai-sdd` at Phase 0 freeze, and iterate/certify need
- * to compare the live `majorHash` against that stored value (with the
- * existing full-hash comparison kept as a legacy fallback). The helper and
- * validator wiring exist; the lock contract extension is the missing piece,
- * tracked for a future minor release.
+ * `hashDesignMd(text)` value against `prototyping.json#designMd.sha256`,
+ * recorded at cycle 0. To realize the "in-zone edits update only
+ * patchHash" UX end-to-end, cycle 0 needs to record the `majorHash` beside
+ * it, and iterate/certify need to compare the live `majorHash` against
+ * that stored value (with the existing full-hash comparison kept as a
+ * fallback). The helper and validator wiring exist; the recorded field is
+ * the missing piece, tracked for a future minor release.
  */
 
 import { createHash } from "node:crypto";
@@ -113,9 +112,8 @@ export function parseDesignMdPatchZone(text: string): ParsePatchZoneResult {
 /**
  * Compute the dual hash pair for a DESIGN.md document.
  *
- * - `patchHash` = sha256 of the bytes verbatim (mirrors the existing
- *   `sha256` value persisted in DESIGN.md.lock.yaml under the legacy
- *   `designMdSha256` key).
+ * - `patchHash` = sha256 of the bytes verbatim (the value
+ *   `prototyping.json#designMd.sha256` records).
  * - `majorHash` = sha256 of the bytes with every in-zone token value
  *   replaced by a canonical placeholder (`<PATCH_ZONE>`). When the
  *   `patch_zone:` block is absent or malformed the two hashes are

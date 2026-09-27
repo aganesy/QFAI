@@ -746,38 +746,11 @@ describe("qfai prototyping certify (TC-3.6.x DESIGN.md gate)", () => {
     }
   });
 
-  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable", async () => {
-    // Pin the new `unreadable` LockGateResult branch added to loadLockGate
-    // for the lock fail-closed posture. Symmetric with the
-    // iterate test of the same name. Trigger the unreadable branch
-    // portably by creating the lock path as a *directory* — Node raises
-    // EISDIR on `readFile`, which routes through the new `unreadable`
-    // kind exactly as EACCES / EPERM / EIO would. Works cross-platform.
-    const root = await newTempDir();
-    await seedMinimalProject(root);
-    await seedAllGatesPass(root);
-    await mkdir(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), {
-      recursive: true,
-    });
-
-    const logger = await import("../../src/cli/lib/logger.js");
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
-    try {
-      expect(await runPrototypingCertify({ root, check: false })).toBe(2);
-      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
-    } finally {
-      errorSpy.mockRestore();
-    }
-  });
-
   it("findStaleIterDirs propagates non-ENOENT readdir errors", async () => {
-    // Symmetric pin with the lock-unreadable test: verify the
-    // fail-closed posture in findStaleIterDirs's readdir catch
+    // Verify the fail-closed posture in findStaleIterDirs's readdir catch
     // (`if (isEnoent(err)) return []; throw err;`). A future revert
     // to a bare `catch { return []; }` would let a permission flip
-    // silently bypass the stale-iter guard — the same vector the
-    // round-9 lock fix closed. Trigger a non-ENOENT readdir error
+    // silently bypass the stale-iter guard. Trigger a non-ENOENT readdir error
     // portably by passing a path that is a file, not a directory:
     // Node raises ENOTDIR which is non-ENOENT and must propagate.
     const root = await newTempDir();

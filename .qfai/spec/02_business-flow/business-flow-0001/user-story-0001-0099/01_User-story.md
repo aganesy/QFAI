@@ -2,7 +2,7 @@
 
 ## User Story
 
-As an implementation worker, I want `design-system.yaml` consumed as a deterministic input mirror of DESIGN.md tokens (not a per-iteration HTML extraction), so that downstream UI work always reads a single, validated token surface.
+As an implementation worker, I want the token tables read from root `DESIGN.md` itself (not a per-iteration HTML extraction, and not a copy), so that downstream UI work always reads a single, validated token surface.
 
 ## Legacy Source Scope
 

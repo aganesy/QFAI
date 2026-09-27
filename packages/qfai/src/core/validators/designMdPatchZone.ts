@@ -92,9 +92,8 @@ export function detectDesignMdPatchOutOfZone(input: DesignMdPatchOutOfZoneInput)
  * applies only when both files exist; without the backup snapshot
  * there is no prior state to diff against and the validator no-ops.
  *
- * The backup file is the operator-authored "what the lock was frozen
- * against" baseline. `qfai-sdd` Phase 0 writes it alongside the lock;
- * subsequent prototyping iterations consult the diff via this
+ * The backup file is the operator-authored baseline the live DESIGN.md
+ * is diffed against; prototyping iterations consult the diff via this
  * validator.
  */
 export async function validateDesignMdPatchZone(
