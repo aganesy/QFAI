@@ -68,7 +68,7 @@ const changedPathPatterns: readonly (readonly RegExp[])[] = [
   [
     /^\.qfai\/spec\/(?:_policies|01_policy|03_contract)\//,
     /^\.qfai\/assistant\/(?:constitution|catalog|manifest|process|rule)\//,
-    /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:_policies|assistant)\//,
+    /^\.qfai\/evidence\/migration-spec-to-story\/(?:contract-map\.json$|retired\/(?:_policies|assistant)\/)/,
     /^qfai\.config\.yaml$/,
   ],
   [
@@ -845,7 +845,7 @@ describe("BF-0004 acceptance criteria", () => {
       ],
       [
         /^docs\/specs\/(?:_policies|01_policy)\//,
-        /^docs\/contracts\/(?:tech|structure|contracts)\.md$/,
+        /^docs\/contracts\/(?:(?:tech|structure|contracts)\.md$|(?:cli|api|db|ui|design)\/)/,
       ],
       [/^docs\/specs\/(?:02_business-flow|spec-\d{4}|_policies)\//],
       [
@@ -873,7 +873,7 @@ describe("BF-0004 acceptance criteria", () => {
       ],
       [
         /^\.qfai\/assistant\/(?:constitution|catalog|manifest|process|rule)\//,
-        /^\.qfai\/evidence\/migration-spec-to-story\/retired\/(?:_policies|assistant)\//,
+        /^\.qfai\/evidence\/migration-spec-to-story\/(?:contract-map\.json$|retired\/(?:_policies|assistant)\/)/,
         /^qfai\.config\.yaml$/,
       ],
       [/^\.qfai\/evidence\/migration-spec-to-story\/(?:id-map\.json|retired\/)/],
@@ -912,7 +912,9 @@ describe("BF-0004 acceptance criteria", () => {
       await readFile(path.join(specs, "02_business-flow/business-flows.md"), "utf8"),
     ).toContain("BF-0001");
     expect(await readFile(path.join(contracts, "tech.md"), "utf8")).toContain("JSON requests");
-    expect(await readFile(path.join(contracts, "api/order.yaml"), "utf8")).toContain("BR-0001");
+    expect(await readFile(path.join(contracts, "api/api-0001-order.yaml"), "utf8")).toContain(
+      "BR-0001-0001",
+    );
     await expect(lstat(path.join(root, ".qfai/spec"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
@@ -1218,12 +1220,18 @@ describe("BF-0004 acceptance criteria", () => {
       await writeFile(file, content);
     }
     // A policy or tech.md section holding a paragraph is not of its template section's
-    // kind, so it goes to a person; every other destination takes the section whole.
+    // kind, and the contract index holds only its table, so both go to a person; every
+    // other destination takes the section whole.
     const moved = step(root, 3);
     expect(moved.status).toBe(3);
     for (const { target, text, source, name } of sectionMarkers) {
       if (target.includes("/01_policy/") || target.endsWith("/tech.md")) {
         expect(moved.stdout, text).toContain(`"## ${name}" of ${source}`);
+        expect(await readFile(path.join(root, target), "utf8"), target).not.toContain(text);
+      } else if (target.endsWith("/contracts.md")) {
+        expect(moved.stdout, text).toContain(
+          `rewrite the text of "## ${name}" in ${source} outside its tables by hand`,
+        );
         expect(await readFile(path.join(root, target), "utf8"), target).not.toContain(text);
       } else {
         expect(await readFile(path.join(root, target), "utf8"), target).toContain(text);
@@ -1406,7 +1414,7 @@ describe("BF-0004 acceptance criteria", () => {
     if (!firstFlow || !firstStory || !plan.rules[0]) throw new Error("Fixture is incomplete");
     expect(firstFlow.from).toBe("CHG-0001: Order flow");
     firstStory.criteria = ["AC-0001-0001"];
-    plan.rules[0].contract = "api/orders.yaml";
+    plan.rules[0].contract = "api/order.yaml";
     plan.flows.push({
       title: "Track a receipt",
       from: "CHG-0002: Track a receipt",
@@ -1470,7 +1478,7 @@ describe("BF-0004 acceptance criteria", () => {
     const firstStory = plan.flows[0]?.stories[0];
     if (!firstStory || !plan.rules[0]) throw new Error("Migration fixture is incomplete");
     firstStory.criteria = ["AC-0001-0001"];
-    plan.rules[0].contract = "api/orders.yaml";
+    plan.rules[0].contract = "api/order.yaml";
     plan.flows.push({ title: "Track a receipt", stories: [{ id: "US-0001-0002" }] });
     await writeFile(planPath, stringifyYaml(plan));
     prepareThrough(root, 3);
@@ -1487,12 +1495,12 @@ describe("BF-0004 acceptance criteria", () => {
       "US-0001-0002": "US-0002-0001",
       "AC-0001-0001": "AC-0001-0001-01",
       "AC-0001-0002": "AC-0002-0001-01",
-      "BR-0001-0001": "BR-0001",
+      "BR-0001-0001": "BR-0001-0001",
     });
     expect(map.placements["spec-0001"]).toMatchObject({
       "US-0001-0001": "Place an order",
       "US-0001-0002": "Track a receipt",
-      "BR-0001-0001": "api/orders.yaml",
+      "BR-0001-0001": "api/order.yaml",
     });
     expect(
       await readFile(
@@ -1620,8 +1628,8 @@ describe("BF-0004 acceptance criteria", () => {
       "AC-0001-0002": "AC-0001-0001-02",
       "EX-0001-0001": "EX-0001-0001-01",
       "EX-0001-0002": "EX-0001-0001-02",
-      "BR-0001-0001": "BR-0001",
-      "BR-0001-0002": "BR-0002",
+      "BR-0001-0001": "BR-0001-0001",
+      "BR-0001-0002": "BR-0002-0001",
     });
   });
 
@@ -1847,7 +1855,7 @@ describe("BF-0004 acceptance criteria", () => {
       "US-0001-0001": "US-0001-0001",
       "AC-0001-0001": "AC-0001-0001-01",
       "EX-0001-0001": "EX-0001-0001-01",
-      "BR-0001-0001": "BR-0001",
+      "BR-0001-0001": "BR-0001-0001",
       "TC-0001-0001": "EX-0001-0001-01",
       "TC-0001-0003": "EX-0001-0001-02",
     });
@@ -1974,35 +1982,28 @@ describe("BF-0004 acceptance criteria", () => {
   // QFAI:AC-0004-0009-01
   it("places three rules in their selected API, DB and design contracts", async () => {
     const api = await readFile(
-      path.join(journey.root, ".qfai/spec/03_contract/api/order.yaml"),
+      path.join(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml"),
       "utf8",
     );
     const db = await readFile(
-      path.join(journey.root, ".qfai/spec/03_contract/db/orders.sql"),
+      path.join(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql"),
       "utf8",
     );
     const design = await readFile(
-      path.join(journey.root, ".qfai/spec/03_contract/design/order.md"),
+      path.join(journey.root, ".qfai/spec/03_contract/design/design-0003-order.md"),
       "utf8",
     );
-    expect(api).toContain("BR-0001");
+    expect(api).toContain("BR-0001-0001");
     expect(api).toContain("EX-0001-0001-01");
-    expect(db).toContain("BR-0002");
-    expect(design).toContain("BR-0003");
+    expect(db).toContain("BR-0002-0001");
+    expect(design).toContain("BR-0003-0001");
   });
 
   // QFAI:AC-0004-0009-02
   it("reports a rule whose destination contract is absent and retains its wording", async () => {
     const root = await project();
-    const plan = path.join(root, ".qfai/evidence/migration-spec-to-story/plan.yaml");
-    const original = await readFile(plan, "utf8");
-    const modified = original.replace(
-      "contract: api/order.yaml",
-      "contract: api/missing-order.yaml",
-    );
-    expect(modified).not.toBe(original);
-    await writeFile(plan, modified);
     prepareAllowingPerson(root, 6);
+    await rm(path.join(root, ".qfai/spec/03_contract/api/api-0001-order.yaml"));
     const source = path.join(root, ".qfai/spec/spec-0001/04_Business-Rules.md");
     const before = await readFile(source, "utf8");
     const result = step(root, 7);
@@ -2012,7 +2013,7 @@ describe("BF-0004 acceptance criteria", () => {
     expect(before).toContain(oldRule);
     expect(await readFile(source, "utf8")).toContain(oldRule);
     await expect(
-      lstat(path.join(root, ".qfai/spec/03_contract/api/missing-order.yaml")),
+      lstat(path.join(root, ".qfai/spec/03_contract/api/api-0001-order.yaml")),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
@@ -2025,7 +2026,8 @@ describe("BF-0004 acceptance criteria", () => {
     const report = journey.applied[7]?.stdout ?? "";
     expect(integration).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(report).toContain("QFAI:SPEC-0001:US-0001-0001");
-    expect(report).toContain("QFAI:CON-API-0001");
+    expect(integration).toContain(["QFAI", "API-0001"].join(":"));
+    expect(integration).not.toContain(["QFAI", "CON-API-0001"].join(":"));
   });
 
   // QFAI:AC-0004-0011-01

@@ -32,4 +32,13 @@ Scenario: An overlay moves beside its rule, or is archived for a person
   And the second is under the migration's retired archive and listed under For a person
   And an overlay whose destination already holds a file is archived, leaving that file unchanged, and listed under For a person
   And when overlays of one name under both directories could take the same place, step 3 writes nothing and lists both under For a person
+
+# AC-0004-0006-04
+# Parent: US-0004-0006
+Scenario: Every 1.x contract takes a contract ID, a name to match and a row in the contract index
+  Given contract files under the contract kind directories that declare old `CON-*` IDs or none, and the old contract index
+  When step 3 runs
+  Then each contract has a new contract ID, unique across kinds, a file name that carries it and a declaration of it
+  And the contract map records each old path and old ID against the new ones
+  And `contracts.md` lists every contract in the index table, and what it cannot hold is listed under For a person
 ```

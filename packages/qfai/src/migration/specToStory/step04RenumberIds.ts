@@ -6,11 +6,21 @@ import { parseDocument } from "yaml";
 import { isEnoent } from "../../core/fs/errno.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { escapeTableCell } from "../../core/specPackParsers.js";
-import { nextId } from "../../core/storyTree/ids.js";
+import { declaredContractId } from "../../core/contractsDecl.js";
+import { CONTRACT_KIND_BY_DIR, nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { ID_MAP_PATH, readIdMap, serializeIdMap, type MigrationIdMap } from "./idMap.js";
+import { OLD_CONTRACT_TOKEN } from "./contractIds.js";
+import {
+  ID_MAP_PATH,
+  oldContractIds,
+  readContractMap,
+  readIdMap,
+  serializeIdMap,
+  type ContractMap,
+  type MigrationIdMap,
+} from "./idMap.js";
 import {
   parseLegacyRecords,
   plainExampleCells,
@@ -37,7 +47,8 @@ export type NumberingInput = {
     name: string;
     stories: readonly { id: string; criteria: readonly string[]; examples: readonly string[] }[];
   }[];
-  rules: readonly string[];
+  /** Each rule in plan order, with the ID of the contract that declares it. */
+  rules: readonly { id: string; contract: string }[];
 };
 
 export type PlannedStory = { id: string; criteria: string[] };
@@ -174,6 +185,12 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     ) {
       throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
     }
+    const [kindDirectory, ...below] = entry.contract.split(/[\\/]/);
+    if (below.length === 0 || !Object.keys(CONTRACT_KIND_BY_DIR).includes(kindDirectory ?? "")) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} names ${placement}, which is not under cli/, api/, db/, ui/ or design/`,
+      );
+    }
     if (seenRules.has(entry.id))
       throw new MigrationInputError(`${PLAN_PATH}: duplicate rule ${entry.id}`);
     seenRules.add(entry.id);
@@ -205,7 +222,7 @@ export function numberPlannedItems(input: NumberingInput): NumberedPlan {
     }
   }
   for (const rule of input.rules) {
-    numbered.rules[rule] = nextId("BR", Object.values(numbered.rules));
+    numbered.rules[rule.id] = nextId("BR", Object.values(numbered.rules), rule.contract);
   }
   return numbered;
 }
@@ -554,9 +571,48 @@ function derivedCriterion(exampleId: string, cases: readonly OldCase[]): string 
 
 function replacedIds(text: string, replacements: Record<string, string>): string {
   return text.replace(
-    /\b(?:US|AC|EX|BR|TC)-\d{4}-\d{4}\b/g,
+    /\b(?:(?:US|AC|EX|BR|TC)-\d{4}-\d{4}|CON-(?:API|DB|UI)-\d+)\b(?!-\d)/g,
     (oldId) => replacements[oldId] ?? oldId,
   );
+}
+
+/** An old `CON-*` ID in a story's text that no contract declared, so step 4 left it as written. */
+function unmappedContracts(
+  file: string,
+  texts: readonly string[],
+  replacements: Record<string, string>,
+): string[] {
+  const tokens = new Set(texts.flatMap((text) => text.match(OLD_CONTRACT_TOKEN) ?? []));
+  return [...tokens]
+    .filter((token) => replacements[token] === undefined)
+    .map((token) => `${file}: ${token} is declared by no contract, so it has no new ID`);
+}
+
+/**
+ * The contract ID of each planned rule's destination. The plan names the
+ * contract by its path before step 3 renamed it; a contract that already
+ * declared its ID keeps its path.
+ */
+async function ruleContractIds(
+  context: MigrationContext,
+  plan: MigrationPlan,
+  contracts: ContractMap,
+): Promise<Map<string, string>> {
+  const resolved = new Map<string, string>();
+  for (const rule of plan.rules) {
+    const mapped: string | undefined = contracts[rule.contract]?.id;
+    const text = mapped ? null : await readOptional(path.join(context.contractsDir, rule.contract));
+    const id = mapped ?? (text === null ? null : declaredContractId(rule.contract, text));
+    if (id === null) {
+      throw new MigrationInputError(
+        text === null
+          ? `${PLAN_PATH}: ${rule.id} names ${rule.contract}, which is not a contract file`
+          : `Run step 3 before step 4: ${rule.contract} declares no contract ID`,
+      );
+    }
+    resolved.set(rule.id, id);
+  }
+  return resolved;
 }
 
 const MERMAID_FENCE = /```mermaid\s*\n([\s\S]*?)\n```/m;
@@ -1104,6 +1160,8 @@ export const step04: MigrationStep = {
           exampleCriterion.set(example.id, criterion);
       }
     }
+    const contracts = existingMap?.contracts ?? (await readContractMap(context.root)) ?? {};
+    const ruleContracts = await ruleContractIds(context, plan, contracts);
     const numberedInput: NumberingInput = {
       flows: plan.flows.map((flow) => ({
         name: flow.title,
@@ -1137,7 +1195,10 @@ export const step04: MigrationStep = {
           return { id: planned.id, criteria, examples };
         }),
       })),
-      rules: plan.rules.map((rule) => rule.id),
+      rules: plan.rules.map((rule) => ({
+        id: rule.id,
+        contract: ruleContracts.get(rule.id) ?? "",
+      })),
     };
     for (const rule of plan.rules) {
       const pack = byPack.get(packOf(rule.id));
@@ -1185,7 +1246,7 @@ export const step04: MigrationStep = {
         if (row) retiredPacks[pack.id] = row.id;
       }
     }
-    const computedMap: MigrationIdMap = { version: 1, ids, placements, retiredPacks };
+    const computedMap: MigrationIdMap = { version: 1, ids, placements, retiredPacks, contracts };
     if (existingMap !== null) {
       assertUnchangedPlacements(plan, existingMap);
       for (const [pack, entries] of Object.entries(ids)) {
@@ -1254,7 +1315,7 @@ export const step04: MigrationStep = {
         const storyId = map.ids[packOf(planned.id)]?.[planned.id];
         if (!story || !pack || !storyId) continue;
         const locations = storyPaths(specsRelative, flowId, storyId);
-        const packMap = map.ids[pack.id] ?? {};
+        const packMap = { ...(map.ids[pack.id] ?? {}), ...oldContractIds(map.contracts) };
         const mappedCriteria = pack.criteria.filter(
           (item) => ownerByCriterion.get(item.id) === story.id && criterionShape(item) !== null,
         );
@@ -1280,6 +1341,13 @@ export const step04: MigrationStep = {
             const criterionId = packMap[exampleCriterion.get(item.id) ?? ""] ?? "";
             return { id, criterionId, input: plain.input, expected: plain.expected };
           });
+        forAPerson.push(
+          ...unmappedContracts(
+            storyFile,
+            [story.body, ...mappedCriteria.map((item) => item.text)],
+            packMap,
+          ),
+        );
         const parts = storyParts(story.body);
         if (parts === null) {
           forAPerson.push(

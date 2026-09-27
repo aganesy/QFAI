@@ -215,7 +215,10 @@ async function applyPreparedResolution(root: string): Promise<void> {
     example: string;
   };
   const target = path.join(root, ".qfai/spec/03_contract", resolution.contract);
-  const parsed: unknown = parse(await readFile(target, "utf8"));
+  const text = await readFile(target, "utf8");
+  // The contract declares its ID on a comment line, which a YAML round trip drops.
+  const declaration = /^# QFAI-CONTRACT-ID: .*\n/.exec(text)?.[0] ?? "";
+  const parsed: unknown = parse(text);
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`Prepared resolution cannot read ${resolution.contract}`);
   }
@@ -231,7 +234,7 @@ async function applyPreparedResolution(root: string): Promise<void> {
   }
   if (!Array.isArray(selected.examples)) throw new Error("Migrated rule has no examples");
   selected.examples.push(resolution.example);
-  await writeFile(target, stringify(contract), "utf8");
+  await writeFile(target, `${declaration}${stringify(contract)}`, "utf8");
 }
 
 /**
@@ -441,13 +444,13 @@ describe("spec-0018: one shipped-script migration journey", () => {
   });
 
   it("places each rule in the selected contract with its example", async () => {
-    const api = await textAt(journey.root, ".qfai/spec/03_contract/api/order.yaml");
-    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/orders.sql");
-    const design = await textAt(journey.root, ".qfai/spec/03_contract/design/order.md");
-    expect(api).toContain("BR-0001");
+    const api = await textAt(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml");
+    const db = await textAt(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
+    const design = await textAt(journey.root, ".qfai/spec/03_contract/design/design-0003-order.md");
+    expect(api).toContain("BR-0001-0001");
     expect(api).toContain("EX-0001-0001-01");
-    expect(db).toContain("BR-0002");
-    expect(design).toContain("BR-0003");
+    expect(db).toContain("BR-0002-0001");
+    expect(design).toContain("BR-0003-0001");
   });
 
   it("rewrites mapped annotations while reporting an integration US and contract annotation", async () => {

@@ -366,7 +366,7 @@ describe("migration catalog move", () => {
   });
 
   it("writes tech.md in its template's shape and its constraints to constraint.md", async () => {
-    // QFAI:EX-0004-0006-12
+    // QFAI:EX-0004-0006-17
     const context = await fixture();
     await put(
       context.root,
@@ -433,7 +433,7 @@ describe("migration catalog move", () => {
   });
 
   it("sends the technology content tech.md cannot take to a person", async () => {
-    // QFAI:EX-0004-0006-13
+    // QFAI:EX-0004-0006-18
     const context = await fixture();
     await put(
       context.root,

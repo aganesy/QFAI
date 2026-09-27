@@ -492,6 +492,30 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     plan, ID map and archives stay in that one working copy.
   - No CI lane runs the prototyping profile.
 
+- **The migration gives every 1.x contract its 2.x contract ID.** No old
+  `CON-*` ID is left where a step can rewrite it.
+  - Step 3 numbers every contract under `cli/`, `api/`, `db/`, `ui/` and
+    `design/` that has no 2.x ID, from `0001` across kinds, in the order CLI,
+    API, DB, UI, design, then by old number. It renames each file to
+    `<kind>-NNNN-<slug>.<ext>`, declares the new ID in its H1 or
+    `QFAI-CONTRACT-ID` line, and rewrites the old IDs in `-- Depends on:` and
+    `x-qfai-depends-on`. Its dry run names each rename with the new ID.
+  - The old and new IDs and paths are recorded in `contract-map.json` beside
+    the plan, and step 4 copies them into the ID map.
+  - `contracts.md` becomes one `## Contract Index` table with the columns
+    `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+    old index's other sections go to a person.
+  - The plan still names a rule's contract by its old path. Step 4 refuses a
+    path outside the five contract directories, or one that names no
+    contract, and numbers each contract's rules `BR-<contract number>-NNNN`.
+  - Step 7 writes a Markdown contract's rules under `## Business rules`, and
+    rewrites the old IDs in each rule statement through the ID map.
+  - Step 8 rewrites a `QFAI:CON-*` annotation to the new contract ID.
+  - An old ID no contract declared, and one left elsewhere in a contract, such
+    as a UI marker, is listed for a person with its file and line.
+  - **Breaking:** the migration no longer continues from a plan and ID map
+    written under the skill's earlier name, `qfai-migration-spec-to-story`.
+
 ### Removed
 
 - **A spec document can no longer opt out of its schema.**
