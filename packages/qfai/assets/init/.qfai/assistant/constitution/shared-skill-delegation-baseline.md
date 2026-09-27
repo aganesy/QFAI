@@ -2,7 +2,7 @@
 
 Use this document to keep SKILL bodies compact. Skill files should reference this baseline and only add role-, stage-, or gate-specific rules.
 
-## Sub-agent Delegation
+## Sub-agent Delegation (MANDATORY)
 
 ### Orchestrator Protocol (MUST)
 

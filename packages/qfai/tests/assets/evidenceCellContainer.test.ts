@@ -77,7 +77,7 @@ describe.each(TREES)("%s", (tree) => {
   });
 
   it("gives the evidence file a per-item section to claim the payload", async () => {
-    // Before, the eleven-field contract sat under `## Evidence`
+    // Before, the eleven-field contract sat under `## Evidence (MANDATORY)`
     // while that file's own Required sections had no per-item slot — so the
     // only *named* destination was the table cell.
     const skill = await read(tree, SKILL);

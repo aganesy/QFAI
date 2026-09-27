@@ -511,7 +511,7 @@ describe("the clarification budget is countable", () => {
     });
 
     it(`${tree}: qfai-configure keeps its tooling-ambiguity stop outside the budget`, async () => {
-      // Hard Constraints says "MUST stop and escalate if tooling choices or
+      // CRITICAL CONSTRAINTS says "MUST stop and escalate if tooling choices or
       // runnable path remain ambiguous", unconditionally, while "configuration
       // decisions" is a listed clarification example that the budget turns into
       // an assumption after five. A run past its budget had to either break the
@@ -526,7 +526,10 @@ describe("the clarification budget is countable", () => {
         "This stop is a `hard-required` input, not a clarification, so it outlives an exhausted Article VI budget",
       );
       expectPhrase(content, "escalate rather than picking a runner");
-      expectPhrase(content, "a resolved tooling choice with a runnable path (Hard Constraints)");
+      expectPhrase(
+        content,
+        "a resolved tooling choice with a runnable path (CRITICAL CONSTRAINTS)",
+      );
     });
   }
 });

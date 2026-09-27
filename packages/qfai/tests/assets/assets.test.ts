@@ -237,7 +237,7 @@ describe("assets guardrails", () => {
     // skill delegation contracts. Apply the v1.x guardrail to all
     // skills *except* qfai-prototyping.
     const requiredPhrases = [
-      "## Sub-agent Delegation",
+      "## Sub-agent Delegation (MANDATORY)",
       "### Orchestrator Protocol (MUST)",
       "### Capability Probe (MUST)",
       "### Delegation Failure (Hard Stop)",
