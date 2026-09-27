@@ -24,6 +24,12 @@ structure:
             regex: true
           - pattern: '(?m)^\s*\|'
             regex: true
+          - pattern: '(?m)^[ \t]*(?:>|```|~~~)'
+            regex: true
+          - pattern: '(?m)^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$'
+            regex: true
+          - pattern: '(?:\A(?:[ \t]*\n)*|\n[ \t]*\n)(?: {4}|\t)'
+            regex: true
       - heading:
           pattern: "^## Assumptions$"
           regex: true
@@ -35,6 +41,8 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+            regex: true
       - heading:
           pattern: "^## Dependencies$"
           regex: true
@@ -45,6 +53,8 @@ structure:
           - min: 1
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Milestones$"

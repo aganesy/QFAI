@@ -308,20 +308,38 @@ describe("shipped schemas agree with the SDD templates", () => {
   }
 });
 
-describe("a closed section rejects an element indented past its first column", () => {
-  const schema = path.join(SCHEMA_ROOT, "story/01_policy/objective.mdschema.yml");
-  const template = readFileSync(path.join(TEMPLATE_ROOT, "01_policy/objective.md"), "utf-8");
-  const variants: ReadonlyArray<readonly [string, string, string]> = [
-    ["a list item in a table section", "## Success criteria\n\n", " - extra item\n\n"],
-    ["a table in a list section", "## Non-goals\n\n", " | a | b |\n | - | - |\n\n"],
+describe("a closed policy section rejects content of another kind", () => {
+  /** What is inserted, into which document, after which text, and the text itself. */
+  const variants: ReadonlyArray<readonly [string, string, string, string]> = [
+    ["prose before the first section", "objective", "# Objective\n\n", "Overview prose.\n\n"],
+    ["a list item in a table section", "objective", "## Success criteria\n\n", " - extra item\n\n"],
+    ["a table in a list section", "objective", "## Non-goals\n\n", " | a | b |\n | - | - |\n\n"],
+    [
+      "a two-space table in a list section",
+      "objective",
+      "## Non-goals\n\n",
+      "  | a | b |\n  | - | - |\n\n",
+    ],
+    ["three-space prose in a list section", "objective", "## Non-goals\n\n", "   extra prose\n\n"],
+    ["a fenced block in a prose section", "initiative", "## Initiative\n\n", "```\ncode\n```\n\n"],
+    ["a block quote in a prose section", "initiative", "## Initiative\n\n", "> quote\n\n"],
+    ["a thematic break in a prose section", "initiative", "## Initiative\n\n", "---\n\n"],
+    [
+      "an indented code block in a prose section",
+      "initiative",
+      "## Initiative\n\n",
+      "    indented code\n\n",
+    ],
   ];
 
-  it.each(variants)("reports %s", (_label, heading, inserted) => {
-    expect(template).toContain(heading);
-    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-indent-"));
+  it.each(variants)("reports %s", (_label, name, anchor, inserted) => {
+    const template = readFileSync(path.join(TEMPLATE_ROOT, `01_policy/${name}.md`), "utf-8");
+    expect(template).toContain(anchor);
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-closed-"));
     try {
-      const file = path.join(dir, "objective.md");
-      writeFileSync(file, template.replace(heading, `${heading}${inserted}`), "utf-8");
+      const file = path.join(dir, `${name}.md`);
+      writeFileSync(file, template.replace(anchor, `${anchor}${inserted}`), "utf-8");
+      const schema = path.join(SCHEMA_ROOT, `story/01_policy/${name}.mdschema.yml`);
       const result = spawnSync(
         process.execPath,
         [MDSCHEMA_CLI, "check", "--schema", schema, file],

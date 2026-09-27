@@ -27,6 +27,8 @@ structure:
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
             regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
+            regex: true
       - heading:
           pattern: "^## Users$"
           regex: true
@@ -36,6 +38,8 @@ structure:
           - min: 1
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
             regex: true
       - heading:
           pattern: "^## Success criteria$"
@@ -58,4 +62,6 @@ structure:
           - min: 1
         forbidden_text:
           - pattern: '(?m)^[ \t]?[^-\s#]'
+            regex: true
+          - pattern: '(?:\A|\n[ \t]*\n)\s*[^-\s#]'
             regex: true
