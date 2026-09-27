@@ -20,7 +20,7 @@ describe("SDD griller and reviewer independence", () => {
       const gate = await read(tree, "assistant/skill/qfai-sdd/references/sdd-quality-gate.md");
       expect(loop).toContain("Keep authorship, grilling, and final review as distinct invocations");
       expect(loop).toContain("a critical product decision needs the user");
-      expect(skill).toContain("an author cannot review the artifact it edited");
+      expect(skill).toContain("an author does not review its own artifact");
       expect(gate).toContain("Reviewers are independent of authors");
     });
   }

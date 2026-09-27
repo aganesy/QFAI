@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { parseSkillFrontmatter, type SkillFrontmatter } from "../agentFrontmatter.js";
 import { resolvePath, type QfaiConfig } from "../config.js";
+import { joinAssistantLayer } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -18,8 +19,10 @@ import { issue } from "./utils.js";
  */
 export type RoutingBinding = "required" | "conditional";
 
-/** What `agent-routing.yml` says about one skill, collected across its phases. */
+/** What `agent-routing.yml` says about one step or skill, collected across its phases. */
 export type SkillRouting = {
+  /** A `- step:` entry is checked against its `STEP.md`, a `- skill:` entry against its `SKILL.md`. */
+  kind: "skill" | "step";
   agents: Map<string, RoutingBinding>;
   reviewProfile?: string;
   /**
@@ -79,8 +82,8 @@ type Selection = { binding: RoutingBinding; source: string };
  */
 const MANIFEST_EXTERNAL_ROLES = new Set(["orchestrator"]);
 
-export function emptySkillRouting(): SkillRouting {
-  return { agents: new Map(), phases: 0 };
+export function emptySkillRouting(kind: SkillRouting["kind"] = "skill"): SkillRouting {
+  return { kind, agents: new Map(), phases: 0 };
 }
 
 /**
@@ -142,7 +145,10 @@ export async function validateSkillRoles(
   // has a backlog rather than one edit.
   const crossCheckSeverity = "error";
   for (const [skill, entry] of routing) {
-    const skillPath = path.join(skillsDir, skill, "SKILL.md");
+    const skillPath =
+      entry.kind === "step"
+        ? joinAssistantLayer(root, "step", skill, "STEP.md")
+        : path.join(skillsDir, skill, "SKILL.md");
     const rel = path.relative(root, skillPath).replace(/\\/g, "/");
     // The manifest-side gate checks run first because they need no `SKILL.md`.
     // Behind the read, a skill that ships no `SKILL.md` — or one this rule
@@ -206,7 +212,9 @@ export async function validateSkillRoles(
       crossCheckSeverity,
     );
   }
-  await reportUnroutedSkills(root, skillsDir, routing, issues, crossCheckSeverity);
+  await reportUnroutedSkills(root, skillsDir, "SKILL.md", routing, issues, crossCheckSeverity);
+  const stepsDir = joinAssistantLayer(root, "step");
+  await reportUnroutedSkills(root, stepsDir, "STEP.md", routing, issues, crossCheckSeverity);
 }
 
 /** `QFAI-AGENT-016` for a `SKILL.md` whose frontmatter block cannot be read. */
@@ -490,6 +498,7 @@ function reportUnselectableRoles(
 async function reportUnroutedSkills(
   root: string,
   skillsDir: string,
+  docName: "SKILL.md" | "STEP.md",
   routing: Map<string, SkillRouting>,
   issues: Issue[],
   crossCheckSeverity: "warning" | "error",
@@ -506,7 +515,7 @@ async function reportUnroutedSkills(
     if ((routing.get(name)?.phases ?? 0) > 0) {
       continue;
     }
-    const skillPath = path.join(skillsDir, name, "SKILL.md");
+    const skillPath = path.join(skillsDir, name, docName);
     const frontmatter = await readSkillFrontmatter(skillPath);
     const rel = path.relative(root, skillPath).replace(/\\/g, "/");
     if (frontmatter?.parseError) {

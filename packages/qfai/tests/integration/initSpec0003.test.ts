@@ -234,15 +234,16 @@ describe("TC-0003-0020: review-*/ サブディレクトリが gitignore 対象",
 // assistant-tree path helpers used by init.
 
 describe("TC-0003-0021: singular assistant-tree seed", () => {
-  it("init uses the assistant path SSOT and ships the four singular layers", async () => {
+  it("init uses the assistant path SSOT and ships the singular layers", async () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toContain("assistantPaths");
     expect(content).toContain("ASSISTANT_DIR");
     expect(content).toContain("joinAssistantLayer");
     expect(content).toContain('"assistant/skill"');
     expect(content).toContain('"assistant/agent"');
+    expect(content).toContain('"assistant/step"');
     const { ASSISTANT_LAYERS } = await import("../../src/core/paths/assistantPaths.js");
-    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
+    expect(ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
   });
 });
 
@@ -261,7 +262,7 @@ describe("TC-0003-0023: --upgrade-assistant-tree migration", () => {
 describe("TC-0003-0025: assistantPaths.ts SSOT module", () => {
   it("exports the singular layer names and path helpers", async () => {
     const mod = await import("../../src/core/paths/assistantPaths.js");
-    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "agent", "prompt"]);
+    expect(mod.ASSISTANT_LAYERS).toEqual(["rule", "skill", "step", "agent", "prompt"]);
     expect(typeof mod.joinAssistantLayer).toBe("function");
     expect(mod.joinAssistantLayer("project", "rule", "quality.md")).toBe(
       path.join("project", ".qfai", "assistant", "rule", "quality.md"),

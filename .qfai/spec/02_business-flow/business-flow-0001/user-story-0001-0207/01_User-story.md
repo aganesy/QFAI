@@ -9,7 +9,7 @@
 - Non-goals: deciding the plan; adding an example; judging whether the run is
   complete.
 - Notes: discussion-20260923171450572#DUS-001 (its implement side, with the
-  seam-only work order the acceptance stage asks for),
+  `implement-seam` work order the acceptance stage asks for),
   discussion-20260923171450572#REQ-0013,
   discussion-20260923171450572#REQ-0034,
   discussion-20260923171450572#REQ-0038,

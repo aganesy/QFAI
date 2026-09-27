@@ -7,6 +7,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -168,7 +169,7 @@ for (const skillId of requiredSkills) {
   }
 }
 
-for (const layer of ["skill", "agent", "rule", "prompt"]) {
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
   const packed = path.join(templateDir, "assistant", layer);
   if (!existsSync(packed) || !lstatSync(packed).isDirectory()) {
     throw new Error(`assets/init/.qfai/assistant/${layer} must be a directory.`);
@@ -241,7 +242,7 @@ if (missingPatterns.length > 0) {
 }
 
 const assistantDir = path.join(qfaiDir, "assistant");
-for (const layer of ["skill", "agent", "rule", "prompt"]) {
+for (const layer of ["skill", "step", "agent", "rule", "prompt"]) {
   const generated = path.join(assistantDir, layer);
   if (!existsSync(generated) || !lstatSync(generated).isDirectory()) {
     throw new Error(`init did not generate .qfai/assistant/${layer} directory.`);
@@ -302,31 +303,6 @@ if (hasEntry(path.join(qfaiDir, "specs")) || hasEntry(path.join(qfaiDir, "contra
   throw new Error("init generated an obsolete spec or contract directory.");
 }
 
-const syntheticDecisionPath = path.join(specDir, "01_policy", "verify-pack-guardrail.md");
-writeFileSync(
-  syntheticDecisionPath,
-  [
-    "# Delta",
-    "",
-    "## Decision Guardrails",
-    "",
-    "### DG-0001: Synthetic guardrail for verify-pack",
-    "- Type: trade-off",
-    "- Scope: .qfai/spec/*",
-    "- Guardrail: Do not implement the rejected synthetic option.",
-    "- Reason: verify-pack smoke test entry",
-    "- Reconsider: never",
-    "- Keywords: synthetic, verify-pack",
-    "",
-  ].join("\n"),
-);
-execFileSync(
-  "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDecisionPath, "--max", "20"],
-  { stdio: "inherit" },
-);
-rmSync(syntheticDecisionPath, { force: true });
-
 // Symlink-based integration directories (v1.5.4+)
 const skillIntegrationDirs = [
   [".claude/skills", path.join(outputDir, ".claude", "skills")],
@@ -383,6 +359,19 @@ for (const skillId of requiredSkills) {
       throw new Error(
         `${path.relative(outputDir, skillDir)} must resolve to ${path.relative(outputDir, canonicalSkillDir)}.`,
       );
+    }
+  }
+}
+
+// Steps are read by their parent skill, never offered to a host as skills.
+const stepsDir = path.join(assistantDir, "step");
+for (const stepId of readdirSync(stepsDir)) {
+  if (!existsSync(path.join(stepsDir, stepId, "STEP.md"))) {
+    throw new Error(`init did not generate .qfai/assistant/step/${stepId}/STEP.md.`);
+  }
+  for (const [label, dir] of skillIntegrationDirs) {
+    if (hasEntry(path.join(dir, stepId))) {
+      throw new Error(`init linked step ${stepId} into ${label}.`);
     }
   }
 }

@@ -4,6 +4,7 @@ import path from "node:path";
 import { everyStageResult, scopeDigestOf, skillOwnerOf } from "./common.js";
 import { isRecord } from "./parse.js";
 import { writeRecord } from "./persistence.js";
+import { isSeamOrder, stepNamesOf, stepServes } from "./steps.js";
 import type { IoRefusal, JournalRecord, WorkflowReplay } from "./persistence.js";
 import type {
   WorkflowActor,
@@ -171,7 +172,7 @@ function foldSeam(snapshot: Snapshot, record: JournalRecord): Snapshot | undefin
     };
     return { ...withoutWorkOrder(snapshot), seamRequest };
   }
-  if (order.operation !== "seam-only" || !snapshot.seamRequest) return undefined;
+  if (!isSeamOrder(order) || !snapshot.seamRequest) return undefined;
   const { seamRequest: _closed, ...rest } = withoutWorkOrder(snapshot);
   return rest;
 }
@@ -217,8 +218,11 @@ function foldRepaired(snapshot: Snapshot, record: JournalRecord): Snapshot | und
   if (!request || !record.stageInstanceId || record.stageInstanceId === request.stageInstanceId) {
     return undefined;
   }
-  const owner = snapshot.outstandingWorkOrder?.executor?.skill;
-  const debts = request.debts.filter((debt) => skillOwnerOf(debt) !== owner);
+  const steps = stepNamesOf(snapshot.outstandingWorkOrder);
+  const debts = request.debts.filter((debt) => {
+    const owner = skillOwnerOf(debt);
+    return !owner || !steps.some((step) => stepServes(step, owner));
+  });
   const { halt: _cleared, repairRequest: _repaired, ...rest } = withoutWorkOrder(snapshot);
   return {
     ...rest,

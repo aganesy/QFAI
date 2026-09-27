@@ -103,7 +103,18 @@ function stageSetGaps(proposal: WorkflowProposal, facts: WorkflowFacts): string[
   const changeRoute = proposal.candidateRoute !== null && proposal.candidateRoute !== "discovery";
   const omittedVerify = changeRoute && !required.includes("verify") ? ["verify"] : [];
   const unknown = plan ? required.filter((kind) => !planKinds.includes(kind)) : [];
-  return [...new Set([...omittedAlways, ...omittedVerify, ...unknown])];
+  return [
+    ...new Set([...omittedAlways, ...omittedVerify, ...unknown, ...unproposable(proposal, facts)]),
+  ];
+}
+
+// Each optional step the proposal lists that no stage of its plan gates with `proposed`.
+function unproposable(proposal: WorkflowProposal, facts: WorkflowFacts): string[] {
+  const stages = builtInPlanOf(proposal, facts)?.stages ?? [];
+  const gated = stages.flatMap((stage) =>
+    (stage.steps ?? []).filter((step) => step.when === "proposed").map((step) => step.name),
+  );
+  return (proposal.optionalSteps ?? []).filter((step) => !gated.includes(step));
 }
 
 // Whether the proposal's plan has a stage that takes the bound flow as its target.
@@ -180,6 +191,7 @@ function checkedPlan(proposal: WorkflowProposal, facts: WorkflowFacts): Workflow
     expectedBehaviorRefs: proposal.expectedBehaviorRefs,
     observedRefs: proposal.observedRefs,
     ...(proposal.riskSignals?.length ? { riskSignals: proposal.riskSignals } : {}),
+    ...(proposal.optionalSteps?.length ? { optionalSteps: proposal.optionalSteps } : {}),
   };
 }
 
@@ -192,6 +204,7 @@ function routingShapeIsBroken(proposal: WorkflowProposal | undefined): boolean {
     !Array.isArray(proposal.expectedBehaviorRefs) ||
     !Array.isArray(proposal.observedRefs) ||
     !Array.isArray(proposal.requiredStages) ||
+    (proposal.optionalSteps !== undefined && !Array.isArray(proposal.optionalSteps)) ||
     !Array.isArray(stories) ||
     (proposal.candidateRoute === "feature" && stories.length === 0) ||
     stories.some(

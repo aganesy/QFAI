@@ -181,6 +181,12 @@ async function project(): Promise<string> {
       { recursive: true, force: true },
     );
   }
+  // The step layer has no legacy name; a project on current assets carries it.
+  await cp(
+    path.join(packageRoot, "assets/init/.qfai/assistant/step"),
+    path.join(root, ".qfai/assistant/step"),
+    { recursive: true, force: true },
+  );
   await cp(convertibleCriteria, path.join(root, ".qfai/specs/spec-0001/03_Acceptance-Criteria.md"));
   await cp(completeExamples, path.join(root, ".qfai/specs/spec-0001/05_Examples.md"));
   await cp(completeCases, path.join(root, ".qfai/specs/spec-0001/06_Test-Cases.md"));

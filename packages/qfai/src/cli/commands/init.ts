@@ -130,8 +130,16 @@ import {
 
 const execAsync = promisify(execCb);
 
-/** Shipped skill and agent files are the assistant assets refreshed by `--force`. */
-const STANDARD_ASSET_PATHS: readonly string[] = ["assistant/skill", "assistant/agent"];
+/**
+ * Shipped skill, step and agent files are the assistant assets refreshed by `--force`.
+ * Steps are copied like skills and never linked into a host's skill directory: a host
+ * would offer each one as a skill of its own.
+ */
+const STANDARD_ASSET_PATHS: readonly string[] = [
+  "assistant/skill",
+  "assistant/step",
+  "assistant/agent",
+];
 
 /** Older receipts can name adopter-owned catalog files needed by story migration. */
 const LEGACY_ADOPTER_OWNED_CATALOG_ASSETS: ReadonlySet<string> = new Set([
@@ -311,7 +319,7 @@ export async function runInit(
 
   if (options.force) {
     info(
-      "NOTE: --force regenerates .qfai/assistant/skill/**, assistant/agent/** and the symlink assets (.agents/.claude/.github/.codex), and removes legacy wrappers. It also regenerates qfai-provided .github/copilot-instructions.md and .github/instructions/**. assistant/rule/** is refreshed only where the file still matches its .assets.lock.json record; diverged files are left for manual merge. Project specs, contracts and routing overrides in qfai.config.yaml are preserved.",
+      "NOTE: --force regenerates .qfai/assistant/skill/**, assistant/step/**, assistant/agent/** and the symlink assets (.agents/.claude/.github/.codex), and removes legacy wrappers. It also regenerates qfai-provided .github/copilot-instructions.md and .github/instructions/**. assistant/rule/** is refreshed only where the file still matches its .assets.lock.json record; diverged files are left for manual merge. Project specs, contracts and routing overrides in qfai.config.yaml are preserved.",
     );
   }
 

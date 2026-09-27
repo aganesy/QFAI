@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { parseDocument, parse as parseYaml } from "yaml";
 
+import { routingEntryName } from "../../core/config.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import {
@@ -206,19 +207,19 @@ async function planOverrides(root: string): Promise<MigrationOperation | null> {
     );
     if (!Array.isArray(project.routing) || !Array.isArray(defaults.routing))
       throw new MigrationInputError("Routing must be a list.");
-    const defaultBySkill = new Map(
+    const defaultByName = new Map(
       defaults.routing.map((entry) => {
-        const record = asRecord(entry, "default routing entry");
-        if (typeof record.skill !== "string")
-          throw new MigrationInputError("Default routing entry needs a skill.");
-        return [record.skill, entry] as const;
+        const name = routingEntryName(asRecord(entry, "default routing entry"));
+        if (name === undefined)
+          throw new MigrationInputError("Default routing entry needs a step or a skill.");
+        return [name, entry] as const;
       }),
     );
     const overrides = project.routing.filter((entry) => {
-      const record = asRecord(entry, "project routing entry");
-      if (typeof record.skill !== "string")
-        throw new MigrationInputError("Project routing entry needs a skill.");
-      return !isDeepStrictEqual(entry, defaultBySkill.get(record.skill));
+      const name = routingEntryName(asRecord(entry, "project routing entry"));
+      if (name === undefined)
+        throw new MigrationInputError("Project routing entry needs a step or a skill.");
+      return !isDeepStrictEqual(entry, defaultByName.get(name));
     });
     if (overrides.length > 0) {
       config.set("routing", overrides);

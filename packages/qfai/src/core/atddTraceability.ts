@@ -1681,7 +1681,7 @@ function normalizeLevel(level: string): string {
 /**
  * `Level` values that carry no ATDD annotation obligation.
  *
- * `qfai-atdd/SKILL.md` puts Unit and Component out of its scope, and
+ * The `atdd-author` step puts Unit and Component out of its scope, and
  * `catalog/test-layers.md` gives L1/L2 no mandated directory — only L3-L5 are
  * directory-pinned, and only those three roots are ever scanned. L1/L2 used to
  * fall through `LEVEL_TO_TEST_KIND`'s `?? "integration"`, which is the fallback

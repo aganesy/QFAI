@@ -216,3 +216,5 @@
 | US-0001-0213 | Seed a diagnosed missing example under an existing criterion                           | `user-story-0001-0213/` |
 | US-0001-0214 | Run `/qfai-sdd` as a stage of a run                                                    | `user-story-0001-0214/` |
 | US-0001-0215 | Verify as the final stage of a run                                                     | `user-story-0001-0215/` |
+| US-0001-0216 | Run only the steps a change needs, reviewed once per stage                             | `user-story-0001-0216/` |
+| US-0001-0217 | Refuse a step tree that a run or a stage skill cannot use                              | `user-story-0001-0217/` |

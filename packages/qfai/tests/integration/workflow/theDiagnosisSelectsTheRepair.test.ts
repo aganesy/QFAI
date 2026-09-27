@@ -29,6 +29,7 @@ afterEach(removeProjects);
 const CRITERION = "AC-0001-0001-01";
 const EXAMPLE = EXAMPLE_IDS[0] ?? "";
 const PRODUCTION = "src/notification-addresses.ts";
+const VERIFY_STEPS = ["verify-context", "verify-qfai-gate", "verify-repo-gate"];
 
 const reasons = (document: unknown) =>
   list(document, "error.reasons").map((each) => field(each, "reason"));
@@ -64,18 +65,17 @@ it("A regression on an annotated example is fixed by regression_fix, which needs
     fix: orderOf(fix.json),
     bare: [field(bare.json, "error.code"), reasons(bare.json)],
     receipted: field(receipted.json, "run.state"),
-    verify: [orderOf(verify.json).stageKind, orderOf(verify.json).operation],
+    verify: [orderOf(verify.json).stageKind, orderOf(verify.json).steps],
     annotated: (await readFile(path.join(root, UNIT_TEST))).equals(testBefore),
   }).toEqual({
     fix: {
       stageKind: "regression_fix",
-      skill: "qfai-implement",
-      operation: "regression-fix",
+      steps: ["implement-regression-fix"],
       target: { kind: "flow", flowId: FLOW_ID },
     },
     bare: ["invalid-input", ["regression-fix-receipt"]],
     receipted: "ready",
-    verify: ["verify", "verify-full"],
+    verify: ["verify", VERIFY_STEPS],
     annotated: true,
   });
 }, 300_000);
@@ -95,7 +95,7 @@ it("An expectation that differs from the story sends the run back to routing bef
 
   expect({
     state: field(accepted.json, "run.state"),
-    next: [orderOf(next.json).stageKind, orderOf(next.json).skill],
+    next: [orderOf(next.json).stageKind, field(next.json, "workOrder.executor.skill")],
     implement: kinds.includes("implement"),
   }).toEqual({ state: "routing", next: ["route", "qfai-run"], implement: false });
 }, 300_000);
@@ -122,21 +122,19 @@ it("A defective test goes to the owner of its layer: qfai-atdd for a criterion, 
   );
   const afterFix = workflow(exampleRoot, ["next", "--run", byExample.runId]);
 
-  expect([field(fixed.json, "run.state"), orderOf(afterFix.json).operation]).toEqual([
+  expect([field(fixed.json, "run.state"), orderOf(afterFix.json).steps]).toEqual([
     "ready",
-    "verify-full",
+    VERIFY_STEPS,
   ]);
   expect([orderOf(byCriterion.next.json), orderOf(byExample.next.json)]).toEqual([
     {
       stageKind: "test_fix",
-      skill: "qfai-atdd",
-      operation: "test-fix",
+      steps: ["atdd-test-fix"],
       target: { kind: "flow", flowId: FLOW_ID },
     },
     {
       stageKind: "test_fix",
-      skill: "qfai-implement",
-      operation: "test-fix",
+      steps: ["implement-test-fix"],
       target: { kind: "flow", flowId: FLOW_ID },
     },
   ]);
@@ -161,9 +159,9 @@ it("A test fix keeping what its test cites, with its review and re-run, is accep
   );
   const verify = workflow(root, ["next", "--run", runId]);
 
-  expect([field(accepted.json, "run.state"), orderOf(verify.json).operation]).toEqual([
+  expect([field(accepted.json, "run.state"), orderOf(verify.json).steps]).toEqual([
     "ready",
-    "verify-full",
+    VERIFY_STEPS,
   ]);
 }, 300_000);
 

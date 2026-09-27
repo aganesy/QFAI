@@ -3,21 +3,16 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Decision = ReturnType<typeof decide>;
 
 const boundedStages = [
-  ["bounded-sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"],
-  ["bounded-implement", "implement", "qfai-implement", "implement"],
-  ["bounded-verify", "verify", "qfai-verify", "verify-full"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when: "always",
-}));
+  planStage("bounded-sdd-delta", "sdd_delta", "always"),
+  planStage("bounded-implement", "implement", "always"),
+  planStage("bounded-verify", "verify", "always"),
+];
 const facts = {
   plans: { "bounded-change": { route: "bounded-change", stages: boundedStages } },
   flows: ["BF-0007"],

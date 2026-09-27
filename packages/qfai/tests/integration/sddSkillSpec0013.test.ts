@@ -23,8 +23,20 @@ const skillRoot = path.resolve(
   "qfai-sdd",
 );
 
-async function skill(): Promise<string> {
+const STEPS = ["sdd-triage", "sdd-flow", "sdd-story", "sdd-contract", "sdd-cycle", "sdd-gate"];
+
+async function parent(): Promise<string> {
   return await readFile(path.join(skillRoot, "SKILL.md"), "utf-8");
+}
+
+/** The parent and its steps, read as one text with soft wraps collapsed. */
+async function skill(): Promise<string> {
+  const steps = await Promise.all(
+    STEPS.map((name) =>
+      readFile(path.join(skillRoot, "..", "..", "step", name, "STEP.md"), "utf-8"),
+    ),
+  );
+  return [await parent(), ...steps].join("\n").replace(/[ \t]*\n[ \t]*/g, " ");
 }
 
 async function reference(name: string): Promise<string> {
@@ -33,21 +45,21 @@ async function reference(name: string): Promise<string> {
 
 describe("shipped qfai-sdd story-tree contract", () => {
   it("writes concrete examples before the rules that cite them", async () => {
-    const content = await skill();
-    const policy = content.indexOf("1. `01_policy/`");
-    const flow = content.indexOf("2. `02_business-flow/`");
-    const story = content.indexOf("3. Each flow's");
-    const contract = content.indexOf("4. `03_contract/`");
-    expect(policy).toBeGreaterThanOrEqual(0);
-    expect(policy).toBeLessThan(flow);
+    const steps = /^steps: \[(.*)\]$/m.exec(await parent())?.[1] ?? "";
+    const flow = steps.indexOf("sdd-flow");
+    const story = steps.indexOf("sdd-story");
+    const contract = steps.indexOf("sdd-contract");
+    expect(flow).toBeGreaterThanOrEqual(0);
     expect(flow).toBeLessThan(story);
     expect(story).toBeLessThan(contract);
-    expect(content).toContain("A BR never cites an unwritten EX");
+    expect(await skill()).toContain("Write a BR only after the EX it cites exists");
   });
 
   it("requires paired templates and exactly three files in a story directory", async () => {
     const content = await skill();
-    expect(content).toContain("paired template under `templates/spec/`");
+    expect(content).toContain(
+      "The paired templates under `.qfai/assistant/skill/qfai-sdd/templates/spec/",
+    );
     expect(content).toContain("`01_User-story.md`");
     expect(content).toContain("`02_Acceptance-Criteria.md`");
     expect(content).toContain("`03_Example.md`");
@@ -67,9 +79,9 @@ describe("shipped qfai-sdd story-tree contract", () => {
   it("keeps contract rules and their index rows together", async () => {
     const content = await skill();
     expect(content).toContain("Put each BR in the contract that enforces it");
-    expect(content).toContain("shared by contracts is defined once");
+    expect(content).toContain("Define a rule shared by contracts once");
     expect(content).toContain(
-      "Add a row to `<paths.contractsDir>/contracts.md` in the same change",
+      "`<paths.contractsDir>/contracts.md` in the same change as every contract file written",
     );
   });
 
@@ -86,13 +98,13 @@ describe("shipped qfai-sdd story-tree contract", () => {
     expect(content).toContain("npx qfai validate --profile sdd --fail-on error --flow BF-NNNN");
     expect(content).toContain(".qfai/evidence/sdd-BF-NNNN.md");
     expect(content).toContain("templates/evidence/sdd-flow.md");
-    expect(content).toContain("routed blocking reviewer cycle");
+    expect(content).toContain("every blocking reviewer returned PASS");
   });
 
   it("gates each changed flow separately without inheriting a sibling worker's findings", async () => {
     // QFAI:EX-0001-0155-02
     const content = await skill();
-    expect(content).toContain("for each BF written or changed");
+    expect(content).toContain("Each BF written or changed");
     expect(content).toContain(
       "A worker's flow gate does not include a sibling flow still being edited",
     );
@@ -121,7 +133,6 @@ describe("shipped qfai-sdd story-tree contract", () => {
       await reference("sdd-triage.md"),
       await reference("spec-traceability-rules.md"),
       await reference("sdd-quality-gate.md"),
-      await reference("review-cycle-playbook.md"),
     ];
     for (const content of files) {
       expect(content).not.toMatch(/--spec\b/);

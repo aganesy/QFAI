@@ -3,40 +3,27 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 const bugfixStages = [
-  ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-  [
-    "bugfix-acceptance",
-    "acceptance",
-    "qfai-atdd",
-    "author-acceptance-tests",
-    "acceptance_obligations_unmet",
-  ],
-  [
-    "bugfix-regression-fix",
-    "regression_fix",
-    "qfai-implement",
-    "regression-fix",
-    "regression_found",
-  ],
-  ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-  stageInstanceId,
-  stageKind,
-  skill,
-  operation,
-  when,
-}));
+  planStage("bugfix-diagnose", "diagnose", "always"),
+  planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
+  planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
+  planStage("bugfix-verify", "verify", "always"),
+];
 const runtimeHeavy = ["completion-reviewer", "qa-gatekeeper"];
 const facts = {
   plans: { bugfix: { route: "bugfix", stages: bugfixStages } },
   flows: ["BF-0007"],
   acceptanceObligationsUnmet: true,
   reviewerRoles: {
-    "qfai-implement": runtimeHeavy,
-    "qfai-atdd": ["completion-reviewer"],
-    "qfai-verify": runtimeHeavy,
+    "implement-diagnose": runtimeHeavy,
+    "implement-regression-fix": runtimeHeavy,
+    "atdd-scaffold": ["completion-reviewer"],
+    "atdd-author": ["completion-reviewer"],
+    "verify-context": runtimeHeavy,
+    "verify-qfai-gate": runtimeHeavy,
+    "verify-repo-gate": runtimeHeavy,
   },
 };
 const flowBinding = { flowId: "BF-0007" };
@@ -112,14 +99,14 @@ it("A bugfix routing result whose only risk signal is authorization-restored", (
       facts,
     );
     const workOrder = issued.verdict.workOrder;
-    return [workOrder?.executor?.skill, workOrder?.requiredReviewerRoles];
+    return [workOrder?.steps?.map((step) => step.name), workOrder?.requiredReviewerRoles];
   });
 
   const heavy = ["completion-reviewer", "qa-gatekeeper", "implementation-reviewer"];
   expect(rolesByStage).toEqual([
-    ["qfai-implement", heavy],
-    ["qfai-atdd", heavy],
-    ["qfai-implement", heavy],
-    ["qfai-verify", runtimeHeavy],
+    [["implement-diagnose"], heavy],
+    [["atdd-scaffold", "atdd-author"], heavy],
+    [["implement-regression-fix"], heavy],
+    [["verify-context", "verify-qfai-gate", "verify-repo-gate"], runtimeHeavy],
   ]);
 });

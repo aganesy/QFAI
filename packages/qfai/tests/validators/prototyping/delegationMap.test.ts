@@ -210,7 +210,7 @@ describe("validatePrototypingDelegationMap (prototyping.json reader)", () => {
 });
 
 // ─── Shipped Delegation Scope Table ↔ policy SSOT ────────────────────────
-// The distributed qfai-prototyping/SKILL.md renders the same policy with
+// The distributed prototyping-loop step renders the same policy with
 // English category labels. When the two drift apart the validator simply
 // does not recognise a table-conformant category and never checks its
 // assignment, which is how { "Generation": <any role> } used to pass.
@@ -219,7 +219,7 @@ describe("shipped Delegation Scope Table categories are validated", () => {
   const SKILL_MD = nodePath.resolve(
     fileURLToPath(import.meta.url),
     "../../../..",
-    "assets/init/.qfai/assistant/skill/qfai-prototyping/SKILL.md",
+    "assets/init/.qfai/assistant/step/prototyping-loop/STEP.md",
   );
 
   async function readShippedScopeRows(): Promise<{ category: string; roles: string[] }[]> {

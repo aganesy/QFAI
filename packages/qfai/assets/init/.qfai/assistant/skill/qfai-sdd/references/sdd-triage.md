@@ -70,6 +70,34 @@ pass changes by operation.
 
 The table keeps exactly its four columns. The citation lives in Approach.
 
+### A change to the story tree
+
+A story-tree or contract file changes only on the operator's answer, given in
+this run:
+
+1. The first attempt asks once and changes nothing. It opens one `decision`
+   question naming the files it would change and the proposed change, and
+   returns `awaiting_input`. The concrete-abstract cycle may add questions for
+   its findings beside it.
+2. The attempt that holds the answer, received through `authorizationRefs`,
+   makes the change. It appends one `decisions.md` row at WIP whose Content
+   opens `Change request:` and names every story-tree and contract file it
+   changed, and `decisions.md` when it appended any other row. The row's
+   Approach cites that answer as `<runId>/<authorizationId>` and writes its
+   `answeredBy`, its `recordedAt` and the label of each chosen option exactly
+   as the run's authorization record holds them.
+3. The same attempt moves the row to DONE once every change the row names is
+   written. The row stays at WIP only while changes it names remain for a later
+   attempt of this stage, which moves it to DONE once it writes them.
+4. A row that cites only the run's `request_scope` is refused. Leaving the row
+   at TODO does not avoid the refusal.
+
+A row present before the stage started keeps its ID, Content and Approach.
+Only a row this stage appended changes its Status.
+
+Upstream drift found outside the run's checked scope gets no `Change request:`
+row here. The stage returns `blocked`, with each finding listed in `debts`.
+
 ## ID allocation
 
 Read all IDs of the kind in the relevant scope, including IDs named by retirement rows. The next ID is the highest plus one. BF spans the project. US is inside its BF. AC and EX are inside their US. BR spans all contracts. DEC and OQ each span their table. Empty numeric scopes begin at 0001, and AC/EX tails begin at 01. Do not reuse an ID because its file was removed or a row was rejected.

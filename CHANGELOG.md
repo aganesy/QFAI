@@ -130,6 +130,28 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The flow's SDD evidence records each cycle, and the completion reviewer
     checks that record.
 
+- **Stage skills run in steps.** `qfai-discussion`, `qfai-sdd`,
+  `qfai-prototyping`, `qfai-atdd`, `qfai-implement`, `qfai-verify` and
+  `qfai-maintain` are each a short list of steps. A run does only the steps its
+  change needs, and each stage is reviewed once, by the reviewers those steps
+  need.
+
+  - `qfai init` installs each step as `.qfai/assistant/step/<name>/STEP.md`.
+    Steps are not linked into any host skills directory, so the host still
+    lists the same skills.
+  - A skill invoked by name runs its steps in order, reading one step at a
+    time, and runs one review after the last.
+  - A plan stage names its steps. A step marked `proposed` runs only when the
+    route proposal lists it in `optionalSteps`. A work order names its steps
+    and requires the reviewers of all of them.
+  - Routing entries and `routing:` overrides in `qfai.config.yaml` are keyed
+    by step.
+  - `qfai validate` reports `QFAI-SKILLS-016` for a step tree that cannot be
+    used: a `SKILL.md` under `step/`, a step without `STEP.md` or with a
+    mismatched name, an unknown owner, a list naming a missing step, a step
+    its owner does not list or that nothing uses, and a `requires` list that
+    names anything but common steps, or appears on a common step.
+
 ### Changed
 
 - **The policy-layer documents and the two registers have closed schemas.**
@@ -337,6 +359,19 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - No CI lane runs the prototyping profile.
 
 ### Removed
+
+- **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
+  `list`, `extract` and `check` actions are gone, along with their `--path`,
+  `--max` and `--keyword` options. `qfai doctor` no longer runs the
+  `guardrails.present` check. `qfai report` no longer writes a Decision
+  Guardrails section, and its JSON output has no `guardrails` field. The
+  package entry point no longer exports the decision-guardrail functions and
+  types.
+
+  Nothing told a project to write `DG-NNNN` entries, and each kind already has
+  a home. Record a non-goal under Non-goals in `01_policy/objective.md` and a
+  trade-off in the decision-priority table of `01_policy/principle.md`. Record
+  a deferral as a `decisions.md` row or a DEFERRED row in `open-questions.md`.
 
 - **Breaking: the spec-pack layout and every check that read it.** `qfai`
   no longer reads `.qfai/specs/spec-*` packs, the shared `_policies/` pack,

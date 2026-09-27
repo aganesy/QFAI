@@ -25,7 +25,7 @@ Use source-backed discussion requirements to write one connected, testable story
 - An EX is one concrete input and expected result for exactly one AC. Split examples whose paths can pass or fail independently.
 - A BR is one independently falsifiable constraint. If removing a clause leaves another complete rule, split it.
 
-Allocate each ID as the highest ID of its kind in its defined scope plus one, counting retired IDs. Never reuse an ID. The scopes and widths are in `../SKILL.md#stage-1-triage-and-records`.
+Allocate each ID as the highest ID of its kind in its defined scope plus one, counting retired IDs. Never reuse an ID. The scopes and widths are in `sdd-triage.md#id-allocation`.
 
 ## Ambiguity
 

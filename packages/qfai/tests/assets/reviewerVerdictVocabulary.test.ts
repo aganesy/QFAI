@@ -54,25 +54,19 @@ describe("reviewer verdict vocabulary", () => {
     expect(codex).not.toContain("Return pass/fail only");
   });
 
-  it("triggers the rerun cycle on REVISE in both playbooks", async () => {
-    for (const relative of [
-      "skill/qfai-sdd/references/review-cycle-playbook.md",
-      "skill/qfai-discussion/references/review-cycle-playbook.md",
-    ]) {
+  it("triggers the rerun cycle on REVISE in the review step", async () => {
+    for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toMatch(/(?:blocking |On `)REVISE/);
         expect(content).not.toMatch(/(?:blocking |On `)FAIL/);
-        expect(content).toMatch(/rerun (?:only )?that reviewer/);
+        expect(content).toMatch(/rerun\s+(?:only\s+)?that\s+reviewer/);
         expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
       }
     }
   });
 
-  it("states the same two verdicts in the footers and the sdd skill body", async () => {
-    for (const relative of [
-      "skill/qfai-sdd/references/rcp_footer.md",
-      "skill/qfai-discussion/references/rcp_footer.md",
-    ]) {
+  it("states the same two verdicts in the review step and the sdd skill body", async () => {
+    for (const relative of ["step/common-review-cycle/STEP.md"]) {
       for (const content of await readShipped(relative)) {
         expect(content).toMatch(/`?PASS`?\s*(?:\/|or)\s*`?REVISE`?/);
         expect(content).toMatch(/REVISE[^\n]*(?:FAIL|`status: "FAIL"`)/);
@@ -104,8 +98,15 @@ describe("reviewer verdict vocabulary", () => {
   // qfai-implement consumes independent reviewer verdicts and records the
   // completed round. Its gate must require PASS on the current revision.
   it("matches qfai-implement's evidence fields and blocking branch to the verdict", async () => {
-    for (const content of await readShipped("skill/qfai-implement/SKILL.md")) {
+    const [tdd, checkpoint] = await Promise.all([
+      readShipped("step/implement-tdd/STEP.md"),
+      readShipped("step/implement-checkpoint/STEP.md"),
+    ]);
+    for (const content of tdd) {
       expect(content).toContain("Record explicit PASS or REVISE for the current revision");
+      expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
+    }
+    for (const content of checkpoint) {
       expect(content).toContain("required independent PASS reviews");
       expect(content).not.toMatch(/return(?:s|ed)? PASS or FAIL/i);
     }

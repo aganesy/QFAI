@@ -1,6 +1,6 @@
 prototyping:
   # Single-thread evolution loop (no per-mode override). The iteration
-  # budget is owned by `.qfai/assistant/skill/qfai-prototyping/SKILL.md`.
+  # budget is owned by `.qfai/assistant/step/prototyping-loop/STEP.md`.
   # Replace `web` with one of the prototyping-supported surfaces if needed:
   #   web | mobile | desktop | mixed
   # (discussion classification also allows `cli` and `non-ui`, but those are

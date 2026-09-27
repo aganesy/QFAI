@@ -23,8 +23,8 @@ Scenario: Specialist Responsibilities Preserved
 # Parent: US-0001-0167
 Scenario: Built-in Routing Defaults and Project Overrides
   Given a project with an installed QFAI package,
-  When a skill resolves its routing and its review profile,
-  Then , with no override in `qfai.config.yaml`, it uses the defaults built into the package. An override under `routing:` replaces the whole default entry for the same skill, and an override under `reviewProfiles:` replaces the whole default profile of the same name. An override that matches no default is added. The project holds no routing file and no review-profile file.
+  When a step, or a skill that owns no step, resolves its routing and its review profile,
+  Then , with no override in `qfai.config.yaml`, it uses the defaults built into the package. An override under `routing:` replaces the whole default entry for the same step, or for the same skill where the skill owns no step, and an override under `reviewProfiles:` replaces the whole default profile of the same name. An override that matches no default is added. The project holds no routing file and no review-profile file.
   And an override that names an agent with no card fails `qfai validate` with `QFAI-AGENT-008`, and `qfai.config.yaml` has no key that overrides an optional review mode.
 
 # AC-0001-0167-04
@@ -39,8 +39,18 @@ Scenario: Migration Skill Routing
 # Parent: US-0001-0167
 Scenario: The routing defaults route the two entry skills
   Given the routing and review-profile defaults built into the package
-  When the entries for `qfai-run` and `qfai-maintain` are read
+  When the entries for `qfai-run` and for the step `maintain-edit` are read
   Then `qfai-run` has the orchestrator role and no authoring or reviewing phase
-  And `qfai-maintain` has an authoring phase and an independent reviewer, on the `default` review profile
+  And `maintain-edit` has an authoring phase and an independent reviewer, on the `default` review profile
+  And `qfai-maintain` has no entry of its own
   And the review-profile defaults gain no profile
+
+# AC-0001-0167-06
+# Parent: US-0001-0167
+Scenario: Routing is keyed by step
+  Given the routing defaults built into the package and the shipped steps and skills
+  When they are read and `qfai validate` runs
+  Then each step with a `routing-profile:` has one `- step:` entry whose `review_profile` names the same profile
+  And a step with no `routing-profile:`, and a skill that owns steps, has no entry
+  And `QFAI-AGENT-013` to `QFAI-AGENT-019` compare each step's `roles:` and `routing-profile:` with its entry as they compare a skill's
 ```

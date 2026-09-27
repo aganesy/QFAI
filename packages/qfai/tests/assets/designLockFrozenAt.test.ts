@@ -21,8 +21,10 @@ describe("the lock's frozenAt says what it is and what checks it", () => {
     it(`${tree}: a re-freeze writes every field, and no gate reads frozenAt`, async () => {
       // A freeze that rewrote only the hash passed every gate, and a green run
       // read as evidence the timestamp had moved with it.
-      const skill = unwrap(await read(tree, "SKILL.md"));
-      expect(skill).toContain("complete the root `DESIGN.md` and design-lock checks");
+      const step = unwrap(
+        await readFile(path.join(repoRoot, tree, "assistant/step/sdd-contract/STEP.md"), "utf-8"),
+      );
+      expect(step).toContain("root `DESIGN.md` and its lock, which `common-design-md`");
 
       const authoring = unwrap(await read(tree, "references/design-md-authoring.md"));
       expect(authoring).toContain("freezes its sha256");

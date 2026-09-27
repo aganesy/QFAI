@@ -74,7 +74,7 @@ Prototyping stage policy:
 
 - `/qfai-prototyping` scope is governed by Article VII § Prototyping exception (scope floor) in `.qfai/assistant/rule/constitution.md` — the single home for both the scope floor and the Change Request exception to it. Do not restate the floor here; on any overlap between this file and the constitution, the constitution wins.
 - Completion requires prototyping evidence (markdown + json in `.qfai/evidence/`) and `npx qfai validate --profile prototyping --fail-on error` pass. The profile is explicit on purpose: an omitted `--profile` defaults to `full`, which runs the ATDD traceability rules (`QFAI-ATDD-111/112/113`) at severity `error` — obligations of stage 5, which has not run yet at stage 4.
-- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See the Verify Output Contract in `.qfai/assistant/skill/qfai-verify/SKILL.md`.
+- The `/qfai-verify` run that feeds `npx qfai prototyping certify` writes `.qfai/report/verify.json` with `scope: "prototyping"`; certify accepts no other scope. See `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 - Coverage gaps (missing BF or AC obligations, unresolved declared checks, API 404) are blocking.
 
 Implementation stage:
@@ -128,7 +128,8 @@ At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping
 4. If information cannot be verified, append an OQ row to `<paths.specsDir>/open-questions.md` and ask the user.
 5. Record new facts discovered during the stage and route an upstream change to its owner.
 
-Do not continue affected downstream work on stale steering.
+Do not continue affected downstream work on stale steering. The procedure that
+carries out these five points is the `common-steering-refresh` step.
 
 This contract narrows, and does not replace, the project-memory read of **Article III** in
 `.qfai/assistant/rule/constitution.md`: Article III says what to read at stage start, Stage 0 says which

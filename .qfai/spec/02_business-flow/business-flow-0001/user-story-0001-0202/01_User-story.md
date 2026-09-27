@@ -9,17 +9,17 @@
   working.
 - Non-goals: the entry skill `qfai-run` and the workflow control core
   (`.qfai/spec/03_contract/cli/qfai-workflow.md`); what `qfai init` installs;
-  the Operations table each skill's own `references/orchestrated-mode.md`
-  declares.
+  what each step does (`.qfai/spec/03_contract/cli/assistant-steps.md`).
 - Notes: discussion-20260923171450572#DUS-008,
   discussion-20260923171450572#REQ-0050,
   discussion-20260923171450572#REQ-0051,
   discussion-20260923171450572#REQ-0052,
   discussion-20260923171450572#REQ-0053,
   discussion-20260923171450572#NFR-0007. The set of skills this story governs
-  is every skill a built-in plan names, read from
+  is every skill that owns a step a built-in plan names, read from
   `.qfai/spec/03_contract/cli/workflow-files.md#vocabulary`, never typed as a
-  list.
+  list. How such a skill runs its steps when invoked by name is decided in
+  `decisions.md#DEC-0938`.
 
 ## Source Provenance
 

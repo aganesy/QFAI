@@ -2,24 +2,29 @@ route: bounded-change
 stages:
   - id: sdd-delta
     kind: sdd_delta
-    skill: qfai-sdd
-    operation: update-or-applicability-check
+    steps:
+      - sdd-triage
+      - { step: sdd-flow, when: proposed }
+      - sdd-story
+      - { step: sdd-contract, when: proposed }
+      - { step: common-design-md, when: proposed }
+      - sdd-gate
     when: always
   - id: acceptance
     kind: acceptance
-    skill: qfai-atdd
-    operation: author-acceptance-tests
+    steps:
+      - atdd-scaffold
+      - { step: atdd-credentials, when: proposed }
+      - atdd-author
     when: acceptance_obligations_unmet
     after: [sdd-delta]
   - id: implement
     kind: implement
-    skill: qfai-implement
-    operation: implement
+    steps: [implement-tdd, implement-checkpoint]
     when: always
     after: [acceptance]
   - id: verify
     kind: verify
-    skill: qfai-verify
-    operation: verify-full
+    steps: [verify-context, verify-qfai-gate, verify-repo-gate]
     when: always
     after: [implement]

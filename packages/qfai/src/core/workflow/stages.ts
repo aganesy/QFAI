@@ -74,19 +74,18 @@ const BUGFIX_PREDICATES = [
 ];
 
 function everyStageNamed(stages: PlanStages): boolean {
-  return stages.every((stage) => Boolean(stage.skill) && Boolean(stage.operation));
+  return stages.every((stage) => (stage.steps ?? []).length > 0);
 }
 
 function directIsInvalid(stages: PlanStages): boolean {
   const [edit, verify] = stages;
+  const editSteps = (edit?.steps ?? []).map((step) => step.name);
   return (
     stages.length !== 2 ||
     edit?.stageKind !== "maintenance" ||
-    edit.skill !== "qfai-maintain" ||
-    edit.operation !== "non-normative-edit" ||
+    editSteps.join(",") !== "maintain-edit" ||
     verify?.stageKind !== "verify" ||
-    verify.skill !== "qfai-verify" ||
-    verify.operation !== "verify-full"
+    !everyStageNamed(stages)
   );
 }
 

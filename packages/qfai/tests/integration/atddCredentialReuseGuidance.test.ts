@@ -38,16 +38,19 @@ import { getInitAssetsDir } from "../../src/shared/assets.js";
 // tests/integration/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const skillDir = (): string =>
-  path.join(getInitAssetsDir(), ".qfai", "assistant", "skill", "qfai-atdd");
-const GUIDANCE_REL = "references/credential-reuse.md";
+// The init asset root stands in for the project root `qfai init` writes into.
+const projectRoot = (): string => getInitAssetsDir();
+const GUIDANCE_REL = ".qfai/assistant/skill/qfai-atdd/references/credential-reuse.md";
 
 let guidance = "";
-let skillEntry = "";
+let stepEntry = "";
 
 beforeAll(async () => {
-  guidance = await readFile(path.join(skillDir(), "references", "credential-reuse.md"), "utf-8");
-  skillEntry = await readFile(path.join(skillDir(), "SKILL.md"), "utf-8");
+  guidance = await readFile(path.join(projectRoot(), GUIDANCE_REL), "utf-8");
+  stepEntry = await readFile(
+    path.join(projectRoot(), ".qfai", "assistant", "step", "atdd-credentials", "STEP.md"),
+    "utf-8",
+  );
 });
 
 /** The `##`/`###` section bodies, so "distinct statement" can mean "its own section". */
@@ -104,11 +107,13 @@ describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are st
     );
   });
 
-  it("is cross-linked from the skill entry point by a path that resolves", async () => {
-    expect(skillEntry, "SKILL.md does not link the guidance").toContain(GUIDANCE_REL);
+  it("is cross-linked from the credentials step by a path that resolves", async () => {
+    expect(stepEntry, "the atdd-credentials step does not link the guidance").toContain(
+      GUIDANCE_REL,
+    );
     // The link is only a link while the target is there. Resolved from the
-    // skill directory, exactly as a reader would follow it.
-    const target = path.resolve(skillDir(), GUIDANCE_REL);
+    // project root, exactly as a reader would follow it.
+    const target = path.resolve(projectRoot(), GUIDANCE_REL);
     await expect(readFile(target, "utf-8")).resolves.toContain("Credential reuse");
   });
 });

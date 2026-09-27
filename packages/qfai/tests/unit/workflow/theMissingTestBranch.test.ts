@@ -4,6 +4,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 type Decision = ReturnType<typeof decide>;
 
@@ -11,38 +12,14 @@ const flowBinding = { flowId: "BF-0018" };
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-sdd-append",
-      "sdd_append",
-      "qfai-sdd",
-      "defect-example-seeding",
-      "missing_example_needed",
-    ],
-    [
-      "bugfix-acceptance",
-      "acceptance",
-      "qfai-atdd",
-      "author-acceptance-tests",
-      "acceptance_obligations_unmet",
-    ],
-    ["bugfix-implement", "implement", "qfai-implement", "implement", "diagnosis_missing_test"],
-    [
-      "bugfix-regression-fix",
-      "regression_fix",
-      "qfai-implement",
-      "regression-fix",
-      "regression_found",
-    ],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-sdd-append", "sdd_append", "missing_example_needed"),
+    planStage("bugfix-acceptance", "acceptance", "acceptance_obligations_unmet"),
+    planStage("bugfix-implement", "implement", "diagnosis_missing_test"),
+    planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
+    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 const diagnosisMatching = (matchedIds: string[]) => ({
   verdict: "missing-test",
@@ -58,8 +35,7 @@ function driveMissingTest(appendedLayer: "Integration" | "Unit", matchedIds = ["
   let acceptedStages: { stageInstanceId: string; stageKind: string; outcome: string }[] = [];
   let acceptanceObligationsUnmet = false;
   let recordedDiagnosis: ReturnType<typeof diagnosisMatching> | null = null;
-  const issued: { stageKind: string; skill: string | undefined; operation: string | undefined }[] =
-    [];
+  const issued: { stageKind: string; steps: ReturnType<typeof kindSteps> | undefined }[] = [];
   const events: Decision["events"] = [];
   for (let index = 0; index < plan.stages.length; index++) {
     const facts = { acceptanceObligationsUnmet };
@@ -68,11 +44,7 @@ function driveMissingTest(appendedLayer: "Integration" | "Unit", matchedIds = ["
     events.push(...next.events);
     const workOrder = next.verdict.workOrder;
     if (!next.verdict.ok || !next.verdict.run || !workOrder) break;
-    issued.push({
-      stageKind: workOrder.stageKind,
-      skill: workOrder.executor?.skill,
-      operation: workOrder.operation,
-    });
+    issued.push({ stageKind: workOrder.stageKind, steps: workOrder.steps });
     const result = {
       resultId: `result-${workOrder.stageInstanceId}`,
       workOrderId: workOrder.workOrderId,
@@ -110,11 +82,11 @@ it("A diagnose result missing-test whose appended row's layer is Integration, dr
   const { issued } = driveMissingTest("Integration");
 
   expect(issued).toEqual([
-    { stageKind: "diagnose", skill: "qfai-implement", operation: "diagnose-only" },
-    { stageKind: "sdd_append", skill: "qfai-sdd", operation: "defect-example-seeding" },
-    { stageKind: "acceptance", skill: "qfai-atdd", operation: "author-acceptance-tests" },
-    { stageKind: "implement", skill: "qfai-implement", operation: "implement" },
-    { stageKind: "verify", skill: "qfai-verify", operation: "verify-full" },
+    { stageKind: "diagnose", steps: kindSteps("diagnose") },
+    { stageKind: "sdd_append", steps: kindSteps("sdd_append") },
+    { stageKind: "acceptance", steps: kindSteps("acceptance") },
+    { stageKind: "implement", steps: kindSteps("implement") },
+    { stageKind: "verify", steps: kindSteps("verify") },
   ]);
 });
 

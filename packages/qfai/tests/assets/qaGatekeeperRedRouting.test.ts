@@ -23,15 +23,14 @@ import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
+import { readImplementFlowSteps } from "../helpers/implementSteps.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 const ROUTING_FILES = ["packages/qfai/assets/defaults/agent-routing.yml"];
 
-const SKILL_FILES = [
-  "packages/qfai/assets/init/.qfai/assistant/skill/qfai-implement/SKILL.md",
-  ".qfai/assistant/skill/qfai-implement/SKILL.md",
-];
+const ASSISTANT_DIRS = ["packages/qfai/assets/init/.qfai/assistant", ".qfai/assistant"];
 
 type Phase = {
   id?: string;
@@ -43,13 +42,13 @@ type Phase = {
 
 async function implementPhases(rel: string): Promise<Phase[]> {
   const raw = await readFile(path.join(repoRoot, rel), "utf-8");
-  const parsed = parseYaml(raw) as { routing?: Array<{ skill?: string; phases?: Phase[] }> };
-  const route = parsed.routing?.find((r) => r.skill === "qfai-implement");
-  expect(route, `${rel} has no qfai-implement route`).toBeDefined();
+  const parsed = parseYaml(raw) as { routing?: Array<{ step?: string; phases?: Phase[] }> };
+  const route = parsed.routing?.find((r) => r.step === "implement-tdd");
+  expect(route, `${rel} has no implement-tdd route`).toBeDefined();
   return route?.phases ?? [];
 }
 
-describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
+describe.each(ROUTING_FILES)("%s — implement-tdd routing", (rel) => {
   it("routes qa-gatekeeper into a phase where the row's predicate does not exist yet", async () => {
     const phases = await implementPhases(rel);
     const red = phases.find((p) => p.id === "red");
@@ -108,19 +107,21 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 
   it("declares the micro-cycle phases as per-ledger-item, not per-invocation", async () => {
     const phases = await implementPhases(rel);
-    for (const id of ["red", "build", "test", "review"]) {
+    for (const id of ["red", "build", "test"]) {
       const phase = phases.find((p) => p.id === id);
       expect(phase?.iteration, `phase ${id}`).toBe("per-ledger-item");
     }
     // `plan` genuinely runs once: `delivery-planner` selects from the whole
     // ledger. Marking it per-item would be a different, equally wrong claim.
     expect(phases.find((p) => p.id === "plan")?.iteration).toBe("per-invocation");
+    // The review runs once for the stage, over every example it implemented.
+    expect(phases.find((p) => p.id === "review")?.iteration).toBe("per-invocation");
   });
 });
 
-describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) => {
+describe.each(ASSISTANT_DIRS)("%s — the implementation steps say where the gate runs", (rel) => {
   it("requires an observed RED before the production change", async () => {
-    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     const flat = skill.replace(/\s+/g, " ");
     expect(flat).toContain(
       "Observe the assertion fail for the intended behavior before changing production code",
@@ -131,14 +132,14 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
   });
 
   it("keeps the selected EX as the implementation and review unit", async () => {
-    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     expect(skill).toContain("An EX is the unit of implementation review");
     expect(skill).toContain("Work one EX at a time by default");
     expect(skill).toContain("Every implemented EX has an observed RED, GREEN and Refactor result");
   });
 
   it("keeps acceptance test authorship in ATDD", async () => {
-    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     const frontmatter = skill.slice(0, skill.indexOf("\n---", 4));
     expect(frontmatter).not.toContain("acceptance-test-engineer");
     expect(skill).toContain("Preserve the BF E2E and AC integration");
@@ -146,10 +147,13 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
   });
 
   it("asks the gatekeeper to check both observed outcomes", async () => {
-    const skill = await readFile(path.join(repoRoot, rel), "utf-8");
+    const skill = await readImplementFlowSteps(path.join(repoRoot, rel));
     const flat = skill.replace(/\s+/g, " ");
     expect(flat).toContain("The qa-gatekeeper checks the observed RED and GREEN evidence");
     expect(flat).toContain("RED, GREEN, and Refactor commands and observed results");
-    expect(flat).toContain("The implementation reviewer and qa-gatekeeper check the selected EX");
+    // RED and GREEN are judged per example as they are taken; the other reviewers judge the
+    // whole stage once, after its last step.
+    expect(flat).toContain("RED before any production code for the example exists");
+    expect(flat).toContain("The stage is reviewed once, after its last step");
   });
 });

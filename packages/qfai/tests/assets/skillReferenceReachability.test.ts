@@ -5,9 +5,8 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
 /**
- * A `references/*.md` file is reached by being named, not by being present:
- * `qfai-discussion/SKILL.md` states the contract itself ("Keep this `SKILL.md`
- * compact; put detailed interview prompts and examples in the reference file").
+ * A `references/*.md` file is reached by being named, not by being present: a
+ * `SKILL.md` names its steps by path, and a step names the references it reads.
  * `qfai init` copies the assistant tree wholesale, so a reference nobody names
  * still ships — it is simply never opened, and the guidance in it silently
  * stops applying.
@@ -17,10 +16,9 @@ import { describe, expect, it } from "vitest";
  * `ui_ux/` appendices were exactly that shape — named only by
  * `ui_ux_best_practices.md`, which nothing named.
  *
- * It also has to resolve by path, never by basename. Two skills ship a
- * `references/review-cycle-playbook.md` and a `references/rcp_footer.md` with
- * different content; a basename match would let `qfai-sdd/SKILL.md` naming its
- * own copies mark `qfai-discussion`'s copies reached.
+ * It also has to resolve by path, never by basename. Two skills may ship
+ * same-named references with different content; a basename match would let one
+ * skill naming its own copy mark the other skill's copy reached.
  */
 const ASSISTANT_ROOT = ["packages", "qfai", "assets", "init", ".qfai", "assistant"];
 
@@ -29,9 +27,10 @@ const ASSISTANT_ROOT = ["packages", "qfai", "assets", "init", ".qfai", "assistan
  * assertion is a subset check, so removing an entry's defect elsewhere does
  * not break this test — but adding a newly unrouted file does.
  */
-const KNOWN_UNROUTED = new Set(["skill/qfai-sdd/references/ui-contract-guide.md"]);
+const KNOWN_UNROUTED = new Set<string>();
 
-const SKILL_ENTRYPOINT = /^skill\/[^/]+\/SKILL\.md$/;
+/** A skill's `SKILL.md`, or a step's `STEP.md`: each is read without being named. */
+const SKILL_ENTRYPOINT = /^(?:skill\/[^/]+\/SKILL|step\/[^/]+\/STEP)\.md$/;
 const SKILL_REFERENCE = /^skill\/[^/]+\/references\//;
 
 /** How the shipped tree is addressed from a consuming project's root. */
@@ -59,7 +58,7 @@ function owningSkill(rel: string): string | undefined {
 /**
  * Tree paths a written `.md` token can denote when it appears inside `from`.
  * Mentions in this tree use three conventions: install-root
- * (`.qfai/assistant/skill/…`), relative to the mentioning file (`rcp_footer.md`,
+ * (`.qfai/assistant/skill/…`), relative to the mentioning file (`sdd-triage.md`,
  * `../../qfai-implement/references/evidence-revision.md`), and relative to the
  * owning skill root (`references/sdd-triage.md` inside a `SKILL.md`). Each one
  * resolves to a single path, so a same-named file in another skill is never a
@@ -91,9 +90,9 @@ function namedBy(from: string, tree: Map<string, string>): Set<string> {
 
 /**
  * Breadth-first walk of the "names" graph, starting from every skill's
- * `SKILL.md`. An edge exists when one file's text names another file by a path
- * that resolves to it — the same signal an agent follows when it decides which
- * file to open next.
+ * `SKILL.md` and every step's `STEP.md`. An edge exists when one file's text
+ * names another file by a path that resolves to it — the same signal an agent
+ * follows when it decides which file to open next.
  */
 function reachableFrom(tree: Map<string, string>): Set<string> {
   const queue = [...tree.keys()].filter((rel) => SKILL_ENTRYPOINT.test(rel));
@@ -134,17 +133,6 @@ describe("shipped skill reference reachability", () => {
     const skillMd = path.join(assistantRoot, "skill", "qfai-discussion", "SKILL.md");
     const text = await readFile(skillMd, "utf-8");
     expect(text).toContain("references/ui-bearing-playbook.md");
-  });
-
-  it("qfai-discussion routes its own review-cycle playbook, not qfai-sdd's", async () => {
-    // Both skills ship `references/review-cycle-playbook.md` and
-    // `references/rcp_footer.md`. `qfai-sdd/SKILL.md` names its pair, so a
-    // basename-keyed graph scored the discussion pair as reached while
-    // `qfai-discussion/SKILL.md` never named them.
-    const tree = await readAssistantTree(assistantRoot);
-    const reached = reachableFrom(tree);
-    expect(reached.has("skill/qfai-discussion/references/review-cycle-playbook.md")).toBe(true);
-    expect(reached.has("skill/qfai-discussion/references/rcp_footer.md")).toBe(true);
   });
 
   it("a same-named reference in another skill is not counted as reached", () => {

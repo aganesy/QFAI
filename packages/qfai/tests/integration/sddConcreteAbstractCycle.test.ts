@@ -2,7 +2,7 @@
  * Integration: the concrete-abstract cycle as the shipped `/qfai-sdd` assembles it.
  *
  * Each criterion is met only when the documents an agent reads in turn agree: the skill places the
- * cycle and sends the agent to its reference, the reference sends it on to the rules that govern
+ * cycle's step, the step sends the agent to its reference, the reference sends it on to the rules that govern
  * each step, the evidence template holds the record the reference asks for, and the reviewer's
  * gate reads that record. These tests follow those links, resolving every citation they depend on,
  * and for the one row a validator reads they run the validator on the row the guidance prescribes.
@@ -20,7 +20,10 @@ import { expectSentence } from "../helpers/shippedSentences.js";
 
 const SKILL = "skill/qfai-sdd/SKILL.md";
 const CYCLE = "skill/qfai-sdd/references/concrete-abstract-cycle.md";
-const ORCHESTRATED = "skill/qfai-sdd/references/orchestrated-mode.md";
+const CYCLE_STEP = "step/sdd-cycle/STEP.md";
+const STORY_STEP = "step/sdd-story/STEP.md";
+const CONTRACT_STEP = "step/sdd-contract/STEP.md";
+const CYCLE_CITATION = ".qfai/assistant/skill/qfai-sdd/references/concrete-abstract-cycle.md";
 const GATE = "skill/qfai-sdd/references/sdd-quality-gate.md";
 const TRIAGE = "skill/qfai-sdd/references/sdd-triage.md";
 const EVIDENCE = "skill/qfai-sdd/templates/evidence/sdd-flow.md";
@@ -111,16 +114,16 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
 describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
   // QFAI:AC-0001-0152-08
   it("sits between the contracts and the gate, and sends an independent test-design-analyst to find", async () => {
-    const skill = await readShipped(SKILL);
-    const stage4 = skill.indexOf("## Stage 4");
-    const cycle = skill.indexOf("## Concrete-abstract cycle");
-    const gate = skill.indexOf("## Review, gate, and evidence");
-    expect(stage4).toBeGreaterThanOrEqual(0);
-    expect(cycle).toBeGreaterThan(stage4);
+    const steps = /^steps: \[(.*)\]$/m.exec(await readShipped(SKILL))?.[1] ?? "";
+    const contracts = steps.indexOf("sdd-contract");
+    const cycle = steps.indexOf("sdd-cycle");
+    const gate = steps.indexOf("sdd-gate");
+    expect(contracts).toBeGreaterThanOrEqual(0);
+    expect(cycle).toBeGreaterThan(contracts);
     expect(gate).toBeGreaterThan(cycle);
-    const placement = await section(SKILL, "## Concrete-abstract cycle");
-    expectSentence(placement, "placement", /Between Stage 4 and the gate/i);
-    await expectResolvedCitation(SKILL, placement, "references/concrete-abstract-cycle.md");
+    const placement = await readShipped(CYCLE_STEP);
+    expectSentence(placement, "placement", /Between `sdd-contract` and `sdd-gate`/);
+    await expectResolvedCitation(CYCLE_STEP, placement, CYCLE_CITATION);
 
     const card = await readShipped(FINDER_CARD);
     await expectResolvedCitation(
@@ -137,10 +140,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
 
     const reference = await section(CYCLE, "## When a cycle runs");
     expectSentence(reference, "the trigger", /Statement or the Examples cell of at least one BR/i);
-    const seeding = await section(
-      "skill/qfai-sdd/references/sdd-phase-checklists.md",
-      "### Defect example seeding",
-    );
+    const seeding = await section(STORY_STEP, "## A diagnosed missing test");
     expectSentence(
       seeding,
       "no cycle under seeding",
@@ -179,17 +179,17 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     }
     expectSentence(text, "a removal", /UPDATE:REMOVE/, /TODO/);
     expectSentence(text, "a split or merge", /splitting, merging/i, /triage approval/i);
-    const contractMode = flat(await section(SKILL, "## Stage 4"));
+    const contractMode = flat(await section(CONTRACT_STEP, "## A named contract"));
     expect(contractMode).toMatch(/ask for a\s+wider change request when only the story can move/i);
     expectSentence(text, "the same route here", /`--contract`/, /wider change request/i);
   });
 
   // QFAI:AC-0001-0152-11
-  it("runs inside a workflow run before the one change question, as the orchestrated mode and the reference both say", async () => {
-    const note = await section(ORCHESTRATED, "## The concrete-abstract cycle in a run");
-    await expectResolvedCitation(ORCHESTRATED, note, "references/concrete-abstract-cycle.md");
+  it("runs inside a workflow run before the one change question, as the step and the reference both say", async () => {
+    await expectResolvedCitation(CYCLE_STEP, await readShipped(CYCLE_STEP), CYCLE_CITATION);
+    const note = await section(CYCLE_STEP, "## Inside a workflow run");
     expectSentence(note, "first attempt only", /first attempt only/i);
-    const change = await section(ORCHESTRATED, "## A change to the story tree");
+    const change = await section(TRIAGE, "### A change to the story tree");
     expectSentence(change, "the one question", /first attempt asks once and changes nothing/i);
     expectSentence(
       note,
@@ -203,7 +203,11 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
       /returns `blocked`/,
     );
     const reference = await section(CYCLE, "## Inside a workflow run");
-    await expectResolvedCitation(CYCLE, reference, "orchestrated-mode.md");
+    await expectResolvedCitation(
+      CYCLE,
+      reference,
+      ".qfai/assistant/step/sdd-cycle/STEP.md#inside-a-workflow-run",
+    );
     expectSentence(
       reference,
       "the summary",
@@ -268,16 +272,16 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
       /`## Concrete-Abstract Cycle`/,
     );
     expectSentence(gate, "no validator", /No validator reads it/i);
-    const skillGate = expectSentence(
-      await readShipped(SKILL),
-      "the skill's gate",
+    const stepGate = expectSentence(
+      await readShipped(CYCLE_STEP),
+      "the step's gate",
       /concrete-abstract cycle ran/i,
-      /completion reviewer returns REVISE/i,
+      /completion reviewer returns\s+REVISE/i,
     );
     await expectResolvedCitation(
-      SKILL,
-      skillGate,
-      "references/sdd-quality-gate.md#concrete-abstract-cycle-record",
+      CYCLE_STEP,
+      stepGate,
+      ".qfai/assistant/skill/qfai-sdd/references/sdd-quality-gate.md#concrete-abstract-cycle-record",
     );
   });
 });

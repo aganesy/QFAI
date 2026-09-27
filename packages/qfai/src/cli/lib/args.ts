@@ -58,12 +58,6 @@ export type ParsedArgs = {
     doctorAutoremediate?: boolean;
     strict: boolean;
     failOn?: "never" | "warning" | "error";
-    guardrailsAction?: "list" | "extract" | "check";
-    guardrailsPaths: string[];
-    guardrailsMax?: number;
-    guardrailsKeyword?: string;
-    /** --format <text|json> for `qfai guardrails list|extract|check`. */
-    guardrailsFormat?: "text" | "json";
     dbDriftFormat?: "text" | "json";
     dbDriftOut?: string;
     platform?: string;
@@ -243,9 +237,6 @@ const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
 
-/** `qfai guardrails <action>` のサブコマンド名。 */
-type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
-
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     rescopeRemove: [],
@@ -263,7 +254,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     doctorFormat: "text",
     validateFormat: "text",
     strict: false,
-    guardrailsPaths: [],
     validateFlowIds: [],
     reportFlowIds: [],
     sddAssumptions: [],
@@ -345,7 +335,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
    *
    * One predicate rather than one per flag: two that mean almost the same
    * thing are two contracts to keep in step, and this is the shape
-   * `ownedByPrototyping` and `ownedByGuardrails` below already use.
+   * `ownedByPrototyping` below already uses.
    */
   const ownedBy = (...commands: string[]): boolean =>
     command !== null && commands.includes(command);
@@ -357,32 +347,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     const action = options.prototypingAction;
     return action !== undefined && actions.includes(action);
   };
-
-  /**
-   * `qfai guardrails <action>` 版の flag-ownership guard。
-   * action トークンも flag loop より前に確定するため、ループ内から安全に
-   * 呼べる (`--max` は extract、`--keyword` は list/extract のみが読む)。
-   */
-  const ownedByGuardrails = (...actions: GuardrailsAction[]): boolean => {
-    if (command !== "guardrails") {
-      return false;
-    }
-    const action = options.guardrailsAction;
-    return action !== undefined && actions.includes(action);
-  };
-
-  if (command === "guardrails") {
-    const candidate = args[0];
-    if (isSubcommandToken(candidate)) {
-      const action = normalizeGuardrailsAction(candidate);
-      if (action) {
-        options.guardrailsAction = action;
-      } else {
-        markInvalid(subcommandReason("guardrails", candidate));
-      }
-      args.shift();
-    }
-  }
 
   // `qfai prototyping <subcommand>` pulls the subcommand token before the
   // flag loop.
@@ -805,52 +769,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       }
-      case "--path": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--path"));
-          break;
-        }
-        if (command === "guardrails") {
-          options.guardrailsPaths.push(next);
-        } else {
-          markInvalid(notValidHere("--path"));
-        }
-        break;
-      }
-      case "--max": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--max"));
-          break;
-        }
-        const parsed = parseNonNegativeInteger(next);
-        // usage(): `guardrails extract` のみ。runGuardrails は list /
-        // check パスで max を読まないため、そこでは誤指定として拒否する。
-        if (!ownedByGuardrails("extract")) {
-          markInvalid(notValidHere("--max"));
-        } else if (parsed === null) {
-          markInvalid(badValue("--max", next, "a non-negative integer"));
-        } else {
-          options.guardrailsMax = parsed;
-        }
-        break;
-      }
-      case "--keyword": {
-        const next = consumeOptionValue();
-        if (next === null) {
-          markInvalid(missingValue("--keyword"));
-          break;
-        }
-        // usage(): `guardrails list/extract` のみ。check パスは
-        // runGuardrails が keyword フィルタ前に early return する。
-        if (ownedByGuardrails("list", "extract")) {
-          options.guardrailsKeyword = next;
-        } else {
-          markInvalid(notValidHere("--keyword"));
-        }
-        break;
-      }
       case "--platform": {
         const next = consumeOptionValue();
         if (next === null) {
@@ -1207,9 +1125,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   ) {
     markInvalid(`qfai doctor: --target-url requires --profile prototyping.`);
   }
-  if (command === "guardrails" && !options.help && !options.guardrailsAction) {
-    markInvalid(subcommandReason("guardrails", null));
-  }
   if (command === "prototyping" && !options.help && !options.prototypingAction) {
     markInvalid(subcommandReason("prototyping", null));
   }
@@ -1240,7 +1155,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
 /** `qfai <command> <subcommand>` で受理されるサブコマンドの集合。 */
 const SUBCOMMAND_EXPECTATIONS = new Map<string, string>([
-  ["guardrails", "list|extract|check"],
   ["prototyping", "preflight|iterate|certify|show-ui-contract|rescope"],
   ["discussion", "list|use"],
   ["audit", "log"],
@@ -1346,13 +1260,6 @@ function applyFormatOption(
     }
     return false;
   }
-  if (command === "guardrails") {
-    if (value === "text" || value === "json") {
-      options.guardrailsFormat = value;
-      return true;
-    }
-    return false;
-  }
   if (command === "db-drift") {
     if (value === "text" || value === "json") {
       options.dbDriftFormat = value;
@@ -1361,17 +1268,6 @@ function applyFormatOption(
     return false;
   }
   return false;
-}
-
-function normalizeGuardrailsAction(value: string): "list" | "extract" | "check" | null {
-  switch (value) {
-    case "list":
-    case "extract":
-    case "check":
-      return value;
-    default:
-      return null;
-  }
 }
 
 function isSkillProfileName(value: string): boolean {

@@ -14,12 +14,13 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { readDiscussionSkill, readDiscussionStep } from "../helpers/discussionSteps.js";
+
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /** Source tree first, then the generated root mirror `sync:ssot` writes. */
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
-const SKILL = "assistant/skill/qfai-discussion/SKILL.md";
 const MATRIX = "assistant/skill/qfai-discussion/references/discussion-completion-matrix.md";
 const REVIEW_REQUEST = "assistant/skill/qfai-discussion/templates/review/review_request.md";
 
@@ -51,11 +52,14 @@ function bucket(skill: string, name: string): string {
 
 describe.each(TREES)("%s — the discussion interview", (tree) => {
   const read = (rel: string): Promise<string> => readFile(path.join(repoRoot, tree, rel), "utf-8");
+  const assistantDir = path.join(repoRoot, tree, "assistant");
+  /** The parent `SKILL.md` and every step it lists, read as one procedure. */
+  const readSkill = (): Promise<string> => readDiscussionSkill(assistantDir);
 
   it("names the method the interview follows", async () => {
     // Without one, an agent that asked nothing has followed the step. The
     // topics are the checklist's, so there is one list to keep current.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "as a grilling session through that skill");
     // The body is read, not the name: a host that loads skill bodies lazily
     // hands the agent the reference and not the procedure, and an agent with
@@ -70,7 +74,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
   it("cites the method rather than restating it", async () => {
     // Two copies of a method drift, and the drift reaches an agent as two
     // instructions to choose between.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "this step does not restate it");
     for (const mechanic of [
       /the whole frontier at once/i,
@@ -88,22 +92,22 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // A decision settled before the research bearing on it is settled against
     // evidence nobody had, and the method reads a fact rather than asking
     // about it — so the protocol's output is an input to the session's tree.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     const research = unwrap(skill).indexOf("research-first-protocol.md");
     const session = unwrap(skill).indexOf("as a grilling session through that skill");
     expect(research).toBeGreaterThan(-1);
     expect(session).toBeGreaterThan(-1);
     expect(research, "research runs after the interview").toBeLessThan(session);
-    expectPhrase(skill, "Step 1's findings are inputs to the session's tree");
+    expectPhrase(skill, "The research findings are inputs to the session's tree");
   });
 
   it("asks the design direction inside the session, not after the pack", async () => {
-    // Step 9 runs after steps 3 to 8 have authored the pack, so a user-owned
+    // The pack step records the direction after the pack is written, so a user-owned
     // visual choice asked there is asked after the thing it governs is written
     // — which the pre-authoring guard exists to stop.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "the design-direction decisions in");
-    expectPhrase(skill, "`references/design-dna-intake.md`");
+    expectPhrase(skill, "references/design-dna-intake.md`");
     // A cli-only pack is UI-bearing and has no brand questions, so the
     // condition is the visual surface rather than the UI-bearing flag.
     expectPhrase(skill, "where any classified surface is");
@@ -120,7 +124,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // and a skill that files it as one records a design nobody agreed to as
     // decided. Running the interview is what this skill performs, so its
     // questions are its own operations.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     const askUser = bucket(skill, "ask-user");
     const autoDecide = bucket(skill, "auto-decide");
 
@@ -133,9 +137,16 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
   it("holds the pack's authoring until the session has ended", async () => {
     // A pack drafted mid-session records a design still being decided, and from
     // then on the run defends the draft rather than the decision.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "**Authoring the pack**");
     expectPhrase(skill, "does not start until the session has ended");
+    // Each step that writes a pack file states the gate itself, since an agent
+    // loads only the step it is running.
+    for (const step of ["discussion-pack", "discussion-oq", "discussion-uiux"] as const) {
+      const body = await readDiscussionStep(assistantDir, step);
+      expect(body, step).toContain("## Precondition");
+      expectPhrase(body, "`## Grilling Session` row, its `Ended at` is written");
+    }
   });
 
   it("scopes the guard to the pack, not to every write", async () => {
@@ -144,7 +155,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // reads, the records a no-question ending produces — which are what block
     // completion — and a throwaway artifact the method calls for where talking
     // cannot settle a question.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "Three writes are not that authoring");
     expectPhrase(
       skill,
@@ -166,7 +177,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // closure that authorizes proceeding and a cancellation cannot share a
     // value — a pack drafted after `stop` is the run doing exactly what the
     // user told it not to.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     for (const ending of ["`confirmed`", "`user-closed`", "`no-question`", "`stopped`"]) {
       expectPhrase(skill, ending);
     }
@@ -195,7 +206,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // An ending cannot authorize authoring over an input the run consumes and
     // does not have. Registering an open question does not make it defaultable:
     // the value is what the run needs, and a question about it is not one.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(
       skill,
       "**No ending authorizes authoring while a `hard-required` input this invocation consumes is missing.**",
@@ -223,23 +234,25 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
   it("records when the session ended and when authoring began", async () => {
     // A row holding only the final state reads the same whether the session ran
     // first, ran after, or never ran — it is written at the end either way.
-    const skill = await read(SKILL);
-    expectPhrase(skill, "| Ended | Ended at | Authoring began |");
-    expectPhrase(skill, "**Both times, and the first written before the pack is.**");
+    // The interview writes the row in the shape the shared record step owns.
+    const skill = await readSkill();
+    expectPhrase(skill, "common-grilling-record/STEP.md#one-session");
+    expectPhrase(skill, "write `Ended at` before the first pack file");
+    const record = await read("assistant/step/common-grilling-record/STEP.md");
+    expectPhrase(record, "| Ended | Ended at | Authoring began |");
+    expectPhrase(record, "**The end time is written before work resumes.**");
     // And the limit is stated rather than implied.
-    expectPhrase(skill, "What it still cannot do is prove a session happened");
+    expectPhrase(record, "It still cannot prove a session happened");
   });
 
   it("leaves a record the reviewer can check the claim against", async () => {
     // A skipped session and a completed one present the same pack, so a
     // reviewer with only the pack must either block every run or accept a
     // claim it cannot verify.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "## Grilling Session");
-    expectPhrase(
-      skill,
-      "`Ended` is `confirmed`, `user-closed`, `no-question` or `stopped`, and only the first three authorize authoring",
-    );
+    const record = await read("assistant/step/common-grilling-record/STEP.md");
+    expectPhrase(record, "Only `confirmed`, `user-closed` and `no-question` authorize authoring.");
     // The reviewer is handed the row rather than sent looking for it: a row it
     // has to find is one it can return `PASS` without reading.
     const request = await read(REVIEW_REQUEST);
@@ -262,10 +275,10 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // file the run may write at that moment. A row with nowhere to go until the
     // pack exists can only be written after drafting, which is the order the
     // requirement was added to rule out.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "`.qfai/evidence/discussion-<YYYYMMDDhhmmssSSS>.md`");
     expectPhrase(skill, "before anything else is written");
-    expectPhrase(skill, "can only be written after drafting");
+    expectPhrase(skill, "have no other home before the pack exists");
   });
 
   it("keeps a cancelled run from leaving a pack behind", async () => {
@@ -273,7 +286,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // before the session ran. A run the user stops there leaves one file under
     // the greatest timestamp, and the resolver picks it over the last complete
     // pack, so every later reader reports a project that looks broken.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(
       skill,
       "**Nothing is written under `.qfai/discussion/` until an ending authorizes authoring.**",
@@ -281,7 +294,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     expectPhrase(skill, "resolved by the greatest timestamp with no completeness check");
     // The summary still has somewhere to be, and reaches the pack when one opens.
     expectPhrase(skill, "record its `research_summary` output in this run's stage evidence");
-    expectPhrase(skill, "carry it into the `## Research Summary` section of `04_Sources.md`");
+    expectPhrase(skill, "into the `## Research Summary` section of `04_Sources.md`");
   });
 
   it("hands the reviewer the two fields it rules on", async () => {
@@ -298,7 +311,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // direction is the case here: the intake document says only the user may
     // choose a theme, so a closure that assumed it would have the run make the
     // one choice that document reserves.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(
       skill,
       "**An interactive closure does not assume a decision some document requires the user to make and record.**",
@@ -314,7 +327,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // one path written down for a visual run with nobody to ask, and bars it
     // into a state that produces neither half: no pack, and so nowhere to
     // register the question the bar was supposed to leave blocking.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "**`--auto` is the other case, and its answer is already written.**");
     expectPhrase(skill, "record it `chosen_by: assumption`, open it in `11_OQ-Register.md`");
     expectPhrase(skill, "What is forbidden is the assumption on its own");
@@ -324,7 +337,7 @@ describe.each(TREES)("%s — the discussion interview", (tree) => {
     // Read as every write, it forbids the stage evidence this run opens first —
     // and it never covered the review pack either, which the cycle writes
     // outside the pack by design.
-    const skill = await read(SKILL);
+    const skill = await readSkill();
     expectPhrase(skill, "Discussion authors no design artifact outside its own pack");
     expectPhrase(skill, "record what the run did rather than specify anything");
   });

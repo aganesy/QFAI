@@ -57,7 +57,7 @@ export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set();
  * | layer                        | what `--force` does                             | what has to be told apart |
  * | ---------------------------- | ----------------------------------------------- | ------------------------- |
  * | `rule/`                      | refreshes a file still matching the record; leaves a diverged one and reports it | stale from forked |
- * | `skill/` `agent/`            | overwrites every file                           | nothing — only whether it is behind |
+ * | `skill/` `step/` `agent/`    | overwrites every file                           | nothing — only whether it is behind |
  *
  * With no merge decision to protect there is nothing to record, so these layers
  * are outside {@link AssistantAssetsLock} and are compared against the shipped
@@ -66,7 +66,7 @@ export const ADOPTER_OWNED_ASSETS: ReadonlySet<string> = new Set();
  *
  * `prompt/` is in neither list; it is installed create-only.
  */
-export const REGENERATED_ASSISTANT_LAYERS = ["skill", "agent"] as const;
+export const REGENERATED_ASSISTANT_LAYERS = ["skill", "step", "agent"] as const;
 
 export type RegeneratedAssistantLayer = (typeof REGENERATED_ASSISTANT_LAYERS)[number];
 

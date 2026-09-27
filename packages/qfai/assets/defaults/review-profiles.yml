@@ -16,12 +16,13 @@ profiles:
   runtime-heavy:
     always_required: [completion-reviewer, qa-gatekeeper]
     conditional_required: [implementation-reviewer]
-  # `qfai-implement` makes `implementation-reviewer` PASS item 8 of its
-  # unconditional 12-point gate, so for that skill the code-quality review is
-  # always required and always blocking. It shares `runtime-heavy` with
-  # qfai-atdd / qfai-configure / qfai-verify, where the same reviewer is
-  # genuinely conditional — hence a profile of its own rather than widening
-  # runtime-heavy for all four.
+  # The steps that change production code (`implement-tdd`,
+  # `implement-regression-fix`, `implement-seam`) make an `implementation-reviewer`
+  # PASS part of their completion gate, so for them the code-quality review is
+  # always required and always blocking. The other `runtime-heavy` users — the
+  # atdd, verify and test-running steps and qfai-configure — keep that reviewer
+  # genuinely conditional, hence a profile of its own rather than widening
+  # runtime-heavy for all of them.
   implementation-heavy:
     always_required: [completion-reviewer, qa-gatekeeper, implementation-reviewer]
     conditional_required: []

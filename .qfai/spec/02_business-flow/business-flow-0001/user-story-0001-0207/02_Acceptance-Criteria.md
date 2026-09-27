@@ -12,14 +12,14 @@ Scenario: The implement stage follows the stage-skill handover
   When /qfai-implement is selected with no work order and not by name
   Then it edits nothing and passes the request to qfai-run
   And a worker handed a work order checks the run, stage and work-order IDs and does only that work
-  And SKILL.md cites references/orchestrated-mode.md with one line
 
 # AC-0001-0207-02
 # Parent: US-0001-0207
-Scenario: The Operations table lists what the plan vocabulary assigns to qfai-implement
-  Given the qfai-implement reference references/orchestrated-mode.md
-  When its Operations table is read
-  Then it lists exactly the operations the plan vocabulary assigns to qfai-implement, seam-only included
+Scenario: qfai-implement lists the steps the plans and seam requests run
+  Given the qfai-implement SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-implement, implement-seam included
+  And every step a plan gives a diagnose, implement or regression_fix stage, and the example-layer step of a test_fix stage, is one of them
 
 # AC-0001-0207-03
 # Parent: US-0001-0207
@@ -32,11 +32,11 @@ Scenario: The bound flow supplies the flow scope without asking
 # AC-0001-0207-04
 # Parent: US-0001-0207
 Scenario: A long stage resumes at an example boundary
-  Given an implement work order carrying a checkpoint reference and a legal operation
+  Given an implement work order carrying a checkpoint reference
   When the stage resumes
   Then it starts at the EX the checkpoint names
   And its result names EX IDs and records no progress state of its own
-  And the skill's own phase order is unchanged
+  And the order of the TDD cycle within each example is unchanged
 
 # AC-0001-0207-05
 # Parent: US-0001-0207
@@ -48,10 +48,10 @@ Scenario: The next-example check is never served from the shared snapshot
 
 # AC-0001-0207-06
 # Parent: US-0001-0207
-Scenario: A seam-only work order lands only the minimal connection
-  Given a seam-only work order naming the acceptance test that cannot reach its assertion
+Scenario: An implement-seam work order lands only the minimal connection
+  Given an implement-seam work order naming the acceptance test that cannot reach its assertion
   When /qfai-implement serves it
-  Then it lands only the minimal connection, through the existing minimal-seam step
+  Then it lands only the minimal connection, through the implement-seam step
   And the target test still fails at its assertion
   And the main implementation waits until the acceptance stage has taken RED
 ```

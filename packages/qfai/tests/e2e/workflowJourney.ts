@@ -273,12 +273,16 @@ export async function answer(root: string, runId: string, question: unknown, eff
   });
 }
 
-/** What a work order names: its stage kind, executor, operation and target. */
+/** The names of the steps a work order runs, in order. */
+export function stepNames(document: unknown): unknown[] {
+  return list(document, "workOrder.steps").map((step) => field(step, "name"));
+}
+
+/** What a work order names: its stage kind, steps and target. */
 export function orderOf(document: unknown) {
   return {
     stageKind: field(document, "workOrder.stageKind"),
-    skill: field(document, "workOrder.executor.skill"),
-    operation: field(document, "workOrder.operation"),
+    steps: stepNames(document),
     target: field(document, "workOrder.target"),
   };
 }

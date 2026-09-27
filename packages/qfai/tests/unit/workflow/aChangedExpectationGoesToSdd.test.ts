@@ -4,20 +4,15 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { issuedSteps, planStage } from "./kindSteps.js";
 
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    ["bugfix-test-fix", "test_fix", "qfai-atdd", "test-fix", "test_defect_found"],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-test-fix", "test_fix", "test_defect_found"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 const run = { id: "run-test-fix", state: "running", sequence: 8 };
 const target: { kind: "flow"; flowId: string } = { kind: "flow", flowId: "BF-0007" };
@@ -27,8 +22,7 @@ const workOrder = {
   attempt: 1,
   stageKind: "test_fix",
   target,
-  executor: { skill: "qfai-implement" },
-  operation: "test-fix",
+  steps: issuedSteps("implement-test-fix"),
 };
 // An example ID first: the test fix goes to `qfai-implement`.
 const facts = {};

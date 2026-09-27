@@ -36,12 +36,14 @@ describe.each(trees)("%s story-tree required files", (tree) => {
   });
 
   it("makes the SDD skill point to the shipped story templates", async () => {
-    const skill = await read(tree, "assistant/skill/qfai-sdd/SKILL.md");
-    expect(skill).toContain("business-flow-NNNN/business-flow.md");
-    expect(skill).toContain("01_User-story.md");
-    expect(skill).toContain("02_Acceptance-Criteria.md");
-    expect(skill).toContain("03_Example.md");
-    expect(skill).toContain("Use the paired template under `templates/spec/`");
-    expect(skill).toContain("Do not create another document inside a story directory");
+    const flow = await read(tree, "assistant/step/sdd-flow/STEP.md");
+    const story = await read(tree, "assistant/step/sdd-story/STEP.md");
+    expect(flow).toContain("business-flow-NNNN/business-flow.md");
+    expect(flow).toContain("Use the paired template for every file");
+    expect(story).toContain("01_User-story.md");
+    expect(story).toContain("02_Acceptance-Criteria.md");
+    expect(story).toContain("03_Example.md");
+    expect(story).toContain("qfai-sdd/templates/spec/");
+    expect(story).toContain("Do not create another document inside a story directory");
   });
 });

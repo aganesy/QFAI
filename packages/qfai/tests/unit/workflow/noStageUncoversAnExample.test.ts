@@ -5,6 +5,7 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { planStage } from "./kindSteps.js";
 
 type Snapshot = Parameters<typeof decide>[0];
 type Facts = Parameters<typeof decide>[2];
@@ -13,21 +14,14 @@ const flowBinding = { flowId: "BF-0001" };
 const EXAMPLES = ["EX-0001-0001-01", "EX-0001-0001-02"];
 
 // A bounded-change plan whose middle stage is the kind under test.
-function plan(stageKind: string, skill: string, operation: string) {
-  const stage = (id: string, kind: string, by: string, op: string) => ({
-    stageInstanceId: id,
-    stageKind: kind,
-    skill: by,
-    operation: op,
-    when: "always",
-  });
+function plan(stageKind: string) {
   return {
     route: "bounded-change",
     writeScope: ["src/**", "tests/**", ".qfai/spec/02_business-flow/**"],
     stages: [
-      stage("sdd-delta", "sdd_delta", "qfai-sdd", "update-or-applicability-check"),
-      stage("middle", stageKind, skill, operation),
-      stage("verify", "verify", "qfai-verify", "verify-full"),
+      planStage("sdd-delta", "sdd_delta", "always"),
+      planStage("middle", stageKind, "always"),
+      planStage("verify", "verify", "always"),
     ],
   };
 }
@@ -46,13 +40,13 @@ function obligations(exampleIds: string[], annotated: string[]): NonNullable<Fac
 // Issues the middle stage against the obligations at issue, then accepts its result against the
 // obligations after it.
 function acceptAgainst(
-  stage: [string, string, string],
+  stageKind: string,
   atIssue: NonNullable<Facts["obligations"]>,
   after: NonNullable<Facts["obligations"]>,
 ) {
   const ready: NonNullable<Snapshot> = {
     run: { id: "run-obligations", state: "ready", sequence: 8 },
-    plan: plan(...stage),
+    plan: plan(stageKind),
     flowBinding,
     acceptedStages: [{ stageInstanceId: "sdd-delta", stageKind: "sdd_delta", outcome: "accepted" }],
   };
@@ -84,12 +78,8 @@ function acceptAgainst(
   };
 }
 
-const implement: [string, string, string] = ["implement", "qfai-implement", "implement"];
-const sddDelta: [string, string, string] = [
-  "sdd_delta",
-  "qfai-sdd",
-  "update-or-applicability-check",
-];
+const implement = "implement";
+const sddDelta = "sdd_delta";
 
 it("A result after which an annotated example has no annotating test", () => {
   expect(

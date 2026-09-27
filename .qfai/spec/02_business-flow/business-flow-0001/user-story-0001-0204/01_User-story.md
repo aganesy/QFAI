@@ -6,7 +6,7 @@
   take its acceptance work order from the run, write the acceptance tests for
   the flow the run binds and report RED honestly, so that the run moves on to
   implementation without my typing a stage.
-- Non-goals: deciding the plan; the seam-only work order itself, which
+- Non-goals: deciding the plan; the `implement-seam` work order itself, which
   `/qfai-implement` serves; judging whether the run is complete.
 - Notes: discussion-20260923171450572#DUS-001 (its acceptance side),
   discussion-20260923171450572#REQ-0035,

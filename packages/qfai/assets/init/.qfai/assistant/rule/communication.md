@@ -78,10 +78,11 @@ When an agent needs to ask the user a question, the following rules apply (see a
    label it an assumption beside that open question. Rule 4's assumptions are the defaultable ones; an assumption
    with no open question against it is not one of them, and a fact declared undefaultable stops the run.
 
-All SKILL.md files MUST include a
-`## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.
-SSOT: the skill templates shipped inside the QFAI package.
-Deployed copy (updated by `npx qfai init`): `.qfai/assistant/skill/*/SKILL.md`.
+These rules bind every skill and every step through one section:
+`.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+Every SKILL.md MUST cite that anchor, and neither a SKILL.md nor a STEP.md
+restates the rules; a step is reached only through its parent or a work order,
+and both run under that section.
 
 ## Error handling
 

@@ -11,14 +11,20 @@ const read = (tree: string, rel: string): Promise<string> =>
 
 describe("the story-tree contract owns quality-gate commands", () => {
   for (const tree of TREES) {
-    it(`${tree}: configure and verify name the same Standard commands home`, async () => {
+    it(`${tree}: configure, the shared rule and the gate step name the same Standard commands home`, async () => {
       const configure = await read(tree, "assistant/skill/qfai-configure/SKILL.md");
-      const verify = await read(tree, "assistant/skill/qfai-verify/SKILL.md");
+      const baseline = await read(tree, "assistant/rule/shared-skill-operating-baseline.md");
+      const gateRun = await read(tree, "assistant/step/common-gate-run/STEP.md");
       const quality = await read(tree, "assistant/rule/quality.md");
       expect(configure).toContain("03_contract/tech.md#standard-commands-copy-paste");
-      expect(verify).toContain(".qfai/spec/03_contract/tech.md#standard-commands-copy-paste");
+      expect(baseline).toContain(
+        "`<paths.contractsDir>/tech.md#standard-commands-copy-paste`. The directory comes",
+      );
+      expect(baseline).toContain("**A capability with no entry is UNRUN, not passed.**");
+      expect(gateRun).toContain("`<paths.contractsDir>/tech.md#standard-commands-copy-paste`");
+      expect(gateRun).toContain("shared-skill-operating-baseline.md#standard-commands-mandatory");
       expect(quality).toContain("<paths.specsDir>/03_contract/tech.md");
-      for (const content of [configure, verify, quality]) {
+      for (const content of [configure, baseline, gateRun, quality]) {
         expect(content).not.toContain(".qfai/assistant/catalog/tech.md");
       }
     });

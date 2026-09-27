@@ -2,42 +2,40 @@ route: bugfix
 stages:
   - id: diagnose
     kind: diagnose
-    skill: qfai-implement
-    operation: diagnose-only
+    steps: [implement-diagnose]
     when: always
   - id: sdd-append
     kind: sdd_append
-    skill: qfai-sdd
-    operation: defect-example-seeding
+    steps: [sdd-story, sdd-gate]
     when: missing_example_needed
     after: [diagnose]
   - id: acceptance
     kind: acceptance
-    skill: qfai-atdd
-    operation: author-acceptance-tests
+    steps:
+      - atdd-scaffold
+      - { step: atdd-credentials, when: proposed }
+      - atdd-author
     when: acceptance_obligations_unmet
     after: [sdd-append]
   - id: implement
     kind: implement
-    skill: qfai-implement
-    operation: implement
+    steps: [implement-tdd, implement-checkpoint]
     when: diagnosis_missing_test
     after: [acceptance]
   - id: regression-fix
     kind: regression_fix
-    skill: qfai-implement
-    operation: regression-fix
+    steps: [implement-regression-fix]
     when: regression_found
     after: [diagnose]
   - id: test-fix
     kind: test_fix
-    skill: [qfai-atdd, qfai-implement]
-    operation: test-fix
+    steps:
+      - { step: atdd-test-fix, when: test_defect_acceptance_layer }
+      - { step: implement-test-fix, when: test_defect_example_layer }
     when: test_defect_found
     after: [diagnose]
   - id: verify
     kind: verify
-    skill: qfai-verify
-    operation: verify-full
+    steps: [verify-context, verify-qfai-gate, verify-repo-gate]
     when: always
     after: [implement, regression-fix, test-fix]

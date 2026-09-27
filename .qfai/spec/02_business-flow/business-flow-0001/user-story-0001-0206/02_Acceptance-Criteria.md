@@ -20,12 +20,12 @@ Scenario: The discussion skill follows the stage-skill handover
   When qfai-discussion starts with no name invocation and no work order
   Then it edits nothing and passes the request to qfai-run
   And with a valid work order it does only that work
-  And its SKILL.md cites references/orchestrated-mode.md with one line
 
 # AC-0001-0206-03
 # Parent: US-0001-0206
-Scenario: The discussion skill declares its operations
-  Given references/orchestrated-mode.md of qfai-discussion
-  When its Operations table is read
-  Then it lists exactly the operations the plan vocabulary assigns to qfai-discussion
+Scenario: The discussion skill lists the steps the plans run for discussion
+  Given the qfai-discussion SKILL.md and the built-in plans
+  When its steps frontmatter is read
+  Then it lists every step whose owner is qfai-discussion
+  And every step a plan gives a discussion stage is one of them
 ```

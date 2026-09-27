@@ -3,27 +3,16 @@
 import { expect, it } from "vitest";
 
 import { decide } from "../../../src/core/workflow/decide.js";
+import { kindSteps, planStage } from "./kindSteps.js";
 
 const flowBinding = { flowId: "BF-0007" };
 const plan = {
   route: "bugfix",
   stages: [
-    ["bugfix-diagnose", "diagnose", "qfai-implement", "diagnose-only", "always"],
-    [
-      "bugfix-regression-fix",
-      "regression_fix",
-      "qfai-implement",
-      "regression-fix",
-      "regression_found",
-    ],
-    ["bugfix-verify", "verify", "qfai-verify", "verify-full", "always"],
-  ].map(([stageInstanceId = "", stageKind = "", skill = "", operation = "", when = ""]) => ({
-    stageInstanceId,
-    stageKind,
-    skill,
-    operation,
-    when,
-  })),
+    planStage("bugfix-diagnose", "diagnose", "always"),
+    planStage("bugfix-regression-fix", "regression_fix", "regression_found"),
+    planStage("bugfix-verify", "verify", "always"),
+  ],
 };
 const diagnosis = {
   verdict: "regression",
@@ -37,8 +26,7 @@ const workOrder = {
   attempt: 1,
   stageKind: "regression_fix",
   target: { kind: "flow" as const, flowId: "BF-0007" },
-  executor: { skill: "qfai-implement" },
-  operation: "regression-fix",
+  steps: kindSteps("regression_fix"),
 };
 const fullReceipt = {
   testId: "TC-0007-0004",

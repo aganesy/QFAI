@@ -71,6 +71,33 @@ describe("assistant routing overrides", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("keys an override by step name and refuses an entry with both keys or a duplicate name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-routing-overrides-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "routing:",
+          "  - step: sdd-contract",
+          "    phases: []",
+          "  - step: sdd-flow",
+          "    skill: qfai-sdd",
+          "  - skill: sdd-contract",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const { config, issues } = await loadConfig(root);
+      expect(issues.map((issue) => issue.message)).toEqual([
+        expect.stringContaining("routing[1] must have exactly one non-empty step or skill."),
+        expect.stringContaining("routing has duplicate entry sdd-contract."),
+      ]);
+      expect(config.routing).toEqual([{ step: "sdd-contract", phases: [] }]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("baseBranch config", () => {

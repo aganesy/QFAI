@@ -15,11 +15,11 @@ async function framingAgents(): Promise<string[]> {
   const routing = (parsed as { routing?: unknown }).routing;
   if (!Array.isArray(routing)) return [];
   const discussion = routing.find(
-    (entry): entry is { skill: string; phases?: unknown } =>
+    (entry): entry is { step: string; phases?: unknown } =>
       typeof entry === "object" &&
       entry !== null &&
-      "skill" in entry &&
-      (entry as { skill?: unknown }).skill === "qfai-discussion",
+      "step" in entry &&
+      (entry as { step?: unknown }).step === "discussion-research",
   );
   if (!Array.isArray(discussion?.phases)) return [];
   const framing = discussion.phases.find(

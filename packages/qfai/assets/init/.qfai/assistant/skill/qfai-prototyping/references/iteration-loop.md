@@ -98,7 +98,7 @@ proceed unless the two match; the lock value is then cached into
 `prototyping.json` so subsequent cycles can re-verify the
 `live === lock === cache` invariant cheaply. Any of the three
 diverging exits with `2`. To change brand identity mid-project, edit
-`DESIGN.md`, rerun `/qfai-sdd`'s `03_contract` step to refreeze the lock, and
+`DESIGN.md`, rerun `/qfai-sdd`'s `common-design-md` step to refreeze the lock, and
 start `/qfai-prototyping` from cycle 0.
 
 ## Sealed loop

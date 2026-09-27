@@ -29,6 +29,14 @@ async function readPrototypingAsset(relativePath: string): Promise<string> {
   return readFile(path.join(PROTOTYPING_SKILL_ASSET_DIR, relativePath), "utf-8");
 }
 
+/** The loop step, which carries the delegation table and the transcription rules. */
+async function readLoopStep(): Promise<string> {
+  return readFile(
+    path.resolve(__dirname, "../..", "assets/init/.qfai/assistant/step/prototyping-loop/STEP.md"),
+    "utf-8",
+  );
+}
+
 const VALID_SKILL_CONTENT = [
   "# Prototyping Skill",
   "",
@@ -229,8 +237,8 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
     expect(prompt).toMatch(/^## Layout anti-pattern matching \(`lap-\*`\)$/m);
   });
 
-  it("SKILL.md delegates generation and evaluation to two different sub-agents", async () => {
-    const skill = await readPrototypingAsset("SKILL.md");
+  it("the loop step delegates generation and evaluation to two different sub-agents", async () => {
+    const skill = await readLoopStep();
     expect(skill).toMatch(
       /^\|\s*Generation and implementation\s*\|\s*product-experience-architect\s*\|/m,
     );
@@ -262,7 +270,7 @@ describe("prototyping skill asset — the reviewer and its inputs", () => {
 
   it("assigns review evidence conversion and screen coverage to the skill writer", async () => {
     const [skill, loop, prompt] = await Promise.all([
-      readPrototypingAsset("SKILL.md"),
+      readLoopStep(),
       readPrototypingAsset("references/iteration-loop.md"),
       readPrototypingAsset("references/reviewer-prompt.md"),
     ]);

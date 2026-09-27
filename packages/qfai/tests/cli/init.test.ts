@@ -362,9 +362,8 @@ describe("qfai init", () => {
           "skill",
           "qfai-discussion",
           "references",
-          "rcp_footer.md",
+          "discussion-artifact-rules.md",
         ),
-        path.join(root, ".qfai", "assistant", "skill", "qfai-sdd", "references", "rcp_footer.md"),
         path.join(root, ".github", "copilot-instructions.md"),
       ];
 
