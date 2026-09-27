@@ -20,6 +20,7 @@ import {
   renderPolicyDocument,
   type PolicyDraft,
 } from "./policyDocuments.js";
+import { moveTechSection, renderTechDocument } from "./techDocument.js";
 
 const POLICY_SOURCES = [
   ["01_Objective.md", "objective.md"],
@@ -74,8 +75,6 @@ function titleFor(target: string): string {
       return "Constraints";
     case "contracts.md":
       return "Contracts";
-    case "tech.md":
-      return "Technology";
     case "structure.md":
       return "Structure";
     default:
@@ -154,7 +153,8 @@ function route(source: string, heading: string, context: MigrationContext): stri
   if (source.endsWith("/product.md"))
     return policy(/^Milestones$/i.test(heading) ? "initiative.md" : "objective.md");
   if (source.endsWith("/manifest.md")) return policy("principle.md");
-  if (source.endsWith("/tech.md")) return contract("tech.md");
+  if (source.endsWith("/tech.md"))
+    return /^Constraints$/i.test(heading) ? policy("constraint.md") : contract("tech.md");
   if (source.endsWith("/structure.md")) return contract("structure.md");
   const policyName = path.posix.basename(source);
   const mapped = POLICY_SOURCES.find(([name]) => name === policyName)?.[1];
@@ -301,6 +301,8 @@ export const step03: MigrationStep = {
     const sources = POLICY_SOURCES.map(([name]) => `${policies}/${name}`);
     sources.push(...CATALOG_FILES.map((name) => `.qfai/assistant/catalog/${name}`));
 
+    const tech = relative(context.root, path.join(context.contractsDir, "tech.md"));
+    const shaped = (target: string): boolean => target === tech || isPolicyDocument(target);
     const drafts = new Map<string, PolicyDraft>();
     const draftFor = (target: string): PolicyDraft => {
       const draft = drafts.get(target) ?? newPolicyDraft(target);
@@ -318,7 +320,7 @@ export const step03: MigrationStep = {
         reserved,
       );
       const fallback = route(source, "", context);
-      if (isPolicyDocument(fallback)) {
+      if (shaped(fallback)) {
         draftFor(fallback);
         const h1 = parseHeadings(content).find((item) => item.level === 1);
         if (
@@ -345,8 +347,9 @@ export const step03: MigrationStep = {
       }
       for (const section of sections) {
         const target = route(source, section.heading, context);
-        if (isPolicyDocument(target)) {
-          forAPerson.push(...movePolicySection(draftFor(target), { ...section, source, archive }));
+        if (shaped(target)) {
+          const move = target === tech ? moveTechSection : movePolicySection;
+          forAPerson.push(...move(draftFor(target), { ...section, source, archive }));
           continue;
         }
         if (!documents.has(target)) {
@@ -360,7 +363,8 @@ export const step03: MigrationStep = {
       operations.push({ kind: "move", source, target: archive });
     }
     for (const [target, draft] of drafts) {
-      const content = await renderPolicyDocument(draft);
+      const content =
+        target === tech ? await renderTechDocument(draft) : await renderPolicyDocument(draft);
       const absolute = path.join(context.root, target);
       if (!(await exists(absolute))) documents.set(target, content);
       else if ((await readInput(absolute)) !== content)

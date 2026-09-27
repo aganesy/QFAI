@@ -43,8 +43,12 @@ states.
    the first write, and record it with `common-grilling-record`.
 2. Write each fact once across `01_policy/objective.md`, `initiative.md`,
    `principle.md`, and `03_contract/tech.md`, `structure.md`.
-3. Put the quality-gate commands only in the Standard commands section of
-   `tech.md`; other documents point there.
+3. Write `tech.md` from its template: the stack in `## Stack`, Runtime and
+   Platform rows included; each runtime dependency with its reason in
+   `## Dependencies`; and the quality-gate commands, one labelled item each,
+   only in the Standard commands section of `tech.md`. Other documents point
+   there. `tech.md` holds no rules and no constraints: a rule goes to the
+   contract that enforces it, a constraint to `01_policy/constraint.md`.
 4. Create or update `02_business-flow/business-flows.md` and each affected
    `business-flow-NNNN/business-flow.md`. Every flow document contains a Mermaid
    `flowchart` or `sequenceDiagram`.

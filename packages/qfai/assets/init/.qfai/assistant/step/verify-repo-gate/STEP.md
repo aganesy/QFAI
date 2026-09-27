@@ -35,16 +35,17 @@ Create and update: `.qfai/evidence/verify-<run-id>.md`, and
 
 ## Repository gates
 
-Run them through `common-gate-run`, in this order:
+Run them through `common-gate-run`, in this order, each with the Standard
+commands entry named after the colon:
 
-1. format check
-2. lint
-3. typecheck
-4. unit and component tests
-5. integration and API tests
-6. E2E tests
-7. build/package (if relevant)
-8. pack/verify (if distributed)
+1. format check: `Format`
+2. lint: `Lint`
+3. typecheck: `Typecheck`
+4. unit and component tests: `Test`
+5. integration and API tests: `Test`
+6. E2E tests: `Test`
+7. build/package (if relevant): `Build`
+8. pack/verify (if distributed): `Pack / distribution`
 
 Run listed commands and record outputs. Where the environment cannot run a
 command, ask the user to run it and provide the output. Never assume PASS

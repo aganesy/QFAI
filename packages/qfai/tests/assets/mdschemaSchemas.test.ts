@@ -356,3 +356,85 @@ describe("a closed policy section rejects content of another kind", () => {
     }
   });
 });
+
+describe("the technology document holds only its three sections, each in its shape", () => {
+  const TECH_TEMPLATE = path.join(TEMPLATE_ROOT, "03_contract/tech.md");
+  const TECH_SCHEMA = path.join(SCHEMA_ROOT, "story/03_contract/tech.mdschema.yml");
+  const PACKAGE = "- `<package>`\n  - `<what the project uses it for>`";
+
+  function check(text: string): { status: number | null; output: string } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "qfai-mdschema-tech-"));
+    try {
+      const file = path.join(dir, "tech.md");
+      writeFileSync(file, text, "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [MDSCHEMA_CLI, "check", "--schema", TECH_SCHEMA, file],
+        { cwd: REPO_ROOT, encoding: "utf-8" },
+      );
+      return { status: result.status, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  /** What is replaced in the template, by what, and the finding the checker reports. */
+  const rejected: ReadonlyArray<readonly [string, string, string, string]> = [
+    ["a Stack table without a Runtime row", "| Runtime ", "| Engine  ", "[required-text]"],
+    ["a Stack table without a Platform row", "| Platform ", "| Hosts    ", "[required-text]"],
+    ["prose in Stack", "## Stack\n\n", "## Stack\n\nThe stack.\n\n", "[forbidden-text]"],
+    ["a dependency with no nested reason", PACKAGE, "- `<package>`", "[forbidden-text]"],
+    [
+      "a dependency with its reason inline",
+      PACKAGE,
+      "- `<package>` for parsing",
+      "[forbidden-text]",
+    ],
+    ["`None.` beside a package", PACKAGE, `${PACKAGE}\n- None.`, "[forbidden-text]"],
+    ["a command list without Skeleton", "- Skeleton:", "- Smoke:", "[required-text]"],
+    [
+      "a command not in backticks",
+      "- Lint: `<lint command>`",
+      "- Lint: run lint",
+      "[forbidden-text]",
+    ],
+    [
+      "prose in Standard commands",
+      "## Standard commands (copy-paste)\n\n",
+      "## Standard commands (copy-paste)\n\nThe gate commands.\n\n",
+      "[forbidden-text]",
+    ],
+    [
+      "a Rules section",
+      "## Dependencies",
+      "## Rules\n\n- A rule.\n\n## Dependencies",
+      "[structure]",
+    ],
+    [
+      "a Constraints section",
+      "## Dependencies",
+      "## Constraints\n\n- A limit.\n\n## Dependencies",
+      "[structure]",
+    ],
+  ];
+
+  it.each(rejected)("reports %s", (_label, from, to, finding) => {
+    const template = readFileSync(TECH_TEMPLATE, "utf-8");
+    expect(template).toContain(from);
+    const result = check(template.replace(from, to));
+    expect(result.output).toContain(finding);
+    expect(result.status).not.toBe(0);
+  });
+
+  it("accepts `- None.` and one Skeleton item per entrypoint", () => {
+    const template = readFileSync(TECH_TEMPLATE, "utf-8")
+      .replace(PACKAGE, "- None.")
+      .replace(
+        /- Skeleton: .*\n/,
+        "- Skeleton: `api` -> `run api`\n- Skeleton: `cli` -> `run cli`\n",
+      );
+    const result = check(template);
+    expect(result.output).toContain("No violations");
+    expect(result.status).toBe(0);
+  });
+});

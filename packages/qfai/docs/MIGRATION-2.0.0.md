@@ -36,12 +36,12 @@ steps use; after that map exists, move or place unresolved content through
 The result separates project policy, concrete behavior, and enforcing
 contracts:
 
-| Old content                                                                    | New home                               |
-| ------------------------------------------------------------------------------ | -------------------------------------- |
-| Shared objectives, glossary and constraints                                    | `01_policy/`                           |
-| Business flows, stories, acceptance criteria and examples                      | `02_business-flow/`                    |
-| Contract index, technical rules and API, database, UI, CLI or design contracts | `03_contract/`                         |
-| Decisions and open questions                                                   | `decisions.md` and `open-questions.md` |
+| Old content                                                                                   | New home                               |
+| --------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Shared objectives, glossary and constraints                                                   | `01_policy/`                           |
+| Business flows, stories, acceptance criteria and examples                                     | `02_business-flow/`                    |
+| Contract index, technology stack and commands, and API, database, UI, CLI or design contracts | `03_contract/`                         |
+| Decisions and open questions                                                                  | `decisions.md` and `open-questions.md` |
 
 The scripts archive old files that have no direct new home. Review the five
 assembled files after step 3: `objective.md`, `initiative.md`,

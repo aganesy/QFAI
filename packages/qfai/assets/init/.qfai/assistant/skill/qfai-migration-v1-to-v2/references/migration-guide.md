@@ -132,7 +132,9 @@ is archived under `retired/_policies/` and none of its sections was copied to
 `qfai-sdd/references/sdd-triage.md`. Read `objective.md`, `initiative.md`, `principle.md`,
 `tech.md` and `structure.md`. Remove facts repeated in different words. The
 scripts remove byte-identical repeats; a person must judge paraphrases. Quality
-gate commands have one home: the Standard commands section of `tech.md`.
+gate commands have one home: the Standard commands section of `tech.md`, which
+step 3 writes in its template's shape. Replace each `<...>` placeholder the old
+`catalog/tech.md` did not supply.
 
 ## Resolve the reports
 

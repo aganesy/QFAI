@@ -18,7 +18,10 @@ Neither is restated here.
 ## Reads
 
 - `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for a project
-  command: Install, Format, Test, Lint, Typecheck, Build, Skeleton or Validate.
+  command: Install, Format, Test, Lint, Typecheck, Build, Skeleton, Validate or
+  Pack / distribution.
+- The `Runtime` and `Platform` rows of `<paths.contractsDir>/tech.md#stack`
+  for the environment a command runs in.
 - `qfai.config.yaml` for `paths.contractsDir`, `paths.outDir` and the test
   globs.
 - The launcher the preflight established, for a qfai command
@@ -36,7 +39,7 @@ Neither is restated here.
    written. An entry that is missing makes the gate UNRUN: record it and route
    the gap as the rule says; never substitute a command from another stack.
 3. **Run it** on the tree the stage will hand to its reviewer, in the
-   environment the section declares.
+   environment the `Runtime` and `Platform` rows declare.
 4. **Record** in the stage evidence (`common-evidence-record`): the exact
    command, the exit code, the counts or outcome, the revision the run read,
    and for a validate run the `<paths.outDir>/validate.log` path and the

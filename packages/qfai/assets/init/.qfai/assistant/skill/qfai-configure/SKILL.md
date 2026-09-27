@@ -384,7 +384,7 @@ Fill steering templates with repo evidence.
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
-- Keep quality-gate commands in `03_contract/tech.md` under Standard commands.
+- Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
 - In `03_contract/structure.md#ui-surface-paths-ssot`, replace placeholder bullets with actual UI globs, or with `none` when the repo renders no user-visible surface. An unresolved field leaves the UI impact decision unevaluable.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)

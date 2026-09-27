@@ -95,7 +95,7 @@ before a dependent stage proceeds.
 - `rule/agent-selection.md`, `rule/test-layers.md` and
   `rule/shared-skill-delegation-baseline.md`.
 - The selected BF, its US, AC, EX and BR records and the contracts they cite.
-- `<paths.contractsDir>/tech.md#standard-commands` for the project's Test,
+- `<paths.contractsDir>/tech.md#standard-commands-copy-paste` for the project's Test,
   Lint, Typecheck and Build commands.
 - Current ATDD evidence when reviewing acceptance or implementation work.
 - Current validation findings, test paths, selectors and observed results.

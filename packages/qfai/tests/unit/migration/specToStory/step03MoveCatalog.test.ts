@@ -56,22 +56,28 @@ function mdschemaCli(): string {
   return path.resolve(path.dirname(manifestPath), entry);
 }
 
-/** What the shipped schema says about one written policy document. */
-function conformance(specsDir: string, name: string): string {
-  const schema = path.resolve(
+/** What the shipped schema at `story/<schema>.mdschema.yml` says about one written document. */
+function schemaCheck(schema: string, document: string): string {
+  const schemaFile = path.resolve(
     getInitAssetsDir(),
     "..",
     "mdschema",
     "story",
-    "01_policy",
-    `${name}.mdschema.yml`,
+    `${schema}.mdschema.yml`,
   );
   const result = spawnSync(
     process.execPath,
-    [mdschemaCli(), "check", "--schema", schema, path.join(specsDir, "01_policy", `${name}.md`)],
-    { encoding: "utf8" },
+    [mdschemaCli(), "check", "--schema", schemaFile, document],
+    {
+      encoding: "utf8",
+    },
   );
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;
+}
+
+/** What the shipped schema says about one written policy document. */
+function conformance(specsDir: string, name: string): string {
+  return schemaCheck(`01_policy/${name}`, path.join(specsDir, "01_policy", `${name}.md`));
 }
 
 async function run(context: MigrationContext): Promise<{ code: number; output: string }> {
@@ -266,6 +272,142 @@ describe("migration catalog move", () => {
     for (const name of ["objective", "glossary", "constraint"]) {
       expect(conformance(context.specsDir, name), name).toContain("No violations");
     }
+  });
+
+  it("writes tech.md in its template's shape and its constraints to constraint.md", async () => {
+    // QFAI:EX-0004-0006-11
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/tech.md",
+      [
+        "# Tech Steering",
+        "",
+        "## Runtime / platform",
+        "",
+        "- Language runtime: Node.js 22",
+        "- OS assumptions: Linux",
+        "",
+        "## Package manager",
+        "",
+        "- pnpm 9",
+        "",
+        "## Dependencies (runtime)",
+        "",
+        "- `yaml`",
+        "  - Parses the configuration.",
+        "",
+        "## Constraints",
+        "",
+        "| ID | Constraint | Rationale | Impact |",
+        "| --- | --- | --- | --- |",
+        "| TC-04 | No native modules | Portable installs | Pure JavaScript only |",
+        "",
+        "## Standard commands (copy-paste)",
+        "",
+        "- Test: `pnpm test`",
+        "- Smoke: `api` -> `pnpm smoke`",
+        "- Build: pnpm build",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(0);
+    const tech = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
+    expect(tech).toContain(
+      "| Component | Choice |\n| --- | --- |\n| Runtime | Node.js 22 |\n| Platform | Linux |\n",
+    );
+    expect(tech).toContain("| Package manager | pnpm 9 |\n");
+    expect(tech).toContain("## Dependencies\n\n- `yaml`\n  - Parses the configuration.\n\n");
+    expect(tech).toContain("- Test: `pnpm test`\n");
+    expect(tech).toContain("- Skeleton: `api` -> `pnpm smoke`\n");
+    expect(tech).toContain("- Build: `pnpm build`\n");
+    expect(tech).toContain("- Install: `<install command>`\n");
+    expect(tech).not.toContain("Smoke");
+    expect(tech.indexOf("## Stack")).toBeLessThan(tech.indexOf("## Dependencies"));
+    expect(tech.indexOf("## Dependencies")).toBeLessThan(
+      tech.indexOf("## Standard commands (copy-paste)"),
+    );
+    expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
+      "No violations",
+    );
+    const constraint = await readFile(
+      path.join(context.specsDir, "01_policy", "constraint.md"),
+      "utf8",
+    );
+    expect(constraint).toContain(
+      "| TC-04 | No native modules | Portable installs | Pure JavaScript only |",
+    );
+    expect(conformance(context.specsDir, "constraint")).toContain("No violations");
+  });
+
+  it("sends the technology content tech.md cannot take to a person", async () => {
+    // QFAI:EX-0004-0006-12
+    const context = await fixture();
+    await put(
+      context.root,
+      ".qfai/assistant/catalog/tech.md",
+      [
+        "# Tech Steering",
+        "",
+        "> Replace placeholder text.",
+        "",
+        "## Frontend",
+        "",
+        "Leave this out for a project with no user interface.",
+        "",
+        "- CSS framework: Tailwind",
+        "",
+        "## Dependencies (runtime)",
+        "",
+        "- yaml for the configuration",
+        "",
+        "## Constraints",
+        "",
+        "- No native modules.",
+        "",
+        "## Standard commands (copy-paste)",
+        "",
+        "This section is the single home for gate commands.",
+        "",
+        "- Test: `pnpm test`",
+        "- Smoke: one line per entrypoint",
+        "  named in the structure file.",
+        "",
+      ].join("\n"),
+    );
+    const result = await run(context);
+    expect(result.code).toBe(3);
+    const source = ".qfai/assistant/catalog/tech.md";
+    const archive = ".qfai/evidence/migration-spec-to-story/retired/assistant/catalog/tech.md";
+    const tech = ".qfai/spec/03_contract/tech.md";
+    for (const line of [
+      `${tech}: rewrite the text before the first section of ${source} by hand (kept at ${archive})`,
+      `${tech} ## Stack: rewrite "## Frontend" of ${source} by hand (kept at ${archive})`,
+      `${tech} ## Dependencies: rewrite "## Dependencies (runtime)" of ${source} by hand (kept at ${archive})`,
+      `.qfai/spec/01_policy/constraint.md: rewrite "## Constraints" of ${source} by hand (kept at ${archive})`,
+      `${tech} ## Standard commands (copy-paste): rewrite the part of "## Standard commands (copy-paste)" of ${source} that is not a list of labelled commands by hand (kept at ${archive})`,
+      `${tech} ## Standard commands (copy-paste): carry "- Smoke: one line per entrypoint" of "## Standard commands (copy-paste)" in ${source} by hand (kept at ${archive})`,
+    ]) {
+      expect(result.output).toContain(line);
+    }
+    const written = await readFile(path.join(context.contractsDir, "tech.md"), "utf8");
+    expect(written).toContain("- Test: `pnpm test`\n");
+    for (const text of [
+      "Replace placeholder",
+      "Tailwind",
+      "yaml for",
+      "single home",
+      "one line per",
+    ]) {
+      expect(written).not.toContain(text);
+    }
+    expect(
+      await readFile(path.join(context.specsDir, "01_policy", "constraint.md"), "utf8"),
+    ).not.toContain("No native modules");
+    expect(schemaCheck("03_contract/tech", path.join(context.contractsDir, "tech.md"))).toContain(
+      "No violations",
+    );
   });
 
   it("archives the full legacy slice policy without restoring obsolete rules", async () => {

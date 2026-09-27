@@ -188,6 +188,23 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
 
+- **`tech.md` has a closed schema of three sections.** `## Stack` is one
+  Component and Choice table with Runtime and Platform rows. `## Dependencies`
+  names each runtime package in backticks with its reason on a nested item, or
+  says `- None.`. `## Standard commands (copy-paste)` holds one labelled item
+  per quality-gate command: Install, Format, Test, Lint, Typecheck, Build,
+  Skeleton and Validate, and optionally Pack / distribution. A project with
+  several entrypoints writes one `- Skeleton: <entry> -> <command>` item each.
+
+  - `tech.md` holds no rules and no constraints. A rule belongs to the contract
+    that enforces it, and a constraint to `01_policy/constraint.md`.
+  - The primary component registry is the `Component catalogue` row of the
+    Stack table.
+  - Migration step 3 writes `tech.md` in its template's shape. The 1.x stack
+    lists become Stack rows, `Smoke` becomes `Skeleton`, and the Constraints
+    section goes to `01_policy/constraint.md`. Anything else is listed under
+    `## For a person`, and the step exits 3.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

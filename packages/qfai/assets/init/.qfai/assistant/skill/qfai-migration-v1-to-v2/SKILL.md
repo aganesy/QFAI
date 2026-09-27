@@ -53,7 +53,9 @@ keep authors separate from reviewers.
    triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the five files assembled from multiple
    sources: `objective.md`, `initiative.md`, `principle.md`, `tech.md` and
    `structure.md`. Remove facts duplicated in different words. Keep the
-   source files archived by the scripts.
+   source files archived by the scripts. `tech.md` is written in its
+   template's shape: replace each `<...>` placeholder its old file did not
+   supply.
 4. Run steps 4 to 10 in order, each with `--dry-run` followed by the real run.
    Inspect and keep every report and exit code as in step 2.
 5. Resolve every reported item with the person responsible for the content.

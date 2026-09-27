@@ -1203,19 +1203,19 @@ describe("BF-0004 acceptance criteria", () => {
       expect(count, source).toBeGreaterThan(0);
       await writeFile(file, content);
     }
-    // A policy section holding a paragraph is not of its template section's kind, so it
-    // goes to a person; every other destination takes the section whole.
+    // A policy or tech.md section holding a paragraph is not of its template section's
+    // kind, so it goes to a person; every other destination takes the section whole.
     const moved = step(root, 3);
     expect(moved.status).toBe(3);
     for (const { target, text, source, name } of sectionMarkers) {
-      if (target.includes("/01_policy/")) {
-        expect(moved.stdout, text).toContain(`rewrite "## ${name}" of ${source} by hand`);
+      if (target.includes("/01_policy/") || target.endsWith("/tech.md")) {
+        expect(moved.stdout, text).toContain(`"## ${name}" of ${source}`);
         expect(await readFile(path.join(root, target), "utf8"), target).not.toContain(text);
       } else {
         expect(await readFile(path.join(root, target), "utf8"), target).toContain(text);
       }
     }
-    expect(await readFile(path.join(root, ".qfai/spec/03_contract/tech.md"), "utf8")).toContain(
+    expect(await readFile(path.join(root, ".qfai/spec/03_contract/tech.md"), "utf8")).not.toContain(
       "Standard commands marker.",
     );
     for (const [source] of markers) {

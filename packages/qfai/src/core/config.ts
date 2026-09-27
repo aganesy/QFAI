@@ -119,8 +119,8 @@ export type QfaiUiuxConfig = {
    * already carries, so a project that has one restates it rather than
    * translating it.
    *
-   * Which registry is primary is prose, and lives in
-   * `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
+   * Which registry is primary is named by the `Component catalogue` row of the
+   * Stack table in `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
    */
   registries?: Record<string, string>;
   designTokensDir?: string;

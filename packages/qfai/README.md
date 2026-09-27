@@ -391,7 +391,7 @@ flowchart LR
 
 - Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
 - Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
-- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands`.
+- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
 ## Minimal tutorial
