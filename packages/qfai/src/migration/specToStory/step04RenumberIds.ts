@@ -630,14 +630,15 @@ type BlockEntry =
   | { kind: "other" };
 
 /** A line that opens a list item, a quote, a table or a fence at the top of a block. */
-const OTHER_BLOCK = /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)/;
+const OTHER_BLOCK =
+  /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 
 function storyBlockEntries(body: string): BlockEntry[] {
   const entries: BlockEntry[] = [];
   let current: BlockEntry | null = null;
   for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
     const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
-    const item = /^\s+[-*+]\s+(.*)$/.exec(line);
+    const item = /^\s+(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
     if (line.trim() === "") {
       if (current?.kind === "paragraph") current = null;
     } else if (field) {
@@ -684,6 +685,8 @@ function storyParts(body: string): StoryParts | null {
       sentences.push(entry.text);
     } else if (entry.key === "non-goals") {
       nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
+    } else if (ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      continue;
     } else if (entry.items.length > 0) {
       return null;
     } else if (entry.key === "goal") {
@@ -710,7 +713,7 @@ function withoutArchivedFields(body: string): string {
     const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
     const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
     if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
-    else if (fence === null && !/^\s+\S/.test(line)) skipping = false;
+    else if (fence === null && line.trim() !== "" && !/^\s+\S/.test(line)) skipping = false;
     const run = marker?.[1] ?? "";
     if (marker && fence === null) fence = run;
     else if (
@@ -1167,7 +1170,16 @@ export const step04: MigrationStep = {
             );
           }
         } else {
-          operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
+          // A criteria file that differs from what step 4 writes was edited after an
+          // earlier run, so it is kept rather than overwritten.
+          const existing = await readOptional(path.join(context.root, criteriaFile));
+          if (existing === null || existing === criteriaText) {
+            operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
+          } else {
+            forAPerson.push(
+              `${criteriaFile}: the existing file differs from what step 4 writes and is kept; check that it states ${storyId}'s criteria`,
+            );
+          }
         }
         operations.push({
           kind: "write",
