@@ -716,16 +716,17 @@ function outputStory(
 }
 
 /**
- * A scenario re-indented to the template: two spaces for `Scenario:`, four for its steps.
- * The steps' own indentation is replaced and every character after it is kept, so a
- * DocString keeps its relative whitespace, tabs included. A whitespace-only line inside a
- * DocString is payload, so it is shifted like the rest rather than emptied.
+ * A scenario re-indented to the template: two spaces for `Scenario:`, four for each step.
+ * Every other line keeps its place relative to the step above it: that step's
+ * indentation is replaced and every character after it is kept, so a DocString keeps
+ * its relative whitespace, tabs included. A whitespace-only line inside a DocString is
+ * payload, so it is shifted like the rest rather than emptied.
  */
 function indentedScenario(scenario: string): string {
   const lines = scenario.replace(/\r\n/g, "\n").split("\n");
   const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
-  const step = lines.find((line) => /^\s*(?:Given|When|Then|And|But)\s/.test(line));
-  const stepIndent = step === undefined ? 0 : indent(step);
+  const isStep = (line: string): boolean => /^\s*(?:Given|When|Then|And|But)\s/.test(line);
+  let stepIndent = indent(lines.find(isStep) ?? "");
   const shifted = (line: string): string =>
     `    ${indent(line) >= stepIndent ? line.slice(stepIndent) : line.trimStart()}`;
   let docString: string | null = null;
@@ -739,6 +740,10 @@ function indentedScenario(scenario: string): string {
       if (line === "") return "";
       if (line.trim() === "") return inDocString ? shifted(line) : "";
       if (index === 0) return `  ${line.trimStart()}`;
+      if (!inDocString && delimiter === null && isStep(line)) {
+        stepIndent = indent(line);
+        return `    ${line.trimStart()}`;
+      }
       return shifted(line);
     })
     .join("\n");
