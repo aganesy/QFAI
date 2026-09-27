@@ -170,6 +170,13 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The `qfai prototyping`, `qfai prototyping iterate` and `qfai workflow`
+  contracts are written as business rules.** This repository's contracts for
+  those commands now hold an ownership boundary and one business-rules table,
+  numbered `BR-0013-NNNN`, `BR-0014-NNNN` and `BR-0017-NNNN`. Their flags,
+  exit codes, payload fields, state transitions and operator screens are rules
+  in that table. No command behaves differently.
+
 - **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
   `CON-UI-NNNN` form is no longer accepted.
   - `--primary-ui-contract`, `prototyping.primaryUiContract` and
