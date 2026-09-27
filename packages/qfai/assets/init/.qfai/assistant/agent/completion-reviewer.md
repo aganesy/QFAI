@@ -34,7 +34,7 @@ specialization_tags:
 
 - Return PASS or REVISE with actionable rework. Check the stage completion contract, prompt DoD, fresh validation result, test obligations and independent reviewer verdicts.
 - Reconcile the affected BF/US/AC/EX/BR links and contracts. Confirm that every in-scope gap has an owner, and that an unresolved error is not reported as completed work.
-- On an SDD handoff, inspect the current story and contract files, their governing decision rows and the SDD evidence. Confirm rejected options are not revived without an approved new DEC row.
+- On an SDD handoff, inspect the current story and contract files, their governing decision rows and the SDD evidence. Confirm each story-tree document holds its template's sections and nothing else, and that a rejected option is revived only by a later `decisions.md` row that reopens it.
 - On an implementation handoff, inspect the final EX evidence and review pack, the affected tests, and the final BF-scoped validation. A reviewer verdict must name the same current revision.
 - Apply `.agents/rules/minimal-implementation.md` and `rule/shared-skill-delegation-baseline.md#what-a-reviewer-may-demand-more-of-must`. Report a new product obligation as advisory to the SDD owner.
 

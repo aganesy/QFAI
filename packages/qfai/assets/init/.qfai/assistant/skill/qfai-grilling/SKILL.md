@@ -261,11 +261,11 @@ Completion is how a session ends on its own. It is not the only way one ends.
   each decision still open recorded as an assumption and labelled as one.
 
 **Two kinds of node are never assumed, whatever the user answered.** A decision
-some document requires the user to make and record — an SDD triage `Approved By`
-among them — and an input declared `hard-required` are outside the assumption
-path. They are still asked, and where a no-question mode forbids asking, the run
-stops and names them instead. Closing the questions waives the agent's own
-uncertainty, never an authorization the user has not given.
+some document requires the user to make and record — the approval an SDD triage
+row waits on among them — and an input declared `hard-required` are outside the
+assumption path. They are still asked, and where a no-question mode forbids
+asking, the run stops and names them instead. Closing the questions waives the
+agent's own uncertainty, never an authorization the user has not given.
 
 ## When talking cannot settle it
 

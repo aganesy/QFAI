@@ -1173,7 +1173,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Each test exception cites a declared BF, AC, or EX ID and a decision row in force.",
   "QFAI-STORY-010":
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
-  "QFAI-STORY-011": "Every business-flow file contains a Mermaid flowchart or sequence diagram.",
+  "QFAI-STORY-011":
+    "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1434,7 +1435,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Correct the annotation to a declared BF, AC, or EX ID, or remove a stale annotation.",
   "QFAI-STORY-010":
     "Restore the protected row or record an in-force change request for the named file change.",
-  "QFAI-STORY-011": "Add a Mermaid flowchart or sequence diagram to the named business-flow file.",
+  "QFAI-STORY-011":
+    "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.

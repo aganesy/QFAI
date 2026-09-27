@@ -1,14 +1,14 @@
 # SDD Quality Gate
 
-The gate checks the story-tree files against their shipped templates and the approved source. Record the result for each touched BF.
+The gate checks the story-tree files against their shipped templates, the document schemas that close those shapes, and the approved source. Record the result for each touched BF.
 
 ## Structure and records
 
 - 01_policy/ contains the required policy files, and each fact in objective.md, initiative.md, principle.md, tech.md, and structure.md has one home.
 - Quality-gate commands occur only in the Standard commands section of <paths.contractsDir>/tech.md. Other files point there.
-- 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has a Mermaid flowchart or sequenceDiagram.
+- 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has exactly one Mermaid flowchart or sequenceDiagram, in `## Flow`.
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
-- The story tree was written from its paired templates under ../templates/spec/.
+- The story tree was written from its paired templates under ../templates/spec/ and holds no heading, section, content kind or history they do not show, as spec-traceability-rules.md#document-shapes sets out.
 - decisions.md and open-questions.md have four cells per row: ID, Content, Approach, Status. Existing rows changed only in Status.
 - Triage, change requests, retirement, and rejected options have decision rows. Unanswered critical decisions have open-question rows and prevent completion.
 
@@ -29,7 +29,7 @@ The gate checks the story-tree files against their shipped templates and the app
 For each BF written or changed, and each existing BF whose obligations depend on a contract-scoped change:
 
 1. Run npx qfai validate --profile sdd --fail-on error --flow BF-NNNN.
-2. Resolve errors in their owning source and rerun until error=0.
+2. Resolve errors in their owning source and rerun until error=0. A document that fails its schema is reshaped to its template, never extended to explain the failure.
 3. Record the exact command, result, and validate log path in .qfai/evidence/sdd-BF-NNNN.md.
 4. Review the finding families for ID grammar, EX-to-AC, BR-to-EX, contract index, and record rows. An error-free gate is necessary and does not prove product intent on its own.
 

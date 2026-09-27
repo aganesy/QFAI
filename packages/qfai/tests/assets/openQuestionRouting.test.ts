@@ -12,7 +12,7 @@ const flat = (text: string): string => text.replace(/\s+/g, " ");
 
 describe.each(trees)("%s open-question routing", (tree) => {
   const registers = {
-    "qfai-configure": "08_Open-questions.md",
+    "qfai-configure": "open-questions.md",
     "qfai-verify": "open-questions.md",
   };
   for (const [name, register] of Object.entries(registers)) {

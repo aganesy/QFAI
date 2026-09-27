@@ -14,15 +14,15 @@ Use these checkpoints with the ordered stages in sdd-execution-playbook.md. A ch
 
 ## Policy and business flow
 
-- Files in 01_policy/ and 02_business-flow/ were copied from paired templates and retain their required headings.
+- Files in 01_policy/ and 02_business-flow/ were copied from paired templates and hold their headings and nothing else, as spec-traceability-rules.md#document-shapes sets out. No section records history.
 - Objective, initiative, principle, tech, and structure state each fact in one place. Gate commands occur only in tech.md Standard commands.
-- Every affected business-flow.md has a Mermaid flowchart or sequenceDiagram.
-- business-flows.md and user-stories.md index actual flows and stories with their assigned BF and US IDs.
+- Every affected business-flow.md has exactly one Mermaid flowchart or sequenceDiagram in `## Flow`, and at least one alternate or exception path.
+- business-flows.md and user-stories.md index actual flows and stories with their assigned BF and US IDs and their H1 titles, word for word.
 
 ## Stories and examples
 
 - Each story directory has only 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
-- Each AC is a Gherkin scenario tied to one story.
+- Each AC is one named Gherkin Scenario under its ID comment, in the story's one gherkin block. No Scenario Outline.
 - Each EX has exactly one existing AC-Ref. Each AC has one or more EX.
 - Examples cover meaningful success, boundary, and kept-failure outcomes without inventing product rules.
 - The story and example IDs follow their BF and US scopes and are never reused.
@@ -53,6 +53,7 @@ Follow concrete-abstract-cycle.md.
 ## Validation and review
 
 - Every affected BF passed npx qfai validate --profile sdd --fail-on error --flow BF-NNNN with error=0.
+- Every document written passes its document schema. A failure was fixed by reshaping the document, not by adding to it.
 - The log path and result for each BF are in .qfai/evidence/sdd-BF-NNNN.md.
 - Each entered design-writing stage has a pre-draft grilling checkpoint before its first mutation. A skipped checkpoint fails the gate; unanswered critical decisions remain open and block completion.
 - Reviewers are independent of the authors and all routed blocking verdicts are PASS.

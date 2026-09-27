@@ -45,12 +45,32 @@ states.
    `principle.md`, and `03_contract/tech.md`, `structure.md`.
 3. Put the quality-gate commands only in the Standard commands section of
    `tech.md`; other documents point there.
-4. Create or update `02_business-flow/business-flows.md` and each affected
-   `business-flow-NNNN/business-flow.md`. Every flow document contains a Mermaid
-   `flowchart` or `sequenceDiagram`.
-5. A flow and its user stories describe observable outcomes, not implementation
+4. Write every file in its template's shape and nothing more, as
+   `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
+   states: policy holds criteria rather than definitions, and no section
+   records history.
+5. Carry the selected discussion pack into policy:
+
+   | Discussion pack                                        | Story tree                                     |
+   | ------------------------------------------------------ | ---------------------------------------------- |
+   | `05_Scope.md` success criteria                         | `objective.md` `## Success criteria` rows      |
+   | `05_Scope.md` out of scope                             | `objective.md` `## Non-goals`                  |
+   | `08_Glossary.md` terms and abbreviations               | `glossary.md` `## Terms` rows                  |
+   | `09_Constraints.md` technical and operational          | `constraint.md` technical and operational rows |
+   | `09_Constraints.md` legal, budget and timeline entries | `constraint.md` `## Business Constraints` rows |
+
+   A row takes the story-tree ID of its section, not the pack's ID, and only
+   the columns its template has.
+
+6. Create or update `02_business-flow/business-flows.md` and each affected
+   `business-flow-NNNN/business-flow.md`. The index holds one row per flow —
+   its ID, its H1 title and its directory — and nothing else. The flow document
+   holds its purpose as prose, exactly one Mermaid `flowchart` or
+   `sequenceDiagram` under `## Flow`, and a list of its alternate and exception
+   paths.
+7. A flow and its user stories describe observable outcomes, not implementation
    steps.
-6. Allocate BF IDs as
+8. Allocate BF IDs as
    `.qfai/assistant/skill/qfai-sdd/references/sdd-triage.md#id-allocation`
    states, and add the new rows to the flow index.
 

@@ -40,8 +40,9 @@ mutation that violates the claimed rule. Run the selected test, capture its
 assertion failure, restore the mutation, and rerun it on the restored tree.
 Record the mutation and both results. If no safe mutation or equivalent
 falsifiability argument exists, keep the obligation unresolved and route it
-through the current flow's `decisions.md`; only a valid DONE exception can
-discharge it. Do not call a passing test alone a RED proof.
+through a `decisions.md` row under `<paths.specsDir>`; only a DONE
+`Test exception:` row can discharge it. Do not call a passing test alone a RED
+proof.
 
 ## Freshness
 

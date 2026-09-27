@@ -29,7 +29,9 @@ The steering files under `<paths.specsDir>`, resolved from `qfai.config.yaml`
 
 1. **Detect.** A file is incomplete when it is missing, has an empty section,
    holds only placeholder text (`<...>`, a lone `-`), carries `TBD`, or states a
-   fact the repository contradicts.
+   fact the repository contradicts. A table with no rows is complete where the
+   template's table has none, and so is a `- None.` list: the project has
+   nothing to record there.
 2. **Fill what this stage owns.** Derive each fact from the repository and name
    where it was read:
    - the objective from the README, the docs and the project's own issues;
