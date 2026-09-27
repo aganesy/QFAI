@@ -1,4 +1,5 @@
 import { parseHeadings } from "./parse/markdown.js";
+import { maskNonSpecRegions } from "./specPackParsers.js";
 import { isContractId } from "./storyTree/ids.js";
 
 // SIMPLIFIED: a declaration may still name a `CON-*` ID beside a `<KIND>-NNNN` one.
@@ -16,16 +17,16 @@ const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI|DESIGN)-\d{4}):\s+\S/;
 
 /**
  * The `<KIND>-NNNN` ID a contract file declares, or `null` when it declares
- * none: the first H1 of a Markdown contract, and the one `QFAI-CONTRACT-ID`
+ * none: the first rendered H1 of a Markdown contract, and the one `QFAI-CONTRACT-ID`
  * line of any other file. Several such lines declare nothing.
  */
 export function declaredContractId(file: string, text: string): string | null {
   if (file.toLowerCase().endsWith(".md")) {
-    const heading = parseHeadings(text).find((item) => item.level === 1);
+    const heading = parseHeadings(maskNonSpecRegions(text)).find((item) => item.level === 1);
     return MARKDOWN_CONTRACT_H1_RE.exec(heading?.title ?? "")?.[1] ?? null;
   }
-  const ids = extractDeclaredContractIds(text).filter(isContractId);
-  return ids.length === 1 ? (ids[0] ?? null) : null;
+  const [id, ...others] = extractDeclaredContractIds(text);
+  return id !== undefined && others.length === 0 && isContractId(id) ? id : null;
 }
 
 export function extractDeclaredContractIds(text: string): string[] {

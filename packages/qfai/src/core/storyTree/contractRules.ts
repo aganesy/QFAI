@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { extractH2Sections } from "../parse/markdown.js";
-import { parseAllMarkdownTables } from "../specPackParsers.js";
+import { extractH2Sections, parseHeadings } from "../parse/markdown.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "../specPackParsers.js";
 
 export type ContractRule = {
   id: string;
@@ -17,7 +17,7 @@ export type ContractRuleScan = { rules: ContractRule[]; refs: string[]; errors: 
 const SQL_RULE = /^-- Rule (BR-[A-Za-z0-9_-]+):\s*(.*)$/;
 const SQL_EXAMPLES = /^-- Examples:\s*(.*)$/;
 const SQL_REFS = /^-- Rule refs:\s*(.*)$/;
-const MARKDOWN_REFS = /^Rule refs:\s*(.*)$/m;
+const MARKDOWN_REFS = /^ {0,3}Rule refs:\s*(.*)$/m;
 const BUSINESS_RULES = "Business rules";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -97,7 +97,14 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   } else if (extension === ".md") {
-    const sections = extractH2Sections(text);
+    const rendered = maskNonSpecRegions(text);
+    const sections = extractH2Sections(rendered);
+    const businessRulesSections = parseHeadings(rendered).filter(
+      (heading) => heading.level === 2 && heading.title === BUSINESS_RULES,
+    ).length;
+    if (businessRulesSections > 1) {
+      errors.push(`More than one ## ${BUSINESS_RULES} section in ${file}`);
+    }
     // SIMPLIFIED: `## Rules`, and the `Rule refs:` line it may carry, are still read
     // beside `## Business rules`.
     // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
@@ -105,7 +112,7 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
       const body = sections.get(name)?.body;
       if (body === undefined) continue;
       readMarkdownRules(file, name, body, rules, errors);
-      const ref = MARKDOWN_REFS.exec(body);
+      const ref = MARKDOWN_REFS.exec(name === BUSINESS_RULES ? maskNonSpecRegions(body) : body);
       if (ref && name === BUSINESS_RULES) {
         errors.push(`A Rule refs line is not allowed under ## ${BUSINESS_RULES} in ${file}`);
       } else if (ref) {
@@ -117,7 +124,11 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
   return { rules, refs: [...new Set(refs)].sort(), errors };
 }
 
-/** Reads one section's rules table, whose columns are exactly BR-ID, Statement and Examples. */
+/**
+ * Reads one section's rules table, whose columns are exactly BR-ID, Statement and
+ * Examples. A table inside a code block or an HTML comment is not the rules table,
+ * and `## Business rules` holds exactly one.
+ */
 function readMarkdownRules(
   file: string,
   section: string,
@@ -125,9 +136,14 @@ function readMarkdownRules(
   rules: ContractRule[],
   errors: string[],
 ): void {
-  const table = parseAllMarkdownTables(body)[0];
+  const tables = parseAllMarkdownTables(maskNonSpecRegions(body));
+  const table = tables[0];
   if (!table) {
     errors.push(`Missing ${section} table in ${file}`);
+    return;
+  }
+  if (section === BUSINESS_RULES && tables.length > 1) {
+    errors.push(`More than one ${section} table in ${file}`);
     return;
   }
   const [idColumn, statementColumn, examplesColumn] = ["BR-ID", "Statement", "Examples"].map(
