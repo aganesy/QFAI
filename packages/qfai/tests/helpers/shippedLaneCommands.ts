@@ -1515,7 +1515,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // paths that render a user-visible surface. The whole delta is that comment:
   // every key the file sets is unchanged, and deleting it reproduces
   // `a6b03c7a…` byte for byte.
-  ["qfai.config.yaml", "41b0a60ea4b942ad240a2af0c2acbd3c2302f46632a4fc8c8b84947d81cbabff"],
+  //
+  // Re-pinned for the commented `uiux.registries` block, which now names the
+  // `Component catalogue` row of the Stack table in `tech.md` as the place that
+  // says which registry is primary. The whole delta is those two comment lines:
+  // restoring the previous wording reproduces `41b0a60e…` byte for byte.
+  ["qfai.config.yaml", "c72c863c52939d3c8c1c2cbfea463ac6d6d8b3073d177f789b3d30d043fa16c9"],
 ]);
 
 /**
