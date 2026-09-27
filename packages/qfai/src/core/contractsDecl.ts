@@ -1,7 +1,33 @@
-const CONTRACT_DECLARATION_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(CON-(?:API|UI|DB)-\d+)\s*(?:\*\/)?\s*$/gm;
-const CONTRACT_DECLARATION_LINE_RE =
-  /^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:CON-(?:API|UI|DB)-\d+)\s*(?:\*\/)?\s*$/;
+import { parseHeadings } from "./parse/markdown.js";
+import { maskNonSpecRegions } from "./specPackParsers.js";
+import { isContractId } from "./storyTree/ids.js";
+
+// SIMPLIFIED: a declaration may still name a `CON-*` ID beside a `<KIND>-NNNN` one.
+// Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+const DECLARED_ID = String.raw`CON-(?:API|UI|DB)-\d+|(?:CLI|API|DB|UI|DESIGN)-\d{4}`;
+const CONTRACT_DECLARATION_RE = new RegExp(
+  String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(${DECLARED_ID})\s*(?:\*\/)?\s*$`,
+  "gm",
+);
+const CONTRACT_DECLARATION_LINE_RE = new RegExp(
+  String.raw`^\s*(?:#|\/\/|--|\/\*+|\*+)?\s*QFAI-CONTRACT-ID:\s*(?:${DECLARED_ID})\s*(?:\*\/)?\s*$`,
+);
+/** `# CLI-0001: <title>`, the H1 a Markdown contract declares its ID in. */
+const MARKDOWN_CONTRACT_H1_RE = /^((?:CLI|API|DB|UI|DESIGN)-\d{4}):\s+\S/;
+
+/**
+ * The `<KIND>-NNNN` ID a contract file declares, or `null` when it declares
+ * none: the first rendered H1 of a Markdown contract, and the one `QFAI-CONTRACT-ID`
+ * line of any other file. Several such lines declare nothing.
+ */
+export function declaredContractId(file: string, text: string): string | null {
+  if (file.toLowerCase().endsWith(".md")) {
+    const heading = parseHeadings(maskNonSpecRegions(text)).find((item) => item.level === 1);
+    return MARKDOWN_CONTRACT_H1_RE.exec(heading?.title ?? "")?.[1] ?? null;
+  }
+  const [id, ...others] = extractDeclaredContractIds(text);
+  return id !== undefined && others.length === 0 && isContractId(id) ? id : null;
+}
 
 export function extractDeclaredContractIds(text: string): string[] {
   const ids: string[] = [];
@@ -195,7 +221,7 @@ function blockSequenceValues(blob: string): string[] {
 }
 
 /** A cell/element holding a contract id and nothing else. */
-const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
+const CONTRACT_ID_EXACT_RE = new RegExp(`^(?:${DECLARED_ID})$`, "i");
 
 /**
  * The ids a listed declaration states, or `undefined` when an element of it is
