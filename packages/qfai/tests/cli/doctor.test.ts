@@ -126,7 +126,6 @@ describe("doctor", () => {
 
       const configSearch = indexOf("config.search");
       const configLoad = indexOf("config.load");
-      const guardrails = indexOf("guardrails.present");
       const outputValidate = indexOf("output.validateJson");
       const outputAlignment = indexOf("output.pathAlignment");
       const outDirCollision = indexOf("output.outDirCollision");
@@ -135,8 +134,7 @@ describe("doctor", () => {
       expect(configLoad).toBeGreaterThan(configSearch);
       expect(Math.min(...pathIndices)).toBeGreaterThan(configLoad);
       expect(promptsDeprecated).toBeGreaterThan(Math.max(...pathIndices));
-      expect(guardrails).toBeGreaterThan(promptsDeprecated);
-      expect(outputValidate).toBeGreaterThan(guardrails);
+      expect(outputValidate).toBeGreaterThan(promptsDeprecated);
       expect(outputAlignment).toBeGreaterThan(outputValidate);
       expect(outDirCollision).toBeGreaterThan(outputAlignment);
       expect(traceability).toBeGreaterThan(outDirCollision);
@@ -152,31 +150,6 @@ describe("doctor", () => {
       const check = findCheck(parsed.checks, "config.search");
       expect(check?.severity).toBe("warning");
       expect(parsed.config?.found).toBe(false);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("reads guardrails from configured policy and contract roots", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-guardrails-"));
-    try {
-      const policy = path.join(root, "custom/spec/01_policy/policy.md");
-      const contract = path.join(root, "custom/contracts/api/orders.md");
-      await mkdir(path.dirname(policy), { recursive: true });
-      await mkdir(path.dirname(contract), { recursive: true });
-      await writeFile(
-        path.join(root, "qfai.config.yaml"),
-        "paths:\n  specsDir: custom/spec\n  contractsDir: custom/contracts\n",
-        "utf8",
-      );
-      const guardrail = (id: string): string =>
-        `## Decision Guardrails\n### ${id}: Boundary\n- Type: non-goal\n- Guardrail: Keep this boundary.\n- Rationale: Scope is fixed.\n- Reconsider: When the scope changes.\n`;
-      await writeFile(policy, guardrail("DG-0001"), "utf8");
-      await writeFile(contract, guardrail("DG-0002"), "utf8");
-      const parsed = await readDoctorData(root);
-      const check = findCheck(parsed.checks, "guardrails.present");
-      expect(check?.severity).toBe("ok");
-      expect(check?.details?.count).toBe(2);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

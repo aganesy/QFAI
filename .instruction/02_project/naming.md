@@ -54,7 +54,6 @@ directories. The former spec-pack layout raises `QFAI-LAYOUT-001`.
 - example: `EX-0001-0001-01` with one `AC-Ref`
 - business rule: `BR-0001` in a contract, citing its examples
 - decision and open question: `DEC-0001`, `OQ-0001`
-- explicit decision guardrail: `DG-0001` in policy or contract Markdown
 
 ## Contracts
 

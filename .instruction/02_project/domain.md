@@ -22,8 +22,7 @@ and reporting.
   `QFAI-CONTRACT-ID: CON-<TYPE>-<NUMBER>` declarations. CLI contracts use
   `CLI-*` short IDs in `contracts.md`.
 - `.qfai/spec/decisions.md` and `open-questions.md`: project-wide decision and
-  question tables. Explicit `DG-NNNN` entries in policy and contract Markdown
-  supply decision guardrails.
+  question tables.
 - `.qfai/discussion/`: discussion packs, the optional upstream input to a spec.
 - `.qfai/assistant/`: the assistant tree — `rule/`, `skill/`, `agent/`,
   `prompt/`, plus project-local `skill.local/` where needed.

@@ -3,7 +3,6 @@ import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runDbDrift } from "./commands/dbDrift.js";
-import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
@@ -54,7 +53,6 @@ const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
   "report",
   "doctor",
   "db-drift",
-  "guardrails",
   "audit",
   "sdd",
   "atdd",
@@ -110,20 +108,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     } else if (invalid) {
       error(invalidReason ?? "qfai: invalid arguments.");
     }
-    // A parser rejection never reaches runGuardrails(), so the `--format json`
-    // promise ("stdout stays parseable for every outcome") has to be honoured
-    // here too: usage goes to stderr and stdout carries the refusal envelope.
-    if (invalid && command === "guardrails" && options.guardrailsFormat === "json") {
-      error(usage());
-      info(
-        formatGuardrailsErrorJson(
-          "invalid-arguments",
-          "guardrails: invalid arguments (see usage on stderr)",
-        ),
-      );
-    } else {
-      info(usage());
-    }
+    info(usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -236,22 +221,6 @@ async function dispatch(command: string, options: ParsedArgs["options"]): Promis
           ...(options.dbDriftOut !== undefined ? { outPath: options.dbDriftOut } : {}),
           ...(options.failOn === "never" ? { failOn: "never" as const } : {}),
         });
-      }
-      return;
-    case "guardrails":
-      {
-        const resolvedRoot = await resolveRoot(options, options.guardrailsFormat === "json");
-        const exitCode = await runGuardrails({
-          root: resolvedRoot,
-          ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
-          paths: options.guardrailsPaths,
-          ...(options.guardrailsMax !== undefined ? { max: options.guardrailsMax } : {}),
-          ...(options.guardrailsKeyword !== undefined
-            ? { keyword: options.guardrailsKeyword }
-            : {}),
-          ...(options.guardrailsFormat !== undefined ? { format: options.guardrailsFormat } : {}),
-        });
-        process.exitCode = exitCode;
       }
       return;
     case "audit":
@@ -476,7 +445,6 @@ Commands:
   report                       Emit validation results and aggregates
   doctor                       Diagnose config, paths and output preconditions
   db-drift                     Compare the DB contracts with the migrations as schemas (needs paths.migrationsDir)
-  guardrails                   Extract / check Decision Guardrails (list|extract|check)
   discussion list              List the discussion packs (the active pointer's pack is marked with *)
   discussion list --active     Show the active discussion session pointer (state.json#discussion.currentId)
   discussion use <id>          Set the active discussion session pointer
@@ -537,11 +505,6 @@ Options:
   --in <path>                   report: validate.json input path (takes precedence over the config)
   --run-validate                report: run validate first, then generate the report
   --base-url <url>              report: base URL
-  --path <path>                 guardrails: target Markdown file/directory (repeatable)
-                                 Default: configured specsDir/01_policy and contractsDir
-  --max <number>                guardrails extract: maximum number of entries
-  --keyword <text>              guardrails list/extract: keyword filter
-  --format <text|json>          guardrails list/extract/check: output format (default text)
   --target-url <url>            prototyping preflight/iterate: URL under evaluation
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: peek at a converged loop state without re-running it (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)

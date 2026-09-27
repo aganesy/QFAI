@@ -21,7 +21,6 @@ export const EXIT_CODES = {
   ok: 0,
   /**
    * validate / doctor / preflight: --fail-on 閾値に到達。
-   * guardrails check: 検査エラーを検出。
    * 実行時エラーの既定値でもある。加えて、未知の *コマンド* 名 (--help を
    * 伴う場合も含む) はこの値で停止する — CLI 引数エラーとは別の行であり、
    * init CLI contract の exit-code 表が 2 を予約しているのは未知のフラグと
@@ -41,7 +40,7 @@ export const EXIT_CODES = {
    * (--cycle に非負整数以外、--fail-on に never / warning / error 以外) も、
    * peek / 本処理へ進まずここで停止する。
    *
-   * 入力 / lock drift エラーも同じ値。guardrails では使用法エラーも、
+   * 入力 / lock drift エラーも同じ値。
    * report / prototyping show-ui-contract では入力ファイルの欠落 / 破損も、
    * prototyping certify では証明書 mismatch / 品質ゲート拒否もこの値。
    * prototyping iterate では --auto-serve のサーバ起動失敗や --capture の
@@ -97,13 +96,6 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = success,`,
       `${EXIT_CODES.findings} = the --fail-on threshold was reached, or a runtime error`,
       "      (an output I/O exception, such as a failed --out write — the same path as doctor)",
-    ],
-  },
-  {
-    label: "guardrails",
-    lines: [
-      `${EXIT_CODES.ok} = success, ${EXIT_CODES.findings} = check found a violation,`,
-      `${EXIT_CODES.inputError} = an input error, or a usage error`,
     ],
   },
   {

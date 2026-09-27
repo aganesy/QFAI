@@ -302,31 +302,6 @@ if (hasEntry(path.join(qfaiDir, "specs")) || hasEntry(path.join(qfaiDir, "contra
   throw new Error("init generated an obsolete spec or contract directory.");
 }
 
-const syntheticDecisionPath = path.join(specDir, "01_policy", "verify-pack-guardrail.md");
-writeFileSync(
-  syntheticDecisionPath,
-  [
-    "# Delta",
-    "",
-    "## Decision Guardrails",
-    "",
-    "### DG-0001: Synthetic guardrail for verify-pack",
-    "- Type: trade-off",
-    "- Scope: .qfai/spec/*",
-    "- Guardrail: Do not implement the rejected synthetic option.",
-    "- Reason: verify-pack smoke test entry",
-    "- Reconsider: never",
-    "- Keywords: synthetic, verify-pack",
-    "",
-  ].join("\n"),
-);
-execFileSync(
-  "node",
-  [cliPath, "guardrails", "extract", "--path", syntheticDecisionPath, "--max", "20"],
-  { stdio: "inherit" },
-);
-rmSync(syntheticDecisionPath, { force: true });
-
 // Symlink-based integration directories (v1.5.4+)
 const skillIntegrationDirs = [
   [".claude/skills", path.join(outputDir, ".claude", "skills")],
