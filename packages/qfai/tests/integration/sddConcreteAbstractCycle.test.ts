@@ -103,7 +103,7 @@ function storyTree(registers: { decisions?: string; openQuestions?: string }) {
     ],
     [
       `${SPECS}/03_contract/api/orders.yaml`,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: An order above 10 000 needs approval\n    examples: [EX-0001-0001-01]",
     ],
     [`${SPECS}/decisions.md`, registers.decisions ?? empty],
     [`${SPECS}/open-questions.md`, registers.openQuestions ?? empty],
@@ -227,7 +227,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     );
     expect(row).not.toBe("");
     const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001 | Ask the user | ${status} |`;
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| OQ-0001 | Unadjudicated: is an unapproved order above 10 000 refused or queued? BR-0001-0001 | Ask the user | ${status} |`;
     const open = validateStoryTreeStructureModel(storyTree({ openQuestions: register("TODO") }));
     expect(open.filter((issue) => issue.code === "QFAI-SPACK-102")).toHaveLength(1);
     const decided = validateStoryTreeStructureModel(storyTree({ openQuestions: register("DONE") }));
@@ -241,7 +241,7 @@ describe("the concrete-abstract cycle across the shipped qfai-sdd", () => {
     const template = await readShipped(DECISIONS_TEMPLATE);
     expect(headerCells(template, "Content")).toEqual(["ID", "Content", "Approach", "Status"]);
     const register = (status: string): string =>
-      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | ${status} |`;
+      `| ID | Content | Approach | Status |\n| --- | --- | --- | --- |\n| DEC-0001 | A case the rule implies that no example states: BR-0001-0001, EX-0001-0001-01, an order of 20 000 in euros | Rejected: nothing names a currency | ${status} |`;
     const decisionsIssues = (status: string) =>
       validateStoryTreeStructureModel(storyTree({ decisions: register(status) })).filter(
         (issue) => issue.file?.endsWith("decisions.md") ?? false,

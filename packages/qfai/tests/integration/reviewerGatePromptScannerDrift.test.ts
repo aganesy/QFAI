@@ -10,7 +10,7 @@
  *   (1) the modified file, (2) the un-paired counterpart,
  *   (3) the Tailwind contract clause whose match cannot be confirmed.
  *
- * The downstream cross-spec assertion against BR-0004-0028 (empty
+ * The downstream cross-spec assertion against BR-0016-0030 (empty
  * justification rejection on advisory-failing codes) is exercised
  * via the existing `validateReviewerJustification` validator.
  */
@@ -159,7 +159,7 @@ describe("TC-0015-0019: Reviewer Gate emits R-PROMPT-SCANNER-DRIFT with 3-part j
     );
   });
 
-  it("downstream qfai validate ingestion rejects empty justification variants (cross-spec assertion vs BR-0004-0028)", async () => {
+  it("downstream qfai validate ingestion rejects empty justification variants (cross-spec assertion vs BR-0016-0030)", async () => {
     // Seed a reviewer-completion.json containing a R-PROMPT-SCANNER-DRIFT
     // finding with an empty justification. The reviewerJustification
     // validator must surface this as an error. (We piggy-back on the

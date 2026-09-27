@@ -12,12 +12,10 @@ export type ContractRule = {
   file: string;
 };
 
-export type ContractRuleScan = { rules: ContractRule[]; refs: string[]; errors: string[] };
+export type ContractRuleScan = { rules: ContractRule[]; errors: string[] };
 
 const SQL_RULE = /^-- Rule (BR-[A-Za-z0-9_-]+):\s*(.*)$/;
 const SQL_EXAMPLES = /^-- Examples:\s*(.*)$/;
-const SQL_REFS = /^-- Rule refs:\s*(.*)$/;
-const MARKDOWN_REFS = /^ {0,3}Rule refs:\s*(.*)$/m;
 const BUSINESS_RULES = "Business rules";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,7 +37,6 @@ function stringList(value: unknown): string[] {
 
 export function parseContractRules(file: string, text: string): ContractRuleScan {
   const rules: ContractRule[] = [];
-  const refs: string[] = [];
   const errors: string[] = [];
   const extension = path.extname(file).toLowerCase();
 
@@ -48,9 +45,9 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
     try {
       parsed = parseYaml(text);
     } catch {
-      return { rules, refs, errors: [`Invalid structured contract: ${file}`] };
+      return { rules, errors: [`Invalid structured contract: ${file}`] };
     }
-    if (!isRecord(parsed)) return { rules, refs, errors };
+    if (!isRecord(parsed)) return { rules, errors };
     if ("x-qfai-rules" in parsed && !Array.isArray(parsed["x-qfai-rules"])) {
       errors.push(`Invalid x-qfai-rules list in ${file}`);
     }
@@ -74,10 +71,6 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
         errors.push(`Invalid rule fields in ${file}`);
       }
     }
-    if ("x-qfai-rule-refs" in parsed && !Array.isArray(parsed["x-qfai-rule-refs"])) {
-      errors.push(`Invalid x-qfai-rule-refs list in ${file}`);
-    }
-    refs.push(...stringList(parsed["x-qfai-rule-refs"]));
   } else if (extension === ".sql") {
     const lines = text.replace(/\r\n/g, "\n").split("\n");
     for (let index = 0; index < lines.length; index += 1) {
@@ -93,8 +86,6 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
         });
         if (examples) index += 1;
       }
-      const ref = SQL_REFS.exec(line);
-      if (ref) refs.push(...splitRefs(ref[1] ?? ""));
     }
   } else if (extension === ".md") {
     const rendered = maskNonSpecRegions(text);
@@ -105,33 +96,20 @@ export function parseContractRules(file: string, text: string): ContractRuleScan
     if (businessRulesSections > 1) {
       errors.push(`More than one ## ${BUSINESS_RULES} section in ${file}`);
     }
-    // SIMPLIFIED: `## Rules`, and the `Rule refs:` line it may carry, are still read
-    // beside `## Business rules`.
-    // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-    for (const name of [BUSINESS_RULES, "Rules"]) {
-      const body = sections.get(name)?.body;
-      if (body === undefined) continue;
-      readMarkdownRules(file, name, body, rules, errors);
-      const ref = MARKDOWN_REFS.exec(name === BUSINESS_RULES ? maskNonSpecRegions(body) : body);
-      if (ref && name === BUSINESS_RULES) {
-        errors.push(`A Rule refs line is not allowed under ## ${BUSINESS_RULES} in ${file}`);
-      } else if (ref) {
-        refs.push(...splitRefs(ref[1] ?? ""));
-      }
-    }
+    const body = sections.get(BUSINESS_RULES)?.body;
+    if (body !== undefined) readMarkdownRules(file, body, rules, errors);
   }
 
-  return { rules, refs: [...new Set(refs)].sort(), errors };
+  return { rules, errors };
 }
 
 /**
- * Reads one section's rules table, whose columns are exactly BR-ID, Statement and
- * Examples. A table inside a code block or an HTML comment is not the rules table,
- * and `## Business rules` holds exactly one.
+ * Reads the `## Business rules` table, whose columns are exactly BR-ID, Statement
+ * and Examples. A table inside a code block or an HTML comment is not the rules
+ * table, and the section holds exactly one.
  */
 function readMarkdownRules(
   file: string,
-  section: string,
   body: string,
   rules: ContractRule[],
   errors: string[],
@@ -139,11 +117,11 @@ function readMarkdownRules(
   const tables = parseAllMarkdownTables(maskNonSpecRegions(body));
   const table = tables[0];
   if (!table) {
-    errors.push(`Missing ${section} table in ${file}`);
+    errors.push(`Missing ${BUSINESS_RULES} table in ${file}`);
     return;
   }
-  if (section === BUSINESS_RULES && tables.length > 1) {
-    errors.push(`More than one ${section} table in ${file}`);
+  if (tables.length > 1) {
+    errors.push(`More than one ${BUSINESS_RULES} table in ${file}`);
     return;
   }
   const [idColumn, statementColumn, examplesColumn] = ["BR-ID", "Statement", "Examples"].map(
@@ -158,7 +136,7 @@ function readMarkdownRules(
     statementColumn < 0 ||
     examplesColumn < 0
   ) {
-    errors.push(`Invalid ${section} columns in ${file}`);
+    errors.push(`Invalid ${BUSINESS_RULES} columns in ${file}`);
     return;
   }
   for (const row of table.rows) {

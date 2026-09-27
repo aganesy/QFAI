@@ -454,18 +454,9 @@ function restoreTestNames(masked: string, original: string, patterns: readonly R
 
 const US_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):US-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
 const TC_TEST_ANNOTATION_RE = /\bQFAI:SPEC-(\d{4}):TC-(\d{4}-\d{4}|\d{4}(?!-))\b/g;
-// SIMPLIFIED: `CON-API-*` and `CON-DB-*` are still read beside `API-NNNN` and `DB-NNNN`.
-// Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
-const API_TEST_ANNOTATION_RE = /\bQFAI:(CON-API-\d+\b|API-\d{4}(?![\w-]))/g;
-/**
- * `CON-DB-*` annotation, the DB peer of the API form above.
- *
- * `CON-DB-*` was a first-class authored contract kind with no downstream test
- * obligation: no annotation form, no coverage rule, and — because
- * `AtddUnknownRefKind` had no DB member — not even an unknown-reference report.
- * A `QFAI:CON-DB-0002` written into a test was silently invisible.
- */
-const DB_TEST_ANNOTATION_RE = /\bQFAI:(CON-DB-\d+\b|DB-\d{4}(?![\w-]))/g;
+const API_TEST_ANNOTATION_RE = /\bQFAI:(API-\d{4}(?![\w-]))/g;
+/** The `DB-NNNN` annotation, the DB peer of the API form above. */
+const DB_TEST_ANNOTATION_RE = /\bQFAI:(DB-\d{4}(?![\w-]))/g;
 
 /** Heading form of a test case, e.g. `## TC-0001-0002: title`. */
 const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
@@ -473,8 +464,8 @@ const TC_HEADING_RE = /^##\s+(TC-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 const LEVEL_META_LINE_RE = /^[-*]\s+Level\s*[:：]\s*(.+?)\s*$/i;
 /** Parses a `SPEC-0001:TC-0002` ref produced by `formatTcRef`. */
 const MISSING_TC_REF_RE = /^SPEC-(\d{4}):TC-(\d{4}(?:-\d{4})?)$/;
-const API_CONTRACT_ID_RE = /^(?:CON-API-\d+|API-\d{4})$/;
-const DB_CONTRACT_ID_RE = /^(?:CON-DB-\d+|DB-\d{4})$/;
+const API_CONTRACT_ID_RE = /^API-\d{4}$/;
+const DB_CONTRACT_ID_RE = /^DB-\d{4}$/;
 /**
  * Extension set used when the project declares no
  * `validation.traceability.testFileGlobs`. It is a fallback, not the rule: its
@@ -612,7 +603,7 @@ export type AtddCodeTraceabilityResult = {
   deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
-   * Every declared `API-NNNN` or `CON-API-*`, active and deferred alike. This is the public
+   * Every declared `API-NNNN`, active and deferred alike. This is the public
    * meaning the field has always had — adding `x-qfai-status: planned` defers
    * the test obligation, it does not un-declare the contract, so an external
    * consumer using this set for "is this ID declared?" must keep seeing it.
@@ -621,24 +612,24 @@ export type AtddCodeTraceabilityResult = {
   /** The subset that carries the `QFAI-ATDD-113` obligation. */
   activeApiContractIds: Set<string>;
   /**
-   * `API-NNNN` and `CON-API-*` IDs excluded from the `QFAI-ATDD-113` obligation because their
+   * `API-NNNN` IDs excluded from the `QFAI-ATDD-113` obligation because their
    * contract declares `x-qfai-status: planned`. Reported as `info` so the
    * deferral stays visible instead of silently shrinking the gate.
    */
   deferredApiContractIds: Set<string>;
   contractsDbRoot: string;
-  /** Every declared `DB-NNNN` or `CON-DB-*`, active and deferred alike. */
+  /** Every declared `DB-NNNN`, active and deferred alike. */
   dbContractIds: Set<string>;
   /** The subset that carries the `QFAI-ATDD-115` obligation. */
   activeDbContractIds: Set<string>;
-  /** `DB-NNNN` and `CON-DB-*` IDs deferred by `-- x-qfai-status: planned`; reported at `info`. */
+  /** `DB-NNNN` IDs deferred by `-- x-qfai-status: planned`; reported at `info`. */
   deferredDbContractIds: Set<string>;
   refs: {
     us: AtddSpecRefs;
     tc: AtddSpecRefs;
     api: Map<string, Set<string>>;
     /**
-     * `DB-NNNN` and `CON-DB-*` references found in integration tests. L3 Integration is the
+     * `DB-NNNN` references found in integration tests. L3 Integration is the
      * layer whose declared scope is real-infrastructure integration including
      * the database, so it is the one that can actually exercise a DB contract.
      */
@@ -695,7 +686,7 @@ export type AtddCodeTraceabilityResult = {
    * `TC-*` refs declaring a `Level` of L4/API or L5/E2E.
    *
    * `catalog/test-layers.md` states that a `TC-*` row's `Level` stays within
-   * L1-L3: L4's goal is a `CON-API-*` and L5's is a `US-*`, so an oracle that
+   * L1-L3: L4's goal is a `API-NNNN` and L5's is a `US-*`, so an oracle that
    * derives to either means the obligation is filed under the wrong ID type —
    * not that the test case is an L4/L5 test.
    *
@@ -1023,14 +1014,14 @@ export async function evaluateAtddCodeTraceability(
     }
 
     for (const contractId of dbAnnotations) {
-      // Declared = active ∪ deferred, for the same reason as CON-API: a
+      // Declared = active ∪ deferred, for the same reason as API-NNNN: a
       // deferral suspends the obligation, it does not un-declare the contract.
       if (!declaredDbContractIds.has(contractId)) {
         pushUnknown(unknown, unknownDedup, file, `QFAI:${contractId}`, "conDb");
         continue;
       }
       // Only an integration test counts. A DB contract is exercised against
-      // real infrastructure, which is L3's declared scope; counting a `CON-DB`
+      // real infrastructure, which is L3's declared scope; counting a `DB-NNNN`
       // annotation from `tests/e2e/**` would let an end-to-end assertion that
       // never touches the schema close the obligation.
       if (kind === "integration") {
@@ -1297,12 +1288,10 @@ function unreadableDirectoryOf(root: string, error: unknown): string | null {
 const UNCOUNTED_TEST_DIRS = ["atdd"];
 
 /** Any QFAI test annotation, in any of its forms. */
-const ANY_QFAI_ANNOTATION =
-  /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
+const ANY_QFAI_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:(?:US|TC)-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /** Any QFAI annotation whose obligation is fixed by its ID type, not by a `Level`. */
-const LEVEL_INDEPENDENT_ANNOTATION =
-  /\bQFAI:(?:SPEC-\d{4}:US-|CON-(?:API|DB)-|(?:API|DB)-\d{4}(?![\w-]))/;
+const LEVEL_INDEPENDENT_ANNOTATION = /\bQFAI:(?:SPEC-\d{4}:US-|(?:API|DB)-\d{4}(?![\w-]))/;
 
 /**
  * Whether a legacy file's annotations are all ones ATDD no longer owes.
@@ -1315,7 +1304,7 @@ const LEVEL_INDEPENDENT_ANNOTATION =
  * required nor misplaced wherever it lands. The advice would push a project back
  * into the all-integration collapse the exclusion exists to undo.
  *
- * Conservative on every uncertainty: a `US-*` or `CON-*` annotation is
+ * Conservative on every uncertainty: a `US-*` or contract annotation is
  * `Level`-independent and still owed, and an unknown or level-less `TC-*`
  * resolves to the default home rather than to "no obligation", so only a file
  * whose every annotation is provably outside ATDD goes quiet.
@@ -1987,13 +1976,13 @@ const PLANNED_CONTRACT_RE = new RegExp(
  *
  * `/qfai-sdd` authors contracts in Phase 0 (Contracts-first) but slices them in
  * Phase 2, so between the second contract and the last slice every declared
- * `CON-API-*` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
+ * `API-NNNN` would otherwise be a `QFAI-ATDD-113` error. The marker makes the
  * deferral explicit and reviewable in the contract itself.
  *
  * The marker is only honoured at the **document root**. A text scan that
  * accepted any indentation would let an `x-qfai-status: planned` on a single
  * OpenAPI operation defer the whole file, silently dropping the API-test
- * obligation for every other `CON-API-*` it declares. The document is therefore
+ * obligation for every other `API-NNNN` it declares. The document is therefore
  * parsed (YAML is a superset of JSON, so both contract formats go through the
  * same path) and only a top-level key counts. An unparseable document falls
  * back to a column-0 text match, which cannot see a nested key either.
@@ -2081,7 +2070,7 @@ async function collectApiContractIds(apiRoot: string): Promise<CollectedContract
  * A DB contract is `.sql`, so the YAML-parse path `isPlannedApiContract` uses
  * cannot apply. The marker is matched on its own comment line only: accepting
  * it mid-statement would let a stray mention inside a `CREATE TABLE` body defer
- * every `CON-DB-*` the file declares.
+ * every `DB-NNNN` the file declares.
  */
 const PLANNED_DB_CONTRACT_RE = new RegExp(
   `^[ \\t]*--[ \\t]*${escapeRegExp(PLANNED_CONTRACT_KEY)}[ \\t]*:[ \\t]*${escapeRegExp(
@@ -2323,7 +2312,7 @@ function indentColumn(line: string): number {
  * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
  *
  * A story whose acceptance cannot be observed at E2E in this slice had no
- * in-band way to say so: `CON-API-*` and `CON-DB-*` both defer with
+ * in-band way to say so: `API-NNNN` and `DB-NNNN` both defer with
  * `x-qfai-status: planned`, while a `US-*` could only be left uncovered (a hard
  * `QFAI-ATDD-111` error), covered by a test asserting nothing, or erased by
  * declaring the whole spec non-user-facing. This is the per-story counterpart.

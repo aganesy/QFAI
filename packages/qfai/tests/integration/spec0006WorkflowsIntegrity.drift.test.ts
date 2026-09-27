@@ -390,7 +390,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
     expect.soft(check?.severity, "a content-identical installed tree is severity `ok`").toBe("ok");
 
     // The payload is pinned as a SET rather than by the absence of one named
-    // key. The four-key drift payload of BR-0006-0022 belongs to the `info`
+    // key. The four-key drift payload of BR-0008-0022 belongs to the `info`
     // emission alone, so an `ok` check carries `workflowsDir` and nothing
     // else: `modified` leaking in here would render an empty file list as a
     // drift report, and `declined` leaking in would contradict
@@ -481,7 +481,7 @@ describe("TC-0006-0028 (TDD-0030): a content-identical installed tree reports se
       .soft(check?.title, "the JSON surface's title must name the checked directory exactly")
       .toBe(`Workflows integrity (${ADOPTER_WORKFLOWS_DIR})`);
 
-    // NOT COVERED BY THIS ROW — BR-0006-0018's 改行正規化 clause.
+    // NOT COVERED BY THIS ROW — BR-0008-0018's line-ending normalization clause.
     //
     // The rule says the comparison basis is newline-NORMALIZED content, and NO
     // TEST IN THE DOCTOR CLOSURE DISCRIMINATES THAT BASIS FROM A RAW-BYTE ONE.

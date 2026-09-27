@@ -50,7 +50,7 @@ function files(acRef = "AC-0001-0001-01"): Map<string, string> {
     ],
     [
       `${spec}/03_contract/cli/check.md`,
-      "## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | Check the project | EX-0001-0001-01 |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Check the project | EX-0001-0001-01 |\n",
     ],
   ]);
 }
@@ -163,7 +163,7 @@ describe("BF-0001 ID examples", () => {
     expect(model.declarations.map((entry) => entry.id)).toEqual([
       "AC-0001-0001-01",
       "BF-0001",
-      "BR-0001",
+      "BR-0001-0001",
       "DEC-0001",
       "EX-0001-0001-01",
       "OQ-0001",
@@ -237,11 +237,14 @@ describe("BF-0001 ID examples", () => {
     const sql = `${spec}/03_contract/db/orders.sql`;
     contents.set(
       yaml,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
+      "x-qfai-rules:\n  - id: BR-0001-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
     );
-    contents.set(sql, "-- Rule BR-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n");
+    contents.set(
+      sql,
+      "-- Rule BR-0001-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+    );
     const duplicates = findings(contents, "QFAI-STORY-002").filter((entry) =>
-      entry.message.includes("BR-0001 is defined more than once"),
+      entry.message.includes("BR-0001-0001 is defined more than once"),
     );
     expect(duplicates).toHaveLength(1);
     expect(duplicates[0]?.message).toContain(yaml);
@@ -316,12 +319,12 @@ describe("BF-0001 EX and BR reference examples", () => {
     contents.delete(`${spec}/03_contract/cli/check.md`);
     contents.set(
       `${spec}/03_contract/api/orders.yaml`,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: Check the order\n    examples: [EX-0001-0001-01]\n",
     );
     const model = buildStoryTreeModel(contents);
     expect(model.rules).toEqual([
       {
-        id: "BR-0001",
+        id: "BR-0002-0001",
         statement: "Check the order",
         examples: ["EX-0001-0001-01"],
         file: `${spec}/03_contract/api/orders.yaml`,
@@ -336,11 +339,11 @@ describe("BF-0001 EX and BR reference examples", () => {
     contents.delete(`${spec}/03_contract/cli/check.md`);
     contents.set(
       `${spec}/03_contract/db/orders.sql`,
-      "-- Rule BR-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
+      "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: Save the order\n-- Examples: EX-0001-0001-01\nSELECT 1;\n",
     );
     expect(buildStoryTreeModel(contents).rules).toEqual([
       {
-        id: "BR-0001",
+        id: "BR-0003-0001",
         statement: "Save the order",
         examples: ["EX-0001-0001-01"],
         file: `${spec}/03_contract/db/orders.sql`,
@@ -349,47 +352,18 @@ describe("BF-0001 EX and BR reference examples", () => {
     expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
   });
 
-  it("reads a Markdown Rules table with its statement and example", () => {
+  it("reads a Markdown Business rules table with its statement and example", () => {
     // QFAI:EX-0001-0009-14
     const model = buildStoryTreeModel(files());
     expect(model.rules).toEqual([
       {
-        id: "BR-0001",
+        id: "BR-0001-0001",
         statement: "Check the project",
         examples: ["EX-0001-0001-01"],
         file: `${spec}/03_contract/cli/check.md`,
       },
     ]);
     expect(findings(files(), "QFAI-STORY-005")).toEqual([]);
-  });
-
-  it("keeps a cross-contract rule reference separate from its declaration", () => {
-    // QFAI:EX-0001-0009-15
-    const contents = files();
-    contents.set(
-      `${spec}/03_contract/api/orders.json`,
-      JSON.stringify({ "x-qfai-rule-refs": ["BR-0001"] }),
-    );
-    const model = buildStoryTreeModel(contents);
-    expect(model.rules.filter((entry) => entry.id === "BR-0001")).toHaveLength(1);
-    expect(model.ruleRefs).toEqual([
-      { id: "BR-0001", file: `${spec}/03_contract/api/orders.json` },
-    ]);
-    expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
-  });
-
-  it("reports an undefined SQL rule reference at its contract file", () => {
-    // QFAI:EX-0001-0009-16
-    const contents = files();
-    contents.set(`${spec}/03_contract/db/orders.sql`, "-- Rule refs: BR-9999\nSELECT 1;\n");
-    expect(findings(contents, "QFAI-STORY-005")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          file: `${spec}/03_contract/db/orders.sql`,
-          message: expect.stringContaining("BR-9999 is not defined"),
-        }),
-      ]),
-    );
   });
 
   function invalidAcRef(acRef: string) {
@@ -462,7 +436,7 @@ describe("BF-0001 EX and BR reference examples", () => {
     );
     contents.set(
       `${spec}/03_contract/cli/check.md`,
-      "## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | First rule | EX-0001-0001-01, EX-0001-0001-02 |\n| BR-0002 | Second rule | EX-0001-0001-01 |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | First rule | EX-0001-0001-01, EX-0001-0001-02 |\n| BR-0001-0002 | Second rule | EX-0001-0001-01 |\n",
     );
     expect(findings(contents, "QFAI-STORY-005")).toEqual([]);
   });
@@ -472,30 +446,36 @@ describe("BF-0001 EX and BR reference examples", () => {
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
-      "## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | No examples | |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | No examples | |\n",
     );
     expect(findings(contents, "QFAI-STORY-005")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: `${spec}/03_contract/cli/check.md`,
-          message: expect.stringContaining("BR-0001 has no examples"),
+          message: expect.stringContaining("BR-0001-0001 has no examples"),
         }),
       ]),
     );
     contents.delete(`${spec}/03_contract/cli/check.md`);
     const yaml = `${spec}/03_contract/api/orders.yaml`;
     const sql = `${spec}/03_contract/db/orders.sql`;
-    contents.set(yaml, "x-qfai-rules:\n  - id: BR-0002\n    statement: Empty\n    examples: []\n");
-    contents.set(sql, "-- Rule BR-0003: No examples line\nSELECT 1;\n");
+    contents.set(
+      yaml,
+      "# QFAI-CONTRACT-ID: API-0002\nx-qfai-rules:\n  - id: BR-0002-0001\n    statement: Empty\n    examples: []\n",
+    );
+    contents.set(
+      sql,
+      "-- QFAI-CONTRACT-ID: DB-0003\n-- Rule BR-0003-0001: No examples line\nSELECT 1;\n",
+    );
     expect(findings(contents, "QFAI-STORY-005")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: yaml,
-          message: expect.stringContaining("BR-0002 has no examples"),
+          message: expect.stringContaining("BR-0002-0001 has no examples"),
         }),
         expect.objectContaining({
           file: sql,
-          message: expect.stringContaining("BR-0003 has no examples"),
+          message: expect.stringContaining("BR-0003-0001 has no examples"),
         }),
       ]),
     );
@@ -523,13 +503,13 @@ describe("BF-0001 EX and BR reference examples", () => {
     const contents = files();
     contents.set(
       `${spec}/03_contract/cli/check.md`,
-      "## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | Unknown example | EX-0001-0001-99 |\n",
+      "# CLI-0001: Check\n\n## Business rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001-0001 | Unknown example | EX-0001-0001-99 |\n",
     );
     expect(findings(contents, "QFAI-STORY-005")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           file: `${spec}/03_contract/cli/check.md`,
-          message: expect.stringContaining("BR-0001 cites unknown EX-0001-0001-99"),
+          message: expect.stringContaining("BR-0001-0001 cites unknown EX-0001-0001-99"),
         }),
       ]),
     );

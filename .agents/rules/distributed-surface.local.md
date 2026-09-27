@@ -23,25 +23,27 @@ the identifier does not belong in it.
 
 ## The shapes that must not appear
 
-| Kind                         | Shape                                                       | Example                   |
-| ---------------------------- | ----------------------------------------------------------- | ------------------------- |
-| Internal spec ID             | `spec-0010` and above                                       | `spec-0011`, `spec-0042`  |
-| Internal capability ID       | `CAP-0010` and above                                        | `CAP-0013`                |
-| Internal decision ID         | `DEC-NNNN-NNNN`                                             | `DEC-0001-0042`           |
-| Internal design-rationale ID | `DR-NNNN`                                                   | `DR-0007`                 |
-| Internal open-question ID    | `OQ-NNNN-NNNN`                                              | `OQ-0012-0006`            |
-| Story decision ID            | `DEC-NNNN`                                                  | `DEC-0010`                |
-| Story open-question ID       | `OQ-NNNN`                                                   | `OQ-0010`                 |
-| Story business-flow ID       | `BF-NNNN`                                                   | `BF-0010`                 |
-| Story user-story ID          | `US-NNNN-NNNN`                                              | `US-0001-0010`            |
-| Story acceptance ID          | `AC-NNNN-NNNN-NN`                                           | `AC-0001-0001-10`         |
-| Story example ID             | `EX-NNNN-NNNN-NN`                                           | `EX-0001-0010-01`         |
-| Story business-rule ID       | `BR-NNNN`, `BR-NNNN-NNNN`                                   | `BR-0010`, `BR-0001-0010` |
-| Story contract ID            | `CLI-NNNN`, `API-NNNN`, `DB-NNNN`, `UI-NNNN`, `DESIGN-NNNN` | `CLI-0010`, `UI-0100`     |
-| Internal change ID           | `CHG-NNN`                                                   | `CHG-003`                 |
-| Retired trace prefix         | `QFAI-PROT2-NNN`                                            |                           |
-| Private version marker       | `vN.M`, `vN.M.P`, `v1.x`                                    | `v2.0`, `v3.0`            |
-| Private schema marker        | `"schemaVersion"`, `schemaVersion:`                         |                           |
+| Kind                         | Shape                                                       | Example                  |
+| ---------------------------- | ----------------------------------------------------------- | ------------------------ |
+| Internal spec ID             | `spec-0010` and above                                       | `spec-0011`, `spec-0042` |
+| Internal capability ID       | `CAP-0010` and above                                        | `CAP-0013`               |
+| Internal decision ID         | `DEC-NNNN-NNNN`                                             | `DEC-0001-0042`          |
+| Internal design-rationale ID | `DR-NNNN`                                                   | `DR-0007`                |
+| Internal open-question ID    | `OQ-NNNN-NNNN`                                              | `OQ-0012-0006`           |
+| Story decision ID            | `DEC-NNNN`                                                  | `DEC-0010`               |
+| Story open-question ID       | `OQ-NNNN`                                                   | `OQ-0010`                |
+| Story business-flow ID       | `BF-NNNN`                                                   | `BF-0010`                |
+| Story user-story ID          | `US-NNNN-NNNN`                                              | `US-0001-0010`           |
+| Story acceptance ID          | `AC-NNNN-NNNN-NN`                                           | `AC-0001-0001-10`        |
+| Story example ID             | `EX-NNNN-NNNN-NN`                                           | `EX-0001-0010-01`        |
+| Story business-rule ID       | `BR-NNNN-NNNN`                                              | `BR-0001-0010`           |
+| Story contract ID            | `CLI-NNNN`, `API-NNNN`, `DB-NNNN`, `UI-NNNN`, `DESIGN-NNNN` | `CLI-0010`, `UI-0100`    |
+| Retired business-rule ID     | `BR-NNNN`                                                   | `BR-0010`                |
+| Retired contract ID          | `CON-<KIND>-NNNN`                                           | `CON-UI-0010`            |
+| Internal change ID           | `CHG-NNN`                                                   | `CHG-003`                |
+| Retired trace prefix         | `QFAI-PROT2-NNN`                                            |                          |
+| Private version marker       | `vN.M`, `vN.M.P`, `v1.x`                                    | `v2.0`, `v3.0`           |
+| Private schema marker        | `"schemaVersion"`, `schemaVersion:`                         |                          |
 
 ### Three exceptions
 
@@ -49,13 +51,18 @@ the identifier does not belong in it.
   may appear.
 - `version` in `package.json` is the released version and is not a private
   marker.
-- The story-tree and contract shapes are permitted when every four-digit segment
-  is `0001` to `0009` and every two-digit tail is `01` to `09`. An ID with any
-  segment outside that sample band is internal. The short `DEC-NNNN` and
-  `OQ-NNNN` patterns do not consume the leading segment of a legacy
-  `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject those.
-  A contract ID counts only where no letter, digit, `_` or `-` precedes it, so a
-  `CON-UI-NNNN` ID is not read as `UI-NNNN`.
+- The story-tree, contract and retired shapes are permitted when
+  every four-digit segment is `0001` to `0009` and every two-digit tail is `01`
+  to `09`. An ID with any segment outside that sample band is internal. The
+  short `DEC-NNNN` and `OQ-NNNN` patterns do not consume the leading segment of
+  a legacy `DEC-NNNN-NNNN` or `OQ-NNNN-NNNN` ID; the legacy classes still reject
+  those. A contract ID counts only where no letter, digit, `_` or `-` precedes
+  it, so a `CON-UI-NNNN` ID is not read as `UI-NNNN`; it is matched whole, as
+  the retired contract ID.
+
+No shipped file uses a retired shape, apart from the sample-band IDs the
+migration guide shows as its input. The guards still refuse the retired shapes,
+so one brought back into a shipped file fails as before.
 
 No file name is exempt. The guards scan every path with the same patterns they
 apply to content.

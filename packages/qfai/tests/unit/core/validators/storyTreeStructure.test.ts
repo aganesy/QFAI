@@ -37,7 +37,7 @@ function model(overrides: Record<string, string> = {}) {
     ],
     [
       `${contracts}/api/checkout.yaml`,
-      "x-qfai-rules:\n  - id: BR-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Paid checkout\n    examples: [EX-0001-0001-01]",
     ],
     [`${specs}/decisions.md`, "| ID | Content | Approach | Status |\n| --- | --- | --- | --- |"],
     [

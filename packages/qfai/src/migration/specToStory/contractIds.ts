@@ -102,7 +102,7 @@ async function assignContractIds(
       highest = Math.max(highest, Number(contractNumber(current)));
       continue;
     }
-    const declared = extractDeclaredContractIds(text);
+    const declared = extractDeclaredContractIds(text, { legacy: true });
     if (declared.length > 1) {
       forAPerson.push(
         `${contractRepoPath(context, relative)}: declares ${declared.join(", ")}; keep one declaration and run step 3 again`,

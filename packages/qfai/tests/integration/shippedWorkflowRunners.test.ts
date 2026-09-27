@@ -11,7 +11,7 @@
  * Why the indirection earns a row of its own: a runner label GitHub does not
  * know is NOT rejected. The job is queued until somebody cancels it, so the
  * failure mode of a wrong value is silence rather than a red check — which is
- * why BR-0003-0035 puts the risk on the DEFAULT (public, schedulable by any
+ * why BR-0020-0015 puts the risk on the DEFAULT (public, schedulable by any
  * clone or fork) and the knob on a repository variable the adopter owns.
  *
  * This file grows row by row; each describe block is one ledger row.
@@ -60,7 +60,7 @@ const LIGHT_RUNNER_VARIABLE = "QFAI_CI_LIGHT_RUNNER";
  * The list has more than one member on purpose: with a single member the
  * predicate below would collapse into an equality check on one literal, and a
  * planted label would then be rejected for "not that string" rather than for
- * "not a public GitHub-hosted label" — the property BR-0003-0035 states.
+ * "not a public GitHub-hosted label" — the property BR-0020-0015 states.
  */
 const PUBLIC_HOSTED_LABELS: readonly string[] = [
   "ubuntu-latest",
@@ -402,7 +402,7 @@ interface RequiredHeaderField {
 }
 
 /**
- * The closed field list BR-0003-0036 / BR-0020-0029 require of
+ * The closed field list BR-0020-0016 / BR-0020-0029 require of
  * every shipped header. Value SSOT is this suite; neither the spec nor the
  * contract restates it.
  */
@@ -525,7 +525,7 @@ async function declaredNodeFloor(): Promise<string> {
 // QFAI:EX-0002-0005-02
 describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and claims no undeclared Node floor", () => {
   // One it() per TC-0003-0042 verify bullet. Scope notes, disclosed:
-  // - The required-field list above is the closed set BR-0003-0036 names, and
+  // - The required-field list above is the closed set BR-0020-0016 names, and
   //   it is value SSOT here per BR-0020-0023. Extra rows are allowed (a file
   //   may document more); a DUPLICATED required row is not, because two
   //   answers to one question is not a complete statement.

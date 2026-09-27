@@ -20,14 +20,14 @@ function table(rows: string[]): string {
 
 function contract(first: string, second = "EX-0001-0005-02"): string {
   return [
-    "# Notify",
+    "# CLI-0001: Notify",
     "",
-    "## Rules",
+    "## Business rules",
     "",
     "| BR-ID | Statement | Examples |",
     "| --- | --- | --- |",
-    `| BR-0001 | One email per customer | ${first} |`,
-    `| BR-0002 | Emails are unique | ${second} |`,
+    `| BR-0001-0001 | One email per customer | ${first} |`,
+    `| BR-0001-0002 | Emails are unique | ${second} |`,
     "",
   ].join("\n");
 }
@@ -58,7 +58,7 @@ function facts(rows: string[], text: string, exampleIds: string[]) {
 
 const question = {
   kind: "decision",
-  text: "Add the empty-value example and cite it from BR-0001?",
+  text: "Add the empty-value example and cite it from BR-0001-0001?",
   options: [
     { optionId: "apply", label: "Apply it", description: "Writes both.", effect: "proceed" },
     { optionId: "skip", label: "Leave it", description: "The run stops.", effect: "stop" },

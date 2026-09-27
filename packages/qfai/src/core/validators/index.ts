@@ -5,7 +5,6 @@
 export { validateDiscussionPackReadiness } from "./discussionPack.js";
 export { validateDiscussionVisuals } from "./discussionVisuals.js";
 export { validateDesignDirectionProposal } from "./designDirectionProposal.js";
-export { validateContractSsotModules } from "./contractSsotModules.js";
 export { validateDbContractApplyOrder } from "./dbContractApplyOrder.js";
 export { validateStorySteeringPlaceholders } from "./assistantAssets.js";
 export { validateStoryTreeContractReferences } from "./contractReferences.js";

@@ -3,7 +3,7 @@
  * the advisory-findings bucket of the 2-group text summary, and never inside the
  * blocking bucket.
  *
- * TC-0006-0029 (AC-0006-0022 / BR-0006-0019, grouping per BR-0006-0011) — Setup
+ * The test case for BR-0008-0019, with the grouping BR-0008-0011 fixes — Setup
  * 「`workflows.integrity` が drift を返すフィクスチャ」, Action 「`runDoctor({ root,
  * format: 'text', failOn: 'error' })` 相当を呼び…」.
  *
@@ -41,12 +41,12 @@
  *
  * ## The header the TC names is not the header that renders
  *
- * The TC (and BR-0006-0011, and DR-0006-0004's plan entry) spell the bucket
+ * The TC and BR-0008-0011 spell the bucket
  * "warnings advisory of drift". `formatDoctorText` renders
  * `== warnings advisory of drift ==`. The two DENOTE the
- * same bucket — BR-0006-0011 declares the group header strings stable
- * identifiers and BR-0008-0011 of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
- * mandates exactly the two buckets — so this file needles the RENDERED literal
+ * same bucket — BR-0008-0011 of `.qfai/spec/03_contract/cli/cli-0008-qfai-doctor.md`
+ * mandates exactly the two buckets and declares their header strings stable
+ * identifiers — so this file needles the RENDERED literal
  * and never the spec's prose. Neither side is "fixed" here; the mapping is
  * recorded instead, since editing either would be a spec change dressed as a
  * test.

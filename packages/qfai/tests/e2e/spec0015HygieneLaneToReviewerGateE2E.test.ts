@@ -171,7 +171,7 @@ describe(
       expect(
         surfaced[0]?.severity,
         "an ingested deferred-registration code keeps the error class the lane emits it with; " +
-          "`BR-0015-0017` defers rejecting it for an empty justification, not its severity",
+          "`BR-0001-0016` defers rejecting it for an empty justification, not its severity",
       ).toBe("error");
 
       const message = surfaced[0]?.message ?? "";

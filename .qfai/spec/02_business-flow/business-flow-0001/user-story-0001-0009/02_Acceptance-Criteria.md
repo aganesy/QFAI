@@ -23,5 +23,10 @@ Feature: Traceability chain BF → US → AC → EX ← BR
     Given a business rule of a project on the story tree
     When the contract layer is read
     Then the rule is declared once, in the contract file that enforces it, in the form that file type allows
-    And a rule ref in another contract adds no citation of the rule's examples and must name a declared rule
+
+  # AC-0001-0009-04
+  Scenario: A contract names no implementation file
+    Given a contract of a project on the story tree
+    When its text is read
+    Then it names no source, test or script file of the implementation
 ```

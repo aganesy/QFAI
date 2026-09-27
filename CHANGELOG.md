@@ -153,15 +153,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     names anything but common steps, or appears on a common step.
 
 - **Contracts can carry their own IDs, and number their rules after them.**
-  `qfai validate` reads the new forms beside the current ones.
+  `qfai validate` reads them.
   - A contract under `cli/`, `api/`, `db/`, `ui/` or `design/` declares a
     contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
     contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
     otherwise. The number is unique across kinds.
   - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
     another number is a BR-to-EX error (`QFAI-STORY-005`).
-  - A Markdown contract may hold its rules under `## Business rules`, which is
-    read like `## Rules` but refuses a `Rule refs:` line.
+  - A Markdown contract holds its rules under `## Business rules`.
   - A `contracts.md` index with the columns `ID`, `Title`, `File`,
     `Depends On`, `Reconciled With` and `Purpose` is checked against every
     contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
@@ -594,6 +593,14 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - **Breaking:** the migration no longer continues from a plan and ID map
     written under the skill's earlier name, `qfai-migration-spec-to-story`.
 
+- **Every CLI contract is held to the closed CLI contract schema.** The
+  document lane and `qfai validate` check each
+  Markdown file under `<paths.contractsDir>/cli/` against the schema of the
+  `cli-NNNN-title.md` template: the `# CLI-NNNN: <title>` heading,
+  `## Ownership boundary` and one `## Business rules` table, and nothing else.
+  - The contract index is read with any GFM delimiter row, so `| -- |`
+    separates its header as `| --- |` does.
+
 ### Removed
 
 - **A spec document can no longer opt out of its schema.**
@@ -770,6 +777,26 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   ATDD evidence record. The check that compared that count with the tree went
   when the record's spec was retired, so the count had gone stale and nothing
   read it.
+
+- **Breaking: the old contract and rule forms are no longer read.**
+  `qfai validate` reads a contract's rules only from `## Business rules`, a
+  rule ID only as `BR-<contract number>-NNNN`, a contract ID only as
+  `<KIND>-NNNN`, and the contract index only in its six current columns.
+  - A single-segment `BR-NNNN` is a malformed ID (`QFAI-STORY-002`).
+  - A `## Rules` section, a `Rule refs:` line, `x-qfai-rule-refs` and a SQL
+    `-- Rule refs:` line are not read, and a rule ref naming no rule is no
+    longer reported.
+  - A `CON-API-*`, `CON-DB-*` or `CON-UI-*` declaration and a `QFAI:CON-*`
+    annotation are not read. The 1.x to 2.x migration rewrites them.
+  - An index with the `Short ID`, `Entity` and `Declared ID` columns is not
+    read, so each contract it lists is reported by `QFAI-CONTRACT-034` as
+    having no row.
+- **The loose CLI contract template is gone.** `qfai-sdd` no longer ships
+  `templates/spec/03_contract/cli/command.md` or its schema;
+  `cli-NNNN-title.md` is the one CLI contract template.
+- **`QFAI-CONTRACT-050` is removed.** `qfai validate` no longer checks the
+  `- SSOT modules:` entries of a contract, which never names an implementation
+  file.
 
 ### Fixed
 

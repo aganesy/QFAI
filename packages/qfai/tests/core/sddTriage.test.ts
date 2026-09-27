@@ -662,8 +662,8 @@ describe("renderTriageMarkdown", () => {
       // TC-0013-0019 (Type=normal): the AC-0013-0012 round-trip
       // identity property must hold for the dominant case — clean
       // ASCII text containing none of the escape-relevant characters
-      // (no `|`, no `\`, no `\r` / `\n`). Required by BR-0013-0008
-      // (every AC needs a Type=normal TC alongside non-normal TCs).
+      // (no `|`, no `\`, no `\r` / `\n`). Required because every AC
+      // needs a Type=normal TC alongside non-normal TCs.
       const row = await roundTripCell("hello world", "see related discussion");
       expect(row[1]).toBe("hello world");
       expect(row[6]).toBe("see related discussion");

@@ -577,3 +577,79 @@ it("Built CLI status while", async () => {
     unchanged: (await treeDigest(runDirOf(root, runId))) === before,
   }).toEqual({ ok: true, sequence: field(routed.json, "run.sequence"), unchanged: true });
 });
+
+// QFAI:EX-0001-0201-40
+it("Run records of a feature run approved at routing", async () => {
+  const root = await minimalProject();
+  const { runId } = await featureRunAt(root, "implement");
+  const records = path.join(root, ".qfai", "evidence", "workflow", runId, "authorizations");
+  const keys = (value: unknown): string[] =>
+    typeof value === "object" && value !== null ? Object.keys(value).sort() : [];
+  const authorizations = await Promise.all(
+    (await readdir(records)).map(async (name): Promise<unknown> =>
+      JSON.parse(await readFile(path.join(records, name), "utf8")),
+    ),
+  );
+
+  const summary = await trackedSummary(root, runId);
+
+  expect({
+    summary: keys(summary),
+    binding: keys(field(summary, "targetBindings.0")),
+    stage: keys(field(summary, "stages.0")),
+    authorizations: authorizations.map((record) => ({
+      kind: field(record, "kind"),
+      capture: field(record, "capture"),
+      operation: field(record, "operation"),
+      fields: keys(record),
+      question: keys(field(record, "question")),
+    })),
+  }).toEqual({
+    summary: [
+      "authorizationIds",
+      "completionTarget",
+      "createdAt",
+      "debts",
+      "qfaiVersion",
+      "requestDigest",
+      "route",
+      "runId",
+      "stages",
+      "state",
+      "targetBindings",
+      "updatedAt",
+    ],
+    binding: ["flowId", "slotId", "storyIds"],
+    stage: [
+      "outcome",
+      "receiptDigests",
+      "reviewerRoles",
+      "stageInstanceId",
+      "stageKind",
+      "testObservation",
+    ],
+    authorizations: [
+      {
+        kind: "human_decision",
+        capture: "agent_captured",
+        operation: "CREATE",
+        fields: [
+          "answer",
+          "answeredBy",
+          "authorizationId",
+          "capture",
+          "effect",
+          "kind",
+          "operation",
+          "question",
+          "questionId",
+          "recordedAt",
+          "runId",
+          "scopeDigest",
+          "target",
+        ],
+        question: ["options", "selection", "text"],
+      },
+    ],
+  });
+});

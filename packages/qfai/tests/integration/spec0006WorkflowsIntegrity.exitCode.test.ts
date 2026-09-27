@@ -2,7 +2,7 @@
  * Integration: the installed shipped-workflow drift advisory is severity `info`
  * and leaves `qfai doctor --fail-on error` at exit 0.
  *
- * TC-0006-0029 (AC-0006-0022 / BR-0006-0019) — Setup 「`workflows.integrity` が
+ * The test case for BR-0008-0019 — Setup 「`workflows.integrity` が
  * drift を返すフィクスチャ」, Action 「`runDoctor({ root, format: 'text', failOn:
  * 'error' })` 相当を呼び、finding severity と `shouldFailDoctor` の判定を観測する」.
  *

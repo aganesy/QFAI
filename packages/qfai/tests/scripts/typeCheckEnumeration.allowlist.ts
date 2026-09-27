@@ -83,7 +83,6 @@ export const TYPE_CHECK_UNENUMERATED: readonly string[] = [
   "tests/core/config.test.ts",
   "tests/core/configCompatibility.test.ts",
   "tests/core/contractDependencies.test.ts",
-  "tests/core/contractSsotModules.test.ts",
   "tests/core/critique/critiqueAdapter.test.ts",
   "tests/core/critique/exampleProviders.test.ts",
   "tests/core/critique/genericCommandProvider.test.ts",

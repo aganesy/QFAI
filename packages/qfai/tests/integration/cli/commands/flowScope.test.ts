@@ -211,7 +211,7 @@ describe("story-tree CLI flow scope", () => {
     );
     await writeFile(
       contract,
-      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
+      "# QFAI-CONTRACT-ID: API-0001\nx-qfai-rules:\n  - id: BR-0001-0001\n    statement: Orders are accepted\n    examples: [EX-0001-0001-0001]\n",
       "utf8",
     );
     await runReport({
