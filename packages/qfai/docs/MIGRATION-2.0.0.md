@@ -29,8 +29,8 @@ The migration skill writes
 each old story needs one destination business flow, and each old business rule
 needs one enforcing contract. Some acceptance criteria need an explicit parent
 story. A contract path is relative to the configured contracts directory, lies
-under `cli/`, `api/`, `db/`, `ui/` or `design/`, and names the file as it is
-before the migration renames it. Flow and story order determine new IDs.
+under `cli/`, `api/`, `db/` or `ui/`, and names the file as it is before the
+migration renames it. Flow and story order determine new IDs.
 Step 4 creates an ID map that later steps use; after that map exists, move or
 place unresolved content through `/qfai-sdd` in the new tree instead of
 changing the plan.
@@ -45,21 +45,30 @@ statements and test annotations, and number each contract's rules from its own
 number, such as `BR-0002-0001`. A Markdown contract takes its rules as rows of
 a `## Business rules` table. `contracts.md` becomes one index table.
 
-`design/DESIGN.md.lock.yaml`, `design/design-system.yaml` and
-`design/prototype-handoff.yaml` are not contracts. They get no ID, and QFAI
-2.0.0 reads none of them. The handoff is now the `handoff` object of
-`.qfai/evidence/prototyping/prototyping.json`, which `/qfai-prototyping`
-writes. The migration does not convert the old file into it.
+Two kinds of 1.x file are not 2.0.0 contracts. Step 3 gives them no ID and
+does not write them into the new tree:
+
+- a Markdown file under `api/`, `db/` or `ui/`, whose directory holds OpenAPI
+  YAML or JSON, SQL or UI YAML contracts;
+- every file under `design/`, which no longer exists: the brand belongs in the
+  root `DESIGN.md`, and a screen in a `ui/` contract.
+
+Each is listed for a person and kept under
+`.qfai/evidence/migration-spec-to-story/retired/contract/`, so a plan cannot
+place a rule in one. The old `design/prototype-handoff.yaml` is now the
+`handoff` object of `.qfai/evidence/prototyping/prototyping.json`, which
+`/qfai-prototyping` writes. The migration does not convert the old file into
+it.
 
 The result separates project policy, concrete behavior, and enforcing
 contracts:
 
-| Old content                                                                                   | New home                               |
-| --------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Shared objectives, glossary and constraints                                                   | `01_policy/`                           |
-| Business flows, stories, acceptance criteria and examples                                     | `02_business-flow/`                    |
-| Contract index, technology stack and commands, and API, database, UI, CLI or design contracts | `03_contract/`                         |
-| Decisions and open questions                                                                  | `decisions.md` and `open-questions.md` |
+| Old content                                                                           | New home                               |
+| ------------------------------------------------------------------------------------- | -------------------------------------- |
+| Shared objectives, glossary and constraints                                           | `01_policy/`                           |
+| Business flows, stories, acceptance criteria and examples                             | `02_business-flow/`                    |
+| Contract index, technology stack and commands, and API, database, UI or CLI contracts | `03_contract/`                         |
+| Decisions and open questions                                                          | `decisions.md` and `open-questions.md` |
 
 Every story-tree document the scripts write is in the shape of its `qfai-sdd`
 template, which is the shape the document schema checks. Content that does not
