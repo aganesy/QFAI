@@ -194,7 +194,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
     );
 
     const migrated = await step(root, 4);
-    expect(migrated.code).toBe(0);
+    expect(migrated.code).toBe(3);
     const mapFile = path.join(root, evidence, "id-map.json");
     const idMap = await readFile(mapFile, "utf8");
     const parsed = JSON.parse(idMap) as { ids: Record<string, Record<string, string>> };
@@ -213,7 +213,7 @@ describe("BF-0004 migration acceptance boundaries", () => {
     ).toContain("AC-0001-0001-01");
     const firstTree = await snapshot(root);
     const rerun = await step(root, 4);
-    expect(rerun.code).toBe(0);
+    expect(rerun.code).toBe(3);
     expect(rerun.stdout).toContain("## Operations\nnone");
     expect(await snapshot(root)).toBe(firstTree);
 

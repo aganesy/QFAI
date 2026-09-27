@@ -119,7 +119,15 @@ async function migrationProject(): Promise<string> {
   return root;
 }
 
+/** Step 4 lists every flow it writes, for a person to write its alternate and exception paths. */
+const FLOWS_FOR_A_PERSON =
+  /## For a person\r?\n(?:- \.qfai\/spec\/02_business-flow\/business-flow-\d{4}\/business-flow\.md: BF-\d{4} has (?:no purpose and )?no alternate and exception paths; write them(?:\r?\n|$))+(?:\r?\n|$)/;
+
 function requireStep(result: Result, number: number): void {
+  if (number === 4) {
+    if (result.status === 3 && FLOWS_FOR_A_PERSON.test(result.stdout)) return;
+    throw new Error(`Step ${number}: exit ${result.status}\n${result.stderr}\n${result.stdout}`);
+  }
   if (result.status !== 0 || /## For a person\r?\n(?!none(?:\r?\n|$))/.test(result.stdout)) {
     throw new Error(`Step ${number}: exit ${result.status}\n${result.stderr}\n${result.stdout}`);
   }
