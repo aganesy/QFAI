@@ -97,4 +97,10 @@ Feature: Unified SDD Workflow
     When the flow's SDD evidence is written and the completion reviewer reads it,
     Then the evidence holds one row per finding carrying the cycle, the finding, its kind, the target IDs, the decision, the adjudicator and the reason, one row for each cycle that raised nothing, and the finder's name in the Work Orders Summary.
     And the reviewer returns REVISE when a cycle has no row, when the finder wrote a BR it read, when a finding the user did not decide names as adjudicator its finder or an author of an item it targets, or when an adopted change to an item that existed when the invocation started was applied with no in-force triage approval or `Change request:` row whose approved change covers it.
+  # AC-0001-0152-15
+  Scenario: A Pre-draft Grilling Checkpoint Precedes Each Design Write
+    Given an invocation of `/qfai-sdd` about to write in a design-writing stage,
+    When the stage makes its first story-tree write,
+    Then a delegated grilling checkpoint has settled that stage's open decisions, and the flow's SDD evidence records it in its `## Pre-draft Grilling` table.
+    And the completion reviewer returns REVISE when a checkpoint is missing, and a Work Orders Summary row does not stand in for one.
 ```
