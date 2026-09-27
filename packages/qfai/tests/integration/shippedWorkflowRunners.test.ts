@@ -3,8 +3,8 @@
  * completeness.
  *
  * Covers the operability half of the shipped-workflows contract
- * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, CLI-0020 §5 dimensions 2 and
- * 3): every shipped runner selector reads a repository variable whose default
+ * (`.qfai/spec/03_contract/cli/cli-0020-shipped-workflows.md`, BR-0020-0029
+ * and BR-0020-0030): every shipped runner selector reads a repository variable whose default
  * is a public GitHub-hosted label, and every shipped file states the
  * operating facts an adopter needs before the first run.
  *
@@ -42,7 +42,7 @@ type ShippedFile = readonly [string, string];
 /**
  * The repository variable a shipped job that executes reads. One variable for
  * every such job, not one per file: an adopter retargets CI with a single
- * knob. Value SSOT is this suite per CLI-0020 §5.
+ * knob. Value SSOT is this suite per BR-0020-0023.
  */
 const RUNNER_VARIABLE = "QFAI_CI_RUNNER";
 
@@ -402,7 +402,7 @@ interface RequiredHeaderField {
 }
 
 /**
- * The closed field list BR-0003-0036 / CLI-0020 §5 dimension 2 require of
+ * The closed field list BR-0003-0036 / BR-0020-0029 require of
  * every shipped header. Value SSOT is this suite; neither the spec nor the
  * contract restates it.
  */
@@ -526,7 +526,7 @@ async function declaredNodeFloor(): Promise<string> {
 describe("TC-0003-0042 (TDD-0042): each shipped header table is complete and claims no undeclared Node floor", () => {
   // One it() per TC-0003-0042 verify bullet. Scope notes, disclosed:
   // - The required-field list above is the closed set BR-0003-0036 names, and
-  //   it is value SSOT here per CLI-0020 §5. Extra rows are allowed (a file
+  //   it is value SSOT here per BR-0020-0023. Extra rows are allowed (a file
   //   may document more); a DUPLICATED required row is not, because two
   //   answers to one question is not a complete statement.
   // - Content obligations are per field and deliberately narrow: the rows

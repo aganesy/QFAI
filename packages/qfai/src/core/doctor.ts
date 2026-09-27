@@ -526,12 +526,12 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     // provenance record is empty for a missing, unreadable or malformed file by
     // contract, and `status: "ok"` is what the reader returns after comparing
     // NOTHING. Every shipped name in that tree is `adopter-owned` or `absent`
-    // in the shipped-workflows state enum (§3) and both rows require silence;
+    // in the shipped-workflows state enum and both rows require silence;
     // the doctor contract keys `ok` to `installed` alone and says outright that
     // it reports nothing for a workflow with no provenance entry. Emitting here
     // would tell an adopter their workflows match a packaged copy that was
     // never opened — including the adopter who installed before the record
-    // existed, for whom §3's known limitation says this channel is silent.
+    // existed, for whom the contract's known limitation says this channel is silent.
     //
     // Deliberately the count and not "some name resolved to `installed`":
     // The workflow rule requires `ok` on a tree whose recorded files were all
