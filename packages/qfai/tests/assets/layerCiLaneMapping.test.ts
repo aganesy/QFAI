@@ -31,7 +31,8 @@ describe("the layer to CI lane map is part of the layer rule", () => {
   // QFAI:EX-0002-0021-03
   // QFAI:EX-0002-0021-04
   it("keeps the mapping inside the existing vocabulary and test scan", () => {
-    const section = read(path.join(assetRoot, ruleName)).split("## CI lane mapping\n")[1] ?? "";
+    const rule = read(path.join(assetRoot, ruleName));
+    const section = rule.split("## CI lane mapping\n")[1] ?? "";
     expect(section).toContain("This section adds no layer token or layer heading");
     expect(section).toMatch(/does not activate\s+per-level routing/u);
     expect(section).toContain("Place test annotations only in paths scanned by");
@@ -39,6 +40,23 @@ describe("the layer to CI lane map is part of the layer rule", () => {
     expect(section).not.toMatch(/^### L\w+/m);
     expect(section).not.toMatch(/layer-[a-z]+/);
     expect(section).not.toMatch(/`QFAI:TC-[^`]+`/);
+
+    const tokens = new Set([...rule.matchAll(/layer-[a-z0-9-]+/gi)].map((match) => match[0]));
+    expect([...tokens].sort()).toEqual([
+      "layer-api",
+      "layer-component",
+      "layer-e2e",
+      "layer-integration",
+      "layer-unit",
+    ]);
+    const headings = [...rule.matchAll(/^ {0,3}#{1,6}\s*L\d+\b.*$/gm)].map((match) => match[0]);
+    expect(headings).toEqual([
+      "### L1 Unit",
+      "### L2 Component",
+      "### L3 Integration",
+      "### L4 API",
+      "### L5 E2E",
+    ]);
   });
 
   // QFAI:EX-0002-0021-05

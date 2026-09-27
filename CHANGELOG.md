@@ -760,6 +760,8 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - The package entry no longer exports the spec-chain validators from
     `validators/ids`, `traceability`, `layeredTraceability`,
     `orphanProhibition`, `atddCodeTraceability` and `specSplitByCapability`.
+  - The package entry no longer exports `collectHeadingTcLevelsFrom`. Only the
+    removed TDD ledger check read it.
 
 - **Breaking: `match.dl_ids` in `waivers.yml`.** A waiver that uses it is
   refused as `QFAI-WAIVER-001` (`error`) and applies to nothing. Name the
