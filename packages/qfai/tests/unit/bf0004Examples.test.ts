@@ -622,7 +622,7 @@ describe("BF-0004 migration examples", () => {
       "# Objective\n\nx-qfai-status: external\n",
     );
     const integration =
-      "const stable = true; // QFAI:SPEC-0001:TC-0001-0001\n// QFAI:SPEC-0001:US-0001-0001\n// QFAI:CON-API-0001\n// x-qfai-status: planned\n";
+      "const stable = true; // QFAI:SPEC-0001:TC-0001-0001\n// QFAI:SPEC-0001:US-0001-0001\n// x-qfai-status: planned\n";
     const e2e = "// QFAI:SPEC-0001:US-0001-0001\n// QFAI:SPEC-0001:TC-0001-9999\n";
     await put(context.root, "tests/integration/checkout.test.ts", integration);
     await put(context.root, "tests/e2e/checkout.test.ts", e2e);
@@ -638,7 +638,6 @@ describe("BF-0004 migration examples", () => {
       "x-qfai-status: external",
     );
     expect(result.output).toContain("## Annotations kept");
-    expect(result.output).toContain("QFAI:CON-API-0001");
     expect(result.output).toContain("QFAI:SPEC-0001:US-0001-0001");
     expect(result.output).toContain("QFAI:SPEC-0001:TC-0001-9999");
     expect(result.output).toContain("## For a person");

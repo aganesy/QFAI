@@ -15,11 +15,9 @@ import {
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import {
   DESIGN_MD_SAMPLE_MARKER,
-  hashDesignMd,
   isUnreplacedDesignMdSample,
   parseDesignMd,
 } from "./design/designMd.js";
-import { readDesignMdLockSha } from "./design/designMdLock.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "./fs.js";
 import { toRelativePath } from "./paths.js";
 import {
@@ -53,6 +51,7 @@ import {
   type WideLineAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 import { diffInstalledShippedWorkflows } from "./doctor/workflowsIntegrity.js";
+import { checkDocsLane } from "./doctor/docsLane.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -658,6 +657,8 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   }
+
+  addCheck(checks, await checkDocsLane(root));
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
@@ -1460,7 +1461,7 @@ async function buildPrototypingDoctorChecks(
       buildPlaywrightLauncherChecks(root),
       buildTargetUrlCheck(root, targetUrl, targetUrlOverride ? "cli" : "config"),
     ]);
-  const designMdChecks = await buildPrototypingDesignMdChecks(root, config);
+  const designMdChecks = await buildPrototypingDesignMdChecks(root);
   // `launcherChecks` may yield 1 or 2 entries: the primary check plus an
   // optional `D-DEPRECATED-PROBE` finding when the deprecated stage resolves.
   return [
@@ -1474,14 +1475,9 @@ async function buildPrototypingDoctorChecks(
   ];
 }
 
-async function buildPrototypingDesignMdChecks(
-  root: string,
-  config: Awaited<ReturnType<typeof loadConfig>>["config"],
-): Promise<DoctorCheck[]> {
+async function buildPrototypingDesignMdChecks(root: string): Promise<DoctorCheck[]> {
   const designMdRel = "DESIGN.md";
-  const lockRel = path.join(config.paths.contractsDir, "design", "DESIGN.md.lock.yaml");
   const designMdAbs = path.join(root, designMdRel);
-  const lockAbs = path.join(root, lockRel);
 
   const checks: DoctorCheck[] = [];
   let designMdText: string | null;
@@ -1502,8 +1498,8 @@ async function buildPrototypingDesignMdChecks(
   } else if (isUnreplacedDesignMdSample(designMdText)) {
     // `qfai init` seeds the shipped sample brand into the project root,
     // so "file exists and parses" cannot distinguish an authored brand
-    // from an unauthored one. Report it here, before /qfai-sdd Phase 0
-    // freezes its sha256 as the project's brand contract.
+    // from an unauthored one. Report it here, before a prototyping loop
+    // records its sha256 as the brand the loop runs against.
     //
     // Samples seeded by releases that predate the marker are detected by
     // content fingerprint instead, so the remediation text must not tell
@@ -1514,8 +1510,8 @@ async function buildPrototypingDesignMdChecks(
       severity: "error",
       title: "Root DESIGN.md",
       message: markerPresent
-        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before freezing"
-        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before freezing",
+        ? "root DESIGN.md is still the qfai sample brand — replace it with this product's brand SSOT and delete the sample marker before prototyping"
+        : "root DESIGN.md is still the qfai sample brand (seeded by a release older than the sample marker) — replace it with this product's brand SSOT before prototyping",
       details: { path: designMdRel, marker: markerPresent ? DESIGN_MD_SAMPLE_MARKER : null },
     });
   } else {
@@ -1539,62 +1535,6 @@ async function buildPrototypingDesignMdChecks(
     }
   }
 
-  let lockText: string | null;
-  try {
-    lockText = await readFile(lockAbs, "utf-8");
-  } catch {
-    lockText = null;
-  }
-  let lockSha: string | null = null;
-  if (lockText === null) {
-    checks.push({
-      id: "prototyping.designMdLock",
-      severity: "error",
-      title: "DESIGN.md.lock.yaml",
-      message: `DESIGN.md.lock.yaml is missing at ${toRelativePath(root, lockAbs)}`,
-      details: { path: toRelativePath(root, lockAbs) },
-    });
-  } else {
-    lockSha = readDesignMdLockSha(lockText);
-    if (lockSha === null) {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "error",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml is missing 'designMdSha256' or is malformed YAML",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdLock",
-        severity: "ok",
-        title: "DESIGN.md.lock.yaml",
-        message: "DESIGN.md.lock.yaml carries designMdSha256",
-        details: { path: toRelativePath(root, lockAbs) },
-      });
-    }
-  }
-
-  if (designMdText !== null && lockSha !== null) {
-    const currentSha = hashDesignMd(designMdText);
-    if (currentSha === lockSha) {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "ok",
-        title: "DESIGN.md sha256 freeze",
-        message: "DESIGN.md sha256 matches DESIGN.md.lock.yaml",
-        details: { sha256: currentSha },
-      });
-    } else {
-      checks.push({
-        id: "prototyping.designMdSha",
-        severity: "error",
-        title: "DESIGN.md sha256 freeze",
-        message: `DESIGN.md sha256 mismatch: lock=${lockSha} current=${currentSha}`,
-        details: { lock: lockSha, current: currentSha },
-      });
-    }
-  }
   return checks;
 }
 

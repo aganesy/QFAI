@@ -660,7 +660,12 @@ describe("migration harness", () => {
     await put(
       ctx.root,
       ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/api-0001-orders.yaml\n",
+    );
+    await put(
+      ctx.root,
+      ".qfai/spec/03_contract/api/api-0001-orders.yaml",
+      "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
     );
     const owner = {
       kind: "write" as const,

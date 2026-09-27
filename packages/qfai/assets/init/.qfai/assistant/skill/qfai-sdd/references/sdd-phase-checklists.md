@@ -38,7 +38,7 @@ The one example a diagnosed missing test needs is appended as `.qfai/assistant/s
 - Every written contract file has a contracts.md index row in the same change, with the columns `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`.
 - Contract state, errors, and persisted attributes can realize the AC and EX outcomes, including required joins.
 - Changed DB contracts were applied to a scratch database and their declared write paths exercised as contract-artifact-rules.md requires. Record the command and result under Contract executability in the flow evidence.
-- UI design contracts use the product's frozen DESIGN.md; the sample design was not frozen.
+- UI design contracts use the product's own DESIGN.md; the sample design was not adopted.
 
 ## Concrete-abstract cycle
 

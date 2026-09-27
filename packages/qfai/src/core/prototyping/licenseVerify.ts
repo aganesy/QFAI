@@ -16,13 +16,10 @@
  */
 
 /**
- * Runtime shape of one `imageSources[]` entry. Mirrors the CLI contract
- * `prototype-handoff.yaml#imageSources[]` row schema — `{url, source,
- * license, attribution}` — so the runtime gate refuses any entry the
- * handoff stage would also reject.
+ * Runtime shape of one `prototyping.json#imageSources[]` entry, the row
+ * schema the CLI contract states — `{url, source, license, attribution}`.
  *
- * Deferring `attribution` to the handoff stage, with only a comment noting
- * it is "recorded separately at certify", would let unattributed stock
+ * Deferring `attribution` to a later stage would let unattributed stock
  * photos pass the cycle ≥ 1 license-verify gate even though the contract's
  * exit-66 class explicitly includes "missing attribution". The field is
  * carried on the runtime type instead (optional at the type level so older
@@ -164,10 +161,9 @@ export function licenseVerify(
     // Require non-empty
     // attribution at the runtime license gate. The CLI contract's
     // exit-66 class explicitly enumerates "missing attribution", and
-    // the handoff schema requires `{url, license, attribution,
+    // the `imageSources[]` row schema requires `{url, license, attribution,
     // source}`; a runtime type that lacked the field entirely would let
-    // unattributed stock photos pass iterate and only surface
-    // at certify (handoff) time. Undefined and empty-string are both
+    // unattributed stock photos pass iterate. Undefined and empty-string are both
     // treated as "missing" here so the gate works for callers that
     // pass through the optional field as either form.
     //

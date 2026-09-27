@@ -42,9 +42,7 @@ export type PrototypingMode = "convergence" | "exploration";
  */
 export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
   "QFAI-CRIT-008", // loop not completed across viewports
-  "QFAI-DCON-030", // design contract drift (DESIGN.md / lock)
-  "QFAI-DCON-031", // design contract drift (paired lock value)
-  "QFAI-DCON-032", // design contract drift (paired token surface)
+  "QFAI-DCON-030", // root DESIGN.md missing
 ] as const;
 
 /**
@@ -136,9 +134,6 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
   // validators/designContractReadiness.ts — non-drift readiness gates
-  "QFAI-DCON-001",
-  "QFAI-DCON-005",
-  "QFAI-DCON-009",
   "QFAI-DCON-012",
   "QFAI-DCON-013",
   "QFAI-DCON-033",

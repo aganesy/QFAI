@@ -22,18 +22,6 @@ Feature: Prototyping skill and UI evidence validation
     When `qfai validate` runs
     Then a root `DESIGN.md` that exists and whose front matter parses per `references/design-md-spec.md` raises neither `QFAI-DCON-030` nor `QFAI-DCON-033`.
 
-  # AC-0001-0042-04
-  Scenario: A matching design lock raises no lock finding
-    Given the design lock and root `DESIGN.md` bytes
-    When `qfai validate` runs
-    Then a `<paths.contractsDir>/design/DESIGN.md.lock.yaml#designMdSha256` equal to `sha256(DESIGN.md bytes)` raises neither `QFAI-DCON-031` nor `QFAI-DCON-032`.
-
-  # AC-0001-0042-05
-  Scenario: A matching design system raises no mirror finding
-    Given the design system and root `DESIGN.md` token tables
-    When `qfai validate` runs
-    Then a `<paths.contractsDir>/design/design-system.yaml` whose `visual.*` tokens equal those of root `DESIGN.md` raises no mirror finding.
-
   # AC-0001-0042-06
   Scenario: A review payload follows schema v3
     Given an `.qfai/evidence/prototyping/iter-NN/review.json` file
@@ -60,22 +48,11 @@ Feature: Prototyping skill and UI evidence validation
     And property tests assert: (a) idempotence, (b) order-stability, (c) absence of `Date`, `process`, `fs`, network calls in the call graph.
 
   # AC-0001-0042-10
-  Scenario: A missing or unparseable DESIGN.md is reported
-    Given root `DESIGN.md` is missing or its front matter does not parse
-    When `qfai validate` runs
-    Then a missing `DESIGN.md` emits `QFAI-DCON-030` at error severity, and an unparseable one emits `QFAI-DCON-033` at error severity.
-
-  # AC-0001-0042-11
-  Scenario: Design lock drift is reported
-    Given the design lock is missing, lacks `designMdSha256`, or records a hash that differs from the on-disk hash
-    When `qfai validate` runs
-    Then a missing lock or a missing `designMdSha256` emits `QFAI-DCON-031` at error severity, and a differing hash emits `QFAI-DCON-032` at error severity.
-
-  # AC-0001-0042-12
-  Scenario: A diverging design system is reported
-    Given a `design-system.yaml` mirror key whose value differs from root `DESIGN.md`
-    When `qfai validate` runs
-    Then `QFAI-DCON-005` is emitted at error severity, naming the key and both values.
+  Scenario: The prototyping handoff is checked where it is recorded
+    Given a target whose UI contracts declare screens
+    When `qfai validate --profile prototyping` runs
+    Then `handoff` in a present `.qfai/evidence/prototyping/prototyping.json` is checked: an absent or non-object `handoff` emits `QFAI-DCON-012`, a `finalArtifact` or `implementationNotes` that is not a non-empty string emits `QFAI-DCON-013`, and a `finalArtifact` naming no file emits `QFAI-PROT-009`, each at error severity naming `prototyping.json`
+    And with no `prototyping.json`, none of the three is emitted
 
   # AC-0001-0042-13
   Scenario: An invalid review payload is rejected
@@ -100,4 +77,10 @@ Feature: Prototyping skill and UI evidence validation
     Given a violation has `kind` and `found` plus extra fields
     When the validator checks review.json
     Then extra fields do **not** reject: the shipped check reads the two it requires and ignores the rest.
+
+  # AC-0001-0042-17
+  Scenario: A missing or unparseable DESIGN.md is reported
+    Given root `DESIGN.md` is missing or its front matter does not parse
+    When `qfai validate` runs
+    Then a missing `DESIGN.md` emits `QFAI-DCON-030` at error severity, and an unparseable one emits `QFAI-DCON-033` at error severity.
 ```

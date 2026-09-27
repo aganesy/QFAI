@@ -1,11 +1,11 @@
 import { createTestLayerRoots, resolveTestKind } from "../../core/atddTraceability.js";
 import { collectFilesByGlobs } from "../../core/fs.js";
-import { readIdMap } from "./idMap.js";
+import { oldContractIds, readIdMap } from "./idMap.js";
 import { MigrationInputError, type MigrationOperation, type MigrationStep } from "./harness.js";
 import { readMigrationInput, repositoryRelative } from "./step05CasesToExamples.js";
 
 const LEGACY_ANNOTATION = /\bQFAI:SPEC-(\d{4}):([A-Z]+-\d{4}(?:-\d{4})?)(?![\d-])/g;
-const CONTRACT_ANNOTATION = /\bQFAI:CON-[A-Za-z0-9:-]+/g;
+const CONTRACT_ANNOTATION = /\bQFAI:(CON-(?:API|DB|UI)-\d+)(?![\w-])/g;
 const DEFERRAL = /\bx-qfai-status:\s*(?:planned|external)\b/g;
 const FILE_LIMIT = 200_000;
 
@@ -39,6 +39,7 @@ export const step08: MigrationStep = {
     if (selected.truncated)
       throw new MigrationInputError(`Test selection exceeds ${FILE_LIMIT} files`);
     const roots = createTestLayerRoots(context.root, context.config);
+    const contractIds = oldContractIds(map.contracts);
     const forAPerson: string[] = [];
     const annotationsKept: string[] = [];
     const operations: MigrationOperation[] = [];
@@ -50,11 +51,15 @@ export const step08: MigrationStep = {
       const isE2e = resolveTestKind(file, roots) === "e2e";
       const changedLines = original.split("\n").map((line, index) => {
         const location = `${repositoryRelative(context.root, file)}:${index + 1}`;
-        for (const match of line.matchAll(CONTRACT_ANNOTATION))
-          annotationsKept.push(`${location}: ${match[0]}`);
         for (const match of line.matchAll(DEFERRAL))
           annotationsKept.push(`${location}: ${match[0]}`);
-        return line.replace(LEGACY_ANNOTATION, (whole, packNumber: string, oldId: string) => {
+        const contracts = line.replace(CONTRACT_ANNOTATION, (whole, oldId: string) => {
+          const mapped = contractIds[oldId];
+          if (mapped) return `QFAI:${mapped}`;
+          forAPerson.push(`${location}: ${whole}: no contract declares ${oldId}`);
+          return whole;
+        });
+        return contracts.replace(LEGACY_ANNOTATION, (whole, packNumber: string, oldId: string) => {
           if (oldId.startsWith("US-") && !isE2e) {
             annotationsKept.push(`${location}: ${whole}`);
             return whole;

@@ -11,6 +11,7 @@ import {
 import { hasLegacySpecPackEntries } from "./storyTree/layout.js";
 import { readStoryTreeModel, type StoryTreeModel } from "./storyTree/tree.js";
 import { validateStoryTreeStructure } from "./validators/storyTreeStructure.js";
+import { validateDocumentSchema } from "./validators/documentSchema.js";
 import { validateStoryTreeObligations } from "./validators/storyTreeObligations.js";
 import { validateStoryTreeContractReferences } from "./validators/contractReferences.js";
 import { validateStorySteeringPlaceholders } from "./validators/assistantAssets.js";
@@ -200,7 +201,11 @@ export async function validateProject(
 
 function isFindingInFlowScope(finding: Issue, scope: FlowScope | undefined): boolean {
   if (!scope || finding.code === "QFAI-FLOW-005") return true;
-  if (!finding.code.startsWith("QFAI-STORY-") && finding.code !== "QFAI-CONTRACT-034") {
+  if (
+    !finding.code.startsWith("QFAI-STORY-") &&
+    finding.code !== "QFAI-CONTRACT-034" &&
+    finding.code !== "QFAI-DOCSCHEMA-001"
+  ) {
     return true;
   }
   if (finding.refs?.some((ref) => flowScopeContainsId(scope, ref))) return true;
@@ -505,6 +510,7 @@ async function runStoryProfileValidators(
 ): Promise<Issue[]> {
   const sdd = async (includeSteering = true): Promise<Issue[]> => [
     ...(await validateStoryTreeStructure(root, config, model)),
+    ...(await validateDocumentSchema(root, config)),
     ...(await validateStoryTreeContractReferences(root, config, model)),
     ...(includeSteering ? await validateStorySteeringPlaceholders(root, config) : []),
     ...(await validateContracts(root, config)),
@@ -601,7 +607,7 @@ async function runSaasPackage(
     timings,
     platformOption,
   );
-  return runSaasPackageProfile(root, config, prototypingIssues);
+  return runSaasPackageProfile(root, prototypingIssues);
 }
 
 async function runDiscussionValidators(
@@ -617,9 +623,7 @@ async function runDiscussionValidators(
     // from `npx qfai init`, from a hand-edit, or from an earlier pass of the
     // pipeline — and this is the earliest gate that can see whether it parses.
     // Catching it here means a malformed file surfaces before `/qfai-sdd`
-    // Phase 0 authors or freezes anything. Only the parse half — the lock
-    // comparison is
-    // `/qfai-sdd` Phase 0's to clear, and the UI-contract checks belong to
+    // builds on it. Only the parse half — the UI-contract checks belong to
     // later stages.
     ...(await validateRootDesignMdParse(root)),
     ...(await validateDiscussionMermaid(root)),
@@ -696,7 +700,7 @@ async function runPrototypingValidators(
     ...(await validatePrototypingDesignContractReadiness(root, config)),
     ...(await validateCompletionCertificateIssues(root, config)),
     ...(await validateConfigReferenceIntegrity(root, config)),
-    ...(await validatePrototypingArtifactRefIntegrity(root, config)),
+    ...(await validatePrototypingArtifactRefIntegrity(root)),
     ...(await validateSpecIdLinkage(root, config)),
     ...(await validateFrozenSurfaceReachability(root, config)),
     // `QFAI-PROT-311` — delegationMap entries must name a role from the
@@ -711,7 +715,7 @@ async function runPrototypingValidators(
  * reports it.
  *
  * Prototyping-mode relaxation: under `mode: exploration` the
- * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
+ * soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030) downgrade
  * error → warning. Schema / path / license gates stay hard error.
  * The mode is read from `prototyping.json#mode` written by iterate
  * at cycle 0 (absent → legacy "convergence" interpretation).

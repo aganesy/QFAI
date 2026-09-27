@@ -235,6 +235,21 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Migration step 3 moves the old structure catalog into those three places
     and lists the rest under `## For a person`.
 
+- **Every spec-tree document is checked against its schema, and the check is
+  required.** `npx qfai validate` runs the shipped document-schema checker in
+  the `sdd`, `verify` and `full` profiles. Each violation is a
+  `QFAI-DOCSCHEMA-001` error naming the document, line and column, and a
+  check that could not run is `QFAI-DOCSCHEMA-002`.
+
+  - `@jackchuka/mdschema` 0.15.4 is now a dependency of the package, and the
+    shipped `qfai-docs.yml` installs the same version.
+  - `npx qfai doctor` reports an error in `workflows.docsLane` when
+    `.github/workflows/qfai-docs.yml` is missing, and names the packaged copy
+    to restore.
+  - `npx qfai init` ships the rule master `.agents/rules/document-schema.md`
+    and cites it from the `AGENTS.md`, `CLAUDE.md` and
+    `copilot-instructions.md` it writes.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves
@@ -478,7 +493,65 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     plan, ID map and archives stay in that one working copy.
   - No CI lane runs the prototyping profile.
 
+- **The migration gives every 1.x contract its 2.x contract ID.** No old
+  `CON-*` ID is left where a step can rewrite it.
+  - Step 3 numbers every contract under `cli/`, `api/`, `db/`, `ui/` and
+    `design/` that has no 2.x ID, from `0001` across kinds, in the order CLI,
+    API, DB, UI, design, then by old number. It renames each file to
+    `<kind>-NNNN-<slug>.<ext>`, declares the new ID in its H1 or
+    `QFAI-CONTRACT-ID` line, and rewrites the old IDs in `-- Depends on:` and
+    `x-qfai-depends-on`. Its dry run names each rename with the new ID.
+  - The old and new IDs and paths are recorded in `contract-map.json` beside
+    the plan, and step 4 copies them into the ID map.
+  - `contracts.md` becomes one `## Contract Index` table with the columns
+    `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+    old index's other sections go to a person.
+  - The plan still names a rule's contract by its old path. Step 4 refuses a
+    path outside the five contract directories, or one that names no
+    contract, and numbers each contract's rules `BR-<contract number>-NNNN`.
+  - Step 7 writes a Markdown contract's rules under `## Business rules`, and
+    rewrites the old IDs in each rule statement through the ID map.
+  - Step 8 rewrites a `QFAI:CON-*` annotation to the new contract ID.
+  - An old ID no contract declared, and one left elsewhere in a contract, such
+    as a UI marker, is listed for a person with its file and line.
+  - **Breaking:** the migration no longer continues from a plan and ID map
+    written under the skill's earlier name, `qfai-migration-spec-to-story`.
+
 ### Removed
+
+- **A spec document can no longer opt out of its schema.**
+  `<!-- mdschema:ignore -->` is now reported as a violation, under every
+  `--scope` of the document lane and by `npx qfai validate`, and the document
+  is still checked.
+- **The 1.x spec-pack and policy schemas are gone.** The `spec/` and
+  `policies/` schemas, their manifest entries and the `when:` routing that
+  sent a retired spec pack to its own schema are removed.
+- **`validation.require.specSections` is removed.** No validator read it. A
+  document's sections come only from the shipped schemas, and
+  `qfai.config.yaml` has no `validation.require` section.
+
+- **Breaking: the design lock, the token mirror and the handoff YAML.**
+  Nothing writes or reads `DESIGN.md.lock.yaml`, `design-system.yaml` or
+  `prototype-handoff.yaml` under `<paths.contractsDir>/design/` any more.
+
+  - `qfai prototyping iterate` and `certify` compare root `DESIGN.md` only
+    with `prototyping.json#designMd.sha256`, the hash cycle 0 records. To
+    change `DESIGN.md` during a loop, edit it and restart from cycle 0.
+  - `iterate` writes no token copy when the loop stops. `/qfai-implement`
+    reads the tokens from root `DESIGN.md`.
+  - The handoff is `handoff` in `.qfai/evidence/prototyping/prototyping.json`:
+    `finalArtifact`, `procurement` and `implementationNotes`. The
+    prototyping profile of `qfai validate` checks it with `QFAI-DCON-012`
+    and `QFAI-DCON-013`, and checks that `finalArtifact` exists with
+    `QFAI-PROT-009`.
+  - `qfai validate` no longer emits `QFAI-DCON-001`, `QFAI-DCON-005`,
+    `QFAI-DCON-009`, `QFAI-DCON-031` or `QFAI-DCON-032`, and
+    `qfai doctor --profile prototyping` no longer reports
+    `prototyping.designMdLock` or `prototyping.designMdSha`.
+  - The saas-package profile's design-system attestation is root
+    `DESIGN.md`, present and parsing.
+  - `/qfai-sdd` no longer freezes `DESIGN.md`, and the two sample files for
+    the lock and the handoff are no longer shipped.
 
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,

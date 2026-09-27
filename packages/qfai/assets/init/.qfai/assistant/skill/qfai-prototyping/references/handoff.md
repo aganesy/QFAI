@@ -12,13 +12,12 @@ client-side route per declared screen, written by the generator. It is
 a distinct tree from the **capture** artifacts at
 `.qfai/evidence/prototyping/iter-<final>/<screenId>.{html,png}`, which
 `npx qfai prototyping iterate --capture` fans out one pair per declared
-screen. Handoff mirrors the authoring artifact; `npx qfai prototyping
+screen. Handoff copies the authoring artifact; `npx qfai prototyping
 certify` gates on the capture artifacts and never opens the
 `prototypes/` tree. Both must exist before handoff can complete: see
 "Output layout" in `references/generator-prompt.md`.
 
-`DESIGN.md` (root) and `<contractsDir>/design/DESIGN.md.lock.yaml`
-remain the brand SSOT through handoff.
+Root `DESIGN.md` remains the brand SSOT through handoff.
 
 ## Outputs
 
@@ -27,85 +26,49 @@ remain the brand SSOT through handoff.
 A copy (not a symlink) of the latest accepted iter. `/qfai-implement`
 reads this as a read-only artifact.
 
-### `<contractsDir>/design/design-system.yaml` (output contract)
+### `prototyping.json#handoff`
 
-A deterministic **mirror of DESIGN.md tokens**. Do not write it:
-`npx qfai prototyping iterate` writes it on the cycle that ends the loop,
-the one that returns exit 64 or 65, from the root `DESIGN.md` that cycle
-read. Nothing is taken from the final HTML, so the mirror cannot drift
-from the SSOT.
+Add a `handoff` object to `.qfai/evidence/prototyping/prototyping.json`,
+with exactly these three keys:
 
-The mirror copies these keys verbatim from `DESIGN.md`:
-
-- `visual.colors` (all 12 keys, required)
-- `visual.typography.family_sans` / `family_display` / `family_mono` (required)
-- `visual.typography.scale` and `weight` (optional in `DESIGN.md`,
-  copied verbatim when present)
-- `visual.spacing` (optional in `DESIGN.md`, copied verbatim when
-  present)
-- `visual.radius` (all 4 keys, required)
-- `visual.shadow` (all 3 keys, required)
-
-It also records `source: DESIGN.md` and `designMdSha256`, the sha256 of
-the `DESIGN.md` it copies, which is the value in `DESIGN.md.lock.yaml`.
-The same `DESIGN.md` always gives the same bytes.
-
-QFAI checks the prototype against these tokens. It does not read the
-product's stylesheet or Tailwind config, so a project that holds its
-implementation to the tokens writes that check itself. Two things make it
-hold:
-
-- **Assert both directions.** Every token in the mirror is declared in the
-  implementation, and every token the implementation declares is in the
-  mirror.
-- **Let a token name contain digits.** `typography.scale` runs from `xs` to
-  `3xl`. A name pattern such as `--token-([a-z-]+)` never captures `2xl` or
-  `3xl`, so both directions pass for them without checking anything. Use
-  `--token-([a-z0-9-]+)` or wider.
-
-When `DESIGN.md` names a `brand.theme`, the mirror copies it too, as
-`brand.theme`. That
-name is the instruction: install the theme, rather than reproduce
-thirty-two values by hand and hope they match. The values stay in the
-mirror because the gates read them, not because anyone should type
-them.
-
-### `<contractsDir>/design/prototype-handoff.yaml`
-
-```yaml
-finalIterIndex: <number>
-finalArtifact: ".qfai/prototype/final/index.html"
-designMdPath: "DESIGN.md"
-designMdSha256: "<hex from DESIGN.md.lock.yaml>"
-designSystemMirror: "<contractsDir>/design/design-system.yaml"
-procurement:
-  # What realises each screen region, so the implementer installs rather
-  # than reconstructs. Every screen a UI contract declares appears in one
-  # of the three lists.
-  procured:
-    - screen: "<screen id>"
-      region: "<what part of the screen>"
-      item: "<catalogue item, or the project component it already had>"
-  authored:
-    - screen: "<screen id>"
-      region: "<what part of the screen>"
-      why: "<what was looked for and did not serve>"
-  # A screen drawn entirely from what the project already had. Say it
-  # here rather than leaving the screen out: an omitted screen reads the
-  # same as one the loop recorded nothing for, and an implementer taking
-  # the second for the first rebuilds by hand what the loop procured.
-  drawn-from-project:
-    - screen: "<screen id>"
-implementationNotes: |
-  Plain prose, for what is genuinely prose: why a flow is ordered as it
-  is, and usability decisions worth carrying into /qfai-implement. Not a
-  carrier for decisions that have a structured form above. Do not restate
-  brand identity — read DESIGN.md.
+```json
+"handoff": {
+  "finalArtifact": ".qfai/prototype/final/index.html",
+  "procurement": {
+    "procured": [{ "screen": "<screen id>", "region": "<what part of the screen>", "item": "<catalogue item, or the project component it already had>" }],
+    "authored": [{ "screen": "<screen id>", "region": "<what part of the screen>", "why": "<what was looked for and did not serve>" }],
+    "drawn-from-project": [{ "screen": "<screen id>" }]
+  },
+  "implementationNotes": "Plain prose ..."
+}
 ```
+
+- `finalArtifact` is the copy above.
+- `procurement` says what realises each screen region, so the implementer
+  installs rather than reconstructs. Every screen a UI contract declares
+  appears in one of the three lists, with one row per region.
+- A screen drawn entirely from what the project already had goes under
+  `drawn-from-project` rather than being left out. An omitted screen reads
+  the same as one the loop recorded nothing for, and an implementer taking
+  the second for the first rebuilds by hand what the loop procured.
+- `implementationNotes` is plain prose, for what is genuinely prose: why a
+  flow is ordered as it is, and usability decisions worth carrying into
+  `/qfai-implement`. It does not carry decisions that have a structured
+  form above, and it does not restate brand identity — read `DESIGN.md`.
+
+The `DESIGN.md` hash the loop ran against is already in
+`prototyping.json#designMd`; the handoff does not repeat it. Image sources
+stay in `prototyping.json#imageSources[]`.
+
+`npx qfai validate --profile prototyping` checks the record:
+`QFAI-DCON-012` when `handoff` is not an object, `QFAI-DCON-013` when
+`finalArtifact` or `implementationNotes` is not a non-empty string or
+`procurement` has the wrong shape, and `QFAI-PROT-009` when
+`finalArtifact` does not exist.
 
 `procurement` is the SSOT for component structure: the implementer reads
 it to install, and the reviewer reads it to check rather than to judge a
-resemblance. DESIGN.md is the SSOT for brand identity.
+resemblance. `DESIGN.md` is the SSOT for brand identity.
 
 What the prototype never showed — responsive behaviour, dark mode, focus
 and hover states, keyboard order, the detail of an empty or error state —
@@ -113,6 +76,29 @@ is not in either. A static capture cannot carry it. Take the adopted
 design system's default, which has already answered each one and answers
 them consistently with each other
 (`.qfai/assistant/rule/ui-procurement.md`).
+
+The evidence tree is local to the checkout and is not committed, so
+`/qfai-implement` and the reviewers read the handoff in the same checkout.
+
+## Checking an implementation's tokens
+
+QFAI checks the prototype against the tokens in root `DESIGN.md`. It does
+not read the product's stylesheet or Tailwind config, so a project that
+holds its implementation to those tokens writes that check itself, reading
+`DESIGN.md` directly. Two things make it hold:
+
+- **Assert both directions.** Every token `DESIGN.md` declares is declared
+  in the implementation, and every token the implementation declares is in
+  `DESIGN.md`.
+- **Let a token name contain digits.** `typography.scale` runs from `xs` to
+  `3xl`. A name pattern such as `--token-([a-z-]+)` never captures `2xl` or
+  `3xl`, so both directions pass for them without checking anything. Use
+  `--token-([a-z0-9-]+)` or wider.
+
+When `DESIGN.md` names a `brand.theme`, that name is the instruction:
+install the theme, rather than reproduce its values by hand and hope they
+match. The values stay in `DESIGN.md` because the gates read them, not
+because anyone should type them.
 
 ## Cert
 
@@ -146,9 +132,9 @@ Run the gates in this order, every time:
    `.qfai/assistant/skill/qfai-verify/references/verify-output-contract.md`.
 3. `npx qfai prototyping certify` — produces
    `.qfai/evidence/prototyping/completion-certificate.json`. The
-   certificate includes `designMdPath` + `designMdSha256` for the
-   locked brand identity. Use `certify --check` to verify digests
-   against later edits.
+   certificate carries `designMd` (the path and sha256 of root
+   `DESIGN.md`) for the brand identity the loop ran against. Use
+   `certify --check` to verify digests against later edits.
 
 Reversing this order makes step 3 fail with "validate.json missing"
 or "verify.json status not PASS" — those are the certify

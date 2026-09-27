@@ -334,6 +334,18 @@ describe("migration steps 1 to 4", () => {
         ".qfai/evidence/migration-spec-to-story/plan.yaml",
         "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
       );
+      const contracts = {
+        "api/orders.yaml": {
+          id: "API-0002",
+          path: "api/api-0002-orders.yaml",
+          old: "CON-API-0001",
+        },
+      };
+      await put(
+        root,
+        ".qfai/evidence/migration-spec-to-story/contract-map.json",
+        `${JSON.stringify({ contracts }, null, 2)}\n`,
+      );
       const first = await run(step04, await context(root));
       expect(first.code).toBe(3);
       expect(first.output).toContain(
@@ -367,15 +379,19 @@ describe("migration steps 1 to 4", () => {
       );
       const mapPath = path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json");
       const firstMap = await readFile(mapPath, "utf8");
-      const map = JSON.parse(firstMap) as { ids: Record<string, Record<string, string>> };
+      const map = JSON.parse(firstMap) as {
+        ids: Record<string, Record<string, string>>;
+        contracts: unknown;
+      };
       expect(map.ids["spec-0001"]).toMatchObject({
         "US-0001-0001": "US-0001-0001",
         "AC-0001-0001": "AC-0001-0001-01",
         "EX-0001-0001": "EX-0001-0001-01",
         "TC-0001-0001": "EX-0001-0001-01",
         "TC-0001-0002": "EX-0001-0001-02",
-        "BR-0001-0001": "BR-0001",
+        "BR-0001-0001": "BR-0002-0001",
       });
+      expect(map.contracts).toEqual(contracts);
       expect(
         await readFile(
           path.join(
@@ -993,7 +1009,17 @@ describe("migration steps 1 to 4", () => {
       await put(
         root,
         ".qfai/evidence/migration-spec-to-story/plan.yaml",
-        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n  - id: BR-0001-0002\n    contract: api/later.yaml\n",
+        "flows:\n  - title: Order flow\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/api-0001-orders.yaml\n  - id: BR-0001-0002\n    contract: api/api-0002-later.yaml\n",
+      );
+      await put(
+        root,
+        ".qfai/spec/03_contract/api/api-0001-orders.yaml",
+        "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
+      );
+      await put(
+        root,
+        ".qfai/spec/03_contract/api/api-0002-later.yaml",
+        "# QFAI-CONTRACT-ID: API-0002\nopenapi: 3.0.0\n",
       );
       const first = await run(step04, await context(root));
       expect(first.errors).toBe("");

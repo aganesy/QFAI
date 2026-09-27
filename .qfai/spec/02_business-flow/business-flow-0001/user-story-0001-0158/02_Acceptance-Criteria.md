@@ -12,8 +12,8 @@ Feature: Active Design Contract Surface Reduction
     And the normalization reference lists the removed contracts as not generated
 
   # AC-0001-0158-02
-  Scenario: Active Design Contract Index = {design-system, prototype-handoff, DESIGN.md, DESIGN.md.lock.yaml, mirror validator}
-    Given the design contracts the shipped `qfai-sdd` and `qfai-prototyping` skills write under `<paths.contractsDir>/design/`
+  Scenario: Active Design Contract Index = {DESIGN.md}
+    Given the design inputs the shipped `qfai-sdd` and `qfai-prototyping` skills name
     When the active design contracts are listed
-    Then the set is exactly root `DESIGN.md`, `DESIGN.md.lock.yaml`, `design-system.yaml`, `prototype-handoff.yaml` and the design-system mirror validator
+    Then the set is root `DESIGN.md` alone, which `common-design-md` authors and validates, and the prototyping handoff is recorded in `prototyping.json#handoff` rather than under `<paths.contractsDir>/design/`
 ```

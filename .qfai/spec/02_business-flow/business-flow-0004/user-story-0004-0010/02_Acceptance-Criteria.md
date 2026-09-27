@@ -13,9 +13,16 @@ Feature: Rewrite the test annotations to the new IDs
 
   # AC-0004-0010-02
   Scenario: Annotations with no new counterpart stay and are listed
-    Given a story annotation outside the E2E layer, a QFAI:CON-* annotation, an old deferral marker, a test-case annotation the ID map does not hold, and an annotation naming neither a test case nor a story
+    Given a story annotation outside the E2E layer, an old deferral marker, a test-case annotation the ID map does not hold, and an annotation naming neither a test case nor a story
     When step 8 runs
     Then none of them changes
-    And the first three are listed under Annotations kept with the file and line
+    And the first two are listed under Annotations kept with the file and line
     And the last two are listed under For a person
+
+  # AC-0004-0010-03
+  Scenario: Contract annotations take the new contract IDs
+    Given a QFAI:CON-* annotation whose contract is in the contract map, and one naming an old ID no contract declared
+    When step 8 runs
+    Then the first names the contract's new ID
+    And the second is unchanged and listed under For a person
 ```

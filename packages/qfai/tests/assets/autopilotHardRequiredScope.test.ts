@@ -18,7 +18,7 @@ describe("autopilot inputs follow story-tree and UI-contract scope", () => {
       expect(skill).toContain(
         "an identifiable affected flow or an explicit decision to create one",
       );
-      expect(skill).toContain("product brand intent when a visual design lock is required");
+      expect(skill).toContain("product brand intent when a root `DESIGN.md` is required");
       expect(skill).toContain("In `--auto`, leave these pending without asking or self-approving");
     });
 

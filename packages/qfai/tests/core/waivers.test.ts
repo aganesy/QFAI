@@ -893,7 +893,7 @@ describe("applyWaivers", () => {
     }
   });
 
-  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"], ["QFAI-DCON-031"], ["QFAI-DCON-032"]])(
+  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"]])(
     "keeps a waiver for the exploration-relaxable rule %s active on a quiet run",
     async (rule) => {
       const root = await createRoot();

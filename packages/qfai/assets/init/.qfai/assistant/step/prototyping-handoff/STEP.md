@@ -1,7 +1,7 @@
 ---
 name: prototyping-handoff
 owner: qfai-prototyping
-purpose: "Publish the accepted prototype, write the handoff contract, and certify the loop."
+purpose: "Publish the accepted prototype, record the handoff, and certify the loop."
 requires: []
 roles:
   [
@@ -24,23 +24,19 @@ prototype accepted.
 - The accepted iteration `.qfai/prototype/iter-<final>/index.html`.
 - `.qfai/assistant/skill/qfai-prototyping/references/handoff.md` — inputs,
   outputs and the order the gates run in.
-- `.qfai/assistant/skill/qfai-prototyping/templates/contracts/prototype-handoff.sample.yaml`.
 - `.qfai/evidence/prototyping/grilling.md`, for the completion report.
 
 ## Writes
 
 - `.qfai/prototype/final/index.html` — a copy, not a symlink, of the latest
   accepted iteration.
-- `<contractsDir>/design/prototype-handoff.yaml`.
+- The `handoff` object of `.qfai/evidence/prototyping/prototyping.json`.
 - `.qfai/evidence/prototyping/completion-certificate.json`, through `certify`.
-
-`<contractsDir>/design/design-system.yaml` is already there: `iterate` writes it
-on the cycle that ends the loop.
 
 ## Procedure
 
-1. Mirror the latest accepted iteration to `.qfai/prototype/final/index.html`.
-2. Write `prototype-handoff.yaml` per the handoff reference.
+1. Copy the latest accepted iteration to `.qfai/prototype/final/index.html`.
+2. Add the `handoff` object to `prototyping.json` per the handoff reference.
 3. Run `npx qfai validate --profile prototyping --fail-on error`. It writes the
    validate report with `counts.error === 0`.
 4. Run `/qfai-verify`. It writes `verify.json` with `status === "PASS"` and

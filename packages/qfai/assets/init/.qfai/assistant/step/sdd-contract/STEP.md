@@ -74,9 +74,9 @@ states.
 
 For a UI-bearing flow, write the screen contracts under
 `<paths.contractsDir>/ui/` as the UI guides above state. A visual prototyping
-surface also needs the root `DESIGN.md` and its lock, which `common-design-md`
-writes after this step. A CLI-only surface does not require a visual brand
-lock. Do not freeze a sample design.
+surface also needs the root `DESIGN.md`, which `common-design-md` writes and
+validates after this step. A CLI-only surface does not require one. Do not
+adopt a sample design.
 
 ## A named contract
 

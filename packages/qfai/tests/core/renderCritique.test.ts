@@ -42,11 +42,6 @@ describe("Render Critique Loop validation", () => {
     await mkdir(designDir, { recursive: true });
     await mkdir(uiDir, { recursive: true });
     await writeFile(
-      path.join(designDir, "design-system.yaml"),
-      "checklist:\n  color: []\n  typography: []\n  spacing: []\n  border_radius: []\n  shadow: []\n  dos_and_donts: []\n  component_tone: []\n  motion_rules: []\n",
-      "utf-8",
-    );
-    await writeFile(
       path.join(uiDir, "ui-0001-dashboard.yaml"),
       "screens:\n  - id: dashboard\n    title: Dashboard\n    route: /dashboard\n",
       "utf-8",

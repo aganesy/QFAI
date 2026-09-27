@@ -56,6 +56,9 @@ importers:
       '@cucumber/messages':
         specifier: ^34.0.0
         version: 34.2.1
+      '@jackchuka/mdschema':
+        specifier: 0.15.4
+        version: 0.15.4
       fast-glob:
         specifier: ^3.3.2
         version: 3.3.3

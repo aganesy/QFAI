@@ -103,8 +103,6 @@ async function seedMinimalProject(
       "  testsDir: tests",
       "validation:",
       "  failOn: error",
-      "  require:",
-      "    specSections: []",
       "  testStrategy:",
       "    requireApiAtdd: false",
       "    requireE2eAtdd: false",
@@ -635,6 +633,7 @@ describe("runPrototypingIterate continue (exit 0)", () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
+  // QFAI:EX-0001-0114-01
   it("TC-3.5.1: persists designMd { path, sha256 } into prototyping.json", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
@@ -652,39 +651,6 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
     expect(protoBody.designMd.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  // QFAI:EX-0001-0114-02
-  it("exits 2 at cycle 0 when DESIGN.md differs from the lock, naming both digests", async () => {
-    const root = await newTempDir();
-    await seedMinimalProject(root);
-    const lockSha = "a".repeat(64);
-    const lockDir = path.join(root, ".qfai/spec/03_contract/design");
-    await mkdir(lockDir, { recursive: true });
-    await writeFile(
-      path.join(lockDir, "DESIGN.md.lock.yaml"),
-      ['designMdPath: "DESIGN.md"', `designMdSha256: "${lockSha}"`, ""].join("\n"),
-      "utf-8",
-    );
-    const logger = await import("../../../src/cli/lib/logger.js");
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
-    try {
-      const exit = await runPrototypingIterate({
-        root,
-        cycle: 0,
-        targetUrl: "http://localhost:5173",
-      });
-      expect(exit).toBe(2);
-      const stderr = errorSpy.mock.calls.flat().join(" ");
-      expect(stderr).toContain(`lock=${lockSha}`);
-      expect(stderr).toContain(`current=${hashDesignMd(CANONICAL_DESIGN_MD)}`);
-      expect(stderr).toContain("refreeze");
-    } finally {
-      errorSpy.mockRestore();
-    }
-    await expect(
-      readFile(path.join(root, ".qfai/evidence/prototyping/prototyping.json"), "utf-8"),
-    ).rejects.toThrow();
-  });
-
   it("TC-3.5.2: missing DESIGN.md → exit 2 with message", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root, { skipDesignMd: true });
@@ -694,41 +660,6 @@ describe("runPrototypingIterate cycle 0 DESIGN.md ingestion (TC-3.5.x)", () => {
       targetUrl: "http://localhost:5173",
     });
     expect(exit).toBe(2);
-  });
-
-  it("returns 2 with 'could not be read' error when DESIGN.md.lock.yaml is unreadable", async () => {
-    // Pin the new `unreadable` LockGateResult branch added to readDesignMdLockGate
-    // for the lock fail-closed posture. Without this test, a
-    // future revert of `if (isEnoent(err)) return { kind: "missing" }; return
-    // { kind: "unreadable", cause: err };` to a bare `return { kind: "missing" };`
-    // would silently re-introduce the freeze-bypass vector.
-    //
-    // Trigger the unreadable branch portably (no chmod / no fs spy) by
-    // creating the lock path as a *directory* instead of a file. Node
-    // raises EISDIR on `readFile`, which is non-ENOENT and routes
-    // through the new `unreadable` kind exactly as a real EACCES /
-    // EPERM / EIO would. Cross-platform — works on Linux/macOS/Windows
-    // CI alike.
-    const root = await newTempDir();
-    await seedMinimalProject(root);
-    await mkdir(path.join(root, ".qfai/spec/03_contract/design/DESIGN.md.lock.yaml"), {
-      recursive: true,
-    });
-
-    const logger = await import("../../../src/cli/lib/logger.js");
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
-    try {
-      const exit = await runPrototypingIterate({
-        root,
-        cycle: 0,
-        targetUrl: "http://localhost:5173",
-      });
-      expect(exit).toBe(2);
-      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
-      expect(messages.some((m) => m.includes("could not be read"))).toBe(true);
-    } finally {
-      errorSpy.mockRestore();
-    }
   });
 
   it("TC-3.5.3: malformed DESIGN.md (no front matter) → exit 2", async () => {
@@ -1435,11 +1366,11 @@ describe("iterate-plan.json design tokens (TC-3.5.x)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// TC-0012-0373 — lock drift mid-loop: exit 2 with canonical stderr regex
+// TC-0012-0373 — DESIGN.md drift mid-loop: exit 2 with canonical stderr regex
 // (spec-0012 ledger TDD entry; user batch label TDD-0380)
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("runPrototypingIterate cycle >= 1 lock drift stderr (TC-0012-0373)", () => {
+describe("runPrototypingIterate cycle >= 1 DESIGN.md drift stderr (TC-0012-0373)", () => {
   // QFAI:EX-0001-0115-01
   it("exits 2 with stderr matching /DESIGN\\.md hash mismatch.*re-run from cycle 0/ and writes no review payload for the failed cycle", async () => {
     // TC-0012-0373 pins the canonical operator-facing stderr phrase
@@ -1690,8 +1621,7 @@ describe("runPrototypingIterate license verify hard-stop (TC-0012-0371)", () => 
     await seedMinimalProject(root);
     // Cycle 0 establishes the frozen catalog. Cycle 1 is where the
     // license-verify gate runs against `imageSources[]` recorded on
-    // prototyping.json (the current wiring reads from the proto json
-    // directly, rather than through the prototype-handoff extraction path).
+    // prototyping.json.
     await seedPrototypingJson(root, [
       {
         index: 0,

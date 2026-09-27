@@ -2,7 +2,7 @@
  * Integration: the exploration-mode relaxation reports itself.
  *
  * `prototyping.mode: exploration` downgrades the soft-rubric gates
- * (QFAI-CRIT-008, QFAI-DCON-030..032) from error to warning. Weakening
+ * (QFAI-CRIT-008, QFAI-DCON-030) from error to warning. Weakening
  * a gate is the same act as waiving one, so it must be as auditable:
  * `validate.json` has to say that the downgrade happened, which file on
  * disk caused it, and which codes it touched. Before this wiring the
@@ -11,7 +11,7 @@
  *
  * Fixture: a UI-bearing project (a `spec/03_contract/ui/*.yaml` exists) with no
  * root DESIGN.md, so `validatePrototypingDesignContractReadiness` emits
- * QFAI-DCON-030 / QFAI-DCON-031 at error. Flipping
+ * QFAI-DCON-030 at error. Flipping
  * `prototyping.json#iterations[0].mode` is the only variable.
  */
 

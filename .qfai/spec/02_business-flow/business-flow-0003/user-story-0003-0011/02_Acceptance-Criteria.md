@@ -58,4 +58,11 @@ Feature: shipped workflow drift detection (detection half)
     And a `declined` entry changes neither the severity (it stays `info`) nor the exit code
     And the message body does not name the declined file as stale
     And in a tree with no modified file and only declined ones, no finding is emitted, so no `details` appear in the output
+
+  # AC-0003-0011-07
+  Scenario: A missing document-schema lane is reported
+    Given a project whose `.github/workflows/qfai-docs.yml` is absent, whether never installed or removed after install
+    When `qfai doctor` runs
+    Then the `workflows.docsLane` check is an error naming the file and the packaged copy to restore it from
+    And with the file present the check is `ok`
 ```
