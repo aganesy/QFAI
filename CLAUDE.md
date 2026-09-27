@@ -48,6 +48,8 @@ Quality-First AI (QFAI) — specification-driven development の検証フレー�
   `.agents/rules/root-additions-policy.md`, plus `root-additions-policy.local.md`
   for what applies here only).
 - Traceability chain (BF -> US -> AC -> EX -> Test -> Code, with each BR in the contract that enforces it) must be maintained; story-tree IDs must not collide or reference entries the tree does not declare.
+  References point one way: a BR cites only EX, only code and tests cite a BR,
+  and a contract never names an implementation file.
 - Distributed surface discipline (no internal IDs / version markers in shipped files): see `.claude/rules/distributed-surface.md` (master: `.agents/rules/distributed-surface.md`). The
   surface, the forbidden identifier shapes and the four guards are in
   `.agents/rules/distributed-surface.local.md`.

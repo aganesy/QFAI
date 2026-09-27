@@ -27,5 +27,5 @@ Scenario: A business rule lives in the contract that enforces it
   Given a business rule of a project on the story tree
   When the contract layer is read
   Then the rule is declared once, in the contract file that enforces it, in the form that file type allows
-  And every other contract that relies on it lists its ID as a rule ref
+  And a rule ref in another contract adds no citation of the rule's examples and must name a declared rule
 ```

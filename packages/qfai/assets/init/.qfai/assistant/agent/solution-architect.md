@@ -37,7 +37,8 @@ specialization_tags:
 ## Domain Responsibilities
 
 - Define architecture boundaries, non-goals, and major trade-offs.
-- Design UI, API, and DB contracts that make requirements executable.
+- Design UI, API, and DB contracts that make requirements executable. Give each one a `<KIND>-NNNN` ID from its directory and the next contract number, and number its business rules `BR-<contract number>-NNNN`.
+- Keep references one way: a business rule cites only examples, and a contract never names an implementation file.
 - Prevent rejected options from being reintroduced without RE-OPEN.
 - Align architecture and contract decisions with implementation and test strategy.
 - Apply SOLID, separation of concerns, coupling/cohesion, and fail-fast principles to structural decisions.

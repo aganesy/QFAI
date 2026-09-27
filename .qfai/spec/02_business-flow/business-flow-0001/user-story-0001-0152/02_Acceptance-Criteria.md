@@ -45,7 +45,7 @@ Scenario: IDs Are The Highest In Their Scope Plus One
 Scenario: Business Rules Are Written Inside Contracts
   Given the story tree,
   When `/qfai-sdd` writes a business rule at the 03-contract step,
-  Then the rule sits inside the contract file that enforces it, in that file type's form, with an ID, a statement and at least one EX. No separate rules file is written, and a rule that several contracts rely on is defined once and referenced by ID from the others.
+  Then the rule sits inside the contract file that enforces it, in that file type's form, with an ID, a statement and at least one EX. No separate rules file is written, and a rule that several contracts rely on is defined once, in the contract authoritative for it, and cited by no other contract.
 
 # AC-0001-0152-07
 # Parent: US-0001-0152

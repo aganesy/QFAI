@@ -198,6 +198,29 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     An old section of the same kind moves into its section; every other one is
     listed under `## For a person` with its archived copy, and the step exits 3.
 
+- **`qfai-sdd` writes contracts in the contract ID scheme, and references
+  point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
+  constitution, the drift protocol and the agent cards now say:
+  - A new contract takes its kind from its directory and the next contract
+    number, which no other contract of any kind uses and which is never
+    reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares its ID in
+    its H1 or on a `QFAI-CONTRACT-ID` line.
+  - Its rules are `BR-<contract number>-NNNN`, under `## Business rules` in a
+    Markdown contract. The shipped samples show `BR-0001-NNNN`,
+    `BR-0002-0001` and `BR-0003-NNNN`.
+  - A rule cites only examples, and only code and tests cite a rule. A rule
+    several contracts rely on is defined once and cited by no other contract;
+    the skill no longer writes rule refs. A contract never names an
+    implementation file.
+  - A flow's contracts are the ones whose rules cite its examples.
+  - The contract index has the columns `ID`, `Title`, `File`, `Depends On`,
+    `Reconciled With` and `Purpose`.
+  - `qfai validate` describes `QFAI-CONTRACT-034` and `QFAI-STORY-005` by the
+    checks they make on contract IDs and rule numbers.
+
+- **`qfai --help` no longer names an internal contract beside
+  `handoff upgrade`.**
+
 - **Every spec-tree document is checked against its schema, and the check is
   required.** `npx qfai validate` runs the shipped document-schema checker in
   the `sdd`, `verify` and `full` profiles. Each violation is a
