@@ -269,6 +269,18 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   - Every flow is listed under `## For a person`, so that a person writes its
     alternate and exception paths, and step 4 exits 3.
 
+- **Migration steps 4 and 5 write criteria and examples in their closed
+  shapes.**
+  - Each criterion holds one named `Scenario:`, the first one it had. A
+    `Background:`, a further scenario, a scenario named only by an ID and a
+    `Scenario Outline:` are not written. Step 4 lists each under
+    `## For a person` with its old file and exits 3.
+  - A criterion left with no named scenario holds a placeholder scenario, and
+    step 4 lists its new file.
+  - An example's Input and Expected lose a leading `Given`, `When`, `Then` or
+    `And` when they hold one step. A cell holding more steps is written as it
+    stands, and the step lists it under `## For a person` and exits 3.
+
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
   stories, acceptance criteria and examples in `02_business-flow/`, contracts
