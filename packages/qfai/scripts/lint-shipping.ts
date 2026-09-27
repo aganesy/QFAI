@@ -255,8 +255,16 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
   },
   {
     name: "internal-story-br-id-jsdoc-leak",
-    re: /\bBR-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    re: /\bBR-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])|\bBR-(?:(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})-[0-9]{4}|[0-9]{4}-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3}))\b/,
     suggestion: "Keep story-tree business-rule IDs outside shipped source comments.",
+    appliesTo: ["src-comment"],
+  },
+  {
+    // A contract ID stands alone: the legacy `CON-UI-NNNN` form is not read as
+    // `UI-NNNN`.
+    name: "internal-story-contract-id-jsdoc-leak",
+    re: /(?<![A-Za-z0-9_-])(?:CLI|API|DB|UI|DESIGN)-(?:0000|00[1-9][0-9]|0[1-9][0-9]{2}|[1-9][0-9]{3})\b(?!-[0-9])/,
+    suggestion: "Keep story-tree contract IDs outside shipped source comments.",
     appliesTo: ["src-comment"],
   },
   {
