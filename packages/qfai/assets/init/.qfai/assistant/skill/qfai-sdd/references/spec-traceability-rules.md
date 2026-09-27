@@ -15,7 +15,7 @@ Every story-tree file is based on its paired template under ../templates/spec/, 
 
 ## Document shapes
 
-The paired template is the shape. The document schema for the path, under `assets/mdschema/story/` in the qfai package, closes it. A document fails the schema check when it:
+The paired template is the shape. The document schema for the path, under `assets/mdschema/story/` in the qfai package, closes it. A document is out of shape when it:
 
 - has a heading the template does not have, or has the template's headings in another order. An optional section may be left out; none may be added;
 - puts a second kind of content in a section: prose above a table, a note under a list, a second table or a second fenced block;
@@ -32,9 +32,9 @@ A table the template shows with no rows is complete with no rows. The rules belo
 | glossary.md                     | One `## Terms` table: a term and its definition. No finding code, file name, configuration key, value set, rule text, retired term or history; the definition links the contract that defines the thing. A distinction goes in the definition. |
 | constraint.md                   | All three sections stay, each one table, which may have no rows. The ID prefix follows the section: `TC-NN`, `OC-NN`, `BC-NN`. A constraint a contract enforces is written there as a BR.                                                      |
 | decisions.md, open-questions.md | Exactly one table and nothing else. Rows are appended; afterwards only Status changes.                                                                                                                                                         |
-| business-flows.md               | `Flow` is the flow's H1 title and `Path` is `` `business-flow-NNNN/` ``. Rows are in ID order.                                                                                                                                                 |
+| business-flows.md               | `Flow` is the title in the flow's H1, after its ID, and `Path` is `` `business-flow-NNNN/` ``. Rows are in ID order.                                                                                                                           |
 | business-flow.md                | `## Purpose` is prose only. `## Flow` is one `mermaid` block, a flowchart or sequenceDiagram, and nothing else. `## Alternate and exception paths` is one list of at least one item.                                                           |
-| user-stories.md                 | `Story` is the story's H1 title, word for word, and `Path` is `` `user-story-NNNN-NNNN/` ``. Rows are in ID order.                                                                                                                             |
+| user-stories.md                 | `Story` is the title in the story's H1, after its ID, word for word, and `Path` is `` `user-story-NNNN-NNNN/` ``. Rows are in ID order.                                                                                                        |
 | 01_User-story.md                | `## User Story` is one paragraph holding one sentence: `As a <actor>, I want <goal>, so that <benefit>.` What the story leaves out goes in the optional `## Non-goals` list.                                                                   |
 | 02_Acceptance-Criteria.md       | One `gherkin` block: `Feature: <story title>`, then per AC its ID comment and one `Scenario:` named for its outcome. Two spaces indent the comment and the Scenario, four the steps. No `Scenario Outline:`, and no `# Parent:` comment.       |
 | 03_Example.md                   | One row per EX, in ID order. `AC-Ref` names one AC of this story. `Input` and `Expected` are plain values, not `Given`, `When` or `Then` steps.                                                                                                |

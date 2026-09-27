@@ -49,9 +49,9 @@ states.
 2. Write the story index and the three files of each affected story, each in
    its template's shape and nothing more, as
    `.qfai/assistant/skill/qfai-sdd/references/spec-traceability-rules.md#document-shapes`
-   states. The index's `Story` cell repeats the story's H1 title word for word,
-   and the story is one `As a <actor>, I want <goal>, so that <benefit>.`
-   sentence.
+   states. The index's `Story` cell repeats the title in the story's H1, after
+   its ID, word for word, and the story is one
+   `As a <actor>, I want <goal>, so that <benefit>.` sentence.
 3. State each AC as its ID comment and one named Gherkin `Scenario:` inside the
    story's one `gherkin` block. A `Scenario Outline:` is not an AC; write each
    case as its own EX instead.

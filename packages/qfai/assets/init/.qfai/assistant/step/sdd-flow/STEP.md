@@ -67,10 +67,10 @@ states.
 
 6. Create or update `02_business-flow/business-flows.md` and each affected
    `business-flow-NNNN/business-flow.md`. The index holds one row per flow —
-   its ID, its H1 title and its directory — and nothing else. The flow document
-   holds its purpose as prose, exactly one Mermaid `flowchart` or
-   `sequenceDiagram` under `## Flow`, and a list of its alternate and exception
-   paths.
+   its ID, the title in its H1 after the ID, and its directory — and nothing
+   else. The flow document holds its purpose as prose, exactly one Mermaid
+   `flowchart` or `sequenceDiagram` under `## Flow`, and a list of its alternate
+   and exception paths.
 7. A flow and its user stories describe observable outcomes, not implementation
    steps.
 8. Allocate BF IDs as
