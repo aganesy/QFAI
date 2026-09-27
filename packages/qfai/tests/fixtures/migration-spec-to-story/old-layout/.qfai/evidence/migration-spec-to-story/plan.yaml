@@ -12,4 +12,4 @@ rules:
   - id: BR-0001-0002
     contract: db/orders.sql
   - id: BR-0001-0003
-    contract: design/order.md
+    contract: api/order.yaml

@@ -446,11 +446,10 @@ describe("spec-0018: one shipped-script migration journey", () => {
   it("places each rule in the selected contract with its example", async () => {
     const api = await textAt(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml");
     const db = await textAt(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql");
-    const design = await textAt(journey.root, ".qfai/spec/03_contract/design/design-0003-order.md");
     expect(api).toContain("BR-0001-0001");
+    expect(api).toContain("BR-0001-0002");
     expect(api).toContain("EX-0001-0001-01");
     expect(db).toContain("BR-0002-0001");
-    expect(design).toContain("BR-0003-0001");
   });
 
   it("rewrites mapped annotations while reporting an integration US and contract annotation", async () => {

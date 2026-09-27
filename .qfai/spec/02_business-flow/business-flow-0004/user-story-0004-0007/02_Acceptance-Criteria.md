@@ -33,7 +33,7 @@ Feature: Build the flows and stories from the plan
 
   # AC-0004-0007-04
   Scenario: A rule destination that is not a contract stops step 4
-    Given a plan placing a rule in a path outside the contract kind directories, or in a path that names no contract
+    Given a plan placing a rule in a path outside the contract kind directories, in a file that holds no contract, or in a path that names no contract
     When step 4 runs
     Then it exits 2 naming the rule and the path
     And it writes nothing

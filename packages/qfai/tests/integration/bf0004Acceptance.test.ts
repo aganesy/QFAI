@@ -1980,7 +1980,7 @@ describe("BF-0004 acceptance criteria", () => {
   });
 
   // QFAI:AC-0004-0009-01
-  it("places three rules in their selected API, DB and design contracts", async () => {
+  it("places three rules in their selected API and DB contracts", async () => {
     const api = await readFile(
       path.join(journey.root, ".qfai/spec/03_contract/api/api-0001-order.yaml"),
       "utf8",
@@ -1989,14 +1989,10 @@ describe("BF-0004 acceptance criteria", () => {
       path.join(journey.root, ".qfai/spec/03_contract/db/db-0002-orders.sql"),
       "utf8",
     );
-    const design = await readFile(
-      path.join(journey.root, ".qfai/spec/03_contract/design/design-0003-order.md"),
-      "utf8",
-    );
     expect(api).toContain("BR-0001-0001");
+    expect(api).toContain("BR-0001-0002");
     expect(api).toContain("EX-0001-0001-01");
     expect(db).toContain("BR-0002-0001");
-    expect(design).toContain("BR-0003-0001");
   });
 
   // QFAI:AC-0004-0009-02
