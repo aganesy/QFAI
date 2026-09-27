@@ -359,7 +359,6 @@ describe("check-mdschema driver", () => {
 });
 
 describe("a Markdown file no schema covers", () => {
-  // QFAI:AC-0001-0011-05
   // QFAI:EX-0001-0011-12
   it("fails the lane under every scope that includes it, naming the file", async () => {
     const root = await newTempDir();
