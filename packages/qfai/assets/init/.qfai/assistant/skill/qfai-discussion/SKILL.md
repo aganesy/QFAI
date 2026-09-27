@@ -91,7 +91,7 @@ of the reviewers of the steps that ran: `completion-reviewer` and
 `discussion-uiux` ran, and `architecture-reviewer` when the pack records an
 architecture-affecting decision.
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 The reviewers check each `## Gate` section of the steps that ran.
 The Drift Protocol, `.qfai/assistant/rule/test-layers.md`, and the rule that
@@ -116,7 +116,7 @@ The full logic, including the UI-bearing conditions, is
 
 ## Completion Message & Next Actions (MUST)
 
-You MUST end the user-facing output with a handoff sentence to `/qfai-sdd` in the active user language.
+End the user-facing output with a handoff sentence to `/qfai-sdd` in the active user language.
 
 - Japanese output (use this exact sentence): ディスカッションが完了しました。他に要望などがあればご提示ください。問題なければ『/qfai-sdd』と入力してください。
 

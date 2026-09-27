@@ -154,6 +154,25 @@ This changelog follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- **The shipped assistant tree and root rules state obligations without
+  capitalised emphasis** (#2240). A capitalised `MANDATORY`, `CRITICAL` or
+  `MUST` now stays only where a validator, a gate or a test reads the exact
+  phrase, such as the `[DRIFT-PROTOCOL:MANDATORY]` marker. Every other one is
+  a plain imperative or a lowercase "must", with the same obligation. Current
+  models read capitalised emphasis as a reason to act before understanding the
+  instruction.
+
+  - Each skill's `CRITICAL CONSTRAINTS (Read First)` section is now
+    `Hard Constraints (Read First)`.
+  - Headings lose their `(MUST)` and `(MANDATORY)` suffixes, and the anchors
+    `#round-budget-and-convergence` and `#finding-provenance` in
+    `shared-skill-delegation-baseline.md` lose their `-must` ending.
+  - A new test fails on any capitalised `MANDATORY`, `CRITICAL` or `MUST` in
+    those two trees that its allowlist does not name. The allowlist records
+    each kept phrase and the file that reads it, and may only shrink.
+  - The writing standard in `documentation-clarity.md` now also asks for
+    direct statement over metaphor.
+
 - **The migration skill is renamed `qfai-migration-v1-to-v2`.** Its former
   name, `qfai-migration-spec-to-story`, is retired. `qfai init --force`
   removes the host links of the old name and moves

@@ -21,7 +21,7 @@ brand-level intent layer at all.
 
 ## Completeness Rule
 
-All three required files above MUST be present for every UI-bearing pack.
+All three required files above must be present for every UI-bearing pack.
 Partial generation is not permitted.
 
 Root `DESIGN.md` is not one of them. `/qfai-sdd`'s `common-design-md` step authors it, and only

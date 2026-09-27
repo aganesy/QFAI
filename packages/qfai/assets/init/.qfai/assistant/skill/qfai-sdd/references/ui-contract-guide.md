@@ -4,7 +4,7 @@ Write UI contracts under `<paths.contractsDir>/ui/**/*.{yaml,yml}`. A UI-bearing
 
 ## `screens[].primary_tasks` shape
 
-Each entry in `screens[]` MUST carry a `primary_tasks:` slot. Each
+Each entry in `screens[]` must carry a `primary_tasks:` slot. Each
 slot entry may be authored in one of two shapes:
 
 1. **String-only (legacy)** — a plain bullet such as

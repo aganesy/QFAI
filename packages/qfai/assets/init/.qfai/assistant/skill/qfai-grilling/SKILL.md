@@ -330,7 +330,7 @@ decisions belonging to different drafting roles.
   beside the open question, which is the ordinary no-question path. Stopping on
   every user-held fact would block a run over a defaultable date.
 
-### Orchestrator Protocol (MUST)
+### Orchestrator Protocol
 
 - The orchestrator computes the frontier and reads the answers. It does not
   decide a frontier question on anyone's behalf.
@@ -338,8 +338,8 @@ decisions belonging to different drafting roles.
   user, the orchestrator puts it. Between agents, the griller puts it and the
   orchestrator does not — a session where both do is one where an author is
   asked twice and the two answers have no tie-break.
-- It MUST NOT record an answer **as the user's** that the user did not give, and
-  MUST NOT self-approve the session's end condition. An author's answer in an
+- It must not record an answer **as the user's** that the user did not give, and
+  must not self-approve the session's end condition. An author's answer in an
   agent-to-agent round is recorded as that author's position, with whose it is:
   the round cannot be recomputed, a disagreement cannot be kept, and an
   escalation cannot carry the positions to the user unless the answers are
@@ -355,7 +355,7 @@ decisions belonging to different drafting roles.
   decision as settled is how a choice nobody with the standing made reaches a
   draft.
 
-### Capability Probe (MUST)
+### Capability Probe
 
 1. Attempt the first fact lookup a decision waits on at session start.
 2. Treat that real delegation attempt as the capability check.
@@ -377,7 +377,7 @@ decisions belonging to different drafting roles.
 
 ## Work Orders Summary
 
-A session that dispatched any lookup MUST record a `## Work Orders Summary`
+A session that dispatched any lookup must record a `## Work Orders Summary`
 table in the artifact its invoking stage writes. Use the shared schema from
 `.qfai/assistant/rule/shared-skill-delegation-baseline.md`, including
 the `Agent instance` column.
@@ -386,7 +386,7 @@ the `Agent instance` column.
 | ---- | ---------------- | --------------- | ------------------------------- | ------------------------------- | ------------------------------- | ---------------------------- |
 | 1    | Reviewer         | `<instance id>` | Read the facts a round waits on | Decision and what it depends on | The fact, and where it was read | PASS/REVISE                  |
 
-### Reviewer Gate (MUST)
+### Reviewer Gate
 
 This skill produces no artifact, so the gate that covers a session is the
 invoking stage's. What it confirms about the session is:
@@ -438,7 +438,7 @@ MAY instantiate a category entry — `approval-required governance operations` �
 operations its own run cannot authorize for itself. `hard-required` also takes the
 undefaultable inputs this skill itself consumes, declared per skill and checked against
 that declaration; the bucket is what a run cannot proceed without, and no prototype can
-enumerate that for a skill it does not know. Otherwise a skill MUST NOT introduce an
+enumerate that for a skill it does not know. Otherwise a skill must not introduce an
 entry outside the prototype's categories. Widening triggers a Reviewer-Gate finding.
 
 The buckets are the method, not a tuning surface. Moving a frontier decision to
