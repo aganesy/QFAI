@@ -218,6 +218,68 @@ describe("the first clause that holds", () => {
     );
   });
 
+  describe("an API obligation", () => {
+    const UI_CONTRACT = ".qfai/spec/03_contract/ui/ui-0001-home.yaml";
+    const ui = [
+      "# QFAI-CONTRACT-ID: UI-0001",
+      "screens:",
+      "  - id: home",
+      "    route: /",
+      "    elements:",
+      "      - id: checkout-button",
+      "",
+    ].join("\n");
+    const api = (id: string, body: string): string =>
+      `# QFAI-CONTRACT-ID: ${id}\nx-qfai-depends-on: []\n${body}\n`;
+
+    // QFAI:EX-0001-0078-10
+    it("is read from the API contract that declares it", async () => {
+      const root = await project({
+        [UI_CONTRACT]: ui,
+        ".qfai/spec/03_contract/api/api-0002-orders.yaml": api(
+          "API-0002",
+          "info:\n  description: submitted by checkout-button",
+        ),
+      });
+      expect(await clauses(root).firstHolding({ ...ROW, obligations: ["API-0002"] })).toEqual({
+        clause: 3,
+        because: `checkout-button from ${UI_CONTRACT} occurs in the entry for API-0002 in .qfai/spec/03_contract/api/api-0002-orders.yaml`,
+      });
+    });
+
+    // QFAI:EX-0001-0078-11
+    it("is not read from a contract that only names it", async () => {
+      const root = await project({
+        [UI_CONTRACT]: ui,
+        ".qfai/spec/03_contract/api/api-0002-orders.yaml": api(
+          "API-0002",
+          "info:\n  description: orders",
+        ),
+        ".qfai/spec/03_contract/api/api-0003-refunds.yaml": [
+          "# QFAI-CONTRACT-ID: API-0003",
+          "x-qfai-depends-on: [API-0002]",
+          "info:",
+          "  description: refunded by checkout-button",
+          "",
+        ].join("\n"),
+      });
+      expect(await clauses(root).firstHolding({ ...ROW, obligations: ["API-0002"] })).toBeNull();
+    });
+
+    // QFAI:EX-0001-0078-12
+    it("has no entry in the retired CON-API form", async () => {
+      const retired = ["CON", "API", "0001"].join("-");
+      const root = await project({
+        [UI_CONTRACT]: ui,
+        ".qfai/spec/03_contract/api/orders.yaml": api(
+          retired,
+          "info:\n  description: submitted by checkout-button",
+        ),
+      });
+      expect(await clauses(root).firstHolding({ ...ROW, obligations: [retired] })).toBeNull();
+    });
+  });
+
   it("finds no link where neither side names the other", async () => {
     const root = await project({
       [CONFIG]: surfacePaths([]),
