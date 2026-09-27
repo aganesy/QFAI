@@ -131,6 +131,12 @@ export type QfaiUiuxConfig = {
    * registered are still held to the same three fields.
    */
   catalogue_refs_min?: number;
+  /**
+   * Repository-relative POSIX globs of the paths that render a user-visible
+   * surface. An empty list states that the project renders none; an absent
+   * key declares nothing.
+   */
+  surfacePaths?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
 };
@@ -1237,6 +1243,21 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
+      );
+    }
+  }
+  if (raw.surfacePaths !== undefined) {
+    const surfacePaths = raw.surfacePaths;
+    if (
+      Array.isArray(surfacePaths) &&
+      surfacePaths.every(
+        (entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0,
+      )
+    ) {
+      result.surfacePaths = surfacePaths.map((entry) => entry.trim());
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.surfacePaths must be a list of non-empty glob strings."),
       );
     }
   }

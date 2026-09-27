@@ -77,10 +77,6 @@ documents:
     schema: story/03_contract/tech.mdschema.yml
     pattern: "{contractsDir}/tech.md"
 
-  - id: story-structure
-    schema: story/03_contract/structure.mdschema.yml
-    pattern: "{contractsDir}/structure.md"
-
   - id: story-cli-contract
     schema: story/03_contract/cli/contract.mdschema.yml
     pattern: "{contractsDir}/cli/*.md"

@@ -71,15 +71,7 @@ cover; a capability with no entry here is UNRUN.
 - Typecheck: `pnpm check-types`
 - Build: `pnpm build`
 - Pack / distribution: `pnpm verify:pack`
-- Smoke: `qfai` -> `node scripts/smoke-qfai-cli.mjs`. It starts the built
-  CLI over stdio in a directory it creates outside this repository, and asserts
-  that the plan carries two strings only the initialization surface produces.
-  It is the `Skeleton command` of
-  `skill/qfai-implement/references/walking-skeleton.md`, one line per entrypoint
-  named under `structure.md#key-packages--entrypoints`. The phase runs once per
-  declared entrypoint, so a single value cannot serve a project with more than
-  one: an aggregate command proves nothing about which entrypoint answered, and
-  one failing entrypoint would take the record of every other with it.
+- Skeleton: `qfai` -> `node scripts/smoke-qfai-cli.mjs`
 - Validate: `npx qfai validate --fail-on error --format github`
 
 ## Rules

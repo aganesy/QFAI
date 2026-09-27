@@ -331,7 +331,6 @@ Every 5 major actions, pause and restate:
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`
-   - `.qfai/spec/03_contract/structure.md`
    - `.qfai/assistant/rule/agent-selection.md`, and
    - the acting role's card under `.qfai/assistant/agent/`.
 
@@ -384,7 +383,6 @@ Fill steering templates with repo evidence.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
 - Keep quality-gate commands in `03_contract/tech.md` under Standard commands.
-- In `03_contract/structure.md#ui-surface-paths-ssot`, replace placeholder bullets with actual UI globs, or with `none` when the repo renders no user-visible surface. An unresolved field leaves the UI impact decision unevaluable.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
@@ -393,6 +391,7 @@ Edit:
 - `validation.traceability.testFileGlobs`
 - `validation.traceability.testFileExcludeGlobs` (only if needed)
 - `routing` or `reviewProfiles` only when the project needs an override; each matching entry replaces the shipped default as a whole
+- `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
 
 Keep all other config keys unchanged.
 

@@ -63,7 +63,7 @@ describe("story-tree core", () => {
       "glossary.md",
       "constraint.md",
     ]);
-    expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md", "structure.md"]);
+    expect(CONTRACT_LAYER_FILES).toEqual(["contracts.md", "tech.md"]);
     expect(CONTRACT_KIND_DIRS).toEqual(["api", "db", "ui", "cli", "design"]);
     expect(STORY_TREE_ROOT_ENTRIES).not.toContain(".qfai/decisions");
     expect(STORY_FILES).not.toContain("01_Spec-retired.md");
@@ -76,7 +76,7 @@ describe("story-tree core", () => {
     expect(hasLegacySpecPackEntries(["spec-0001"])).toBe(true);
     expect(hasLegacySpecPackEntries(["_policies"])).toBe(true);
     expect(hasStoryTreeEntries(["01_policy"])).toBe(true);
-    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(16);
+    expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toHaveLength(15);
     expect(storyTreeMarkdownPatterns("docs/spec", "docs/contracts")).toContain(
       "docs/contracts/contracts.md",
     );
@@ -150,20 +150,16 @@ describe("story-tree core", () => {
     ]);
   });
 
-  it("reads rules from the contract layer's tech and structure files", () => {
+  it("reads rules from the contract layer's tech file", () => {
     const files = new Map(storyFiles);
     files.delete(".qfai/spec/03_contract/api/pay.yaml");
-    files.set(
-      ".qfai/spec/03_contract/structure.md",
-      "# Structure\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0001 | Payment succeeds | EX-0001-0001-01 |\n",
-    );
     files.set(
       ".qfai/spec/03_contract/tech.md",
       "# Tech\n\n## Rules\n\n| BR-ID | Statement | Examples |\n| --- | --- | --- |\n| BR-0002 | The CLI runs | EX-0001-0001-01 |\n",
     );
 
     const model = buildStoryTreeModel(files);
-    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0001", "BR-0002"]);
+    expect(model.rules.map((rule) => rule.id)).toEqual(["BR-0002"]);
   });
 
   it("retains malformed declarations so the validator can report their source", () => {

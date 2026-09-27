@@ -73,6 +73,12 @@ output:
 #   # Left out entirely by a project with no user interface.
 #   registries:
 #     "@acme": https://acme.example/r/{name}.json
+#   # Repository-relative globs of the paths that render a user-visible
+#   # surface: a change under one is UI-affecting. `**` spans zero or more
+#   # path segments, `*` and `?` stay within one, and matching is
+#   # case-sensitive. `[]` states that the project renders no surface.
+#   surfacePaths:
+#     - src/components/**
 prototyping:
   calibration:
     packPath: .qfai/evidence/calibration.yaml

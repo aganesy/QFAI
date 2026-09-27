@@ -8,7 +8,7 @@ The story tree makes business intent concrete before a rule is attached to an en
 - <paths.specsDir>/02_business-flow/business-flows.md indexes flow directories.
 - Each business-flow-NNNN/ owns business-flow.md, user-stories.md, and its user-story-NNNN-NNNN/ directories.
 - Each story directory contains exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md, with no subdirectory.
-- <paths.contractsDir>/ owns contracts.md, tech.md, structure.md, and concrete enforcing contracts. The 03_contract/ template mirrors this contract view.
+- <paths.contractsDir>/ owns contracts.md, tech.md, and concrete enforcing contracts. The 03_contract/ template mirrors this contract view.
 - <paths.specsDir>/decisions.md and open-questions.md own decision and question rows. No other record tree is created.
 
 Every story-tree file is based on its paired template under ../templates/spec/. Do not invent a replacement layout to solve a validation error.

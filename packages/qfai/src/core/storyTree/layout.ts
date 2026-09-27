@@ -20,7 +20,7 @@ export const STORY_FILES = [
 
 export const BUSINESS_FLOW_FILES = ["business-flow.md", "user-stories.md"] as const;
 
-export const CONTRACT_LAYER_FILES = ["contracts.md", "tech.md", "structure.md"] as const;
+export const CONTRACT_LAYER_FILES = ["contracts.md", "tech.md"] as const;
 export const CONTRACT_KIND_DIRS = ["api", "db", "ui", "cli", "design"] as const;
 export const STORY_TREE_ROOT_ENTRIES = [
   "decisions.md",

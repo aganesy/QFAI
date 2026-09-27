@@ -1519,10 +1519,15 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
   //
+  // Re-pinned for the commented `uiux.surfacePaths` entry, which names the
+  // paths that render a user-visible surface. The whole delta is that comment:
+  // every key the file sets is unchanged, and deleting it reproduces
+  // `a6b03c7a…` byte for byte.
+  //
   // Re-pinned for the removal of `validation.require.specSections`, which nothing read: the
   // sections of a story-tree document come from the shipped schemas. Restoring the two lines
-  // `require:` and `specSections: []` reproduces `a6b03c7a…` byte for byte.
-  ["qfai.config.yaml", "bdb249c7bc9c4fea35f01a8d92bf38d3d35a552bec462f0a4a29dc8231ad4a64"],
+  // `require:` and `specSections: []` reproduces `41b0a60e…` byte for byte.
+  ["qfai.config.yaml", "3c3c1be32c09c953ab9ef9d590fb29bcd74723117abbbefe6d05f5971f8b248e"],
 ]);
 
 /**
