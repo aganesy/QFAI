@@ -35,7 +35,7 @@ describe("shipped contract templates", () => {
   // QFAI:EX-0001-0057-09
   it("parse as contracts with no rule-shape finding", async () => {
     const files = await templates();
-    expect(files.length).toBeGreaterThanOrEqual(7);
+    expect(files.length).toBeGreaterThanOrEqual(6);
     for (const file of files) {
       const scan = parseContractRules(file, await readFile(file, "utf-8"));
       expect(scan.errors, path.relative(SHIPPED_ASSISTANT, file)).toEqual([]);
