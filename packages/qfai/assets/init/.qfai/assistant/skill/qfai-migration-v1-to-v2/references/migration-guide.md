@@ -74,19 +74,91 @@ the file to match:
 - Numbers run across all contracts, in the order CLI, API, DB, UI, design,
   then by the old number, then by path. No two contracts share a number.
 - The new ID replaces the old one in the file's declaration: the H1 of a
-  Markdown contract, and the `QFAI-CONTRACT-ID` line of any other. The old IDs
-  in `-- Depends on:` and `x-qfai-depends-on` become the new ones.
+  Markdown contract, as `# CLI-0001: <title>`, and the `QFAI-CONTRACT-ID` line
+  of any other. The old IDs in `-- Depends on:` and `x-qfai-depends-on` become
+  the new ones.
 - `contracts.md` becomes one index table listing every contract. The old
   index's other sections are reported for a person.
 - `.qfai/evidence/migration-spec-to-story/contract-map.json` records each old
   path and old ID with the new ones, and step 4 copies it into the ID map.
-- Rules are numbered per contract: the first rule step 4 places in API-0002 is
-  BR-0002-0001.
 - Step 7 writes the new IDs into rule statements, and step 8 changes a
   `QFAI:CON-API-0001` test annotation to `QFAI:API-0002`.
 
+`design/DESIGN.md.lock.yaml`, `design/design-system.yaml` and
+`design/prototype-handoff.yaml` are not contracts. Step 3 gives them no ID, and
+QFAI 2.x reads none of them. The handoff is now the `handoff` object of
+`.qfai/evidence/prototyping/prototyping.json`, which `/qfai-prototyping` writes
+when a loop ends with the prototype accepted. The migration does not convert
+the old file into it.
+
 An old ID the map cannot translate, such as a UI marker in application code or
 an ID no contract declared, is reported for a person with its file and line.
+
+## Business rules
+
+Rules are numbered per contract, `BR-<contract number>-NNNN` from `0001` in plan
+order: the first rule step 4 places in API-0002 is BR-0002-0001. Step 7 writes
+each rule into its contract in the form the contract's format takes:
+
+| Contract format | Where the rule goes                                                     |
+| --------------- | ----------------------------------------------------------------------- |
+| Markdown        | A row of the `## Business rules` table: BR-ID, Statement and Examples   |
+| YAML or JSON    | An entry `{ id, statement, examples }` of the top-level `x-qfai-rules:` |
+| SQL             | A `-- Rule BR-0002-0001: <statement>` line, then an `-- Examples:` line |
+
+A Markdown contract without a `## Business rules` section gets one as its last
+section. A rule's examples are the new IDs of the examples that cited it.
+
+## Documents in their template's shape
+
+Each story-tree document the steps write takes the shape of its `qfai-sdd`
+template, which is the shape the document schema checks:
+
+| Documents                                                                               | Step |
+| --------------------------------------------------------------------------------------- | ---- |
+| `decisions.md` and `open-questions.md` rows                                             | 2    |
+| `objective.md`, `initiative.md`, `principle.md`, `glossary.md` and `constraint.md`      | 3    |
+| `contracts.md` and `tech.md`                                                            | 3    |
+| `business-flows.md`, `business-flow.md`, `user-stories.md` and each story's three files | 4    |
+| Examples turned from test cases                                                         | 5    |
+
+Content that does not fit that shape is listed under `## For a person`, and the
+step exits 3:
+
+- Step 3 leaves it out of the policy file or `tech.md`, and names the source
+  file, its archived copy and, where one fits, the template section that takes
+  the content once a person rewrites it.
+- Step 3 also leaves as it is a policy file or `tech.md` that already exists
+  and differs from what it would write.
+- Steps 4 and 5 write a story sentence or an example cell of another form as it
+  stands, for a person to rewrite.
+- Step 4 lists every business flow, so that a person writes its alternate and
+  exception paths.
+
+The steps do not write these into the new tree. Each stays in its old spec-pack
+file, which stays in the pack while any of its content is unplaced and then
+moves to `.qfai/evidence/migration-spec-to-story/retired/<spec-id>/`:
+
+- a spec pack's scope and source provenance;
+- a story block's `Parent`, `Source` and `Flow` fields;
+- a criterion's `# Parent:` line, since its directory names the story;
+- a `Background:`, any scenario after a criterion's first named one, and a
+  `Scenario Outline:`, each listed for a person.
+
+Step 3 writes no structure document. It routes the old `catalog/structure.md`
+section by section:
+
+| Old content                                          | New home                                              |
+| ---------------------------------------------------- | ----------------------------------------------------- |
+| An entrypoint with a smoke or skeleton command       | A `- Skeleton:` line in `tech.md`'s Standard commands |
+| An `## Architecture constraints` row with a `TC-` ID | The Technical Constraints section of `constraint.md`  |
+| The `ui_paths:` globs of `## UI surface paths`       | `uiux.surfacePaths` in `qfai.config.yaml`, if unset   |
+| Anything else                                        | `## For a person`, with the archived copy             |
+
+A Markdown contract keeps its own body: step 3 changes only its H1, and step 7
+adds the `## Business rules` table. The CLI contract schema requires
+`## Ownership boundary` and that table, and admits nothing else. Rewrite any
+other section of a migrated CLI contract into those two by hand.
 
 ## Run the bundled steps
 
@@ -172,7 +244,8 @@ Keep all files moved to `.qfai/evidence/migration-spec-to-story/legacy/` or
 Resolve each `## For a person` row using its file path and reason. Common cases
 include a story without a flow, a rule without an enforcing contract, an example
 without exactly one criterion, an unresolved annotation, an applicable
-non-functional requirement, and a catalog overlay without a matching rule. A
+non-functional requirement, a catalog overlay without a matching rule, and
+content that does not fit its template's shape. A
 migrated test case with no previous example appears
 under `## Cases to examples` or `## For a person`; check that none is missing.
 
