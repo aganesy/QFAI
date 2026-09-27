@@ -432,6 +432,7 @@ export const GATE_GROUP_FAMILIES = {
     "QFAI-SPACK-102",
   ],
   "story-contract-index": ["QFAI-CONTRACT-034"],
+  "document-schema": ["QFAI-DOCSCHEMA-*"],
   "story-test-obligations": [
     "QFAI-STORY-006",
     "QFAI-STORY-007",
@@ -478,15 +479,9 @@ export const GATE_GROUP_FAMILIES = {
   "ui-screen-entries": ["QFAI-CONTRACT-042"],
   "contract-parse": ["QFAI-CONTRACT-021"],
   "contract-ssot-modules": ["QFAI-CONTRACT-050"],
-  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-031", "QFAI-DCON-032", "QFAI-DCON-034"],
+  "design-contract-readiness": ["QFAI-DCON-030", "QFAI-DCON-034"],
   "root-design-md-parse": ["QFAI-DCON-033"],
-  "design-contract-readiness-prototyping": [
-    "QFAI-DCON-001",
-    "QFAI-DCON-005",
-    "QFAI-DCON-009",
-    "QFAI-DCON-012",
-    "QFAI-DCON-013",
-  ],
+  "design-contract-readiness-prototyping": ["QFAI-DCON-012", "QFAI-DCON-013"],
   "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
@@ -554,6 +549,7 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   ],
   sdd: [
     "story-structure",
+    "document-schema",
     "story-contract-index",
     "design-contract-readiness",
     "sdd",
@@ -1162,7 +1158,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Story-tree IDs are well formed, unique, and consistent with their paths.",
   "QFAI-STORY-003": "The decisions and open-questions tables have valid records.",
   "QFAI-STORY-004": "Each story has acceptance criteria and examples with valid references.",
-  "QFAI-STORY-005": "Every business rule and contract reference resolves.",
+  "QFAI-STORY-005":
+    "Every business rule and contract reference resolves, and a rule numbered BR-NNNN-NNNN carries the number of the contract that declares it.",
   "QFAI-STORY-006":
     "The selected profile's story obligations have test annotations: BF and AC in ATDD, EX in TDD.",
   "QFAI-STORY-007":
@@ -1175,6 +1172,9 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Protected story-tree files change through an in-force change request, and decision rows remain append-only.",
   "QFAI-STORY-011":
     "The one Mermaid block in each business-flow file's `## Flow` section is a flowchart or sequence diagram.",
+  "QFAI-DOCSCHEMA-001":
+    "Every story-tree document has the sections, order and content its shipped schema declares, and none carries the opt-out marker.",
+  "QFAI-DOCSCHEMA-002": "The document-schema check runs over the story tree.",
   "QFAI-SPACK-102": "No open question is a decision the user was asked for and never took.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
@@ -1249,7 +1249,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-PROT-336":
     ".qfai/evidence/prototyping/completion-certificate.json digest mismatch — evidence has been modified since certify; re-run `qfai prototyping certify`.",
   "QFAI-CFG-LINK-001":
-    "qfai.config.yaml: prototyping.primaryUiContract names a CON-UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
+    "qfai.config.yaml: prototyping.primaryUiContract names a UI-NNNN contract declared under `<paths.contractsDir>/ui/`.",
   "QFAI-CFG-LINK-002":
     "qfai.config.yaml: paths.* points to a directory that does not exist on disk.",
   "QFAI-CFG-LINK-003":
@@ -1260,20 +1260,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Every screen declared in `<paths.contractsDir>/ui/*.yaml` has an HTML snapshot evidence file at `.qfai/evidence/prototyping/html/<screen-id>.html`.",
   "QFAI-UIE-003":
     "Every declared screen id used for prototyping evidence filenames must be path-safe (`[A-Za-z0-9._-]+`).",
-  "QFAI-DCON-001":
-    "UI-bearing execution requires the canonical design contracts for the current phase when UI contracts exist.",
-  "QFAI-DCON-005":
-    "design-system.yaml must define checklist entries for color, typography, spacing, border_radius, shadow, dos_and_donts, and motion_rules, plus component guidance via checklist.component_tone or richer component guidance blocks.",
-  "QFAI-DCON-009": "design-system.yaml must parse as an object-shaped YAML document.",
-  "QFAI-DCON-012": "prototype-handoff.yaml must parse as an object-shaped YAML document.",
+  "QFAI-DCON-012": "prototyping.json must carry `handoff` as an object.",
   "QFAI-DCON-013":
-    "prototype-handoff.yaml must carry `finalIterIndex` as a non-negative integer, and `finalArtifact`, `designMdPath`, `designMdSha256`, `designSystemMirror` and `implementationNotes` each as a non-empty string — the first two and the fourth a path, the third the frozen DESIGN.md sha256, the last the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
+    "prototyping.json#handoff must carry `finalArtifact` and `implementationNotes`, each as a non-empty string — the first the path of the final prototype, the second the prose the loop hands on. On a target whose UI contracts declare screens it carries `procurement`, a mapping of a `procured`, an `authored` and a `drawn-from-project` list and nothing else. A `procured` row names `screen`, `region` and `item` and an `authored` row `screen`, `region` and `why`, one row per region across the two; a `drawn-from-project` row names the `screen` that needed nothing. Every declared screen appears in one of the three, and none appears both as needing nothing and as needing something.",
   "QFAI-DCON-030":
     "Root DESIGN.md is required as the brand SSOT for UI-bearing projects (file missing).",
-  "QFAI-DCON-031":
-    "DESIGN.md.lock.yaml must exist under contracts/design/ and contain a designMdSha256 string.",
-  "QFAI-DCON-032":
-    "Root DESIGN.md sha256 must match DESIGN.md.lock.yaml#designMdSha256 (re-freeze after intentional edits).",
   "QFAI-DCON-033":
     "Root DESIGN.md exists but failed to parse per design-md-spec (front-matter is malformed).",
   "QFAI-DCON-034":
@@ -1297,7 +1288,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // time has a backlog to work through rather than a single edit.
   "QFAI-CONTRACT-015":
     "Every contract file states its apply order (`-- Depends on:` for SQL, `x-qfai-depends-on` for YAML/JSON), writing `-` when nothing has to be applied before it.",
-  "QFAI-CONTRACT-034": "Every declared contract has a row in a contract index.",
+  "QFAI-CONTRACT-034":
+    "Every contract under a kind directory declares one ID of that kind, is named `<kind>-NNNN-<slug>` after it, and has a contracts.md row that agrees with its ID and file. Every row names a contract file, and no two contracts share a number.",
   "QFAI-CONTRACT-036":
     "Every table a DB contract's foreign key references is either created by that same contract or by one its declared apply order names, so applying the contracts in the declared order never meets a `REFERENCES` to a table that does not exist yet.",
   // Reads the implementation tree rather than another declaration, so what it
@@ -1350,7 +1342,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SKILLS-001":
     "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "QFAI-ASSETS-003":
-    "The contract-layer tech.md and structure.md hold project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
+    "The contract-layer tech.md holds project values rather than shipped `<...>` slots and TODO/TBD placeholders. qfai-implement reads gate commands from <paths.contractsDir>/tech.md#standard-commands-copy-paste.",
   // Both state the graph, not a path: `paths.skillsDir` is configurable, and
   // the file actually judged is on the finding's `target:` line.
   "QFAI-SKILLS-013":
@@ -1412,7 +1404,7 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
  */
 export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-CONTRACT-034":
-    "Correct the named contract index row or add its missing contract file, then rerun validate.",
+    "Correct the named contract's ID, file name or index row, give a contract that shares a number the next free one, or remove a row that names no contract file, then rerun validate.",
   "QFAI-DRIFT-001":
     "Restore the protected file or record an in-force change request authorizing the named change.",
   "QFAI-FLOW-005": "Use an existing BF-NNNN ID for --flow, or create the flow before selecting it.",
@@ -1426,7 +1418,8 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-STORY-002": "Correct the named story-tree ID or directory so the ID and path agree.",
   "QFAI-STORY-003": "Repair the named decisions or open-questions row and its required fields.",
   "QFAI-STORY-004": "Add the missing AC or EX record and repair the cited story reference.",
-  "QFAI-STORY-005": "Define the missing business rule or contract, or correct the cited reference.",
+  "QFAI-STORY-005":
+    "Define the missing business rule or contract, correct the cited reference, or renumber the rule after the contract that declares it.",
   "QFAI-STORY-006":
     "Add a real test in the required layer with a QFAI annotation for the named BF, AC, or EX.",
   "QFAI-STORY-007":
@@ -1437,6 +1430,10 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Restore the protected row or record an in-force change request for the named file change.",
   "QFAI-STORY-011":
     "Make the `## Flow` section of the named business-flow file exactly one Mermaid flowchart or sequence diagram.",
+  "QFAI-DOCSCHEMA-001":
+    "Rewrite the named section in the shape its qfai-sdd template shows, and remove the opt-out marker if the finding names it.",
+  "QFAI-DOCSCHEMA-002":
+    "Install the qfai package with its dependencies, so @jackchuka/mdschema is present, then rerun validate.",
   // The finding already names the offending key and the release the window
   // closes at; this is the catalog half, which `qfai report` renders for
   // codes whose `issue(...)` sites carry no `suggested_action` of their own.
@@ -1489,13 +1486,6 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // every rung of the ladder depends on this catalog for its `fix:` line. The
   // even codes are repaired by writing a `Parent`, the odd ones by pointing an
   // existing `Parent` at something the level above actually defines.
-  // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
-  // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
-  // component guidance, a mirror value that diverges from DESIGN.md, and a
-  // mirror key DESIGN.md never authored — all fall through to this entry, so it
-  // has to name every repair, not just the additive one.
-  "QFAI-DCON-005":
-    "design-system.yaml is a verbatim copy of DESIGN.md, so repair the entry the message names in whichever direction it is off: add it when it is missing (the `visual.*` block or key, the legacy `checklist.*` key, or the component-guidance block), copy DESIGN.md's value over it when the two diverge, and delete it when DESIGN.md does not author it. Then refreeze the lock and rerun validate.",
   // The browser-QA bundle checks are schema assertions raised by a local
   // `makeIssue` helper that has no `suggested_action` parameter, so every one of
   // their call sites depends on this catalog for its `fix:` line.

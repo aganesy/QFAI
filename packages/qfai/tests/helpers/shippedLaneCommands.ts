@@ -1237,7 +1237,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-docs.yml", "a85981ec0e0abce435c2b436ac05f7890475fe1ed5d7741740bf13a270557525"],
+  ["qfai-docs.yml", "2ad1523e42db03cf08b832076ef88c158aff7cc4f6933bd8ba2bd1fc720f98ba"],
   ["qfai-tests.yml", "9ca5cacd65cca88204a8255fa0e76cb3e5aea5658f351b927d817fa4cae56be0"],
   ["qfai-validate.yml", "ed6adc47dca67488209552100d3e31285b30e3ddb39e9091d5c516d168695893"],
 ]);
@@ -1360,8 +1360,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     // Re-pinned for the work-log surface item, which the run no longer writes into the list of
     // canonical `.qfai/` locations. Derived by running `qfai init` into a temp root; restoring
     // that one item reproduces `be3d8ce2…` byte for byte.
+    //
+    // Re-pinned for one more bullet on the rules list, naming `.agents/rules/document-schema.md`,
+    // the rule master the run now seeds. Derived by running `qfai init` into a temp root; dropping
+    // that one bullet reproduces `977424d0…` byte for byte.
     ".github/copilot-instructions.md",
-    "977424d04766292554407b765af218b2b47a3ed500f9c91e94c87b01e60a1a1e",
+    "0a58ab20105052b8eebde3fe46304b46abddbb423bdf239cb8cf2e2b85723de6",
   ],
   // `qfai init` copies this file verbatim, so it is pinned like every other
   // adopter-facing file here — and for one reason none of the others has: it
@@ -1436,8 +1440,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // the forge may be asked of. Derived by running `qfai init` into a temp root and hashing what it
   // wrote; dropping that one bullet from both written files reproduces `66f2f506…` and
   // `bf6a52af…` byte for byte.
-  ["AGENTS.md", "51e3e03ec8d8efb12eb1e92045291f9cb2df87fb0cb115aedde26791589e5e93"],
-  ["CLAUDE.md", "07350d6ae1bdb8fe6dd617ebaaa740ce57836eba1bdcf72400a9892d16094efd"],
+  //
+  // Re-pinned for one more bullet in the same block, naming `.agents/rules/document-schema.md`,
+  // the rule master the run now seeds. Dropping that one bullet from both written files
+  // reproduces `51e3e03e…` and `07350d6a…` byte for byte.
+  ["AGENTS.md", "837a26630f7b9bf782ffcfa5c90800716be0bd0a76df364cfa582d17068d68d1"],
+  ["CLAUDE.md", "85cd31b5b97051166646738cd0758b13f03ffe437645d839c90c55c5e27e1cb0"],
   // Inside `.claude/`, and pinned anyway — see the paragraph above the path set.
   // These are the hooks that restate a rule at the moment it applies: the writing
   // rule when a pull request, issue or review is posted through the GitHub tools
@@ -1510,7 +1518,21 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   // It ships commented out because a project with no user interface declares
   // nothing here, and a live empty map would read as a project that had
   // considered the question and answered none.
-  ["qfai.config.yaml", "a6b03c7ab81d09c94c111814d0c7f112901e83493ae04a25ebae28212f1a25b5"],
+  //
+  // Re-pinned for the commented `uiux.surfacePaths` entry, which names the
+  // paths that render a user-visible surface. The whole delta is that comment:
+  // every key the file sets is unchanged, and deleting it reproduces
+  // `a6b03c7a…` byte for byte.
+  //
+  // Re-pinned for the removal of `validation.require.specSections`, which nothing read: the
+  // sections of a story-tree document come from the shipped schemas. Restoring the two lines
+  // `require:` and `specSections: []` reproduces `41b0a60e…` byte for byte.
+  //
+  // Re-pinned for the commented `uiux.registries` block, which now names the
+  // `Component catalogue` row of the Stack table in `tech.md` as the place that
+  // says which registry is primary. The whole delta is those two comment lines:
+  // restoring the previous wording reproduces `3c3c1be3…` byte for byte.
+  ["qfai.config.yaml", "1fea21e9a7d7d534920245d200b72a1a6d30aa0119855966b321d4886833e3b3"],
 ]);
 
 /**
@@ -1620,6 +1642,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
   "root/.agents/rules/api-budget.md",
   "root/.agents/rules/distributed-surface.md",
+  "root/.agents/rules/document-schema.md",
   "root/.agents/rules/documentation-clarity.md",
   "root/.agents/rules/grilling.md",
   "root/.agents/rules/interface-clarity.md",
@@ -1980,11 +2003,11 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body b761d8e879323adfa7ac7e179e70eaca46078c9768673fd7e850d4d331296d29>"}',
+    '{"name":"Install the document-shape and diagram checkers","shell":"bash","run":"<body befb43afc6800850d3a14c00df4ffb4d6d3c7a310b2659cf3c3a43b86a0066fb>"}',
   ],
   [
     "qfai-docs.yml#checks",
-    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body 34a9e3456d446848663e72cd3d055a826e9b817e9e027722a461ed682955178e>"}',
+    '{"name":"Check SDD document shape","if":"matrix.check == \'shape\'","shell":"bash","run":"<body dc64220796b9ca5fa999241442d70074d186b93894b92b6626b3bb4097d884cb>"}',
   ],
   [
     "qfai-docs.yml#checks",
@@ -2268,7 +2291,7 @@ export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);
  * runner, and that answer is still exactly one.
  */
 export const ALLOWED_TOOL_INSTALLS: ReadonlySet<string> = new Set([
-  "@jackchuka/mdschema@0.15.2 mermaid@11.17.2 jsdom@29.1.1",
+  "@jackchuka/mdschema@0.15.4 mermaid@11.17.2 jsdom@29.1.1",
   "qfai",
 ]);
 

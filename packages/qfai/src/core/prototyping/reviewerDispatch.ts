@@ -4,7 +4,7 @@
  * The prototyping evolution loop dispatches a Reviewer sub-agent per
  * `(uiContractId, screen)` pair. The Reviewer is the role that drives
  * Playwright (loads the prototype, navigates menu entries, inspects DOM /
- * a11y) and emits the `iter-NN/CON-UI-NNNN/<screen>.review.json` payload
+ * a11y) and emits the `iter-NN/UI-NNNN/<screen>.review.json` payload
  * that downstream `iterate` / `certify` steps consume.
  *
  * Two structural invariants this module exists to enforce:
@@ -225,13 +225,11 @@ export async function dispatchReviewerToPair(
   screen: string,
   options: ReviewerDispatchOptions,
 ): Promise<ReviewerOutcome> {
-  if (!/^CON-UI-\d{4}$/.test(uiContractId)) {
+  if (!/^UI-\d{4}$/.test(uiContractId)) {
     return {
       uiContractId,
       screen,
-      attempts: [
-        { ok: false, attemptIndex: 0, errorMessage: "uiContractId must match CON-UI-NNNN" },
-      ],
+      attempts: [{ ok: false, attemptIndex: 0, errorMessage: "uiContractId must match UI-NNNN" }],
       finalStatus: "launchFailed",
     };
   }

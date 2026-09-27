@@ -6,12 +6,27 @@ import { parseDocument } from "yaml";
 import { isEnoent } from "../../core/fs/errno.js";
 import { extractH2Sections, parseHeadings } from "../../core/parse/markdown.js";
 import { escapeTableCell } from "../../core/specPackParsers.js";
-import { nextId } from "../../core/storyTree/ids.js";
+import { declaredContractId } from "../../core/contractsDecl.js";
+import { CONTRACT_KIND_BY_DIR, nextId } from "../../core/storyTree/ids.js";
 import { storyPaths } from "../../core/storyTree/layout.js";
 import { parseRecordTable } from "../../core/storyTree/tables.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { ID_MAP_PATH, readIdMap, serializeIdMap, type MigrationIdMap } from "./idMap.js";
-import { parseLegacyRecords, retiredLegacyStatus, withoutLegacyRecords } from "./legacyRecords.js";
+import { OLD_CONTRACT_TOKEN } from "./contractIds.js";
+import {
+  ID_MAP_PATH,
+  oldContractIds,
+  readContractMap,
+  readIdMap,
+  serializeIdMap,
+  type ContractMap,
+  type MigrationIdMap,
+} from "./idMap.js";
+import {
+  parseLegacyRecords,
+  plainExampleCells,
+  retiredLegacyStatus,
+  withoutLegacyRecords,
+} from "./legacyRecords.js";
 import {
   MigrationInputError,
   type MigrationContext,
@@ -32,7 +47,8 @@ export type NumberingInput = {
     name: string;
     stories: readonly { id: string; criteria: readonly string[]; examples: readonly string[] }[];
   }[];
-  rules: readonly string[];
+  /** Each rule in plan order, with the ID of the contract that declares it. */
+  rules: readonly { id: string; contract: string }[];
 };
 
 export type PlannedStory = { id: string; criteria: string[] };
@@ -169,6 +185,12 @@ export async function readMigrationPlan(context: MigrationContext): Promise<Migr
     ) {
       throw new MigrationInputError(`${PLAN_PATH}: invalid rule placement ${placement}`.trimEnd());
     }
+    const [kindDirectory, ...below] = entry.contract.split(/[\\/]/);
+    if (below.length === 0 || !Object.keys(CONTRACT_KIND_BY_DIR).includes(kindDirectory ?? "")) {
+      throw new MigrationInputError(
+        `${PLAN_PATH}: ${entry.id} names ${placement}, which is not under cli/, api/, db/, ui/ or design/`,
+      );
+    }
     if (seenRules.has(entry.id))
       throw new MigrationInputError(`${PLAN_PATH}: duplicate rule ${entry.id}`);
     seenRules.add(entry.id);
@@ -200,7 +222,7 @@ export function numberPlannedItems(input: NumberingInput): NumberedPlan {
     }
   }
   for (const rule of input.rules) {
-    numbered.rules[rule] = nextId("BR", Object.values(numbered.rules));
+    numbered.rules[rule.id] = nextId("BR", Object.values(numbered.rules), rule.contract);
   }
   return numbered;
 }
@@ -342,12 +364,61 @@ export function parseOldCriteria(text: string): OldCriterion[] {
     .map(({ criterion }) => criterion);
 }
 
-function criterionScenario(criterion: OldCriterion): string | null {
+type GherkinItem = { keyword: string; name: string; lines: string[] };
+/** What a convertible criterion writes: its one named scenario, or null for the placeholder. */
+type CriterionShape = { scenario: string | null; dropped: string[] };
+
+const GHERKIN_ITEM = /^\s*(Background|Scenario Outline|Scenario Template|Scenario):[ \t]*(.*?)\s*$/;
+const ID_ONLY_NAME = /^(?:US|AC)-\d{4}-\d{4}(?:-\d{2})?:?$/;
+
+/** The scenario a criterion holds when none of its old items is one named `Scenario:`. */
+const PLACEHOLDER_SCENARIO = [
+  "Scenario: <the outcome this criterion accepts>",
+  "  Given <a starting state>",
+  "  When <the user acts>",
+  "  Then <the expected outcome>",
+].join("\n");
+
+/** Each `Background`, `Scenario` and `Scenario Outline` of a criterion, with the lines under it. */
+function gherkinItems(source: string): GherkinItem[] {
+  const items: GherkinItem[] = [];
+  let docString = false;
+  for (const line of source.replace(/\r\n/g, "\n").split("\n")) {
+    const delimiter = /^\s*"""/.test(line);
+    const header = docString || delimiter ? null : GHERKIN_ITEM.exec(line);
+    if (delimiter) docString = !docString;
+    if (header) items.push({ keyword: header[1] ?? "", name: header[2] ?? "", lines: [line] });
+    else items.at(-1)?.lines.push(line);
+  }
+  return items;
+}
+
+/** An item's text without the blank, tag and comment lines that lead into the next item. */
+function itemText(item: GherkinItem): string {
+  const lines = [...item.lines];
+  while (lines.length > 1 && /^\s*(?:@|#|$)/.test(lines.at(-1) ?? "")) lines.pop();
+  return lines.join("\n");
+}
+
+function droppedItem(item: GherkinItem): string {
+  if (item.keyword === "Background") return item.name ? `Background "${item.name}"` : "Background";
+  if (item.keyword !== "Scenario") return `${item.keyword} "${item.name}"`;
+  if (item.name === "") return "Scenario with no name";
+  if (ID_ONLY_NAME.test(item.name)) return `Scenario named only by its ID ${item.name}`;
+  return `further Scenario "${item.name}"`;
+}
+
+/**
+ * The shape a criterion is written in, or null when it has no `Scenario` with Given, When and
+ * Then lines. A criterion holds one named `Scenario:`: the first one it has. Every other
+ * `Background`, `Scenario` and `Scenario Outline` is dropped and named for a person.
+ */
+function criterionShape(criterion: OldCriterion): CriterionShape | null {
   const fenced = /```gherkin\s*\n([\s\S]*?)\n```/m.exec(criterion.text)?.[1];
   const source = fenced ?? criterion.text.replace(/\n```[\s\S]*$/m, "");
   const start = source.search(/^Scenario(?: Outline)?:\s+\S/m);
   if (start < 0) return null;
-  const scenario = source.slice(start).trim();
+  const scenario = source.slice(start);
   if (
     !/^\s*Given\s+\S/m.test(scenario) ||
     !/^\s*When\s+\S/m.test(scenario) ||
@@ -355,12 +426,27 @@ function criterionScenario(criterion: OldCriterion): string | null {
   ) {
     return null;
   }
-  return scenario;
+  const items = gherkinItems(source);
+  const kept = items.find(
+    (item) => item.keyword === "Scenario" && item.name !== "" && !ID_ONLY_NAME.test(item.name),
+  );
+  return {
+    scenario: kept === undefined ? null : itemText(kept),
+    dropped: items.filter((item) => item !== kept).map(droppedItem),
+  };
 }
 
 function hasConvertibleCriterion(id: string, criteria: ReadonlyMap<string, OldCriterion>): boolean {
   const criterion = criteria.get(id);
-  return criterion !== undefined && criterionScenario(criterion) !== null;
+  return criterion !== undefined && criterionShape(criterion) !== null;
+}
+
+const BACKGROUND_LINE = /^\s*Background:/gm;
+
+/** How many `Background:` lines of a criteria file lie outside every criterion. */
+function backgroundsOutsideCriteria(text: string, criteria: readonly OldCriterion[]): number {
+  const count = (value: string): number => (value.match(BACKGROUND_LINE) ?? []).length;
+  return count(text) - criteria.reduce((total, criterion) => total + count(criterion.text), 0);
 }
 
 function splitIds(value: string, prefix: string): string[] {
@@ -485,14 +571,56 @@ function derivedCriterion(exampleId: string, cases: readonly OldCase[]): string 
 
 function replacedIds(text: string, replacements: Record<string, string>): string {
   return text.replace(
-    /\b(?:US|AC|EX|BR|TC)-\d{4}-\d{4}\b/g,
+    /\b(?:(?:US|AC|EX|BR|TC)-\d{4}-\d{4}|CON-(?:API|DB|UI)-\d+)\b(?!-\d)/g,
     (oldId) => replacements[oldId] ?? oldId,
   );
 }
 
+/** An old `CON-*` ID in a story's text that no contract declared, so step 4 left it as written. */
+function unmappedContracts(
+  file: string,
+  texts: readonly string[],
+  replacements: Record<string, string>,
+): string[] {
+  const tokens = new Set(texts.flatMap((text) => text.match(OLD_CONTRACT_TOKEN) ?? []));
+  return [...tokens]
+    .filter((token) => replacements[token] === undefined)
+    .map((token) => `${file}: ${token} is declared by no contract, so it has no new ID`);
+}
+
+/**
+ * The contract ID of each planned rule's destination. The plan names the
+ * contract by its path before step 3 renamed it; a contract that already
+ * declared its ID keeps its path.
+ */
+async function ruleContractIds(
+  context: MigrationContext,
+  plan: MigrationPlan,
+  contracts: ContractMap,
+): Promise<Map<string, string>> {
+  const resolved = new Map<string, string>();
+  for (const rule of plan.rules) {
+    const mapped: string | undefined = contracts[rule.contract]?.id;
+    const text = mapped ? null : await readOptional(path.join(context.contractsDir, rule.contract));
+    const id = mapped ?? (text === null ? null : declaredContractId(rule.contract, text));
+    if (id === null) {
+      throw new MigrationInputError(
+        text === null
+          ? `${PLAN_PATH}: ${rule.id} names ${rule.contract}, which is not a contract file`
+          : `Run step 3 before step 4: ${rule.contract} declares no contract ID`,
+      );
+    }
+    resolved.set(rule.id, id);
+  }
+  return resolved;
+}
+
 const MERMAID_FENCE = /```mermaid\s*\n([\s\S]*?)\n```/m;
 
-/** The old flow section `from` selects: its Mermaid diagram and the prose around it. */
+/**
+ * The old flow section `from` selects: its Mermaid diagram and the prose around it. Headings are
+ * dropped: the prose becomes `## Purpose`, and a flow document has no heading below that level.
+ */
 function flowSource(
   text: string,
   selector: string | undefined,
@@ -502,9 +630,9 @@ function flowSource(
   const prose = selected
     .replace(MERMAID_FENCE, "")
     .split(/\r?\n/)
-    .filter((line) => !/^#\s/.test(line))
-    .map((line) => line.replace(/^#{2}(?=\s)/, "###"))
+    .filter((line) => !/^#{1,6}\s/.test(line))
     .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
   return { diagram: MERMAID_FENCE.exec(selected)?.[1] ?? null, prose };
 }
@@ -550,6 +678,11 @@ function reportUnplaced(
   for (const pack of packs) {
     if (pack.retired) continue;
     const base = relative(root, pack.dir);
+    if (backgroundsOutsideCriteria(pack.raw["03_Acceptance-Criteria.md"], pack.criteria) > 0) {
+      forAPerson.push(
+        `${base}/03_Acceptance-Criteria.md: a Background outside every criterion is not written`,
+      );
+    }
     for (const story of pack.stories) {
       if (!placedStories.has(story.id)) {
         forAPerson.push(`${base}/02_User-stories.md: ${story.id} has no flow in plan.yaml`);
@@ -560,7 +693,7 @@ function reportUnplaced(
         forAPerson.push(
           `${base}/03_Acceptance-Criteria.md: ${criterion.id} has no single placed story`,
         );
-      } else if (criterionScenario(criterion) === null) {
+      } else if (criterionShape(criterion) === null) {
         forAPerson.push(
           `${base}/03_Acceptance-Criteria.md: ${criterion.id} has no convertible Gherkin scenario`,
         );
@@ -588,7 +721,7 @@ function reportUnplaced(
         testCase.criteria.length === 1 &&
         criterion !== undefined &&
         ownerByCriterion.has(criterion) &&
-        pack.criteria.some((item) => item.id === criterion && criterionScenario(item) !== null);
+        pack.criteria.some((item) => item.id === criterion && criterionShape(item) !== null);
       if (
         testCase.invalidExampleReference ||
         testCase.examples.length + testCase.danglingExamples.length > 1
@@ -619,42 +752,212 @@ function reportUnplaced(
   return forAPerson;
 }
 
-function sourceScope(pack: OldPack): string | null {
-  const text = pack.raw["01_Spec.md"];
-  const headings = parseHeadings(text).filter(
-    (heading) => heading.level === 2 && heading.title === "Scope",
-  );
-  if (headings.length > 1) {
-    throw new MigrationInputError(`${pack.id}/01_Spec.md has several Scope sections`);
+const STORY_SENTENCE = /^As an? [^,]+, I want .+, so that .+\.$/;
+/** Fields of an old story block that the archive keeps and the story tree does not. */
+const ARCHIVED_STORY_FIELDS = new Set(["parent", "source", "flow"]);
+
+type StoryParts = { sentence: string; nonGoals: string[] };
+type BlockEntry =
+  | { kind: "field"; key: string; value: string; items: string[] }
+  | { kind: "paragraph"; text: string }
+  | { kind: "other" };
+
+/** A line that opens a list item, a quote, a table or a fence at the top of a block. */
+const OTHER_BLOCK =
+  /^ {0,3}(?:[-*+]|\d+[.)]|#{1,6})\s|^\s*(?:>|\||```|~~~)|^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+
+function storyBlockEntries(body: string): BlockEntry[] {
+  const entries: BlockEntry[] = [];
+  let current: BlockEntry | null = null;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const field = /^-\s+([A-Za-z][A-Za-z-]*):\s*(.*)$/.exec(line);
+    const item = /^\s+(?:[-*+]|\d+[.)])\s+(.*)$/.exec(line);
+    if (line.trim() === "") {
+      if (current?.kind === "paragraph") current = null;
+    } else if (field) {
+      current = {
+        kind: "field",
+        key: (field[1] ?? "").toLowerCase(),
+        value: field[2] ?? "",
+        items: [],
+      };
+      entries.push(current);
+    } else if (current?.kind === "field" && item) {
+      current.items.push(item[1] ?? "");
+    } else if (current?.kind === "field" && /^\s/.test(line)) {
+      const last = current.items.length - 1;
+      if (last >= 0) current.items[last] = `${current.items[last]} ${line.trim()}`;
+      else current.value = `${current.value.trimEnd()} ${line.trim()}`;
+    } else if (OTHER_BLOCK.test(line)) {
+      current = { kind: "other" };
+      entries.push(current);
+    } else if (current?.kind === "other") {
+      continue;
+    } else if (current?.kind === "paragraph") {
+      current.text = `${current.text.trimEnd()} ${line.trim()}`;
+    } else {
+      current = { kind: "paragraph", text: line.trim() };
+      entries.push(current);
+    }
   }
-  return headings.length === 1 ? extractH2Sections(text).get("Scope")?.body.trim() || null : null;
+  return entries;
+}
+
+/**
+ * The one `As a …, I want …, so that ….` sentence of an old story block and its
+ * non-goals, or null when the block holds anything else. The sentence is the
+ * block's one paragraph or its `Goal` field.
+ */
+function storyParts(body: string): StoryParts | null {
+  const sentences: string[] = [];
+  const nonGoals: string[] = [];
+  for (const entry of storyBlockEntries(body)) {
+    if (entry.kind === "other") {
+      return null;
+    } else if (entry.kind === "paragraph") {
+      sentences.push(entry.text);
+    } else if (entry.key === "non-goals") {
+      nonGoals.push(...[entry.value, ...entry.items].map((text) => text.trim()).filter(Boolean));
+    } else if (ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      continue;
+    } else if (entry.items.length > 0) {
+      return null;
+    } else if (entry.key === "goal") {
+      sentences.push(entry.value);
+    } else if (!ARCHIVED_STORY_FIELDS.has(entry.key)) {
+      return null;
+    }
+  }
+  const sentence = sentences[0]?.trim() ?? "";
+  return sentences.length === 1 && STORY_SENTENCE.test(sentence) ? { sentence, nonGoals } : null;
+}
+
+/**
+ * A story block without the top-level fields only the archive keeps, and their
+ * continuation lines. A line inside a fence is content, never a field. Every other
+ * line stays as written, except a blank line a removed field leaves beside another.
+ */
+function withoutArchivedFields(body: string): string {
+  const kept: string[] = [];
+  let skipping = false;
+  let removed = false;
+  let fence: string | null = null;
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    const field = fence === null ? /^-\s+([A-Za-z][A-Za-z-]*):/.exec(line) : null;
+    if (field) skipping = ARCHIVED_STORY_FIELDS.has((field[1] ?? "").toLowerCase());
+    else if (fence === null && line.trim() !== "" && !/^\s+\S/.test(line)) skipping = false;
+    const run = marker?.[1] ?? "";
+    if (marker && fence === null) fence = run;
+    else if (
+      marker &&
+      fence !== null &&
+      run[0] === fence[0] &&
+      run.length >= fence.length &&
+      (marker[2] ?? "").trim() === ""
+    )
+      fence = null;
+    if (skipping) {
+      removed = true;
+      continue;
+    }
+    if (removed && line.trim() === "" && (kept.at(-1) ?? "").trim() === "") continue;
+    removed = false;
+    kept.push(line);
+  }
+  return kept.join("\n");
 }
 
 function outputStory(
   story: OldStory,
   newId: string,
   ids: Record<string, string>,
-  pack: OldPack,
-  scope: string | null,
+  parts: StoryParts | null,
 ): string {
-  const body = replacedIds(story.body, ids).trim();
-  const archive = `.qfai/evidence/migration-spec-to-story/retired/${pack.id}`;
-  const sourceScopeText = scope ?? "The legacy source has no Scope section.";
-  return `# ${newId}: ${story.title}\n\n## User Story\n\n${body}\n\n## Legacy Source Scope\n\n${sourceScopeText}\n\n## Source Provenance\n\n- Spec scope: \`${archive}/01_Spec.md#scope\`\n- Story block: \`${archive}/02_User-stories.md#${story.id.toLowerCase()}\`\n`;
+  const heading = `# ${newId}: ${story.title}\n\n## User Story\n\n`;
+  if (parts === null) {
+    return `${heading}${replacedIds(withoutArchivedFields(story.body), ids).trim()}\n`;
+  }
+  const nonGoals = parts.nonGoals.map((text) => `- ${replacedIds(text, ids)}`).join("\n");
+  return `${heading}${replacedIds(parts.sentence, ids)}\n${nonGoals ? `\n## Non-goals\n\n${nonGoals}\n` : ""}`;
+}
+
+/**
+ * A scenario re-indented to the template: two spaces for `Scenario:`, four for each step
+ * and each `Examples:` line. Every other line keeps its place relative to the step above it: that step's
+ * indentation is replaced and every character after it is kept, so a DocString keeps
+ * its relative whitespace, tabs included. A whitespace-only line inside a DocString is
+ * payload, so it is shifted like the rest rather than emptied.
+ */
+function indentedScenario(scenario: string): string {
+  const lines = scenario.replace(/\r\n/g, "\n").split("\n");
+  const indent = (line: string): number => /^\s*/.exec(line)?.[0].length ?? 0;
+  const isStep = (line: string): boolean =>
+    /^\s*(?:(?:Given|When|Then|And|But|\*)\s|(?:Examples|Scenarios):)/.test(line);
+  let stepIndent = indent(lines.find(isStep) ?? "");
+  const shifted = (line: string): string => {
+    if (indent(line) >= stepIndent) return `    ${line.slice(stepIndent)}`;
+    const delta = 4 - stepIndent;
+    return delta >= 0 ? `${" ".repeat(delta)}${line}` : line.slice(Math.min(-delta, indent(line)));
+  };
+  let docString: string | null = null;
+  return lines
+    .map((line, index) => {
+      const delimiter = /^\s*("""|```)/.exec(line)?.[1] ?? null;
+      const inDocString = docString !== null && delimiter !== docString;
+      if (delimiter !== null && (docString === null || delimiter === docString)) {
+        docString = docString === null ? delimiter : null;
+      }
+      if (line === "") return "";
+      if (line.trim() === "") return inDocString ? shifted(line) : "";
+      if (index === 0) return `  ${line.trimStart()}`;
+      if (!inDocString && delimiter === null && isStep(line)) {
+        stepIndent = indent(line);
+        return `    ${line.trimStart()}`;
+      }
+      return shifted(line);
+    })
+    .join("\n");
 }
 
 function outputCriteria(
   story: OldStory,
   criteria: readonly OldCriterion[],
   ids: Record<string, string>,
-): string {
-  if (criteria.length === 0) return `# Acceptance Criteria\n\n## Criteria\n`;
+): string | null {
+  if (criteria.length === 0) return null;
   const blocks = criteria.map((criterion) => {
-    const scenario = criterionScenario(criterion);
-    if (scenario === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
-    return `# ${ids[criterion.id]}\n# Parent: ${ids[story.id]}\n${replacedIds(scenario, ids)}`;
+    const shape = criterionShape(criterion);
+    if (shape === null) throw new MigrationInputError(`${criterion.id} has no Gherkin scenario`);
+    const scenario = shape.scenario ?? PLACEHOLDER_SCENARIO;
+    return `  # ${ids[criterion.id]}\n${indentedScenario(replacedIds(scenario, ids))}`;
   });
-  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n\n${blocks.join("\n\n")}\n\`\`\`\n`;
+  return `# Acceptance Criteria\n\n## Criteria\n\n\`\`\`gherkin\nFeature: ${story.title}\n${blocks.join("\n\n")}\n\`\`\`\n`;
+}
+
+/** What `outputCriteria` does not write as it stands: each dropped item, and each placeholder. */
+function criteriaForAPerson(
+  source: string,
+  criteriaFile: string,
+  criteria: readonly OldCriterion[],
+  ids: Record<string, string>,
+): string[] {
+  const forAPerson: string[] = [];
+  for (const criterion of criteria) {
+    const shape = criterionShape(criterion);
+    if (shape === null) continue;
+    for (const item of shape.dropped) {
+      forAPerson.push(
+        `${source}: ${criterion.id} ${item} is not written; a criterion holds one named Scenario`,
+      );
+    }
+    if (shape.scenario === null) {
+      forAPerson.push(
+        `${criteriaFile}: ${ids[criterion.id] ?? criterion.id} holds a placeholder Scenario; write it`,
+      );
+    }
+  }
+  return forAPerson;
 }
 
 function outputExamples(
@@ -667,9 +970,21 @@ function outputExamples(
   return `# Examples\n\n## Examples\n\n| EX-ID | AC-Ref | Input | Expected |\n| --- | --- | --- | --- |\n${rows.join("\n")}${rows.length > 0 ? "\n" : ""}`;
 }
 
+/** The placeholders of the `qfai-sdd` business flow template. */
+const FLOW_PURPOSE_PLACEHOLDER = "`<Who carries out this flow, and the outcome it reaches.>`";
+const FLOW_PATHS_PLACEHOLDER =
+  "- `<branch, failure, interruption or resumption, and where it leads>`";
+
 function outputFlow(title: string, id: string, diagram: string, prose: string): string {
-  const source = prose ? `\n${prose}\n` : "";
-  return `# ${id}: ${title}\n\n## Purpose\n\n- ${title}\n${source}\n## Flow\n\n\`\`\`mermaid\n${diagram.trim()}\n\`\`\`\n`;
+  return [
+    `# ${id}: ${title}`,
+    "## Purpose",
+    prose || FLOW_PURPOSE_PLACEHOLDER,
+    "## Flow",
+    `\`\`\`mermaid\n${diagram.trim()}\n\`\`\``,
+    "## Alternate and exception paths",
+    `${FLOW_PATHS_PLACEHOLDER}\n`,
+  ].join("\n\n");
 }
 
 function outputFlowIndex(flows: readonly { id: string; title: string }[]): string {
@@ -845,6 +1160,8 @@ export const step04: MigrationStep = {
           exampleCriterion.set(example.id, criterion);
       }
     }
+    const contracts = existingMap?.contracts ?? (await readContractMap(context.root)) ?? {};
+    const ruleContracts = await ruleContractIds(context, plan, contracts);
     const numberedInput: NumberingInput = {
       flows: plan.flows.map((flow) => ({
         name: flow.title,
@@ -854,7 +1171,7 @@ export const step04: MigrationStep = {
           const criteria = pack.criteria
             .filter(
               (item) =>
-                ownerByCriterion.get(item.id) === planned.id && criterionScenario(item) !== null,
+                ownerByCriterion.get(item.id) === planned.id && criterionShape(item) !== null,
             )
             .map((item) => item.id);
           const examples = [
@@ -878,7 +1195,10 @@ export const step04: MigrationStep = {
           return { id: planned.id, criteria, examples };
         }),
       })),
-      rules: plan.rules.map((rule) => rule.id),
+      rules: plan.rules.map((rule) => ({
+        id: rule.id,
+        contract: ruleContracts.get(rule.id) ?? "",
+      })),
     };
     for (const rule of plan.rules) {
       const pack = byPack.get(packOf(rule.id));
@@ -926,7 +1246,7 @@ export const step04: MigrationStep = {
         if (row) retiredPacks[pack.id] = row.id;
       }
     }
-    const computedMap: MigrationIdMap = { version: 1, ids, placements, retiredPacks };
+    const computedMap: MigrationIdMap = { version: 1, ids, placements, retiredPacks, contracts };
     if (existingMap !== null) {
       assertUnchangedPlacements(plan, existingMap);
       for (const [pack, entries] of Object.entries(ids)) {
@@ -956,8 +1276,6 @@ export const step04: MigrationStep = {
       )) ??
       "";
     const fallbackDiagram = await templateDiagram();
-    const scopeByPack = new Map(packs.map((pack) => [pack.id, sourceScope(pack)] as const));
-    const missingScopes = new Set<string>();
     operations.push({
       kind: "write",
       target: `${specsRelative}/02_business-flow/business-flows.md`,
@@ -972,6 +1290,10 @@ export const step04: MigrationStep = {
       const { diagram, prose } = flowSource(oldFlowText, flow.from);
       if (!flow.from || !diagram)
         forAPerson.push(`${PLAN_PATH}: ${flow.title} has no old flow diagram`);
+      const missing = prose ? "" : "no purpose and ";
+      forAPerson.push(
+        `${flowDir}/business-flow.md: ${flowId} has ${missing}no alternate and exception paths; write them`,
+      );
       operations.push({
         kind: "write",
         target: `${flowDir}/business-flow.md`,
@@ -993,36 +1315,75 @@ export const step04: MigrationStep = {
         const storyId = map.ids[packOf(planned.id)]?.[planned.id];
         if (!story || !pack || !storyId) continue;
         const locations = storyPaths(specsRelative, flowId, storyId);
-        const packMap = map.ids[pack.id] ?? {};
-        const scope = scopeByPack.get(pack.id) ?? null;
-        if (scope === null && !missingScopes.has(pack.id)) {
-          forAPerson.push(`${relative(context.root, pack.dir)}/01_Spec.md: Scope is missing`);
-          missingScopes.add(pack.id);
-        }
+        const packMap = { ...(map.ids[pack.id] ?? {}), ...oldContractIds(map.contracts) };
         const mappedCriteria = pack.criteria.filter(
-          (item) => ownerByCriterion.get(item.id) === story.id && criterionScenario(item) !== null,
+          (item) => ownerByCriterion.get(item.id) === story.id && criterionShape(item) !== null,
+        );
+        const [storyFile = "", criteriaFile = "", exampleFile = ""] = locations.files;
+        forAPerson.push(
+          ...criteriaForAPerson(
+            `${relative(context.root, pack.dir)}/03_Acceptance-Criteria.md`,
+            criteriaFile,
+            mappedCriteria,
+            packMap,
+          ),
         );
         const mappedExamples = pack.examples
           .filter((item) => ownerByCriterion.get(exampleCriterion.get(item.id) ?? "") === story.id)
-          .map((item) => ({
-            id: packMap[item.id] ?? "",
-            criterionId: packMap[exampleCriterion.get(item.id) ?? ""] ?? "",
-            input: item.input,
-            expected: item.expected,
-          }));
+          .map((item) => {
+            const id = packMap[item.id] ?? "";
+            const plain = plainExampleCells(item.input, item.expected);
+            for (const column of plain.notPlain) {
+              forAPerson.push(
+                `${exampleFile}: ${id} ${column} is Gherkin steps, not one plain value; rewrite it`,
+              );
+            }
+            const criterionId = packMap[exampleCriterion.get(item.id) ?? ""] ?? "";
+            return { id, criterionId, input: plain.input, expected: plain.expected };
+          });
+        forAPerson.push(
+          ...unmappedContracts(
+            storyFile,
+            [story.body, ...mappedCriteria.map((item) => item.text)],
+            packMap,
+          ),
+        );
+        const parts = storyParts(story.body);
+        if (parts === null) {
+          forAPerson.push(
+            `${storyFile}: ${storyId} is not one "As a <actor>, I want <goal>, so that <benefit>." sentence; rewrite its User Story`,
+          );
+        }
         operations.push({
           kind: "write",
-          target: locations.files[0] ?? "",
-          content: outputStory(story, storyId, packMap, pack, scope),
+          target: storyFile,
+          content: outputStory(story, storyId, packMap, parts),
         });
+        const criteriaText = outputCriteria(story, mappedCriteria, packMap);
+        if (criteriaText === null) {
+          forAPerson.push(`${criteriaFile}: ${storyId} has no criterion that takes a new ID`);
+          // Nothing tells an earlier step 4's output from a file a person wrote, so an
+          // existing criteria file is kept and named for the person resolving the story.
+          if ((await readOptional(path.join(context.root, criteriaFile))) !== null) {
+            forAPerson.push(
+              `${criteriaFile}: the existing file is kept; check that it states ${storyId}'s criteria`,
+            );
+          }
+        } else {
+          // A criteria file that differs from what step 4 writes was edited after an
+          // earlier run, so it is kept rather than overwritten.
+          const existing = await readOptional(path.join(context.root, criteriaFile));
+          if (existing === null || existing === criteriaText) {
+            operations.push({ kind: "write", target: criteriaFile, content: criteriaText });
+          } else {
+            forAPerson.push(
+              `${criteriaFile}: the existing file differs from what step 4 writes and is kept; check that it states ${storyId}'s criteria`,
+            );
+          }
+        }
         operations.push({
           kind: "write",
-          target: locations.files[1] ?? "",
-          content: outputCriteria(story, mappedCriteria, packMap),
-        });
-        operations.push({
-          kind: "write",
-          target: locations.files[2] ?? "",
+          target: exampleFile,
           content: outputExamples(mappedExamples),
         });
       }

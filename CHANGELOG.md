@@ -152,7 +152,119 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     its owner does not list or that nothing uses, and a `requires` list that
     names anything but common steps, or appears on a common step.
 
+- **Contracts can carry their own IDs, and number their rules after them.**
+  `qfai validate` reads the new forms beside the current ones.
+  - A contract under `cli/`, `api/`, `db/`, `ui/` or `design/` declares a
+    contract ID such as `CLI-0001` or `API-0002`: in its H1 for a Markdown
+    contract (`# CLI-0001: <title>`), and on a `QFAI-CONTRACT-ID` line
+    otherwise. The number is unique across kinds.
+  - A rule of such a contract is `BR-<contract number>-NNNN`. One that carries
+    another number is a BR-to-EX error (`QFAI-STORY-005`).
+  - A Markdown contract may hold its rules under `## Business rules`, which is
+    read like `## Rules` but refuses a `Rule refs:` line.
+  - A `contracts.md` index with the columns `ID`, `Title`, `File`,
+    `Depends On`, `Reconciled With` and `Purpose` is checked against every
+    contract: each file is named `<kind>-NNNN-<slug>.<ext>` after the ID it
+    declares and has a row that agrees with both. A disagreement is
+    `QFAI-CONTRACT-034`.
+
 ### Changed
+
+- **Prototyping names a UI contract by its contract ID, `UI-NNNN`.** The
+  `CON-UI-NNNN` form is no longer accepted.
+  - `--primary-ui-contract`, `prototyping.primaryUiContract` and
+    `qfai prototyping rescope --remove` take `UI-0001`, not `CON-UI-0001`.
+  - Evidence is written to `iter-NN/UI-NNNN/<screen>.review.json`, and
+    `uiContractsCovered`, `frozenSurfaceUnion` and a review's `uiContractId`
+    hold `UI-NNNN` IDs. Certification reads only `UI-NNNN` directories.
+  - The contract samples `qfai-sdd` ships declare `API-0001`, `DB-0002` and
+    `UI-0003`.
+
+- **The policy-layer documents and the two registers have closed schemas.**
+  `objective.md`, `initiative.md`, `principle.md`, `glossary.md`,
+  `constraint.md`, `decisions.md` and `open-questions.md` now accept only
+  the sections their templates declare, in order, each holding the one kind of
+  content it is for. A section the schema does not name, or a list where a table
+  belongs, fails `pnpm lint:mdschema`.
+
+  - `principle.md` gains a Decision priorities table; `initiative.md` no
+    longer carries an overview or its own priorities.
+  - `glossary.md` is one Term and Definition table.
+  - `constraint.md` has Technical, Operational and Business sections, each one
+    ID, Constraint, Rationale and Impact table, which may be empty.
+  - The spec tree's `.markdownlint.jsonc` is checked against markdownlint's
+    strict schema, so a misspelt rule or option fails instead of being ignored.
+  - Migration step 3 writes these five policy files in their template's shape.
+    An old section of the same kind moves into its section; every other one is
+    listed under `## For a person` with its archived copy, and the step exits 3.
+
+- **`qfai-sdd` writes contracts in the contract ID scheme, and references
+  point one way.** The skill, its `sdd-contract` and `sdd-triage` steps, the
+  constitution, the drift protocol and the agent cards now say:
+  - A new contract takes its kind from its directory and the next contract
+    number, which no other contract of any kind uses and which is never
+    reused. The file is `<kind>-NNNN-<slug>.<ext>`, and it declares its ID in
+    its H1 or on a `QFAI-CONTRACT-ID` line.
+  - Its rules are `BR-<contract number>-NNNN`, under `## Business rules` in a
+    Markdown contract. The shipped samples show `BR-0001-NNNN`,
+    `BR-0002-0001` and `BR-0003-NNNN`.
+  - A rule cites only examples, and only code and tests cite a rule. A rule
+    several contracts rely on is defined once and cited by no other contract;
+    the skill no longer writes rule refs. A contract never names an
+    implementation file.
+  - A flow's contracts are the ones whose rules cite its examples.
+  - The contract index has the columns `ID`, `Title`, `File`, `Depends On`,
+    `Reconciled With` and `Purpose`.
+  - `qfai validate` describes `QFAI-CONTRACT-034` and `QFAI-STORY-005` by the
+    checks they make on contract IDs and rule numbers.
+
+- **`qfai --help` no longer names an internal contract beside
+  `handoff upgrade`.**
+
+- **The story tree has no `structure.md`.** `qfai init` no longer writes
+  `03_contract/structure.md`, and nothing reads it. Its facts have other
+  homes:
+  - Each entrypoint is a Skeleton line in the Standard commands section of
+    `03_contract/tech.md`: `` - Skeleton: `<entry>` -> `<command>` ``.
+  - An architecture boundary is a Technical Constraints row of
+    `01_policy/constraint.md`.
+  - The paths that render a user-visible surface are `uiux.surfacePaths` in
+    `qfai.config.yaml`: a list of globs, or `[]` for a project that renders
+    none. `/qfai-configure` writes it, and the UI-affecting check reads it.
+  - `QFAI-ASSETS-003` checks `tech.md` alone for unfilled placeholders.
+  - Migration step 3 moves the old structure catalog into those three places
+    and lists the rest under `## For a person`.
+
+- **Every spec-tree document is checked against its schema, and the check is
+  required.** `npx qfai validate` runs the shipped document-schema checker in
+  the `sdd`, `verify` and `full` profiles. Each violation is a
+  `QFAI-DOCSCHEMA-001` error naming the document, line and column, and a
+  check that could not run is `QFAI-DOCSCHEMA-002`.
+
+  - `@jackchuka/mdschema` 0.15.4 is now a dependency of the package, and the
+    shipped `qfai-docs.yml` installs the same version.
+  - `npx qfai doctor` reports an error in `workflows.docsLane` when
+    `.github/workflows/qfai-docs.yml` is missing, and names the packaged copy
+    to restore.
+  - `npx qfai init` ships the rule master `.agents/rules/document-schema.md`
+    and cites it from the `AGENTS.md`, `CLAUDE.md` and
+    `copilot-instructions.md` it writes.
+
+- **`tech.md` has a closed schema of three sections.** `## Stack` is one
+  Component and Choice table with Runtime and Platform rows. `## Dependencies`
+  names each runtime package in backticks with its reason on a nested item, or
+  says `- None.`. `## Standard commands (copy-paste)` holds one labelled item
+  per quality-gate command: Install, Format, Test, Lint, Typecheck, Build,
+  Skeleton and Validate, and optionally Pack / distribution.
+
+  - `tech.md` holds no rules and no constraints. A rule belongs to the contract
+    that enforces it, and a constraint to `01_policy/constraint.md`.
+  - The primary component registry is the `Component catalogue` row of the
+    Stack table.
+  - Migration step 3 writes `tech.md` in its template's shape. The 1.x stack
+    lists become Stack rows, `Smoke` becomes `Skeleton`, and the Constraints
+    section goes to `01_policy/constraint.md`. Anything else is listed under
+    `## For a person`, and the step exits 3.
 
 - **The shipped guidance states what each story-tree document may hold.** The
   `qfai-sdd` skill, its steps and the shared rules now say that a document
@@ -178,6 +290,43 @@ This changelog follows Keep a Changelog and Semantic Versioning.
   kept and `qfai validate` no longer reports it. A migration under way
   continues under the new name from the step it reached: the plan, the ID map
   and the archives stay in `.qfai/evidence/migration-spec-to-story/`.
+
+- **Migration step 4 writes stories and criteria in the template's shape.**
+  - `01_User-story.md` holds the story heading, the one
+    `As a …, I want …, so that ….` sentence under `## User Story`, and the old
+    non-goals under `## Non-goals` when there are any.
+  - The pack's scope and source provenance are no longer copied into the
+    story. They stay in the retained archive under
+    `.qfai/evidence/migration-spec-to-story/retired/`.
+  - `02_Acceptance-Criteria.md` opens `Feature:` with the story title and
+    indents each scenario as the template does. A criterion no longer carries a
+    `# Parent:` line; its directory names the story.
+  - A story block that is not one such sentence is written as it stands, and a
+    story with no criterion that takes a new ID gets no
+    `02_Acceptance-Criteria.md`. Step 4 lists both under `## For a person` and
+    exits 3.
+
+- **Migration step 4 writes business flows in the template's shape.**
+  - `business-flow.md` holds the old section's prose under `## Purpose`,
+    without its headings and with no list item added, its diagram under
+    `## Flow`, and one placeholder item under
+    `## Alternate and exception paths`.
+  - Where the old section has no prose, `## Purpose` holds the template's
+    placeholder.
+  - Every flow is listed under `## For a person`, so that a person writes its
+    alternate and exception paths, and step 4 exits 3.
+
+- **Migration steps 4 and 5 write criteria and examples in their closed
+  shapes.**
+  - Each criterion holds one named `Scenario:`, the first one it had. A
+    `Background:`, a further scenario, a scenario named only by an ID and a
+    `Scenario Outline:` are not written. Step 4 lists each under
+    `## For a person` with its old file and exits 3.
+  - A criterion left with no named scenario holds a placeholder scenario, and
+    step 4 lists its new file.
+  - An example's Input and Expected lose a leading `Given`, `When`, `Then` or
+    `And` when they hold one step. A cell holding more steps is written as it
+    stands, and the step lists it under `## For a person` and exits 3.
 
 - **Breaking: specs move to the story tree.** A project's specifications live
   under `.qfai/spec/`: policy in `01_policy/`, business flows with their
@@ -359,7 +508,65 @@ This changelog follows Keep a Changelog and Semantic Versioning.
     plan, ID map and archives stay in that one working copy.
   - No CI lane runs the prototyping profile.
 
+- **The migration gives every 1.x contract its 2.x contract ID.** No old
+  `CON-*` ID is left where a step can rewrite it.
+  - Step 3 numbers every contract under `cli/`, `api/`, `db/`, `ui/` and
+    `design/` that has no 2.x ID, from `0001` across kinds, in the order CLI,
+    API, DB, UI, design, then by old number. It renames each file to
+    `<kind>-NNNN-<slug>.<ext>`, declares the new ID in its H1 or
+    `QFAI-CONTRACT-ID` line, and rewrites the old IDs in `-- Depends on:` and
+    `x-qfai-depends-on`. Its dry run names each rename with the new ID.
+  - The old and new IDs and paths are recorded in `contract-map.json` beside
+    the plan, and step 4 copies them into the ID map.
+  - `contracts.md` becomes one `## Contract Index` table with the columns
+    `ID`, `Title`, `File`, `Depends On`, `Reconciled With` and `Purpose`. The
+    old index's other sections go to a person.
+  - The plan still names a rule's contract by its old path. Step 4 refuses a
+    path outside the five contract directories, or one that names no
+    contract, and numbers each contract's rules `BR-<contract number>-NNNN`.
+  - Step 7 writes a Markdown contract's rules under `## Business rules`, and
+    rewrites the old IDs in each rule statement through the ID map.
+  - Step 8 rewrites a `QFAI:CON-*` annotation to the new contract ID.
+  - An old ID no contract declared, and one left elsewhere in a contract, such
+    as a UI marker, is listed for a person with its file and line.
+  - **Breaking:** the migration no longer continues from a plan and ID map
+    written under the skill's earlier name, `qfai-migration-spec-to-story`.
+
 ### Removed
+
+- **A spec document can no longer opt out of its schema.**
+  `<!-- mdschema:ignore -->` is now reported as a violation, under every
+  `--scope` of the document lane and by `npx qfai validate`, and the document
+  is still checked.
+- **The 1.x spec-pack and policy schemas are gone.** The `spec/` and
+  `policies/` schemas, their manifest entries and the `when:` routing that
+  sent a retired spec pack to its own schema are removed.
+- **`validation.require.specSections` is removed.** No validator read it. A
+  document's sections come only from the shipped schemas, and
+  `qfai.config.yaml` has no `validation.require` section.
+
+- **Breaking: the design lock, the token mirror and the handoff YAML.**
+  Nothing writes or reads `DESIGN.md.lock.yaml`, `design-system.yaml` or
+  `prototype-handoff.yaml` under `<paths.contractsDir>/design/` any more.
+
+  - `qfai prototyping iterate` and `certify` compare root `DESIGN.md` only
+    with `prototyping.json#designMd.sha256`, the hash cycle 0 records. To
+    change `DESIGN.md` during a loop, edit it and restart from cycle 0.
+  - `iterate` writes no token copy when the loop stops. `/qfai-implement`
+    reads the tokens from root `DESIGN.md`.
+  - The handoff is `handoff` in `.qfai/evidence/prototyping/prototyping.json`:
+    `finalArtifact`, `procurement` and `implementationNotes`. The
+    prototyping profile of `qfai validate` checks it with `QFAI-DCON-012`
+    and `QFAI-DCON-013`, and checks that `finalArtifact` exists with
+    `QFAI-PROT-009`.
+  - `qfai validate` no longer emits `QFAI-DCON-001`, `QFAI-DCON-005`,
+    `QFAI-DCON-009`, `QFAI-DCON-031` or `QFAI-DCON-032`, and
+    `qfai doctor --profile prototyping` no longer reports
+    `prototyping.designMdLock` or `prototyping.designMdSha`.
+  - The saas-package profile's design-system attestation is root
+    `DESIGN.md`, present and parsing.
+  - `/qfai-sdd` no longer freezes `DESIGN.md`, and the two sample files for
+    the lock and the handoff are no longer shipped.
 
 - **Breaking: `qfai guardrails` and the Decision Guardrails scans.** The
   `list`, `extract` and `check` actions are gone, along with their `--path`,

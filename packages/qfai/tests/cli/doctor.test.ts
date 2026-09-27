@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { chmod, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -669,7 +668,7 @@ describe("doctor", () => {
   // TC-3.7.x — root DESIGN.md preflight checks
   // ───────────────────────────────────────────────────────────────────────
 
-  it("TC-3.7.1: all designMd checks ok when DESIGN.md + lock + sha agree", async () => {
+  it("TC-3.7.1: designMdRoot ok when root DESIGN.md parses", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const server = await startTestServer();
     try {
@@ -677,8 +676,6 @@ describe("doctor", () => {
       await seedPrototypingFixture(root, server.url);
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("ok");
-      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("ok");
-      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("ok");
     } finally {
       await stopTestServer(server.server);
       await rm(root, { recursive: true, force: true });
@@ -709,106 +706,6 @@ describe("doctor", () => {
       await writeFile(path.join(root, "DESIGN.md"), "not a front matter\n", "utf-8");
       const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
       expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("error");
-    } finally {
-      await stopTestServer(server.server);
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("TC-3.7.4: missing DESIGN.md.lock.yaml → designMdLock=error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const server = await startTestServer();
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedPrototypingFixture(root, server.url);
-      await rm(path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"), {
-        force: true,
-      });
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
-    } finally {
-      await stopTestServer(server.server);
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("TC-3.7.5: lock sha mismatch → designMdSha=error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const server = await startTestServer();
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedPrototypingFixture(root, server.url);
-      // Replace lock with a non-matching sha.
-      await writeFile(
-        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
-        [
-          'designMdPath: "DESIGN.md"',
-          `designMdSha256: "${"0".repeat(64)}"`,
-          'frozenAt: "2026-05-05T00:00:00Z"',
-          "",
-        ].join("\n"),
-        "utf-8",
-      );
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("error");
-    } finally {
-      await stopTestServer(server.server);
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("TC-3.7.6: malformed lock yaml → designMdLock=error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const server = await startTestServer();
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedPrototypingFixture(root, server.url);
-      await writeFile(
-        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
-        ": : :\n",
-        "utf-8",
-      );
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
-    } finally {
-      await stopTestServer(server.server);
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("TC-3.7.7: well-formed but stale lock sha → designMdSha=error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const server = await startTestServer();
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedPrototypingFixture(root, server.url);
-      // 64-hex but doesn't match — same shape as TC-3.7.5.
-      await writeFile(
-        path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"),
-        ['designMdPath: "DESIGN.md"', `designMdSha256: "${"a".repeat(64)}"`, ""].join("\n"),
-        "utf-8",
-      );
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designMdSha")?.severity).toBe("error");
-    } finally {
-      await stopTestServer(server.server);
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("TC-3.7.8: DESIGN.md AND lock missing → both checks error", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const server = await startTestServer();
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedPrototypingFixture(root, server.url);
-      await rm(path.join(root, "DESIGN.md"), { force: true });
-      await rm(path.join(root, ".qfai", "spec", "03_contract", "design", "DESIGN.md.lock.yaml"), {
-        force: true,
-      });
-      const parsed = await readDoctorData(root, { profile: "prototyping", targetUrl: server.url });
-      expect(findCheck(parsed.checks, "prototyping.designMdRoot")?.severity).toBe("error");
-      expect(findCheck(parsed.checks, "prototyping.designMdLock")?.severity).toBe("error");
     } finally {
       await stopTestServer(server.server);
       await rm(root, { recursive: true, force: true });
@@ -972,7 +869,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
       "  srcDir: src",
       "  testsDir: tests",
       "prototyping:",
-      "  primaryUiContract: CON-UI-0001",
+      "  primaryUiContract: UI-0001",
       "  execution:",
       `    targetUrl: ${targetUrl}`,
       "    browserTool: playwright-cli",
@@ -994,7 +891,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
   await writeFile(
     path.join(uiDir, "home.yaml"),
     [
-      "# QFAI-CONTRACT-ID: CON-UI-0001",
+      "# QFAI-CONTRACT-ID: UI-0001",
       "screens:",
       "  - id: home",
       "    title: Home",
@@ -1005,8 +902,7 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     ].join("\n"),
     "utf-8",
   );
-  // Phase 3b: brand SSOT lives in root DESIGN.md plus a sha freeze in
-  // spec/03_contract/design/DESIGN.md.lock.yaml.
+  // The brand SSOT lives in root DESIGN.md.
   const designMdText = [
     "---",
     "brand:",
@@ -1047,17 +943,6 @@ async function seedPrototypingFixture(root: string, targetUrl: string): Promise<
     "",
   ].join("\n");
   await writeFile(path.join(root, "DESIGN.md"), designMdText, "utf-8");
-  const designMdSha = createHash("sha256").update(designMdText, "utf8").digest("hex");
-  await writeFile(
-    path.join(designDir, "DESIGN.md.lock.yaml"),
-    [
-      'designMdPath: "DESIGN.md"',
-      `designMdSha256: "${designMdSha}"`,
-      'frozenAt: "2026-05-05T00:00:00Z"',
-      "",
-    ].join("\n"),
-    "utf-8",
-  );
   await writeTestPlaywrightCli(binDir, 0);
 }
 

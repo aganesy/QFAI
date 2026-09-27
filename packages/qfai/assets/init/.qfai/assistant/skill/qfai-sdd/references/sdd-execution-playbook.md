@@ -20,7 +20,7 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Stage 2: policy and flow
 
-1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, tech.md, and structure.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
+1. Write affected 01_policy/ files from their paired templates. Each fact has one home among objective.md, initiative.md, principle.md, glossary.md, constraint.md, and tech.md. Policy states criteria; a definition or a business rule belongs to the contract that owns it.
 2. Write 02_business-flow/business-flows.md and the affected business-flow-NNNN/business-flow.md files. Each flow's `## Flow` section is exactly one Mermaid flowchart or sequenceDiagram.
 3. Allocate BF and US IDs from the highest existing ID in their scopes, counting retired IDs named in decisions rows. Add rows to the flow and story indexes.
 
@@ -33,10 +33,10 @@ stop dependent work. A declined change stays as a REJECTED decision row.
 
 ## Stage 4: enforcing contracts
 
-1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. The only quality-gate command definitions are in the Standard commands section of tech.md.
-2. Put each BR inside the contract that enforces it. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition; dependent contracts use file-level rule refs.
-3. Add each contract file to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
-4. For a visual UI surface, the root DESIGN.md and its lock are written by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require a visual lock.
+1. Write the 03_contract/ view and each contract file from its paired template or contract-specific template. tech.md holds the stack, the runtime dependencies and, in its Standard commands section, the only quality-gate command definitions. It holds no BR.
+2. Put each BR inside the contract that enforces it, numbered `BR-<contract number>-NNNN`. Cite at least one EX already written. Every EX is cited by at least one BR. A shared rule has one authoritative definition, and no other contract cites it.
+3. Give each new contract the next contract number, declare its `<KIND>-NNNN` ID, name the file `<kind>-NNNN-<slug>.<ext>`, and add its row to contracts.md in the same change. Reconcile API and DB fields, state transitions, errors, and persisted attributes. Run the executable DB contract checks required by contract-artifact-rules.md.
+4. For a visual UI surface, the root DESIGN.md is written and validated by .qfai/assistant/step/common-design-md/STEP.md. A CLI-only surface does not require one.
 
 ## Concrete-abstract cycle
 

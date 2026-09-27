@@ -205,7 +205,7 @@ A finding outside the reviewing stage's remit is recorded and deferred, never bl
 | `/qfai-sdd`                | Spec / contract consistency, testability, traceability edges, each document in its template's shape                 | Runtime enforcement correctness, code quality                                           |
 | `/qfai-atdd`               | Obligation coverage, layer placement, annotation validity                                                           | Implementation structure                                                                |
 | `/qfai-implement`          | Code quality, spec alignment of the item, RED/GREEN evidence                                                        | Upstream spec content, contract design                                                  |
-| `/qfai-prototyping`        | The prototype against its UI contracts and the locked `DESIGN.md`, loop evidence, the handoff                       | Spec and contract content, downstream implementation code                               |
+| `/qfai-prototyping`        | The prototype against its UI contracts and the root `DESIGN.md`, loop evidence, the handoff                         | Spec and contract content, downstream implementation code                               |
 | `/qfai-migration-v1-to-v2` | Migration plan and report fidelity, ID mapping, archive completeness, each written document in its template's shape | New story content and downstream implementation quality                                 |
 | `/qfai-configure`          | Config / manifest validity and the surfaces the run generated                                                       | Spec content, implementation structure                                                  |
 | `/qfai-verify`             | Gate execution, evidence completeness, report / artifact fidelity                                                   | Authoring quality of the artifacts it verifies                                          |
@@ -231,7 +231,7 @@ the row of the skill whose stage ran it.
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
 - `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — a `BF-*`, `AC-*`, `EX-*`, `BR-*`, `CON-*` ID, or a named shared rule **that governs the product's behaviour**;
+  - an upstream obligation — a `BF-*`, `AC-*`, `EX-*`, `BR-*` or contract ID, or a named shared rule **that governs the product's behaviour**;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it (see `.qfai/assistant/rule/drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
   - `record:<CODE>` — a defect in the run's own record rather than in the product: an evidence section, a round block, an anchor, or provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
@@ -337,7 +337,7 @@ Audited evidence hash: <content hash of the evidence read>   # one line per EX r
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Recommended and unadjudicated: none | <critical decisions in THIS artifact as it now stands that any agent recommended and adopted with no user adjudication>
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
+- <issue> | Severity: blocking|advisory | Traces to: <BF-*/AC-*/EX-*/BR-*/<contract-ID>/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
 - <action>   # blocking findings only
 Advisory / Change Request proposals:

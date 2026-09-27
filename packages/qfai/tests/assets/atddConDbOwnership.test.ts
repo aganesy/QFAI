@@ -20,7 +20,7 @@ describe.each(trees)("%s ATDD contract ownership", (tree) => {
   it("uses contracts to shape assertions without treating contract IDs as coverage annotations", async () => {
     const card = await read(tree, "assistant/agent/acceptance-test-engineer.md");
     const step = await read(tree, "assistant/step/atdd-author/STEP.md");
-    expect(card).toContain("Use active CON-API and CON-DB contracts to shape assertions");
+    expect(card).toContain("Use active API and DB contracts to shape assertions");
     expect(card).toContain("one E2E test per BF and integration or API tests for each active AC");
     expect(step).toContain("Contract references and business rules define assertions");
     expect(step).toContain("contract IDs are not coverage annotations");

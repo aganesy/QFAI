@@ -1,7 +1,7 @@
 ---
 name: prototyping-recover
 owner: qfai-prototyping
-purpose: "Recover a prototyping loop that stopped on lock drift, a license failure, an exhausted budget or a retired UI contract."
+purpose: "Recover a prototyping loop that stopped on drift from the cycle-0 record, a license failure, an exhausted budget or a retired UI contract."
 requires: []
 roles: [orchestrator, product-experience-architect, devops-ci-engineer, completion-reviewer]
 routing-profile: default
@@ -36,15 +36,15 @@ reset; re-running the accepted cycle is reported by the convergence gate (exit
 the `--force` requirement and the `certify` alternative are in
 `.qfai/assistant/skill/qfai-prototyping/references/iteration-loop.md#sealed-loop`.
 
-## Lock drift
+## Drift from the cycle-0 record
 
-Exit `2` on lock drift covers a `DESIGN.md` hash that no longer matches the
-lock, and `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1.
+Exit `2` on drift covers a `DESIGN.md` whose sha256 no longer matches
+`prototyping.json#designMd.sha256`, the hash cycle 0 recorded, and
+`frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1.
 
-To change `DESIGN.md`, edit it, refreeze the lock through the `common-design-md` step of
-`/qfai-sdd`, and re-run prototyping from cycle 0. Which side of a drift or
-conflict wins is the user's decision: ask it, and under a no-question mode stop
-and report the drift.
+To change `DESIGN.md`, edit it and re-run prototyping from cycle 0. Which side
+of a drift or conflict wins — the edit or the recorded state — is the user's
+decision: ask it, and under a no-question mode stop and report the drift.
 
 ## Scope reduction: `prototyping rescope`
 
@@ -55,7 +55,7 @@ catch. `rescope` is the operation that applies such a decision without
 discarding the loop:
 
 ```bash
-npx qfai prototyping rescope --remove CON-UI-0001 --reason "<decision that retired it>"
+npx qfai prototyping rescope --remove UI-0001 --reason "<decision that retired it>"
 ```
 
 It drops the surface from `frozenSurfaceUnion`, prunes it from any captured
@@ -119,7 +119,7 @@ Recovery path (no in-loop retry — the verifier is fail-closed):
    host pinning for an added source is not available.
 2. Edit the offending `imageSources[]` entry to use an allowlisted source,
    known tier, HTTPS URL, matching host and non-empty attribution. **Do not**
-   edit `frozenLicenseCatalog` mid-loop (a separate exit-2 lock-drift class).
+   edit `frozenLicenseCatalog` mid-loop (a separate exit-2 drift class).
 3. To broaden the allowlist, apply an add-only `--license-patch` at the current
    cycle — no cycle-0 restart. Deletions and modifications inside a patch file
    are rejected outright. Revoking an already-applied permission is a manual
@@ -127,7 +127,7 @@ Recovery path (no in-loop retry — the verifier is fail-closed):
    `licensePatchAudit[]`, so every prior row is unioned back in from cycle 1.
    Delete (or archive elsewhere) the offending rows from
    `prototyping.json#licensePatchAudit[]` yourself as part of the re-seed — that
-   array is not covered by the lock-drift gate, unlike `frozenLicenseCatalog`.
+   array is not covered by the drift gate, unlike `frozenLicenseCatalog`.
 
 ## Cycle 9 budget exhaustion
 
@@ -136,13 +136,13 @@ artifacts and `validate` / `/qfai-verify` can still execute for inspection, but
 `npx qfai prototyping certify --check` exits non-zero and prevents DONE.
 
 Use `npx qfai prototyping iterate --cycle 9 --check-convergence` for a
-read-only peek of `prototyping.json` before refreezing: exit `0` confirms
+read-only peek of `prototyping.json` before re-seeding: exit `0` confirms
 convergence (no recovery needed), exit `2` confirms the run did not converge.
 Recovery: review `DESIGN.md`, the pivot strategy in
 `.qfai/assistant/skill/qfai-prototyping/references/reviewer-prompt.md`, and the
 latest `review.json` findings, then ask for and run
 `npx qfai prototyping iterate --cycle 0 --target-url <url> --force` to
-refreeze. Do not seal a certificate against an unconverged iter-09.
+re-seed the loop. Do not seal a certificate against an unconverged iter-09.
 
 A reset after a rejected prototype counts against the same ten-cycle budget as
 the cycles before it (`prototyping-loop` § U). When it is spent, stop and

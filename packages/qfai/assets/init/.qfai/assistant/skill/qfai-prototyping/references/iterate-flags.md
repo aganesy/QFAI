@@ -48,7 +48,7 @@ passed.
 
 ## Scope and license
 
-- `--primary-ui-contract <CON-UI-NNNN>` — pins the primary contract without
+- `--primary-ui-contract <UI-NNNN>` — pins the primary contract without
   narrowing the covered set. It accepts the full ID only; no input is
   normalized. Use it when the automatically selected primary differs from the
   intended one. It takes precedence over
@@ -61,7 +61,7 @@ passed.
   Audit and back up the ledger too — the frozen catalog alone omits every added
   permission. A patch covers sources and tiers only: it never pins
   `sourceHosts`, and a `--cycle 0 --force` re-seed does not revoke earlier
-  rows. Never hand-edit the frozen catalog; that is a lock-drift exit `2`.
+  rows. Never hand-edit the frozen catalog; that is a drift exit `2`.
   Recovery: `.qfai/assistant/step/prototyping-recover/STEP.md`.
 
 ## Seeding and posture

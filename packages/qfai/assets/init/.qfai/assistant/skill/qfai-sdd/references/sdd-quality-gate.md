@@ -4,7 +4,7 @@ The gate checks the story-tree files against their shipped templates, the docume
 
 ## Structure and records
 
-- 01_policy/ contains the required policy files, and each fact in objective.md, initiative.md, principle.md, tech.md, and structure.md has one home.
+- 01_policy/ contains the required policy files, and each fact in objective.md, initiative.md, principle.md, and tech.md has one home.
 - Quality-gate commands occur only in the Standard commands section of <paths.contractsDir>/tech.md. Other files point there.
 - 02_business-flow/business-flows.md indexes real BF directories. Each business-flow.md has exactly one Mermaid flowchart or sequenceDiagram, in `## Flow`.
 - Each story directory holds exactly 01_User-story.md, 02_Acceptance-Criteria.md, and 03_Example.md.
@@ -17,12 +17,13 @@ The gate checks the story-tree files against their shipped templates, the docume
 - BF → US → AC → EX ← BR edges exist.
 - Every AC is a Gherkin scenario with at least one EX. Every EX has exactly one existing AC-Ref.
 - Every BR lives in its enforcing contract, cites at least one existing full EX ID, and every EX has a BR citation.
-- A shared rule is defined once; other contracts use file-level rule refs.
+- A shared rule is defined once; no other contract restates or cites it.
+- A contract names no implementation file, and each BR cites only EX IDs.
 - Every contract file written has a contracts.md row from the same change.
 - Every persisted attribute and state named by an AC, EX, or BR is realizable by its contract directly or through a stated join.
 - Paired API and DB contracts agree on terminal states and error outcomes.
 - Each changed DB contract was applied to a scratch database and its declared write paths were exercised as contract-artifact-rules.md requires. The result appears under Contract executability in the affected flow evidence.
-- UI work uses a product-owned DESIGN.md and matching lock; a sample design is not frozen.
+- UI work uses a product-owned DESIGN.md that parses and validates; a sample design is not adopted.
 
 ## Flow validation
 

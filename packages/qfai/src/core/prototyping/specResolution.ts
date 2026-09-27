@@ -46,7 +46,7 @@ export async function readUiContractInventory(
       if (isEnoent(error)) continue;
       throw error;
     }
-    const declared = extractDeclaredContractIds(text).filter((id) => /^CON-UI-\d{4}$/.test(id));
+    const declared = extractDeclaredContractIds(text).filter((id) => /^UI-\d{4}$/.test(id));
     if (declared.length !== 1) continue;
     let parsed: unknown;
     try {

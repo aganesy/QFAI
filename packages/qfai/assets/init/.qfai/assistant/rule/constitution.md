@@ -65,8 +65,8 @@ policy and contract files. These are complementary obligations.
 Outputs MUST align with:
 
 - repository structure and conventions
-- chosen tools / runtimes
-- architecture boundaries
+- chosen tools / runtimes (`<paths.contractsDir>/tech.md`)
+- architecture boundaries (the Technical Constraints of `<paths.specsDir>/01_policy/constraint.md`)
 
 ---
 
@@ -83,9 +83,14 @@ If spec and code conflict:
 
 Maintain the chain from a business flow to its stories, acceptance criteria,
 examples, tests, code, and verification evidence. Business rules live in the
-relevant contract under `.qfai/spec/03_contract/`, and each example cites
-exactly one acceptance criterion. Keep those links intact when moving a story
-or changing a contract.
+contract that enforces them under `.qfai/spec/03_contract/`, and each example
+cites exactly one acceptance criterion. Keep those links intact when moving a
+story or changing a contract.
+
+References point one way. A business rule cites examples and nothing else, and
+only code and tests cite a business rule. A contract never names an
+implementation file. The contracts a flow relies on are the ones whose rules
+cite the flow's examples.
 
 The test obligation is determined by the ID and the test's layer:
 
@@ -99,8 +104,9 @@ test is an uncovered obligation, even if tests in another layer mention it.
 Resolve a valid exception through a row in `.qfai/spec/decisions.md`; do not
 invent a test annotation to suppress a finding.
 
-When practical, cite the BF, US, AC, EX, and relevant contract IDs in the
-work's evidence so a reviewer can follow the changed behavior.
+When practical, cite the BF, US, AC and EX IDs, and the contract and BR IDs
+that enforce them, in the work's evidence so a reviewer can follow the changed
+behavior.
 
 ---
 
@@ -193,7 +199,7 @@ Default policy:
   `hard-required` has no default and MUST NOT be guessed once the budget is
   exhausted. The exemption is **scoped to the inputs the requested work actually
   consumes**: brand intent when the run produces brand-facing
-  output, a full `CON-UI-NNNN` when a prototyping-scoped run cannot identify
+  output, a full `UI-NNNN` when a prototyping-scoped run cannot identify
   its primary UI contract, or a usable story source and `BF-NNNN` when a
   flow-scoped run cannot identify its target. An input the requested
   path never reads MUST NOT be asked for and MUST NOT block the run — a

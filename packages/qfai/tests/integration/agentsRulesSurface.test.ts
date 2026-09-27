@@ -321,7 +321,7 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
     expect(text).toMatch(/version-discipline/);
   });
 
-  // A repository-only rule, like `document-schema.md`: it governs what this
+  // A repository-only rule, like `repository-language.md`: it governs what this
   // tree stores, and `packages/qfai/assets/init/root/.agents/rules/` does not
   // carry it. An adopter picks the language of their own repository, and a
   // copy under the shipped masters would both say otherwise and oblige every
@@ -1168,6 +1168,62 @@ describe("cross-AI rules surface (.agents/rules/ master)", () => {
       expect(text).toContain("api-budget.md");
     });
   });
+
+  // An adopter's spec tree is held to the same closed schemas, by the same
+  // checker, in `qfai validate` and in the docs lane. So the master ships, and
+  // what only this repository has — its lanes and how a schema is changed — is
+  // in the overlay.
+  describe("document-schema rule", () => {
+    const MASTER = "packages/qfai/assets/init/root/.agents/rules/document-schema.md";
+    const OVERLAY = ".agents/rules/document-schema.local.md";
+
+    it("states every clause in the shipped master", async () => {
+      const text = await readFile(path.join(ROOT, MASTER), "utf-8");
+      for (const clause of [
+        /The schemas are closed/,
+        /A section the schema does not name fails/,
+        /An empty section is still there/,
+        /The template is the shape/,
+        /No history in a document/,
+        /`<!-- mdschema:ignore -->` is refused/,
+        /QFAI-DOCSCHEMA-001/,
+        /The lane is required/,
+        /What a schema cannot say/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+    });
+
+    it("keeps what only this repository has in the overlay", async () => {
+      const text = await readFile(path.join(ROOT, OVERLAY), "utf-8");
+      for (const clause of [
+        /lint:mdschema/,
+        /lint:mermaid/,
+        /check-markdownlint-config\.mjs/,
+        /One implementation, three entry points/,
+        /One content kind per section/,
+        /A required section may hold a header-only table/,
+        /mdschemaSchemas\.test\.ts/,
+        /`max: 0` means no upper limit/,
+        /mermaid-lint:ignore/,
+      ]) {
+        expect(text).toMatch(clause);
+      }
+      expect(text).not.toMatch(/`when:`/);
+    });
+
+    it.each([
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      "packages/qfai/assets/init/root/AGENTS.md",
+      "packages/qfai/assets/init/root/CLAUDE.md",
+      "packages/qfai/src/cli/commands/init.ts",
+    ])("%s cites the rule master", async (rel) => {
+      const text = await readFile(path.join(ROOT, rel), "utf-8");
+      expect(text).toContain("document-schema.md");
+    });
+  });
 });
 
 describe("the question shape has one owner", () => {
@@ -1369,7 +1425,10 @@ describe("rule overlays", () => {
         "AC-NNNN-NNNN-NN",
         "EX-NNNN-NNNN-NN",
         "BR-NNNN",
+        "BR-NNNN-NNNN",
+        "DESIGN-NNNN",
         "every four-digit segment",
+        "is not read as `UI-NNNN`",
         // The three exceptions — the sample IDs, the manifest version and the
         // story-tree sample band — and the absence of any file-name exemption.
         "spec-0001",

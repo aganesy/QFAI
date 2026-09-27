@@ -28,10 +28,10 @@ Scenario: Records Go To The Two Tables
 
 # AC-0001-0152-04
 # Parent: US-0001-0152
-Scenario: The Five Merged Files State Each Fact Once
+Scenario: The Four Merged Files State Each Fact Once
   Given the story tree,
-  When `/qfai-sdd` writes `objective.md`, `initiative.md` or `principle.md` under `<paths.specsDir>/01_policy/`, or `tech.md` or `structure.md` under `<paths.contractsDir>`,
-  Then each fact is stated in one of the five files only, and the quality-gate commands appear only in the Standard commands section of `tech.md`.
+  When `/qfai-sdd` writes `objective.md`, `initiative.md` or `principle.md` under `<paths.specsDir>/01_policy/`, or `tech.md` under `<paths.contractsDir>`,
+  Then each fact is stated in one of the four files only, and the quality-gate commands appear only in the Standard commands section of `tech.md`.
 
 # AC-0001-0152-05
 # Parent: US-0001-0152
@@ -45,7 +45,7 @@ Scenario: IDs Are The Highest In Their Scope Plus One
 Scenario: Business Rules Are Written Inside Contracts
   Given the story tree,
   When `/qfai-sdd` writes a business rule at the 03-contract step,
-  Then the rule sits inside the contract file that enforces it, in that file type's form, with an ID, a statement and at least one EX. No separate rules file is written, and a rule that several contracts rely on is defined once and referenced by ID from the others.
+  Then the rule sits inside the contract file that enforces it, in that file type's form, with an ID, a statement and at least one EX. No separate rules file is written, and a rule that several contracts rely on is defined once, in the contract authoritative for it, and cited by no other contract.
 
 # AC-0001-0152-07
 # Parent: US-0001-0152

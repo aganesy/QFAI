@@ -721,19 +721,6 @@ describe("migration steps 11 and 12: the free-text entry", () => {
     expect(naming).toEqual([]);
   });
 
-  // QFAI:AC-0004-0041-07
-  it("continues a migration the old skill name began from its ID map", async () => {
-    // QFAI:EX-0004-0041-15
-    const root = await oldProject();
-    await throughStep(root, 4);
-    const map = path.join(root, ".qfai/evidence/migration-spec-to-story/id-map.json");
-    const written = await readFile(map, "utf8");
-    const result = await stepIn(root, 5);
-    expect([0, 3]).toContain(result.code);
-    expect(section(result.output, "Cases to examples").length).toBeGreaterThan(0);
-    expect(await readFile(map, "utf8")).toBe(written);
-  });
-
   // QFAI:AC-0004-0041-04
   it("names an evidence re-include line and leaves the managed negations alone", async () => {
     // QFAI:EX-0004-0041-16

@@ -43,10 +43,11 @@ prototyping evidence before the owning skill claims completion.
 
 ## Inputs you must read
 
-Read the selected BF and its linked stories and contracts, current validation
-findings, evidence and review pack, `rule/test-layers.md`, and the Standard
-commands in `<paths.contractsDir>/tech.md`. Follow linked evidence only for
-the active scope.
+Read the selected BF, its stories, the contracts whose business rules cite its
+examples, current validation findings, evidence and review pack,
+`rule/test-layers.md`, and the Standard commands in
+`<paths.contractsDir>/tech.md`. Follow linked evidence only for the active
+scope.
 
 ## Boundaries
 

@@ -22,14 +22,14 @@ Invoking a stage skill such as `/qfai-sdd` yourself remains available as the exp
 - Prototyping is UI-only and runs through `qfai prototyping iterate --cycle <n>`.
   It evaluates every UI-bearing contract and each screen that contract declares.
   `prototyping.primaryUiContract` in `qfai.config.yaml` pins the primary
-  contract; `--primary-ui-contract CON-UI-0001` overrides it. Cycle 0 records
+  contract; `--primary-ui-contract UI-0001` overrides it. Cycle 0 records
   the full UI contract set as `uiContractsCovered` and `frozenSurfaceUnion` in
   `prototyping.json`. The loop runs through cycles 0..9 with deterministic stop
   codes: 0 (continue), 64 (converged), 65 (cycle limit), 66 (license check),
   and 2 (input or lock drift).
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iteration evidence is a single
-  `iter-NN/CON-UI-NNNN/<screen>.review.json` per UI contract and screen pair
+  `iter-NN/UI-NNNN/<screen>.review.json` per UI contract and screen pair
   (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
   `designMdViolations[]`, and `pivotDirective`). It is the only
@@ -146,7 +146,7 @@ Run `/qfai-discussion` and `/qfai-sdd` to fill the seeded story tree.
     evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Evidence refs must resolve to concrete repository-relative artifacts;
     absolute paths are invalid. UI coverage and per-screen reviews use full
-    `CON-UI-NNNN` IDs.
+    `UI-NNNN` IDs.
     `fullHarness` follows a terminal-first state machine: `status="in-progress"` requires `finalDecision="pending"`,
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
@@ -346,6 +346,9 @@ validation:
       - "tests/**/*.spec.ts"
     testFileExcludeGlobs:
       - "**/fixtures/**"
+uiux:
+  surfacePaths: # the paths that render a user-visible surface; [] for none
+    - "src/components/**"
 ```
 
 Notes.
@@ -369,14 +372,18 @@ QFAI keeps policy, behavior and enforcing contracts in one story tree:
 - `02_business-flow/` holds the flow index, each BF and its user stories. Each
   story has `01_User-story.md`, `02_Acceptance-Criteria.md` and `03_Example.md`.
 - `03_contract/` holds the contract index and API, DB, UI, CLI and design
-  contracts. A BR is defined in the contract that enforces it.
+  contracts. The directory sets a contract's kind, and its ID is
+  `<KIND>-NNNN`, such as `API-0002`, with a number no other contract of any
+  kind uses. The file is named `<kind>-NNNN-<slug>.<ext>`. A BR is defined in
+  the contract that enforces it, as `BR-<contract number>-NNNN`.
 - `decisions.md` and `open-questions.md` record project decisions and open
   questions in append-only four-column tables.
 
 The traceability chain is BF → US → AC → EX, with BR → EX from the contracts.
 Each EX names one AC in its story; every AC has an EX, and every EX is cited by
-a BR. Validation checks this chain and the independent BF, AC and EX test
-obligations.
+a BR. A BR cites only EX, only code and tests cite a BR, and a contract never
+names an implementation file. Validation checks this chain and the independent
+BF, AC and EX test obligations.
 
 ## SSOT boundaries
 
@@ -391,7 +398,7 @@ flowchart LR
 
 - Story and policy SSOT: `paths.specsDir` (`.qfai/spec/` by default).
 - Contract SSOT: `paths.contractsDir` (`.qfai/spec/03_contract/` by default).
-- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands`.
+- Project quality-gate commands: `<paths.contractsDir>/tech.md#standard-commands-copy-paste`.
 - Report outputs (`.qfai/report/**`) are derived artifacts and not SSOT.
 
 ## Minimal tutorial
@@ -515,12 +522,16 @@ example table without `AC-Ref`, or a malformed flow diagram needs more than
 Markdown formatting checks.
 
 - **Document shape** comes from the schemas the package ships in
-  `assets/mdschema/`: one per SDD document type, declaring which chapters it
-  needs and whether each is a list, a table with named columns, a Gherkin block
-  or a Mermaid diagram. They are the schemas the `qfai-sdd` templates were
-  written against, so a document authored from the template passes by
-  construction. The driver reads `paths.specsDir` from your `qfai.config.yaml`,
-  so a relocated story tree is covered without editing the driver.
+  `assets/mdschema/`, one per story-tree document. A schema is closed: it fixes
+  the headings, their order, and the one kind of content each section holds,
+  and a section it does not name fails. They are the schemas the `qfai-sdd`
+  templates are written to, so a document authored from its template passes by
+  construction. No document may opt out. The driver reads `paths.specsDir` and
+  `paths.contractsDir` from your `qfai.config.yaml`, so a relocated story tree
+  is covered without editing the driver.
+- **The lane is required.** `npx qfai validate` runs the same shape check and
+  reports each violation as `QFAI-DOCSCHEMA-001`, and `npx qfai doctor` warns
+  when `qfai-docs.yml` is missing.
 - **Mermaid syntax** is checked with Mermaid's own grammar under a headless DOM
   — the parse the renderer performs before it draws, with no browser and no
   rendering. A template block carrying `<placeholder>` tokens opts out with
@@ -632,7 +643,6 @@ commit that bumps the package, and to keep the two from being merged separately.
 │   │   │   └── business-flows.md
 │   │   └── 03_contract
 │   │       ├── contracts.md
-│   │       ├── structure.md
 │   │       └── tech.md
 │   └── waivers.yml
 └── qfai.config.yaml

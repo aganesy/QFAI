@@ -42,7 +42,10 @@ keep authors separate from reviewers.
    migrate, and continue at item 6. Otherwise write
    `.qfai/evidence/migration-spec-to-story/plan.yaml` with each old story's
    destination flow, any criterion whose parent story needs a judgment, and
-   each old business rule's destination contract. Use the format in the guide.
+   each old business rule's destination contract. Name that contract by its
+   current path under `cli/`, `api/`, `db/`, `ui/` or `design/` of the
+   contracts directory: step 3 gives every contract a new ID and file name,
+   and later steps find it from that path. Use the format in the guide.
 2. Run steps 1 to 3 in order. For **each** step, run `--dry-run` first, inspect
    its operations and write targets, then run it without `--dry-run`. Keep the
    complete Markdown report and exit code from **every** invocation as
@@ -50,10 +53,12 @@ keep authors separate from reviewers.
    step completed with items in `## For a person`; keep them for resolution.
 3. After step 3, confirm the complete old `_policies/11_Slice-Policy.md` is
    archived and none of its sections was copied into `principle.md`. Current
-   triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the five files assembled from multiple
-   sources: `objective.md`, `initiative.md`, `principle.md`, `tech.md` and
-   `structure.md`. Remove facts duplicated in different words. Keep the
-   source files archived by the scripts.
+   triage rules belong to `qfai-sdd/references/sdd-triage.md`. Read the four files assembled from multiple
+   sources: `objective.md`, `initiative.md`, `principle.md` and `tech.md`.
+   Remove facts duplicated in different words. Keep the
+   source files archived by the scripts. `tech.md` is written in its
+   template's shape: replace each `<...>` placeholder its old files did not
+   supply.
 4. Run steps 4 to 10 in order, each with `--dry-run` followed by the real run.
    Inspect and keep every report and exit code as in step 2.
 5. Resolve every reported item with the person responsible for the content.

@@ -28,24 +28,35 @@ The migration skill writes
 `.qfai/evidence/migration-spec-to-story/plan.yaml`. Review it before step 4:
 each old story needs one destination business flow, and each old business rule
 needs one enforcing contract. Some acceptance criteria need an explicit parent
-story. Contract paths are relative to the configured contracts directory.
-Flow and story order determine new IDs. Step 4 creates an ID map that later
-steps use; after that map exists, move or place unresolved content through
-`/qfai-sdd` in the new tree instead of changing the plan.
+story. A contract path is relative to the configured contracts directory, lies
+under `cli/`, `api/`, `db/`, `ui/` or `design/`, and names the file as it is
+before the migration renames it. Flow and story order determine new IDs.
+Step 4 creates an ID map that later steps use; after that map exists, move or
+place unresolved content through `/qfai-sdd` in the new tree instead of
+changing the plan.
+
+Step 3 gives every contract a 2.x contract ID and renames its file to match:
+`api/api-0001-orders.yaml`, declaring `CON-API-0001`, can become
+`api/api-0002-orders.yaml` declaring `API-0002`. Numbers are unique across
+contract kinds. The old and new IDs and paths are recorded in
+`.qfai/evidence/migration-spec-to-story/contract-map.json` and then in the ID
+map. Later steps rewrite the old IDs in dependency declarations, rule
+statements and test annotations, and number each contract's rules from its own
+number, such as `BR-0002-0001`. `contracts.md` becomes one index table.
 
 The result separates project policy, concrete behavior, and enforcing
 contracts:
 
-| Old content                                                                    | New home                               |
-| ------------------------------------------------------------------------------ | -------------------------------------- |
-| Shared objectives, glossary and constraints                                    | `01_policy/`                           |
-| Business flows, stories, acceptance criteria and examples                      | `02_business-flow/`                    |
-| Contract index, technical rules and API, database, UI, CLI or design contracts | `03_contract/`                         |
-| Decisions and open questions                                                   | `decisions.md` and `open-questions.md` |
+| Old content                                                                                   | New home                               |
+| --------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Shared objectives, glossary and constraints                                                   | `01_policy/`                           |
+| Business flows, stories, acceptance criteria and examples                                     | `02_business-flow/`                    |
+| Contract index, technology stack and commands, and API, database, UI, CLI or design contracts | `03_contract/`                         |
+| Decisions and open questions                                                                  | `decisions.md` and `open-questions.md` |
 
-The scripts archive old files that have no direct new home. Review the five
+The scripts archive old files that have no direct new home. Review the four
 assembled files after step 3: `objective.md`, `initiative.md`,
-`principle.md`, `tech.md` and `structure.md`. Remove duplicated facts
+`principle.md` and `tech.md`. Remove duplicated facts
 expressed in different words. Keep the complete old slice-policy file in the
 migration archive; do not copy its obsolete rules into `principle.md`.
 
@@ -59,7 +70,7 @@ exit codes. Run the next step only after the preceding one has completed.
 | ---- | ---------------------------- | ---------------------------------------------------------------------------------------- |
 | 1    | `01-rename-directories.mjs`  | Move owned directories and update old default paths.                                     |
 | 2    | `02-merge-tables.mjs`        | Combine decisions, questions and change records.                                         |
-| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; archive content with no new home.                     |
+| 3    | `03-move-catalog.mjs`        | Move policy and assistant content; number and rename the contracts.                      |
 | 4    | `04-renumber-ids.mjs`        | Build the flow and story tree and write the ID map.                                      |
 | 5    | `05-cases-to-examples.mjs`   | Preserve test-case-only behavior as examples.                                            |
 | 6    | `06-derive-ac-refs.mjs`      | Link examples to acceptance criteria when the source establishes one.                    |
@@ -112,7 +123,9 @@ After step 12, run the locally installed `qfai validate --profile full
 findings: end-to-end tests cover business flows, integration or API tests
 cover acceptance criteria, and other tests cover examples. Step 8 changes
 only resolvable annotations; inspect `## Annotations kept` and verify each
-new annotation against the test's actual assertion. Record a permitted
+new annotation against the test's actual assertion. An old contract ID the
+steps could not translate, such as a UI marker in application code, is
+listed for a person with its file and line; replace it by hand. Record a permitted
 exception in `decisions.md` when a test is intentionally absent.
 
 Update project CI to use the new tree and annotation patterns. On pull
@@ -122,7 +135,10 @@ the applicable layers. The workflows installed by `qfai init` are
 create-only: compare a project's edited copies with the new shipped
 templates and apply changes deliberately. Update `qfai.config.yaml` test
 globs and the Standard commands in `03_contract/tech.md` to match the
-project's test layout.
+project's test layout. Step 3 moves the old structure catalog's entrypoints
+to Skeleton lines in `tech.md`, its technical constraints to
+`constraint.md` and its UI surface paths to `uiux.surfacePaths` in
+`qfai.config.yaml`, and lists the rest for a person.
 
 ## Roll back or resume
 
@@ -144,8 +160,5 @@ Once step 12 exits 0 and validation passes, send the project's first
 free-text change request to `qfai-run`. The entry directive step 11 added to
 `AGENTS.md` and `CLAUDE.md` points agents there.
 
-A project that ran the migration under its earlier name,
-`qfai-migration-spec-to-story`, continues with `qfai-migration-v1-to-v2` from
-the step it reached: the plan, the ID map and the archives stay under
-`.qfai/evidence/migration-spec-to-story/`. `qfai init --force` removes the host
-links of the old name.
+`qfai init --force` removes the host links of the skill's earlier name,
+`qfai-migration-spec-to-story`.

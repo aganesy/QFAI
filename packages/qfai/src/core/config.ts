@@ -52,9 +52,6 @@ export type QfaiPaths = {
 
 export type QfaiValidationConfig = {
   failOn: FailOn;
-  require: {
-    specSections: string[];
-  };
   testStrategy: {
     /**
      * When true (default), `qfai validate` reports the silent-placeholder
@@ -119,8 +116,8 @@ export type QfaiUiuxConfig = {
    * already carries, so a project that has one restates it rather than
    * translating it.
    *
-   * Which registry is primary is prose, and lives in
-   * `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
+   * Which registry is primary is named by the `Component catalogue` row of the
+   * Stack table in `.qfai/spec/03_contract/tech.md`. Nothing here ranks them.
    */
   registries?: Record<string, string>;
   designTokensDir?: string;
@@ -134,6 +131,12 @@ export type QfaiUiuxConfig = {
    * registered are still held to the same three fields.
    */
   catalogue_refs_min?: number;
+  /**
+   * Repository-relative POSIX globs of the paths that render a user-visible
+   * surface. An empty list states that the project renders none; an absent
+   * key declares nothing.
+   */
+  surfacePaths?: string[];
   renderEvidence?: RenderEvidenceConfig;
   audit?: QfaiUiuxAuditConfig;
 };
@@ -159,7 +162,7 @@ export type QfaiPrototypingConfig = {
   execution?: QfaiPrototypingExecutionConfig;
   /**
    * Explicit primary UI contract for `/qfai-prototyping`.
-   * Uses the full `CON-UI-NNNN` identifier.
+   * Uses the full `UI-NNNN` identifier.
    */
   primaryUiContract?: string;
   /**
@@ -309,9 +312,6 @@ export const defaultConfig: QfaiConfig = {
   },
   validation: {
     failOn: "error",
-    require: {
-      specSections: [],
-    },
     testStrategy: {
       forbidTestTodoStubs: true,
       requireLayerTags: DEPRECATED_TEST_STRATEGY_FLAG_DEFAULT,
@@ -585,16 +585,6 @@ function normalizeValidation(
     return base;
   }
 
-  let requireRaw: Record<string, unknown> | undefined;
-  if (raw.require === undefined) {
-    requireRaw = undefined;
-  } else if (isRecord(raw.require)) {
-    requireRaw = raw.require;
-  } else {
-    issues.push(configIssue(configPath, "validation.require はオブジェクトである必要があります。"));
-    requireRaw = undefined;
-  }
-
   let traceabilityRaw: Record<string, unknown> | undefined;
   if (raw.traceability === undefined) {
     traceabilityRaw = undefined;
@@ -623,15 +613,6 @@ function normalizeValidation(
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
-    require: {
-      specSections: readStringArray(
-        requireRaw?.specSections,
-        base.require.specSections,
-        "validation.require.specSections",
-        configPath,
-        issues,
-      ),
-    },
     testStrategy: {
       forbidTestTodoStubs: readBoolean(
         testStrategyRaw?.forbidTestTodoStubs,
@@ -720,7 +701,7 @@ function normalizePrototyping(
     issues.push(
       configIssue(
         configPath,
-        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: CON-UI-NNNN.",
+        "prototyping.primarySpecId is retired; use prototyping.primaryUiContract: UI-NNNN.",
       ),
     );
   }
@@ -769,16 +750,16 @@ function normalizePrimaryUiContract(
     issues.push(
       configIssue(
         configPath,
-        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
+        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;
   }
-  if (!/^CON-UI-\d{4}$/.test(raw)) {
+  if (!/^UI-\d{4}$/.test(raw)) {
     issues.push(
       configIssue(
         configPath,
-        `prototyping.primaryUiContract must be a full CON-UI-NNNN ID; received ${JSON.stringify(raw)}.`,
+        `prototyping.primaryUiContract must be a full UI-NNNN ID; received ${JSON.stringify(raw)}.`,
       ),
     );
     return undefined;
@@ -1262,6 +1243,21 @@ function normalizeUiux(
     } else {
       issues.push(
         configIssue(configPath, "uiux.catalogue_refs_min must be an integer of 0 or more."),
+      );
+    }
+  }
+  if (raw.surfacePaths !== undefined) {
+    const surfacePaths = raw.surfacePaths;
+    if (
+      Array.isArray(surfacePaths) &&
+      surfacePaths.every(
+        (entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0,
+      )
+    ) {
+      result.surfacePaths = surfacePaths.map((entry) => entry.trim());
+    } else {
+      issues.push(
+        configIssue(configPath, "uiux.surfacePaths must be a list of non-empty glob strings."),
       );
     }
   }

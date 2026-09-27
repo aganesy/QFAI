@@ -84,9 +84,11 @@ during review whenever either signal identifies the flow as UI-bearing.
 
 Allocate each new ID from the highest ID of its kind in scope plus one,
 including retired IDs named in decisions rows. BF scope is project-wide; US
-scope is its BF; AC and EX scope is their US; BR scope is all contracts; DEC and
-OQ scope is their own table. Empty scopes begin at `0001`, or `01` for AC and EX
-tails. This is a reading rule over the tree, not a new command.
+scope is its BF; AC and EX scope is their US; a contract number's scope is every
+contract of every kind; BR scope is its contract, whose number the BR carries
+(`BR-0002-0001` belongs to `API-0002`); DEC and OQ scope is their own table.
+Empty scopes begin at `0001`, or `01` for AC and EX tails. This is a reading
+rule over the tree, not a new command.
 
 ## Pre-draft grilling
 

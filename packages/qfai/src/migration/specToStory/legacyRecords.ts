@@ -18,6 +18,35 @@ export function retiredLegacyStatus(value: string): boolean {
   return /^(?:superseded|deprecated|removed)\b/i.test(value.trim());
 }
 
+const LEADING_STEP = /^(?:Given|When|Then|And)\s+/;
+const FURTHER_STEP = /(?:^|\s)(?:Given|When|Then|And|But)\s/;
+
+export type PlainExampleCells = {
+  input: string;
+  expected: string;
+  /** The columns that still hold Gherkin steps and are written as they stand. */
+  notPlain: ("Input" | "Expected")[];
+};
+
+/**
+ * An example's Input and Expected as the plain values a story's `03_Example.md` holds. A leading
+ * `Given`, `When`, `Then` or `And` is removed where what follows is one plain value; a cell holding
+ * a further step keeps its text and is named in `notPlain`.
+ */
+export function plainExampleCells(input: string, expected: string): PlainExampleCells {
+  const notPlain: PlainExampleCells["notPlain"] = [];
+  const plain = (value: string, column: "Input" | "Expected"): string => {
+    const trimmed = value.trim();
+    const keyword = LEADING_STEP.exec(trimmed)?.[0];
+    if (keyword === undefined) return value;
+    const rest = trimmed.slice(keyword.length);
+    if (!FURTHER_STEP.test(rest)) return rest;
+    notPlain.push(column);
+    return value;
+  };
+  return { input: plain(input, "Input"), expected: plain(expected, "Expected"), notPlain };
+}
+
 function field(body: string, name: string): string {
   const normalized = name.replace(/[- ]/g, "[- ]?");
   const pattern = new RegExp(`^${normalized}\\s*:\\s*(.*)$`, "i");

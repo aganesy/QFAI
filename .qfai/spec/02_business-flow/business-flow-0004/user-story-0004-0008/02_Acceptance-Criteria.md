@@ -12,6 +12,8 @@ Scenario: Step 5 converts a test-case-only row citing one criterion
   When step 5 runs
   Then an EX row for it is under that AC's story, with the new ID the ID map gives it
   And Cases to examples lists its old TC ID and its new EX ID
+  And its Steps and Expected are written as plain values, without a leading Given, When, Then or And
+  And a cell holding more than one step is written as it stands and listed under For a person, and step 5 exits 3
 
 # AC-0004-0008-02
 # Parent: US-0004-0008

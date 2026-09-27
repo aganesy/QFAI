@@ -25,8 +25,7 @@ against a frozen `DESIGN.md` and a frozen UI contract set, one lineage per
 ## Reads
 
 - `.qfai/evidence/prototyping/grilling.md`, which `prototyping-grill` wrote.
-- The UI contracts in scope, root `DESIGN.md` (read-only) and
-  `<contractsDir>/design/DESIGN.md.lock.yaml`.
+- The UI contracts in scope and root `DESIGN.md` (read-only).
 - The references below.
 
 ## Writes
@@ -79,7 +78,7 @@ sub-agent.
 ### C0 — seed (product-experience-architect)
 
 1. Run `npx qfai prototyping iterate --cycle 0 --target-url <url>`. The CLI
-   computes `sha256(DESIGN.md)` and enforces the lock match.
+   records `sha256(DESIGN.md)` in `prototyping.json#designMd`.
 2. Generator reads contracts + `.qfai/evidence/prototyping/grilling.md` + the
    generator prompt + DESIGN.md tokens, and writes
    `.qfai/prototype/iter-00/index.html`.
@@ -91,7 +90,7 @@ sub-agent.
 4. REPLACE the seed `iterations[0]` per [Transcription](#transcription), then
    commit `prototyping: iter-00`.
 
-Output: `iter-00`, `prototyping.json#designMdSha256`.
+Output: `iter-00`, `prototyping.json#designMd.sha256`.
 
 ### C1..9 — review, transcribe, iterate
 
@@ -214,7 +213,7 @@ filename template. Without `--capture`, store `evidenceRefs: []`; the reviewer
 still operates Playwright live. With `--capture`, require a screenshot and HTML
 path for every declared screen, then copy one `kind: screenshot` and one
 `kind: html` entry per screen. The per-screen
-`CON-UI-NNNN/<screen>.review.json` payloads stay closed and contain no
+`UI-NNNN/<screen>.review.json` payloads stay closed and contain no
 `evidenceRefs` field. `buildEvidenceRefs()` is a pure helper, not an automatic
 CLI writer for this transcription.
 
@@ -243,20 +242,20 @@ per-cycle ordinal UX scores `exceptional`, with `designMdViolations`,
 `(UI contract, screen)` payload); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown license
 tier, non-HTTPS URL, host mismatch against the frozen `sourceHosts`, or missing
-or empty `attribution`); `2` input error or lock drift (including a DESIGN.md
-hash mismatch, and `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on
-cycle ≥ 1).
+or empty `attribution`); `2` input error or drift from the cycle-0 record
+(a `DESIGN.md` hash that differs from `prototyping.json#designMd.sha256`, and
+`frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 
-| Exit | Next                                                                               |
-| ---- | ---------------------------------------------------------------------------------- |
-| 0    | The next cycle, following `pivotDirective`                                         |
-| 64   | Step `U`                                                                           |
-| 65   | `prototyping-recover` § Cycle 9 budget exhaustion                                  |
-| 66   | `prototyping-recover` § License-verify hard-stop (exit 66)                         |
-| 2    | `prototyping-recover` § Lock drift, or § Scope reduction for a retired UI contract |
+| Exit | Next                                                                                                  |
+| ---- | ----------------------------------------------------------------------------------------------------- |
+| 0    | The next cycle, following `pivotDirective`                                                            |
+| 64   | Step `U`                                                                                              |
+| 65   | `prototyping-recover` § Cycle 9 budget exhaustion                                                     |
+| 66   | `prototyping-recover` § License-verify hard-stop (exit 66)                                            |
+| 2    | `prototyping-recover` § Drift from the cycle-0 record, or § Scope reduction for a retired UI contract |
 
-The DESIGN.md lock sha256 is re-checked every cycle against the live
-`DESIGN.md`; a mismatch exits 2 and stops the loop.
+Every cycle after 0 compares the live `DESIGN.md` with the sha256 cycle 0
+recorded; a mismatch exits 2 and stops the loop.
 
 ## Evaluator Inputs (Mandatory)
 
@@ -276,8 +275,8 @@ The DESIGN.md lock sha256 is re-checked every cycle against the live
 
 - One lineage only — no parallel candidates, no best-of-history; the latest
   iter is always accepted.
-- `DESIGN.md` is frozen for the run
-  (`.qfai/assistant/step/common-design-md/STEP.md#check-against-the-lock`).
+- `DESIGN.md` is frozen for the run at the hash cycle 0 recorded
+  (`.qfai/assistant/step/common-design-md/STEP.md#check-before-building`).
 - Token-only colors, fonts, radii and shadows — non-DESIGN.md hex, rgb, rgba,
   hsl, font, radius or shadow values land in `designMdViolations[]` and block
   exit 64.

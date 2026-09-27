@@ -35,8 +35,10 @@ value identifies an old flow to continue; omit it for a new flow. Add
 records. A `from` value is an exact H2 heading in the old
 `_policies/04_Business-Flow.md`. For its unnamed opening flow, use the reserved
 value `_policies/04_Business-Flow.md`. If `from` is omitted, the script writes a
-template flow and reports that its diagram needs a person. Contract paths are
-relative to the configured contracts directory.
+template flow and reports that its diagram needs a person. A contract path is
+relative to the configured contracts directory, lies under `cli/`, `api/`,
+`db/`, `ui/` or `design/`, and names the contract file as it is before step 3
+renames it.
 
 ```yaml
 flows:
@@ -51,13 +53,40 @@ rules:
 
 Use IDs from the old files in this plan. Assign each old story and rule at most
 once. A `from` value that matches no old flow or matches several, an invalid
-plan, a duplicate assignment, or a path outside the configured contract
-directory stops step 4 before writing. A valid contract path with no file is
-reported for a person, and its rule stays in the old file. Check the step-4 dry
-run before accepting its numbering. Step 4 writes
+plan, a duplicate assignment, or a contract path that is outside the five
+contract directories or names no contract stops step 4 before writing. Check
+the step-4 dry run before accepting its numbering. Step 4 writes
 `.qfai/evidence/migration-spec-to-story/id-map.json` once. Later steps use that
 map. Once it exists, changing the plan to move or newly place a mapped item is
 refused; resolve unplaced content in the new tree through `/qfai-sdd`.
+
+## Contract IDs
+
+Step 3 gives every contract file that has no 2.x contract ID one, and renames
+the file to match:
+
+| Old contract               | Declares       | New ID   | New file                   |
+| -------------------------- | -------------- | -------- | -------------------------- |
+| `cli/orders.md`            | nothing        | CLI-0001 | `cli/cli-0001-orders.md`   |
+| `api/api-0001-orders.yaml` | `CON-API-0001` | API-0002 | `api/api-0002-orders.yaml` |
+| `db/db-0001-orders.sql`    | `CON-DB-0001`  | DB-0003  | `db/db-0003-orders.sql`    |
+
+- Numbers run across all contracts, in the order CLI, API, DB, UI, design,
+  then by the old number, then by path. No two contracts share a number.
+- The new ID replaces the old one in the file's declaration: the H1 of a
+  Markdown contract, and the `QFAI-CONTRACT-ID` line of any other. The old IDs
+  in `-- Depends on:` and `x-qfai-depends-on` become the new ones.
+- `contracts.md` becomes one index table listing every contract. The old
+  index's other sections are reported for a person.
+- `.qfai/evidence/migration-spec-to-story/contract-map.json` records each old
+  path and old ID with the new ones, and step 4 copies it into the ID map.
+- Rules are numbered per contract: the first rule step 4 places in API-0002 is
+  BR-0002-0001.
+- Step 7 writes the new IDs into rule statements, and step 8 changes a
+  `QFAI:CON-API-0001` test annotation to `QFAI:API-0002`.
+
+An old ID the map cannot translate, such as a UI marker in application code or
+an ID no contract declared, is reported for a person with its file and line.
 
 ## Run the bundled steps
 
@@ -69,7 +98,7 @@ evidence. The scripts write no report file themselves.
 | ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | 1    | `01-rename-directories.mjs`  | Move old owned directories entry by entry; move a colliding entry into the migration `legacy/` archive. |
 | 2    | `02-merge-tables.mjs`        | Merge decisions, questions, triage and change records.                                                  |
-| 3    | `03-move-catalog.mjs`        | Move policy and assistant content, archive files with no new home, and keep project overrides.          |
+| 3    | `03-move-catalog.mjs`        | Move policy and assistant content, number and rename the contracts, and keep project overrides.         |
 | 4    | `04-renumber-ids.mjs`        | Write the flow and story tree, archive old plans and test lists, and write the ID map.                  |
 | 5    | `05-cases-to-examples.mjs`   | Turn old cases with no example into examples.                                                           |
 | 6    | `06-derive-ac-refs.mjs`      | Give each example one criterion reference where the cases establish it.                                 |
@@ -129,10 +158,12 @@ migrate; run steps 10 to 12 all the same.
 Immediately after step 3, confirm the complete old `_policies/11_Slice-Policy.md`
 is archived under `retired/_policies/` and none of its sections was copied to
 `principle.md`. Current triage operations and ID allocation are in the shipped
-`qfai-sdd/references/sdd-triage.md`. Read `objective.md`, `initiative.md`, `principle.md`,
-`tech.md` and `structure.md`. Remove facts repeated in different words. The
+`qfai-sdd/references/sdd-triage.md`. Read `objective.md`, `initiative.md`, `principle.md`
+and `tech.md`. Remove facts repeated in different words. The
 scripts remove byte-identical repeats; a person must judge paraphrases. Quality
-gate commands have one home: the Standard commands section of `tech.md`.
+gate commands have one home: the Standard commands section of `tech.md`, which
+step 3 writes in its template's shape. Replace each `<...>` placeholder the old
+`catalog/tech.md` did not supply.
 
 ## Resolve the reports
 
@@ -146,10 +177,10 @@ migrated test case with no previous example appears
 under `## Cases to examples` or `## For a person`; check that none is missing.
 
 Step 8 changes test-case annotations to example annotations where the ID map
-resolves them. It changes an old user-story annotation to a business-flow
-annotation only in an E2E test. Contract annotations, unresolved annotations
-and old deferral markers stay in place and are reported. Step 9 changes only the
-host integration links.
+resolves them, and contract annotations to the new contract IDs. It changes an
+old user-story annotation to a business-flow annotation only in an E2E test.
+Unresolved annotations and old deferral markers stay in place and are
+reported. Step 9 changes only the host integration links.
 
 Step 10 keeps `.qfai/evidence/` out of git:
 
@@ -212,11 +243,6 @@ The plan, the ID map and the `legacy/` and `retired/` archives under
 `.qfai/evidence/migration-spec-to-story/` exist only in this working copy,
 like everything else under `.qfai/evidence/`. Keep a copy elsewhere if anyone
 needs them beyond it.
-
-A migration begun under the skill's earlier name,
-`qfai-migration-spec-to-story`, continues from the step it reached: the plan,
-the ID map and the archives stay under
-`.qfai/evidence/migration-spec-to-story/`.
 
 ## Former migration memos
 

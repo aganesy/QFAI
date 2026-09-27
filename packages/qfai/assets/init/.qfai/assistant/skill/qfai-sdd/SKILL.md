@@ -2,7 +2,7 @@
 name: qfai-sdd
 title: QFAI SDD (Story Tree)
 description: "Use when invoked by name or handed a QFAI work order. Its subject is the story tree: policy, business flows, stories, examples and the contracts that enforce them."
-argument-hint: "[<BF-ID-or-name>] [--contract <CON-ID-or-path>] [--auto]"
+argument-hint: "[<BF-ID-or-name>] [--contract <contract-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 steps: [sdd-triage, sdd-flow, sdd-story, sdd-contract, common-design-md, sdd-cycle, sdd-gate]
 roles:
@@ -41,7 +41,7 @@ states.
 
 - A BF ID or name limits the work to that flow and its shared dependencies. With
   no argument, every incoming requirement is triaged.
-- `--contract <CON-ID-or-path>` repairs one existing contract and the flows that
+- `--contract <contract-ID-or-path>` repairs one existing contract and the flows that
   depend on it.
 - `--auto` asks nothing, as
   `.qfai/assistant/rule/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`
@@ -57,10 +57,10 @@ it, then move to the next.
 | Step               | What it does                                                   | Skipped when                                               |
 | ------------------ | -------------------------------------------------------------- | ---------------------------------------------------------- |
 | `sdd-triage`       | Source, preflight, triage rows, approvals and ID allocation    | Never                                                      |
-| `sdd-flow`         | Policy, `tech.md`, `structure.md` and business flows           | Triage changed no policy fact and no flow                  |
+| `sdd-flow`         | Policy, `tech.md` and business flows                           | Triage changed no policy fact and no flow                  |
 | `sdd-story`        | Stories, Gherkin AC and EX                                     | Never                                                      |
 | `sdd-contract`     | Contracts and the BRs they enforce, or the `--contract` repair | Triage changed no BR and no contract                       |
-| `common-design-md` | Root `DESIGN.md` and its lock                                  | The flow is not UI-bearing, or its surface is CLI-only     |
+| `common-design-md` | Root `DESIGN.md`                                               | The flow is not UI-bearing, or its surface is CLI-only     |
 | `sdd-cycle`        | The concrete-abstract cycle between BRs and EXs                | `sdd-contract` wrote or changed no BR Statement or Example |
 | `sdd-gate`         | Per-flow `validate --profile sdd` and the flow evidence        | Never                                                      |
 
@@ -107,7 +107,7 @@ may pass through `/qfai-prototyping` first.
   In `--auto`, leave these pending without asking or self-approving.
 - hard-required: a usable requirement source,
   an identifiable affected flow or an explicit decision to create one,
-  and product brand intent when a visual design lock is required.
+  and product brand intent when a root `DESIGN.md` is required.
 
 project_memory:
 

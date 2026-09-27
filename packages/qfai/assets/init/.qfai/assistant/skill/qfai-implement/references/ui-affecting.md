@@ -2,7 +2,9 @@
 
 ## Inputs
 
-Resolve paths.contractsDir from qfai.config.yaml. Read the optional UI surface paths section of its structure.md, every UI contract under its ui/ directory, the root DESIGN.md if present, and the design files under its design/ directory. Read the flow, story, acceptance criterion, and example that the implementation changes.
+Read the UI surface paths `uiux.surfacePaths` declares in qfai.config.yaml, and resolve paths.contractsDir from the same file. Read every UI contract under its ui/ directory, the root DESIGN.md if present for the brand tokens, and the design files under its design/ directory.
+When a prototyping loop ran in this checkout, read its handoff at .qfai/evidence/prototyping/prototyping.json#handoff: the final prototype, its procurement and the implementation notes.
+Read the flow, story, acceptance criterion, and example that the implementation changes.
 
 ## Routing
 
@@ -13,7 +15,7 @@ component is UI affecting when a rendered surface consumes it.
 
 Match declared paths after normalizing separators to forward slashes. A pattern with two stars spans zero or more path
 segments; one star stays in one segment; a question mark matches one character. Matching is case-sensitive, including
-dot-prefixed segments. If the optional path section is absent or the path relationship is uncertain, use the observed
+dot-prefixed segments. If `uiux.surfacePaths` is absent or the path relationship is uncertain, use the observed
 behavior and UI contracts; route an unresolved case as UI affecting and record the uncertainty for
 product-surface-reviewer. Do not infer that a change has no UI effect from its directory name alone.
 

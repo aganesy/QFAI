@@ -56,8 +56,8 @@ const baseInputs = (evidenceRoot: string) => ({
     timestamp: "2026-04-27T00:02:00Z",
   },
   iterationCount: 4,
-  uiContractsCovered: ["CON-UI-0017"],
-  convergedUiContracts: ["CON-UI-0017"],
+  uiContractsCovered: ["UI-0017"],
+  convergedUiContracts: ["UI-0017"],
   laggingUiContracts: [],
 });
 
@@ -71,11 +71,11 @@ describe("buildCompletionCertificate", () => {
         uiContractsCovered: ["0017"],
         convergedUiContracts: ["0017"],
       }),
-    ).rejects.toThrow(/CON-UI-NNNN/);
+    ).rejects.toThrow(/UI-NNNN/);
     await expect(
       buildCompletionCertificate({
         ...baseInputs(evidenceRoot),
-        laggingUiContracts: ["CON-UI-0017"],
+        laggingUiContracts: ["UI-0017"],
       }),
     ).rejects.toThrow(/partition/);
   });
@@ -105,7 +105,7 @@ describe("buildCompletionCertificate", () => {
     const cert = await buildCompletionCertificate(baseInputs(evidenceRoot));
     expect(cert.runId).toBe("run-2026-04-27-abc");
     expect(cert.reviewerSignoff.reviewerId).toBe("test-reviewer");
-    expect(cert.uiContractsCovered).toEqual(["CON-UI-0017"]);
+    expect(cert.uiContractsCovered).toEqual(["UI-0017"]);
   });
 });
 
@@ -352,8 +352,8 @@ describe("checkCompletionCertificate", () => {
           timestamp: "2026-04-27T00:00:00Z",
         },
         iterationCount: 0,
-        uiContractsCovered: ["CON-UI-0001"],
-        convergedUiContracts: ["CON-UI-0001"],
+        uiContractsCovered: ["UI-0001"],
+        convergedUiContracts: ["UI-0001"],
         laggingUiContracts: [],
       })}\n`,
       "utf-8",
@@ -451,7 +451,7 @@ describe("readUiContractsCovered drives certify aggregation", () => {
     // certify aggregation loop honours that order verbatim (it does not re-sort,
     // re-dedupe, or re-resolve from disk). This unit test pins the predicate: a
     // mock prototyping.json record with a non-lexicographic order
-    // (e.g. ["CON-UI-0099", "CON-UI-0001"]) returns the same order — proving the
+    // (e.g. ["UI-0099", "UI-0001"]) returns the same order — proving the
     // reader does not silently re-sort.
     //
     // The certify call site (prototypingCertify.ts:314) passes the
@@ -460,13 +460,13 @@ describe("readUiContractsCovered drives certify aggregation", () => {
     // preserve order. Together these two facts mean a certify
     // iteration over `cert.uiContractsCovered` walks the UI contract set in
     // frozen-set order.
-    const frozen = ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"];
+    const frozen = ["UI-0099", "UI-0001", "UI-0042"];
     const result = readUiContractsCovered({ uiContractsCovered: frozen });
     // Preservation of input order (NOT sorted) — defends against a
     // future refactor that silently sorts the array.
-    expect(result).toEqual({ kind: "ok", value: ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"] });
+    expect(result).toEqual({ kind: "ok", value: ["UI-0099", "UI-0001", "UI-0042"] });
     // Confirm non-mutation of the input.
-    expect(frozen).toEqual(["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"]);
+    expect(frozen).toEqual(["UI-0099", "UI-0001", "UI-0042"]);
   });
 
   it("the certificate receives the same frozen UI contract iteration order", async () => {
@@ -479,7 +479,7 @@ describe("readUiContractsCovered drives certify aggregation", () => {
     const evidenceRoot = await seedEvidence(root, {
       "rounds/r5/harvest.json": "{}\n",
     });
-    const frozenInRecord = { uiContractsCovered: ["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"] };
+    const frozenInRecord = { uiContractsCovered: ["UI-0099", "UI-0001", "UI-0042"] };
     const frozenResult = readUiContractsCovered(frozenInRecord);
     if (frozenResult.kind !== "ok") throw new Error("frozen UI contract list unexpectedly invalid");
     const frozen = frozenResult.value;
@@ -489,7 +489,7 @@ describe("readUiContractsCovered drives certify aggregation", () => {
       uiContractsCovered: frozen,
       convergedUiContracts: frozen,
     });
-    expect(cert.uiContractsCovered).toEqual(["CON-UI-0099", "CON-UI-0001", "CON-UI-0042"]);
+    expect(cert.uiContractsCovered).toEqual(["UI-0099", "UI-0001", "UI-0042"]);
   });
 });
 
@@ -502,28 +502,28 @@ describe("frozen UI contract evidence remains immutable across reads", () => {
     // copy from the persisted record.
     //
     // Setup: persist a "cycle 0 evidence" record with frozen set
-    // ["CON-UI-0001"]. Then mutate an in-memory "live" array. Re-read the
-    // frozen set — must still be ["CON-UI-0001"], not the mutated value.
-    const recorded = { uiContractsCovered: ["CON-UI-0001"] };
+    // ["UI-0001"]. Then mutate an in-memory "live" array. Re-read the
+    // frozen set — must still be ["UI-0001"], not the mutated value.
+    const recorded = { uiContractsCovered: ["UI-0001"] };
     const liveInMemory: string[] = [...recorded.uiContractsCovered];
 
     // Cycle 0: read the frozen set.
     const cycle0 = readUiContractsCovered(recorded);
-    expect(cycle0).toEqual({ kind: "ok", value: ["CON-UI-0001"] });
+    expect(cycle0).toEqual({ kind: "ok", value: ["UI-0001"] });
 
     // Mutate the in-memory live copy AND attempt to mutate cycle0
     // (which must not back-write to the record).
-    liveInMemory.push("CON-UI-0099");
+    liveInMemory.push("UI-0099");
     if (cycle0.kind === "ok") {
-      cycle0.value.push("CON-UI-0042");
+      cycle0.value.push("UI-0042");
     }
 
-    // Cycle 1 re-reads the frozen set — still ["CON-UI-0001"].
+    // Cycle 1 re-reads the frozen set — still ["UI-0001"].
     const cycle1 = readUiContractsCovered(recorded);
-    expect(cycle1).toEqual({ kind: "ok", value: ["CON-UI-0001"] });
+    expect(cycle1).toEqual({ kind: "ok", value: ["UI-0001"] });
     // Confirm the persisted record was NOT mutated by the cycle-0
     // consumer (defensive-copy contract).
-    expect(recorded.uiContractsCovered).toEqual(["CON-UI-0001"]);
+    expect(recorded.uiContractsCovered).toEqual(["UI-0001"]);
   });
 
   it("preserves the frozenLicenseCatalog shape across reads", async () => {

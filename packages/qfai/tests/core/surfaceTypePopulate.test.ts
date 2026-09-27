@@ -40,7 +40,7 @@ it("runs SDD story validation without the retired surface type finding", async (
   await writeFile(flowFile, "# BF-0001: Checkout\n", "utf-8");
   const uiContract = path.join(root, ".qfai", "spec", "03_contract", "ui", "checkout.yaml");
   await mkdir(path.dirname(uiContract), { recursive: true });
-  await writeFile(uiContract, "# QFAI-CONTRACT-ID: CON-UI-0001\nscreens: []\n", "utf-8");
+  await writeFile(uiContract, "# QFAI-CONTRACT-ID: UI-0001\nscreens: []\n", "utf-8");
 
   const result = await validateProject(
     root,

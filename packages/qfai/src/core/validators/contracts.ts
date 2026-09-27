@@ -300,8 +300,10 @@ function validateDeclaredContractIds(ids: string[], file: string, kind: Contract
   }
 
   const id = ids[0] ?? "";
-  const expectedPrefix = `CON-${kind}-`;
-  if (!id.startsWith(expectedPrefix)) {
+  const expectedPrefix = `${kind}-`;
+  // SIMPLIFIED: `CON-<kind>-` is still accepted beside `<kind>-NNNN`.
+  // Lift when: the story tree and shipped templates no longer use the old contract and rule IDs.
+  if (!id.startsWith(expectedPrefix) && !id.startsWith(`CON-${kind}-`)) {
     return [
       issue(
         "QFAI-CONTRACT-012",
@@ -353,7 +355,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
       "contracts.dependencyDeclaration",
       [id],
       "change",
-      "Add `-- Depends on: CON-DB-0002` to a `.sql` file, or `x-qfai-depends-on: [CON-API-0002]` " +
+      "Add `-- Depends on: DB-0002` to a `.sql` file, or `x-qfai-depends-on: [API-0002]` " +
         "to a `.yaml` / `.json` one. Write `-` when no contract has to be applied first.",
     ),
   ];

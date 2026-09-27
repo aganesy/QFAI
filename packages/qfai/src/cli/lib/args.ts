@@ -96,7 +96,7 @@ export type ParsedArgs = {
     prototypingUpgradeScopeFull?: boolean;
     /** --license-patch <file> for `qfai prototyping iterate`. */
     prototypingLicensePatch?: string;
-    /** --primary-ui-contract <CON-UI-NNNN> for `qfai prototyping iterate`. */
+    /** --primary-ui-contract <UI-NNNN> for `qfai prototyping iterate`. */
     prototypingPrimaryUiContract?: string;
     /**
      * --check-convergence for `qfai prototyping iterate`. Read-only peek
@@ -143,8 +143,8 @@ export type ParsedArgs = {
      * loop posture:
      *   - `convergence` (default): all gates apply at error severity.
      *   - `exploration`: medium gate relaxation — soft-rubric gates
-     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030..032 design
-     *     compliance) downgrade error → warning. Schema / path /
+     *     (QFAI-CRIT-008 loop completion, QFAI-DCON-030 root
+     *     DESIGN.md presence) downgrade error → warning. Schema / path /
      *     license (exit 66) gates stay hard error.
      * Overrides `qfai.config.yaml#prototyping.mode`. Unknown values
      * are rejected via markInvalid(reason).

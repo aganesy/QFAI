@@ -630,7 +630,7 @@ describe("migration harness", () => {
     await put(
       ctx.root,
       ".qfai/spec/spec-0001/02_User-stories.md",
-      "# Stories\n\n## US-0001-0001: Order\n\nOrder.\n",
+      "# Stories\n\n## US-0001-0001: Order\n\nAs a buyer, I want to order, so that the cart is bought.\n",
     );
     await put(
       ctx.root,
@@ -660,7 +660,12 @@ describe("migration harness", () => {
     await put(
       ctx.root,
       ".qfai/evidence/migration-spec-to-story/plan.yaml",
-      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/orders.yaml\n",
+      "flows:\n  - title: Order flow\n    from: _policies/04_Business-Flow.md\n    stories:\n      - id: US-0001-0001\nrules:\n  - id: BR-0001-0001\n    contract: api/api-0001-orders.yaml\n",
+    );
+    await put(
+      ctx.root,
+      ".qfai/spec/03_contract/api/api-0001-orders.yaml",
+      "# QFAI-CONTRACT-ID: API-0001\nopenapi: 3.0.0\n",
     );
     const owner = {
       kind: "write" as const,
@@ -672,7 +677,7 @@ describe("migration harness", () => {
     await writeFile(stage.marker, `${JSON.stringify(owner)}\n`);
     await writeFile(stage.payload, '{"version":1,"ids":');
     const captured = capture();
-    expect(await runStep(4, [], { cwd: ctx.root, ...captured.io })).toBe(0);
+    expect(await runStep(4, [], { cwd: ctx.root, ...captured.io })).toBe(3);
     expect(JSON.parse(await readFile(path.join(ctx.root, ID_MAP_PATH), "utf8"))).toMatchObject({
       version: 1,
       ids: { "spec-0001": { "US-0001-0001": "US-0001-0001" } },

@@ -12,9 +12,9 @@
  *     `prototyping.json#designMd.sha256`; mismatch => exit 2. Then
  *     checks the latest iteration in `prototyping.json#iterations[]`
  *     against the deterministic stop condition (shouldStop()) and exits
- *     64 (convergence) or 65 (max-iterations) when applicable, after
- *     writing `design-system.yaml` from the root DESIGN.md. Otherwise assigns paths for the next iteration and exits 0 to
- *     signal "continue".
+ *     64 (convergence) or 65 (max-iterations) when applicable. Otherwise
+ *     assigns paths for the next iteration and exits 0 to signal
+ *     "continue".
  *
  * Exit codes:
  *   0   continue to this cycle
@@ -51,7 +51,6 @@ import { EXIT_CODES } from "../lib/exitCodes.js";
 import { error, info, warn } from "../lib/logger.js";
 import { loadConfig, type QfaiConfig } from "../../core/config.js";
 import { hashDesignMd, parseDesignMd, type DesignMd } from "../../core/design/designMd.js";
-import { readDesignMdLockSha } from "../../core/design/designMdLock.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { COMPLETION_CERTIFICATE_REL_PATH } from "../../core/prototyping/certificate.js";
 import type { LoggedMoves } from "../../core/prototyping/mutationLog.js";
@@ -59,7 +58,6 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { writeDesignSystemMirror } from "../../core/prototyping/designSystemMirror.js";
 import {
   PROTOTYPE_REL,
   PROTOTYPING_EVIDENCE_REL,
@@ -424,7 +422,7 @@ const CURRENT_TAILWIND_CONTRACT_PHASE = "phase-1";
 
 // TODO(next-minor): runPrototypingIterate body is ~674 LOC and orchestrates
 // 13 distinct sections (peek, cycle range, primary-spec, zero-UI precheck,
-// DESIGN.md lock, cycle-0 reset, seed write, license verify, plan write,
+// DESIGN.md hash, cycle-0 reset, seed write, license verify, plan write,
 // auto-serve, capture, context write, blocked summary). CLAUDE.md project
 // rule asks for ~50 LOC per function. Candidate extractions for the next
 // minor housekeeping pass: verifyLicensesForCycle(options, protoRecord),
@@ -439,7 +437,7 @@ export async function runPrototypingIterate(
   //   1. The cycle range gate (0..9) does NOT trip when the operator
   //      passes a deliberately out-of-range cycle to peek (though the
   //      typical hint convention pins cycle 9, which is in range).
-  //   2. The DESIGN.md read, lock gate, spec resolution, license
+  //   2. The DESIGN.md read, spec resolution, license
   //      verify, capture, serve, and validate paths are bypassed —
   //      the peek is a pure read of the canonical prototyping state
   //      file, never a re-run of the loop.
@@ -604,45 +602,6 @@ export async function runPrototypingIterate(
   // are immutable for the duration of one invocation.
   const configResult = earlyConfig;
 
-  // The SDD lock (`DESIGN.md.lock.yaml#designMdSha256`) is the single
-  // source of truth for the frozen brand SSOT. Iterate consults it on
-  // EVERY cycle — not just cycle 0 — so that prototyping.json acts as a
-  // cache of the lock value, never as an independent SHA store.
-  // A missing lock file is allowed (fresh project that has not yet run
-  // /qfai-sdd Phase 0); a present-but-malformed lock is a fail-fast
-  // condition because the SDD precondition is broken.
-  const lockResult = await readDesignMdLockGate(
-    options.root,
-    configResult.config.paths.contractsDir,
-  );
-  if (lockResult.kind === "malformed") {
-    error(
-      "qfai prototyping iterate: DESIGN.md.lock.yaml exists but " +
-        "designMdSha256 is missing or not a 64-character hex string. " +
-        "Re-run the design lock step of /qfai-sdd to regenerate the lock.",
-    );
-    return 2;
-  }
-  if (lockResult.kind === "unreadable") {
-    const cause =
-      lockResult.cause instanceof Error ? lockResult.cause.message : String(lockResult.cause);
-    error(
-      "qfai prototyping iterate: DESIGN.md.lock.yaml exists but could not be read " +
-        `(${cause}). The freeze invariant cannot be enforced when the lock is ` +
-        "unreadable; fix file permissions / EIO and rerun.",
-    );
-    return 2;
-  }
-  const lockSha = lockResult.kind === "ok" ? lockResult.sha256 : null;
-  if (lockSha !== null && lockSha !== currentSha) {
-    error(
-      "qfai prototyping iterate: root DESIGN.md sha256 differs from " +
-        `DESIGN.md.lock.yaml — lock=${lockSha} current=${currentSha}. ` +
-        "DESIGN.md was edited after the SDD freeze; re-run the design lock step of /qfai-sdd to refreeze.",
-    );
-    return 2;
-  }
-
   // The CLI pin takes precedence over the configured primary UI contract.
   const effectiveConfig =
     primaryUiContract !== undefined
@@ -657,7 +616,7 @@ export async function runPrototypingIterate(
   const resolved = await resolvePrimaryPrototypingSpec(options.root, effectiveConfig);
   if (!resolved) {
     error(
-      "qfai prototyping iterate: no UI contract with a CON-UI-NNNN declaration and " +
+      "qfai prototyping iterate: no UI contract with a UI-NNNN declaration and " +
         "at least one screens[] entry was found under contractsDir/ui.",
     );
     return 2;
@@ -678,20 +637,16 @@ export async function runPrototypingIterate(
   });
   info(`qfai prototyping iterate: prototyping mode resolved to ${resolvedMode}.`);
 
-  // 2) Cycle >=1: enforce hash gate against the lock-anchored cache in
-  //    prototyping.json + convergence/budget stop + monotonicity +
-  //    spec-set drift. See `evaluateCycleGteOneGate` for the full
-  //    contract. The lock equality (above) plus the cache equality
-  //    (in the helper) jointly enforce a 3-way invariant
-  //    (live === lock === cache) without the cache becoming a third
-  //    independent SHA SSOT.
+  // 2) Cycle >=1: compare the live DESIGN.md hash with the one cycle 0
+  //    recorded in prototyping.json, then the convergence/budget stop,
+  //    monotonicity and spec-set drift. See `evaluateCycleGteOneGate`
+  //    for the full contract.
   if (options.cycle >= 1) {
     const gate = await evaluateCycleGteOneGate({
       root: options.root,
       cycle: options.cycle,
       protoJsonAbs,
       currentSha,
-      lockSha,
       designMd,
       specs,
       config: configResult.config,
@@ -760,7 +715,7 @@ export async function runPrototypingIterate(
 
   // 3c) `--dry-run` stops here, the last point before any write.
   //     Everything above is a read: the zero-UI-bearing precheck, the
-  //     DESIGN.md read and hash, the lock gate, the converged-loop
+  //     DESIGN.md read and hash, the converged-loop
   //     refusal, primary UI contract validation, the cycle-range gate
   //     and the destructive-rerun refusal. The first mutation is the
   //     mutation-log write in the reset block below.
@@ -976,8 +931,8 @@ export async function runPrototypingIterate(
   }
 
   // 4) Persist seed metadata to prototyping.json on cycle 0:
-  //    - designMd { path, sha256 }: the lock-anchored cache used by
-  //      cycle >= 1 hash gates and by `certify` (frozen-loop hash).
+  //    - designMd { path, sha256 }: the DESIGN.md hash every later
+  //      cycle and `certify` compare the live file with.
   //    - runId: the canonical loop identifier consumed by `certify`.
   //      The legacy `fullHarness.runId` shape is no longer written.
   //    - uiContractsCovered: every UI-bearing contract resolved at cycle 0.
@@ -1865,46 +1820,6 @@ async function collectScreensForCapture(
 
 type DesignMdReadResult =
   { ok: true; text: string; data: DesignMd } | { ok: false; message: string };
-
-type LockGateResult =
-  | { kind: "ok"; sha256: string }
-  | { kind: "missing" }
-  | { kind: "malformed" }
-  | { kind: "unreadable"; cause: unknown };
-
-/**
- * Read the SDD-frozen sha256 from
- * `<contractsDir>/design/DESIGN.md.lock.yaml`.
- *
- * Distinguishes four outcomes so iterate can apply LSP-style
- * fail-fast on malformed / unreadable cases while still allowing
- * fresh projects (lock genuinely absent) to proceed:
- *
- *   - `ok`         — lock present and `designMdSha256` is valid
- *                    64-character hex
- *   - `missing`    — lock file does not exist on disk (ENOENT)
- *   - `malformed`  — lock file exists but does not parse as YAML, or
- *                    `designMdSha256` is missing / not 64 hex
- *   - `unreadable` — lock file exists but the read failed for a
- *                    non-ENOENT reason (e.g. EACCES / EPERM / EIO).
- *                    Fail-closed so the freeze invariant cannot be
- *                    silently bypassed by a permission flip.
- *
- * `qfai validate` and `qfai doctor` surface the SDD-precondition
- * issue (missing lock) via DCON-031.
- */
-async function readDesignMdLockGate(root: string, contractsDir: string): Promise<LockGateResult> {
-  const lockAbs = path.join(root, contractsDir, "design", "DESIGN.md.lock.yaml");
-  let lockText: string;
-  try {
-    lockText = await readFile(lockAbs, "utf-8");
-  } catch (err) {
-    if (isEnoent(err)) return { kind: "missing" };
-    return { kind: "unreadable", cause: err };
-  }
-  const sha = readDesignMdLockSha(lockText);
-  return sha !== null ? { kind: "ok", sha256: sha } : { kind: "malformed" };
-}
 
 async function readDesignMdFile(absPath: string): Promise<DesignMdReadResult> {
   let text: string;
@@ -3558,7 +3473,7 @@ async function evaluateZeroUiBearingPrecheck(root: string): Promise<ZeroUiBearin
   if (unionSpecs.length === 0) {
     info(
       "qfai prototyping iterate: no UI-bearing contracts resolved — deterministic no-op. " +
-        "Declare a CON-UI-NNNN contract with a non-empty screens[] under contractsDir/ui to enable the loop.",
+        "Declare a UI-NNNN contract with a non-empty screens[] under contractsDir/ui to enable the loop.",
     );
     return { shortCircuit: true, exitCode: 0 };
   }
@@ -3579,7 +3494,6 @@ type CycleGteOneGateInput = {
   cycle: number;
   protoJsonAbs: string;
   currentSha: string;
-  lockSha: string | null;
   designMd: DesignMd;
   specs: readonly string[];
   config: ConfigLoadResult["config"];
@@ -3588,30 +3502,10 @@ type CycleGteOneGateInput = {
 type CycleGteOneGateResult = { shortCircuit: true; exitCode: number } | { shortCircuit: false };
 
 /**
- * The cycle that ends the loop writes `design-system.yaml` from the DESIGN.md
- * this invocation read, then reports the stop. The gates before it have
- * already refused a DESIGN.md that differs from its lock or from the cycle-0
- * record, so the hash it records is the lock's whenever a lock exists.
- */
-async function endLoop(
-  input: CycleGteOneGateInput,
-  reason: StopReason,
-): Promise<CycleGteOneGateResult> {
-  const written = await writeDesignSystemMirror(
-    input.root,
-    input.config.paths.contractsDir,
-    input.designMd,
-    input.currentSha,
-  );
-  info(`qfai prototyping iterate: wrote ${written} from DESIGN.md.`);
-  return { shortCircuit: true, exitCode: emitStop(reason) };
-}
-
-/**
  * Section 2 of `runPrototypingIterate`: cycle >= 1 gates.
  *
- * Composes (in order) the hash-gate against the lock-anchored cache
- * in prototyping.json, the convergence/max-budget stop, the
+ * Composes (in order) the hash-gate against the DESIGN.md hash cycle 0
+ * recorded in prototyping.json, the convergence/max-budget stop, the
  * history-monotonicity check, the expected-next-cycle check, the
  * frozen UI contract equality check, and the mid-run scope
  * drift check. Each sub-gate either returns `{shortCircuit: true,
@@ -3620,12 +3514,7 @@ async function endLoop(
  * Falling all the way through returns `{shortCircuit: false}` and the
  * caller proceeds to cycle-0 `--target-url` validation +
  * iterate-plan.json generation.
- *
- * The lock equality enforced by the caller (DESIGN.md.lock.yaml ===
- * live DESIGN.md sha256) plus the cache equality enforced here
- * (prototyping.json#designMd.sha256 === live === lock) jointly form a
- * 3-way invariant; the cache is intentionally a cache of the lock,
- * never a third independent SHA SSOT.
+
  */
 async function evaluateCycleGteOneGate(
   input: CycleGteOneGateInput,
@@ -3654,22 +3543,14 @@ async function evaluateCycleGteOneGate(
     );
     return { shortCircuit: true, exitCode: 2 };
   }
-  if (input.lockSha !== null && protoRecord.designMd.sha256 !== input.lockSha) {
-    error(
-      "qfai prototyping iterate: prototyping.json#designMd.sha256 (" +
-        `${protoRecord.designMd.sha256}) differs from DESIGN.md.lock.yaml ` +
-        `(${input.lockSha}). The lock was refrozen mid-loop; re-run prototyping from cycle 0.`,
-    );
-    return { shortCircuit: true, exitCode: 2 };
-  }
-  // The cycle ≥ 1 lock-drift gates MUST run BEFORE `shouldStop()`, or a
+  // The cycle ≥ 1 drift gates MUST run BEFORE `shouldStop()`, or a
   // converged / max-budget loop could mask a `frozenSurfaceUnion`
   // missing-or-malformed record or a live-vs-frozen spec-set drift:
   // a run that satisfies `shouldStop` (converged or
   // max-iterations) would exit 64/65 immediately with the drift gate
   // never firing — a mid-loop UI-marker removal or contract edit
   // silently accepted as a successful convergence / exhaustion. The
-  // ordering mirrors the DESIGN.md hash check above: lock-drift
+  // ordering mirrors the DESIGN.md hash check above: drift
   // classes (designMd, frozenSurfaceUnion presence + drift) gate the
   // run first; convergence / budget signals come after.
   const recordedIterations = asIterations(protoRecord);
@@ -3754,7 +3635,7 @@ async function evaluateCycleGteOneGate(
               `First violation: ${first.kind}=${first.found}. ` +
               "Run `qfai prototyping iterate --cycle 0 --target-url <url>` to restart the loop.",
           );
-          return endLoop(input, "max-iterations");
+          return { shortCircuit: true, exitCode: emitStop("max-iterations") };
         }
         info(
           "qfai prototyping iterate: review reported convergence but the " +
@@ -3764,10 +3645,10 @@ async function evaluateCycleGteOneGate(
         );
         // Fall through to the next-cycle plan below (no early return).
       } else {
-        return endLoop(input, stop);
+        return { shortCircuit: true, exitCode: emitStop(stop) };
       }
     } else {
-      return endLoop(input, stop);
+      return { shortCircuit: true, exitCode: emitStop(stop) };
     }
   }
   // Defense-in-depth: confirm the recorded loop history is itself

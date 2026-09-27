@@ -19,6 +19,9 @@ const workflowPool = useAdopterTreePool();
 async function withWorkspace(task: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-bf0003-acceptance-"));
   try {
+    // A project carries the document-schema lane; doctor reports its absence as an error.
+    await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
+    await writeFile(path.join(root, ".github", "workflows", "qfai-docs.yml"), "name: qfai-docs\n");
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });

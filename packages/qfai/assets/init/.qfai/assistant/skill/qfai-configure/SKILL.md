@@ -161,7 +161,6 @@ Note: /qfai-sdd includes a preflight step that bootstraps missing config/steerin
   - The evidence file MUST show at least one matched file per declared test layer (unit / integration / api / e2e / component as applicable). A layer with zero matched files is a blocking gap, not a note.
   - A scan failure is `QFAI-SCAN-002`; the run is not done until the configured selection scans completely. `QFAI-STORY-006` through `QFAI-STORY-009` report uncovered BF, AC, and EX obligations for the testing stages.
 - `validation.traceability.testFileExcludeGlobs` is added only when needed.
-- Do not use `validation.require.specSections` for the story tree. Its fixed files and sections are defined by the shipped schemas.
 - A validation checklist with evidence (sample matched files) is produced.
 - Project-owned policy and contract files are filled or refreshed from evidence, or marked `TBD` when evidence is missing. Keep quality-gate commands solely in `03_contract/tech.md` under Standard commands.
 - Evidence file exists: `.qfai/evidence/configure-<run-id>.md`.
@@ -324,7 +323,7 @@ Every 5 major actions, pause and restate:
 - Do **not** modify tests or source code.
 - Avoid overly broad globs (e.g., `**/*`).
 - Exclude generated/output directories (`node_modules`, `.git`, `.qfai`, `dist`, `build`, `coverage`, `.next`, `out`, etc.).
-- Keep `validation.require.specSections` unchanged; story-tree structure comes from the shipped schemas.
+- Write no `validation.require` key; the sections of a story-tree document come from the shipped schemas.
 
 ## Step 0 - Load Context (always)
 
@@ -332,7 +331,6 @@ Every 5 major actions, pause and restate:
    - `.qfai/spec/01_policy/objective.md`
    - `.qfai/spec/01_policy/initiative.md`
    - `.qfai/spec/03_contract/tech.md`
-   - `.qfai/spec/03_contract/structure.md`
    - `.qfai/assistant/rule/agent-selection.md`, and
    - the acting role's card under `.qfai/assistant/agent/`.
 
@@ -384,8 +382,7 @@ Fill steering templates with repo evidence.
 - Keep existing content when already accurate.
 - When evidence is missing, write `TBD` and record what is missing.
 - Do not invent facts.
-- Keep quality-gate commands in `03_contract/tech.md` under Standard commands.
-- In `03_contract/structure.md#ui-surface-paths-ssot`, replace placeholder bullets with actual UI globs, or with `none` when the repo renders no user-visible surface. An unresolved field leaves the UI impact decision unevaluable.
+- Fill `03_contract/tech.md` in its template's shape: a Stack row for the runtime, the platform and each tool detected, each runtime dependency with its reason, and the quality-gate commands under Standard commands, one labelled item each. It holds no rule and no constraint; a constraint goes to `01_policy/constraint.md`.
 
 ## Step 4 - Update `qfai.config.yaml` (minimal diff)
 
@@ -394,6 +391,7 @@ Edit:
 - `validation.traceability.testFileGlobs`
 - `validation.traceability.testFileExcludeGlobs` (only if needed)
 - `routing` or `reviewProfiles` only when the project needs an override; each matching entry replaces the shipped default as a whole
+- `uiux.surfacePaths`: the repository-relative globs of the paths observed to render a user-visible surface, or `[]` when the repository renders none. Keep an existing value unless the user asks to change it. An absent key leaves the UI impact decision unevaluable.
 
 Keep all other config keys unchanged.
 
